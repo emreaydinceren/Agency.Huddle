@@ -460,7 +460,7 @@
 }
 
 /* The Library view's heading (LibrarySidebarTree.razor), an h2 for the outline, lines up with the search field below it.
-   The view starts 8px down rather than every view's 16px, and the search row drops its own top padding to 4px, so the
+   The view starts 4px down rather than every view's 16px, and the search row drops its own top padding to 4px, so the
    heading sits close to both the top and the search field. */
 .library-sidebar-title.mud-typography {
     display: block;
@@ -470,7 +470,7 @@
 }
 
 .sidebar-view.sidebar-view-library {
-    padding-top: 8px;
+    padding-top: 4px;
 }
 
 .library-sidebar-tree .library-explorer-tree-header {

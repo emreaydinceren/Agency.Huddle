@@ -24,16 +24,20 @@ public sealed class R3LibraryTests
         Assert.Contains("border-bottom: 1px solid var(--hu-line-region);", toolbar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>New note sits inside the band, in the same row as the search field, which is the compact 28px field.</summary>
+    /// <summary>New note and New folder always sit on the row below the compact search field, never beside it: the
+    /// header wraps and the search fills a whole row at every pane width.</summary>
     [Fact]
-    public void Explorer_NewNote_IsInTheSameRowAsTheCompactSearch()
+    public void Explorer_NewNoteAndNewFolder_AlwaysWrapBelowTheCompactSearch()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryExplorer.razor"));
-        string header = CssText.RuleBody(CssText.AppCss(), ".library-explorer-tree-header", RuleMatch.Last);
+        string css = CssText.AppCss();
+        string header = CssText.RuleBody(css, ".library-explorer-tree-header", RuleMatch.Last);
+        string search = CssText.RuleBody(css, ".library-explorer-tree-header > .library-explorer-search", RuleMatch.Last);
 
         Assert.Contains("Compact=\"true\"", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("display: flex;", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.DoesNotContain("flex-direction: column;", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex-wrap: wrap;", header, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("flex: 1 1 100%;", search, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>A tree row takes the shared selected shape: inset 4px, rounded at 0.75x the base radius, with the 2px bar kept inside.</summary>
