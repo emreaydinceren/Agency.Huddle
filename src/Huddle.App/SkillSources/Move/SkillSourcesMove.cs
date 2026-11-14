@@ -89,7 +89,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
             }
 
             MoveReport report = plan.Report(this.clock.GetLocalNow());
-            this.reports.Save(report);
+            this.SaveReport(plan, report);
             foreach (MoveProblem problem in report.Problems)
             {
                 this.logger.LogWarning("Move: {Subject}: {Message}", problem.Subject, problem.Message);
@@ -121,6 +121,33 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
         {
             TryDelete(staging);
         }
+    }
+
+    /// <summary>Saves the report, already shown when nothing of the Human's moved.</summary>
+    /// <param name="plan">The plan that ran.</param>
+    /// <param name="report">The report built from it.</param>
+    private void SaveReport(Plan plan, MoveReport report)
+    {
+        bool nothingMoved = MovedNothingOfTheHumans(plan, report);
+        this.reports.Save(report, shown: nothingMoved);
+        if (nothingMoved)
+        {
+            this.logger.LogDebug("Nothing of the Human's moved; the report is saved as already shown");
+        }
+    }
+
+    /// <summary>
+    /// Whether the run moved nothing the Human owned: only the embedded catalogs were written, so a snackbar about it would be noise.
+    /// A problem still counts, because the Human has something to read.
+    /// </summary>
+    /// <param name="plan">The plan that ran.</param>
+    /// <param name="report">The report built from it.</param>
+    /// <returns>True when the report is saved as already shown.</returns>
+    private static bool MovedNothingOfTheHumans(Plan plan, MoveReport report)
+    {
+        return !plan.UsedUserCatalog
+            && report.ShippedPackRows + report.UserPacksMoved + report.SkillsPointedAt + report.SkillsLeftInPlace == 0
+            && report.Problems.Count == 0;
     }
 
     /// <summary>Deletes every <c>.move-*</c> folder older than ten minutes; a younger one may belong to a running Huddle.</summary>
@@ -211,6 +238,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
             {
                 if (LegacyCatalogReader.Parse(File.ReadAllText(user)) is { } entries)
                 {
+                    plan.UsedUserCatalog = true;
                     return entries;
                 }
             }
@@ -752,7 +780,7 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
     {
         try
         {
-            reports.Save(report);
+            reports.Save(report, shown: false);
         }
         catch (IOException)
         {
@@ -891,6 +919,9 @@ internal sealed partial class SkillSourcesMove : ISkillSourcesMove
 
         /// <summary>The Sources written, in order.</summary>
         public List<string> SourcesWritten { get; } = [];
+
+        /// <summary>Whether the Human's own <c>SkillsCatalog.json</c> parsed and replaced the embedded catalog.</summary>
+        public bool UsedUserCatalog { get; set; }
 
         /// <summary>Counts for the report.</summary>
         public int Catalogs { get; set; }

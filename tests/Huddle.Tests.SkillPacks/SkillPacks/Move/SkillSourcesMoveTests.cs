@@ -459,6 +459,7 @@ public sealed class MoveReportTests
     public async Task ReportStore_TakeUnshown_ReturnsOnceThenNull()
     {
         using MoveFixture fixture = new();
+        fixture.UserPack("my-pack.json", MyPackJson);
         await fixture.RunAsync();
 
         MoveReport? first = new MoveReportStore(fixture.Settings()).TakeUnshown();
@@ -468,6 +469,99 @@ public sealed class MoveReportTests
         Assert.Equal(263, first.CatalogSkills);
         Assert.Null(second);
     }
+
+    /// <summary>A blank data folder moves nothing of the Human's, so its report is saved already shown and no snackbar follows.</summary>
+    [Fact]
+    public async Task BlankFolder_ReportSavedAsShown()
+    {
+        using MoveFixture fixture = new();
+
+        MoveReport? report = await fixture.RunAsync();
+
+        Assert.NotNull(report);
+        Assert.False(report.Failed);
+        Assert.Equal(263, report.CatalogSkills);
+        Assert.True(File.Exists(Path.Combine(fixture.DataDir, MoveReportStore.FileName)));
+        using JsonDocument stored = JsonDocument.Parse(File.ReadAllText(Path.Combine(fixture.DataDir, MoveReportStore.FileName)));
+        Assert.True(stored.RootElement.GetProperty("shown").GetBoolean());
+        Assert.Null(new MoveReportStore(fixture.Settings()).TakeUnshown());
+    }
+
+    /// <summary>A user Pack that moved leaves the report unshown.</summary>
+    [Fact]
+    public async Task UserPackMoved_ReportUnshown()
+    {
+        using MoveFixture fixture = new();
+        fixture.UserPack("my-pack.json", MyPackJson);
+
+        MoveReport? report = await fixture.RunAsync();
+
+        Assert.Equal(1, report?.UserPacksMoved);
+        Assert.NotNull(new MoveReportStore(fixture.Settings()).TakeUnshown());
+    }
+
+    /// <summary>The Human's own <c>SkillsCatalog.json</c> leaves the report unshown although every counter but the catalog's stays zero.</summary>
+    [Fact]
+    public async Task UserCatalog_ReportUnshown()
+    {
+        using MoveFixture fixture = new();
+        File.WriteAllText(Path.Combine(fixture.DataDir, "SkillsCatalog.json"), """
+            [{ "id": "a/b/c", "name": "only-one", "description": "d", "publisher": "p", "repo": "https://github.com/a/b", "path": "c", "link": "https://github.com/a/b/tree/0123456789abcdef0123456789abcdef01234567/c", "commit": "0123456789abcdef0123456789abcdef01234567", "license": "MIT" }]
+            """);
+
+        MoveReport? report = await fixture.RunAsync();
+
+        Assert.NotNull(report);
+        Assert.Equal(1, report.CatalogSkills);
+        Assert.Equal(0, report.ShippedPackRows + report.UserPacksMoved + report.SkillsPointedAt + report.SkillsLeftInPlace);
+        Assert.Empty(report.Problems);
+        Assert.NotNull(new MoveReportStore(fixture.Settings()).TakeUnshown());
+    }
+
+    /// <summary>An imported Skill that was pointed at leaves the report unshown.</summary>
+    [Fact]
+    public async Task ImportedSkill_ReportUnshown()
+    {
+        using MoveFixture fixture = new();
+        fixture.Imported("target-authoring", "https://github.com/dotnet/skills", "plugins/dotnet-msbuild/skills/target-authoring", "a660de83c2f9cad071a5d568f7d77041ccd07059");
+
+        MoveReport? report = await fixture.RunAsync();
+
+        Assert.Equal(1, report?.SkillsPointedAt);
+        Assert.NotNull(new MoveReportStore(fixture.Settings()).TakeUnshown());
+    }
+
+    /// <summary>Shipped Pack rows leave the report unshown.</summary>
+    [Fact]
+    public async Task ShippedPackRows_ReportUnshown()
+    {
+        using MoveFixture fixture = new();
+        fixture.WithRepository(fixture.CopyOfFixtureRepository());
+
+        MoveReport? report = await fixture.RunAsync();
+
+        Assert.Equal(2, report?.ShippedPackRows);
+        Assert.NotNull(new MoveReportStore(fixture.Settings()).TakeUnshown());
+    }
+
+    /// <summary>A problem alone, with nothing moved, still leaves the report unshown so the Human reads it.</summary>
+    [Fact]
+    public async Task ProblemOnly_ReportUnshown()
+    {
+        using MoveFixture fixture = new();
+        string absent = Path.Combine(fixture.DataDir, "absent");
+        fixture.WithRepository(absent);
+
+        MoveReport? report = await fixture.RunAsync();
+
+        Assert.NotNull(report);
+        Assert.Equal(0, report.ShippedPackRows + report.UserPacksMoved + report.SkillsPointedAt + report.SkillsLeftInPlace);
+        MoveProblem problem = Assert.Single(report.Problems);
+        Assert.Equal($"Team:SkillsRepositoryDir '{absent}' does not exist.", problem.Message);
+        Assert.NotNull(new MoveReportStore(fixture.Settings()).TakeUnshown());
+    }
+
+    private const string MyPackJson = """{ "id": "my-pack", "version": "1", "title": "Mine", "skills": [] }""";
 }
 
 /// <summary>Pins the SKILLS.md the move writes for the spec's fixture, byte for byte against a reviewed golden file.</summary>

@@ -23,14 +23,16 @@ internal sealed class MoveReportStore(SkillSourcesSettings settings)
     /// <summary>The file's full path.</summary>
     public string FilePath => Path.Combine(settings.DataDir, FileName);
 
-    /// <summary>Saves a report as not yet shown.</summary>
-    public void Save(MoveReport report)
+    /// <summary>Saves a report, either waiting to be shown or already marked shown (a move that moved nothing of the Human's).</summary>
+    /// <param name="report">The report to keep.</param>
+    /// <param name="shown">True when there is nothing to announce, so <see cref="TakeUnshown"/> never returns it.</param>
+    public void Save(MoveReport report, bool shown)
     {
         ArgumentNullException.ThrowIfNull(report);
         lock (this.gate)
         {
             Directory.CreateDirectory(settings.DataDir);
-            AtomicFile.WriteText(this.FilePath, JsonSerializer.Serialize(new StoredReport(report, false), Options).ReplaceLineEndings("\n") + "\n");
+            AtomicFile.WriteText(this.FilePath, JsonSerializer.Serialize(new StoredReport(report, shown), Options).ReplaceLineEndings("\n") + "\n");
         }
     }
 

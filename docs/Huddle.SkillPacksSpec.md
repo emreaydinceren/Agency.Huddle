@@ -991,7 +991,8 @@ commit. The catalog already pins both Pack Skills: `target-authoring` at `a660de
    `CardResolver` now looks them up in SKILLS.md; one that is not downloaded makes the draft
    card **Needs setup** with **Copy prompt**.
 9. **Report.** Append each step to the Sources' `log.jsonl` files, and show one snackbar:
-   **Packs and Skills moved to SKILLS.md · Show**, which opens the Packs tab.
+   **Packs and Skills moved to SKILLS.md · Show**, which opens the Packs tab. A new data folder,
+   where nothing of the Human's moved, shows no snackbar.
 
 ### What changes in the code
 

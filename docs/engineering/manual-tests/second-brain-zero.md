@@ -20,8 +20,6 @@ This page covers the whole journey. For single features in more depth, see [Seco
 [Team Memory Helper](team-memory-helper.md) and [Jobs](jobs.md). Terminals `T-A` and `T-B` are defined in
 [Common procedures](common.md). Record results as [the script's section 0.7](../manual-tests.md#07-recording-results) says.
 
-The first start shows a **Packs and Skills moved to SKILLS.md** notice. It is normal on an empty folder.
-
 ## Setup
 
 You need about 8 hours, which you can spread over several sittings. The app can be stopped between tests. You also
