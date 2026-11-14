@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
 /// Pins NF-6: <c>TeamSpend</c> sums the persisted spend of the members per currency for the Team page
-/// header, and the Team page hands it the Team's members.
+/// header, the Team page hands it the Team's members, and a Project page shows none.
 /// </summary>
 public sealed class TeamSpendTests
 {
@@ -52,5 +52,26 @@ public sealed class TeamSpendTests
         IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p.Add(x => x.Team, "Business"));
 
         Assert.Equal(["Nova", "Kit"], cut.FindComponent<Stub<TeamSpend>>().Instance.Parameters.Get(x => x.Members));
+    }
+
+    /// <summary>A Project page shows no spend line: the spend is the Team members' all-time figure, not the Project's (#543).</summary>
+    [Fact]
+    public async Task ProjectPage_Header_HasNoSpend()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Business", ["Marketing"], ["Nova", "Kit"], true)] };
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton<ITeamCatalog>(catalog);
+        ctx.Services.AddSingleton(TestOptions.Create());
+        ctx.ComponentFactories.AddStub<TeamRoster>();
+        ctx.ComponentFactories.AddStub<TeamFilesTab>();
+        ctx.ComponentFactories.AddStub<TeamTasksTab>();
+        ctx.ComponentFactories.AddStub<TeamSpend>();
+
+        IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p
+            .Add(x => x.Team, "Business")
+            .Add(x => x.Project, "Marketing"));
+
+        Assert.Single(cut.FindAll(".team-project-kind"));
+        Assert.Empty(cut.FindComponents<Stub<TeamSpend>>());
     }
 }

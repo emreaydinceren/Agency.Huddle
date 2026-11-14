@@ -122,6 +122,9 @@
                                Class="team-page-actions team-page-archive" OnClick="@(() => this.ArchiveTeamAsync(sourceTeam))">Archive</MudButton>
                 </Actions>
             </PageHeader>
+            @* There is no per-project spend yet (persona_spend has no project dimension), so the Team members' figure is
+               not shown on a Project page (#543). *@
+            <TeamSpend Members="@summary.Members" />
         }
         else
         {
@@ -151,7 +154,6 @@
                 </Actions>
             </PageHeader>
         }
-        <TeamSpend Members="@summary.Members" />
 
         @if (available.Count == 0)
         {
