@@ -183,7 +183,50 @@ public sealed class AddEvidenceToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal("Give a command or a note.", result);
+        Assert.Equal("Pass note for a remark where no command was run, or command with exitCode for a check you ran. Nothing was added.", result);
+        Assert.Empty(Evidence(harness, task));
+    }
+
+    /// <summary>A call that passed its text under the unknown name <c>text</c> is told so, writes nothing, and a retry with <c>note</c> is recorded.</summary>
+    [Fact]
+    public async Task InvokeAsync_UnknownTextArgument_NamesItAndRetryWithNoteWorks()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
+        TaskItem task = harness.CreateTask("Fix login");
+        AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
+        JsonObject wrong = new() { ["taskId"] = task.Id.ToString(), ["text"] = "Checked on staging." };
+
+        string refused = await tool.InvokeAsync(wrong, ct);
+
+        Assert.Equal(
+            "Pass note for a remark where no command was run, or command with exitCode for a check you ran. add_evidence has no argument named text. Nothing was added.",
+            refused);
+        Assert.Empty(Evidence(harness, task));
+
+        JsonObject retry = new() { ["taskId"] = task.Id.ToString(), ["note"] = "Checked on staging." };
+        string added = await tool.InvokeAsync(retry, ct);
+
+        Assert.Equal($"Added evidence to {task.Id}.", added);
+        EvidenceLine line = Assert.Single(Evidence(harness, task));
+        Assert.Equal("Checked on staging.", line.RawText);
+    }
+
+    /// <summary>Two unknown argument names are both listed, in the order the call gave them, and nothing is written.</summary>
+    [Fact]
+    public async Task InvokeAsync_TwoUnknownArguments_NamesBothInOrder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
+        TaskItem task = harness.CreateTask("Fix login");
+        AddEvidenceTool tool = CreateTool(harness, new ToolCallLogWriter(harness.Options));
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["text"] = "a", ["body"] = "b" };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal(
+            "Pass note for a remark where no command was run, or command with exitCode for a check you ran. add_evidence has no arguments named text, body. Nothing was added.",
+            result);
         Assert.Empty(Evidence(harness, task));
     }
 
