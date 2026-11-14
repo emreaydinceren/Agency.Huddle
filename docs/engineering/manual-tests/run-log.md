@@ -6318,7 +6318,7 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 
 ### REMOTE-12 — A Huddle crash kills the Tailscale child (Job object)
 
-File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object)
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-kill-on-parent-exit)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

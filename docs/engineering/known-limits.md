@@ -889,6 +889,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   `Auth:Mode = trusted-proxy`.
 - **Funnel and the real-phone Tailscale flows are tested by hand only.** They need a second device and a tailnet, so
   no automated test covers them ([manual tests](manual-tests/remote-access.md)). The live host-list refresh, the
-  tailnet address lookup and the Job object that stops an orphaned `tailscale serve` child are manual too.
+  tailnet address lookup and the crash kill that stops an orphaned `tailscale serve` child are manual too (a test pins
+  only that `KillOnParentExit` is set).
+- **On macOS a Huddle crash can orphan the `tailscale serve` child.** `ProcessStartInfo.KillOnParentExit` is supported
+  on Windows and Linux only, so on macOS the foreground child, and the route it holds, outlive a crashed Huddle until
+  it is killed by hand. A clean shutdown still kills it.
 - **The `allowed_origins_required` Security item cannot fire yet.** It depends on `GatewayRuntimeView.BareNameHostInUse`,
   which always returns `false` today, so a bare machine name that needs `AllowedOrigins` is not detected.

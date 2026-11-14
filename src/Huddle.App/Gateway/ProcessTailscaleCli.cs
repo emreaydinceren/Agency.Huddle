@@ -1,28 +1,27 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading.Channels;
 
 namespace Agency.Huddle.App.Gateway;
 
-/// <summary>The real <see cref="ITailscaleCli"/> (D-11): no shell, no window, redirected streams, tree kill, and on Windows a kill-on-close Job object.</summary>
+/// <summary>
+/// The real <see cref="ITailscaleCli"/> (D-11): no shell, no window, redirected streams, tree kill, and on Windows and Linux
+/// <see cref="ProcessStartInfo.KillOnParentExit"/>, so a Huddle crash does not orphan a <c>tailscale serve</c> child.
+/// </summary>
 /// <param name="configuredCommand"><c>Team:Gateway:Tailscale:Command</c>, tried after <c>PATH</c> and the platform default.</param>
-internal sealed partial class ProcessTailscaleCli(string? configuredCommand = null) : ITailscaleCli
+internal sealed class ProcessTailscaleCli(string? configuredCommand = null) : ITailscaleCli
 {
-    private const int JobObjectExtendedLimitInformation = 9;
-    private const uint JobObjectLimitKillOnJobClose = 0x2000;
-    private static readonly Lazy<nint> Job = new(CreateKillOnCloseJob);
-
     /// <inheritdoc />
     public async Task<(int ExitCode, string Stdout, string Stderr)> RunAsync(IReadOnlyList<string> args, TimeSpan timeout, CancellationToken cancellationToken)
     {
-        using Process process = Launch(args);
-        Task<string> stdout = process.StandardOutput.ReadToEndAsync(cancellationToken);
-        Task<string> stderr = process.StandardError.ReadToEndAsync(cancellationToken);
+        using Process process = this.Launch(args);
         using CancellationTokenSource limit = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         limit.CancelAfter(timeout);
         try
         {
+            // Reads both streams together, so a full stderr pipe cannot stall a child that is still writing stdout.
+            (string stdout, string stderr) = await process.ReadAllTextAsync(limit.Token).ConfigureAwait(false);
             await process.WaitForExitAsync(limit.Token).ConfigureAwait(false);
+            return (process.ExitCode, stdout, stderr);
         }
         catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
@@ -32,8 +31,57 @@ internal sealed partial class ProcessTailscaleCli(string? configuredCommand = nu
         {
             KillIfRunning(process);
         }
+    }
 
-        return (process.ExitCode, await stdout.ConfigureAwait(false), await stderr.ConfigureAwait(false));
+    /// <inheritdoc />
+    public Task<ITailscaleChild> StartAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
+    {
+        Process process = this.Launch(args);
+        Channel<string> lines = Channel.CreateUnbounded<string>();
+        process.OutputDataReceived += (_, e) => Forward(lines, e.Data);
+        process.ErrorDataReceived += (_, e) => Forward(lines, e.Data);
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        return Task.FromResult<ITailscaleChild>(new Child(process, lines));
+    }
+
+    /// <summary>The start settings for one <c>tailscale</c> call.</summary>
+    /// <param name="executable">The resolved CLI path.</param>
+    /// <param name="args">The arguments, without the executable.</param>
+    /// <returns>Settings with no shell, no window, all three streams redirected and, where supported, the child tied to Huddle's lifetime.</returns>
+    internal static ProcessStartInfo BuildStartInfo(string executable, IReadOnlyList<string> args)
+    {
+        ProcessStartInfo info = new(executable, args)
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+
+        // macOS has no equivalent; there a crashed Huddle can still orphan a foreground serve child (known-limits.md).
+        if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+        {
+            info.KillOnParentExit = true;
+        }
+
+        return info;
+    }
+
+    /// <summary>Where the Tailscale installer puts the CLI on each platform.</summary>
+    /// <param name="windows">Whether the host is Windows.</param>
+    /// <param name="macOs">Whether the host is macOS.</param>
+    /// <param name="programFiles">The Program Files folder, used on Windows.</param>
+    /// <returns>The default path of the Tailscale CLI.</returns>
+    internal static string DefaultPath(bool windows, bool macOs, string programFiles)
+    {
+        if (windows)
+        {
+            return Path.Combine(programFiles, "Tailscale", "tailscale.exe");
+        }
+
+        return macOs ? "/Applications/Tailscale.app/Contents/MacOS/Tailscale" : "/usr/bin/tailscale";
     }
 
     private static void KillIfRunning(Process process)
@@ -51,29 +99,6 @@ internal sealed partial class ProcessTailscaleCli(string? configuredCommand = nu
         }
     }
 
-    /// <inheritdoc />
-    public Task<ITailscaleChild> StartAsync(IReadOnlyList<string> args, CancellationToken cancellationToken)
-    {
-        Process process = Launch(args);
-        Channel<string> lines = Channel.CreateUnbounded<string>();
-        process.OutputDataReceived += (_, e) => Forward(lines, e.Data);
-        process.ErrorDataReceived += (_, e) => Forward(lines, e.Data);
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-        return Task.FromResult<ITailscaleChild>(new Child(process, lines));
-    }
-
-    [LibraryImport("kernel32.dll", EntryPoint = "CreateJobObjectW", StringMarshalling = StringMarshalling.Utf16)]
-    private static partial nint CreateJobObject(nint attributes, string? name);
-
-    [LibraryImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool SetInformationJobObject(nint job, int informationClass, ref ExtendedLimit information, uint length);
-
-    [LibraryImport("kernel32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool AssignProcessToJobObject(nint job, nint process);
-
     private static void Forward(Channel<string> lines, string? data)
     {
         if (data is not null)
@@ -82,36 +107,8 @@ internal sealed partial class ProcessTailscaleCli(string? configuredCommand = nu
         }
     }
 
-    private static nint CreateKillOnCloseJob()
-    {
-        nint job = CreateJobObject(0, null);
-        if (job == 0)
-        {
-            return 0;
-        }
-
-        ExtendedLimit information = default;
-        information.LimitFlags = JobObjectLimitKillOnJobClose;
-        return SetInformationJobObject(job, JobObjectExtendedLimitInformation, ref information, (uint)Marshal.SizeOf<ExtendedLimit>()) ? job : 0;
-    }
-
     private static string DefaultPath()
         => DefaultPath(OperatingSystem.IsWindows(), OperatingSystem.IsMacOS(), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
-
-    /// <summary>Where the Tailscale installer puts the CLI on each platform.</summary>
-    /// <param name="windows">Whether the host is Windows.</param>
-    /// <param name="macOs">Whether the host is macOS.</param>
-    /// <param name="programFiles">The Program Files folder, used on Windows.</param>
-    /// <returns>The default path of the Tailscale CLI.</returns>
-    internal static string DefaultPath(bool windows, bool macOs, string programFiles)
-    {
-        if (windows)
-        {
-            return Path.Combine(programFiles, "Tailscale", "tailscale.exe");
-        }
-
-        return macOs ? "/Applications/Tailscale.app/Contents/MacOS/Tailscale" : "/usr/bin/tailscale";
-    }
 
     private static string? FromPath()
     {
@@ -131,50 +128,7 @@ internal sealed partial class ProcessTailscaleCli(string? configuredCommand = nu
     private Process Launch(IReadOnlyList<string> args)
     {
         string executable = FromPath() ?? (File.Exists(DefaultPath()) ? DefaultPath() : configuredCommand) ?? "tailscale";
-        ProcessStartInfo info = new(executable)
-        {
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-        };
-        foreach (string arg in args)
-        {
-            info.ArgumentList.Add(arg);
-        }
-
-        Process process = Process.Start(info) ?? throw new InvalidOperationException("tailscale did not start.");
-        if (OperatingSystem.IsWindows() && Job.Value != 0)
-        {
-            _ = AssignProcessToJobObject(Job.Value, process.Handle);
-        }
-
-        return process;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ExtendedLimit
-    {
-        public long PerProcessUserTimeLimit;
-        public long PerJobUserTimeLimit;
-        public uint LimitFlags;
-        public nuint MinimumWorkingSetSize;
-        public nuint MaximumWorkingSetSize;
-        public uint ActiveProcessLimit;
-        public nuint Affinity;
-        public uint PriorityClass;
-        public uint SchedulingClass;
-        public ulong ReadOperationCount;
-        public ulong WriteOperationCount;
-        public ulong OtherOperationCount;
-        public ulong ReadTransferCount;
-        public ulong WriteTransferCount;
-        public ulong OtherTransferCount;
-        public nuint ProcessMemoryLimit;
-        public nuint JobMemoryLimit;
-        public nuint PeakProcessMemoryUsed;
-        public nuint PeakJobMemoryUsed;
+        return Process.Start(BuildStartInfo(executable, args)) ?? throw new InvalidOperationException("tailscale did not start.");
     }
 
     private sealed class Child : ITailscaleChild
