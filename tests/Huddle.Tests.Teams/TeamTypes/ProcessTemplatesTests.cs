@@ -211,4 +211,46 @@ public sealed partial class ProcessTemplatesTests
         Assert.NotEmpty(roles);
         Assert.All(roles, role => Assert.Contains(role, manifestRoles));
     }
+
+    /// <summary>#536: every Development process tells QA to drive a UI acceptance in a browser, and tells the manager to do the same when no QA Engineer is hired.</summary>
+    /// <param name="processId">The process id.</param>
+    [Theory]
+    [InlineData("lightweight-flow")]
+    [InlineData("spec-driven")]
+    [InlineData("sprints")]
+    [InlineData("maintenance")]
+    public void Process_Verify_DrivesAWebUiInABrowser(string processId)
+    {
+        ProcessFile file = LoadProcess(processId);
+        string text = string.Join(' ', file.Body);
+
+        Assert.Contains("drives it in a browser (the browser-check Skill)", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#536: the QA Engineer and Development Manager personas carry the browser-check sentence, so a hired Agent is told to read the Skill.</summary>
+    [Fact]
+    public void Personas_QaAndManager_PointAtTheBrowserCheckSkill()
+    {
+        string qa = ReadPersona("qa-engineer");
+        string manager = ReadPersona("development-manager");
+
+        Assert.Contains("When the acceptance names a web page or a UI, drive it in a browser and record what you did as Evidence: read your browser-check Skill and follow it. If you cannot, say in the Evidence line that the verify is partial.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("When no QA Engineer is hired, you verify each acceptance line yourself. When it names a web page or a UI, drive it in a browser with your browser-check Skill and record what you did as Evidence.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>Reads an embedded hiring-pool persona file, so the test sees the text that ships.</summary>
+    /// <param name="personaId">The persona id, which is the file name without <c>.md</c>.</param>
+    /// <returns>The raw file text.</returns>
+    private static string ReadPersona(string personaId)
+    {
+        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
+        string target = "HiringPool/personas/" + personaId + ".md";
+        string? resource = assembly.GetManifestResourceNames().SingleOrDefault(n => n.Replace('\\', '/') == target);
+        Assert.NotNull(resource);
+        using Stream? stream = assembly.GetManifestResourceStream(resource);
+        Assert.NotNull(stream);
+        using StreamReader reader = new(stream);
+        return reader.ReadToEnd();
+    }
 }

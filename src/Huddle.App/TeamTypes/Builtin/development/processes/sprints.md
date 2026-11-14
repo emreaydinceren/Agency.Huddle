@@ -22,7 +22,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 1. **Plan**: the manager sets the sprint goal and chooses the Tasks. Done when each Task has an acceptance line and an assignee.
 2. **In progress**: the developer works the Task and its tests. Done when the build and the tests pass locally.
 3. **Review**: a reviewer reads the diff. Done when no open finding remains.
-4. **Verify**: QA checks the acceptance line and posts an Evidence line. Done when that line exists.
+4. **Verify**: QA checks the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists.
 5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
@@ -37,7 +37,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 
 - No `tech-lead`: the manager breaks each goal into Tasks itself.
 - No `reviewer`: the manager reviews the diff before it is merged.
-- No `qa-engineer`: the manager verifies the acceptance line and posts the Evidence line. The Done gate still needs that Evidence line.
+- No `qa-engineer`: the manager verifies the acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
 ## Gates

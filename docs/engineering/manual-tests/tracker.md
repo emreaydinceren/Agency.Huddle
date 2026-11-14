@@ -1174,6 +1174,7 @@ Second Brain from zero: three Teams hired by hand, documents ingested into memor
 | [ZERO-26](second-brain-zero.md#zero-26--a-request-carries-work-between-teams) | 💰 | Pass |  | rerun 2026-11-06 at `108dfef8`, every Agent on Sonnet; early merge and early close not exercised, see the Run log |
 | [ZERO-27](second-brain-zero.md#zero-27--find-it-all-and-add-up-the-cost) |  | Fail |  | run 2026-11-05, Task search matches titles only, see the Run log |
 | [ZERO-28](second-brain-zero.md#zero-28--the-chief-of-staff-asks-a-manager-and-the-question-task-ends-closed) | 💰 |  | #535 | not run yet |
+| [ZERO-29](second-brain-zero.md#zero-29--qa-drives-the-ui-in-a-browser-and-reports-a-planted-bug) | 💰 | Pass | #536 | run 2026-11-14 in an isolated lane with a fresh Dev Team on Sonnet, not the ZERO-12 Team, see the Run log |
 
 ## doc-history
 

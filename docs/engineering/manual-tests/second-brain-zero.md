@@ -5,7 +5,7 @@ documents to learn, and prove those documents became lasting memory that later s
 also builds a small working app. This page is for a Human running the whole product end to end. Every chat text is
 ready to paste and nothing is seeded.
 
-**28 tests** · 3 free, 25 paid · budget about 8.0 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
+**29 tests** · 3 free, 26 paid · budget about 8.3 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
 all 27 on 2026-11-05, on Route B, with Route A tested separately: ZERO-01 to ZERO-16 at `50f223af` and ZERO-17 to
 ZERO-27 at `365cd12f`, after #384, which changes only the Chief of Staff's capture text and the Team Memory Helper's
 prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13). On 2026-11-05 ZERO-12, 14, 15 and 26 were rerun on the script's models, ZERO-15 needed three product fixes and ZERO-26 is unresolved (#403), and the rerun cost about 13 USD.
@@ -1096,6 +1096,32 @@ Needs the Dev Team from ZERO-12 to ZERO-15, with Devon as its manager. It covers
 
 **Pass if**: the Task ends Closed, in `_tasks\_closed`, with the answer in its Evidence section, and the Human closed nothing.
 **Fail if**: the Human must close the Task, the Task stays open after the answer was relayed, or its Evidence section holds no answer.
+
+### ZERO-29 — QA drives the UI in a browser and reports a planted bug
+
+**Paid** 💰 · about 20 min
+
+Needs the Dev Team from ZERO-12 to ZERO-15 and its web UI; every Agent on Sonnet at least. It covers #536 (the QA Engineer checks a UI acceptance in a browser). On 2026-11-14 it passed in an isolated lane with a fresh Dev Team, not the ZERO-12 one; see the Run log.
+
+1. In the app's repository, on a new branch, plant a UI bug: change the Add or Save button so its click handler does nothing. Commit it on that branch and note the branch name.
+2. Create a Task assigned to the QA Engineer that names the branch and whose acceptance names that button in the UI, for example `Clicking Add puts the new item in the list`. Do not tell the QA how to check it.
+3. Watch the Dev Team Room and the Task. The QA should set up Playwright, start the app on localhost, drive the page and add an Evidence line. Do not touch the Task. If nothing has happened after five minutes, in the **Dev Team** Team Room send this, with the QA's real name:
+
+   ```text
+   @amara You have a Task with a UI acceptance. Please verify it.
+   ```
+
+4. Read the Task's Evidence section, then check the worktree is clean:
+
+   ```powershell
+   (Get-Content <the Task file> -Raw) -replace '(?s)^.*?(?=## Evidence)', ''
+   git -C <the worktree> status --short
+   ```
+
+**Expect**: an Evidence line whose command is `node check.mjs`, with a non-zero exit code, and a note that names the failing step and the browser (for example msedge). Playwright was installed outside the repository, so `git status` in the worktree prints nothing. The QA sends the Task back to the developer and does not mark it passed.
+
+**Pass if**: the Evidence records a real browser check that failed on the planted bug, and the worktree is clean.
+**Fail if**: the QA records a pass, checks only over HTTP, installs Playwright inside the repository, or records a browser check it did not run.
 
 ## Starting over
 

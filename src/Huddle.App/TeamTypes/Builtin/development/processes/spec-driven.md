@@ -22,7 +22,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 2. **Approved**: the human approves the spec Task. Done when the approval is recorded on it.
 3. **Break down**: the tech lead splits the spec into build Tasks, each with an acceptance line. Done when every build Task has one.
 4. **Build**: the developer writes the change and its tests against the spec. Done when the build and the tests pass locally.
-5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. Done when both are recorded.
+5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded.
 6. **Done**: the manager moves the build Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
@@ -38,7 +38,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 
 - No `tech-lead`: the manager writes the spec and does the breakdown itself.
 - No `reviewer`: the manager reviews the diff against the spec.
-- No `qa-engineer`: the manager verifies each acceptance line and posts the Evidence line. The Done gate still needs that Evidence line.
+- No `qa-engineer`: the manager verifies each acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
 ## Gates
