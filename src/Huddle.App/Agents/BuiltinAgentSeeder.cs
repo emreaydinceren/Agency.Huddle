@@ -15,7 +15,9 @@ namespace Agency.Huddle.App.Agents;
 /// </summary>
 /// <remarks>
 /// Runs regardless of <c>Team:Acp:Enabled</c> - writing a file is free; only starting a session
-/// spends. Never reverts an edit: only an absent marker, or an untouched earlier shipped version (see <see cref="BuiltinAgentVersions"/>), triggers a write, and the check runs
+/// spends. An existing Chief's model and effort are left alone, with one exception: a Chief still on
+/// the old seeded default (model <c>haiku</c>, no effort) is moved once to <c>opus</c> at <c>medium</c>
+/// (issue 560); a marker file in the data folder makes that happen once. Never reverts an edit: only an absent marker, or an untouched earlier shipped version (see <see cref="BuiltinAgentVersions"/>), triggers a write, and the check runs
 /// once, at startup, never on <c>PersonaRemoved</c> (Spec §6.12 Constraints). A failed write -
 /// no free (Name, Alias) pair within <see cref="MaxFreeNameAttempts"/> attempts, or
 /// <see cref="PersonaStore.Add"/> itself throwing - logs an Error and lets startup continue
@@ -41,12 +43,24 @@ internal sealed class BuiltinAgentSeeder(
 
     /// <summary>
     /// The model a newly created Chief of Staff starts on, in the id the Model picker stores for the
-    /// Claude Adapter (the same name <c>TeamMemoryHelper</c> uses). The greeting runs at the first
-    /// launch, before a Human can open the Agents page, and on the account's default model it cost 0.33 USD.
-    /// Only a Chief created here gets it: an existing one, with or without a stored model, is never
-    /// touched, and the Human can change or clear it afterwards.
+    /// Claude Adapter. The owner decided (2026-11-14, issue 560) that the Chief of Staff, the Human's
+    /// front door, runs on Opus at medium effort. The first-launch greeting therefore costs more than
+    /// it did on Haiku (0.33 USD on the account default, under 0.01 USD on Haiku). The Human can change
+    /// or clear it afterwards.
     /// </summary>
-    private const string GreetingModel = "haiku";
+    private const string DefaultModel = "opus";
+
+    /// <summary>The effort a newly created Chief of Staff starts on, in the id the Effort picker stores (issue 560).</summary>
+    private const string DefaultEffort = "medium";
+
+    /// <summary>
+    /// The model earlier builds seeded (issue 390). An existing Chief still on exactly this model with
+    /// no stored effort is moved once to <see cref="DefaultModel"/> and <see cref="DefaultEffort"/>.
+    /// </summary>
+    private const string OldDefaultModel = "haiku";
+
+    /// <summary>The file in the data folder that records the one-time move has been decided.</summary>
+    private const string ModelMovedMarkerFile = "chief-of-staff-model-moved.txt";
 
     /// <summary>
     /// How many <c>(Name, Alias)</c> pairs the free-name search tries before giving up. Spec §8.6
@@ -68,6 +82,7 @@ internal sealed class BuiltinAgentSeeder(
         if (existing is not null)
         {
             this.UpdateExisting(existing);
+            this.MoveOldDefaultModelOnce(existing.Name);
             return Task.CompletedTask;
         }
 
@@ -90,17 +105,21 @@ internal sealed class BuiltinAgentSeeder(
 
         try
         {
-            personas.Add(identity, body, model: GreetingModel, effort: null);
+            personas.Add(identity, body, model: DefaultModel, effort: DefaultEffort);
         }
         catch (ChatException ex)
         {
             logger.LogError(ex, "Could not seed the Chief of Staff '{Name}': {Reason}.", identity.Name, ex.Message);
+            return Task.CompletedTask;
         }
         catch (IOException ex)
         {
             logger.LogError(ex, "Could not seed the Chief of Staff '{Name}': {Reason}.", identity.Name, ex.Message);
+            return Task.CompletedTask;
         }
 
+        // A Chief seeded here is already on the new default, so the one-time move is decided too.
+        this.WriteModelMovedMarker(identity.Name);
         return Task.CompletedTask;
     }
 
@@ -139,6 +158,64 @@ internal sealed class BuiltinAgentSeeder(
         catch (Exception ex) when (ex is ChatException or IOException or UnauthorizedAccessException)
         {
             logger.LogError(ex, "Could not update the Chief of Staff '{Name}': {Reason}.", entry.Name, ex.Message);
+        }
+    }
+
+    /// <summary>Where the one-time move's marker lives, in the data folder.</summary>
+    private string ModelMovedMarkerPath => Path.Combine(personas.Paths.DataDir, ModelMovedMarkerFile);
+
+    /// <summary>
+    /// Moves an existing Chief of Staff from the old seeded default (model <c>haiku</c>, no effort) to
+    /// <c>opus</c> at <c>medium</c>, once (issue 560). A Chief with any other model or an effort is the
+    /// Human's choice and stays. The marker file is written whether or not anything moved, so a later
+    /// start never moves it again; its absence is the only trigger. Work Mode is preserved.
+    /// </summary>
+    /// <param name="name">The Chief of Staff's current Name.</param>
+    private void MoveOldDefaultModelOnce(string name)
+    {
+        try
+        {
+            if (File.Exists(this.ModelMovedMarkerPath))
+            {
+                return;
+            }
+
+            var persona = personas.Get(name);
+            if (persona is not null
+                && string.Equals(persona.Model, OldDefaultModel, StringComparison.Ordinal)
+                && persona.Effort is null)
+            {
+                _ = personas.Update(name, persona.Text, DefaultModel, DefaultEffort, persona.WorkMode);
+                if (logger.IsEnabled(LogLevel.Information))
+                {
+                    logger.LogInformation("Moved the Chief of Staff '{Name}' from the old default model to Opus at medium effort.", name);
+                }
+            }
+
+        }
+        catch (Exception ex) when (ex is ChatException or IOException or UnauthorizedAccessException)
+        {
+            logger.LogError(ex, "Could not move the Chief of Staff '{Name}' to the new default model: {Reason}.", name, ex.Message);
+            return;
+        }
+
+        this.WriteModelMovedMarker(name);
+    }
+
+    /// <summary>
+    /// Records that the one-time move is decided, so no later start moves the Chief of Staff again. A
+    /// failed write logs an Error and lets startup continue; the next start then decides again.
+    /// </summary>
+    /// <param name="name">The Chief of Staff's current Name, for the log line.</param>
+    private void WriteModelMovedMarker(string name)
+    {
+        try
+        {
+            AtomicFile.WriteText(this.ModelMovedMarkerPath, "done");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            logger.LogError(ex, "Could not record the Chief of Staff '{Name}' model move as done: {Reason}.", name, ex.Message);
         }
     }
 

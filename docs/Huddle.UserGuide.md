@@ -974,6 +974,13 @@ vendor from the role it must differ from, and then looks for the model with
 `Team:Teams:Tiers:<adapter>:<tier>` in your configuration. With no entry for that adapter and tier, the adapter's default model is used. A
 mapped model the adapter does not list is ignored in the same way.
 
+The Chief of Staff is not hired for a role. A new install creates it on **Opus** at
+**medium** effort, so its first Greeting is billed on Opus: about 0.33 USD when last measured, against under
+0.01 USD on Haiku. An
+install whose Chief of Staff was still on the earlier default, Haiku with no effort, moves
+to Opus at medium once, at the next start. A model or effort you chose stays, and you can
+change it on the Chief of Staff's card at any time.
+
 ### Running an Agent on Haiku
 
 Haiku is the cheapest model, and every Second Brain flow works on it. These were checked by hand on 2026-11-03: filing a
