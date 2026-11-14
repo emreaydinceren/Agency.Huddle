@@ -5,7 +5,7 @@ documents to learn, and prove those documents became lasting memory that later s
 also builds a small working app. This page is for a Human running the whole product end to end. Every chat text is
 ready to paste and nothing is seeded.
 
-**27 tests** · 3 free, 24 paid · budget about 7.8 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
+**28 tests** · 3 free, 25 paid · budget about 8.0 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
 all 27 on 2026-11-05, on Route B, with Route A tested separately: ZERO-01 to ZERO-16 at `50f223af` and ZERO-17 to
 ZERO-27 at `365cd12f`, after #384, which changes only the Chief of Staff's capture text and the Team Memory Helper's
 prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13). On 2026-11-05 ZERO-12, 14, 15 and 26 were rerun on the script's models, ZERO-15 needed three product fixes and ZERO-26 is unresolved (#403), and the rerun cost about 13 USD.
@@ -1062,6 +1062,40 @@ Nobody normally tries to close it early. If no Agent does, record that clause as
 
 **Pass if**: each search finds its item, and you recorded the Spending amounts for all three Teams and the Total in the Run log's Notes.
 **Fail if**: an item that exists on disk cannot be found, or the Feed shows Message text.
+
+### ZERO-28 — The Chief of Staff asks a manager and the question Task ends Closed
+
+**Paid** 💰 · about 12 min
+
+Needs the Dev Team from ZERO-12 to ZERO-15, with Devon as its manager. It covers #534 (the Chief of Staff searches before it asks) and #535 (a question Task ends Closed). The 2026-11-05 run did not include it, and it has not been run yet.
+
+1. In the Chief of Staff's one-to-one Room, send a question whose answer is recorded nowhere, so the Chief of Staff has to ask the Dev Team:
+
+   ```text
+   After v1 of the app, what does the Dev Team plan next, and does its manager think it is safe for the family to use on the home PC?
+   ```
+
+2. Watch the Room. The Chief of Staff should first search the Rooms and Tasks it can see, then create a Task assigned to Devon that asks the question. Do not answer for Devon and do not touch the Task.
+3. Devon wakes, answers on the Task and closes it. Wait for the Chief of Staff to pass the answer on in the Room. If nothing has happened after five minutes, in the **Dev Team** Team Room send:
+
+   ```text
+   @devon You have a Task from the Chief of Staff that asks a question. Please answer it.
+   ```
+
+4. In `T-B`, find the Task, check which folder it is in, and read its Evidence section:
+
+   ```powershell
+   $hit = Get-ChildItem "$data\Teams\Dev Team\_tasks" -Recurse -Filter *.md | Select-String -Pattern 'home PC' -List
+   $hit | ForEach-Object Path
+   $path = @($hit)[0].Path
+   $path -like '*\_tasks\_closed\*'
+   (Get-Content $path -Raw) -replace '(?s)^.*?(?=## Evidence)', ''
+   ```
+
+**Expect**: the Chief of Staff searched before it asked. The Task was created by the Chief of Staff and assigned to Devon. Devon's answer is an Evidence line (the `add_evidence` note) and he closed the Task with `close_task`. The Chief of Staff relays the answer in the Room. The path printed is under `Teams\Dev Team\_tasks\_closed\`, the `-like` line prints `True`, and the Evidence section holds the answer. Status `To Do` on the closed Task is acceptable.
+
+**Pass if**: the Task ends Closed, in `_tasks\_closed`, with the answer in its Evidence section, and the Human closed nothing.
+**Fail if**: the Human must close the Task, the Task stays open after the answer was relayed, or its Evidence section holds no answer.
 
 ## Starting over
 

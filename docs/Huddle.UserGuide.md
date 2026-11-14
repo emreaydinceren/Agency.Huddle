@@ -2357,8 +2357,8 @@ invalid Skill is listed under **Problems** with the reason.
 ### Changing a built-in Skill
 
 Huddle ships seven Skills: `team-building` and `team-rollup`, used by the Chief of
-Staff, `team-management`, used by Team managers to see other Teams, handle Requests
-and propose Sprints, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
+Staff, `team-management`, used by Team managers to see other Teams, handle Requests,
+answer and close a Task that only asks a question, and propose Sprints, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
 and `brain-check`, which keep a [Second Brain](#keeping-it-tidy) tidy. To change one,
 create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
 same name in it, for example `onboarding.md`. Your file replaces that one file; the
