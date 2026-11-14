@@ -86,7 +86,7 @@ internal sealed class AddEvidenceTool(
         string cleanNote = Clean(note);
         if (cleanCommand.Length == 0 && cleanNote.Length == 0)
         {
-            return "Give a command or a note.";
+            return this.NothingToAddRefusal(arguments);
         }
 
         if (!TryReadExplicitLogRef(cleanCommand, logRef, out string? logPath, out int? logLine))
@@ -109,6 +109,34 @@ internal sealed class AddEvidenceTool(
         return result is TaskResult.Saved saved
             ? $"Added evidence to {saved.Task.Id}."
             : TaskToolText.Refusal(result, this.Name);
+    }
+
+    /// <summary>
+    /// Builds the refusal for a call with neither a command nor a note: it names the right arguments and, when the call carried
+    /// keys the schema does not have, names those too. The known keys come from <see cref="InputSchema"/>, so they cannot drift.
+    /// </summary>
+    /// <param name="arguments">The tool arguments the call carried.</param>
+    private string NothingToAddRefusal(JsonObject arguments)
+    {
+        JsonObject? properties = this.InputSchema["properties"] as JsonObject;
+        List<string> unknown = [];
+        foreach (KeyValuePair<string, JsonNode?> argument in arguments)
+        {
+            if (properties is null || !properties.ContainsKey(argument.Key))
+            {
+                unknown.Add(argument.Key);
+            }
+        }
+
+        string names = string.Join(", ", unknown);
+        string naming = unknown.Count switch
+        {
+            0 => string.Empty,
+            1 => $" {this.Name} has no argument named {names}.",
+            _ => $" {this.Name} has no arguments named {names}.",
+        };
+
+        return $"Pass note for a remark where no command was run, or command with exitCode for a check you ran.{naming} Nothing was added.";
     }
 
     /// <summary>Reads the optional <c>exitCode</c> argument; <paramref name="exitCode"/> stays null when it is absent.</summary>
