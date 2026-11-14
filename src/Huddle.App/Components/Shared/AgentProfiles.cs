@@ -148,12 +148,30 @@ internal sealed class AgentProfiles(
             warm = this.StartWarm(persona.Adapter, persona.Model, persona.Effort);
         }
 
-        ProfileRuntime runtime = new(
-            (adapters.Find(persona.Adapter) ?? adapters.Default).DisplayName,
-            AgentProfiles.Describe(persona.Model, names.Model, DefaultModelText),
-            AgentProfiles.Describe(persona.Effort, names.Effort, DefaultEffortText));
-        return (runtime, warm);
+        return (this.Compose(persona.Adapter, persona.Model, persona.Effort, names), warm);
     }
+
+    /// <summary>
+    /// Reads out what an Adapter, Model and Effort selection runs on, from the cache only: it never
+    /// probes and never starts a warm-up. Build a team uses it for a draft that has no Persona yet.
+    /// </summary>
+    /// <param name="adapter">The chosen Adapter id, or null for the default.</param>
+    /// <param name="model">The chosen model id, or null.</param>
+    /// <param name="effort">The chosen effort id, or null.</param>
+    /// <returns>The three display strings.</returns>
+    public ProfileRuntime DescribeRuntime(string? adapter, string? model, string? effort) =>
+        this.Compose(adapter, model, effort, modelCatalog.PeekRuntime(adapter, model, effort));
+
+    /// <summary>Builds the three display strings from already-peeked names.</summary>
+    /// <param name="adapter">The chosen Adapter id, or null for the default.</param>
+    /// <param name="model">The chosen model id, or null.</param>
+    /// <param name="effort">The chosen effort id, or null.</param>
+    /// <param name="names">What the model catalog's cache holds for them.</param>
+    /// <returns>The three display strings.</returns>
+    private ProfileRuntime Compose(string? adapter, string? model, string? effort, RuntimeNames names) => new(
+        (adapters.Find(adapter) ?? adapters.Default).DisplayName,
+        AgentProfiles.Describe(model, names.Model, DefaultModelText),
+        AgentProfiles.Describe(effort, names.Effort, DefaultEffortText));
 
     /// <summary>The text for one Model or Effort: the chosen id's name (or the id), else the default's name marked as such, else <paramref name="fallback"/>.</summary>
     /// <param name="chosen">The id the Persona chose, or null.</param>

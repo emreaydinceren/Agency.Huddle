@@ -504,10 +504,11 @@
         return departing ? "Will leave the Team when you save" : null;
     }
 
-    /// <summary>Maps a roster draft to the data its <see cref="ProfileCard"/> draws: the status dot only for a saved member, the tier only once a role is chosen.</summary>
+    /// <summary>Maps a roster draft to the data its <see cref="ProfileCard"/> draws: the status dot only for a saved member, the tier only once a role is chosen, and the Adapter, Model and Effort the draft stores (read from the model catalog's cache, so an unpicked one reads as the default) when <see cref="AgentProfiles"/> is registered.</summary>
     /// <param name="draft">The roster card's draft.</param>
     private AgentProfile ProfileOf(DraftMember draft) => new(draft.Name, draft.Title, draft.Description, draft.Avatar)
     {
+        Runtime = this.Services.GetService<AgentProfiles>()?.DescribeRuntime(draft.Adapter, draft.Model, draft.Effort),
         State = draft.Existing && this.MemberState is { } stateOf ? stateOf(draft.Name) : null,
         Tier = draft.RoleId.Length > 0 ? TierOfModel.Of(draft.Tier, draft.Model, this.HireContext.TierMap) : null,
         SkillNames = [.. draft.Skills.Select(static skill => skill.Name)],
