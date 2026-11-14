@@ -319,8 +319,8 @@ public sealed class SidebarDensityTests
         ctx.Services.AddSingleton(sp => new Agency.Huddle.App.Tasks.Views.ViewStore(sp.GetRequiredService<TempDataDir>().Options(), NullLogger<Agency.Huddle.App.Tasks.Views.ViewStore>.Instance));
         ctx.Services.AddSingleton(TestOptions.Create());
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
         return ctx;
     }
 

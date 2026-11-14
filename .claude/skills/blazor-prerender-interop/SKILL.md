@@ -64,24 +64,44 @@ Pick the first row that fits:
 
 ## JS interop: the house way
 
-**Direction (owner, 2026-11-13): modules, not globals.** Today Huddle's JS lives in
-`src/Huddle.App/wwwroot/app.js` (plus feature files such as `task-list-resize.js`, all loaded by `<script>` tags in
-`App.razor`) as named global objects: `window.huddleSidebar`, `huddleSearch`, `huddleStorage`, `huddleTabs`,
-`huddleFeed` and so on. The owner has agreed to move to ES modules (a collocated `Component.razor.js`, or a shared
-module under `wwwroot/` for code several components use), loaded with
-`IJSRuntime.InvokeAsync<IJSObjectReference>("import", path)` inside a typed wrapper.
+**Modules, not globals (owner, 2026-11-13).** Every piece of the app's JS is an ES module in
+`src/Huddle.App/wwwroot/`; there is no `app.js` and no `<script>` tag for app code. Shared modules (`composer.js`,
+`scroll.js`, `storage.js`, `clipboard.js` and the rest) each have a `JsModule` instance
+(`Components/Shared/JsModule.cs`), which imports them once per circuit and caches the reference; `Circuits/JsModulePreloader` imports them all when
+the circuit opens, before the first render. Without that, a first-render call would wait for its import, and a
+component disposed meanwhile hands the module a disposed `DotNetObjectReference` or a removed element: on a first
+load that killed the circuit. The preload is what closes that window. It waits at most 5 s, so a module whose fetch
+stalls past that is imported on first use and the window reopens for it: `BrowserCall`'s module overloads drop a
+disposed `DotNetObjectReference`, but a removed element still reaches the module as `null` and throws `JSException`.
+A module that one component owns (`library-editor.js`, `theme-lab.js`) may be imported by that
+component directly.
 
-- **New JS** is a module with `export`ed functions, never a new `window.huddleX` object or `<script>` tag.
-- **Existing globals** move in their own change, one namespace at a time, together with their C# callers and the
-  bUnit `JSInterop.Setup` calls that name them. Do not half-move a namespace inside a feature change.
-- Until a namespace has moved, a component that uses it keeps calling it as it does today.
+```csharp
+try
+{
+    IJSObjectReference feed = await JsModule.Feed.ImportAsync(this.Js, ct);   // cached: one round trip per call
+    return await feed.InvokeAsync<bool>("isScrolled", ct, this.root);
+}
+catch (JSDisconnectedException)
+{
+    return false;
+}
+```
+
+- **New JS** is an `export` in a module, never a `window.*` object. A new shared module gets a `JsModule` entry
+  (and lands in `JsModule.All`, so it is preloaded and registered in `MudBunitContext`).
+- **Keep the call inside your own try/catch.** `BL0016` checks the `IJSObjectReference` call at the call site, which
+  is why `JsModule` hands out the reference instead of wrapping the call. `BrowserCall`'s module overloads do the
+  catch for the "gone circuit is nothing to do" case.
+- **Never dispose the reference** `ImportAsync` returns: every caller on the circuit shares it.
+- **bUnit:** `ctx.Module(JsModule.X).Setup<T>("fn")`, never a second `SetupModule` for the same path.
 
 Rules that hold either way:
 
 - **No JS before the circuit.** Call JS from `OnAfterRenderAsync(firstRender)` or an event handler, never from
   `OnInitialized*`, `OnParametersSet*` or a constructor. For a parameter change, set a flag in `OnParametersSet`
   and act on it in `OnAfterRenderAsync`.
-- **Wrap, don't scatter.** A component does not call `huddleStorage.get` itself; it calls `BrowserStorage`
+- **Wrap, don't scatter.** A component does not call `storage.js` itself; it calls `BrowserStorage`
   (`Components/Shared/BrowserStorage.cs`), which already swallows a gone circuit, blocked storage and prerender.
   Check `UXDesignGuidelines.md`'s helper catalog for a wrapper before adding one. A new wrapper keeps
   the JS identifiers in `const` fields, not string literals at call sites.
@@ -99,5 +119,5 @@ Rules that hold either way:
 - **`ElementReference` over element ids.** Pass `@ref` values, not `document.getElementById` strings.
 - **CSS before JS.** Anything a custom property, `data-` attribute or pseudo-class can do stays in CSS.
 
-`agents/BlazorTesting.md` covers asserting JS calls in bUnit (`ctx.JSInterop`), and why a server-rendered HTML
+`agents/BlazorTesting.md` covers asserting JS calls in bUnit (`ctx.Module(...)`), and why a server-rendered HTML
 test sees the prerender rather than the interactive page.

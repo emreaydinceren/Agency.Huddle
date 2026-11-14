@@ -223,8 +223,8 @@ Agent takes a single action.
 | `Components/Layout/MainLayout.razor` (between :22 and :23) | `<TaskViewNav />` | §13.1 |
 | `Services/MarkdownRenderer.cs` | Recognise Task ids in rendered text and link them; allow the `/tasks/item/` link prefix through `IsSafe` | §13.13.2 |
 | `Components/Shared/MessageList.razor` (:13 and :24, both `ToHtml` calls) | Inject `TaskStore` and pass it to `MarkdownRenderer.ToHtml` as the resolver | §13.13.2 |
-| `Components/Shared/Composer.razor`, `wwwroot/app.js` (`teamComposer`) | The `#` Task picker | §13.13.4 |
-| `wwwroot/app.js` | `window.huddleStorage` get/set | §13.9 |
+| `Components/Shared/Composer.razor`, `wwwroot/composer.js` | The `#` Task picker | §13.13.4 |
+| `wwwroot/storage.js` | `get`/`set` for `localStorage` (through `BrowserStorage`) | §13.9 |
 | `wwwroot/app.css` | Task styles, using `--mud-*` variables only | §13.10 |
 | Golden files, `PromptGoldenTests.cs` (:59-82), `PromptDefaultsTests.cs` (:31-42), `ToolNamesTests.cs` | Regenerate or extend | §16 |
 
@@ -236,7 +236,7 @@ No package is added, so `Directory.Packages.props` doesn't change.
 | --- | --- | --- |
 | `ServiceCollectionExtensions.cs` | WS3 (TaskService) registers every Tasks singleton at once, with stubs if needed | Hand WS3 the line you need |
 | `PromptCatalog.cs`, `prompts.default.json`, goldens | WS5 (App Tools) | WS4's `task.wake.message` is added by WS5, and WS4 reads it by key |
-| `app.css`, `app.js` | WS7 (UI shell) | Later UI workstreams append to their own clearly marked `/* Tasks: … */` blocks. WS11 extends `teamComposer` in place, because the picker changes its Enter handling |
+| `app.css`, `wwwroot/*.js` modules | WS7 (UI shell) | Later UI workstreams append to their own clearly marked `/* Tasks: … */` blocks. WS11 extends `composer.js` in place, because the picker changes its Enter handling |
 | `MarkdownRenderer.cs`, `MessageList.razor`, `Composer.razor` | WS11 | Shared with the chat. Keep every existing `MarkdownRendererTests` test passing unchanged |
 | `MainLayout.razor` | WS7 | — |
 
@@ -1410,9 +1410,9 @@ release).
   View under a default name ("New view", "New view 2", and so on) and opens it; the Human renames it from
   the ⋮ menu.
 - **`/tasks` with no ViewId:** during prerender, render *All Tasks*. In
-  `OnAfterRenderAsync(firstRender)`, read `huddle.tasks.lastView` through `huddleStorage.get`
+  `OnAfterRenderAsync(firstRender)`, read `huddle.tasks.lastView` through `BrowserStorage.TryGetAsync`
   (§13.9). If it names an existing View, `NavigateTo($"/tasks/{id}", replace: true)`.
-- **On every render of `/tasks/{ViewId}`**, write that id with `huddleStorage.set`. Do this in
+- **On every render of `/tasks/{ViewId}`**, write that id with `BrowserStorage.TrySetAsync`. Do this in
   `OnAfterRenderAsync`, never during prerender.
 - **An unknown ViewId** shows a `MudAlert Severity.Warning role="status"` reading *"That View no
   longer exists."*, with a link to All Tasks.
@@ -1760,22 +1760,25 @@ again only when every conflicting field has been resolved.
   icon slot holds `MudProgressCircular Indeterminate="true" Size="Size.Small"`. There's no custom
   pulse animation or CSS for it.
 
-### 13.9 Browser storage — `wwwroot/app.js`
+### 13.9 Browser storage — `wwwroot/storage.js`
 
-Append the following. Every access is wrapped, because storage can throw in private windows:
+The module is `wwwroot/storage.js` (`JsModule.Storage`). Every access is wrapped, because storage can throw in private windows:
 
 ```js
-window.huddleStorage = {
+const storage = {
   get: function (key) { try { return window.localStorage.getItem(key); } catch { return null; } },
   set: function (key, value) { try { window.localStorage.setItem(key, value); } catch { } }
 };
+
+export const { get, set } = storage;
 ```
 
-- Call it with `JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView")`, **only** in
+- Call it with `BrowserStorage.TryGetAsync(this.JS, "huddle.tasks.lastView")`, **only** in
   `OnAfterRenderAsync` (the `Composer.razor:42-51` precedent), because prerender is on
   (`App.razor:24`).
-- Catch `JSDisconnectedException` and `JSException` and ignore them. The key is the only thing
-  stored.
+- `BrowserStorage` already swallows `JSDisconnectedException`, `JSException` and the prerender
+  `InvalidOperationException`, and reads any of them as "nothing remembered"; the caller adds no
+  catch of its own. The key is the only thing stored.
 
 ### 13.10 Styling
 
@@ -1869,10 +1872,10 @@ wire format:
   failed, show `Severity.Warning` with *"Couldn't copy. The id is selected; press Ctrl+C."* and
   select the text.
 
-**The helper, appended to `wwwroot/app.js`:**
+**The helper, `copy` in `wwwroot/clipboard.js` (`JsModule.Clipboard`, called through `ClipboardCopier`):**
 
 ```js
-window.huddleClipboard = {
+const clipboard = {
   // Returns true only when the text really reached the clipboard.
   copy: async function (text) {
     if (window.isSecureContext && navigator.clipboard) {
@@ -1887,6 +1890,8 @@ window.huddleClipboard = {
     return ok;
   }
 };
+
+export const { copy } = clipboard;
 ```
 
 > [!WARNING]
@@ -1894,9 +1899,10 @@ window.huddleClipboard = {
 > opened as `http://<host>:port` from another machine on the network, the modern API is simply
 > missing. The `execCommand("copy")` fallback is what makes the button work there, which is use case
 > T25. Both paths need the click's *user activation*: call
-> `JS.InvokeAsync<bool>("huddleClipboard.copy", id)` **directly from the click handler**, with no
+> `ClipboardCopier.TryCopyAsync(this.JS, id, ct)` **directly from the click handler**, with no
 > other `await` before it, so the Blazor Server round trip stays within the browser's activation
-> window.
+> window. The module is imported when the circuit opens (`JsModulePreloader`), so its import is
+> not an `await` that closes that window.
 
 The helper's `style` assignments are layout, not colour, so they don't conflict with the
 no-colour-literal rules.
@@ -1965,7 +1971,7 @@ returns to the Room.
 
 1. Parse the id. If it's invalid or unknown, show
    `MudAlert Severity.Warning role="status"` reading *"No task PLAT-0999."* over the last View.
-2. Otherwise, load the **last-opened View** (the same `huddleStorage` rule as `/tasks`, §13.2)
+2. Otherwise, load the **last-opened View** (the same `BrowserStorage` rule as `/tasks`, §13.2)
    and open the Task's **panel** (§13.6) on top of it. The Task doesn't need to match the View;
    the panel shows it regardless.
 3. A **Closed** Task opens the same way, with a *Closed* `MudChip` in the panel header.
@@ -1975,7 +1981,7 @@ returns to the Room.
 #### 13.13.4 The `#` Task picker in the composer
 
 The composer is a plain `<textarea>` (`Components/Shared/Composer.razor`). Its Enter key is handled
-in JavaScript: `teamComposer.attach` (`wwwroot/app.js:1-11`) sends on Enter and clears the box.
+in JavaScript: `attach` in `wwwroot/composer.js` sends on Enter and clears the box.
 There's no autocomplete in the app today, and MudBlazor has no mention-style picker for a textarea.
 So the picker is a **composition**: JavaScript watches the caret, and Blazor renders the list as a
 `MudPopover` holding a `MudList<TaskReference>`.
@@ -1987,7 +1993,7 @@ matches `(?:^|\s)#([A-Za-z0-9-]{0,40})$`:
 - `C#`, `a#b` and `# Heading` (a space after `#`) never match, so Markdown headings and ordinary
   `#` characters are unaffected, which is use case T24.
 
-**The JavaScript side**, extending `teamComposer` and keeping its current Enter behaviour when the
+**The JavaScript side**, extending `composer.js` and keeping its current Enter behaviour when the
 picker is closed:
 
 | Event | While the picker is **closed** | While the picker is **open** |
@@ -1999,7 +2005,7 @@ picker is closed:
 | `Escape` | Browser default | Close the picker and keep the typed text |
 | `blur` | — | Close the picker after 150 ms, so a mouse click on an item still lands |
 
-`teamComposer.insertTask(el, id)` replaces the `#query` token that ends at the caret with
+`insertReference(el, text)` in `composer.js` (this spec first called it `insertTask(el, id)`) replaces the `#query` token that ends at the caret with
 `PLAT-0042 ` (the id plus a space), puts the caret after it, and closes the picker. The `#` is not
 kept (D-33). The text sent is the plain id, the same as a paste.
 
@@ -2009,9 +2015,9 @@ kept (D-33). The text sent is the plain id, the same as a paste.
   closes it.
 - `[JSInvokable] Task MoveAsync(int delta)`: moves the highlight, wrapping around.
 - `[JSInvokable] Task<string?> PickAsync()`: returns the highlighted id to JavaScript, which calls
-  `insertTask`. With no matches it returns `null`, and JavaScript then does nothing, so a stray
+  `insertReference`. With no matches it returns `null`, and JavaScript then does nothing, so a stray
   Enter still doesn't send.
-- **A mouse click** on an item calls `JS.InvokeVoidAsync("teamComposer.insertTask", this.textarea, id)`.
+- **A mouse click** on an item calls `BrowserCall.InvokeVoidAsync(this.JS, JsModule.Composer, "insertReference", this.textarea, row.InsertText)`.
 - **The popover:** `MudPopover Open="@this.pickerOpen" AnchorOrigin="Origin.TopLeft"
   TransformOrigin="Origin.BottomLeft"` above the textarea. It holds a dense `MudList` whose items
   show `PLAT-0042`, the title (through `MudHighlighter` on the query) and a status `MudChip`
@@ -2233,7 +2239,7 @@ WS5 lands `task.wake.message` first.
 | TK-T12 | 6 | Functional | `ViewStoreTests`: an absent file gives the built-ins and no file is created; a malformed file sets `LoadError`, refuses `Save` and leaves the file byte-identical; an invalid entry is kept and flagged; atomic write; the watcher reloads; `RenameAgent`; built-in delete refused | §12.3 | Fails |
 | TK-I12 | 6 | Impl | `ViewStore`, plus the two `PersonaRenameCascade` calls (§9.6) | `AvatarStore.cs`, `PersonaRenameCascade.cs:112-155` | T12 green |
 | TK-T13 | 7 | bUnit | `TaskViewNavTests` lists Views and New View; `TasksPageTests` renders All Tasks in prerender (HTTP GET via `TeamWebApplicationFactory`); the `MudDataGrid` List hides the columns not in `Fields`, groups on two levels in `view.Grouping` order with `GroupLabel` labels, and a header click doesn't change the saved View; rejected and `LoadError` alerts have roles | §13.0-13.3a, §13.12 | Fails |
-| TK-I13 | 7 | Impl | `TaskViewNav` (`MudNavGroup`), `Tasks.razor`, `TaskToolbar` (`MudToolBar`), `TaskListView` (`MudDataGrid`), `TaskColors`, the `app.js` storage, the minimal `app.css` block, and `MainLayout` wiring. Settle the group-order note in §13.3a and record the answer in this spec | §13.0-13.3a | T13 green, `ThemeSourceTests` green |
+| TK-I13 | 7 | Impl | `TaskViewNav` (`MudNavGroup`), `Tasks.razor`, `TaskToolbar` (`MudToolBar`), `TaskListView` (`MudDataGrid`), `TaskColors`, the `storage.js` module, the minimal `app.css` block, and `MainLayout` wiring. Settle the group-order note in §13.3a and record the answer in this spec | §13.0-13.3a | T13 green, `ThemeSourceTests` green |
 | TK-T14 | 8 | bUnit | `TaskBoardTests`: columns from the View; ghost buckets appear only while dragging (bUnit can't drag. Start a drag with the container's public `StartTransaction(item, zoneId, index, Func<Task> commit, Func<Task> cancel)` and end it with `CancelTransaction()`. Check first that these raise `TransactionStarted` and `TransactionEnded`; if they don't, test through the component's own `OnDragStarted` and `OnDragEnded` handlers); a drop on Duplicate opens the picker and cancel saves nothing; Move to menu parity; cross-lane drops refused; hidden count | §13.4 | Fails |
 | TK-I14 | 8 | Impl | `TaskBoard`, `TaskCard`, `DuplicatePickerDialog`, `ReasonDialog` | §13.4 | T14 green |
 | TK-T15 | 9 | bUnit | `FieldsDialogTests` and `RenameViewTests` (replacing the removed View editor tests): Fields reorder, switch and remove; Rename validates length and uniqueness | §13.5 | Fails |
@@ -2243,9 +2249,9 @@ WS5 lands `task.wake.message` first.
 | TK-T17 | 11 | Unit | `MarkdownRendererTests` gains: an id that resolves becomes `<a class="task-ref" href="/tasks/item/PLAT-0042" title="…">`; an unknown id, `UTF-8`, a lower-case `plat-0042`, and ids inside a code span, a code block or an existing link stay plain; a Closed Task gets `task-ref-closed`; `[x](/tasks/item/../../evil)` and `[x](/other)` are still rewritten to `#`; `ToHtml(string)` without a resolver is unchanged (all existing tests pass as they are) | §13.13.2 | Fails |
 | TK-I17 | 11 | Impl | `ITaskReferenceResolver`, `TaskReference`, the AST rewrite, `IsSafe`, `TaskStore` as the resolver, and both `MessageList` call sites | §13.13.2 | T17 green |
 | TK-T18 | 11 | bUnit | The `/tasks/item/{id}` route opens the panel over the last View; an unknown id shows the alert; closing the panel replaces the URL. `TaskQueryTests.Suggest_*` covers an empty query, an id prefix before a title match, Active before Closed, and the limit | §13.13.3-13.13.4 | Fails |
-| TK-I18 | 11 | Impl | The route, the copy button and its menu items, `huddleClipboard`, `TaskQuery.Suggest` | §13.13.1, §13.13.3 | T18 green |
+| TK-I18 | 11 | Impl | The route, the copy button and its menu items, `clipboard.js`, `TaskQuery.Suggest` | §13.13.1, §13.13.3 | T18 green |
 | TK-T19 | 11 | bUnit | `ComposerTests`: `TaskQueryAsync` opens the popover and `null` closes it; `MoveAsync` wraps; `PickAsync` returns the highlighted id, or null with no matches; the listbox has `aria-activedescendant`. The JavaScript key handling can't be tested by bUnit, so it is manual test TASKS-14 | §13.13.4 | Fails |
-| TK-I19 | 11 | Impl | The `#` picker: `teamComposer` extended in `app.js`, plus `Composer.razor`'s popover and three `[JSInvokable]`s | §13.13.4 | T19 green, TASKS-14 passes |
+| TK-I19 | 11 | Impl | The `#` picker: `composer.js` extended, plus `Composer.razor`'s popover and three `[JSInvokable]`s | §13.13.4 | T19 green, TASKS-14 passes |
 | TK-D | — | Docs | **Already written on 2026-09-24:** ADR-0025 and ADR-0026 (status *proposed*), and `language.md`'s *Tasks* section plus the Team entry's ADR-0025 sentence. **When the feature ships:** set both ADRs to *accepted*, and replace the *Tasks* section's "Proposed, not built" line. `code-map.md` gets a row per new file. `Huddle.EngineeringGuide.md` gets a map row plus config rows for `Team:Tasks:*`. `known-limits.md` covers: an offline assignee misses the wake-up; startup edits wake no one; wake budgets reset on restart; tags can't contain `,` or `;`; a Task link reflects the index when the Message was last rendered. `decisions.md` gets a dated entry. `roadmap.md` gets an item. `manual-tests/tasks.md` plus `tracker.md` rows. `mudblazor.md` → *Components Huddle already uses* gains rows for `MudDataGrid` (`TaskListView.razor`), `MudDropContainer`/`MudDropZone` (`TaskBoard.razor`), `MudToggleGroup`, `MudTimeline`, `MudExitPrompt`, `MudBadge` and `MudNavGroup`, each pointing at its Tasks file | all | Reviewed |
 
 ---
@@ -2261,5 +2267,5 @@ WS5 lands `task.wake.message` first.
 | Queued delivery to an offline assignee | Needs a change to the ACP side (ADR-0004) |
 | Agents using Views | A `view` argument on `list_tasks` |
 | Attachments | Designed in [TaskAttachments](Huddle.TaskAttachments-Specifications.md): link a Library file, or upload to `Uploads/Tasks/<ID>/`. The sibling `<ID>/` folder first proposed here was rejected there (D-1): `_` folders are hidden from the Library |
-| The `#` picker in the description editor | The same `teamComposer` logic attached to `MudTextField`'s inner textarea |
+| The `#` picker in the description editor | The same `composer.js` logic attached to `MudTextField`'s inner textarea |
 | A preview card on hovering a Task link | Needs a Blazor-rendered Message body, or a small JavaScript-delegated click and hover handler |

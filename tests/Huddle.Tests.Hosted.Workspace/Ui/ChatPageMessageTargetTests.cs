@@ -23,7 +23,7 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class ChatPageMessageTargetTests
 {
     /// <summary>The script that scrolls to a target row.</summary>
-    private const string ToMessage = "teamScroll.toMessage";
+    private const string ToMessage = "toMessage";
 
     /// <summary>The <c>Message</c> parameter is handed to <see cref="MessageList"/> as its target.</summary>
     [Fact]
@@ -32,7 +32,7 @@ public sealed class ChatPageMessageTargetTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = ChatPageMessageTargetTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
         Room room = await ChatPageMessageTargetTests.SeedRoomAsync(factory, ct);
 
         IRenderedComponent<Host> cut = ctx.Render<Host>(parameters => parameters
@@ -50,7 +50,7 @@ public sealed class ChatPageMessageTargetTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = ChatPageMessageTargetTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
         Room room = await ChatPageMessageTargetTests.SeedRoomAsync(factory, ct);
         TabService tabs = ctx.Services.GetRequiredService<TabService>();
         tabs.Open($"/rooms/{room.Id}?message=m-1");
@@ -69,7 +69,7 @@ public sealed class ChatPageMessageTargetTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = ChatPageMessageTargetTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
         Room room = await ChatPageMessageTargetTests.SeedRoomAsync(factory, ct);
         IRenderedComponent<Host> cut = ctx.Render<Host>(parameters => parameters
             .Add(host => host.RoomId, room.Id)
@@ -92,7 +92,7 @@ public sealed class ChatPageMessageTargetTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = ChatPageMessageTargetTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(ChatPageMessageTargetTests.ToMessage, static _ => true).SetResult(true);
         Room room = await ChatPageMessageTargetTests.SeedRoomAsync(factory, ct);
         IRenderedComponent<Host> cut = ctx.Render<Host>(parameters => parameters
             .Add(host => host.RoomId, room.Id)
@@ -105,14 +105,14 @@ public sealed class ChatPageMessageTargetTests
         cut.WaitForAssertion(() => Assert.Equal(2, ChatPageMessageTargetTests.Jumps(ctx)));
     }
 
-    /// <summary>How many times <c>teamScroll.toMessage</c> was invoked.</summary>
+    /// <summary>How many times <c>toMessage</c> in <c>scroll.js</c> was invoked.</summary>
     /// <param name="ctx">The context whose recorded invocations to count.</param>
     private static int Jumps(MudBunitContext ctx) => ChatPageMessageTargetTests.JumpTargets(ctx).Length;
 
-    /// <summary>The Message ids <c>teamScroll.toMessage</c> was called with, in order.</summary>
+    /// <summary>The Message ids <c>toMessage</c> in <c>scroll.js</c> was called with, in order.</summary>
     /// <param name="ctx">The context whose recorded invocations to read.</param>
     private static string[] JumpTargets(MudBunitContext ctx) =>
-        [.. ctx.JSInterop.Invocations
+        [.. ctx.Module(JsModule.Scroll).Invocations
             .Where(invocation => string.Equals(invocation.Identifier, ChatPageMessageTargetTests.ToMessage, StringComparison.Ordinal))
             .Select(invocation => (string)invocation.Arguments[1]!)];
 

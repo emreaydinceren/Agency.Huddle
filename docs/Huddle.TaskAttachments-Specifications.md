@@ -68,7 +68,7 @@ test-first task list. Every decision is in §9 with the alternative it beat.
 | --- | --- |
 | **An `attachments:` list in the Task frontmatter** | A second place a file is named, which drifts from the description. The description already carries links (Tasks §3) |
 | **A separate Attachments panel on the Task** | The path lines in the Preview are the list, and the Library shows the folder. Revisit if Humans lose track of files whose line they deleted |
-| **Inserting at the cursor** | Needs the `teamComposer` JavaScript attached to `MudTextField`'s textarea (Tasks Appendix B). V1 appends a line at the end |
+| **Inserting at the cursor** | Needs the `composer.js` module's logic attached to `MudTextField`'s textarea (Tasks Appendix B). V1 appends a line at the end |
 | **The `@` or `#` picker inside the description** | Same reason; it stays a Tasks Appendix B item |
 | **Paste and drag-and-drop of files onto the description** | Needs the same JavaScript. The button covers the need |
 | **Attaching by an Agent** | Agents write files with their own tools and can put the path in `update_task`'s description |

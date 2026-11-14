@@ -5,6 +5,7 @@ using MudBlazor;
 using Agency.Huddle.App.Components.Sidebar;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.Tests.Elicitation;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -80,7 +81,7 @@ public sealed class SidebarPanelFrameTests
     public async Task Frame_RememberedCollapse_StartsCollapsed()
     {
         await using MudBunitContext ctx = new();
-        ctx.JSInterop.Setup<bool>("huddleSidebar.isCollapsed", _ => true).SetResult(true);
+        ctx.Module(JsModule.Sidebar).Setup<bool>("isCollapsed", _ => true).SetResult(true);
 
         IRenderedComponent<SidebarPanelFrame> frame = RenderFrame(ctx);
 

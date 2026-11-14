@@ -84,7 +84,8 @@ else
         this.self ??= DotNetObjectReference.Create(this);
         try
         {
-            await this.Js.InvokeVoidAsync("huddleSidebar.watchHeadings", this.headings.Select(static h => h.Id).ToArray(), this.self);
+            IJSObjectReference sidebar = await JsModule.Sidebar.ImportAsync(this.Js);
+            await sidebar.InvokeVoidAsync("watchHeadings", this.headings.Select(static h => h.Id).ToArray(), this.self);
         }
         catch (JSException)
         {
@@ -118,7 +119,8 @@ else
         {
             try
             {
-                await this.Js.InvokeVoidAsync("huddleSidebar.unwatchHeadings");
+                IJSObjectReference sidebar = await JsModule.Sidebar.ImportAsync(this.Js);
+                await sidebar.InvokeVoidAsync("unwatchHeadings");
             }
             catch (JSDisconnectedException)
             {

@@ -26,7 +26,7 @@ public sealed class ComposerTests
 
         _ = ComposerTests.RenderComposer(ctx);
 
-        var invocation = ctx.JSInterop.VerifyInvoke("teamComposer.attach");
+        var invocation = ctx.Module(JsModule.Composer).VerifyInvoke("attach");
         Assert.Equal("huddle:draft:any-room", invocation.Arguments[2]);
     }
 
@@ -40,7 +40,7 @@ public sealed class ComposerTests
 
         await ctx.DisposeComponentsOnDispatcherAsync();
 
-        var invocation = ctx.JSInterop.VerifyInvoke("teamComposer.detach");
+        var invocation = ctx.Module(JsModule.Composer).VerifyInvoke("detach");
         Assert.Single(invocation.Arguments);
     }
 

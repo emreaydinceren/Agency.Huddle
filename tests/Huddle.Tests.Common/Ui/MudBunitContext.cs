@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
 using Agency.Huddle.App.Components.Layout;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 
@@ -80,6 +81,9 @@ internal sealed class MudBunitContext : BunitContext
 
     private readonly Bunit.TestDoubles.BunitAuthorizationContext authorization;
 
+    /// <summary>The handler for each app module, registered once: a second <c>SetupModule</c> for a path would only reach later imports.</summary>
+    private readonly Dictionary<JsModule, BunitJSModuleInterop> modules = [];
+
     /// <summary>
     /// Creates the context: registers MudBlazor's services and switches bUnit's JSInterop to loose
     /// mode. See the type-level remarks for why each is needed.
@@ -100,6 +104,15 @@ internal sealed class MudBunitContext : BunitContext
         this.Services.AddSingleton<Agency.Huddle.App.Gateway.IRemoteAccessState>(remoteAccess);
         this.Services.AddSingleton(new Agency.Huddle.App.Gateway.HostActions(remoteAccess));
         this.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        // Every app module is set up before anything renders. JsModule caches each import per runtime, and a module
+        // reference imported before its SetupModule never sees that module's setups, so a late setup would be ignored.
+        foreach (JsModule module in JsModule.All)
+        {
+            BunitJSModuleInterop interop = this.JSInterop.SetupModule(module.Path);
+            interop.Mode = JSRuntimeMode.Loose;
+            this.modules[module] = interop;
+        }
 
         // Settings reads the viewer's scopes from the cascading authentication state (C-13). Every context starts as the paired admin,
         // so a test that is not about access keeps rendering the page as it always did; SignInWithScopes narrows that.
@@ -142,7 +155,21 @@ internal sealed class MudBunitContext : BunitContext
     /// <summary>Sets what local storage answers when the Right sidebar asks whether the viewer left it open; <see langword="null"/> is nothing remembered.</summary>
     /// <param name="open">The remembered state, or <see langword="null"/> for none.</param>
     public void RememberSidebarOpen(bool? open) =>
-        this.JSInterop.Setup<string?>("huddleStorage.get", "shell:rightSidebarOpen").SetResult(open?.ToString().ToLowerInvariant());
+        this.Module(JsModule.Storage).Setup<string?>(BrowserStorage.GetFunction, "shell:rightSidebarOpen").SetResult(open?.ToString().ToLowerInvariant());
+
+    /// <summary>
+    /// The bUnit handler for one of the app's modules: set up its exports and read its calls here, by the exported
+    /// name (<c>Module(JsModule.Clipboard).Setup&lt;bool&gt;("copy")</c>). Calls on a module are also recorded in
+    /// <c>JSInterop.Invocations</c>, but under the bare name, which several modules share (<c>attach</c>, <c>detach</c>).
+    /// </summary>
+    /// <param name="module">The module.</param>
+    /// <returns>The handler registered for it when the context was created.</returns>
+    public BunitJSModuleInterop Module(JsModule module)
+    {
+        ArgumentNullException.ThrowIfNull(module);
+
+        return this.modules[module];
+    }
 
     /// <summary>
     /// Disposes every rendered component, as <see cref="BunitContext.DisposeComponentsAsync"/> does, but from
@@ -171,13 +198,28 @@ internal sealed class MudBunitContext : BunitContext
     /// the component may still be calling JS - inside a wait, a poll, or after work the test did not
     /// await.
     /// </remarks>
-    /// <param name="identifier">The JS function's identifier, e.g. <c>huddleStorage.set</c>.</param>
+    /// <param name="identifier">The JS function's identifier on the root runtime, e.g. a MudBlazor call; for an app module use the <see cref="JsModule"/> overload.</param>
     /// <returns>A snapshot of the calls, oldest first, that later calls do not change.</returns>
     public Task<IReadOnlyList<JSRuntimeInvocation>> InvocationsOnDispatcherAsync(string identifier)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
 
         return this.Renderer.Dispatcher.InvokeAsync<IReadOnlyList<JSRuntimeInvocation>>(() => [.. this.JSInterop.Invocations[identifier]]);
+    }
+
+    /// <summary>
+    /// Copies the calls recorded for <paramref name="identifier"/> on <paramref name="module"/>, reading them on the
+    /// renderer's dispatcher, for the same reason as <see cref="InvocationsOnDispatcherAsync(string)"/>.
+    /// </summary>
+    /// <param name="module">The module that exports the function.</param>
+    /// <param name="identifier">The exported function's name, e.g. <c>set</c>.</param>
+    /// <returns>A snapshot of the calls, oldest first, that later calls do not change.</returns>
+    public Task<IReadOnlyList<JSRuntimeInvocation>> InvocationsOnDispatcherAsync(JsModule module, string identifier)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        BunitJSModuleInterop interop = this.Module(module);
+
+        return this.Renderer.Dispatcher.InvokeAsync<IReadOnlyList<JSRuntimeInvocation>>(() => [.. interop.Invocations[identifier]]);
     }
 
     /// <summary>

@@ -24,13 +24,13 @@ namespace Agency.Huddle.Tests.Ui.References;
 
 /// <summary>
 /// The Copy link entry points (spec §6.1, D-31): the Room header button on <c>Chat.razor</c>, and the
-/// <c>Copy link</c> item first in <c>RoomNavRow</c>'s menu. Both call <c>huddleClipboard.copy</c> with the
+/// <c>Copy link</c> item first in <c>RoomNavRow</c>'s menu. Both call <c>copy</c> in <c>clipboard.js</c> with the
 /// Room's reference text, and both report through the snackbar with the spec's exact wording.
 /// </summary>
 public sealed class RoomCopyLinkTests
 {
     /// <summary>The clipboard helper both entry points call.</summary>
-    private const string CopyHelper = "huddleClipboard.copy";
+    private const string CopyHelper = "copy";
 
     /// <summary>The header button's accessible name.</summary>
     private const string HeaderButton = "button[aria-label='Copy link to this Room']";
@@ -53,12 +53,12 @@ public sealed class RoomCopyLinkTests
         string expected = $"[{label}](/rooms/{room.Id})";
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
 
         var cut = RoomCopyLinkTests.RenderChat(ctx, room.Id);
         await cut.InvokeAsync(() => cut.Find(RoomCopyLinkTests.HeaderButton).ClickAsync());
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke(RoomCopyLinkTests.CopyHelper);
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke(RoomCopyLinkTests.CopyHelper);
         Assert.Equal(expected, Assert.Single(invocation.Arguments));
     }
 
@@ -86,7 +86,7 @@ public sealed class RoomCopyLinkTests
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct: ct);
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         var cut = RoomCopyLinkTests.RenderChat(ctx, room.Id);
@@ -107,7 +107,7 @@ public sealed class RoomCopyLinkTests
         Room room = await RoomCopyLinkTests.CreateRoomAsync(factory, "Nova", null, false, ct: ct);
         await using MudBunitContext ctx = ChatPageContext.Create(factory);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(false);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(RoomCopyLinkTests.CopyHelper, $"[Nova](/rooms/{room.Id})").SetResult(false);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         var cut = RoomCopyLinkTests.RenderChat(ctx, room.Id);
@@ -132,7 +132,7 @@ public sealed class RoomCopyLinkTests
         var cut = RoomCopyLinkTests.RenderChat(ctx, room.Id);
         await cut.InvokeAsync(() => cut.Find(RoomCopyLinkTests.HeaderButton).ClickAsync());
 
-        Assert.Single(ctx.JSInterop.Invocations, invocation => string.Equals(invocation.Identifier, RoomCopyLinkTests.CopyHelper, StringComparison.Ordinal));
+        Assert.Single(ctx.Module(JsModule.Clipboard).Invocations, invocation => string.Equals(invocation.Identifier, RoomCopyLinkTests.CopyHelper, StringComparison.Ordinal));
     }
 
     /// <summary>The sidebar row's menu offers Copy link first, above Archive and Delete.</summary>
@@ -173,12 +173,12 @@ public sealed class RoomCopyLinkTests
 
         await using MudBunitContext ctx = RoomCopyLinkTests.NewListContext(directory, chat, events);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
         var cut = RoomCopyLinkTests.RenderRoomList(ctx);
         await RoomCopyLinkTests.OpenRowMenuAsync(cut);
         await RoomCopyLinkTests.ClickMenuItemAsync(cut, "Copy link");
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke(RoomCopyLinkTests.CopyHelper);
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke(RoomCopyLinkTests.CopyHelper);
         Assert.Equal(expected, Assert.Single(invocation.Arguments));
     }
 
@@ -196,14 +196,14 @@ public sealed class RoomCopyLinkTests
 
         await using MudBunitContext ctx = RoomCopyLinkTests.NewTeamsNavContext(directory, catalog, chat, events);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
-        ctx.JSInterop.Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(RoomCopyLinkTests.CopyHelper, expected).SetResult(true);
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/room-marketing");
         IRenderedComponent<ContainerFragment> cut = RoomCopyLinkTests.RenderTeamsNav(ctx);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/room-marketing']")));
         await RoomCopyLinkTests.OpenRowMenuAsync(cut);
         await RoomCopyLinkTests.ClickMenuItemAsync(cut, "Copy link");
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke(RoomCopyLinkTests.CopyHelper);
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke(RoomCopyLinkTests.CopyHelper);
         Assert.Equal(expected, Assert.Single(invocation.Arguments));
     }
 

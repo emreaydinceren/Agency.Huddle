@@ -2,7 +2,7 @@ namespace Agency.Huddle.Tests.Ui.Sidebar;
 
 /// <summary>
 /// Pins the two script entry points the Outline panel's page calls - <c>revealLine</c> on the editor handle and
-/// <c>window.huddleLibrary.scrollToHeading</c> - as source facts, because the repo has no JavaScript test runner
+/// <c>libraryDocument.scrollToHeading</c> in <c>library-document.js</c> - as source facts, because the repo has no JavaScript test runner
 /// (plan T7.3; the same approach <see cref="SidebarCollapseSourceTests"/> uses).
 /// </summary>
 public sealed class LibraryEditorRevealSourceTests
@@ -34,35 +34,38 @@ public sealed class LibraryEditorRevealSourceTests
         Assert.Contains("view.state.doc.lines", body, StringComparison.Ordinal);
     }
 
-    /// <summary><c>window.huddleLibrary</c> defines <c>scrollToHeading(root, id)</c> (plan T7.3).</summary>
+    /// <summary><c>library-document.js</c> defines <c>scrollToHeading(root, id)</c> and exports it (plan T7.3).</summary>
     [Fact]
-    public void AppJs_HuddleLibrary_HasScrollToHeading()
+    public void LibraryDocumentJs_HasScrollToHeading()
     {
-        string block = LibraryEditorRevealSourceTests.HuddleLibraryBlock();
+        string block = LibraryEditorRevealSourceTests.LibraryDocumentBlock();
 
-        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        // contains-ok: source-fact test, no JS runner - library-document.js's own text is what's pinned.
         Assert.Contains("scrollToHeading(root, id) {", block, StringComparison.Ordinal);
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "library-document.js"));
+        // contains-ok: source-fact test, no JS runner - library-document.js's own text is what's pinned.
+        Assert.Contains("scrollToHeading", text[text.IndexOf("\nexport const {", StringComparison.Ordinal)..], StringComparison.Ordinal);
     }
 
     /// <summary><c>scrollToHeading</c> builds its selector through <c>CSS.escape</c>, so an id with selector characters cannot break the query (plan T7.3).</summary>
     [Fact]
-    public void AppJs_ScrollToHeading_EscapesTheId()
+    public void LibraryDocumentJs_ScrollToHeading_EscapesTheId()
     {
-        string block = LibraryEditorRevealSourceTests.HuddleLibraryBlock();
+        string block = LibraryEditorRevealSourceTests.LibraryDocumentBlock();
         int start = block.IndexOf("scrollToHeading(root, id) {", StringComparison.Ordinal);
-        Assert.True(start >= 0, "Expected window.huddleLibrary to define scrollToHeading.");
+        Assert.True(start >= 0, "Expected libraryDocument to define scrollToHeading.");
 
-        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        // contains-ok: source-fact test, no JS runner - library-document.js's own text is what's pinned.
         Assert.Contains("CSS.escape(id)", block[start..], StringComparison.Ordinal);
     }
 
-    /// <summary>Returns the <c>window.huddleLibrary</c> object literal, from its name to the <c>};</c> that closes it.</summary>
-    private static string HuddleLibraryBlock()
+    /// <summary>Returns the <c>libraryDocument</c> object literal in <c>library-document.js</c>, from its name to the <c>};</c> that closes it.</summary>
+    private static string LibraryDocumentBlock()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
-        int start = text.IndexOf("window.huddleLibrary =", StringComparison.Ordinal);
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "library-document.js"));
+        int start = text.IndexOf("const libraryDocument = {", StringComparison.Ordinal);
         int end = start < 0 ? -1 : text.IndexOf("\n};", start, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "Expected window.huddleLibrary to be an object literal closed by \"};\".");
+        Assert.True(start >= 0 && end > start, "Expected const libraryDocument in library-document.js to be an object literal closed by \"};\".");
         return text[start..(end + 3)];
     }
 }

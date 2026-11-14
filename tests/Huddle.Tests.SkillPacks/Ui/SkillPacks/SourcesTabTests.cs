@@ -6,6 +6,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.SkillPacks;
 
@@ -69,7 +70,7 @@ public sealed class SourcesTabTests : IDisposable
         Assert.Equal("This Source moved to openai/plugins.", cut.Find(".source-row-moved").TextContent.Trim());
         await cut.InvokeAsync(() => cut.Find(".source-row-copy-prompt").ClickAsync());
 
-        string copied = Assert.IsType<string>(Assert.Single(ctx.JSInterop.Invocations["huddleClipboard.copy"]).Arguments[0]);
+        string copied = Assert.IsType<string>(Assert.Single(ctx.Module(JsModule.Clipboard).Invocations["copy"]).Arguments[0]);
         Assert.Contains("openai/plugins", copied, StringComparison.Ordinal); // contains-ok: the prompt text is pinned by SkillPromptBuilderTests
     }
 

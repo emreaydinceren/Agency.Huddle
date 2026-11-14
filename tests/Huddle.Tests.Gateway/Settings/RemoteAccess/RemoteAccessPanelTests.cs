@@ -6,6 +6,7 @@ using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Settings.RemoteAccess;
 
@@ -134,15 +135,15 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
         await Click(cut, () => Button(Part(cut, "gateway"), "Copy link"));
 
         Assert.Equal("https://desktop-a.tail1234.ts.net:5101", cut.TextOf("[data-testid=public-url]"));
-        _ = this.ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
-        Assert.Equal("https://desktop-a.tail1234.ts.net:5101", this.ctx.JSInterop.Invocations["huddleClipboard.copy"].Single().Arguments[0]);
+        _ = this.ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
+        Assert.Equal("https://desktop-a.tail1234.ts.net:5101", this.ctx.Module(JsModule.Clipboard).Invocations["copy"].Single().Arguments[0]);
     }
 
     /// <summary>A copy the browser accepts says the link was copied.</summary>
     [Fact]
     public async Task Gateway_CopyLinkAccepted_SaysLinkCopied()
     {
-        _ = this.ctx.JSInterop.Setup<bool>("huddleClipboard.copy", _ => true).SetResult(true);
+        _ = this.ctx.Module(JsModule.Clipboard).Setup<bool>("copy", _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = this.Render();
 
         await Click(cut, () => Button(Part(cut, "gateway"), "Copy link"));
@@ -154,7 +155,7 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
     [Fact]
     public async Task Gateway_CopyLinkRefused_DoesNotSayCopied()
     {
-        _ = this.ctx.JSInterop.Setup<bool>("huddleClipboard.copy", _ => true).SetResult(false);
+        _ = this.ctx.Module(JsModule.Clipboard).Setup<bool>("copy", _ => true).SetResult(false);
         IRenderedComponent<ContainerFragment> cut = this.Render();
 
         await Click(cut, () => Button(Part(cut, "gateway"), "Copy link"));

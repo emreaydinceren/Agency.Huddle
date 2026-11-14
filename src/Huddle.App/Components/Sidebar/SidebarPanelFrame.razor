@@ -72,7 +72,8 @@
 
         try
         {
-            bool remembered = await this.Js.InvokeAsync<bool>("huddleSidebar.isCollapsed", this.PanelId);
+            IJSObjectReference sidebar = await JsModule.Sidebar.ImportAsync(this.Js);
+            bool remembered = await sidebar.InvokeAsync<bool>("isCollapsed", this.PanelId);
             if (remembered)
             {
                 this.collapsed = true;
@@ -94,7 +95,8 @@
         this.collapsed = !this.collapsed;
         try
         {
-            await this.Js.InvokeVoidAsync("huddleSidebar.setCollapsed", this.PanelId, this.collapsed);
+            IJSObjectReference sidebar = await JsModule.Sidebar.ImportAsync(this.Js);
+            await sidebar.InvokeVoidAsync("setCollapsed", this.PanelId, this.collapsed);
         }
         catch (JSException)
         {

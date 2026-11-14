@@ -8,6 +8,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.SkillPacks;
 
@@ -77,7 +78,7 @@ public sealed class PackCardTests : IDisposable
         Assert.Equal(ItemState.Broken, view.State);
         string file = Path.GetRelativePath(this.fixture.Host.Dir, first.File).Replace('\\', '/');
         Assert.Equal($"{file}: {SkillProblemText.Compose(first)}", cut.Find(".pack-card-cause").TextContent.Trim());
-        JSRuntimeInvocation copy = Assert.Single(ctx.JSInterop.Invocations["huddleClipboard.copy"]);
+        JSRuntimeInvocation copy = Assert.Single(ctx.Module(JsModule.Clipboard).Invocations["copy"]);
         Assert.Contains(first.Code, Assert.IsType<string>(copy.Arguments[0]), StringComparison.Ordinal); // contains-ok: the prompt text is pinned by SkillPromptBuilderTests
     }
 

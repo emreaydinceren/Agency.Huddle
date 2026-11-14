@@ -475,7 +475,7 @@
     box-sizing: border-box;
     width: 100%;
 
-    /* Starts at 3 lines and grows with the text (teamComposer.fit) up to 18, then scrolls. Each bound is
+    /* Starts at 3 lines and grows with the text (fit in composer.js) up to 18, then scrolls. Each bound is
        lines of the 18px line-height below, plus the vertical padding and the 1px borders. The script owns the
        height, so there is no manual resize handle. */
     min-height: calc((3 * 18px) + 24px + 2px);

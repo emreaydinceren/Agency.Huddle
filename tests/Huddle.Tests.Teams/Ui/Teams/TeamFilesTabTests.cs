@@ -12,6 +12,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -311,8 +312,8 @@ public sealed class TeamFilesTabTests : IDisposable
         string? search = null,
         List<string?>? changes = null)
     {
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
         List<string?> sink = changes ?? [];
         return ctx.RenderWithPopovers(builder =>
         {

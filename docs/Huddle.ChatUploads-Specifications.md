@@ -103,7 +103,7 @@ it beat.
  Composer
    paperclip ─┐
    paste ─────┼─> hidden <input type=file> (MudFileUpload) ─> OnFilesChanged(IBrowserFile[])
-   drop ──────┘     (app.js puts clipboard/dropped Files into it via DataTransfer)
+   drop ──────┘     (composer.js puts clipboard/dropped Files into it via DataTransfer)
         │
         ▼
  ChatUploadService.SaveAsync(roomId, name, stream, ct)            ← new, singleton
@@ -220,7 +220,7 @@ unmounts the composer (ADR-0045).
 - **Paperclip.** A `MudFileUpload T="IReadOnlyList<IBrowserFile>"` with `MaximumFileCount` set
   to the remaining count, and a `MudIconButton` (`AttachFile` icon, aria-label *Attach files*)
   beside Send, opening the picker. No `Accept` filter: the bytes decide.
-- **Paste and drop.** `app.js` `teamComposer.attach` gains `paste` (only when
+- **Paste and drop.** `attach` in `composer.js` gains `paste` (only when
   `clipboardData.files.length > 0`; otherwise the default text paste runs untouched),
   `dragover`/`dragleave` (adds/removes `composer-dropping` on the box) and `drop` handlers. Each
   builds a `DataTransfer`, adds the files, assigns it to the hidden input's `files` and
@@ -344,7 +344,7 @@ Archive changes nothing. A Room whose Team vanished keeps its files under the ol
 - **Composer (bUnit)**: paperclip hidden when the Library is off; chips render name, size, error;
   send with text and two chips posts the exact final text (assert the whole string); send with
   chips only; Send disabled while uploading; a refusal shows the copy from §7. JS interop for
-  paste/drop: `teamComposer.attach` is called with the input reference (`JSInterop.SetupVoid`).
+  paste/drop: `attach` in `composer.js` is called with the input reference (`MudBunitContext.Module(JsModule.Composer)`, by the bare function name `attach`).
 - **Prompt**: a sent upload path resolves through `TryResolveAbsolute` to the Uploads root and
   the Library documents block reads `(upload, …)`; the planner turns an uploaded PNG into an
   image block for an image-capable profile (an end-to-end test through `RoomSession` with the
@@ -394,7 +394,7 @@ Archive changes nothing. A Room whose Team vanished keeps its files under the ol
 | `src/Huddle.App/Library/LibraryFileService.cs`, `LibraryUpload.cs`, `UploadKind.cs`, `UploadNames.cs` (new) | chat | §6.2, §6.3 |
 | `src/Huddle.App/Library/LibraryDocumentCollector.cs`, `LibraryFilesEndpoint.cs`, `WikiLinkIndex.cs`, `LibrarySearchProvider.cs` | chat | §6.1 kind switches |
 | `src/Huddle.App/Uploads/ChatUploadService.cs`, `PendingUploads.cs`, `RoomUploadFolders.cs` (new) | chat | §6.4, §6.9 |
-| `src/Huddle.App/Components/Shared/Composer.razor`, `wwwroot/app.js`, `wwwroot/app.css` | chat | §6.5 |
+| `src/Huddle.App/Components/Shared/Composer.razor`, `wwwroot/composer.js`, `wwwroot/app.css` | chat | §6.5 |
 | `src/Huddle.App/Components/Library/*` (`LibraryPanel`, `LibraryTree`, `LibraryDocument`) | chat | §6.1 kind switches |
 | `src/Huddle.App/Components/Shared/RoomNavRow.razor`, `ArchivedChatsDialog.razor` | chat | §6.9 confirm copy |
 | `src/Huddle.App/FileChanges/FolderScanner.cs`, `FileChangeTracker.cs`, `WatchedFolderResolver.cs` | chat | §6.8 |
@@ -439,7 +439,7 @@ then run `dotnet build Huddle.slnx` and the class's tests.
 9. **File Changes pruning** (§6.8).
 10. **Room delete** (§6.9): `IRoomUploadFolders`, the confirm copy.
 11. **Composer**: paperclip, chips, send text, Send disabled while uploading (bUnit).
-12. **`app.js` paste and drop** into the hidden input; look at it in the browser pane.
+12. **`composer.js` paste and drop** into the hidden input; look at it in the browser pane.
 13. **Docs**: ADR-0027 row, UserGuide section, EngineeringGuide and Library spec config rows,
     language.md (**Upload**), code-map, known-limits (U13 orphans, U19), roadmap item 23 B
     pointing here, the manual-test page and the Index rows. Run `agents/scripts/Check-All.ps1`.

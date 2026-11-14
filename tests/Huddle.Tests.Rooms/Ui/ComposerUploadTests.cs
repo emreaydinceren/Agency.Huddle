@@ -29,7 +29,7 @@ public sealed class ComposerUploadTests
         IRenderedComponent<ContainerFragment> cut = rig.Render();
 
         Assert.Single(cut.FindAll("button[aria-label='Attach files']"));
-        var invocation = rig.Context.JSInterop.VerifyInvoke("teamComposer.attach");
+        var invocation = rig.Context.Module(JsModule.Composer).VerifyInvoke("attach");
         Assert.IsType<ElementReference>(invocation.Arguments[3]);
     }
 
@@ -44,7 +44,7 @@ public sealed class ComposerUploadTests
 
         Assert.Empty(cut.FindAll("button[aria-label='Attach files']"));
         Assert.Empty(cut.FindAll("input[type='file']"));
-        var invocation = rig.Context.JSInterop.VerifyInvoke("teamComposer.attach");
+        var invocation = rig.Context.Module(JsModule.Composer).VerifyInvoke("attach");
         Assert.Null(invocation.Arguments[3]);
     }
 

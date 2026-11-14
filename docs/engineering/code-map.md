@@ -650,6 +650,7 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `Components/Layout/TabPersistence.razor` | Restores the stored Tabs after the first render and saves every change (`huddle:tabs`). |
 | `Circuits/ICircuitConnection.cs` | Whether the browser behind a circuit is still connected. |
 | `Circuits/CircuitConnectionTracker.cs` | The circuit's `CircuitHandler`: follows the framework's connection callbacks and answers `ICircuitConnection`. |
+| `Circuits/JsModulePreloader.cs` | A second `CircuitHandler`: imports every app JS module (`Components/Shared/JsModule.cs`) when the circuit opens, before the first render. |
 | `Circuits/ServerNavigator.cs` | Navigates for a handler that a server event started and skips the call once the browser is gone; `TabSync` and `Chat` use it. |
 | `Circuits/CircuitServiceCollectionExtensions.cs` | `AddCircuitConnection`: registers one scoped tracker as both the handler and the connection. |
 

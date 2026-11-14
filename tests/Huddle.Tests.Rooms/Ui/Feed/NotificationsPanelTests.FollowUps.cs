@@ -3,6 +3,7 @@ using Agency.Huddle.App.Feed;
 using Agency.Huddle.Tests.Library;
 using Bunit;
 using Microsoft.AspNetCore.Components.Web;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -28,8 +29,8 @@ public sealed partial class NotificationsPanelTests
         using LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
         _ = host.PostNeedsYou(5);
         await using MudBunitContext ctx = NewContext(host, library);
-        ctx.JSInterop.Setup<bool>("huddleFeed.isScrolled", _ => true).SetResult(true);
-        ctx.JSInterop.SetupVoid("huddleFeed.scrollToTop", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Feed).Setup<bool>("isScrolled", _ => true).SetResult(true);
+        ctx.Module(JsModule.Feed).SetupVoid("scrollToTop", _ => true).SetVoidResult();
         IRenderedComponent<NotificationsPanel> cut = Render(ctx);
         _ = host.ApplyQueued();
         FeedItem fresh = host.PostNeedsYou();
@@ -69,7 +70,7 @@ public sealed partial class NotificationsPanelTests
         using FeedPanelHost host = new();
         using LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
         await using MudBunitContext ctx = NewContext(host, library);
-        ctx.JSInterop.SetupVoid("huddleFeed.focusChecked", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Feed).SetupVoid("focusChecked", _ => true).SetVoidResult();
         IRenderedComponent<NotificationsPanel> cut = Render(ctx);
         Assert.Equal("Needs", ChosenWord(cut));
 

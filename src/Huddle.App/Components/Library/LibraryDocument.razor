@@ -289,7 +289,7 @@
             return;
         }
 
-        _ = await BrowserCall.InvokeAsync<bool>(this.JS, "huddleLibrary.scrollToHeading", this.rootElement, scroll.HeadingId);
+        _ = await BrowserCall.InvokeAsync<bool>(this.JS, JsModule.LibraryDocument, "scrollToHeading", this.rootElement, scroll.HeadingId);
     }
 
     /// <summary>Whether the byline and the History apply: History is on and this is a Markdown document.</summary>
@@ -317,7 +317,7 @@
     protected override void OnInitialized() =>
         this.locationChangingRegistration = this.Navigation.RegisterLocationChangingHandler(this.OnLocationChangingAsync);
 
-    /// <summary>Registers <see cref="OnVisible"/> with <c>huddleLibrary.onVisible</c> (Task 12.6.i) so the
+    /// <summary>Registers <see cref="OnVisible"/> with <c>onVisible</c> in <c>library-document.js</c> (Task 12.6.i) so the
     /// page's <c>visibilitychange</c> listener can trigger a refresh when the human switches back to this
     /// tab.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -328,7 +328,7 @@
         }
 
         this.selfReference = DotNetObjectReference.Create(this);
-        await BrowserCall.InvokeVoidAsync(this.JS, "huddleLibrary.onVisible", this.selfReference);
+        await BrowserCall.InvokeVoidAsync(this.JS, JsModule.LibraryDocument, "onVisible", this.selfReference);
     }
 
     /// <inheritdoc />
@@ -583,7 +583,7 @@
     /// item 11).</summary>
     private void OnKeepMine() => this.freshnessNoticeVisible = false;
 
-    /// <summary>Called from JS (<c>huddleLibrary.onVisible</c>) when the page becomes visible again
+    /// <summary>Called from JS (<c>onVisible</c> in <c>library-document.js</c>) when the page becomes visible again
     /// (Task 12.6.i): runs the same refresh as a manual <see cref="RefreshAsync"/>.</summary>
     [JSInvokable]
     public async Task OnVisible() => await this.RefreshAsync();
@@ -747,7 +747,8 @@
         {
             if (this.selfReference is not null)
             {
-                await this.JS.InvokeVoidAsync("huddleLibrary.offVisible", this.selfReference);
+                IJSObjectReference libraryDocument = await JsModule.LibraryDocument.ImportAsync(this.JS);
+                await libraryDocument.InvokeVoidAsync("offVisible", this.selfReference);
             }
         }
         catch (JSDisconnectedException)

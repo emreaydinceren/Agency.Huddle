@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Components.Shared;
+
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
 using Agency.Huddle.Tests.Factories;
@@ -48,7 +50,7 @@ public sealed class TaskRouteAndCopyTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", "huddle.tasks.lastView").SetResult(null);
 
         var cut = ctx.RenderWithPopovers(builder =>
         {
@@ -68,7 +70,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", "huddle.tasks.lastView").SetResult(null);
 
         var cut = ctx.RenderWithPopovers(builder =>
         {
@@ -88,7 +90,7 @@ public sealed class TaskRouteAndCopyTests
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", "huddle.tasks.lastView").SetResult(null);
 
         var cut = ctx.RenderWithPopovers(builder =>
         {
@@ -116,20 +118,20 @@ public sealed class TaskRouteAndCopyTests
         Assert.Equal("Closed", cut.Find(".task-detail-closed-chip").TextContent.Trim());
     }
 
-    /// <summary>Spec §13.13.1: the copy button calls <c>huddleClipboard.copy</c> with exactly the id, and Spec's own wording shows a success toast when the call returns <see langword="true"/>.</summary>
+    /// <summary>Spec §13.13.1: the copy button calls <c>copy</c> in <c>clipboard.js</c> with exactly the id, and Spec's own wording shows a success toast when the call returns <see langword="true"/>.</summary>
     [Fact]
     public async Task TaskDetail_CopyIdButton_CallsHuddleClipboardCopyWithExactId_AndShowsSuccessToastWhenTrue()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", task.Id.ToString()).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", task.Id.ToString()).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         var cut = RenderPanel(ctx, task.Id);
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Copy task id {task.Id}\"]").ClickAsync());
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
         Assert.Equal(task.Id.ToString(), Assert.Single(invocation.Arguments));
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Snackbar shown = snackbar.ShownSnackbars.Single();
@@ -144,7 +146,7 @@ public sealed class TaskRouteAndCopyTests
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", task.Id.ToString()).SetResult(false);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", task.Id.ToString()).SetResult(false);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         var cut = RenderPanel(ctx, task.Id);
@@ -165,13 +167,13 @@ public sealed class TaskRouteAndCopyTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         string expected = $"{navigation.BaseUri}tasks/item/{task.Id}";
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", expected).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", expected).SetResult(true);
 
         var cut = RenderPanel(ctx, task.Id);
         await cut.InvokeAsync(() => cut.Find("button[aria-label^=\"Actions for \"]").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "Copy link", StringComparison.Ordinal)).ClickAsync());
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
         Assert.Equal(expected, Assert.Single(invocation.Arguments));
     }
 
@@ -235,15 +237,15 @@ public sealed class TaskRouteAndCopyTests
         personas.Dispose();
     }
 
-    /// <summary>Settled design (J52): the page wires a List row's "Copy id" to the same <c>huddleClipboard.copy</c> path as the detail header's button, not just to a local event.</summary>
+    /// <summary>Settled design (J52): the page wires a List row's "Copy id" to the same <c>copy</c> in <c>clipboard.js</c> path as the detail header's button, not just to a local event.</summary>
     [Fact]
     public async Task TasksPage_ListRowCopyId_CallsHuddleClipboardCopyWithExactId()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Ship the thing");
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle.tasks.lastView").SetResult(null);
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", task.Id.ToString()).SetResult(true);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", "huddle.tasks.lastView").SetResult(null);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", task.Id.ToString()).SetResult(true);
 
         var cut = ctx.RenderWithPopovers(builder =>
         {
@@ -254,7 +256,7 @@ public sealed class TaskRouteAndCopyTests
         await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
         await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
         Assert.Equal(task.Id.ToString(), Assert.Single(invocation.Arguments));
     }
 

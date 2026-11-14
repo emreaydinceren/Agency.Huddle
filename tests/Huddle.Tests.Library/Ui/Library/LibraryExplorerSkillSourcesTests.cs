@@ -2,6 +2,7 @@ using Agency.Huddle.App.Library;
 using Bunit;
 using Bunit.Rendering;
 using ExplorerFixture = Agency.Huddle.Tests.Ui.Library.LibraryExplorerTests.ExplorerFixture;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -31,7 +32,7 @@ public sealed class LibraryExplorerSkillSourcesTests : IDisposable
     public async Task OpenRoot_NoSelection_ShowsSkillsMd()
     {
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
 
         IRenderedComponent<ContainerFragment> cut = LibraryExplorerTests.RenderExplorer(ctx, scopes: [new LibraryLocation(LibraryRootStore.SkillSourcesRootId, string.Empty)]);
 
@@ -43,8 +44,8 @@ public sealed class LibraryExplorerSkillSourcesTests : IDisposable
     public async Task OpenRoot_RememberedSelection_Wins()
     {
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", invocation => Equals(invocation.Arguments[0], "library:test:open")).SetResult("skill-sources/notes.md");
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", invocation => !Equals(invocation.Arguments[0], "library:test:open")).SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", invocation => Equals(invocation.Arguments[0], "library:test:open")).SetResult("skill-sources/notes.md");
+        ctx.Module(JsModule.Storage).Setup<string?>("get", invocation => !Equals(invocation.Arguments[0], "library:test:open")).SetResult(null);
 
         IRenderedComponent<ContainerFragment> cut = LibraryExplorerTests.RenderExplorer(ctx, scopes: [new LibraryLocation(LibraryRootStore.SkillSourcesRootId, string.Empty)]);
 
@@ -59,8 +60,8 @@ public sealed class LibraryExplorerSkillSourcesTests : IDisposable
         File.WriteAllText(Path.Combine(notes, "SKILLS.md"), "pinned body");
         await using MudBunitContext pinnedContext = this.fixture.NewContext();
         await using MudBunitContext wholeContext = this.fixture.NewContext();
-        pinnedContext.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
-        wholeContext.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        pinnedContext.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
+        wholeContext.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
 
         IRenderedComponent<ContainerFragment> pinned = LibraryExplorerTests.RenderExplorer(pinnedContext, scopes: [new LibraryLocation("notes", string.Empty)]);
         IRenderedComponent<ContainerFragment> whole = LibraryExplorerTests.RenderExplorer(wholeContext, scopes: null);
@@ -77,7 +78,7 @@ public sealed class LibraryExplorerSkillSourcesTests : IDisposable
     public async Task TreeMenu_OnSkillsMd_HasNoWriteVerb()
     {
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
         IRenderedComponent<ContainerFragment> cut = LibraryExplorerTests.RenderExplorer(ctx, scopes: [new LibraryLocation(LibraryRootStore.SkillSourcesRootId, string.Empty)]);
         cut.WaitForAssertion(() => Assert.Contains(cut.FindAll(".library-tree-node-name"), node => node.TextContent.Trim() == "SKILLS.md"));
 

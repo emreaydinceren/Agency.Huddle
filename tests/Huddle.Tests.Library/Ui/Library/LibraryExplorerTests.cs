@@ -17,6 +17,7 @@ using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 using static Agency.Huddle.Tests.Ui.Library.LibraryDocumentTestSupport;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -522,7 +523,7 @@ public sealed class LibraryExplorerTests : IDisposable
     }
 
     /// <summary>[12.7b] <c>StateKey</c> keys the remembered expanded folders, open file and divider
-    /// position separately per host, through <c>huddleStorage.set</c> (corrections-B6 item 28).</summary>
+    /// position separately per host, through <c>set</c> in <c>storage.js</c> (corrections-B6 item 28).</summary>
     [Fact]
     public async Task StateKey_SeparatesRememberedState()
     {
@@ -531,8 +532,8 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryPath one = this.fixture.LibraryFixture.Resolve(root, "One.md");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(
             ctx, scopes: [new LibraryLocation(one.Root.Id, string.Empty)], stateKey: "pane-a");
 
@@ -541,9 +542,9 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-tree-node-name").Count));
         await cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").Single(node => node.TextContent.Trim() == "One.md").ClickAsync());
 
-        ctx.JSInterop.VerifyInvoke("huddleStorage.set");
+        ctx.Module(JsModule.Storage).VerifyInvoke("set");
         Assert.Contains(
-            ctx.JSInterop.Invocations["huddleStorage.set"],
+            ctx.Module(JsModule.Storage).Invocations["set"],
             invocation => Equals(invocation.Arguments[0], "library:pane-a:open"));
     }
 
@@ -559,14 +560,14 @@ public sealed class LibraryExplorerTests : IDisposable
     public async Task RestoreState_ReadsTheLayoutSpecificDividerKey(LibraryExplorerLayout layout, string expectedKey)
     {
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: null, layout: layout, stateKey: "k");
 
         await cut.WaitForAssertionAsync(async () => Assert.Contains(
-            await ctx.InvocationsOnDispatcherAsync("huddleStorage.get"),
+            await ctx.InvocationsOnDispatcherAsync(JsModule.Storage, "get"),
             invocation => Equals(invocation.Arguments[0], expectedKey)));
         Assert.DoesNotContain(
-            await ctx.InvocationsOnDispatcherAsync("huddleStorage.get"),
+            await ctx.InvocationsOnDispatcherAsync(JsModule.Storage, "get"),
             invocation => Equals(invocation.Arguments[0], "library:k:divider"));
     }
 
@@ -583,8 +584,8 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryPath one = this.fixture.LibraryFixture.Resolve(root, "One.md");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", invocation => invocation.Arguments[0] is string key && key.EndsWith(":divider", StringComparison.Ordinal)).SetResult("200");
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", invocation => invocation.Arguments[0] is string key && !key.EndsWith(":divider", StringComparison.Ordinal)).SetResult(null);
+        ctx.Module(JsModule.Storage).Setup<string?>("get", invocation => invocation.Arguments[0] is string key && key.EndsWith(":divider", StringComparison.Ordinal)).SetResult("200");
+        ctx.Module(JsModule.Storage).Setup<string?>("get", invocation => invocation.Arguments[0] is string key && !key.EndsWith(":divider", StringComparison.Ordinal)).SetResult(null);
         ctx.JSInterop.SetupVoid("mudSplitPanel_setDividerPosition", _ => true)
             .SetException(new JSException("Cannot read properties of undefined (reading 'setDividerPosition')"));
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(
@@ -1200,8 +1201,8 @@ public sealed class LibraryExplorerTests : IDisposable
 
     private static void SetupStorage(MudBunitContext ctx)
     {
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
     }
 
     private static List<string> NodeNames(IRenderedComponent<ContainerFragment> cut) =>
@@ -1301,8 +1302,8 @@ public sealed class LibraryExplorerTests : IDisposable
     /// <summary>Sets up the remembered-state JS calls an explorer makes when a document opens.</summary>
     private static void ArrangeStorage(MudBunitContext ctx)
     {
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
     }
 
     /// <summary>Every tree node name currently rendered, ordinally sorted so the assertion does not depend on

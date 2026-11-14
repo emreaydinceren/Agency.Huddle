@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Tabs;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -24,8 +25,8 @@ public sealed class TabPersistenceTests
         MudBunitContext ctx = new();
         tabs = new TabService();
         ctx.Services.AddSingleton(tabs);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle:tabs").SetResult(stored);
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", "huddle:tabs").SetResult(stored);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
         return ctx;
     }
 
@@ -68,14 +69,14 @@ public sealed class TabPersistenceTests
 
         // The first save happens only after the restore and the subscription, so it marks "now watching".
         // The saves are recorded on the dispatcher while the test waits, so they are read there.
-        await cut.WaitForAssertionAsync(async () => Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync("huddleStorage.set")));
+        await cut.WaitForAssertionAsync(async () => Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync(JsModule.Storage, "set")));
         Assert.Equal(2, tabs.Tabs.Count);
 
         await cut.InvokeAsync(() => tabs.Open("/settings"));
 
         await cut.WaitForAssertionAsync(async () =>
         {
-            IReadOnlyList<JSRuntimeInvocation> saves = await ctx.InvocationsOnDispatcherAsync("huddleStorage.set");
+            IReadOnlyList<JSRuntimeInvocation> saves = await ctx.InvocationsOnDispatcherAsync(JsModule.Storage, "set");
             Assert.Equal("huddle:tabs", saves[^1].Arguments[0]);
             Assert.Contains("/settings", (string?)saves[^1].Arguments[1], StringComparison.Ordinal);
         });

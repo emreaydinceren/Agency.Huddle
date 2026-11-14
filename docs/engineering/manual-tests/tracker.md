@@ -221,7 +221,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-16](shell-nav.md#shellnav-16--sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active |  |  |
 | [SHELLNAV-17](shell-nav.md#shellnav-17--the-new-room-panel-toggles-lists-agents-with-status-dots-and-gates-open-room) |  | Active |  |  |
 | [SHELLNAV-18](shell-nav.md#shellnav-18--starting-a-chat-creates-a-room-named-after-its-agents-and-navigates-straight-to-it) |  | Active |  |  |
-| [SHELLNAV-19](shell-nav.md#shellnav-19--appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active |  |  |
+| [SHELLNAV-19](shell-nav.md#shellnav-19--composerjs-and-scrolljs-are-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active |  |  |
 | [SHELLNAV-20](shell-nav.md#shellnav-20--the-room-list-updates-live-with-no-refresh-when-a-room-appears-from-outside-the-app) |  | Active |  |  |
 | [SHELLNAV-23](shell-nav.md#shellnav-23--a-bad-appearancejson-does-not-break-the-shell-no-theme-link-no-blank-page-only-a-log-warning) |  | Active |  |  |
 | [SHELLNAV-24](shell-nav.md#shellnav-24--a-deep-link-renders-complete-content-on-a-cold-first-request-before-any-circuit-attaches) |  | Active |  |  |

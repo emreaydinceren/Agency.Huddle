@@ -13,7 +13,7 @@ Delete an entry in the same commit that delivers it.
 **Raised:** 2026-10-17, while evaluating the MudBlazor add-on packages (see
 [Packages evaluated and declined](#packages-evaluated-and-declined)).
 
-Five places copy text through the same `huddleClipboard.copy` helper in `wwwroot/app.js`
+Five places copy text through the same `copy` export of `wwwroot/clipboard.js`
 and then show a success or warning snackbar. Each repeats the same steps: call the helper,
 branch on the `bool` it returns, and show a message under a fixed snackbar key. Only the
 text, the wording and the key differ.
@@ -33,7 +33,7 @@ spec. Then make the five callers use it.
 
 **Done when:**
 
-- `huddleClipboard.copy` appears in exactly one C# file.
+- `JsModule.Clipboard` is called from exactly one C# file (today `ClipboardCopier`, `LibraryClipboard` and `PromptClipboard` each call it).
 - Every message a Human sees is unchanged, word for word.
 - `TaskClipboardTests`, `RoomLinkCopierTests` and the Library and Skills copy tests pass
   unchanged.
@@ -44,7 +44,8 @@ spec. Then make the five callers use it.
 > clipboard write only during the click's brief permission window, and an earlier
 > `await` can close it (Spec §13.13.1; the comments on `TaskDetail.CopyIdAsync` and
 > `Tasks.OnCopyIdAsync`). The shared helper must not await anything before it calls
-> `huddleClipboard.copy`.
+> `copy` in `clipboard.js`. Its `JsModule.Clipboard.ImportAsync` does not count: the module is imported when the circuit
+> opens (`JsModulePreloader`), so that await completes at once.
 
 `LibraryClipboard` passes no `CancellationToken` today, so the shared helper will add one.
 Pass `CancellationToken.None` from click handlers, as the Task callers already do.
@@ -154,7 +155,7 @@ any order.
 | H-1 | **Huddle's own TLS for the direct binds** | Plain HTTP, labelled downgraded; Tailscale Serve is the HTTPS path (spec §3) | Huddle as its own certificate authority, as `mkcert` does: a root CA created once, its key encrypted with Data Protection, **with X.509 name constraints** limiting it to `10/8`, `172.16/12`, `192.168/16`, `.local` and the machine name (written with `AsnWriter`; .NET has no built-in extension), so a stolen key cannot impersonate other sites. A leaf certificate for the bound addresses and names, at most 825 days (Apple's limit), renewed and re-issued through `ServerCertificateSelector`. HTTPS on the LAN address and plain HTTP on `127.0.0.1`, same port number, different addresses. A **Download certificate** link and per-OS install steps (iOS: install the profile, then turn on full trust under About › Certificate Trust Settings; Android: install as a CA certificate; Windows and macOS: trusted root). Session cookies gain `Secure`. About 1-1.5 weeks with device testing. **Not** a plain self-signed certificate: permanent warnings teach people to click through certificate errors. OpenClaw builds no browser TLS either |
 | H-2 | **Read-only devices** | `operator.read` and `operator.write` are always granted together, because Huddle's UI has no read-only mode (spec §6.7) | Grant `operator.read` alone, as OpenClaw allows. Every action that changes something (post, edit, create, move, delete, run) checks `operator.write` in its service, and the UI hides those controls for a read-only session. Start with an inventory of the write paths; the size of that list decides whether this is worth it |
 | H-3 | **Live address change** | A direct bind's new IP address needs a restart for the host list and the setup-link QR (spec §6.4) | On `NetworkChange.NetworkAddressChanged`, recompute the host list and the setup-link addresses and signal the same `IOptionsChangeTokenSource<HostFilteringOptions>` that V1 already uses for the Tailscale name. The LAN bind already listens on all interfaces, so only the lists change |
-| H-4 | **Theme Lab copy over plain HTTP** | `theme-lab.js` calls `navigator.clipboard` directly, which browsers refuse on the downgraded binds | Route its copy through `huddleClipboard.copy` in `app.js`, which already falls back to `execCommand("copy")` outside a secure context |
+| H-4 | **Theme Lab copy over plain HTTP** | `theme-lab.js` calls `navigator.clipboard` directly, which browsers refuse on the downgraded binds | Import `copy` from `./clipboard.js` in `theme-lab.js` (both are ES modules now), which already falls back to `execCommand("copy")` outside a secure context |
 
 **Change:** for each item, write its test first, as the spec's Appendix C does for V1, then the code. When an item
 ships, update the spec where its **V1** column points, and delete its row here.

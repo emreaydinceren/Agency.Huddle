@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -308,12 +309,12 @@ public sealed class HelperCardTests : IDisposable
     {
         await using MudBunitContext ctx = new();
         this.Register(ctx);
-        ctx.JSInterop.Setup<bool>("teamScroll.intoView", "helper-NeedsHuman").SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>("intoView", "helper-NeedsHuman").SetResult(true);
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/settings/helpers#helper-NeedsHuman");
 
         IRenderedComponent<HelpersPanel> panel = ctx.Render<HelpersPanel>();
         panel.Render();
 
-        Assert.Single(ctx.JSInterop.Invocations["teamScroll.intoView"]);
+        Assert.Single(ctx.Module(JsModule.Scroll).Invocations["intoView"]);
     }
 }

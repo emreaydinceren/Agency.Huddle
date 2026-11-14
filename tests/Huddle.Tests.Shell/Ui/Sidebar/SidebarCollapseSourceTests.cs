@@ -3,33 +3,33 @@ using Agency.Huddle.Tests.Css;
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
 /// <summary>
-/// Pins the Right sidebar panel header, body and the <c>window.huddleSidebar</c> collapse helper (Right sidebar
+/// Pins the Right sidebar panel header, body and the <c>sidebar.js</c> collapse helper (Right sidebar
 /// spec D-8) as source facts, because the repo has no JavaScript test runner - the same source-text approach
-/// <c>Tasks.AppJsSourceTests</c> uses for <c>app.js</c> and <c>app.css</c>.
+/// <c>Tasks.AppJsSourceTests</c> uses for the wwwroot modules and <c>app.css</c>.
 /// </summary>
 public sealed class SidebarCollapseSourceTests
 {
-    /// <summary>Both <c>window.huddleSidebar</c> functions wrap their storage access in a try block (Right sidebar spec D-8).</summary>
+    /// <summary>Both <c>sidebar.js</c> collapse functions (<c>isCollapsed</c>, <c>setCollapsed</c>) wrap their storage access in a try block (Right sidebar spec D-8).</summary>
     [Fact]
-    public void AppJs_HuddleSidebar_GuardsEveryStorageAccess()
+    public void SidebarJs_Sidebar_GuardsEveryStorageAccess()
     {
         string block = SidebarCollapseSourceTests.HuddleSidebarBlock();
         string isCollapsed = SidebarCollapseSourceTests.FunctionBlock(block, "isCollapsed(id) {", "setCollapsed(id, collapsed) {");
         string setCollapsed = SidebarCollapseSourceTests.FunctionBlock(block, "setCollapsed(id, collapsed) {", null);
 
-        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        // contains-ok: source-fact test, no JS runner - sidebar.js's own text is what's pinned.
         Assert.Contains("try {", isCollapsed, StringComparison.Ordinal);
-        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        // contains-ok: source-fact test, no JS runner - sidebar.js's own text is what's pinned.
         Assert.Contains("try {", setCollapsed, StringComparison.Ordinal);
     }
 
-    /// <summary>The <c>window.huddleSidebar</c> keys are built from the <c>huddle.sidebar.collapsed.</c> prefix plus the panel id (Right sidebar spec D-8).</summary>
+    /// <summary>The <c>sidebar.js</c> keys are built from the <c>huddle.sidebar.collapsed.</c> prefix plus the panel id (Right sidebar spec D-8).</summary>
     [Fact]
-    public void AppJs_HuddleSidebar_UsesThePanelKeyPrefix()
+    public void SidebarJs_Sidebar_UsesThePanelKeyPrefix()
     {
         string block = SidebarCollapseSourceTests.HuddleSidebarBlock();
 
-        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
+        // contains-ok: source-fact test, no JS runner - sidebar.js's own text is what's pinned.
         Assert.Contains("\"huddle.sidebar.collapsed.\" + id", block, StringComparison.Ordinal);
     }
 
@@ -50,13 +50,13 @@ public sealed class SidebarCollapseSourceTests
         Assert.DoesNotContain("rgba(", rules, StringComparison.Ordinal);
     }
 
-    /// <summary>Returns the <c>window.huddleSidebar</c> object literal, from its name to the <c>};</c> that closes it.</summary>
+    /// <summary>Returns the <c>sidebar</c> object literal in <c>sidebar.js</c>, from its name to the <c>};</c> that closes it.</summary>
     private static string HuddleSidebarBlock()
     {
-        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
-        int start = text.IndexOf("window.huddleSidebar", StringComparison.Ordinal);
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "sidebar.js"));
+        int start = text.IndexOf("const sidebar = {", StringComparison.Ordinal);
         int end = start < 0 ? -1 : text.IndexOf("\n};", start, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, "Expected window.huddleSidebar to be an object literal closed by \"};\".");
+        Assert.True(start >= 0 && end > start, "Expected const sidebar in sidebar.js to be an object literal closed by \"};\".");
         return text[start..(end + 3)];
     }
 
@@ -65,7 +65,7 @@ public sealed class SidebarCollapseSourceTests
     {
         int start = block.IndexOf(startMarker, StringComparison.Ordinal);
         int end = endMarker is null ? block.Length : block.IndexOf(endMarker, StringComparison.Ordinal);
-        Assert.True(start >= 0 && end > start, $"Expected '{startMarker}' to be present in window.huddleSidebar.");
+        Assert.True(start >= 0 && end > start, $"Expected '{startMarker}' to be present in sidebar.js.");
         return block[start..end];
     }
 }

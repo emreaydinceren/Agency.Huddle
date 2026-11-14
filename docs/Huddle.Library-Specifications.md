@@ -441,7 +441,7 @@ As ADR-0029 decided:
   (Appearance, default right). The room sidebar stays the existing `MudDrawer`.
 - **Size.** `FirstPanelInitialSize` and `MinPanelSize` are pixels (`int?` and `int`). The pane
   opens at 420px. The divider position is read with `GetDividerPositionAsync()` when the pane
-  closes and when the layout is disposed, stored with `window.huddleStorage` and restored with
+  closes and when the layout is disposed, stored in `localStorage` through `BrowserStorage` (`storage.js`) and restored with
   `SetDividerPositionAsync(offset)`. The panel has no change callback to bind.
 - **Closed,** the pane isn't rendered at all and the page body takes the full width. It is
   toggled from the sidebar's *Library* link, the `?library=` link handler (§6.6) and a close
@@ -513,8 +513,8 @@ doesn't change.
 
 **The Copy button.** Every document, in the pane's header and on every file node's menu, has a
 **Copy** button (`MudIconButton`, `Icons.Material.Outlined.ContentCopy`). It puts the file's
-**absolute path** on the clipboard through the existing `window.huddleClipboard` helper in
-`app.js`, and shows *Path copied*. It copies the path and nothing else: no Markdown and no
+**absolute path** on the clipboard through the existing `copy` function in
+`clipboard.js` (called by `LibraryClipboard`), and shows *Path copied*. It copies the path and nothing else: no Markdown and no
 Huddle-only token. The same text works in a Huddle Room, in Claude Code and in any other tool.
 
 **In the chat,** the pasted path is an ordinary absolute path, so §6.6 already renders it as a
@@ -619,7 +619,7 @@ public sealed record LibraryLocation(string RootId, string FolderPath);
 | `Title` | `string?` | The explorer's header label. Defaults to the single scope's folder name, or *Library* |
 | `Layout` | `LibraryExplorerLayout` | `Stacked` (tree above document, for narrow hosts such as the pane) or `SideBySide` (tree left, for pages) |
 | `InitialFile` | `string?` | A file, relative to the first scope, to open on first render |
-| `StateKey` | `string` | Keys the remembered expanded folders, open file and divider position in `window.huddleStorage`, so each host remembers its own |
+| `StateKey` | `string` | Keys the remembered expanded folders, open file and divider position in `localStorage` (through `BrowserStorage`), so each host remembers its own |
 
 `LibraryLocation`, `LibraryExplorerLayout` and any other parameter type are **`public`**:
 [rules.md](engineering/rules.md) forbids a `[Parameter]` of an `internal` type (CS0053). Everything
@@ -1092,7 +1092,7 @@ solution after each (`dotnet build Huddle.slnx`, then `dotnet test Huddle.slnx -
 | LB-T10 | L4 | Source | `ThemeSourceTests` still pass with the new CSS; string parameters in `Components/Library/**` carry their leading `@` (the `rules.md` row), guarded the way `AgentDialogParametersTests` guards the Agent dialog | §8 |
 | LB-T11 | L3 | Unit | `RoomSession` prompt tests: the Library documents block's position (after File Changes, before Catch-up), dedupe and cap, paths outside roots ignored, inline text only when `ReadsFiles` is false, truncation line; prompt goldens and `PromptDefaultsTests` for the four keys | §6.14 |
 | LB-I13 | L3 | Impl | The block in `RoomSession`, the four `turn.library*` keys, the `LibraryPathResolver` lookup from an absolute path | §6.14 |
-| LB-I14 | L4 | Impl | The Copy button on the document header and the node menu, using `window.huddleClipboard` | §6.14 |
+| LB-I14 | L4 | Impl | The Copy button on the document header and the node menu, using `clipboard.js` (through `LibraryClipboard`) | §6.14 |
 | LB-T20 | L6 | Unit | `NoteTagReaderTests` and `NoteFrontmatterTests`: every inline, boundary and frontmatter row of the §6.17 test table, with a **(V)** marker on the rows to verify against a vault | §6.17 |
 | LB-I20 | L6 | Impl | `NoteFrontmatter.Split`; `NoteTagReader` with the one normalise step and the Task-id exclusion through `TaskId.TryParse`; the code-range helper in `WikiLinkParser` made shared, and Markdig run over the body only | §6.17 |
 | LB-T21 | L6 | Functional | Tag collection in `WikiLinkIndex` on a temp root: merge, display casing, nesting and counts, skipped notes, `MaxIndexedFiles`, invalidation, the in-flight-build race, nothing written | §6.17 |

@@ -385,4 +385,4 @@ What differs between the text above and the code as built. The code is right whe
 | B-6 | §5.6: "every other step is the same" for `PostAsHuddleAsync` | Two steps differ: no Budget spend or reset and no dropped Question or form (HF-9 finding 1) | `PostCoreAsync` read "not an Agent" as "the Human" |
 | B-7 | §5.6 listed `SenderDisplay` as the place that draws a sender | `MessageList.razor` draws it; `SenderDisplay` only renames the Human. A Huddle wake-up is the muted system row and any other Huddle Message wears `.huddle-mark` | HF-9 finding 3 |
 | B-8 | §5.4: the pill and pause icon | A `helper-paused` card wears the gauge badge, but its pill is the ordinary "Waiting for you"; only `room-budget` draws the pause icon in the pill | Not worth a second rule |
-| B-9 | The Helpers anchor "and scroll" | `HelpersPanel` scrolls once, after the first render, with the existing `teamScroll.intoView` | Same helper as the Prompts and Packs highlights |
+| B-9 | The Helpers anchor "and scroll" | `HelpersPanel` scrolls once, after the first render, with the existing `intoView` in `scroll.js` | Same helper as the Prompts and Packs highlights |

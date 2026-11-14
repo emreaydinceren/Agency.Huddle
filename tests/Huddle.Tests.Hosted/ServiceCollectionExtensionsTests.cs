@@ -177,7 +177,16 @@ public sealed class ServiceCollectionExtensionsTests
     public void AddTeamServices_RegistersTheCircuitConnectionTrackerAsTheCircuitHandler()
     {
         using TempDataDir dataDir = new();
-        using ServiceProvider provider = BuildTeamProvider(dataDir);
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Team:DataDir"] = dataDir.Path })
+            .Build();
+        var services = new ServiceCollection();
+        services.AddLogging();
+
+        // Blazor Server supplies the circuit's IJSRuntime in the app; the circuit handlers include JsModulePreloader, which needs it.
+        services.AddScoped<Microsoft.JSInterop.IJSRuntime, Agency.Huddle.Tests.Ui.FakeModuleRuntime>();
+        services.AddTeamServices(configuration);
+        using ServiceProvider provider = services.BuildServiceProvider();
         using IServiceScope scope = provider.CreateScope();
 
         CircuitConnectionTracker handler = Assert.Single(scope.ServiceProvider.GetServices<CircuitHandler>().OfType<CircuitConnectionTracker>());

@@ -141,7 +141,7 @@ public sealed class ComposerReferencePickerTests
         Assert.Equal(first, cut.Find("textarea").GetAttribute("aria-activedescendant"));
     }
 
-    /// <summary>A token with a space and no hits closes the picker and tells the script through <c>teamComposer.pickerClosed</c>.</summary>
+    /// <summary>A token with a space and no hits closes the picker and tells the script through <c>pickerClosed</c> in <c>composer.js</c>.</summary>
     [Fact]
     public async Task SpacedTokenWithNoHits_Closes()
     {
@@ -154,7 +154,7 @@ public sealed class ComposerReferencePickerTests
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll("[role='listbox']")));
         Assert.Equal("false", cut.Find("textarea").GetAttribute("aria-expanded"));
-        _ = ctx.JSInterop.VerifyInvoke("teamComposer.pickerClosed");
+        _ = ctx.Module(JsModule.Composer).VerifyInvoke("pickerClosed");
     }
 
     /// <summary>A filter prefix followed by a space (<c>lib: </c>, <c>lib: my</c>) is not a Name with a space: the search is not yet possible, so the picker stays open and never tells the script it closed (spec §5.1, §5.5).</summary>
@@ -173,7 +173,7 @@ public sealed class ComposerReferencePickerTests
         await composer.Instance.PickerSettled.WaitAsync(Xunit.TestContext.Current.CancellationToken);
 
         Assert.Equal("true", cut.Find("textarea").GetAttribute("aria-expanded"));
-        ctx.JSInterop.VerifyNotInvoke("teamComposer.pickerClosed");
+        ctx.Module(JsModule.Composer).VerifyNotInvoke("pickerClosed");
     }
 
     /// <summary>Prose after a searchable filter prefix (<c>team: standup in 5 min</c>) with no row closes the picker, so the next Enter sends instead of needing a second one.</summary>
@@ -192,7 +192,7 @@ public sealed class ComposerReferencePickerTests
         await composer.Instance.PickerSettled.WaitAsync(Xunit.TestContext.Current.CancellationToken);
 
         Assert.Equal("false", cut.Find("textarea").GetAttribute("aria-expanded"));
-        _ = ctx.JSInterop.VerifyInvoke("teamComposer.pickerClosed");
+        _ = ctx.Module(JsModule.Composer).VerifyInvoke("pickerClosed");
     }
 
     /// <summary>After <c>/invite </c> the picker lists the Agents group alone.</summary>

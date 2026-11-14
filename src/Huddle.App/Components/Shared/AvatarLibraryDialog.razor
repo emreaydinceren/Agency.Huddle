@@ -9,7 +9,7 @@
     The search box sits in a wrapper that stops keydown bubbling, so Escape clears the text first and only a second
     Escape (with the text already empty) cancels the dialog. Blazor's stopPropagation only stops Blazor's own event
     dispatch: MudBlazor closes the dialog on Escape through a DOM key interceptor on the dialog element, so the
-    wrapper is also handed to huddleAvatarLibrary.guardSearchEscape (app.js), which stops the DOM event itself.
+    wrapper is also handed to guardSearchEscape (avatar-library.js), which stops the DOM event itself.
 *@
 
 @using Agency.Huddle.App.Avatars

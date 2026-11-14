@@ -150,7 +150,7 @@
         }
 
         this.scrolled = true;
-        _ = await BrowserCall.InvokeAsync<bool>(this.JS, "teamScroll.intoView", PromptFieldId(this.highlight));
+        _ = await BrowserCall.InvokeAsync<bool>(this.JS, JsModule.Scroll, "intoView", PromptFieldId(this.highlight));
     }
 
     private bool IsHighlighted(string key) => string.Equals(key, this.highlight, StringComparison.Ordinal);

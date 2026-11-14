@@ -80,7 +80,7 @@ Two of those steps exist for reasons specific to this repo:
   launches a real `node -e` subprocess to prove the stdio pipe wiring works. The SDK image
   ships no Node, and without this step those six tests fail with `Failed to start 'node'`.
   `ComposerScriptTests` (6 test methods; the picker harness `tests/Huddle.Tests.Agents/Ui/References/composer-picker.harness.js`
-  loads the real `app.js` into a `vm` context under `node`) need it too, and so does
+  loads the real `composer.js` into a `vm` context under `node`) need it too, and so does
   `MarkdownCommandsScriptTests` (the harness `tests/Huddle.Tests.Agents/Ui/Library/markdown-commands.harness.mjs`
   imports the pure `wwwroot/markdown-commands.js` as an ES module; plain Node 18 runs it). One
   `node` process serves the whole class, so a missing `node` fails all its methods together.

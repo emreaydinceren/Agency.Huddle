@@ -173,7 +173,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-18--s
 
 ### SHELLNAV-19 — app.js is proven functionally: Enter sends and clears, and the transcript scrolls
 
-File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-19--appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls)
+File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-19--composerjs-and-scrolljs-are-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

@@ -10,7 +10,8 @@ internal static class CircuitServiceCollectionExtensions
     /// <see cref="CircuitHandler"/> in the circuit's scope and reports the connection to it, components read it
     /// as an <see cref="ICircuitConnection"/>, and <see cref="ServerNavigator"/> is built on that. The three
     /// resolve to one instance. Two instances would leave the one components read forever connected, and no
-    /// compiler or runtime error would say so.
+    /// compiler or runtime error would say so. Also registers <see cref="JsModulePreloader"/>, a second handler that
+    /// imports the app's JS modules when the circuit opens.
     /// </summary>
     /// <param name="services">The service collection.</param>
     /// <returns>The same collection, for chaining.</returns>
@@ -22,6 +23,7 @@ internal static class CircuitServiceCollectionExtensions
         services.AddScoped<ICircuitConnection>(static provider => provider.GetRequiredService<CircuitConnectionTracker>());
         services.AddScoped<CircuitHandler>(static provider => provider.GetRequiredService<CircuitConnectionTracker>());
         services.AddScoped<ServerNavigator>();
+        services.AddScoped<CircuitHandler, JsModulePreloader>();
         return services;
     }
 }

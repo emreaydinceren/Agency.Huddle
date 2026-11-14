@@ -1,6 +1,6 @@
 @*
     The drag handle on the left drawer's content-facing edge: the mouse drags it and the arrow keys move it.
-    huddleResize.attachSidebar (app.js) sets the layout's
+    attachSidebar (resize.js) sets the layout's
     --mud-drawer-width-left on every pointermove, so a drag never round-trips to the server; only the width it commits
     on release does, through WidthChanged, so MainLayout's Width follows and the next render agrees with what the
     Human sees. The width is the Sidebar's own (the Activity bar's 49px is not part of it) and is remembered under
@@ -74,7 +74,7 @@
         }
 
         this.self = DotNetObjectReference.Create(this);
-        _ = await BrowserCall.InvokeVoidAsync(this.JS, "huddleResize.attachSidebar", this.handle, this.self, this.StorageKey, this.MinPx, this.MaxPx, this.DefaultPx, this.BarPx, this.Side);
+        _ = await BrowserCall.InvokeVoidAsync(this.JS, JsModule.Resize, "attachSidebar", this.handle, this.self, this.StorageKey, this.MinPx, this.MaxPx, this.DefaultPx, this.BarPx, this.Side);
     }
 
     /// <summary>Called from the browser with the width a drag or key press settled on.</summary>

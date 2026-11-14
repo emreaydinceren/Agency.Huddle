@@ -19,7 +19,7 @@ namespace Agency.Huddle.App.Components.Layout;
 /// step. Nothing is shown until <see cref="LoadAsync"/> has read the stored choice, so a removed shortcut never flashes
 /// on a reload; JavaScript is unreachable while prerendering, so the first caller is an <c>OnAfterRenderAsync</c>.
 /// </remarks>
-/// <param name="js">Reaches <c>huddleStorage</c> in <c>app.js</c>.</param>
+/// <param name="js">Reaches <c>storage.js</c>.</param>
 /// <param name="logger">Reports a <see cref="Changed"/> subscriber that threw; defaults to a logger that discards.</param>
 /// <param name="renames">The rename journal, so a name stored before a Team rename loads as today's name.</param>
 internal sealed class TeamShortcutStore(IJSRuntime js, ILogger<TeamShortcutStore>? logger = null, ITeamRenames? renames = null)

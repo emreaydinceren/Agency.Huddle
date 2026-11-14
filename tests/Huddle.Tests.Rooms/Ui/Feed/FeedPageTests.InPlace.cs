@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Feed;
 using Bunit;
 using Bunit.Rendering;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -36,7 +37,7 @@ public sealed partial class FeedPageTests
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         FeedItem ask = host.Feed.PostNeedsYou(5);
         await using MudBunitContext ctx = NewContext(host);
-        ctx.JSInterop.Setup<bool>("huddleFeed.isScrolled", _ => true).SetResult(true);
+        ctx.Module(JsModule.Feed).Setup<bool>("isScrolled", _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         FeedItem fresh = host.Feed.PostTaskCreated();
         await cut.InvokeAsync(() => host.Feed.Events.RaiseItemsAdded([fresh]));

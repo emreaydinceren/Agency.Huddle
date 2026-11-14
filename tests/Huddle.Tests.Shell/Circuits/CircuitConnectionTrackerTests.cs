@@ -53,11 +53,12 @@ public sealed class CircuitConnectionTrackerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         ServiceCollection services = new();
+        services.AddScoped<Microsoft.JSInterop.IJSRuntime, Agency.Huddle.Tests.Ui.FakeModuleRuntime>(); // Blazor supplies it in the app; JsModulePreloader needs it.
         services.AddCircuitConnection();
         using ServiceProvider provider = services.BuildServiceProvider();
         using IServiceScope scope = provider.CreateScope();
 
-        CircuitHandler handler = Assert.Single(scope.ServiceProvider.GetServices<CircuitHandler>());
+        CircuitHandler handler = Assert.Single(scope.ServiceProvider.GetServices<CircuitHandler>().OfType<CircuitConnectionTracker>());
         ICircuitConnection connection = scope.ServiceProvider.GetRequiredService<ICircuitConnection>();
         await handler.OnConnectionDownAsync(TestCircuit.Any(), ct);
 

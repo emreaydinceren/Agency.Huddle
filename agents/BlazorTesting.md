@@ -96,7 +96,7 @@ Snapshot the calls there instead:
 
 ```csharp
 await cut.WaitForAssertionAsync(async () =>
-    Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync("huddleStorage.set")));
+    Assert.NotEmpty(await ctx.InvocationsOnDispatcherAsync(JsModule.Storage, "set")));
 ```
 
 A read straight after a synchronous `cut.Render(...)` with nothing in flight is safe as it is. The `NameDialogTests` focus checks and the `LibraryExplorerTests` divider
@@ -126,8 +126,13 @@ hundred runs. Count the element — `class="agents-item-name">Amy<` — instead.
   membership.
 - Raw HTTP output encodes `'` as `&#x27;`. Parse HTML outside a render with
   `new AngleSharp.Html.Parser.HtmlParser().ParseDocument(html)`.
-- `app.js` and the `wwwroot/css/` stylesheets have no runner: pin their rules as source facts (`AppJsSourceTests`,
-  `AppCssTasksTests`), using ordered `IndexOf` checks where order matters.
+- The `wwwroot/` JS modules and the `wwwroot/css/` stylesheets have no browser runner: pin their rules as source facts
+  (`AppJsSourceTests`, `AppCssTasksTests`), using ordered `IndexOf` checks where order matters.
+- A component's call into one of the app's JS modules is recorded on that module, by the bare export name, not on
+  `JSInterop` under a dotted global name. Set it up and read it through `MudBunitContext.Module(JsModule.X)`
+  (`Module(JsModule.Clipboard).Setup<bool>("copy")`). Never call `JSInterop.SetupModule` for an app module on a
+  `MudBunitContext`: the context already did, imports are cached per context, and a second handler only reaches imports
+  made after it. A plain `BunitContext` calls `SetupModule(JsModule.X.Path)` once, before the first render.
 
 ## Reading component state
 
