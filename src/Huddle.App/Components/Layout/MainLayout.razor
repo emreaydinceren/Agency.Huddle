@@ -86,8 +86,8 @@
                 <RoomList />
             </div>
             <div class="sidebar-view sidebar-view-team" hidden="@(this.sidebarView != SidebarView.Teams)">
-                @* The Teams view is a Team shortcut's view with its Team list unfolded: the last Team used, else the first. *@
-                <TeamsNav IsTeamsView="true" Team="@this.shortcutTeam" TeamChanged="this.OnTeamsViewTeamChanged" />
+                @* The Teams view is a Team shortcut's view with its Team list unfolded: the Team of the open page, else the last Team used, else the first. *@
+                <TeamsNav IsTeamsView="true" Team="@this.shortcutTeam" TeamChanged="this.OnTeamsViewTeamChanged" RouteTeamChanged="this.OnRouteTeamChanged" />
             </div>
             @* The Team view a shortcut opens is its own TeamsNav, narrowed to that Team; it is mounted while a shortcut
                has been used, so its open folders survive a switch to another view and back. *@
@@ -220,6 +220,16 @@
         {
             this.sidebarView = null;
         }
+    }
+
+    /// <summary>
+    /// The open page is in <paramref name="team"/>, which the Teams view was not showing: it becomes the Team shown. The Sidebar's view
+    /// and the Activity bar's highlight stay as they were; a pressed shortcut's view and tile follow, as both read <see cref="shortcutTeam"/>.
+    /// </summary>
+    /// <param name="team">The catalog's spelling of the page's Team.</param>
+    private void OnRouteTeamChanged(string team)
+    {
+        this.shortcutTeam = team;
     }
 
     /// <summary>Remembers the Team picked in the Teams view as the last used one; the Sidebar stays on the Teams view.</summary>
