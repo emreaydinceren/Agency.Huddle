@@ -1481,9 +1481,9 @@ If the Model has no effort ladder at all, the select will show only `Agent defau
 
 **Steps**
 
-1. In `T-B` run `Adapters` and write down every row. Then in the sidebar click **New chat**.
+1. In `T-B` run `Adapters` and write down every row. Then in the sidebar click **New room**.
 2. In the panel tick the checkbox next to `Nova` AND the checkbox next to `Chief of Staff`.
-3. Click **Start chat** and note the new Room that appears in the sidebar; open it.
+3. Click **Open room** and note the new Room that appears in the sidebar; open it.
 4. Go back to the two-member Room named `Nova`.
 5. In its composer type `My favourite fruit is a quince. Reply with just OK.` and press Enter; wait for the reply.
 6. Switch to the group Room from step 3.
@@ -1512,7 +1512,7 @@ If the Model has no effort ladder at all, the select will show only `Agent defau
 
 **Inconclusive if**
 
-If `Nova` answers `quince` and a Memory file explains it, record the Memory file's path and conclude nothing about leaks: only the routing conditions and the process count are then decisive. If **New chat** shows `No agents have connected yet`, nothing has connected — wait for `Nova` to go Online, or use **Add agent** in the `Nova` Room header instead.
+If `Nova` answers `quince` and a Memory file explains it, record the Memory file's path and conclude nothing about leaks: only the routing conditions and the process count are then decisive. If **New room** shows `No agents have connected yet`, nothing has connected — wait for `Nova` to go Online, or use **Add agent** in the `Nova` Room header instead.
 
 > [!NOTE]
 > The old "context bleeds between Rooms" limit is lifted (ADR-0024; `known-limits.md:137`): an Agent holds one session per Room, and shares only its Persona text, Work Dir, Memory and adapter process across them. What is given up is implicit recall of other Rooms. **Stop** stops only that Room's session.
@@ -1534,7 +1534,7 @@ If `Nova` answers `quince` and a Memory file explains it, record the Memory file
 1. Open a FRESH `T-A` (so no stale `Team__` variables remain).
 2. In `T-A` run `$env:Team__Acp__TokenBudget='1'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 3. In the browser open `http://localhost:5100/agents` and wait until both `Nova` and `Ada` read **Online**.
-4. In the sidebar click **New chat**, tick `Nova` and `Ada`, and click **Start chat**.
+4. In the sidebar click **New room**, tick `Nova` and `Ada`, and click **Open room**.
 5. Open the new Room.
 6. In the composer type `@Nova please ask @Ada a question, then keep the conversation going.` and press Enter.
 7. Watch the Room. As soon as the first agent-to-agent exchange happens, switch to the `/agents` tab and watch both tiles.
@@ -1588,7 +1588,7 @@ IMPORTANT: this Degraded state is UNREACHABLE in a plain two-member Human-to-Per
 1. Open a FRESH `T-A`.
 2. In `T-A` run `$env:Team__Acp__TokenBudget='0'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 3. In the browser wait until `Nova` and `Ada` both read **Online** on `/agents`.
-4. Open (or create with **New chat**) a Room containing both `Nova` and `Ada`.
+4. Open (or create with **New room**) a Room containing both `Nova` and `Ada`.
 5. In the composer type `@Nova please ask @Ada a question, then keep the conversation going.` and press Enter.
 6. Watch the Room until the exchange stops. Count the agent replies.
 7. Read the area above the composer.

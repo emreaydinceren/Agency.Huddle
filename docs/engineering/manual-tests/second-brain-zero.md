@@ -177,7 +177,7 @@ ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test g
 **Paid** 💰 · about 10 min
 
 1. In `T-A`, stop the app and run the paid launch.
-2. Click **Chats** and open the Chief of Staff's Room. Wait for its first Message.
+2. Click **Rooms** and open the Chief of Staff's Room. Wait for its first Message.
 
 **Expect**: without you posting, one Message arrives that says who it is, how Huddle works, what a team can be, what it
 costs, and lists a menu of first teams. It ends with exactly one question.
@@ -262,7 +262,7 @@ Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** 
 
 **Paid** 💰 · about 15 min
 
-1. Click **Chats** and open your one-to-one Room with **Hana**. Huddle posted the onboarding steps there, as you, once she started, and she will reply, probably with questions. Do not answer here. Do not stop the app while her first Turn runs: the reply is lost.
+1. Click **Rooms** and open your one-to-one Room with **Hana**. Huddle posted the onboarding steps there, as you, once she started, and she will reply, probably with questions. Do not answer here. Do not stop the app while her first Turn runs: the reply is lost.
 2. In the **Family** Team Room, click the paperclip and attach `family\family-profile.md` from the test documents. A file attached in the Team's Room goes to its `raw/`.
 3. Send this:
 
@@ -755,7 +755,7 @@ This also answers an open question: can the Chief of Staff file a Task into a Te
    Select-String -Path "$data\Teams\memory\*.md" -Pattern 'Pacific'
    ```
 
-3. Open Cole's Room from ZERO-10, click Cole's avatar in the Room header, then **Start afresh**, and then the red **Start afresh** confirm in the popover. **New chat** with only Cole would reopen the same Room and session, and a fresh session is what reads a fresh index. Check that a new session began: the log shows `sessionId=... resume=none`, and Cole's old session id is gone from his Persona file. Send:
+3. Open Cole's Room from ZERO-10, click Cole's avatar in the Room header, then **Start afresh**, and then the red **Start afresh** confirm in the popover. **New room** with only Cole would reopen the same Room and session, and a fresh session is what reads a fresh index. Check that a new session began: the log shows `sessionId=... resume=none`, and Cole's old session id is gone from his Persona file. Send:
 
    ```text
    Using only your instructions and memory index, with no tools: what time zone does Sam work in? Where do you know that from?
@@ -825,7 +825,7 @@ lactose topic if there is one. The History shows **Team Memory (Helper)** and na
    From now on, put the invoice number first in every line about an invoice.
    ```
 
-5. Add that line yourself to `Teams/Harbor Lane Bakery/AGENTS.md` through the Team's **Files** tab, under a heading `## Rules`, and press Ctrl+S to save, because the editor has no Save button. No Agent restarts. **New chat** with only Cole reopens the same Room and session, so open that Room, click Cole's avatar in the Room header, then **Start afresh**, and the red confirm (it moves when the right panel is open, and a missed click leaves the old session: check the log for `resume=none`). In the Files tab, check the editor is open before you type: the Edit toggle sits at a different height for each file. Then ask Cole:
+5. Add that line yourself to `Teams/Harbor Lane Bakery/AGENTS.md` through the Team's **Files** tab, under a heading `## Rules`, and press Ctrl+S to save, because the editor has no Save button. No Agent restarts. **New room** with only Cole reopens the same Room and session, so open that Room, click Cole's avatar in the Room header, then **Start afresh**, and the red confirm (it moves when the right panel is open, and a missed click leaves the old session: check the log for `resume=none`). In the Files tab, check the editor is open before you type: the Edit toggle sits at a different height for each file. Then ask Cole:
 
    ```text
    Are there any rules in your instructions about how to write a line about an invoice? Quote them.
@@ -1085,7 +1085,7 @@ To go back to a saved case instead, restore it with `P-CHECKPOINT`, which needs 
 - **Agent wording varies.** Judge the facts and figures in each table, never the exact sentences.
 - **Some file output varies.** The order of Skills, and the line number on a `skills:` match, depend on your clicks and the Agent's Adapter.
 - **The dates are fixed.** The documents are written around November 2026, and Cole's question states its "as of" date for that reason.
-- **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **Start afresh** where the step says so; **New chat** with the same Members reopens the existing Room and session.
+- **A new session is deliberate.** A Memory index is read when a session opens, so a running session hears of a change only as a file change. Use **Start afresh** where the step says so; **New room** with the same Members reopens the existing Room and session.
 - **Pane and browser traps.** A native file dialog (the paperclip, **Browse**) cannot be driven from an automation pane: attach through the file input, one file at a time. Set the viewport to about 1400 by 900 first, or the Agents view collapses. Screenshots lag one action behind, so a click can look as if it failed. The first click after a page change can miss silently. A click point in an 800 by 600 pane frame is the CSS pixel divided by 1.28. The time field on a job does not take typing in such a pane: set its value from script.
 - **The mock Adapter cannot run this.** It echoes its prompt, so it only proves the Team setup steps.
 - **Save a checkpoint after each case.** Once a case has passed and its result is in the Run log, stop the app and run

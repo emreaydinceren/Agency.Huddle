@@ -1,7 +1,7 @@
 # Huddle user guide
 
 Huddle is a chat workspace where you work with a small team of AI
-**Agents**. You talk to them in chat Rooms, organise them into Teams and
+**Agents**. You talk to them in Rooms, organise them into Teams and
 Projects, hand them Tasks, and share notes with them through the Library. This
 guide is for the person running Huddle on their own machine. It explains what
 each part of the app does, how the parts relate, and **what Huddle writes to
@@ -31,7 +31,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Set a Team's process and gates, schedules and Household | [Running a Team](#running-a-team) |
 | Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
 | Chat with one or several Agents | [Chatting in Rooms](#chatting-in-rooms) |
-| Chat inside a Team, or find its Team Room | [Team chats](#team-chats) |
+| Open a Room inside a Team, or find its Team Room | [Team rooms](#team-rooms) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Have an Agent, or yourself, reminded of something on a timetable | [Scheduling jobs](#scheduling-jobs) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
@@ -105,7 +105,7 @@ You get around the app from the left edge of the window, which works like Visual
 **Activity bar** at the far left has two rows of buttons. The buttons at the top choose
 what the **sidebar** beside it shows. The highlighted button is the one showing now.
 Select another to switch; select the highlighted one again to fold the sidebar away and
-give the page more room. The sidebar opens on **Chats**.
+give the page more room. The sidebar opens on **Rooms**.
 
 The **Feed** icon is always the first button in the Activity bar. Below it is one avatar tile
 per Team, its shortcut. To hide or bring back a Team's tile, open the Team's page and select
@@ -113,8 +113,8 @@ per Team, its shortcut. To hide or bring back a Team's tile, open the Team's pag
 
 | Activity bar button | What the sidebar shows |
 | --- | --- |
-| **Chats** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the chats waiting on you, and **All** with the rest, plus **New chat**. It never folds the list behind "Show all". A Team's chats are not listed under **All**; see [Team chats](#team-chats). Pick **Team** to list every chat in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A chat that is waiting on you also wears a **Needs you** pill in the list. |
-| **Teams** | One row per Team. Expand it to see its Team Room, its chats and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New chat**, **New project** and **Archive team**. A Project row has its own More (⋮) menu with **Archive project**. |
+| **Rooms** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the Rooms waiting on you, and **All** with the rest, plus **New room**. It never folds the list behind "Show all". A Team's Rooms are not listed under **All**; see [Team rooms](#team-rooms). Pick **Team** to list every Room in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A Room that is waiting on you also wears a **Needs you** pill in the list. |
+| **Teams** | One row per Team. Expand it to see its Team Room, its other Rooms and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New room**, **New project** and **Archive team**. A Project row has its own More (⋮) menu with **Archive project**. |
 | **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
 | **Library** | One **Library** link. The Library's roots (see [Library roots](#library-roots)) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
@@ -124,9 +124,9 @@ per Team, its shortcut. To hide or bring back a Team's tile, open the Team's pag
 The two buttons at the bottom of the Activity bar are **Archived** and **Settings**. **Archived**
 opens the [Archived page](#the-archived-page).
 
-![The Activity bar beside the sidebar, which shows Chats with Grace selected](images/user-guide/sidebar.png)
+![The Activity bar beside the sidebar, which shows Rooms with Grace selected](images/user-guide/sidebar.png)
 
-1. **Chats**, highlighted because the sidebar is showing it.
+1. **Rooms**, highlighted because the sidebar is showing it.
 2. **Teams**.
 3. **Agents**.
 4. **Tasks**.
@@ -136,7 +136,7 @@ opens the [Archived page](#the-archived-page).
 8. **Rooms**. The arrow folds the group away.
 9. A Room. Its More (⋮) menu sits at the end of the row.
 10. **Show all**, with how many Rooms there are, to list the rest.
-11. **New chat**.
+11. **New room**.
 
 When a Room is waiting on you, the **Needs you** card sits above **Rooms**.
 
@@ -144,7 +144,7 @@ Every page has its own address, so you can bookmark it:
 
 | Address | Page |
 | --- | --- |
-| `/rooms/{roomId}` | A chat Room |
+| `/rooms/{roomId}` | A Room |
 | `/agents` | Agents |
 | `/teams/{Team}`, `/teams/{Team}/files`, `/teams/{Team}/tasks` | A Team page and its tabs |
 | `/teams/{Team}/projects/{Project}` | A Project page |
@@ -156,7 +156,7 @@ Every page has its own address, so you can bookmark it:
 
 ### Needs you
 
-When several Rooms are running, **Needs you** at the top of the sidebar's **Chats** view lists the ones waiting on you, longest wait first. A Room is listed when:
+When several Rooms are running, **Needs you** at the top of the sidebar's **Rooms** view lists the ones waiting on you, longest wait first. A Room is listed when:
 
 - an Agent **mentions you** in a Message you have not answered (the row shows who and when);
 - an Agent has asked you a **Question** or opened a **Form** that is still waiting;
@@ -259,7 +259,7 @@ The search box sits in the top bar, above the sidebar and every page.
   Matching ignores case and looks for the exact phrase you typed.
 - **Results come in groups:** Teams, Agents, Library, Tasks and Rooms. With All, each group
   shows up to five results. With one chip picked, that group shows up to 50. Library matches
-  its contents as well as its names, for entries up to 1 MB. Closed Tasks and archived chats come
+  its contents as well as its names, for entries up to 1 MB. Closed Tasks and archived Rooms come
   last, shown in grey.
 - **Open a result** with `Enter` in the current Tab, or `Ctrl+Enter` to open it in a new Tab that
   stays. An Agent opens its card. A Room opens at the matching Message, which is highlighted for
@@ -278,7 +278,7 @@ It holds one or more panels, depending on the page:
 
 | On | Panels |
 | --- | --- |
-| A chat Room | **Members**, **Tasks in this chat**, **Documents in this chat** |
+| A Room | **Members**, **Tasks in this Room**, **Documents in this Room** |
 | A Markdown note in the Library | **Outline**, **Linked documents** |
 | A Task you opened on the Tasks page | **Task**: its details, read-only, with **Edit** (the sidebar opens by itself when you open a Task) |
 | A Task in its edit page | **Activity**, **Blocked by**, **Blocks**, **Linked documents** (the last three only when they have something to show) |
@@ -287,14 +287,14 @@ It holds one or more panels, depending on the page:
 | Panel | What it shows | What selecting it does |
 | --- | --- | --- |
 | **Members** | Everyone in the Room, Agents first, each with their avatar and, for an Agent, the [presence badge](#status-at-a-glance) on it. | The avatar opens the member's profile. |
-| **Tasks in this chat** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. A code such as an invoice number (`INV-2043`) is listed only if its letters are the Task prefix of a Team that exists or once existed; otherwise it stays plain text. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
-| **Documents in this chat** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is shown in grey. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
+| **Tasks in this Room** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. A code such as an invoice number (`INV-2043`) is listed only if its letters are the Task prefix of a Team that exists or once existed; otherwise it stays plain text. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
+| **Documents in this Room** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is shown in grey. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
 | **Outline** | The note's headings, indented by level. In **Split** mode it follows your typing; in **Read** and **Edit** it shows the note as last loaded or saved. | Scrolls the note to that heading. In **Edit** mode it moves the cursor to the heading's line. |
 | **Linked documents** | The notes this note links to with `[[...]]`, in the order they appear. A link to a note that does not exist shows `(not found)`. | Opens the linked note. |
 
 Each panel's header shows its name and a count. Press the header to fold the panel away; your
 browser remembers which panels you folded. A panel with nothing in it stays, with one line
-saying so, such as `No Tasks mentioned in this chat yet.` The Tasks panel appears only while
+saying so, such as `No Tasks mentioned in this Room yet.` The Tasks panel appears only while
 Tasks are switched on, and the two Library panels only while the Library is.
 
 **In the background:** the sidebar reads the same files and records as the page beside it and
@@ -317,13 +317,13 @@ connect. Later sections explain how to work with them.
 | **Agent** | An Agent that is running and online in chat. There is one Agent per Agent file. | A row in `team.db`, plus a running adapter process |
 | **Team** | A named group of Agents. Its membership is a label in each member's `teams:` list; a Team set up from a type also has a manager, a workspace and a process. | A label in each member's `teams:` list, plus a folder `Teams/<Team>/` holding `_team.md` (settings) and `AGENTS.md` (rules) |
 | **Project** | A piece of work inside one Team. | A sub-folder `Teams/<Team>/<Project>/` |
-| **Room** | A chat conversation between you and one or more Agents. | Rows in `team.db` |
+| **Room** | A shared space where you and one or more Agents chat: its members, Messages, Budget and files. You chat *in* a Room; the app never calls the Room itself a chat. | Rows in `team.db` |
 | **Message** | One chat message, in one Room. | One line in `rooms/<roomId>.jsonl` |
 | **Room Session** | An Agent's private working conversation for one Room. | Only a resume pointer, in `room-sessions/<Name>.json` |
 | **Task** | A unit of work filed under a Team or Project, optionally assigned to someone. | `Teams/<Team>/[<Project>/]_tasks/<ID>.md` |
 | **View** | A saved list or board of Tasks with filters. | `views.json` |
 | **Library item** | Any note, folder or file you browse in the Library. | The file itself, wherever it lives |
-| **Personal memory** | What one Agent remembers across chats. | `Agents/<Name>/work/memory/*.md` |
+| **Personal memory** | What one Agent remembers across Rooms. | `Agents/<Name>/work/memory/*.md` |
 | **Team Memory** | Facts shared by every member of a Team, or by a Project. | `Teams/<Team>/memory/*.md` and `Teams/<Team>/<Project>/memory/*.md` |
 | **Skill** | A named, reusable set of instructions an Agent can read on demand. | `Skills/<skill-name>/SKILL.md` plus extra `.md` files |
 
@@ -430,7 +430,7 @@ App_Data/
 │           ├── memory/            Project memory
 │           └── _tasks/
 ├── Skills/                        Team:Acp:SkillsDir; your own and overridden Skills
-├── rooms/<roomId>.jsonl           one chat transcript per Room
+├── rooms/<roomId>.jsonl           one transcript per Room
 ├── room-sessions/<Name>.json      where each Agent can resume each Room
 ├── file-state/<Name>.json         what each Agent last saw of its folders
 ├── team.db                        SQLite: users, agents, rooms, members, models, task ID counters
@@ -755,7 +755,7 @@ presence badge on its avatar and the word **Member**) and any new drafts after t
 
 - **Add** on a role card puts a new draft Agent on the roster, as in Build a team.
 - **Edit** on a member opens their Agent card, which saves at once.
-- **Message** opens this Team's own one-to-one chat with that member. It shows once the
+- **Message** opens this Team's own one-to-one Room with that member. It shows once the
   member has connected at least once.
 - **Remove** opens a menu: **Remove from team** takes the member off this Team and keeps
   the Agent; **Delete agent** deletes them. Either marks the card until you save,
@@ -1279,12 +1279,12 @@ Huddle does not connect anything itself. A Household has no workspace requiremen
 
 ## Chatting in Rooms
 
-### Starting a chat
+### Starting a Room
 
-Select **New chat** and pick one or more Agents. Choosing a single Agent
+Select **New room**, pick one or more Agents and select **Open room**. Choosing a single Agent
 reopens your existing one-to-one Room with it, if there is one. In the Rooms
-group this makes a root Room. From a Team's menu it makes a chat inside that
-Team; see [Team chats](#team-chats).
+group this makes a root Room. From a Team's menu it makes a Room inside that
+Team; see [Team rooms](#team-rooms).
 
 **In the background:** Huddle adds the Room and its members to `team.db`. The
 Room gets a name derived from its members. Its transcript file is created in
@@ -1373,7 +1373,7 @@ stop that, set `Team:References:ExpandInPrompt` to `false`.
 
 Use **Copy link** to put a Room's reference on the clipboard. It is the link button in
 the Room's header, and **Copy link** in the More (⋮) or right-click menu of a Room in the
-sidebar, both under Rooms (the **Chats** view) and under a Team (the **Teams** view). Paste it into any message box to make the same
+sidebar, both under the **Rooms** view and under a Team (the **Teams** view). Paste it into any message box to make the same
 reference the picker writes. The Room opens when a reader selects it.
 
 A plain address from the address bar opens the Room, but it is not a reference: it
@@ -1433,7 +1433,7 @@ it with their own tools.
 - Send waits while a file is still uploading, and the text you typed stays in the
   box.
 - The paperclip, paste and drop appear only when the Library is on.
-- In a Team's chat, files land in that Team's **`raw/`** folder, kept exactly as
+- In a Team's Room, files land in that Team's **`raw/`** folder, kept exactly as
   they arrived. Other Rooms put their files in the **Raw** root of the Library, one
   folder per Room.
 - Deleting a Room sends its files in **Raw** to the Recycle Bin. Archiving
@@ -1506,25 +1506,25 @@ session; nothing new is written to disk for the compaction itself.
 | Action | In the background |
 | --- | --- |
 | **Rename** (pencil icon beside the Room name) | Updates `team.db`. A name you type is kept even when members change. Not offered for a Team Room, whose name is its Team's. |
-| **Archive** | Adds the Room to the archived list in `team.db`. It only hides the Room; it still works and can still be woken. Find it on the **Chats** tab of the [Archived page](#the-archived-page). |
+| **Archive** | Adds the Room to the archived list in `team.db`. It only hides the Room; it still works and can still be woken. Find it on the **Rooms** tab of the [Archived page](#the-archived-page). |
 | **Delete** | Removes the Room from `team.db` and **permanently deletes** `rooms/<roomId>.jsonl`. Asks for confirmation. |
 
 > [!WARNING]
 > Deleting a Room cannot be undone. The transcript file is deleted, not moved to
 > the Recycle Bin. Archive the Room instead if you might want it later.
 
-### Team chats
+### Team rooms
 
-A Room is either a root Room or belongs to one Team. The two look the same in
-the chat; they differ in where they are listed.
+A Room is either a root Room or belongs to one Team. The two look the same
+inside; they differ in where they are listed.
 
-- **Rooms** lists the root Rooms: the chats you start from the Rooms group, and
+- **Rooms** lists the root Rooms: the ones you start from the **Rooms** view, and
   your one-to-one Rooms with Agents.
-- **A Team's chats** are listed under the Team in the sidebar's **Teams** view, below its Team
-  Room and above its Projects. Open the Team's More (⋮) menu and select **New chat**.
-  The panel is headed *New chat in Marketing* and lists that Team's members
+- **A Team's Rooms** are listed under the Team in the sidebar's **Teams** view, below its Team
+  Room and above its Projects. Open the Team's More (⋮) menu and select **New room**.
+  The panel is headed *New room in Marketing* and lists that Team's members
   first, but you can still select an Agent from another Team.
-- **The Team Room** is a chat named after the Team, holding you and every member
+- **The Team Room** is a Room named after the Team, holding you and every member
   of the Team. Every Team has one. It is created when the Team first has a
   member, and an Agent who joins the Team later is invited into it; the
   Transcript records the join like any invitation. Leaving a Team does not take
@@ -1536,14 +1536,14 @@ the chat; they differ in where they are listed.
 - **Digests and retrospectives** for a Team post in its Team Room, with a
   mention of the Agent they are for, so it replies. If the Team Room is
   archived, they post in that Agent's one-to-one under Rooms instead. A Task
-  whose original chat is gone wakes its assignee in a chat of that Team.
+  whose original Room is gone wakes its assignee in a Room of that Team.
 - **A Team that goes away** (no folder and no Agent's label names it any more,
   which is what renaming its folder in Explorer does while no Agent still
-  carries the old name) has its chats archived, with their history kept. Find them on the **Chats** tab of the [Archived page](#the-archived-page). If you restore one of them
+  carries the old name) has its Rooms archived, with their history kept. Find them on the **Rooms** tab of the [Archived page](#the-archived-page). If you restore one of them
   while its Team is still gone, it is listed under Rooms with "(Marketing)" after
   its name.
 
-**In the background:** when a chat is created inside a Team, Huddle writes a
+**In the background:** when a Room is created inside a Team, Huddle writes a
 row to the `room_teams` table in `team.db`, saying which Team the Room belongs
 to. A Team Room has its flag set there too. Huddle creates and fills Team Rooms
 when the list of Teams changes, so a Team made by hand, or from an Agent's
@@ -1721,11 +1721,11 @@ laid out just like Teams.
 ### The Archived page
 
 The **Archived** button at the bottom of the Activity bar opens one page with three tabs:
-**Teams**, **Projects** and **Chats**. Each tab lists what you archived. Select a row and choose
-**Restore**, or double-click it. On the **Chats** tab you can also **Delete** a chat for good;
+**Teams**, **Projects** and **Rooms**. Each tab lists what you archived. Select a row and choose
+**Restore**, or double-click it. On the **Rooms** tab you can also **Delete** a Room for good;
 Huddle asks first.
 
-- A chat shows where it belongs after its name: its Team, and its Project when it has one
+- A Room shows where it belongs after its name: its Team, and its Project when it has one
   ("Kickoff · Marketing / Q3 launch").
 - **Projects** lists the archived Projects of the Teams you still have. An archived Team's
   Projects come back with it when you restore the Team.
@@ -2567,7 +2567,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | Override a gate | The Task, with `gate overridden by Human` in its Change log | Assignee woken |
 | Add or remove an Agent | The `teams:` line in `<Name>.md` | That Agent restarts |
 | Create a Project | `Teams/<Team>/<Project>/` | Members see it as a file change |
-| Start a chat | `team.db` | None until you post |
+| Start a Room | `team.db` | None until you post |
 | Post a message | One line appended to `rooms/<roomId>.jsonl` | Addressed Agents take a turn |
 | Write `@name /compact` | One line in `rooms/<roomId>.jsonl`, then the Agent's outcome line | That Agent compacts its conversation; other Agents only read the outcome |
 | Archive a Room | `team.db` | None; Room still works |

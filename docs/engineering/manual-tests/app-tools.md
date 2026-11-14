@@ -162,7 +162,7 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 9. Close the card with the × button.
 10. Read the app's console window from the top. Confirm there is NO line containing `App tool server listening at`.
 11. In `T-C`, from the repo root, run `pwsh tools/echo-bot.ps1 -Name mybot` and wait for a line containing `"type":"welcome"`.
-12. In the browser, click **New chat** in the left sidebar, tick the checkbox next to `mybot`, then click **Start chat**.
+12. In the browser, click **New room** in the left sidebar, tick the checkbox next to `mybot`, then click **Open room**.
 13. In the room that opens, type exactly `hello` and press Enter.
 14. Confirm `mybot` replies within a few seconds and its reply appears as a message row with sender `mybot`.
 15. Confirm no amber `member-health-alert` strip appears anywhere between the transcript and the composer (it is a `Severity.Warning` alert, `Chat.razor:76`).
@@ -185,7 +185,7 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 
 **Inconclusive if**
 
-If `O-ADAPTERS` printed a non-zero count before the app took any action (a leftover adapter from an earlier run), you cannot attribute it — stop it with `Stop-Process -Id <ProcessId>`, restart the app, and rerun. If `mybot` does not appear in the **New chat** panel, the bot never registered; check `T-C` for the `welcome` line before judging. Do NOT file the fact that opening a Create/Edit agent card spawns a `node` probe in this mode — that is a documented, deliberate and free behaviour (no Turn is started, so no tokens are spent).
+If `O-ADAPTERS` printed a non-zero count before the app took any action (a leftover adapter from an earlier run), you cannot attribute it — stop it with `Stop-Process -Id <ProcessId>`, restart the app, and rerun. If `mybot` does not appear in the **New room** panel, the bot never registered; check `T-C` for the `welcome` line before judging. Do NOT file the fact that opening a Create/Edit agent card spawns a `node` probe in this mode — that is a documented, deliberate and free behaviour (no Turn is started, so no tokens are spent).
 
 > [!NOTE]
 > `O-ADAPTERS` is the honest oracle here, not the log. A missing log line proves the server did not bind; only the adapter count proves no adapter was launched.
@@ -471,7 +471,7 @@ If the transcript is empty after the restart, check you reopened the right room:
 **Steps**
 
 1. Open http://localhost:5100/agents. On paper or in a text file, write down every tile's Name, its title, its alias caption, and the state word in its avatar badge's tooltip (Online / Starting / Degraded / Offline).
-2. Click **New chat** in the left sidebar and write down every checkbox name in the panel and each one's status mark (glyph and tooltip). Click **New chat** again to close the panel without starting one.
+2. Click **New room** in the left sidebar and write down every checkbox name in the panel and each one's status mark (glyph and tooltip). Click **New room** again to close the panel without starting one.
 3. Open the room named `Nova` from the sidebar.
 4. Click into the composer and type exactly: `Who else is here? List every agent and every persona you can see, name for name, and say which are online.`
 5. Press Enter and wait for the reply.
@@ -482,7 +482,7 @@ If the transcript is empty after the restart, check you reopened the right room:
 
 **Pass if — all of these**
 
-- Every name in the reply appears on the /agents page or in the New chat panel, and every name on those surfaces appears in the reply.
+- Every name in the reply appears on the /agents page or in the New room panel, and every name on those surfaces appears in the reply.
 - Agents are separated from Personas, each Agent carries an online/offline state, and every Persona appears by name.
 - The online/offline states match the status marks on screen.
 - At Trace: the decoded tool text has the documented `Agents:` / `Personas:` shape.
@@ -511,7 +511,7 @@ If the reply lists the right names but gives no online/offline state, rerun once
 
 - Two Personas online: `Nova` (alias `nova`) and `Jarvis` (alias `jar`). Both Haiku/low.
 - A bot `mybot` connected in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`) — it is free and gives the room its third member.
-- A room with three or more members. Create it: click **New chat**, tick `Nova` and `mybot`, click **Start chat**.
+- A room with three or more members. Create it: click **New room**, tick `Nova` and `mybot`, click **Open room**.
 - COST: one turn on Haiku at effort low, plus one free re-check.
 
 **Steps**
@@ -519,7 +519,7 @@ If the reply lists the right names but gives no online/offline state, rerun once
 1. Open http://localhost:5100/agents and confirm the `Jarvis` tile shows the title `Researcher` and an alias caption reading `@jar` (separate elements, `Agents.razor:98-104`).
 2. FREE PATH FIRST — in the three-member room (`Nova, mybot`), click into the composer and type exactly `/invite @jar` then press Enter.
 3. Confirm the sidebar entry and the chat header `<h1>` both rename to include `Jarvis`, with no page refresh.
-4. Now make a room Jarvis is genuinely not in so the tool path can be tested: click **New chat**, tick `Nova` and `mybot`, click **Start chat**. A multi-agent New chat always creates a fresh Room (`ChatService.cs:477-490`), so no reset is needed.
+4. Now make a room Jarvis is genuinely not in so the tool path can be tested: click **New room**, tick `Nova` and `mybot`, click **Open room**. A multi-agent New room always creates a fresh Room (`ChatService.cs:477-490`), so no reset is needed.
 5. In that fresh room, click into the composer and type exactly: `List the agents here with their handles, then use mcp__team__invite_agent to add jar to this room.`
 6. Press Enter and wait for the turn to finish.
 7. Confirm Nova's reply quotes `Alias: jar` (or clearly reports `jar` as Jarvis's handle) from the job description it read.
@@ -560,7 +560,7 @@ If Nova asks you which room to invite into rather than reading the id from its o
 - APPTOOLS-05 has passed (the agent can read its own room id).
 - `Nova` and `Jarvis` both **Online**, Haiku/low.
 - A bot `mybot` connected in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`).
-- A three-member room containing `Nova` and `mybot` but NOT `Jarvis`. Create it via **New chat**: tick `Nova` and `mybot`, click **Start chat**.
+- A three-member room containing `Nova` and `mybot` but NOT `Jarvis`. Create it via **New room**: tick `Nova` and `mybot`, click **Open room**.
 - COST: one turn, plus one short turn for Jarvis's answer. Haiku at effort low.
 
 **Steps**
@@ -652,7 +652,7 @@ If Nova paraphrases rather than quoting the tool result verbatim, that alone is 
 **Before you start**
 
 - Any room with a Persona that is **Online**.
-- No agent or Persona named `Zephyr` exists. Confirm on /agents and in the **New chat** panel.
+- No agent or Persona named `Zephyr` exists. Confirm on /agents and in the **New room** panel.
 - COST: one short turn on Haiku at effort low.
 
 **Steps**
@@ -661,7 +661,7 @@ If Nova paraphrases rather than quoting the tool result verbatim, that alone is 
 2. Click into the composer and type exactly: `Use mcp__team__invite_agent to add someone called Zephyr to this room, then tell me word for word what the tool replied.`
 3. Press Enter and wait for the reply.
 4. Confirm the reply quotes text of the form `Unknown agent 'Zephyr'. Agents that do exist: <names>.`
-5. Confirm the `<names>` list contains the real agent names you can see on /agents and in **New chat** — not an empty list and not `none`.
+5. Confirm the `<names>` list contains the real agent names you can see on /agents and in **New room** — not an empty list and not `none`.
 6. Confirm the sidebar entry and the header `<h1>` are unchanged.
 7. Confirm the console shows NO `Invited agent` line.
 8. Confirm the model either corrects itself using one of the listed real names, or reports the failure plainly. It must not claim the invite succeeded.
@@ -682,7 +682,7 @@ If Nova paraphrases rather than quoting the tool result verbatim, that alone is 
 
 **Inconclusive if**
 
-If an agent named `Zephyr` does exist in your environment (someone created one), this test is INCONCLUSIVE — pick a name you have confirmed is absent from BOTH /agents and the **New chat** panel and rerun. If the model refuses to attempt the call at all ('there is no Zephyr, so I will not try'), that is INCONCLUSIVE for the tool's error text: rerun once with `Call mcp__team__invite_agent with agent "Zephyr" anyway and paste its exact result text.`
+If an agent named `Zephyr` does exist in your environment (someone created one), this test is INCONCLUSIVE — pick a name you have confirmed is absent from BOTH /agents and the **New room** panel and rerun. If the model refuses to attempt the call at all ('there is no Zephyr, so I will not try'), that is INCONCLUSIVE for the tool's error text: rerun once with `Call mcp__team__invite_agent with agent "Zephyr" anyway and paste its exact result text.`
 
 > [!NOTE]
 > One short Haiku turn, so cheap and fast. It is the cheapest test of the error-as-text design that all seven chat tools share.
@@ -839,7 +839,7 @@ If the model creates the room but stops before posting, the test is INCONCLUSIVE
 
 **Steps**
 
-1. Open http://localhost:5100/agents and write down every tile name and status, and open **New chat** and write down every checkbox name. Close the panel.
+1. Open http://localhost:5100/agents and write down every tile name and status, and open **New room** and write down every checkbox name. Close the panel.
 2. Open the room named `Nova`.
 3. Click into the composer and type exactly: `Do not read any files. Using only your tools, tell me who is in this room and what other agents exist.`
 4. Press Enter and wait for the reply. Write the answer down.
@@ -940,7 +940,7 @@ THE CONFUSING PART, and it is NOT a bug: after the refusal, Nova's own explanato
 **Steps**
 
 1. `P-STOP` the app, set `$env:Team__AgentMessageBudget = '1'`, then launch with `P-LAUNCH-UAT`. Start `mybot` in its own terminal (`P-ECHO-BOT`).
-2. Click **New chat**, choose `Ada` and `mybot` as members and create the room. It has three members, so an agent replies only when mentioned.
+2. Click **New room**, choose `Ada` and `mybot` as members and create the room. It has three members, so an agent replies only when mentioned.
 3. Type `@mybot hello` and press Enter.
 4. Confirm `mybot` replies once. That is agent message 1 of 1, so the Budget is now spent.
 5. Confirm an amber warning panel (`Chat.razor:132`) appears reading `Agents have sent 1 replies since you last spoke, and are paused.` (`Chat.razor:134`).
@@ -1080,7 +1080,7 @@ A **Next session** prompt silently having no effect on a running agent is EXPECT
 **Before you start**
 
 - `Nova` and `Jarvis` both **Online**, Haiku/low. A bot `mybot` connected in a third terminal (`pwsh tools/echo-bot.ps1 -Name mybot`, `P-ECHO-BOT`) as the free control.
-- A four-member room containing `Nova`, `Jarvis` and `mybot`: click **New chat**, tick all three, click **Start chat**.
+- A four-member room containing `Nova`, `Jarvis` and `mybot`: click **New room**, tick all three, click **Open room**.
 - Neither Persona has restarted since this room was created — a restart clears every follow (see the Inconclusive note).
 - COST: two short turns on Haiku at effort low — one for the `follow_room` call, one for the test message.
 
@@ -1348,8 +1348,8 @@ Nova never calls `search`; ask again naming the tool. If Nova widens on the firs
 **Before you start**
 
 - `Nova` **Online**, Haiku/low, in a `P-LAUNCH-PAID` launch at Trace, and a member of the Team `Design` (put `Design` on the `teams:` line of Nova's card and wait for her to be **Online** again). `Jarvis` is also in `Design`.
-- A Team chat in `Design` that holds Jarvis and you but NOT Nova: on the **Design** row choose `⋯` then **New chat**, tick **Jarvis** and leave **Nova** unticked (TEAMCHATS-03 shows the panel), then post `The quokka-ledger-9 vendor list is final.` in it. Confirm in the Room's member list that Nova is absent.
-- A NEW one-to-one with Nova (**New chat**, Nova only), so her session has not yet passed `scope: "all"` in an earlier test. Use the new Room for the steps below.
+- A Team chat in `Design` that holds Jarvis and you but NOT Nova: on the **Design** row choose `⋯` then **New room**, tick **Jarvis** and leave **Nova** unticked (TEAMCHATS-03 shows the panel), then post `The quokka-ledger-9 vendor list is final.` in it. Confirm in the Room's member list that Nova is absent.
+- A NEW one-to-one with Nova (**New room**, Nova only), so her session has not yet passed `scope: "all"` in an earlier test. Use the new Room for the steps below.
 - COST: one short turn on Haiku at effort low.
 
 **Steps**

@@ -1988,7 +1988,7 @@ The theme does not change and the page looks identical -> confirm `<data>\appear
 **Steps**
 
 1. Start the app and confirm the agent under test reads `Online` on /agents.
-2. Open its Room from the card's **Message** link (or via **New chat** in the sidebar) and send `Say hello in five words.`
+2. Open its Room from the card's **Message** link (or via **New room** in the sidebar) and send `Say hello in five words.`
 3. While that Turn is running, cut the network (disable the adapter) so the Turn fails. Restore the network. Go to /agents and read the tile and card now (one failed Turn).
 4. Repeat the previous two steps twice more, so THREE Turns in a row have failed. Read the tile's avatar badge (glyph and tooltip), and open its card and read the line under the status and the action row.
 5. Restore normal operation and let one ordinary Turn complete. Read the tile.

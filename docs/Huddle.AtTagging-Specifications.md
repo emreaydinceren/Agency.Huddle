@@ -357,7 +357,7 @@ space.
 | How | `huddleClipboard.copy(text)` (`app.js:433`), called **directly** from the click handler with no other `await` before it, so the browser's clipboard permission stays inside the click's user activation; the pattern of `TaskDetail.CopyIdAsync` (`TaskDetail.razor:1085-1110`). Outside a secure context the helper already falls back to a hidden textarea and `execCommand("copy")`; `app.js` does not change |
 | Confirmation | A snackbar with key `copy`, as the Task copy buttons do: success `Copied link to <Room Name>` (`Severity.Success`), failure `Couldn't copy the link.` (`Severity.Warning`). The Room Name in the snackbar is the plain Name (a snackbar escapes it), not the Markdown label |
 | V1 entry points (D-31) | **The Room header**: a `MudIconButton` with `Icons.Material.Filled.Link`, tooltip `Copy link`, `aria-label="Copy link to this Room"`, beside the Rename pencil (`Chat.razor:40-46`), shown for every Room including a Team Room (which has no pencil). **The sidebar Room row menu**: a `Copy link` item first in `RoomNavRow`'s menu (`RoomNavRow.razor:36-53`), above Archive and Delete. `RoomNavRow` is shared by `RoomList` and `TeamsNav`, so root Rooms, Team-scoped Rooms **and the Team Room under its Team** all get it from one edit, through both the `…` button and right-click (the row already opens the same menu on `contextmenu`) |
-| V2 | Copy link on a Team page (`[<Team>](/teams/<Team>)`), and in the Archived chats dialog. A Task needs nothing: its existing **Copy id** already copies its reference, the plain id (D-33) |
+| V2 | Copy link on a Team page (`[<Team>](/teams/<Team>)`), and in the Archived rooms dialog. A Task needs nothing: its existing **Copy id** already copies its reference, the plain id (D-33) |
 
 **Pasting** needs no new code (D-11): the scanner reads the sent text, so a pasted reference is
 identical to a picked one. It is snapshotted at send, expanded in the Agent's header, counted in the
@@ -736,7 +736,7 @@ the reason.
 | Showing the snapshot for unchanged targets | A hover card per reference |
 | Boosting the current Room's uploads in the picker's Library group | Rank files under `uploads:/<roomId>/` (or `Teams/<Team>/Uploads/<roomId>/`) first; V1 ranks them like any Library file |
 | Library files whose path contains a backtick | A double-backtick span both the recogniser and the renderer accept; V1 leaves them out of the picker |
-| Copy link on a Team page and in the Archived chats dialog | The same `ReferenceText` call with `TeamHref` or `RoomHref` (§6.1) |
+| Copy link on a Team page and in the Archived rooms dialog | The same `ReferenceText` call with `TeamHref` or `RoomHref` (§6.1) |
 | Pasted absolute `http(s)://<origin>/rooms/<id>` and `/teams/<Name>` URLs as references | Needs the app's origin on the server; cost in §6.1 |
 
 ---

@@ -76,11 +76,11 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 - At step 3 the Transcript records Kim joining, in the same form as any Invitation, and its name is `Marketing`.
 - At step 4 Kim is listed under Marketing, and the Team Room still has one copy of each member.
 
-### TEAMCHATS-03 — New chat on a Team scopes the Room to that Team, and a non-member can be ticked
+### TEAMCHATS-03 — New room on a Team scopes the Room to that Team, and a non-member can be ticked
 
 **Free** · about 8 min
 
-*Proves T5 and D-4: the Team's New chat makes a Room under the Team, and any Agent may join it.*
+*Proves T5 and D-4: the Team's New room makes a Room under the Team, and any Agent may join it.*
 
 **Before you start**
 
@@ -89,14 +89,14 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Steps**
 
-1. Open the `⋯` menu on the **Marketing** row in the Teams group and select **New chat**.
+1. Open the `⋯` menu on the **Marketing** row in the Teams group and select **New room**.
 2. Read the panel's heading.
 3. Tick **Ada** and **Ola**, and select **Start**.
 4. Look at the sidebar.
 
 **Pass if — all of these**
 
-- At step 2 the heading reads `New chat in Marketing`, and Marketing's members are listed before the other Agents.
+- At step 2 the heading reads `New room in Marketing`, and Marketing's members are listed before the other Agents.
 - At step 4 a new Room, named after its members (`Ada, Ola`), is listed under **Marketing**, below the Team Room, and not in **Rooms**.
 - The new Room opens and both Agents are in its member list, including Ola, which is not in Marketing.
 
@@ -124,7 +124,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 - At step 4 Ada's root one-to-one is still under **Rooms** and is unchanged, and a Room named `Ada` is listed under **Marketing**, the one you just opened.
 - Pressing **Message** a second time on the same card opens the same Room again and creates no third one.
 
-### TEAMCHATS-05 — New chat in the Rooms group still makes a root Room
+### TEAMCHATS-05 — New room in the Rooms group still makes a root Room
 
 **Free** · about 4 min
 
@@ -136,7 +136,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Steps**
 
-1. In the **Rooms** group select **New chat** and tick **Ada** only.
+1. In the **Rooms** group select **New room** and tick **Ada** only.
 2. Look at the sidebar.
 3. Note the Room's id, and open the Room.
 
@@ -183,7 +183,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 1. Close the app. In `<data>\Teams\`, rename the folder `Marketing` to `Marketing-old` in Explorer. This is the test data folder, not the repository.
 2. Start the app with the `P-LAUNCH-UAT` launch command and open `/`.
 3. Look at the **Teams** group and at **Rooms**.
-4. Open **Archived** at the bottom of the Activity bar, then its **Chats** tab.
+4. Open **Archived** at the bottom of the Activity bar, then its **Rooms** tab.
 5. Rename the folder back to `Marketing` and restart the app.
 
 **Pass if — all of these**
@@ -207,9 +207,9 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Steps**
 
 1. Restart the app, then wait one minute.
-2. Look at **Marketing** in the sidebar and at the Archived page's **Chats** tab.
+2. Look at **Marketing** in the sidebar and at the Archived page's **Rooms** tab.
 3. Add **Kim** to Marketing through the `teams:` line on Kim's card.
-4. Wait a minute, then open the Archived page's **Chats** tab and look at the Team Room.
+4. Wait a minute, then open the Archived page's **Rooms** tab and look at the Team Room.
 
 **Pass if — all of these**
 
@@ -280,7 +280,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 1. Start the app and wait up to two minutes for the digest to fire.
 2. Open Ada's root one-to-one under **Rooms** and read its newest message.
-3. Open the archived Team Room (it is listed on the Archived page's **Chats** tab) and read its newest message.
+3. Open the archived Team Room (it is listed on the Archived page's **Rooms** tab) and read its newest message.
 
 **Pass if — all of these**
 

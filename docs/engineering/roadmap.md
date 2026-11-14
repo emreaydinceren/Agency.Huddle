@@ -1150,7 +1150,7 @@ destroy a Room"* and *"a Human may never put a Room away"* are different claims,
 and only the first follows. The sidebar is the app's primary navigation and it
 only ever grew.
 
-Archive hides a Room from the sidebar, reversibly, from **Archived chats** above
+Archive hides a Room from the sidebar, reversibly, from **Archived rooms** above
 the Settings button. Delete removes the Room and its Transcript for good, behind
 an inline confirmation that names it. Both are on a context menu on the Room's
 sidebar row, reachable by right-click and by a keyboard-focusable button.

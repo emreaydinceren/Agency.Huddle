@@ -463,7 +463,7 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 **Before you start**
 
 - `P-LAUNCH-UAT` is running (Ada and Bo online; the mock adapter spends nothing) and `Vault` is pinned.
-- A Room with Ada and Bo exists: New chat with both. It has three Members, so only a Mention wakes an Agent.
+- A Room with Ada and Bo exists: New room with both. It has three Members, so only a Mention wakes an Agent.
 
 **Steps**
 

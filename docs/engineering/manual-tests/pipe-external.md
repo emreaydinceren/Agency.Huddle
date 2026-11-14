@@ -17,9 +17,9 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Lane is `P-LAUNCH-FREE` (ACP off, data in `<repo>\src\Huddle.App\App_Data`), except PIPEEXTERNAL-03, -18, -19, -20, -21 and -31, which need an in-process Agent and say in **Before you start** that they use [`P-LAUNCH-UAT`](common.md#p-launch-uat) instead (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`). Nothing in this area needs a real model turn, so nothing spends money. A Room or bot created under one lane does not exist under the other: switching lane means a different data folder.
 2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `<repo>`.
-3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Needs you** card when something waits, the **Rooms** group (the Rooms, then **New chat** below them; the group starts closed), **Teams**, **Agents**, **Tasks**, **Library** (one link) and, at the foot, the **Archived** and **Settings** icons. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
+3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Needs you** card when something waits, the **Rooms** group (the Rooms, then **New room** below them; the group starts closed), **Teams**, **Agents**, **Tasks**, **Library** (one link) and, at the foot, the **Archived** and **Settings** icons. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
 4. No test in this area configures a Persona. Under `P-LAUNCH-FREE` ACP stays off, so nothing here spends money; the six UAT tests use the free mock adapter.
-5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New chat and Invite agent lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
+5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New room and Invite agent lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
 6. **RAW-CLIENT** (used by PIPEEXTERNAL-28 through -32): a plain PowerShell pipe client, distinct from `P-ECHO-BOT`. In a new terminal, line by line:
 
 ```powershell
@@ -35,7 +35,7 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 ## Tests
 
-### PIPEEXTERNAL-03 — New chat builds a group Room named after its Agents, and that Room is mention-gated
+### PIPEEXTERNAL-03 — New room builds a group Room named after its Agents, and that Room is mention-gated
 
 **Free** · about 5 min
 
@@ -47,11 +47,11 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 **Steps**
 
-1. Click **New chat** under the Rooms in the sidebar.
+1. Click **New room** under the Rooms in the sidebar.
 2. Confirm the panel lists `Ada` and `Bo`, each as a checkbox with a small coloured dot, an avatar and a name.
 3. Tick the checkbox next to `Ada`.
 4. Tick the checkbox next to `Bo`.
-5. Click **Start chat**.
+5. Click **Open room**.
 6. Read the page heading and the line beneath it.
 7. Read `T-A`'s newest log line.
 8. Type `hi @Ada` in the message box and press Enter, then wait 10 seconds.
@@ -59,7 +59,7 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 **Pass if — all of these**
 
-- Before any checkbox is ticked, the **Start chat** button is disabled; it becomes enabled once at least one box is ticked.
+- Before any checkbox is ticked, the **Open room** button is disabled; it becomes enabled once at least one box is ticked.
 - The browser navigates to a new Room whose heading reads exactly `Ada, Bo` and whose members line reads exactly `You, Ada, Bo`.
 - `T-A` logs `Created room '<id>' (Ada, Bo) with 3 members.`
 - After `hi @Ada`, exactly ONE new Message appears, from `Ada`, a long plain-text reply that contains `hi`. `Bo` posts nothing.
@@ -69,11 +69,11 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 
 - The Room heading is something other than the comma-joined Agent names -> the Room name is not being rebuilt from its Members.
 - Both `Ada` and `Bo` reply to `hi @Ada` -> the per-recipient `mentioned` label is wrong, or the Reply Gate is not applying it; cross-check with PIPEEXTERNAL-22.
-- The **Start chat** button is clickable with nothing ticked -> the guard on an empty selection is gone.
+- The **Open room** button is clickable with nothing ticked -> the guard on an empty selection is gone.
 
 **Inconclusive if**
 
-If a Room named `Ada, Bo` already exists from an earlier run, a NEW second Room with the same name is created — that is expected for a multi-agent New chat and is not a fail. If neither `Ada` nor `Bo` appears in the panel, this test is INCONCLUSIVE: the `P-LAUNCH-UAT` precondition has not held, so fix that first.
+If a Room named `Ada, Bo` already exists from an earlier run, a NEW second Room with the same name is created — that is expected for a multi-agent New room and is not a fail. If neither `Ada` nor `Bo` appears in the panel, this test is INCONCLUSIVE: the `P-LAUNCH-UAT` precondition has not held, so fix that first.
 
 > [!NOTE]
 > The bare `hi` producing no reply is correct here: this is a three-Member Room, so per ADR-0004 it stays Mention-gated by design. That is different from a two-Member Room, which now answers every Message without a Mention.
@@ -101,7 +101,7 @@ If a Room named `Ada, Bo` already exists from an earlier run, a NEW second Room 
 
 **Pass if — all of these**
 
-- A new entry reading exactly `mybot` appears at the BOTTOM of the sidebar Room list (just above **New chat**) without the page being refreshed or clicked.
+- A new entry reading exactly `mybot` appears at the BOTTOM of the sidebar Room list (just above **New room**) without the page being refreshed or clicked.
 - `T-C` prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...`, then `Sent hello. Listening for messages (Ctrl+C to exit)...`, then one long JSON line beginning `{"type":"welcome",`.
 - `T-A` logs `Created direct room '<id>' for agent 'mybot'.`
 - Clicking `mybot` opens a Room whose heading reads `mybot` and whose members line reads `You, mybot`.
@@ -296,14 +296,14 @@ If a second `mybot` Room DOES appear and you have previously invited anyone into
 3. Read the `agentId` in the welcome line and compare it to the one you wrote down.
 4. Read the `name` value in the same welcome line.
 5. Look at the sidebar without refreshing.
-6. Click **New chat** and read the agent names listed.
+6. Click **New room** and read the agent names listed.
 
 **Pass if — all of these**
 
 - The welcome line's `agentId` is identical to `mybot`'s existing id.
 - The welcome line reads `"name":"mybot"` — the ORIGINAL stored spelling, not the `MYBOT` you typed.
 - No new sidebar entry appears; there is still exactly one entry reading `mybot`, spelled in lower case.
-- The New chat panel lists `mybot` once, spelled in lower case, and does not list `MYBOT`.
+- The New room panel lists `mybot` once, spelled in lower case, and does not list `MYBOT`.
 
 **Fail if — any of these**
 
@@ -362,7 +362,7 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 > [!NOTE]
 > A pipe-only Agent NEVER appears on the **Agents** page — that page renders Persona files, and `mybot` has none. "My bot is missing from Agents" is not a bug.
 
-### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Invite agent
+### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New room and Invite agent
 
 **Free** · about 7 min
 
@@ -377,18 +377,18 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 **Steps**
 
 1. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name mybot` and wait for its welcome line.
-2. In the browser, click **New chat** in the sidebar.
+2. In the browser, click **New room** in the sidebar.
 3. Find the row for `mybot`. Hover the small coloured dot to its left and read the tooltip; if no tooltip shows, right-click the dot, choose Inspect, and read the element's `class` and `title` attributes.
 4. Note the dot's colour and its tooltip text.
-5. Click **New chat** again to close the panel.
+5. Click **New room** again to close the panel.
 6. Press Ctrl+C in `T-C`.
-7. Click **New chat** again to reopen the panel and read `mybot`'s dot and tooltip again.
+7. Click **New room** again to reopen the panel and read `mybot`'s dot and tooltip again.
 8. Open the `otherbot` Room, click **Invite agent**, leave the Team filter on `All teams`, and read the dot beside `mybot` in that panel (it is offline now). Close the panel, restart `mybot` in `T-C`, reopen the panel and read the dot again.
-9. Now test the known staleness: with `mybot` connected, open the **New chat** panel and LEAVE IT OPEN, then press Ctrl+C in `T-C` and watch the open panel for 10 seconds. Press Ctrl+C in `T-D` when done.
+9. Now test the known staleness: with `mybot` connected, open the **New room** panel and LEAVE IT OPEN, then press Ctrl+C in `T-C` and watch the open panel for 10 seconds. Press Ctrl+C in `T-D` when done.
 
 **Pass if — all of these**
 
-- While the bot is connected, `mybot`'s dot in the New chat panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
+- While the bot is connected, `mybot`'s dot in the New room panel is green and its `title` / tooltip reads `online` (the element's class is `agent-dot online`).
 - After Ctrl+C and REOPENING the panel, `mybot`'s badge is a hollow grey ring and its `title` reads `offline` (class `agent-dot offline`).
 - The **Invite agent** panel in the `otherbot` Room shows the same dot and the same tooltip for `mybot`: a hollow grey ring (`offline`) while `mybot` is stopped, a green check circle (`online`) once it is restarted.
 - The dot's colour and its tooltip text agree with each other in every case.
@@ -475,7 +475,7 @@ If the bot DOES reply immediately after reconnecting, check first whether you ty
 - Step 2 prints `{"type":"error","code":"invalidName","message":"\u0027bad name!\u0027 is not a valid agent name.","version":3}` (the wire escapes each apostrophe as `\u0027`, `ProtocolJson.cs:37-48`; the bot prints the raw line) and then `Server closed the connection.`, and the script exits.
 - Each of steps 4-8 prints an `invalidName` error naming the exact Name you passed, between two `\u0027` escapes, then `Server closed the connection.`
 - The sidebar gains NOTHING at any point, before or after the F5 refresh.
-- `team.db` gains no row for any of these Names — confirmed by clicking **New chat** and seeing none of them listed.
+- `team.db` gains no row for any of these Names — confirmed by clicking **New room** and seeing none of them listed.
 
 **Fail if — any of these**
 
@@ -504,18 +504,18 @@ If PowerShell itself rejects the argument before connecting (a parameter-binding
 2. Look at the browser sidebar without refreshing.
 3. Run `pwsh tools/echo-bot.ps1 -Name you` — note the lower case.
 4. Read the lines it prints.
-5. Click **New chat** in the sidebar and read the list of agents.
+5. Click **New room** in the sidebar and read the list of agents.
 
 **Pass if — all of these**
 
 - Step 1 prints `{"type":"error","code":"nameReserved","message":"\u0027You\u0027 is reserved.","version":3}` (apostrophes are escaped as `\u0027` on the wire, `ProtocolJson.cs:37-48`) and then `Server closed the connection.`
 - Step 3 prints a `nameReserved` error too (the message quotes `you` between the same `\u0027` escapes, the spelling you passed).
 - No Room appears in the sidebar for either attempt.
-- The New chat panel does not list `You` or `you` as an agent.
+- The New room panel does not list `You` or `you` as an agent.
 
 **Fail if — any of these**
 
-- Either attempt is accepted -> a second `You` now exists as an Agent; every Message in every Room becomes ambiguous about whether the Human or a bot wrote it, and the New chat panel offers the Human as a chat partner.
+- Either attempt is accepted -> a second `You` now exists as an Agent; every Message in every Room becomes ambiguous about whether the Human or a bot wrote it, and the New room panel offers the Human as a chat partner.
 - The lower-case attempt is accepted while the exact-case one is refused -> the reservation is case-sensitive but the Name table is not, so a bot can squat a spelling the Human cannot distinguish.
 - The refusal arrives as `invalidName` instead of `nameReserved` -> a client cannot tell "pick a different Name" from "fix your Name's shape".
 
@@ -665,14 +665,14 @@ If `Ada` does not appear in the Invite agent list, check the `Team` dropdown is 
 
 **Steps**
 
-1. Click **New chat**, tick `Ada` and `Bo`, and click **Start chat**. You are now in a Room named `Ada, Bo` that `mybot` is not a Member of.
+1. Click **New room**, tick `Ada` and `Bo`, and click **Open room**. You are now in a Room named `Ada, Bo` that `mybot` is not a Member of.
 2. Copy the room id from the address bar (`/rooms/{id}`).
 3. Click **Invite agent**, leave the Team filter on `All teams`, and click `mybot`.
 4. Read the panel's info line, the page heading, the members line and the sidebar.
 5. Read `T-A`'s newest log line.
 6. Type `hi @mybot` in this Room and press Enter.
 7. Read the line `T-C` prints — in particular its `roomId` and `roomName` — and watch the browser.
-8. Now test the other door: click **New chat**, tick only `Bo`, click **Start chat** to open `Bo`'s own Room (or click the `Bo` entry in the sidebar).
+8. Now test the other door: click **New room**, tick only `Bo`, click **Open room** to open `Bo`'s own Room (or click the `Bo` entry in the sidebar).
 9. In that Room, type `/invite @mybot` in the message box and press Enter.
 10. Read the info line above the message box and the page heading.
 
@@ -1332,7 +1332,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 4. In `T-A` run `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 5. Open a fresh browser tab at http://localhost:5100.
 6. Read the sidebar's Room list area and read the main pane.
-7. Click **New chat** and read the panel.
+7. Click **New room** and read the panel.
 8. Close the panel. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name mybot`.
 9. WITHOUT touching the browser, read the sidebar and then read the main pane.
 10. Click the `mybot` sidebar entry and read the heading.
@@ -1344,7 +1344,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 
 - The sidebar's Room list shows the title `No rooms yet` with the line `Start an agent to create one.` under it.
 - The main pane reads exactly the SAME sentence: `No rooms yet. Start an agent to create one.`
-- The New chat panel shows the title `No agents have connected yet` and, under it, `Start one with tools/echo-bot.ps1` followed by whatever the rest of that line currently says (the app's empty-state copy, which is not what this test judges).
+- The New room panel shows the title `No agents have connected yet` and, under it, `Start one with tools/echo-bot.ps1` followed by whatever the rest of that line currently says (the app's empty-state copy, which is not what this test judges).
 - After the bot connects, the sidebar gains `mybot` with NO refresh.
 - The MAIN PANE still reads `No rooms yet. Start an agent to create one.` until you click the sidebar entry.
 - Clicking the entry opens the Room with heading `mybot`.
@@ -1353,7 +1353,7 @@ If the browser tab was already disconnected or backgrounded before step 3, the d
 **Fail if — any of these**
 
 - The empty-state sentences differ from the ones above -> user-facing copy drifted; report both the expected and the actual text.
-- The New chat panel lists ghost agents after `App_Data` was deleted -> it is reading a stale database; find where `Team:DataDir` actually resolved (`Get-ChildItem -Recurse -Filter team.db <repo>`) before filing, because the likely cause is that you deleted the wrong folder.
+- The New room panel lists ghost agents after `App_Data` was deleted -> it is reading a stale database; find where `Team:DataDir` actually resolved (`Get-ChildItem -Recurse -Filter team.db <repo>`) before filing, because the likely cause is that you deleted the wrong folder.
 - The main pane throws or shows a Blazor error instead of the empty state -> the Room view does not handle having no Room.
 - `App_Data` is not recreated at startup -> the data initialiser is not running, and nothing will persist.
 - Any Room already exists in the sidebar before the bot connects -> the fresh install is not empty, and every "empty install" test is then impossible; check that the right `App_Data` was deleted.

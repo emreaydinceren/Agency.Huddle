@@ -157,7 +157,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-16--s
 
 ### SHELLNAV-17 — The New chat panel toggles, lists agents with status dots, and gates Start chat
 
-File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-17--the-new-chat-panel-toggles-lists-agents-with-status-dots-and-gates-start-chat)
+File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-17--the-new-room-panel-toggles-lists-agents-with-status-dots-and-gates-open-room)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -229,7 +229,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-27--w
 
 ### SHELLNAV-28 — The New chat panel with no agents shows its own guidance instead of an empty list
 
-File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-28--the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list)
+File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-28--the-new-room-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -383,7 +383,7 @@ File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#star
 
 ### STARTUPCONFIG-07 — Start chat on one known agent reuses its Room; two agents create one new named Room
 
-File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-07--start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room)
+File: [`docs/engineering/manual-tests/startup-config.md`](startup-config.md#startupconfig-07--open-room-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2502,7 +2502,7 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 
 ### INVITEROOMS-03 — The New chat panel toggles, lists every Agent with a status dot, and keeps Start chat disabled until something is ticked
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-03--the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-03--the-new-room-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-open-room-disabled-until-something-is-ticked)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2542,7 +2542,7 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 
 ### INVITEROOMS-08 — New chat with exactly ONE Agent opens that Agent's existing Room and creates nothing
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-08--new-chat-with-exactly-one-agent-opens-that-agents-existing-room-and-creates-nothing)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-08--new-room-with-exactly-one-agent-opens-that-agents-existing-room-and-creates-nothing)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2550,7 +2550,7 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 
 ### INVITEROOMS-09 — New chat with two Agents creates a Room named after them and navigates to it, live
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-09--new-chat-with-two-agents-creates-a-room-named-after-them-and-navigates-to-it-live)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-09--new-room-with-two-agents-creates-a-room-named-after-them-and-navigates-to-it-live)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -2748,7 +2748,7 @@ File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#invitero
 
 ### INVITEROOMS-34 — Archiving a Room from its row menu removes it from the sidebar and lists it under Archived chats
 
-File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-34--archiving-a-room-from-its-row-menu-removes-it-from-the-sidebar-and-lists-it-under-archived-chats)
+File: [`docs/engineering/manual-tests/invite-rooms.md`](invite-rooms.md#inviterooms-34--archiving-a-room-from-its-row-menu-removes-it-from-the-sidebar-and-lists-it-under-archived-rooms)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3289,7 +3289,7 @@ File: [`docs/engineering/manual-tests/appearance-theme.md`](appearance-theme.md#
 
 ### PIPEEXTERNAL-03 — New chat builds a group Room named after its Agents, and that Room is mention-gated
 
-File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeexternal-03--new-chat-builds-a-group-room-named-after-its-agents-and-that-room-is-mention-gated)
+File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeexternal-03--new-room-builds-a-group-room-named-after-its-agents-and-that-room-is-mention-gated)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3353,7 +3353,7 @@ File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeex
 
 ### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New chat and Invite agent
 
-File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeexternal-12--where-a-disconnect-is-visible-the-agent-dot-in-new-chat-and-invite-agent)
+File: [`docs/engineering/manual-tests/pipe-external.md`](pipe-external.md#pipeexternal-12--where-a-disconnect-is-visible-the-agent-dot-in-new-room-and-invite-agent)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4979,7 +4979,7 @@ File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-02
 
 ### TEAMCHATS-03 — New chat on a Team scopes the Room to that Team, and a non-member can be ticked
 
-File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-03--new-chat-on-a-team-scopes-the-room-to-that-team-and-a-non-member-can-be-ticked)
+File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-03--new-room-on-a-team-scopes-the-room-to-that-team-and-a-non-member-can-be-ticked)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -4993,7 +4993,7 @@ File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-04
 
 ### TEAMCHATS-05 — New chat in the Rooms group still makes a root Room
 
-File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-05--new-chat-in-the-rooms-group-still-makes-a-root-room)
+File: [`docs/engineering/manual-tests/team-chats.md`](team-chats.md#teamchats-05--new-room-in-the-rooms-group-still-makes-a-root-room)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

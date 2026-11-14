@@ -642,7 +642,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   slot, and every leading mark is centred in it: a section's icon, a row's 18px icon, a 24px
   avatar, a Team's chevron, the "+" of an action row, the arrow of "Show all". The slot starts
   4px inside the row's pill and every label starts 4px after it: a section title, a name, "Show
-  all", "New chat". These are VS Code's Explorer proportions scaled to the 32px row (its 16px
+  all", "New room". These are VS Code's Explorer proportions scaled to the 32px row (its 16px
   twistie becomes the 24px slot, its few-px margins stay tight), so a label starts 32px inside
   its row's pill. A row with no mark keeps the slot empty. The grid is one set of tokens in
   `shell.css` "Left menu" (`--nav-inset`, `--nav-pad`, `--nav-slot`, `--nav-gap`, `--nav-step`,
@@ -668,7 +668,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   18px icon in the leading slot); only a group with children wears the section-header style.
 - **The Needs you card is outlined in Line.** Its row is 32px: the reason icon, the Room's
   name, and a trailing time, like every other sidebar row.
-- **A group header is 32px like a row.** Sidebar action rows ("Show all", "New chat") are 13px
+- **A group header is 32px like a row.** Sidebar action rows ("Show all", "New room") are 13px
   in Quiet ink.
 - **The active row wears the Selected treatment and shape**: Accent ink, a 14% tint (20% on
   hover or focus) and the inset rounded shape (see [States](#colour)).
@@ -697,7 +697,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   its slot's start by 4px, so its row's text box does not clip, and each line truncates itself. It
   keeps 8px to its name, so a 1:1 Room's name starts 8px after a group Room's.
   Room rows stand 4px apart (`.room-nav-row + .room-nav-row`).
-- **Sidebar action links** ("New chat", "Build a team", "New view") take the
+- **Sidebar action links** ("New room", "Build a team", "New view") take the
   `nav-action-link` class: secondary text colour (not the accent), the "+" in the leading slot
   and the label on the text line like any row. Don't set `IconColor` on them, and don't repeat
   those rules inline.

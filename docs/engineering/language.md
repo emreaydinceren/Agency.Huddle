@@ -280,6 +280,11 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   ([ADR-0082](../adr/0082-a-room-may-belong-to-one-project-of-its-team.md)).
 : *Avoid*: channel, chat, conversation, thread. Also avoid *Direct Room* and
   *Group Room* — a Room is a Room, and behaviour follows from member count.
+: *chat* survives only as a verb or an activity: you chat **in** a Room ("Chat
+  with Nova", "don't ask for approval in chat"), and Huddle is a chat
+  application. Every label that names the thing says Room: the **Rooms** view,
+  **New room**, **Open room**, **Tasks in this Room**, the Archived page's
+  **Rooms** tab.
 
 **Scope**
 : Where a Room belongs: the root, or exactly one Team. Set when the Room is
@@ -302,7 +307,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 
 **Archived**
 : Hidden from the sidebar and listed on the **Archived** page instead, where
-  **Restore** brings it back. For a Room it is the page's **Chats** tab: reversible, and a display filter only — an Archived Room is
+  **Restore** brings it back. For a Room it is the page's **Rooms** tab: reversible, and a display filter only — an Archived Room is
   still live, and Agents still post into it. For a Team or a Project it means the
   folder has been moved to `{DataDir}/Archive`, where it is read-only.
 : *Avoid*: hidden, closed, muted, inactive, soft-deleted. A Room that was

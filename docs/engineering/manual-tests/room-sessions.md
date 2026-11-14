@@ -37,7 +37,7 @@ there is no free lane to start from. This area adds:
    after `P-LAUNCH-PAID`'s first step; RS-M10 uses it. Several tests name a before/after
    comparison (RS-M1, RS-M3): keep the Model and the Effort identical between the two runs and
    record both, per [§0.3](../manual-tests.md#03-the-model-and-effort-convention).
-2. **Every Room here is built the same way.** *New chat* with a single Agent returns that Agent's
+2. **Every Room here is built the same way.** *New room* with a single Agent returns that Agent's
    existing direct Room (`ChatService.cs:477-480`), so it can never make a second Room with only
    Nova in it. Make each extra Room with Nova **and** a pipe bot as the third Member
    (`pwsh tools/echo-bot.ps1 -Name "pipe"`, [`P-ECHO-BOT`](common.md#p-echo-bot)), and prefix
