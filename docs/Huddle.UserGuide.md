@@ -1079,6 +1079,8 @@ Agents add lines with the `add_evidence` tool, and lines are only ever appended.
 The Task panel does not have a separate Evidence view; you read it in the Task file
 in the Library.
 
+**Checking a web page.** When a Task's acceptance names a web page or a UI, a Development Team's QA Engineer verifies it in a headless browser with the built-in `browser-check` Skill. It installs Playwright in a temporary folder outside the repository, so the tree it checks stays clean, and drives the page with the Edge installed on Windows or Chrome elsewhere. The Evidence line names the command, its exit code and the browser, and lists the steps it drove. When no QA Engineer is hired, the manager does the same. Opening `localhost` only is a rule the Skill states, not a guard Huddle enforces; a governed browser is planned (#548). Agents hired before this change keep their copied role text and Skills list: to give an existing QA Engineer the Skill, add `browser-check` on its card and paste this sentence into its role text: "When the acceptance names a web page or a UI, drive it in a browser and record what you did as Evidence: read your browser-check Skill and follow it. If you cannot, say in the Evidence line that the verify is partial."
+
 **Tool-call log.** Huddle keeps a lasting record of every tool call an Agent
 makes, one JSON line each, in `logs/tool-calls/<Agent>/<date>.jsonl` in your data
 folder. An Evidence line can point to a line of it, such as
@@ -2356,10 +2358,10 @@ invalid Skill is listed under **Problems** with the reason.
 
 ### Changing a built-in Skill
 
-Huddle ships seven Skills: `team-building` and `team-rollup`, used by the Chief of
+Huddle ships eight Skills: `team-building` and `team-rollup`, used by the Chief of
 Staff, `team-management`, used by Team managers to see other Teams, handle Requests,
 answer and close a Task that only asks a question, and propose Sprints, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
-and `brain-check`, which keep a [Second Brain](#keeping-it-tidy) tidy. To change one,
+and `brain-check`, which keep a [Second Brain](#keeping-it-tidy) tidy, and `browser-check`, used by a Development Team's QA Engineer (and its manager when no QA is hired) to drive a web page with Playwright when the acceptance names a UI. To change one,
 create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
 same name in it, for example `onboarding.md`. Your file replaces that one file; the
 others still come from the built-in version. On the **Skills** tab, **Restore default** in the

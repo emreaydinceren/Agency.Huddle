@@ -54,6 +54,33 @@ public sealed class SkillCatalogTests
         Assert.Contains("If `close_task` says the Task is already closed, the one who asked closed it first, and there is nothing more to do.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
+    /// <summary>#536: the catalog holds <c>browser-check</c>: valid, one file, and it grants no tools.</summary>
+    [Fact]
+    public void All_ContainsBrowserCheck_GrantingNoTools()
+    {
+        Assert.Contains("browser-check", SkillCatalog.All.Keys);
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["browser-check"];
+
+        SkillValidation validation = SkillValidator.Validate("browser-check", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Empty(validation.Tools);
+    }
+
+    /// <summary>#536: the <c>browser-check</c> Skill installs Playwright outside the repository, never counts a click as a pass, admits a partial verify and states that the localhost rule is not enforced.</summary>
+    [Fact]
+    public void BrowserCheck_TeachesPlaywrightOutsideTheRepoAndPartialVerify()
+    {
+        string text = string.Join(' ', SkillCatalog.All["browser-check"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("Never install Playwright in the repository you are checking: it would dirty the tree you verify.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("On Windows launch `chromium.launch({ channel: \"msedge\" })`; on Linux and macOS launch `chromium.launch({ channel: \"chrome\" })`.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Never count a click as a pass only because it ran: a button that does nothing must fail the check.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Never record a browser check you did not run.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Opening `localhost` only is a rule you follow, not something Huddle enforces in this version.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
     /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c>.</summary>
     [Fact]
     public void All_ContainsTeamRollup_GrantingListTeamsOnly()

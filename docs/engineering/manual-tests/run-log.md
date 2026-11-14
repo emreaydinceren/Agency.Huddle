@@ -6114,6 +6114,14 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### ZERO-29 — QA drives the UI in a browser and reports a planted bug
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-29--qa-drives-the-ui-in-a-browser-and-reports-a-planted-bug)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-14 | Pass | `d2badef9` + #536 branch | #536 | By an agent acting as the Human, in an isolated lane with a fresh Development Team (manager, Developer, QA Engineer, all on Sonnet) instead of the ZERO-12 Dev Team, on a two-file node to-do page whose Add button was made a no-op on a branch. The QA read `browser-check`, installed Playwright in `%TEMP%\huddle-browser-check\DEVE-0001`, drove msedge headless and recorded `node check.mjs` exit 1 naming the failing step; the repository stayed clean and the manager filed a fix Task. The same script on `main` exits 0. Spend 0.44 USD. |
+
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 
 ### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen

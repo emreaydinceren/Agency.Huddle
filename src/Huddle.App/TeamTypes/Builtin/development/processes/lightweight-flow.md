@@ -21,7 +21,7 @@ This Team builds and ships software in a repository, and this process takes a sm
 1. **Ready**: the Task has a title, an acceptance line and an assignee. Done when the manager assigns it.
 2. **In progress**: the developer writes the change and its tests. Done when the build and the tests pass locally.
 3. **Review**: a reviewer reads the diff and records the outcome on the Task, with the next step, not only in chat. Done when no open finding remains.
-4. **Verify**: QA checks the change against the acceptance line and posts an Evidence line. Done when that line exists.
+4. **Verify**: QA checks the change against the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists.
 5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
@@ -36,7 +36,7 @@ This Team builds and ships software in a repository, and this process takes a sm
 
 - No `tech-lead`: the manager writes the spec and does the breakdown itself.
 - No `reviewer`: the developer asks the manager for a second read, and the manager reviews the diff.
-- No `qa-engineer`: the manager verifies against the acceptance line and posts the Evidence line. The Done gate still needs that Evidence line.
+- No `qa-engineer`: the manager verifies against the acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
 ## Gates

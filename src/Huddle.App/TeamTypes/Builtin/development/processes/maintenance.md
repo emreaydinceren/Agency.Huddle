@@ -22,7 +22,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 1. **Triage**: the bug Task states the symptom, the affected version and the expected behaviour. Done when the manager assigns it.
 2. **Reproduce**: the developer writes a test that fails on the current code. Done when the failing test is recorded as Evidence.
 3. **Fix**: the developer changes the code until the test passes. Done when the build and the tests pass locally.
-4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. Done when both are recorded.
+4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded.
 5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
@@ -36,7 +36,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 ## If a role is not hired
 
 - No `reviewer`: the manager reviews the fix before it is merged.
-- No `qa-engineer`: the manager confirms the symptom is gone and posts the Evidence line. The Done gate still needs that Evidence line.
+- No `qa-engineer`: the manager confirms the symptom is gone and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
 ## Gates

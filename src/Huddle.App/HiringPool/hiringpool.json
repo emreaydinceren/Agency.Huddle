@@ -152,6 +152,11 @@
           "name": "team-management",
           "source": "builtin",
           "path": "team-management"
+        },
+        {
+          "name": "browser-check",
+          "source": "builtin",
+          "path": "browser-check"
         }
       ],
       "teamTypes": [
@@ -387,6 +392,11 @@
           "name": "team-management",
           "source": "builtin",
           "path": "team-management"
+        },
+        {
+          "name": "browser-check",
+          "source": "builtin",
+          "path": "browser-check"
         }
       ],
       "teamTypes": [

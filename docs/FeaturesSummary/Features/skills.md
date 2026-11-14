@@ -20,6 +20,7 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 | `ingest` | Proposing facts, Tasks and documents from new originals |
 | `wrap-up` | Proposing what a session produced |
 | `brain-check` | Finding drift and filing it as Tasks |
+| `browser-check` | Driving a web page in a browser to verify a Task |
 
 Assign a Skill on an Agent's card. You can override a built-in Skill file by file and restore it later.
 
