@@ -91,11 +91,11 @@ public sealed class BuiltinAgentSeederTests
     }
 
     /// <summary>
-    /// Issue 390: a blank install's Chief of Staff is created with the cheap model already stored,
-    /// so its first greeting does not run on the account's most expensive default.
+    /// Issue 560: a blank install's Chief of Staff is created on Opus at medium effort, both stored
+    /// before any turn runs.
     /// </summary>
     [Fact]
-    public async Task Start_EmptyLibrary_StoresTheCheapModelBeforeAnyTurn()
+    public async Task Start_EmptyLibrary_StoresOpusAtMediumBeforeAnyTurn()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
@@ -104,7 +104,109 @@ public sealed class BuiltinAgentSeederTests
 
         await seeder.StartAsync(ct);
 
-        Assert.Equal("haiku", personas.Get("Chief of Staff")?.Model);
+        Persona? chief = personas.Get("Chief of Staff");
+        Assert.Equal("opus", chief?.Model);
+        Assert.Equal("medium", chief?.Effort);
+    }
+
+    /// <summary>
+    /// Issue 560: a Chief of Staff still on the old seeded default (haiku, no effort) is moved to
+    /// opus at medium on start-up, and its Work Mode and file text are preserved.
+    /// </summary>
+    [Fact]
+    public async Task Start_ChiefOnOldDefault_MovesToOpusAtMedium()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PersonaStore personas = NewStore(dataDir);
+        personas.Add(
+            new PersonaIdentity("Chief of Staff", "Chief", "cos", Teams: [], Builtin: BuiltinAgent.ChiefOfStaffMarker),
+            "You are the Chief.", model: "haiku", workMode: "plan");
+        string before = File.ReadAllText(personas.PathFor("Chief of Staff"));
+        BuiltinAgentSeeder seeder = new(personas, NullLogger<BuiltinAgentSeeder>.Instance);
+
+        await seeder.StartAsync(ct);
+
+        Persona? chief = personas.Get("Chief of Staff");
+        Assert.Equal("opus", chief?.Model);
+        Assert.Equal("medium", chief?.Effort);
+        Assert.Equal("plan", chief?.WorkMode);
+        Assert.Equal(before, File.ReadAllText(personas.PathFor("Chief of Staff")));
+    }
+
+    /// <summary>Issue 560: a model or effort the Human chose (sonnet, or haiku with an effort) is left alone.</summary>
+    /// <param name="model">The stored model.</param>
+    /// <param name="effort">The stored effort.</param>
+    [Theory]
+    [InlineData("sonnet", null)]
+    [InlineData("haiku", "low")]
+    public async Task Start_ChiefWithHumanChosenSettings_IsUntouched(string model, string? effort)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using PersonaStore personas = NewStore(dataDir);
+        personas.Add(
+            new PersonaIdentity("Chief of Staff", "Chief", "cos", Teams: [], Builtin: BuiltinAgent.ChiefOfStaffMarker),
+            "You are the Chief.", model: model, effort: effort);
+        BuiltinAgentSeeder seeder = new(personas, NullLogger<BuiltinAgentSeeder>.Instance);
+
+        await seeder.StartAsync(ct);
+
+        Persona? chief = personas.Get("Chief of Staff");
+        Assert.Equal(model, chief?.Model);
+        Assert.Equal(effort, chief?.Effort);
+    }
+
+    /// <summary>
+    /// Issue 560: the move runs once. After it ran, a Human who sets the Chief back to haiku with no
+    /// effort keeps that choice across a restart.
+    /// </summary>
+    [Fact]
+    public async Task Start_AfterMove_HumanSettingBackToHaikuIsKept()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using (PersonaStore first = NewStore(dataDir))
+        {
+            first.Add(
+                new PersonaIdentity("Chief of Staff", "Chief", "cos", Teams: [], Builtin: BuiltinAgent.ChiefOfStaffMarker),
+                "You are the Chief.", model: "haiku");
+            await new BuiltinAgentSeeder(first, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+            Persona moved = first.Get("Chief of Staff") ?? throw new InvalidOperationException("Chief missing.");
+            Assert.Equal("opus", moved.Model);
+            _ = first.Update("Chief of Staff", moved.Text, "haiku", null, moved.WorkMode);
+        }
+
+        using PersonaStore second = NewStore(dataDir);
+        await new BuiltinAgentSeeder(second, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+
+        Persona? chief = second.Get("Chief of Staff");
+        Assert.Equal("haiku", chief?.Model);
+        Assert.Null(chief?.Effort);
+    }
+
+    /// <summary>
+    /// Issue 560: a freshly seeded Chief writes the marker, so a Human who sets it to haiku with no
+    /// effort is not moved on the next start.
+    /// </summary>
+    [Fact]
+    public async Task Start_FreshlySeededChiefSetToHaiku_IsNotMovedOnNextStart()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dataDir = new();
+        using (PersonaStore first = NewStore(dataDir))
+        {
+            await new BuiltinAgentSeeder(first, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+            Persona chief = first.Get("Chief of Staff") ?? throw new InvalidOperationException("Chief missing.");
+            _ = first.Update("Chief of Staff", chief.Text, "haiku", null, chief.WorkMode);
+        }
+
+        using PersonaStore second = NewStore(dataDir);
+        await new BuiltinAgentSeeder(second, NullLogger<BuiltinAgentSeeder>.Instance).StartAsync(ct);
+
+        Persona? after = second.Get("Chief of Staff");
+        Assert.Equal("haiku", after?.Model);
+        Assert.Null(after?.Effort);
     }
 
     /// <summary>Issue 390: an existing Chief of Staff with a stored model keeps it across a start.</summary>

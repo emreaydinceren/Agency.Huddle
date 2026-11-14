@@ -970,7 +970,7 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 
 - `pwsh tools/acp/install.ps1` has been run and `tools\acp\node_modules` exists.
 - `node --version` prints a version.
-- This test is paid although it sends no prompt: the Model dropdown in step 5 needs the real Adapter, and with ACP on the Chief of Staff takes a Greeting Turn at the account-default Model unless `P-LAUNCH-PAID`'s first step made it Haiku / low (F3: `PersonaRunner.cs:481-495`).
+- This test is paid although it sends no prompt: the Model dropdown in step 5 needs the real Adapter, and with ACP on the Chief of Staff takes a Greeting Turn on Opus at medium effort (its seeded default) unless `P-LAUNCH-PAID`'s first step made it Haiku / low (F3: `PersonaRunner.cs:481-495`).
 
 **Steps**
 

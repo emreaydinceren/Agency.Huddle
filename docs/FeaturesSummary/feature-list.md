@@ -164,7 +164,7 @@ nothing is created until the Human approves. Its card has **Reset to default** i
 It is also the front door for quick captures. A Team's fact goes to that Team's Memory
 through the Helper, a dated item or an undecided idea becomes a Task, a Huddle-wide fact goes
 to Huddle-wide Memory, a rule becomes a proposed `AGENTS.md` line, and anything it cannot
-place gets one question. A new Chief of Staff starts on Haiku, and the Human can change that.
+place gets one question. A new Chief of Staff starts on Opus at medium effort, and the Human can change that.
 At start-up an unedited older file updates to the shipped text and keeps its name, alias,
 Model, Effort and Work mode; an edited file stays as it is, with one Notification per shipped
 version. PRs: #71, then #136, #377, #385, #406.
