@@ -133,7 +133,7 @@ public sealed class MainLayoutMoveSnackbarTests : IDisposable
     public async Task UnshownReport_ShownOnce()
     {
         MoveReportStore store = new(this.fixture.Host.Settings);
-        store.Save(new MoveReport(DateTimeOffset.UnixEpoch, false, 6, 263, 0, 2, 0, 1, 0, [], [new MoveProblem("a", "b")]));
+        store.Save(new MoveReport(DateTimeOffset.UnixEpoch, false, 6, 263, 0, 2, 0, 1, 0, [], [new MoveProblem("a", "b")]), shown: false);
         await using MudBunitContext first = this.fixture.NewContext();
         first.Services.AddSingleton(store);
 

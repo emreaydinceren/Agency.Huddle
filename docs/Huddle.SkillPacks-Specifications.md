@@ -3407,10 +3407,12 @@ internal sealed record MoveProblem(string Subject, string Message);
 a temporary file and a rename, together with `"shown": false`. `MainLayout` asks
 `MoveReportStore.TakeUnshown()` on its first render, shows the snackbar, and the store writes
 `"shown": true`. The snackbar is therefore shown once per Huddle even if the first start had no
-open window.
+open window. A move that carried over nothing of the Human's, as on a new data folder, is saved
+with `"shown": true` straight away, so it shows no snackbar.
 
 | Report | Snackbar (`Severity`, text) |
 | --- | --- |
+| Nothing of the Human's moved: `ShippedPackRows`, `UserPacksMoved`, `SkillsPointedAt` and `SkillsLeftInPlace` are 0, no `Problems`, and the catalog split was the embedded one, not the Human's `SkillsCatalog.json` | None: saved with `"shown": true` |
 | No problems | Success: *Packs and Skills moved to SKILLS.md* · **Show** |
 | `Problems.Count > 0` | Warning: *Packs and Skills moved to SKILLS.md · {n} could not be moved* · **Show** |
 | `Problems.Count == 0` and `SkillsWithIgnoredTools.Count > 0` | Warning: *Packs and Skills moved to SKILLS.md · {n} Skills no longer grant tools* · **Show** |
@@ -3794,7 +3796,7 @@ user packs, optional skills repository, a `FakeTimeProvider` fixed at 2026-10-17
 | `ImportedSkillsMoveTests` | An imported Skill is copied to `fetched/<name>/` with its recorded hash, `.source.json` and `.git` excluded, and its catalog entry points there; a Skill outside the catalog gets its own catalog, Source and row; a locally modified Skill is left in place with `path` `""` and a `skill-left` line |
 | `MoveBoundaryTests` | Agent files, `Skills/` and the old inputs are byte-identical after the move; no `HttpClient` in the move's namespace; no Skill shows **Update available** and `msbuild-authoring@1.0.0` still matches |
 | `MoveOutputChecksTests` | `Checks.Run` over the output finds no error, no `O002` and no `D003`; SKILLS.md round-trips through `RegistryReader` |
-| `MoveReportTests` | The three snackbar texts; `MoveReportStore.TakeUnshown` returns the report once, across a restart |
+| `MoveReportTests` | The three snackbar texts; `MoveReportStore.TakeUnshown` returns the report once, across a restart; a blank data folder's report is saved shown, while a user Pack, the Human's `SkillsCatalog.json`, an imported Skill, shipped Pack rows or a problem alone each leave it unshown |
 | `SkillsMdGoldenTests` | The golden SKILLS.md below |
 
 **The golden test.** `SkillsMdGoldenTests.SkillsMd_ForFixture_MatchesGolden` runs the move over
