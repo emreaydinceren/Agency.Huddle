@@ -464,7 +464,8 @@ public sealed class TeamsNavTests
     /// <param name="ctx">The test context.</param>
     /// <param name="lastUsed">The last Team used, or <see langword="null"/> before any was.</param>
     /// <param name="onTeamChanged">Receives the Team picked in the switcher, when given.</param>
-    private static IRenderedComponent<ContainerFragment> RenderTeamsView(MudBunitContext ctx, string? lastUsed, Action<string?>? onTeamChanged = null) =>
+    /// <param name="onRouteTeamChanged">Receives the Team the open page is in when it is not the one shown, when given.</param>
+    private static IRenderedComponent<ContainerFragment> RenderTeamsView(MudBunitContext ctx, string? lastUsed, Action<string?>? onTeamChanged = null, Action<string>? onRouteTeamChanged = null) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TeamsNav>(0);
@@ -475,6 +476,11 @@ public sealed class TeamsNavTests
                 builder.AddComponentParameter(3, nameof(TeamsNav.TeamChanged), EventCallback.Factory.Create(ctx, onTeamChanged));
             }
 
+            if (onRouteTeamChanged is not null)
+            {
+                builder.AddComponentParameter(4, nameof(TeamsNav.RouteTeamChanged), EventCallback.Factory.Create(ctx, onRouteTeamChanged));
+            }
+
             builder.CloseComponent();
         });
 
@@ -482,7 +488,8 @@ public sealed class TeamsNavTests
     /// <param name="ctx">The test context.</param>
     /// <param name="team">The Team the shortcut shows.</param>
     /// <param name="onTeamChanged">Receives the Team picked in the switcher, when given.</param>
-    private static IRenderedComponent<ContainerFragment> RenderShortcut(MudBunitContext ctx, string team, Action<string?>? onTeamChanged = null) =>
+    /// <param name="onRouteTeamChanged">Receives the Team the open page is in, when given (a shortcut never raises it).</param>
+    private static IRenderedComponent<ContainerFragment> RenderShortcut(MudBunitContext ctx, string team, Action<string?>? onTeamChanged = null, Action<string>? onRouteTeamChanged = null) =>
         ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TeamsNav>(0);
@@ -490,6 +497,11 @@ public sealed class TeamsNavTests
             if (onTeamChanged is not null)
             {
                 builder.AddComponentParameter(2, nameof(TeamsNav.TeamChanged), EventCallback.Factory.Create(ctx, onTeamChanged));
+            }
+
+            if (onRouteTeamChanged is not null)
+            {
+                builder.AddComponentParameter(3, nameof(TeamsNav.RouteTeamChanged), EventCallback.Factory.Create(ctx, onRouteTeamChanged));
             }
 
             builder.CloseComponent();
@@ -749,6 +761,143 @@ public sealed class TeamsNavTests
             Assert.Equal(projects, ProjectTexts(cut));
         });
         Assert.Empty(Writes(ctx));
+    }
+
+    /// <summary>Two Teams, and a directory with one Room of each plus a root Room that belongs to no Team.</summary>
+    /// <param name="catalog">The catalog the nav reads.</param>
+    /// <param name="script">The directory's script, to add Rooms after the nav rendered.</param>
+    private static ITeamDirectory TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out ScriptedRoomsDirectory script)
+    {
+        catalog = new FakeTeamCatalog { Teams = [Team("Business"), Team("Sales & Ops")] };
+        ITeamDirectory directory = ScriptedRoomsDirectory.Create(out script);
+        script.Rooms.Add(new Room("bizroom", "Ada", DateTimeOffset.UnixEpoch) { Team = "Business" });
+        script.Rooms.Add(new Room("salesroom", "Bo", DateTimeOffset.UnixEpoch.AddDays(1)) { Team = "Sales & Ops" });
+        script.Rooms.Add(new Room("rootroom", "Chief of Staff", DateTimeOffset.UnixEpoch.AddDays(2)));
+        return directory;
+    }
+
+    /// <summary>The Teams view showing Business follows a Room of another Team: it raises <c>RouteTeamChanged</c> once, with the catalog's spelling.</summary>
+    [Fact]
+    public async Task TeamsView_RoomOfAnotherTeam_RaisesRouteTeamChangedOnce()
+    {
+        ITeamDirectory directory = TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out _);
+        List<string> routed = [];
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, "Business", onRouteTeamChanged: routed.Add);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/bizroom']")));
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/rooms/salesroom"));
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sales & Ops"], routed));
+        await Flush(cut);
+        Assert.Single(routed);
+    }
+
+    /// <summary>A lower-cased or escaped Team address raises the catalog's own spelling, never the address's.</summary>
+    [Theory]
+    [InlineData("/teams/sales%20%26%20ops/files")]
+    [InlineData("/teams/sales%20%26%20ops")]
+    [InlineData("/teams/Sales%20%26%20Ops/projects/Budget")]
+    public async Task TeamsView_TeamAddress_RaisesTheCatalogSpelling(string route)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        ITeamDirectory directory = TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out _);
+        List<string> routed = [];
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, "Business", onRouteTeamChanged: routed.Add);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/bizroom']")));
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => nav.NavigateTo(route));
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sales & Ops"], routed));
+    }
+
+    /// <summary>An address in the Team already shown, the Build page, an unknown Team, a root Room and the Feed raise nothing; a Room of another Team still raises afterwards.</summary>
+    [Theory]
+    [InlineData("/teams/business/files")]
+    [InlineData("/rooms/bizroom")]
+    [InlineData("/teams/build")]
+    [InlineData("/teams/Nowhere")]
+    [InlineData("/rooms/rootroom")]
+    [InlineData("/feed")]
+    public async Task TeamsView_AddressWithNoOtherTeam_RaisesNothing(string route)
+    {
+        ArgumentNullException.ThrowIfNull(route);
+        ITeamDirectory directory = TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out _);
+        List<string> routed = [];
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, "Business", onRouteTeamChanged: routed.Add);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/bizroom']")));
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => nav.NavigateTo(route));
+        await Flush(cut);
+        await Flush(cut);
+
+        Assert.Empty(routed);
+        await cut.InvokeAsync(() => nav.NavigateTo("/rooms/salesroom"));
+        cut.WaitForAssertion(() => Assert.Equal(["Sales & Ops"], routed));
+    }
+
+    /// <summary>A Team shortcut's own nav (not the Teams view) never raises <c>RouteTeamChanged</c>, even for another Team's Room or page.</summary>
+    [Fact]
+    public async Task Shortcut_RoomOfAnotherTeam_RaisesNothing()
+    {
+        ITeamDirectory directory = TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out _);
+        List<string> routed = [];
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        IRenderedComponent<ContainerFragment> cut = RenderShortcut(ctx, "Business", onRouteTeamChanged: routed.Add);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/bizroom']")));
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+
+        await cut.InvokeAsync(() => nav.NavigateTo("/rooms/salesroom"));
+        await cut.InvokeAsync(() => nav.NavigateTo("/teams/Sales%20%26%20Ops/files"));
+        await Flush(cut);
+        await Flush(cut);
+
+        Assert.Empty(routed);
+        Assert.Equal("Business", cut.Find(".teams-nav-scope-header .teams-nav-scope-label").TextContent.Trim());
+    }
+
+    /// <summary>After a reload nothing is remembered (the Team param is null): a Room of the catalog's second Team, open at load, makes that Team the one shown.</summary>
+    [Fact]
+    public async Task TeamsView_DirectLoadOnARoomOfTheSecondTeam_RaisesThatTeam()
+    {
+        ITeamDirectory directory = TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out _);
+        List<string> routed = [];
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/salesroom");
+
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, null, onRouteTeamChanged: routed.Add);
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sales & Ops"], routed));
+    }
+
+    /// <summary>A Room opened before the directory lists it raises nothing; once a Rooms reload lists it, the Team is raised once, and a later reload does not raise again.</summary>
+    [Fact]
+    public async Task TeamsView_RoomListedLater_RaisesOnceAfterTheReload_AndNotAgain()
+    {
+        ITeamDirectory directory = TwoTeamsCatalogAndRooms(out FakeTeamCatalog catalog, out ScriptedRoomsDirectory script);
+        List<string> routed = [];
+        await using MudBunitContext ctx = NewContext(catalog, tasksEnabled: false, directory: directory);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/rooms/fresh");
+        IRenderedComponent<ContainerFragment> cut = RenderTeamsView(ctx, "Business", onRouteTeamChanged: routed.Add);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/bizroom']")));
+        await Flush(cut);
+        Assert.Empty(routed);
+        RoomEvents events = ctx.Services.GetRequiredService<RoomEvents>();
+
+        script.Rooms.Add(new Room("fresh", "Cy", DateTimeOffset.UnixEpoch.AddDays(3)) { Team = "Sales & Ops" });
+        events.PublishRoomsChanged();
+
+        cut.WaitForAssertion(() => Assert.Equal(["Sales & Ops"], routed));
+        script.Rooms.Add(new Room("later", "Di", DateTimeOffset.UnixEpoch.AddDays(4)) { Team = "Business" });
+        events.PublishRoomsChanged();
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/later']")));
+        await Flush(cut);
+        Assert.Single(routed);
     }
 
     /// <summary>The nav sits in the layout and is not re-created on navigation, so it follows <c>LocationChanged</c>: navigating into a collapsed Team opens it, with no storage write.</summary>

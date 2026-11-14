@@ -38,7 +38,10 @@
     the Rooms header (so a first chat can be started) and the Library link in place of the list.
 
     With IsTeamsView set (the Activity bar's Teams view, MainLayout.razor) it is that same single-Team view, for the last
-    Team used (Team) or the catalog's first, with the card's Team list unfolded from the start and after a pick. Neither
+    Team used (Team) or the catalog's first, with the card's Team list unfolded from the start and after a pick. It also
+    follows the open page's Team (a Room of a Team, or a /teams/{Team}/... page): it raises RouteTeamChanged with the
+    catalog's spelling of that Team when it is not the one shown, and MainLayout makes it the Team shown. A page with no
+    Team (a root Room, the Feed) leaves the Team shown. Neither
     Team nor IsTeamsView set lists every Team, as the Teams view used to. Archived Teams and Projects are listed and restored
     on the Archived page; this nav only archives (the Team row's menu, and the scope rows' menus).
 *@
@@ -196,6 +199,17 @@
     /// <summary>Raised with the Team picked in the header card's switcher, so the layout shows that Team's view instead.</summary>
     [Parameter]
     public EventCallback<string?> TeamChanged { get; set; }
+
+    /// <summary>
+    /// Raised only by the Teams view (<see cref="IsTeamsView"/>), with the catalog's spelling of the Team the open page is in
+    /// (a Room of the Team, or a <c>/teams/{Team}/...</c> page), when it differs from the Team shown. The layout then makes it the
+    /// Team shown. Not <see cref="TeamChanged"/>, which is the switcher's pick and also moves the Sidebar to a view.
+    /// </summary>
+    [Parameter]
+    public EventCallback<string> RouteTeamChanged { get; set; }
+
+    /// <summary>Whether the current address's Team was found in the catalog (raised or already shown); reset on every navigation, so a later reload re-resolves only an address that is still unresolved and never undoes a shortcut the Human pressed since.</summary>
+    private bool routeTeamResolved;
 
     private bool showAllTeams;
 
@@ -724,15 +738,50 @@
         this.Tracker.Changed += this.OnTrackerChanged;
         this.TaskSignals.TaskChanged += this.OnTaskChanged;
         this.TaskSignals.TasksReloaded += this.OnTasksReloaded;
-        this.locationChanged = (_, _) => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        this.locationChanged = (_, _) => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
         {
-            this.UpdateRoute();
+            this.routeTeamResolved = false;
+            await this.FollowRouteAsync();
             this.StateHasChanged();
-            return Task.CompletedTask;
         });
         this.Navigation.LocationChanged += this.locationChanged;
         await this.LoadRoomsAsync();
+        await this.FollowRouteAsync();
+    }
+
+    /// <summary>
+    /// Reads the route (see <see cref="UpdateRoute"/>) and, in the Teams view, raises <see cref="RouteTeamChanged"/> with the
+    /// catalog's spelling of the address's Team when it is not the Team shown. An address with no Team (a root Room, the Feed) or
+    /// a Team the catalog does not list raises nothing and stays unresolved.
+    /// </summary>
+    private async Task FollowRouteAsync()
+    {
         this.UpdateRoute();
+        if (!this.IsTeamsView)
+        {
+            return;
+        }
+
+        string? routed = this.Catalog.Teams.FirstOrDefault(team => string.Equals(team.Name, this.routeTeam, StringComparison.OrdinalIgnoreCase))?.Name;
+        if (routed is null)
+        {
+            return;
+        }
+
+        this.routeTeamResolved = true;
+        if (!string.Equals(routed, this.OneTeam, StringComparison.OrdinalIgnoreCase))
+        {
+            await this.RouteTeamChanged.InvokeAsync(routed);
+        }
+    }
+
+    /// <summary>After a reload of the Rooms or the catalog, follows the route again while the address has not been resolved to a Team yet.</summary>
+    private async Task RefollowRouteAsync()
+    {
+        if (this.IsTeamsView && !this.routeTeamResolved)
+        {
+            await this.FollowRouteAsync();
+        }
     }
 
     /// <summary>Loads the remembered collapsed Teams once, after the first render.</summary>
@@ -1093,6 +1142,7 @@
         }
 
         await this.LoadRoomsAsync();
+        await this.RefollowRouteAsync();
         this.StateHasChanged();
     });
 
@@ -1118,6 +1168,7 @@
     private void OnRoomsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {
         await this.LoadRoomsAsync();
+        await this.RefollowRouteAsync();
         this.StateHasChanged();
     });
 
