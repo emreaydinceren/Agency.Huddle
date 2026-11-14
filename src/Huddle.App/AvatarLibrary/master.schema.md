@@ -31,7 +31,7 @@
 | `hair_length` | string | `short`, `medium` or `long`. |
 | `hair_color` | string | `blonde`, `brown`, `black` or `red`. |
 | `glasses` | boolean | True if the avatar wears glasses. |
-| `glasses_color` | string or null | `red`, `blue` or `black`; null without glasses. |
+| `glasses_color` | string or null | `red`, `blue` or `silver`; null without glasses. |
 | `facial_hair` | string | `none`, `mustache` or `beard`. Always `none` for women. |
 | `outfit` | string | For example `red top`. |
 | `outfit_color` | string | `black`, `blue`, `red`, `pink`, `white`, `beige` or `gray`. |

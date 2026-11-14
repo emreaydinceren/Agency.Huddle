@@ -350,7 +350,7 @@ upload button. It appears only in the **An image** choice, and only when a libra
 |  Tags                                                            |
 |  (glasses) (short hair) (no-glasses) (black hair) (brown hair)   |
 |  (medium hair) (long hair) (blue glasses) (red glasses)          |
-|  (black glasses) (beard) (beige top)            Show all (21)    |
+|  (silver glasses) (beard) (beige top)           Show all (21)    |
 |                                                                  |
 |  126 of 126                                        [ Clear all ] |
 | ---------------------------------------------------------------- |

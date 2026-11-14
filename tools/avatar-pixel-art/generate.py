@@ -25,7 +25,7 @@ from PIL import Image
 GRID = 32                 # the art is drawn on a 32 x 32 grid
 PNG_SIDE = 256            # BundledAvatarLibraryTests pins 256 x 256
 SEED = 20261111           # changing it reshuffles hair, glasses and facial hair
-GENERATED = "2026-11-12"  # written into master.json; bump it when the art changes
+GENERATED = "2026-11-13"  # written into master.json; bump it when the art changes
 OUTLINE = "#2a1f2d"
 EYE = "#1d1626"
 LENS = "#eef5fb"
@@ -33,7 +33,8 @@ LENS = "#eef5fb"
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = REPO / "src" / "Huddle.App" / "AvatarLibrary"
 
-# name -> (skin_tone written to master.json, base, shade, mouth, blush).
+# name -> (skin_tone written to master.json, base, shade, mouth, blush). The blush is no longer drawn; it is kept
+# so the tuple keeps its shape.
 # skin_tone uses the words SkinGroups.cs already maps to the picker's Light / Tan / Dark buttons.
 SKINS = {
     "fair": ("fair", "#f8d9c4", "#e6b79b", "#b8484f", "#f2a3a3"),
@@ -55,7 +56,15 @@ OUTFITS = {  # base, shade, light accent
     "beige": ("#d9c3a0", "#b8a07c", "#ecdcc0"),
     "gray": ("#8a8f99", "#6b707a", "#aab0ba"),
 }
-FRAMES = {"red": "#c0392b", "blue": "#2f6fd0", "black": "#16141a"}
+FRAMES = {"red": "#c0392b", "blue": "#2f6fd0", "silver": "#a9b4c2"}  # no black: it fused with dark hair and the outline
+# A frame must stand off the skin in brightness, not only in hue: silver on tan and red on darker skin were
+# near-equal luma and read as a smudge or a mask.
+FRAME_OVERRIDES = {("silver", "fair"): "#8f9bab", ("silver", "olive"): "#d0d7e0", ("red", "darker"): "#e0524a"}
+
+
+def frame_colour(frame, skin_name):
+    """The frame colour for this skin: FRAMES, or the per-skin tone where FRAME_OVERRIDES has one."""
+    return FRAME_OVERRIDES.get((frame, skin_name), FRAMES[frame])
 # Per gender, 21 avatars of each skin. Weighted so the hair is believable for the skin: natural red
 # hair is rare outside fair skin, and blonde is rare on darker skin.
 HAIR_COLOR_COUNTS = {
@@ -67,7 +76,7 @@ HAIR_LENGTH_RATIOS = {
     "m": [("short", 0.6), ("medium", 0.25), ("long", 0.15)],
     "f": [("short", 0.25), ("medium", 0.35), ("long", 0.4)],
 }
-GLASSES_RATIOS = [("none", 0.4), ("red", 0.2), ("blue", 0.2), ("black", 0.2)]
+GLASSES_RATIOS = [("none", 0.4), ("red", 0.2), ("blue", 0.2), ("silver", 0.2)]
 FACIAL_HAIR_RATIOS = [("none", 0.55), ("mustache", 0.15), ("beard", 0.3)]  # men only
 
 HEAD = {9: (12, 19), **{y: (11, 20) for y in range(10, 18)}, 18: (12, 19), 19: (13, 18), 20: (14, 17)}
@@ -179,7 +188,7 @@ def body(c, skin, outfit, gender):
 
 
 def head(c, skin, gender):
-    _, s, sh, mouth, blush = skin
+    _, s, sh, mouth, _ = skin
     c.shape(HEAD, s)
     c.dots([(10, 13), (10, 14), (10, 15), (21, 13), (21, 14), (21, 15)], s)
     c.dots([(21, 14)], sh)
@@ -189,9 +198,8 @@ def head(c, skin, gender):
     c.rect(18, 14, 1, 2, EYE)
     c.dots([(16, 16), (16, 17)], sh)
     c.row(18, 15, 16, mouth)
-    if gender == "f":
+    if gender == "f":  # the lash pixel; no blush, which was the most stereotyped cue and barely showed on darker skin
         c.dots([(12, 14), (19, 14)], EYE)
-        c.dots([(12, 17), (19, 17)], blush)
 
 
 def luma(col):
@@ -199,36 +207,53 @@ def luma(col):
     return 0.299 * int(col[1:3], 16) + 0.587 * int(col[3:5], 16) + 0.114 * int(col[5:7], 16)
 
 
-def facial_tones(skin, h):
+FACIAL_OVERRIDES = {  # (skin, hair) -> beard colour, where stepping darker lands somewhere wrong
+    ("olive", "blonde"): "#8a6420",   # the stepped tone was a muddy olive that read as a dirty jaw
+    ("darker", "blonde"): "#b8892c",  # the bright base read as a scarf over a light top
+}
+
+
+def facial_tones(skin_name, skin, hair_name, h):
     """(main, light) for facial hair: the hair colour, stepped darker until it stands off the skin.
 
-    The light tone leans towards the skin, so the texture stays as strong as the contrast allows.
+    Black never goes past its own base: anything darker is darker than the outline, and hair, beard
+    and outline fuse into one mass. A few skin and hair pairs take a fixed colour instead. The light
+    tone leans towards the skin, so the texture stays as strong as the contrast allows.
     """
     base, _, dark = h
-    for main in (base, dark, mix(dark, OUTLINE, 0.5)):
-        if abs(luma(main) - luma(skin[1])) >= 70:
-            break
-    return main, mix(main, skin[1], 0.3)
+    if (skin_name, hair_name) in FACIAL_OVERRIDES:
+        main = FACIAL_OVERRIDES[(skin_name, hair_name)]
+    elif hair_name == "black":
+        main = base
+    else:
+        for main in (base, dark, mix(dark, OUTLINE, 0.5)):
+            if abs(luma(main) - luma(skin[1])) >= 70:
+                break
+    return main, mix(main, skin[1], 0.45 if hair_name == "black" else 0.3)
 
 
-def facial_hair(c, kind, skin, h):
-    """A mustache, or a short boxed beard with one, in tones that stand off the skin.
+def facial_hair(c, kind, skin_name, hair_name):
+    """A mustache, or a full beard with one, in tones that stand off the skin.
 
-    Both sit on the mouth row and move the lip one row down. That leaves a row of skin under the
-    nose, so the hair never touches the bottom rim of the glasses, and the lip shows below the
-    mustache instead of inside it. Drawn after the hairline pass, so it keeps its own shading.
+    The full beard starts at the sideburns, runs down the jaw and rounds off under the chin onto the
+    neck, so it reads as part of the hair rather than a patch on the chin. Both sit on the mouth row
+    and move the lip one row down. That leaves a row of skin under the nose, so the hair never touches
+    the bottom rim of the glasses, and the lip shows below the mustache instead of inside it. Drawn
+    after the hairline pass, so it keeps its own shading.
     """
     if kind == "none":
         return
-    main, light = facial_tones(skin, h)
-    if kind == "mustache":
-        c.row(18, 13, 18, main)
-    else:
-        c.dots([(11, 16), (20, 16), (11, 17), (20, 17)], main)
-        c.shape({18: (12, 19), 19: (13, 18), 20: (14, 17)}, main)
-        c.dots([(13, 19), (16, 20)], light)
+    skin = SKINS[skin_name]
+    main, light = facial_tones(skin_name, skin, hair_name, HAIRS[hair_name])
+    if kind == "beard":  # ends at row 21 with a two-pixel chin shadow, so the head keeps a neck
+        c.shape({13: [(11, 11), (20, 20)], 14: [(11, 11), (20, 20)], 15: [(11, 11), (20, 20)],
+                 16: [(11, 12), (19, 20)], 17: [(11, 13), (18, 20)],
+                 18: (11, 20), 19: (12, 19), 20: (12, 19), 21: (13, 18)}, main)
+        c.dots([(12, 19), (18, 20), (14, 21), (17, 21), (13, 20), (11, 16)], light)
+        c.dots([(15, 21), (16, 21)], mix(main, OUTLINE, 0.4))
+    c.row(18, 13, 18, main)
     c.dots([(14, 18), (17, 18)], light)
-    c.row(19, 15, 16, skin[3])
+    c.row(19, 15, 16, mix(skin[3], main, 0.45))  # a lip toned into the hair, not a bright tongue
 
 
 def mix(a, b, t):
@@ -279,9 +304,9 @@ def draw(a):
         c.row(12, 18, 19, h[2])
     hair_front(c, a["gender"], a["hair_length"], h)
     hairline(c, skin, h, strong=a["skin"] == "darker" and a["hair_color"] == "brown")
-    facial_hair(c, a["facial_hair"], skin, h)
+    facial_hair(c, a["facial_hair"], a["skin"], a["hair_color"])
     if a["glasses"] != "none":
-        glasses(c, skin, FRAMES[a["glasses"]])
+        glasses(c, skin, frame_colour(a["glasses"], a["skin"]))
     c.px = {p: v for p, v in c.px.items() if inside(*p)}
     figure = set(c.px)
     for (x, y) in figure:
@@ -305,10 +330,8 @@ def allocate(n, weights, rng):
 
 
 def clashes(a):
-    """True when colours fight: red hair with red frames or a red top, or black frames on black hair and darker skin."""
-    if a["hair_color"] == "red" and "red" in (a["glasses"], a["outfit"]):
-        return True
-    return a["skin"] == "darker" and a["hair_color"] == "black" and a["glasses"] == "black"
+    """True when colours fight: red hair with red frames or a red top."""
+    return a["hair_color"] == "red" and "red" in (a["glasses"], a["outfit"])
 
 
 def repair(avatars):
