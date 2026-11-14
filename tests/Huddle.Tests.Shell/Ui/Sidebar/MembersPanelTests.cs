@@ -137,7 +137,7 @@ public sealed class MembersPanelTests
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, panelCtx, new RoomSubject("no-such-room"));
 
-        cut.WaitForAssertion(() => Assert.Equal("No members in this chat.", cut.Find("[role=status]").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("No members in this Room.", cut.Find("[role=status]").TextContent.Trim()));
         Assert.Equal(0, panelCtx.Count);
     }
 

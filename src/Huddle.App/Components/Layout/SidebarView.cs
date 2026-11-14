@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Components.Layout;
 public enum SidebarView
 {
     /// <summary>The Needs You card and the Rooms that belong to no Team.</summary>
-    Chats,
+    Rooms,
 
     /// <summary>The Teams, each with its Rooms and Projects.</summary>
     Teams,

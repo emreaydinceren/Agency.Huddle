@@ -1,5 +1,5 @@
 @*
-    "Documents in this chat" (Spec): the distinct Library files a Room's Messages mention, newest mention
+    "Documents in this Room" (Spec): the distinct Library files a Room's Messages mention, newest mention
     first, each resolved for existence. A file that is gone is listed as gone. Reloads when a Message is
     posted in this Room; re-resolves (no reload) when the Library's link index is invalidated for any root.
     Anything but a Room Subject is ignored; the jump button navigates the Tab showing the Room; the count goes to the host.
@@ -23,7 +23,7 @@
 {
     if (this.loaded)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No documents mentioned in this chat yet.</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No documents mentioned in this Room yet.</MudText>
     }
 }
 else

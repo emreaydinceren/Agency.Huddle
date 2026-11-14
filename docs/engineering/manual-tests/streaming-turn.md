@@ -17,7 +17,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Take the [§0.4](../manual-tests.md#04-rollback) rollback copy before touching anything. Several tests here edit config, Personas and the database.
 2. Free lane is `P-LAUNCH-FREE`. `<data>` is `<repo>\src\Huddle.App\App_Data` on that lane (see [common.md](common.md)), so a Room's Transcript is `<data>\rooms\<roomid>.jsonl`. Tests STREAMINGTURN-21 onward are all paid (21 and 22 send no prompt but start the real Adapter and the Chief of Staff's Greeting) and additionally need the Adapter: run `pwsh tools/acp/install.ps1`, then confirm `tools\acp\node_modules` exists and `node --version` prints a version. Without both, every ACP test here is INCONCLUSIVE, not failed. On any lane with ACP on, the built-in Chief of Staff also starts and takes a Greeting Turn in its empty Room (paid on the real adapter): `P-LAUNCH-PAID` handles that in its first step, so do not launch the paid lane any other way.
-3. Open a Chromium browser at `http://localhost:5100`. The free lane starts no Agent (the built-in Chief of Staff is seeded but stays Offline, and no Room is created for it), so a fresh data folder has no Room yet: the sidebar shows the title `No rooms yet` with the line `Start an agent to create one.` under it and the main column reads `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>`. The drawer shows the Room list with **New chat** at its foot, then Teams, **Agents**, Task views, Library, Archived and the **Settings** icon (`MainLayout.razor:17-30`). Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
+3. Open a Chromium browser at `http://localhost:5100`. The free lane starts no Agent (the built-in Chief of Staff is seeded but stays Offline, and no Room is created for it), so a fresh data folder has no Room yet: the sidebar shows the title `No rooms yet` with the line `Start an agent to create one.` under it and the main column reads `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>`. The drawer shows the Room list with **New room** at its foot, then Teams, **Agents**, Task views, Library, Archived and the **Settings** icon (`MainLayout.razor:17-30`). Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
 4. Open `T-C` for pipe clients and `T-D` for file and HTTP checks.
 5. SAVE THE SLOW-DRAFT CLIENT. It is the workhorse of this area: it holds a Draft open for as long as you like, costs nothing and needs no real agent. Create `$env:TEMP\drip.ps1` with exactly this content:
 
@@ -372,7 +372,7 @@ If the second tab shows an `Attempting to reconnect` overlay, its circuit droppe
 
 **Inconclusive if**
 
-If the sidebar has only one room, the test cannot run - create a second Room first (New chat, or connect `tools/echo-bot.ps1`) and record this as not run until then.
+If the sidebar has only one room, the test cannot run - create a second Room first (New room, or connect `tools/echo-bot.ps1`) and record this as not run until then.
 
 > [!NOTE]
 > Judge 'flicker' with devtools' paint-flashing enabled if the naked eye is ambiguous; otherwise report only the two decisive observations (leak, and survival on return).
@@ -627,9 +627,9 @@ The drip client does not print the server's error replies, so a silent absence o
 
 1. In `T-C` run `pwsh $env:TEMP\drip.ps1 -Name drip` and in `T-D` run `pwsh $env:TEMP\drip.ps1 -Name drop`. Let both register; the sidebar gains `drip` and `drop` rooms.
 2. Press ENTER twice in each window to let them finish and disconnect. Both agent names now exist.
-3. In the browser sidebar, click **New chat**.
+3. In the browser sidebar, click **New room**.
 4. Tick the checkbox beside `drip` and the checkbox beside `drop`.
-5. Click **Start chat**. The browser navigates to a new Room named `drip, drop`. Copy its id from the address bar as GROUPROOM. Run `Test-Path "<data>\rooms\<GROUPROOM>.jsonl"`: if it prints `True`, run `Get-Content "<data>\rooms\<GROUPROOM>.jsonl" | Measure-Object -Line` and write the count down as BEFORE; if `False`, BEFORE is 0.
+5. Click **Open room**. The browser navigates to a new Room named `drip, drop`. Copy its id from the address bar as GROUPROOM. Run `Test-Path "<data>\rooms\<GROUPROOM>.jsonl"`: if it prints `True`, run `Get-Content "<data>\rooms\<GROUPROOM>.jsonl" | Measure-Object -Line` and write the count down as BEFORE; if `False`, BEFORE is 0.
 6. In `T-C` run: `pwsh $env:TEMP\drip.ps1 -Name drip -RoomId <GROUPROOM> -DelaySeconds 6`.
 7. Within two seconds, in `T-D` run: `pwsh $env:TEMP\drip.ps1 -Name drop -RoomId <GROUPROOM> -DelaySeconds 6`.
 8. Watch the Group Room for about 25 seconds.
@@ -656,7 +656,7 @@ The drip client does not print the server's error replies, so a silent absence o
 
 **Inconclusive if**
 
-The store returns a Room's Drafts in no particular order, so the two rows may swap vertical position between renders - that is documented and NOT a defect. If the **New chat** panel shows `No agents have connected yet.`, steps 1-2 did not register both names; repeat them and reopen the panel.
+The store returns a Room's Drafts in no particular order, so the two rows may swap vertical position between renders - that is documented and NOT a defect. If the **New room** panel shows `No agents have connected yet.`, steps 1-2 did not register both names; repeat them and reopen the panel.
 
 > [!NOTE]
 > Keep the GROUPROOM id - STREAMINGTURN-15 reuses it.
@@ -924,7 +924,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
 **Steps**
 
 1. Press Ctrl+C in `T-A`. In the same window run `$env:Team__AgentMessageBudget="2"`, then the `P-LAUNCH-UAT` seeder and launch commands. Wait for Ada and Bo to be **Online**.
-2. Reload the browser. Click **New chat**, tick `Ada` and `Bo`, click **Start chat**. This Room has three Members, so each Agent answers only a Mention.
+2. Reload the browser. Click **New room**, tick `Ada` and `Bo`, click **Open room**. This Room has three Members, so each Agent answers only a Mention.
 3. Click into the composer, type `@Ada hello one` and press Enter. Wait for Ada's reply, and read the grey line: `1 of 2 agent replies since you last spoke.`
 4. Send ONE Message mentioning both Agents: `hello @Ada and @Bo`. Wait for both replies.
 
@@ -1248,7 +1248,7 @@ If the composer shows the budget pause prompt, the Room Budget intervened and th
 
 **Steps**
 
-1. Click **New chat** in the sidebar, tick `Nova` and one other connected agent (e.g. a second Persona from `P-NEW-PERSONA`), and click **Start chat**. Call this ROOM B; Nova's own direct Room is ROOM A.
+1. Click **New room** in the sidebar, tick `Nova` and one other connected agent (e.g. a second Persona from `P-NEW-PERSONA`), and click **Open room**. Call this ROOM B; Nova's own direct Room is ROOM A.
 2. Open ROOM B, type `@Nova count from 1 to 300, one number per line` and press Enter. Confirm a Draft starts streaming there.
 3. Switch to ROOM A and type `@Nova list ten countries` and press Enter. With `MaxConcurrentTurns` at its default of 1 this Turn waits behind the one in ROOM B.
 4. Switch back to ROOM B and click **Stop** on Nova's Draft.
@@ -1272,7 +1272,7 @@ If the composer shows the budget pause prompt, the Room Budget intervened and th
 
 **Inconclusive if**
 
-If ROOM A's prompt never queued because Nova answered it before you clicked Stop (it would then have no wait behind ROOM B's Turn), the test did not set up its condition - retry with a longer first prompt in ROOM B. If no second agent is offered in New chat, create one with `P-NEW-PERSONA`; the second agent only exists to make it a Group Room.
+If ROOM A's prompt never queued because Nova answered it before you clicked Stop (it would then have no wait behind ROOM B's Turn), the test did not set up its condition - retry with a longer first prompt in ROOM B. If no second agent is offered in New room, create one with `P-NEW-PERSONA`; the second agent only exists to make it a Group Room.
 
 > [!NOTE]
 > COSTS MONEY: one partial Haiku turn in ROOM B plus one short full turn in ROOM A. The old rule that Stop kills an Agent in every Room is gone (ADR-0024); `known-limits.md` and ADR-0008 still say it, and Phase 5 corrects them. Do NOT file ROOM A's reply as a defect.
@@ -1301,7 +1301,7 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 1. With the app running on `P-LAUNCH-PAID`, create a second Persona through the UI with `P-NEW-PERSONA`: **Name** `Nova2`, **Title** `Second test persona`, **Alias** `nova2`, **Persona body** `You are Nova2. Reply with one very short sentence that ends with @nova.`, **Model** the Haiku option, **Effort** `low`. Never write its file by hand: a `.md` at the `Agents` root is rejected and a hand-written file has no Model row (F1). Then open Nova's card, choose **Edit**, and change her body to `You are Nova. Reply with one very short sentence that ends with @nova2.`, then **Save**. Write down her original body so you can restore it in step 10.
 2. Press Ctrl+C in `T-A`. In the same window run the `P-LAUNCH-PAID` launch block (not its first step) but with its two budget lines replaced by `$env:Team__AgentMessageBudget = '4'` and `$env:Team__Acp__TokenBudget = '1'`. The Room Budget bounds the ping-pong, and therefore the spend.
 3. Wait for BOTH Nova and Nova2 to reach **Online** on /agents and confirm both cards show Model = Haiku and Effort = low.
-4. Click **New chat**, tick `Nova` and `Nova2` only, and click **Start chat**.
+4. Click **New room**, tick `Nova` and `Nova2` only, and click **Open room**.
 5. Type exactly `Say hi @nova` and press Enter. Nova answers mentioning `@nova2`, then Nova2 answers mentioning `@nova`. That second reply is an AGENT Message, so it wakes Nova with no reset — and that is the Turn the cap refuses.
 6. Watch the Room for 15 seconds and note whether any third Draft appears.
 7. Read the strip between the transcript and the composer, word for word, and screenshot it before typing anything else.

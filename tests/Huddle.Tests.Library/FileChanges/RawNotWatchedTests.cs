@@ -43,6 +43,6 @@ public sealed class RawNotWatchedTests
 
         Assert.False(resolved);
         Assert.Null(folder);
-        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+        Assert.Equal("Uploads are announced in the Room, not watched.", reason);
     }
 }

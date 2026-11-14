@@ -2,10 +2,10 @@
 @page "/archived/{Tab}"
 @*
     The Archived page, opened from the Activity bar's Archived button: everything the Human archived, in three tabs,
-    Teams | Projects | Chats. Each tab lists its entries (ArchivedEntryList); the Human selects one and presses Restore,
+    Teams | Projects | Rooms. Each tab lists its entries (ArchivedEntryList); the Human selects one and presses Restore,
     or double-clicks it. A chat can also be deleted, asked first with the inline confirm RoomNavRow uses.
 
-    The tab is the address (/archived/teams, /archived/projects, /archived/chats; /archived is Teams), read from the Tab's
+    The tab is the address (/archived/teams, /archived/projects, /archived/rooms; /archived is Teams), read from the Tab's
     own URL as FeedPage does, and a tab click only navigates, as on the Team page. The lists are read again whenever the
     Team catalog or the Rooms change, so a Team or Project archived from the sidebar, or a chat archived from its row
     menu, appears here without a reload, and a selection whose row is gone is dropped.
@@ -28,7 +28,7 @@
 @inject NavigationManager Navigation
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4 archived-page">
-    <PageHeader Title="Archived" Subtitle="Teams, Projects and chats you archived. Select one and restore it." />
+    <PageHeader Title="Archived" Subtitle="Teams, Projects and Rooms you archived. Select one and restore it." />
 
     <MudTabs Class="archived-tabs" KeepPanelsAlive="false" Elevation="0" MinimumTabWidth="96px" AlwaysShowScrollButtons="false"
              ActivePanelIndex="@((int)this.ActiveTab)" ActivePanelIndexChanged="this.OnTabChanged">
@@ -50,10 +50,10 @@
                 </Actions>
             </ArchivedEntryList>
         </MudTabPanel>
-        <MudTabPanel Text="Chats" Icon="@ActionIcons.Chat">
-            <ArchivedEntryList Label="Archived chats" Icon="@ActionIcons.Chat" Entries="this.chats"
+        <MudTabPanel Text="Rooms" Icon="@ActionIcons.Chat">
+            <ArchivedEntryList Label="Archived rooms" Icon="@ActionIcons.Chat" Entries="this.chats"
                                Selected="@this.selectedChat" SelectedChanged="this.SelectChat" OnActivate="this.RestoreChatAsync"
-                               EmptyTitle="No archived chats" EmptyText="Chats you archive are kept here, so you can restore them.">
+                               EmptyTitle="No archived rooms" EmptyText="Rooms you archive are kept here, so you can restore them.">
                 <Actions>
                     @if (this.confirmingDelete && this.SelectedRoom is { } room)
                     {

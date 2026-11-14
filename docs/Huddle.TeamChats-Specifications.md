@@ -48,9 +48,9 @@ it beat.
 | T2 | A Persona file gains `teams: [Research]`, and *Research* did not exist | *Research* appears in the Teams list and its Team Room holds the Human and that Agent |
 | T3 | Kim joins *Marketing* | Kim is added to the *Marketing* Team Room, which says so in the Transcript like any Invitation |
 | T4 | Kim leaves *Marketing* | Kim stays a Member of the Team Room (§3). Nothing is posted |
-| T5 | The Human chooses **New chat** on *Marketing*, ticks Nova and Bo (Bo is not in *Marketing*) | A new Room *Nova, Bo* scoped to *Marketing*, listed under it. Bo is allowed (D-4) |
+| T5 | The Human chooses **New room** on *Marketing*, ticks Nova and Bo (Bo is not in *Marketing*) | A new Room *Nova, Bo* scoped to *Marketing*, listed under it. Bo is allowed (D-4) |
 | T6 | The Human presses **Message** on Nova in *Marketing*'s Members tab | Marketing's one-to-one with Nova opens, created if it did not exist. It is not the sidebar's root *Nova* Room |
-| T7 | The Human chooses **New chat** in the Chats group and ticks Nova | The root *Nova* Room opens, as today |
+| T7 | The Human chooses **New room** in the Chats group and ticks Nova | The root *Nova* Room opens, as today |
 | T8 | Nova's Persona comes online | Its root one-to-one is ensured, as today. No Team Room is touched by the hello |
 | T9 | An Agent's Turn in Marketing's *Nova* Room | The Turn label reads `[Room: Nova (id: …, Team: Marketing)]` |
 | T10 | The Human invites Bo into the *Marketing* Team Room | Bo joins. The Room keeps its name *Marketing* |
@@ -112,7 +112,7 @@ it beat.
                                           add missing members
                                           archive Rooms whose Team is gone
         │
- UI: RoomList (root only) · TeamsNav (Team ▸ scope list, ROOMS, TASKS, LIBRARY; menu: New chat)
+ UI: RoomList (root only) · TeamsNav (Team ▸ scope list, ROOMS, TASKS, LIBRARY; menu: New room)
      NewChat (Team parameter) · TeamMembers Message → EnsureTeamOneToOneAsync
  Prompt: turn.roomLabel gains {{team}}
  Tools: read_records accepts a Room scoped to the Team
@@ -208,18 +208,18 @@ that has never connected is added on the run after it does: User creation raises
 
 - **`RoomList`** lists Rooms with `Team is null`, plus unarchived Rooms whose Team is no
   longer in the catalog, those with a muted `(<Team>)` after the name (T12).
-- **`TeamsNav`**: an expanded Team shows a selectable scope list: the Team row first, then one row per Project, each trailing its open Task count. Clicking a row selects it and opens its page; the address also selects it (a Room selects its Project, ADR-0082, or the Team row when it has none or its Project is gone). Below the list sit the selected scope's **ROOMS** (with a "+" that opens New chat in that scope), **TASKS** and **LIBRARY** sections. The Team scope lists its Rooms with no Project, or whose Project is archived or gone: the Team Room first, then its other non-archived scoped Rooms, oldest first. Room rows use the same `NavTabLink
+- **`TeamsNav`**: an expanded Team shows a selectable scope list: the Team row first, then one row per Project, each trailing its open Task count. Clicking a row selects it and opens its page; the address also selects it (a Room selects its Project, ADR-0082, or the Team row when it has none or its Project is gone). Below the list sit the selected scope's **ROOMS** (with a "+" that opens New room in that scope), **TASKS** and **LIBRARY** sections. The Team scope lists its Rooms with no Project, or whose Project is archived or gone: the Team Room first, then its other non-archived scoped Rooms, oldest first. Room rows use the same `NavTabLink
   /rooms/{id}` and Archive/Delete menu as `RoomList` — extract that row into a shared
-  `RoomNavRow` rather than copying it. The Team's `MudMenu` gains **New chat** and is now
+  `RoomNavRow` rather than copying it. The Team's `MudMenu` gains **New room** and is now
   rendered whatever `ProjectsAllowed` says (only **New project** stays behind it).
   Subscribe to `RoomEvents.RoomsChanged` as well as `Catalog.Changed`.
 - **`NewChat`** takes an optional `Team` parameter. With it, the panel opens from the Team
-  menu, its heading reads *New chat in Marketing*, members of the Team are listed first, and
+  menu, its heading reads *New room in Marketing*, members of the Team are listed first, and
   Start passes the Team to `CreateRoomForAsync`.
 - **`TeamMembers`**: the card's Message action becomes a button that calls
   `EnsureTeamOneToOneAsync` and navigates, instead of an `Href` to the root Room.
   `AgentProfileCard` gains an `OnMessage` callback for this; the Agents page keeps its `Href`.
-- **Archived chats dialog** shows the Team after a scoped Room's name.
+- **Archived rooms dialog** shows the Team after a scoped Room's name.
 
 ### 6.6 What the Agent sees
 
@@ -290,11 +290,11 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
 
 | Where | Text |
 | --- | --- |
-| Team menu | **New chat** |
-| New chat panel heading, in a Team | *New chat in {Team}* |
+| Team menu | **New room** |
+| New room panel heading, in a Team | *New room in {Team}* |
 | Members card action | **Message** (unchanged label) |
 | Root Chats row of an orphaned Room | *{Room}* followed by muted *({Team})* |
-| Archived chats dialog | *{Room} · {Team}* for a scoped Room |
+| Archived rooms dialog | *{Room} · {Team}* for a scoped Room |
 | `turn.roomLabel` | `[Room: Nova (id: abc123, Team: Marketing)]` |
 
 ---
@@ -305,7 +305,7 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
   Team; `Team` round-trips; root `FindRoomWithExactMembersAsync` never returns a scoped Room
   and a Team find never returns a root one or another Team's; Team match ignores case; delete
   removes the row; an existing database without `room_teams` gains it on `InitializeAsync`.
-- **ChatService**: single-agent New chat in a Team creates a scoped Room and leaves the root
+- **ChatService**: single-agent New room in a Team creates a scoped Room and leaves the root
   one alone; `EnsureTeamOneToOneAsync` is idempotent; an unknown Team is refused.
 - **TeamRoomReconciler** with a fake catalog: T1, T2, T3, T13, T11; an empty catalog changes
   nothing; two `Changed` events in a row create one Room.
@@ -317,7 +317,7 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
   unchanged; ADR-0042's restore-on-refusal still holds.
 - **Names**: `IsReservedProjectName("uploads")` is true; a Team folder with `Uploads/` lists
   no *Uploads* Project; creating a Project named *Uploads* is refused with the new message.
-- **bUnit**: `RoomList` hides scoped Rooms; `TeamsNav` lists them and shows **New chat**
+- **bUnit**: `RoomList` hides scoped Rooms; `TeamsNav` lists them and shows **New room**
   without Library or Tasks; `TeamMembers` Message creates and navigates.
 - Look at it in the browser pane, light and dark, because bUnit cannot see layout.
 
@@ -399,7 +399,7 @@ then run `dotnet build Huddle.slnx` and the class's tests.
 9. **Team Room rename refused** in `ChatService`, and the header pencil hidden (§6.3).
 10. **`RoomNavRow`** extracted from `RoomList` with no behaviour change, then `RoomList`
     filtering (T12 included).
-11. **`TeamsNav`**: Rooms under the Team, the always-on menu with **New chat**, `NewChat` with
+11. **`TeamsNav`**: Rooms under the Team, the always-on menu with **New room**, `NewChat` with
     a Team.
 12. **`TeamMembers` Message** through `EnsureTeamOneToOneAsync`; the Archived dialog's Team.
 13. **Docs**: UserGuide, language.md, code-map, known-limits (leaving a Team does not leave

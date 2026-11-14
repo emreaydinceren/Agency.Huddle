@@ -39,7 +39,7 @@
 <rect x="34" y="232" width="32" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="50.0" y="244.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S5a</text>
 <rect x="40" y="246" width="40" height="40" rx="3" fill="#e3e9f3" stroke="#1d4f8f" stroke-width="1"/>
-<text x="60" y="270" font-size="9" font-weight="700" fill="#1d4f8f" text-anchor="middle">Chats</text>
+<text x="60" y="270" font-size="9" font-weight="700" fill="#1d4f8f" text-anchor="middle">Rooms</text>
 <rect x="40" y="290" width="40" height="40" rx="3" fill="#ffffff" stroke="#cfd4dc" stroke-width="1"/>
 <text x="60" y="314" font-size="9" font-weight="400" fill="#6b7280" text-anchor="middle">Teams</text>
 <rect x="40" y="334" width="40" height="40" rx="3" fill="#ffffff" stroke="#cfd4dc" stroke-width="1"/>
@@ -59,7 +59,7 @@
 <rect x="98" y="183" width="25" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="110.5" y="195.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S2</text>
 <text x="129" y="196" font-size="12" font-weight="600" fill="#1f2430" text-anchor="start">Sidebar</text>
-<text x="186" y="196" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">240px, the Chats view</text>
+<text x="186" y="196" font-size="11" font-weight="400" fill="#6b7280" text-anchor="start">240px, the Rooms view</text>
 <rect x="100" y="212" width="224" height="98" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="96" y="204" width="32" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="112.0" y="216.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S2a</text>
@@ -81,7 +81,7 @@
 <text x="138" y="407" font-size="12" font-weight="400" fill="#1f2430" text-anchor="start">Room B</text>
 <circle cx="122" cy="433" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
 <text x="138" y="437" font-size="12" font-weight="400" fill="#1f2430" text-anchor="start">Room C</text>
-<text x="112" y="466" font-size="12" font-weight="600" fill="#0e7c86" text-anchor="start">+ New chat</text>
+<text x="112" y="466" font-size="12" font-weight="600" fill="#0e7c86" text-anchor="start">+ New room</text>
 <rect x="96" y="312" width="32" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="112.0" y="324.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S2b</text>
 <rect x="108" y="472" width="208" height="148" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
@@ -99,7 +99,7 @@
 <rect x="160" y="588" width="64" height="26" rx="5" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="192.0" y="605.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Cancel</text>
 <rect x="232" y="588" width="76" height="26" rx="5" fill="#0e7c86" stroke="#0e7c86" stroke-width="1.2"/>
-<text x="270.0" y="605.0" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">Start chat</text>
+<text x="270.0" y="605.0" font-size="10" font-weight="600" fill="#fff" text-anchor="middle">Open room</text>
 <text x="212" y="636" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Other views replace these:</text>
 <text x="212" y="648" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Teams (S2c), Agents (S2d),</text>
 <text x="212" y="660" font-size="10" font-weight="400" fill="#6b7280" text-anchor="middle" font-style="italic">Tasks (S2e), Library (S2f).</text>
@@ -126,7 +126,7 @@
 <rect x="488" y="500" width="230" height="130" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4" filter="url(#sh)"/>
 <rect x="484" y="492" width="32" height="17" rx="8.5" fill="#1d4f8f"/>
 <text x="500.0" y="504.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S2i</text>
-<text x="502" y="526" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Archived chats</text>
+<text x="502" y="526" font-size="12" font-weight="700" fill="#1f2430" text-anchor="start">Archived rooms</text>
 <rect x="682" y="508" width="28" height="28" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <text x="696" y="527" font-size="11" font-weight="400" fill="#6b7280" text-anchor="middle">✕</text>
 <line x1="496" y1="540" x2="710" y2="540" stroke="#cfd4dc" stroke-width="1.2"/>
@@ -151,7 +151,7 @@
 <circle cx="914" cy="302" r="8" fill="#9fb3c8" stroke="none" stroke-width="1"/>
 <text x="930" y="306" font-size="13" font-weight="400" fill="#1f2430" text-anchor="start">Kit</text>
 <rect x="896" y="334" width="256" height="100" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
-<text x="908" y="355" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Tasks in this chat</text>
+<text x="908" y="355" font-size="13" font-weight="600" fill="#1f2430" text-anchor="start">Tasks in this Room</text>
 <text x="1118" y="355" font-size="12" font-weight="400" fill="#6b7280" text-anchor="end">2</text>
 <text x="1140" y="355" font-size="11" font-weight="400" fill="#6b7280" text-anchor="end">⌄</text>
 <line x1="896" y1="366" x2="1152" y2="366" stroke="#cfd4dc" stroke-width="1.2"/>

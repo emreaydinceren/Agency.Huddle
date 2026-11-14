@@ -3,7 +3,7 @@ using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Sidebar;
 
-/// <summary>Pins <see cref="RoomMentions.Collect"/>, the one function both Room panels read (Spec: Tasks and Documents in this chat).</summary>
+/// <summary>Pins <see cref="RoomMentions.Collect"/>, the one function both Room panels read (Spec: Tasks and Documents in this Room).</summary>
 public sealed class RoomMentionsTests
 {
     private static readonly DateTimeOffset Start = new(2026, 10, 1, 9, 0, 0, TimeSpan.Zero);

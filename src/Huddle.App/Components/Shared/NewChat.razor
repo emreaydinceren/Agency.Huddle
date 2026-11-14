@@ -13,18 +13,18 @@
 @inject AvatarStore Avatars
 
 @* The picker is a floating panel like Invite's (audit B10 "New chat"): anchored under the link or the Team row, Edge outline,
-   32px/13px rows, Cancel then Start chat. It floats over the rows below it and moves nothing. *@
+   32px/13px rows, Cancel then Open room. It floats over the rows below it and moves nothing. *@
 <div class="new-chat">
     @if (this.Team is null)
     {
-        <MudNavLink Icon="@Icons.Material.Filled.Add" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
+        <MudNavLink Icon="@Icons.Material.Filled.Add" OnClick="this.TogglePanel" Class="nav-action-link">New room</MudNavLink>
     }
     @if (this.isOpen)
     {
-        <div class="new-chat-panel floating-panel" role="group" aria-label="@(this.Team is null ? "New chat" : $"New chat in {this.Scope}")">
+        <div class="new-chat-panel floating-panel" role="group" aria-label="@(this.Team is null ? "New room" : $"New room in {this.Scope}")">
             @if (this.Team is not null)
             {
-                <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New chat in @this.Scope</MudText>
+                <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New room in @this.Scope</MudText>
             }
 
             @if (this.agents.Count == 0)
@@ -51,7 +51,7 @@
                 <MudButton Variant="Variant.Text" Size="Size.Small" Class="new-chat-cancel" OnClick="this.CloseAsync">Cancel</MudButton>
                 @if (this.agents.Count > 0)
                 {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" Size="Size.Small" OnClick="this.StartChatAsync">Start chat</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" Size="Size.Small" OnClick="this.StartChatAsync">Open room</MudButton>
                 }
             </div>
         </div>

@@ -13,7 +13,7 @@ using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
-/// <summary>Pins the Tasks in this chat panel (Spec "Tasks in this chat", D-8): rows, state, the jump, and the refresh events.</summary>
+/// <summary>Pins the Tasks in this Room panel (Spec "Tasks in this Room", D-8): rows, state, the jump, and the refresh events.</summary>
 public sealed class RoomTasksPanelTests
 {
     private const string RoomId = "room-1";
@@ -269,7 +269,7 @@ public sealed class RoomTasksPanelTests
 
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render();
 
-        cut.WaitForAssertion(() => Assert.Equal("No Tasks mentioned in this chat yet.", cut.Find("[role='status']").TextContent.Trim()), TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.Equal("No Tasks mentioned in this Room yet.", cut.Find("[role='status']").TextContent.Trim()), TimeSpan.FromSeconds(5));
         Assert.Equal(0, setup.Panel.Count);
     }
 

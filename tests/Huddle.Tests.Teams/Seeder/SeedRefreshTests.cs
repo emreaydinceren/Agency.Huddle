@@ -168,7 +168,7 @@ public sealed class SeedRefreshTests
         Assert.Contains(messages, m => ReferenceScanner.Scan(m.Text).Count > 0);
     }
 
-    /// <summary>SEED-INV-9: No transcript keeps a <c>{{token}}</c>, and the Rooms cite documents so "Documents in this chat" has two to four rows in the three named Rooms.</summary>
+    /// <summary>SEED-INV-9: No transcript keeps a <c>{{token}}</c>, and the Rooms cite documents so "Documents in this Room" has two to four rows in the three named Rooms.</summary>
     [Fact]
     public async Task Tokens_NeverSurviveIntoATranscript_AndNamedRoomsCiteDocuments()
     {

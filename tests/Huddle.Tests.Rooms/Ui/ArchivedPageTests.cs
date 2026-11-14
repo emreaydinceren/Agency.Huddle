@@ -23,10 +23,10 @@ using Agency.Huddle.Tests.Ui.Teams;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Pins the Archived page (<c>/archived</c>): three tabs, Teams | Projects | Chats, each a single-select list
+/// Pins the Archived page (<c>/archived</c>): three tabs, Teams | Projects | Rooms, each a single-select list
 /// (<c>.archived-row</c>, the selected one <c>.selected-shape</c>) under a toolbar whose <c>button.archived-restore</c>
 /// restores the selected row. The Chats tab also has <c>button.archived-delete</c>, asked first with the inline
-/// confirm. The page replaced the Archived chats dialog, so the dialog's tests moved here; the chat tests run
+/// confirm. The page replaced the Archived rooms dialog, so the dialog's tests moved here; the chat tests run
 /// against the real <see cref="ITeamDirectory"/> and <see cref="ChatService"/>, the Team and Project tests against
 /// a <see cref="RecordingArchiveService"/>.
 /// </summary>
@@ -41,7 +41,7 @@ public sealed class ArchivedPageTests
         (ITeamDirectory directory, ChatService chat, RoomEvents events, Room room) = await ArchivedRoomAsync(dir, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
 
         Assert.Equal([room.Name], RowNames(cut));
         Assert.Equal("Restore", cut.Find("button.archived-restore").TextContent.Trim());
@@ -56,7 +56,7 @@ public sealed class ArchivedPageTests
         (ITeamDirectory directory, ChatService chat, RoomEvents events, Room room) = await ArchivedRoomAsync(dir, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
         Assert.True(cut.Find("button.archived-restore").HasAttribute("disabled"));
 
         await cut.InvokeAsync(() => Row(cut, room.Name).ClickAsync());
@@ -75,7 +75,7 @@ public sealed class ArchivedPageTests
         (ITeamDirectory directory, ChatService chat, RoomEvents events, _) = await ArchivedRoomAsync(dir, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
 
         Assert.Equal("Archived today", cut.Find(".archived-row-date").TextContent.Trim());
     }
@@ -94,11 +94,11 @@ public sealed class ArchivedPageTests
         _ = await chat.EnsureRoomForAsync(agent, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
 
         Assert.Empty(cut.FindAll(".archived-row"));
         Assert.Empty(cut.FindAll(".archived-toolbar"));
-        Assert.Equal("No archived chats", cut.Find(".empty-state-title").TextContent.Trim());
+        Assert.Equal("No archived rooms", cut.Find(".empty-state-title").TextContent.Trim());
     }
 
     /// <summary>
@@ -119,7 +119,7 @@ public sealed class ArchivedPageTests
             builder.OpenComponent<RoomList>(0);
             builder.CloseComponent();
             builder.OpenComponent<ArchivedPage>(2);
-            builder.AddAttribute(3, nameof(ArchivedPage.Tab), "chats");
+            builder.AddAttribute(3, nameof(ArchivedPage.Tab), "rooms");
             builder.CloseComponent();
         });
         Assert.Empty(SidebarRoomNames(cut));
@@ -141,7 +141,7 @@ public sealed class ArchivedPageTests
         (ITeamDirectory directory, ChatService chat, RoomEvents events, Room room) = await ArchivedRoomAsync(dir, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
 
         await cut.InvokeAsync(() => Row(cut, room.Name).DoubleClickAsync());
 
@@ -158,7 +158,7 @@ public sealed class ArchivedPageTests
         (ITeamDirectory directory, ChatService chat, RoomEvents events, Room room) = await ArchivedRoomAsync(dir, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
         await BeginDeleteAsync(cut, room.Name);
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
@@ -174,7 +174,7 @@ public sealed class ArchivedPageTests
         (ITeamDirectory directory, ChatService chat, RoomEvents events, Room room) = await ArchivedRoomAsync(dir, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
         await BeginDeleteAsync(cut, room.Name);
         await cut.InvokeAsync(() => cut.Find("button.inline-confirm-confirm").ClickAsync());
 
@@ -194,7 +194,7 @@ public sealed class ArchivedPageTests
         _ = await chat.SetRoomArchivedAsync(other.Id, archived: true, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
         await BeginDeleteAsync(cut, room.Name);
 
         await cut.InvokeAsync(() => chat.SetRoomArchivedAsync(room.Id, archived: false, ct));
@@ -218,7 +218,7 @@ public sealed class ArchivedPageTests
         _ = await chat.SetRoomArchivedAsync(teamRoom.Id, archived: true, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
 
         string[] rows = [.. cut.FindAll(".archived-row .archived-row-text").Select(element => element.TextContent.Trim())];
         Assert.Contains("Launch plan · Marketing", rows);
@@ -241,7 +241,7 @@ public sealed class ArchivedPageTests
         _ = await chat.SetRoomArchivedAsync(projectRoom.Id, archived: true, ct);
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
 
         Assert.Equal("Kickoff · Marketing / Q3 launch", cut.Find(".archived-row .archived-row-text").TextContent.Trim());
     }
@@ -260,7 +260,7 @@ public sealed class ArchivedPageTests
         chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = count };
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
         await BeginDeleteAsync(cut, room.Name);
 
         Assert.Equal($"Delete \"{room.Name}\"? {sentence}", cut.Find(".inline-confirm-prompt").TextContent.Trim());
@@ -276,7 +276,7 @@ public sealed class ArchivedPageTests
         chat.UploadFolders = new Agency.Huddle.Tests.Uploads.FakeRoomUploadFolders { Count = 0 };
 
         await using MudBunitContext ctx = NewContext(directory, chat, events);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "chats");
+        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "rooms");
         await BeginDeleteAsync(cut, room.Name);
 
         Assert.Equal($"Delete \"{room.Name}\"?", cut.Find(".inline-confirm-prompt").TextContent.Trim());
@@ -461,7 +461,7 @@ public sealed class ArchivedPageTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         await using MudBunitContext ctx = await NewTeamsContextAsync(new RecordingArchiveService(), new FakeTeamCatalog(), ct);
         Agency.Huddle.App.Tabs.TabService tabs = ctx.Services.GetRequiredService<Agency.Huddle.App.Tabs.TabService>();
-        Agency.Huddle.App.Tabs.Tab tab = tabs.Open("/archived/chats", "Archived");
+        Agency.Huddle.App.Tabs.Tab tab = tabs.Open("/archived/rooms", "Archived");
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<CascadingValue<Agency.Huddle.App.Tabs.TabPageContext>>(0);
@@ -475,7 +475,7 @@ public sealed class ArchivedPageTests
             builder.CloseComponent();
         });
 
-        Assert.Equal("Chats", cut.Find(".mud-tab.mud-tab-active").TextContent.Trim());
+        Assert.Equal("Rooms", cut.Find(".mud-tab.mud-tab-active").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-tab").Single(header => header.TextContent.Trim() == "Teams").ClickAsync());
 
@@ -508,12 +508,12 @@ public sealed class ArchivedPageTests
         NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "projects");
 
-        Assert.Equal(["Teams", "Projects", "Chats"], [.. cut.FindAll(".mud-tab").Select(tab => tab.TextContent.Trim())]);
+        Assert.Equal(["Teams", "Projects", "Rooms"], [.. cut.FindAll(".mud-tab").Select(tab => tab.TextContent.Trim())]);
         Assert.Equal("Projects", cut.Find(".mud-tab.mud-tab-active").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-tab").Single(tab => tab.TextContent.Trim() == "Chats").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-tab").Single(tab => tab.TextContent.Trim() == "Rooms").ClickAsync());
 
-        Assert.Equal("http://localhost/archived/chats", navigation.Uri);
+        Assert.Equal("http://localhost/archived/rooms", navigation.Uri);
     }
 
     /// <summary>The names of the Rooms the sidebar's <see cref="RoomList"/> lists.</summary>

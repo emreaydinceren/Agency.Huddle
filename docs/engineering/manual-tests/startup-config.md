@@ -49,7 +49,7 @@ standing conventions. This area adds:
 - The console prints `Now listening on: http://localhost:5100`.
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
-- The sidebar contains, in this order: a button labelled exactly `New chat`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Agents`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived) may sit between them; their order and content are not judged here.
+- The sidebar contains, in this order: a button labelled exactly `New room`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Agents`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived) may sit between them; their order and content are not judged here.
 - On a data folder with no `profile.json` (a fresh install), the address bar reads `/settings/profile` and the main column shows the Settings **Profile** tab with its welcome line - the first-run redirect STARTUPCONFIG-35 covers. Where `profile.json` already exists, the main column shows the same empty state as the sidebar, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**
@@ -121,38 +121,38 @@ If DevTools shows CSS rows served `(from disk cache)` with no status code, you d
 
 **Steps**
 
-1. Click `New chat` in the sidebar.
+1. Click `New room` in the sidebar.
 2. Read the panel that opens: note whether it lists agents with checkboxes and a coloured dot each, and whether a button is present at the bottom.
-3. Without ticking anything, try to click the `Start chat` button.
+3. Without ticking anything, try to click the `Open room` button.
 4. Tick the checkbox beside `Ada`.
-5. Try the `Start chat` button again — note whether it is now clickable. Then click `New chat` again to close the panel WITHOUT starting a chat.
+5. Try the `Open room` button again — note whether it is now clickable. Then click `New room` again to close the panel WITHOUT starting a chat.
 6. Click `Agents` in the sidebar and read the address bar and the page heading.
 7. Click the Settings icon (the cog at the bottom of the sidebar, accessible name `Settings`) and read the address bar and the page heading.
 8. Click a Room in the sidebar room list and confirm the main column shows that Room.
 
 **Pass if — all of these**
 
-- The `New chat` panel lists `Ada` and `Bo`, each with a checkbox and a small status dot. The built-in `Chief of Staff` is listed too once it is Online; ignore it.
-- With nothing ticked, the `Start chat` button is present but DISABLED (clicking does nothing).
-- With `Ada` ticked, `Start chat` becomes enabled.
+- The `New room` panel lists `Ada` and `Bo`, each with a checkbox and a small status dot. The built-in `Chief of Staff` is listed too once it is Online; ignore it.
+- With nothing ticked, the `Open room` button is present but DISABLED (clicking does nothing).
+- With `Ada` ticked, `Open room` becomes enabled.
 - `Agents` navigates to `/agents` and the page heading reads exactly `Agents`.
 - The Settings icon navigates to `/settings` and the page heading reads exactly `Settings`.
 - Clicking a Room navigates to `/rooms/<id>` and the main column heading is that Room's name.
 
 **Fail if — any of these**
 
-- `Start chat` is clickable with nothing ticked -> the selection guard is gone and an empty Room can be created.
+- `Open room` is clickable with nothing ticked -> the selection guard is gone and an empty Room can be created.
 - `Agents` or the Settings icon leads to a blank page or an error -> the route was dropped from `Routes.razor` or the page throws on load.
 - The `Agents` link text differs, or the Settings icon's accessible name is not `Settings` -> shipped navigation copy has drifted.
 
 **Inconclusive if**
 
-If the `New chat` panel says `No agents have connected yet…` instead of listing agents, Ada and Bo have not come Online yet (wait a few seconds and reopen the panel) or `P-LAUNCH-UAT` was not the launch used. Fix that first and re-run; record this test as inconclusive meanwhile.
+If the `New room` panel says `No agents have connected yet…` instead of listing agents, Ada and Bo have not come Online yet (wait a few seconds and reopen the panel) or `P-LAUNCH-UAT` was not the launch used. Fix that first and re-run; record this test as inconclusive meanwhile.
 
 > [!NOTE]
-> Do not actually click `Start chat` here — STARTUPCONFIG-07 owns that path and needs a known Room count first.
+> Do not actually click `Open room` here — STARTUPCONFIG-07 owns that path and needs a known Room count first.
 
-### STARTUPCONFIG-07 — Start chat on one known agent reuses its Room; two agents create one new named Room
+### STARTUPCONFIG-07 — Open room on one known agent reuses its Room; two agents create one new named Room
 
 **Free** · about 6 min
 
@@ -165,11 +165,11 @@ If the `New chat` panel says `No agents have connected yet…` instead of listin
 **Steps**
 
 1. Click the `Ada` Room, type `hello ada` and press Enter, and wait for Ada's reply to settle. Then count the entries in the sidebar room list and write the number down (expected: 3, counting the Chief of Staff's Room).
-2. Click `New chat`, tick ONLY `Ada`, and click `Start chat`.
+2. Click `New room`, tick ONLY `Ada`, and click `Open room`.
 3. Read the address bar and the main column heading, then count the sidebar room list again.
-4. Click `New chat`, tick BOTH `Ada` and `Bo`, and click `Start chat`.
+4. Click `New room`, tick BOTH `Ada` and `Bo`, and click `Open room`.
 5. Read the main column heading and count the sidebar room list again.
-6. Click `New chat`, tick BOTH `Ada` and `Bo` again, and click `Start chat` once more.
+6. Click `New room`, tick BOTH `Ada` and `Bo` again, and click `Open room` once more.
 7. Count the sidebar room list a final time.
 
 **Pass if — all of these**
@@ -181,7 +181,7 @@ If the `New chat` panel says `No agents have connected yet…` instead of listin
 
 **Fail if — any of these**
 
-- Step 2 produces a SECOND Room also named `Ada` (4 entries) -> single-agent selection stopped routing through the exact-membership lookup; every `Start chat` will now mint duplicates.
+- Step 2 produces a SECOND Room also named `Ada` (4 entries) -> single-agent selection stopped routing through the exact-membership lookup; every `Open room` will now mint duplicates.
 - Step 2 lands on an empty transcript rather than the existing `Ada` history -> a new Room was created even though the sidebar count looks right; check the Room id in the address bar against the original.
 - The two-agent Room's heading is not `Ada, Bo` -> the multi-member Room naming rule changed.
 
@@ -190,7 +190,7 @@ If the `New chat` panel says `No agents have connected yet…` instead of listin
 If you have already created extra Rooms by hand in earlier exploration, the counts will not match. Re-run the seeder line of `P-LAUNCH-UAT` (that is the reset), relaunch, and start this test from step 1. If step 6's behaviour is ambiguous, record it verbatim as an observation rather than a verdict — the reuse rule is defined for single-agent selection; multi-agent Room reuse is not specified here.
 
 > [!NOTE]
-> Optional oracle if `sqlite3` is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT COUNT(*) FROM rooms;"` before and after each Start chat.
+> Optional oracle if `sqlite3` is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT COUNT(*) FROM rooms;"` before and after each Open room.
 
 ### STARTUPCONFIG-08 — /agents lists Personas only — pipe clients never appear there
 
@@ -431,7 +431,7 @@ On some runs the SQLite handle lingers briefly even after the app has exited —
 1. Stop the app (Ctrl+C).
 2. In the run window set `$env:Team__AgentMessageBudget = '1'`.
 3. Relaunch in that SAME window by running all of `P-LAUNCH-UAT` (seeder line, `$mock` line and `dotnet run` command), so the Rooms start empty and the variable is inherited by the app.
-4. Open http://localhost:5100. Click `New chat`, tick BOTH `Ada` and `Bo`, click `Start chat`, and confirm the Room is headed `Ada, Bo`. This Room has three Members (you, Ada and Bo), so a Message is answered only when it @Mentions someone; Ada is the only one that will be mentioned.
+4. Open http://localhost:5100. Click `New room`, tick BOTH `Ada` and `Bo`, click `Open room`, and confirm the Room is headed `Ada, Bo`. This Room has three Members (you, Ada and Bo), so a Message is answered only when it @Mentions someone; Ada is the only one that will be mentioned.
 5. Type exactly `hi @Ada` and press Enter. Wait for Ada's reply (a long plain-text reply that repeats your Message back, streamed in three chunks). Bo does not answer.
 6. Read what appears between the message list and the message box at the bottom.
 7. Note the two buttons in that block and their exact labels.
@@ -603,7 +603,7 @@ This test has no failing outcome in the usual sense; its job is to calibrate the
 
 1. Relaunch with a DIFFERENT data folder by running the `$mock = ...` line of `P-LAUNCH-UAT` and then its `dotnet run` command with the one argument `--Team:DataDir=C:\seeds\huddle\uat\data` changed to `--Team:DataDir=C:\seeds\huddle\uat\data_test`. Do NOT re-run the seeder line, and do NOT add a second `DataDir` setting or an `$env:Team__DataDir`: a command-line argument outranks an environment variable, so the argument in the command is the one to replace.
 2. Open http://localhost:5100 and read the main column and the sidebar immediately, then again after 10 seconds.
-3. Click `New chat` and read the panel.
+3. Click `New room` and read the panel.
 4. Click the Settings icon (accessible name `Settings`) and read the absolute path printed in the Prompts tab's overrides paragraph.
 5. In `T-B` run `Get-ChildItem -Recurse -Force C:\seeds\huddle\uat\data_test`.
 6. Stop the app and relaunch with the ORIGINAL `P-LAUNCH-UAT` `dotnet run` command (DataDir back to `...\uat\data`, still no seeder line).
@@ -736,14 +736,14 @@ If the browser still shows a working app after the crash, you are looking at a D
 5. Click the `mybot` Room, type exactly `hi @mybot` and press Enter.
 6. Watch both the browser and the script window.
 7. Press Ctrl+C in the script window to stop it.
-8. In the browser, click `New chat` and look at the dot beside `mybot`; check the sidebar room list.
+8. In the browser, click `New room` and look at the dot beside `mybot`; check the sidebar room list.
 
 **Pass if — all of these**
 
 - The script prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...` then `Sent hello. Listening for messages (Ctrl+C to exit)...` then a JSON line beginning `{"type":"welcome"` that contains `"name":"mybot"`.
 - A Room named `mybot` appears in the sidebar immediately, with NO refresh and no navigation.
 - `hi @mybot` gets a bold echoed reply in the browser, and the script window prints the incoming envelope.
-- After Ctrl+C, the `mybot` Room REMAINS in the sidebar, and its dot in the `New chat` panel is grey/offline.
+- After Ctrl+C, the `mybot` Room REMAINS in the sidebar, and its dot in the `New room` panel is grey/offline.
 
 **Fail if — any of these**
 
@@ -1166,7 +1166,7 @@ You are a second test agent. Reply with one very short sentence that ends with @
 ```
 3. Run the variable lines of [`P-LAUNCH-PAID`](common.md#p-launch-paid-), then override two: `$env:Team__Acp__TokenBudget = '2000'` — small enough that one Turn exceeds it — and `$env:Team__AgentMessageBudget = '4'`, which bounds the ping-pong and therefore the spend.
 4. Launch with the `dotnet run` line of `P-LAUNCH-PAID` and wait for BOTH tiles to read `Online`. Set Model = Haiku and Effort = low on `Tester2` as well.
-5. Click **New chat**, tick `Tester` and `Tester2` only, and click **Start chat**. The Room heading reads `Tester, Tester2`.
+5. Click **New room**, tick `Tester` and `Tester2` only, and click **Open room**. The Room heading reads `Tester, Tester2`.
 6. Type exactly `Say hi @tester` and press Enter.
 7. Watch the exchange: `Tester` answers mentioning `@tester2`, then `Tester2` answers mentioning `@tester`. That second reply is an AGENT Message, so it wakes `Tester` with no reset — and that is the Turn the cap refuses.
 8. Wait 30 seconds and record that no third Agent Message arrives.

@@ -2,8 +2,8 @@
 
 **Status:** the shell is built. The toggle (`S1c`) and the drawer (`S4`) shipped on
 `feat/right-sidebar`. The panel framework below is **built** on `feat/right-sidebar-panels` (2026-10-16). The first build
-delivers the framework and five panels: Outline, Linked documents, Tasks in this chat,
-Documents in this chat and Members ([v1 scope](#v1-scope)).
+delivers the framework and five panels: Outline, Linked documents, Tasks in this Room,
+Documents in this Room and Members ([v1 scope](#v1-scope)).
 
 The Right sidebar is the drawer on the window's right edge (`S4` in
 [wireframes.md](engineering/wireframes.md#figure-1-the-shell)). It shows panels about what the
@@ -29,8 +29,8 @@ the documents a note links to. This page fixes three things before any panel is 
 | Panel | Shown when | Shows | Acts on the page by |
 | --- | --- | --- | --- |
 | Outline | A Markdown document is open | Its headings, nested | Scrolling the document to a heading |
-| Tasks in this chat | A Room is open | Each Task its Messages reference, with live State | Opening the Task |
-| Documents in this chat | A Room is open | Each Library file its Messages reference | Opening the file; jumping to the Message |
+| Tasks in this Room | A Room is open | Each Task its Messages reference, with live State | Opening the Task |
+| Documents in this Room | A Room is open | Each Library file its Messages reference | Opening the file; jumping to the Message |
 | Linked documents | A Markdown document is open | The notes it links to | Opening the note |
 | Members | A Room is open | Each member of the Room, with live status | Opening the member's profile |
 
@@ -197,7 +197,7 @@ per-viewer convenience, so it lives in local storage behind the usual try/catch.
 | **Acts** | `ScrollToHeading(id, line)`. In Read and Split the page scrolls the rendered heading into view. In Edit it reveals the heading's line in the editor |
 | **Missing today** | Rendered headings have no `id`. They get one only on the note render path (`MarkdownRenderer.Render` with a `from` note), never in chat, where Messages would repeat ids. The id is `doc-h-` plus a lowercase slug, with `-2`, `-3` for repeats, so it cannot collide with an app element. Markdig's `UseAutoIdentifiers` is not used, because the pipeline is shared with chat and the parsers. Also needed: `huddleLibrary.scrollToHeading` in `app.js` and a `revealLine` on the editor handle in `library-editor.js` |
 
-### Tasks in this chat
+### Tasks in this Room
 
 | | |
 | --- | --- |
@@ -207,7 +207,7 @@ per-viewer convenience, so it lives in local storage behind the usual try/catch.
 | **Acts** | Open `/tasks/item/{id}`; optionally jump to the first Message that mentioned it (`?message=`) |
 | **Missing today** | Nothing structural. Messages from before reference snapshots existed carry no `References`; fall back to `ReferenceScanner.Scan(text)` for those |
 
-### Documents in this chat
+### Documents in this Room
 
 | | |
 | --- | --- |
@@ -267,12 +267,12 @@ Settled on 2026-10-16:
 
 | Question | Decision |
 | --- | --- |
-| Which panels | Outline, Linked documents, Tasks in this chat, Documents in this chat, Members |
+| Which panels | Outline, Linked documents, Tasks in this Room, Documents in this Room, Members |
 | Backlinks | Moved to the Right sidebar as `BacklinksPanel`. It lists the notes that link to the open note, then the open Tasks that link to it (Library spec §6.5), and reloads on `WikiLinkIndex.Invalidated` and on a Task list change |
 | Relative links | Wikilinks only. Relative `[text](other.md)` links are a later `WikiLinkIndex` change |
 | Room header strip | Stays. Members adds the full list; it does not replace the glance |
 | Outline source | Follows unsaved edits through `DocumentSubject.Text` in Split mode. Read and Edit show the loaded or saved text, because the editor sends text only on save and mode switch |
-| Feature switches | Outline, Linked documents and Documents in this chat need `Library.Enabled`; Tasks in this chat needs `Tasks.Enabled`; Members needs neither |
+| Feature switches | Outline, Linked documents and Documents in this Room need `Library.Enabled`; Tasks in this Room needs `Tasks.Enabled`; Members needs neither |
 | Subjects | `RoomSubject` and `DocumentSubject` only. `TaskSubject` and the others wait for a panel that needs them. Since built: `TaskSubject` (the Task edit page, D-8 of the Task read view spec) and `TaskDetailSubject` (a Task selected on the Tasks page, whose one panel is the read view) |
 | Page commands | Built, because Outline needs `ScrollToHeading` |
 | Open state | Open by default, and remembered per viewer in local storage (`shell:rightSidebarOpen`): closing it with the Top bar button keeps it closed on the next visit. Opening or closing the Notifications view is not remembered |

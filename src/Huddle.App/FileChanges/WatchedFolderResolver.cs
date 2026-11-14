@@ -84,7 +84,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, Agent
         if (PathContainment.IsInside(fullPath, uploadsRoot, includeRoot: true, StringComparison.OrdinalIgnoreCase)
             || WatchedFolderResolver.IsTeamRaw(fullPath, teamsRoot))
         {
-            reason = "Uploads are announced in the chat, not watched.";
+            reason = "Uploads are announced in the Room, not watched.";
             return false;
         }
 

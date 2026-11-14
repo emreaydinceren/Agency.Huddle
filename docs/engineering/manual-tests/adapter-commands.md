@@ -203,7 +203,7 @@ Record the observed behaviour of step 3 in the spec's Appendix C (row V-4, which
 **Before you start**
 
 - Paid lane. `Scratch` and a second Agent `Kai` (Name `Kai`, **Model** Haiku, **Effort** `low`, made with [`P-NEW-PERSONA`](common.md#p-new-persona)) are both Online, and both cards show the `/compact` line.
-- A Room with you, `Scratch` and `Kai` is open (New chat with both). With three Members only a Mention wakes anyone.
+- A Room with you, `Scratch` and `Kai` is open (New room with both). With three Members only a Mention wakes anyone.
 - `T-A` shows the app log (`O-LOG`).
 
 **Steps**

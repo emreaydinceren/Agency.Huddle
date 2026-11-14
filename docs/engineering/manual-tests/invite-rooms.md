@@ -1,6 +1,6 @@
 # Creating Rooms, inviting Agents, Room naming
 
-Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Invite agent" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
+Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New room" panel, the "Invite agent" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
 
 **38 tests** · 34 free, 4 paid 💰 · about 4.2 hours.
 
@@ -63,7 +63,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 > [!NOTE]
 > The copy `No rooms yet. Start an agent to create one.` is MISLEADING for a bad id when Rooms plainly exist in the sidebar. That is current, documented behaviour — note it in your report, do NOT file it as a defect.
 
-### INVITEROOMS-03 — The New chat panel toggles, lists every Agent with a status dot, and keeps Start chat disabled until something is ticked
+### INVITEROOMS-03 — The New room panel toggles, lists every Agent with a status dot, and keeps Open room disabled until something is ticked
 
 **Free** · about 5 min
 
@@ -75,17 +75,17 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 
 **Steps**
 
-1. Click **New chat** in the sidebar's Rooms group, just under the Room list.
+1. Click **New room** in the sidebar's Rooms group, just under the Room list.
 2. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter — confirms the panel is genuinely open, not merely present in the DOM.
 3. Count the checkbox rows in the panel that opens and read each row's text.
 4. For each row, hover the small round dot immediately left of the name and read its tooltip.
 5. In the Console, type `[...document.querySelectorAll('.agent-dot')].map(d => d.title)` and press Enter. Record the array.
-6. Find the **Start chat** button at the bottom of the panel and try to click it without ticking anything.
-7. In DevTools Elements, select the **Start chat** button and confirm it carries the `disabled` attribute.
+6. Find the **Open room** button at the bottom of the panel and try to click it without ticking anything.
+7. In DevTools Elements, select the **Open room** button and confirm it carries the `disabled` attribute.
 8. Tick the checkbox next to `Ada`.
-9. Look at the **Start chat** button again.
+9. Look at the **Open room** button again.
 10. Untick `Ada`.
-11. Click **New chat** again and repeat the Console command from step 2.
+11. Click **New room** again and repeat the Console command from step 2.
 
 **Pass if — all of these**
 
@@ -94,17 +94,17 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - Each row has a presence badge (a green circle with a check for online, an amber pulse for starting, a red dash for degraded, a hollow grey ring for offline) whose tooltip is one of `online`, `offline`, `degraded` or `starting`. With Ada and Bo connected, both of their tooltips read `online`.
 - Step 5's array contains only those four words.
 - `You` does NOT appear anywhere in the list.
-- Before anything is ticked, **Start chat** is visibly greyed out, does nothing when clicked, and carries the `disabled` attribute in the DOM.
-- After ticking `Ada`, **Start chat** loses the `disabled` attribute and becomes clickable.
+- Before anything is ticked, **Open room** is visibly greyed out, does nothing when clicked, and carries the `disabled` attribute in the DOM.
+- After ticking `Ada`, **Open room** loses the `disabled` attribute and becomes clickable.
 - Optional DB check: `sqlite3 <data>\team.db "SELECT name FROM users WHERE kind='agent' ORDER BY rowid;"` returns the same three names as the panel, in the panel's order.
 
 **Fail if — any of these**
 
-- **Start chat** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
+- **Open room** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - An Agent is missing, or `Bo` is listed before `Ada` -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
 - Every dot is a hollow grey ring while Ada and Bo are clearly connected (the Agents page shows them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Online is a green circle with a white check and Offline a hollow grey ring (`agent-dot`, `presence-glyph-ring`); a ring on a connected Agent means the state did not resolve.
-- Step 2 prints `true` on a fresh page load, before ever clicking **New chat** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
+- Step 2 prints `true` on a fresh page load, before ever clicking **New room** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
 
 **Inconclusive if**
 
@@ -283,11 +283,11 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 > [!NOTE]
 > Windows reserved device names (CON, NUL, COM1) DO pass NameRules and are accepted as Agent Names. That is a documented known limit — do not add a case for them and do not file it.
 
-### INVITEROOMS-08 — New chat with exactly ONE Agent opens that Agent's existing Room and creates nothing
+### INVITEROOMS-08 — New room with exactly ONE Agent opens that Agent's existing Room and creates nothing
 
 **Free** · about 7 min
 
-*Proves the single-Agent short-circuit in CreateRoomForAsync. This is the one branch in the whole area that REUSES instead of creating, which makes it the most likely silent regression here — and the symptom is an empty-looking Room, which a user reads as lost history. The New chat panel this test drives is `MudCollapse` with `MudCheckBox` rows (Stage 5 of the MudBlazor migration) — see INVITEROOMS-03 — but nothing about that change touches the reuse-versus-create logic this test is actually about.*
+*Proves the single-Agent short-circuit in CreateRoomForAsync. This is the one branch in the whole area that REUSES instead of creating, which makes it the most likely silent regression here — and the symptom is an empty-looking Room, which a user reads as lost history. The New room panel this test drives is `MudCollapse` with `MudCheckBox` rows (Stage 5 of the MudBlazor migration) — see INVITEROOMS-03 — but nothing about that change touches the reuse-versus-create logic this test is actually about.*
 
 **Before you start**
 
@@ -304,9 +304,9 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 7. Write down the exact text of both messages.
 8. Note the current last line in `T-A`.
 9. Count the sidebar links and write the count down.
-10. Click **New chat** in the sidebar.
+10. Click **New room** in the sidebar.
 11. Tick the checkbox next to `Ada`, and ONLY that one. Confirm `Bo` is unticked.
-12. Click **Start chat**.
+12. Click **Open room**.
 13. Read the address bar.
 14. Read the Transcript.
 15. Count the sidebar links again.
@@ -314,11 +314,11 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 
 **Pass if — all of these**
 
-- The address bar reads exactly ROOM-ADA — the same room id you recorded before clicking Start chat.
+- The address bar reads exactly ROOM-ADA — the same room id you recorded before clicking Open room.
 - Both messages are still in the Transcript, with the same text.
 - The sidebar link count is UNCHANGED, and there is still exactly one link reading `Ada`.
 - `T-A` printed NO `Created room` line and NO `Created direct room` line.
-- The New chat panel closed itself and its checkbox is no longer ticked when you reopen it.
+- The New room panel closed itself and its checkbox is no longer ticked when you reopen it.
 - Optional DB check: `sqlite3 <data>\team.db "SELECT count(*) FROM rooms;"` returns the same number as before step 10.
 
 **Fail if — any of these**
@@ -326,7 +326,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 - A SECOND sidebar link reading `Ada` appears and the Transcript looks empty -> the `if (agents.Count == 1) return await EnsureRoomForAsync(...)` short-circuit regressed and every 'message this agent' click now mints a fresh Room. To the user this reads as lost conversation history, with no error anywhere. This is THE regression this test exists to catch.
 - The address bar changes to a different room id even though the sidebar count stayed the same -> a Room was created and the old one orphaned; the DB count check will confirm it.
 - `T-A` prints `Created room '<id>' (Ada) with 2 members.` -> the same defect, visible in the log before you even look at the sidebar.
-- `Start chat` does nothing at all -> the selection is not reaching the server; check the checkbox actually shows as ticked before blaming the button.
+- `Open room` does nothing at all -> the selection is not reaching the server; check the checkbox actually shows as ticked before blaming the button.
 
 **Inconclusive if**
 
@@ -335,7 +335,7 @@ If Ada did not reply to `hi @Ada` within 15 seconds, check on the Agents page th
 > [!NOTE]
 > Do not invite anyone into Ada's Room for the rest of the free tests — INVITEROOMS-24 and the restart test read best with it intact.
 
-### INVITEROOMS-09 — New chat with two Agents creates a Room named after them and navigates to it, live
+### INVITEROOMS-09 — New room with two Agents creates a Room named after them and navigates to it, live
 
 **Free** · about 5 min
 
@@ -349,14 +349,14 @@ If Ada did not reply to `hi @Ada` within 15 seconds, check on the Agents page th
 
 1. Note the current last line in `T-A`.
 2. Count the sidebar links.
-3. Click **New chat**.
+3. Click **New room**.
 4. Tick `Ada` FIRST, then tick `Bo`, without unticking either. The order matters.
-5. Click **Start chat**.
+5. Click **Open room**.
 6. Read the address bar.
 7. Read the `<h1>` and the grey line beneath it.
 8. Read the sidebar without pressing F5.
 9. In DevTools Elements, select the new sidebar link and read its class list.
-10. Click **New chat** again and read the checkbox states.
+10. Click **New room** again and read the checkbox states.
 11. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
@@ -366,7 +366,7 @@ If Ada did not reply to `hi @Ada` within 15 seconds, check on the Agents page th
 - The grey line beneath reads exactly `You, Ada, Bo` — `You` first.
 - A new sidebar link reading `Ada, Bo` is present WITHOUT a page reload.
 - That sidebar link carries the `active` class (it is the highlighted one).
-- The New chat panel closed itself, and reopening it shows both checkboxes cleared.
+- The New room panel closed itself, and reopening it shows both checkboxes cleared.
 - `T-A` printed `Created room '<id>' (Ada, Bo) with 3 members.`
 - Optional DB check: `sqlite3 <data>\team.db "SELECT u.name FROM room_members m JOIN users u ON u.id=m.user_id WHERE m.room_id='<the new id>' ORDER BY m.rowid;"` returns `You` (or the human row) first, then `Ada`, then `Bo`.
 
@@ -396,9 +396,9 @@ If the `active` class is not on the link but everything else passed, the highlig
 
 1. Write down the `/rooms/<id>` of the existing `Ada, Bo` Room. Call it ROOM-EA1.
 2. Note the current last line in `T-A`.
-3. Click **New chat**.
+3. Click **New room**.
 4. Tick `Ada`, then `Bo` — the identical pair, in the identical order.
-5. Click **Start chat**.
+5. Click **Open room**.
 6. Read the address bar.
 7. Read the sidebar.
 8. Read every line `T-A` printed since your note.
@@ -412,7 +412,7 @@ If the `active` class is not on the link but everything else passed, the highlig
 
 **Fail if — any of these**
 
-- Clicking **Start chat** does nothing visible — no navigation, no new link -> the create path is throwing silently; check `T-A` for an exception. A user clicking a button that does nothing has no way to know whether it worked.
+- Clicking **Open room** does nothing visible — no navigation, no new link -> the create path is throwing silently; check `T-A` for an exception. A user clicking a button that does nothing has no way to know whether it worked.
 - The browser navigates to ROOM-EA1 while `T-A` also logs `Created room` -> a Room was created and then abandoned; the user sees the old Transcript and believes it is the new Room.
 - Only ONE `Ada, Bo` link is visible afterwards but the address bar shows a new id -> the sidebar did not repaint; press F5 once to distinguish a repaint failure from a create failure and say which you saw.
 
@@ -842,9 +842,9 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Steps**
 
-1. Click **New chat** in the sidebar.
+1. Click **New room** in the sidebar.
 2. Tick `Bo` FIRST, then tick `Ada`. This order is deliberate and is the reverse of INVITEROOMS-09.
-3. Click **Start chat**.
+3. Click **Open room**.
 4. Read the `<h1>` and the members line, and write both down exactly.
 5. Note the current last line in `T-A`.
 6. Click into the composer and type exactly: `/invite @gamma`
@@ -855,7 +855,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Pass if — all of these**
 
-- Immediately after Start chat, the `<h1>` reads exactly `Bo, Ada` — tick order, NOT alphabetical and NOT the New chat list order.
+- Immediately after Open room, the `<h1>` reads exactly `Bo, Ada` — tick order, NOT alphabetical and NOT the New room list order.
 - The members line reads exactly `You, Bo, Ada`.
 - After the `/invite @gamma`, the `<h1>` reads exactly `Bo, Ada, gamma` — `gamma` APPENDED, with `Bo` and `Ada` in their original order.
 - The members line reads exactly `You, Bo, Ada, gamma` — `You` first and appearing exactly once.
@@ -929,11 +929,11 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 
 **Before you start**
 
-- `gamma` is running (the `gamma` terminal) and is not a Member of the test Room. Do NOT use an existing Room: ROOM-EA1 and the second `Ada, Bo` Room already contain `gamma`, `Ada`'s own Room is needed untouched by INVITEROOMS-33, and `Bo`'s own Room by INVITEROOMS-38. Create a fresh one in step 1: New chat ticking only `Ada` and `Bo` always creates another Room (INVITEROOMS-10).
+- `gamma` is running (the `gamma` terminal) and is not a Member of the test Room. Do NOT use an existing Room: ROOM-EA1 and the second `Ada, Bo` Room already contain `gamma`, `Ada`'s own Room is needed untouched by INVITEROOMS-33, and `Bo`'s own Room by INVITEROOMS-38. Create a fresh one in step 1: New room ticking only `Ada` and `Bo` always creates another Room (INVITEROOMS-10).
 
 **Steps**
 
-1. In tab A (the current tab) click **New chat**, tick `Ada` and `Bo` and click **Start chat**. The new Room is named `Ada, Bo`. Then open a second browser tab on `http://localhost:5100`. Call the first tab A and the second tab B.
+1. In tab A (the current tab) click **New room**, tick `Ada` and `Bo` and click **Open room**. The new Room is named `Ada, Bo`. Then open a second browser tab on `http://localhost:5100`. Call the first tab A and the second tab B.
 2. In tab A, stay on the new `Ada, Bo` Room. Write its room id down.
 3. In tab B, navigate to the SAME `/rooms/<id>`.
 4. In tab B, click **Invite agent** in the Room header and leave the panel OPEN. Confirm `gamma` is listed as a candidate.
@@ -963,7 +963,7 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 
 **Inconclusive if**
 
-If tab B's SignalR circuit had already dropped (you will see a 'Attempting to reconnect' overlay or a frozen page), nothing it shows is evidence. Reload tab B, re-open the panel, and start the test again with a fresh `Ada, Bo` Room from New chat.
+If tab B's SignalR circuit had already dropped (you will see a 'Attempting to reconnect' overlay or a frozen page), nothing it shows is evidence. Reload tab B, re-open the panel, and start the test again with a fresh `Ada, Bo` Room from New room.
 
 ### INVITEROOMS-23 — Adding a third Member flips a Room from answer-everything to mention-gated
 
@@ -1021,7 +1021,7 @@ If neither `hi @delta` nor `hi @Bo` draws a reply, the Agents may be disconnecte
 
 **Before you start**
 
-- Several Rooms exist, at least one created via New chat and at least one renamed by an invite. After INVITEROOMS-09 through 23 this is satisfied.
+- Several Rooms exist, at least one created via New room and at least one renamed by an invite. After INVITEROOMS-09 through 23 this is satisfied.
 
 **Steps**
 
@@ -1232,7 +1232,7 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 2. Reload the browser and click **Agents**.
 3. Click **New agent**. Fill **Name** = `Friday`, **Title** = `Analyst`, **Alias** = `fri`, **Teams** empty, body = `You are Friday. Answer in one short sentence.`, **Model** = `Haiku`, **Effort** = `low`. Click the card's **Add agent** submit button.
 4. Wait until both `Jarvis` and `Friday` tiles read Online and both appear in the sidebar.
-5. Click **New chat**, tick `Jarvis`, `Friday` and `mybot`, and click **Start chat**. You need three or more Members so Mentions actually gate.
+5. Click **New room**, tick `Jarvis`, `Friday` and `mybot`, and click **Open room**. You need three or more Members so Mentions actually gate.
 6. Note the current last line in `T-A`.
 7. Count the sidebar links and write the count down.
 8. In the composer type exactly: `@Jarvis start a separate room with Friday and give it the context`
@@ -1275,7 +1275,7 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 **Before you start**
 
 - INVITEROOMS-28 passed: `Team:Acp:Enabled=true`, `Team:AgentMessageBudget=6`, and `Jarvis` and `Friday` are both online (Haiku / low).
-- A Room with three or more Members that `Friday` is NOT in. Create one via New chat ticking `Jarvis`, `mybot` and `gamma` (pipe bots from `T-C` and the `gamma` terminal) if you do not have one.
+- A Room with three or more Members that `Friday` is NOT in. Create one via New room ticking `Jarvis`, `mybot` and `gamma` (pipe bots from `T-C` and the `gamma` terminal) if you do not have one.
 - COST: roughly two to four short Haiku Turns.
 
 **Steps**
@@ -1321,12 +1321,12 @@ If `Jarvis` answers in prose without calling the tool, retry ONCE with `@Jarvis 
 **Before you start**
 
 - `Team:Acp:Enabled=true`, `Team:AgentMessageBudget=6`, `Jarvis` online (Haiku / low).
-- A second Room that `Jarvis` is NOT a Member of. Create one via New chat ticking `mybot` and `gamma` only, and write down its room id and its `<h1>`.
+- A second Room that `Jarvis` is NOT a Member of. Create one via New room ticking `mybot` and `gamma` only, and write down its room id and its `<h1>`.
 - COST: roughly one short Haiku Turn.
 
 **Steps**
 
-1. Create the target Room if you do not have one: click **New chat**, tick `mybot` and `gamma` only, click **Start chat**. Write down its `/rooms/<id>` and its `<h1>` — call it TARGET.
+1. Create the target Room if you do not have one: click **New room**, tick `mybot` and `gamma` only, click **Open room**. Write down its `/rooms/<id>` and its `<h1>` — call it TARGET.
 2. Navigate to a DIFFERENT Room that `Jarvis` IS a Member of.
 3. Note the current last line in `T-A`.
 4. In the composer type exactly, substituting the real id: `@Jarvis invite Friday into the room whose id is <TARGET id>`
@@ -1458,7 +1458,7 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a line contain
 **Before you start**
 
 - `P-LAUNCH-UAT` is running, Ada and Bo are Online, and Ada's own Room is still the two-Member Room named `Ada` (never invited into, never renamed).
-- You need a SECOND Room containing `Ada` but not `Bo`: start a pipe bot with `pwsh tools/echo-bot.ps1 -Name scratch33` in `T-D`, then use `New chat` ticking `Ada` and `scratch33`. That creates a Room named `Ada, scratch33`. Stop `scratch33` when the test is done.
+- You need a SECOND Room containing `Ada` but not `Bo`: start a pipe bot with `pwsh tools/echo-bot.ps1 -Name scratch33` in `T-D`, then use `New room` ticking `Ada` and `scratch33`. That creates a Room named `Ada, scratch33`. Stop `scratch33` when the test is done.
 
 **Steps**
 
@@ -1495,7 +1495,7 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a line contain
 > [!NOTE]
 > There is one edge with no observable symptom, and it is deliberate, not a defect: rename a Room to EXACTLY the name auto-naming would have produced (`Ada` for a Room whose only Agent is `Ada`) and it counts as still auto-named, so the next Invitation re-derives over it. Do not file that. See [Known limits](../known-limits.md).
 
-### INVITEROOMS-34 — Archiving a Room from its row menu removes it from the sidebar and lists it under Archived chats
+### INVITEROOMS-34 — Archiving a Room from its row menu removes it from the sidebar and lists it under Archived rooms
 
 **Free** · about 5 min
 
@@ -1512,14 +1512,14 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a line contain
 3. Right-click the row.
 4. Click **Archive**.
 5. Watch the sidebar for up to 3 seconds WITHOUT reloading.
-6. Click the **Archived** icon (`aria-label="Archived"`, `ArchivedLink.razor`), directly above the Settings button at the bottom-left, then the **Chats** tab.
+6. Click the **Archived** icon (`aria-label="Archived"`, `ArchivedLink.razor`), directly above the Settings button at the bottom-left, then the **Rooms** tab.
 
 **Pass if — all of these**
 
 - The `⋮` button appears on hover and is reachable by Tab, and is visible when focused.
 - Right-clicking opens a menu offering exactly **Archive** and **Delete**, and no browser context menu appears.
 - The Room disappears from the sidebar WITHOUT a page reload.
-- The Archived page's **Chats** tab lists that Room; selecting it enables **Restore**.
+- The Archived page's **Rooms** tab lists that Room; selecting it enables **Restore**.
 - The other Room is untouched and still visible.
 
 **Fail if — any of these**
@@ -1527,7 +1527,7 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a line contain
 - The Room only disappears after F5 -> `RoomsChanged` is not reaching `RoomList`.
 - The browser's own context menu appears -> `@oncontextmenu:preventDefault` is not applied.
 - The `⋮` is unreachable by keyboard -> it is being hidden with `display:none` rather than `opacity`, which takes it out of the Tab order.
-- The Room vanishes from the sidebar but the Archived page's Chats tab is empty -> it is being hidden without the `archived_rooms` row being written, and the Room is now unreachable.
+- The Room vanishes from the sidebar but the Archived page's Rooms tab is empty -> it is being hidden without the `archived_rooms` row being written, and the Room is now unreachable.
 
 **Inconclusive if**
 
@@ -1545,7 +1545,7 @@ If the app was started on a freshly seeded folder and only one Room is visible, 
 
 **Steps**
 
-1. Open **Archived** and its **Chats** tab.
+1. Open **Archived** and its **Rooms** tab.
 2. Select the Room and click **Restore**.
 3. Watch the sidebar WITHOUT reloading.
 4. Click the Room and read its Transcript.
@@ -1553,7 +1553,7 @@ If the app was started on a freshly seeded folder and only one Room is visible, 
 **Pass if — all of these**
 
 - The Room reappears in the sidebar immediately, in `created, id` order — not necessarily at the bottom.
-- It leaves the Chats tab's list, which either empties or shrinks by one.
+- It leaves the Rooms tab's list, which either empties or shrinks by one.
 - Its Transcript holds exactly what it held before archiving, in the same order.
 
 **Fail if — any of these**
@@ -1625,7 +1625,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 - After step 2 you land on another Room — its id is in the address bar and its `<h1>` names it. You are never left on an archived Room.
 - Step 4 does NOT move you anywhere; switching Rooms normally is unaffected.
 - After step 5 you are on `/` and the page shows the empty state, not a blank panel and not an error.
-- The Archived page's **Chats** tab lists them all.
+- The Archived page's **Rooms** tab lists them all.
 
 **Fail if — any of these**
 
@@ -1642,16 +1642,16 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 
 **Before you start**
 
-- Bo's own two-Member Room (`Bo`), which nothing before INVITEROOMS-37 has touched; INVITEROOMS-37 step 5 archived it along with every other Room, so it now sits on the Archived page's **Chats** tab. Do NOT re-run the seeder line to get it back: that wipes the archived and deleted Rooms INVITEROOMS-39 needs. Instead open **Archived**, select `Bo` on the **Chats** tab and click **Restore**, then open it. If you have not run INVITEROOMS-37 it is simply in the sidebar.
+- Bo's own two-Member Room (`Bo`), which nothing before INVITEROOMS-37 has touched; INVITEROOMS-37 step 5 archived it along with every other Room, so it now sits on the Archived page's **Rooms** tab. Do NOT re-run the seeder line to get it back: that wipes the archived and deleted Rooms INVITEROOMS-39 needs. Instead open **Archived**, select `Bo` on the **Rooms** tab and click **Restore**, then open it. If you have not run INVITEROOMS-37 it is simply in the sidebar.
 - The `Bo` Room holds at least one Message. If it is empty, send `hi` and wait for Bo's reply.
 
 **Steps**
 
 1. Archive the `Bo` Room. Write its room id down (call it OLD).
 2. Open **Agents**, click the `Bo` tile, and read its actions. Close the card.
-3. Start a new chat with `Bo` (New chat, tick `Bo`, Start chat).
+3. Start a new chat with `Bo` (New room, tick `Bo`, Open room).
 4. Read the new Room's id, `<h1>` and Transcript.
-5. Open **Archived**, select OLD on the **Chats** tab and click **Restore**.
+5. Open **Archived**, select OLD on the **Rooms** tab and click **Restore**.
 6. Read the sidebar.
 
 **Pass if — all of these**
@@ -1686,11 +1686,11 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 1. Stop the app (Ctrl+C in `T-A`). Do NOT re-run the seeder line or delete `C:\seeds\huddle\uat\data`.
 2. Start it again with the app command of `P-LAUNCH-UAT` only, and open the browser.
 3. Read the sidebar.
-4. Open **Archived** and its **Chats** tab.
+4. Open **Archived** and its **Rooms** tab.
 
 **Pass if — all of these**
 
-- The archived Room is still absent from the sidebar and still listed on the Archived page's Chats tab.
+- The archived Room is still absent from the sidebar and still listed on the Archived page's Rooms tab.
 - The deleted Room is in neither place.
 - Every other Room is present, in the same order, with its Transcript intact.
 - `T-A` logs no schema, migration or SQLite error at startup.

@@ -10,5 +10,5 @@ internal enum ArchivedTab
     Projects,
 
     /// <summary>Archived Rooms.</summary>
-    Chats,
+    Rooms,
 }

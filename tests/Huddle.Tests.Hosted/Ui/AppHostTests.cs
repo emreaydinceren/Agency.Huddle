@@ -102,6 +102,6 @@ public sealed class AppHostTests
 
         var html = await client.GetStringAsync("/", ct);
 
-        Assert.Contains("New chat", html, StringComparison.Ordinal);
+        Assert.Contains("New room", html, StringComparison.Ordinal); // contains-ok: haystack is the whole prerendered page served over HTTP; the label is one element in it
     }
 }

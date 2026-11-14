@@ -36,7 +36,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Pass if — all of these**
 
 - The Right sidebar is 280px wide and sits at the right edge, beside the Workspace.
-- The headings read `Members`, `Tasks in this chat` and `Documents in this chat`, in that order.
+- The headings read `Members`, `Tasks in this Room` and `Documents in this Room`, in that order.
 - Each heading has an icon and a count, and nothing overlaps the Workspace at 90% zoom.
 
 ### RSIDE-02 — A Message that references a Task appears, and its jump works
@@ -52,7 +52,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Steps**
 
 1. In the `Ada` Room, use the `#` picker to reference the Task and send `Please look at #` followed by the Task's title.
-2. Look at the `Tasks in this chat` panel.
+2. Look at the `Tasks in this Room` panel.
 3. Click the Task's row in that panel.
 
 **Pass if — all of these**
@@ -160,13 +160,13 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Steps**
 
-1. Collapse the `Tasks in this chat` panel with its chevron.
+1. Collapse the `Tasks in this Room` panel with its chevron.
 2. Reload the page.
 3. Look at the three panel headings.
 
 **Pass if — all of these**
 
-- After step 2 `Tasks in this chat` is still collapsed, and `Members` and `Documents in this chat` are open.
+- After step 2 `Tasks in this Room` is still collapsed, and `Members` and `Documents in this Room` are open.
 
 ### RSIDE-08 — Two panes follow focus
 
@@ -186,7 +186,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 1 the Right sidebar shows `Members`, `Tasks in this chat` and `Documents in this chat`.
+- At step 1 the Right sidebar shows `Members`, `Tasks in this Room` and `Documents in this Room`.
 - At step 2 it shows `Outline` and `Linked documents`, and no Room panels.
 - At step 3 it shows the Room panels again.
 

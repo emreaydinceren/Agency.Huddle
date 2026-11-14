@@ -78,7 +78,7 @@ live check on §6.8's warning that a wrong attribution must only ever cost an ex
 **Before you start**
 
 `P-LAUNCH-PAID` with the Keeper and Aide created. Room A is the Keeper's own direct Room. Room B is
-**New chat** with the Keeper and Aide (three Members, so every Message to the Keeper starts
+**New room** with the Keeper and Aide (three Members, so every Message to the Keeper starts
 `@Keeper`).
 
 **Steps**
@@ -318,7 +318,7 @@ is *Inconclusive*.
 
 **Steps**
 
-1. In a Room that did not receive the C# preference (create a fresh **New chat** with the Keeper
+1. In a Room that did not receive the C# preference (create a fresh **New room** with the Keeper
    and Aide), send "@Keeper what do you remember, and from where?"
 
 **Expect**

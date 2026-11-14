@@ -219,7 +219,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-14](shell-nav.md#shellnav-14--no-route-sets-a-browser-tab-title) |  | Active |  |  |
 | [SHELLNAV-15](shell-nav.md#shellnav-15--focus-moves-to-the-pages-h1-after-every-navigation) |  | Active |  |  |
 | [SHELLNAV-16](shell-nav.md#shellnav-16--sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active |  |  |
-| [SHELLNAV-17](shell-nav.md#shellnav-17--the-new-chat-panel-toggles-lists-agents-with-status-dots-and-gates-start-chat) |  | Active |  |  |
+| [SHELLNAV-17](shell-nav.md#shellnav-17--the-new-room-panel-toggles-lists-agents-with-status-dots-and-gates-open-room) |  | Active |  |  |
 | [SHELLNAV-18](shell-nav.md#shellnav-18--starting-a-chat-creates-a-room-named-after-its-agents-and-navigates-straight-to-it) |  | Active |  |  |
 | [SHELLNAV-19](shell-nav.md#shellnav-19--appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active |  |  |
 | [SHELLNAV-20](shell-nav.md#shellnav-20--the-room-list-updates-live-with-no-refresh-when-a-room-appears-from-outside-the-app) |  | Active |  |  |
@@ -228,7 +228,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-25](shell-nav.md#shellnav-25--two-browser-tabs-on-the-same-install-stay-in-step-through-the-shell) |  | Active |  |  |
 | [SHELLNAV-26](shell-nav.md#shellnav-26--the-reconnect-modal-shows-exactly-one-state-paragraph-at-a-time-when-the-server-goes-away) |  | Active |  |  |
 | [SHELLNAV-27](shell-nav.md#shellnav-27--with-no-rooms-the-empty-state-renders-twice-and-there-is-no-heading-at-all) |  | Active |  |  |
-| [SHELLNAV-28](shell-nav.md#shellnav-28--the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active |  |  |
+| [SHELLNAV-28](shell-nav.md#shellnav-28--the-new-room-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active |  |  |
 | [SHELLNAV-29](shell-nav.md#shellnav-29--record-whether-the-yellow-error-band-ever-appears-during-a-genuine-circuit-fault) |  | Active |  |  |
 | [SHELLNAV-30](shell-nav.md#shellnav-30--the-drawers-icons-and-settings-pinned-to-the-bottom) |  | Active |  |  |
 | [SHELLNAV-31](shell-nav.md#shellnav-31--one-click-on-a-left-menu-item-opens-a-preview-tab-and-a-click-on-a-different-item-replaces-it) |  | Active |  |  |
@@ -256,7 +256,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-01](startup-config.md#startupconfig-01--the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) |  | Active |  | rewritten 2026-10. Earlier Pass. |
 | [STARTUPCONFIG-02](startup-config.md#startupconfig-02--every-stylesheet-in-the-document-head-returns-200--the-silent-assets-regression) |  | Active |  |  |
 | [STARTUPCONFIG-06](startup-config.md#startupconfig-06--every-navigation-surface-is-reachable-from-a-cold-start) |  | Active |  |  |
-| [STARTUPCONFIG-07](startup-config.md#startupconfig-07--start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active |  |  |
+| [STARTUPCONFIG-07](startup-config.md#startupconfig-07--open-room-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active |  |  |
 | [STARTUPCONFIG-08](startup-config.md#startupconfig-08--agents-lists-personas-only--pipe-clients-never-appear-there) |  | Active |  |  |
 | [STARTUPCONFIG-09](startup-config.md#startupconfig-09--settings-prompts-tab-on-a-first-run-says-promptsjson-is-absent-and-offers-nothing-to-save-or-reset) |  | Active |  |  |
 | [STARTUPCONFIG-10](startup-config.md#startupconfig-10--appearance-tab-on-a-first-run-reads-lumen-light-picking-a-dark-theme-writes-appearancejson-and-applies-immediately-with-no-reload) |  | Active |  |  |
@@ -578,13 +578,13 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [INVITEROOMS-02](invite-rooms.md#inviterooms-02--routing--redirects-to-the-first-room-and-an-unknown-room-id-shows-the-empty-state-instead-of-crashing) |  | Active |  |  |
-| [INVITEROOMS-03](invite-rooms.md#inviterooms-03--the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Active |  |  |
+| [INVITEROOMS-03](invite-rooms.md#inviterooms-03--the-new-room-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-open-room-disabled-until-something-is-ticked) |  | Active |  |  |
 | [INVITEROOMS-04](invite-rooms.md#inviterooms-04--a-pipe-client-connecting-creates-its-room-and-it-appears-in-the-sidebar-with-no-page-refresh) |  | Active |  |  |
 | [INVITEROOMS-05](invite-rooms.md#inviterooms-05--reconnecting-under-the-same-name-re-attaches-to-the-existing-room--it-never-mints-a-second-one) |  | Active |  |  |
 | [INVITEROOMS-06](invite-rooms.md#inviterooms-06--a-name-differing-only-in-case-re-attaches-to-the-existing-agent-instead-of-creating-a-second-one) |  | Active |  |  |
 | [INVITEROOMS-07](invite-rooms.md#inviterooms-07--an-invalid-agent-name-is-refused-at-the-handshake-and-no-room-appears-anywhere) |  | Active |  |  |
-| [INVITEROOMS-08](invite-rooms.md#inviterooms-08--new-chat-with-exactly-one-agent-opens-that-agents-existing-room-and-creates-nothing) |  | Active |  |  |
-| [INVITEROOMS-09](invite-rooms.md#inviterooms-09--new-chat-with-two-agents-creates-a-room-named-after-them-and-navigates-to-it-live) |  | Active |  |  |
+| [INVITEROOMS-08](invite-rooms.md#inviterooms-08--new-room-with-exactly-one-agent-opens-that-agents-existing-room-and-creates-nothing) |  | Active |  |  |
+| [INVITEROOMS-09](invite-rooms.md#inviterooms-09--new-room-with-two-agents-creates-a-room-named-after-them-and-navigates-to-it-live) |  | Active |  |  |
 | [INVITEROOMS-10](invite-rooms.md#inviterooms-10--the-same-two-agent-selection-twice-creates-a-second-room-with-the-identical-name) |  | Active |  |  |
 | [INVITEROOMS-11](invite-rooms.md#inviterooms-11--invite-agent-on-the-room-header-offers-only-agents-that-are-not-already-members-and-starts-closed) |  | Active |  |  |
 | [INVITEROOMS-12](invite-rooms.md#inviterooms-12--clicking-a-candidate-invites-it-renames-the-room-and-repaints-all-four-surfaces-with-no-reload) |  | Active |  |  |
@@ -609,7 +609,7 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | [INVITEROOMS-31](invite-rooms.md#inviterooms-31--every-agent-created-room-contains-the-human-so-none-is-hidden) | 💰 | Active |  |  |
 | [INVITEROOMS-32](invite-rooms.md#inviterooms-32--the-composers-own-status-line-does-not-survive-a-room-switch) |  | Active |  |  |
 | [INVITEROOMS-33](invite-rooms.md#inviterooms-33--a-renamed-room-keeps-its-name-across-an-invitation-an-un-renamed-one-still-re-derives) |  | Active |  |  |
-| [INVITEROOMS-34](invite-rooms.md#inviterooms-34--archiving-a-room-from-its-row-menu-removes-it-from-the-sidebar-and-lists-it-under-archived-chats) |  | Active |  |  |
+| [INVITEROOMS-34](invite-rooms.md#inviterooms-34--archiving-a-room-from-its-row-menu-removes-it-from-the-sidebar-and-lists-it-under-archived-rooms) |  | Active |  |  |
 | [INVITEROOMS-35](invite-rooms.md#inviterooms-35--unarchiving-returns-the-room-to-the-sidebar-with-its-transcript-intact) |  | Active |  |  |
 | [INVITEROOMS-36](invite-rooms.md#inviterooms-36--deleting-a-room-needs-a-confirmation-and-removes-its-transcript-file-from-disk) |  | Active |  |  |
 | [INVITEROOMS-37](invite-rooms.md#inviterooms-37--archiving-or-deleting-the-room-you-are-viewing-moves-you-somewhere-valid) |  | Active |  |  |
@@ -704,7 +704,7 @@ The named pipe: external agents and the wire — [area file](pipe-external.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [PIPEEXTERNAL-03](pipe-external.md#pipeexternal-03--new-chat-builds-a-group-room-named-after-its-agents-and-that-room-is-mention-gated) |  | Active |  |  |
+| [PIPEEXTERNAL-03](pipe-external.md#pipeexternal-03--new-room-builds-a-group-room-named-after-its-agents-and-that-room-is-mention-gated) |  | Active |  |  |
 | [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04--a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) |  | Active |  | rewritten 2026-10. Earlier Pass. |
 | [PIPEEXTERNAL-05](pipe-external.md#pipeexternal-05--the-welcome-envelope-shape-fields-and-version-3) |  | Active |  |  |
 | [PIPEEXTERNAL-07](pipe-external.md#pipeexternal-07--an-agent-never-receives-its-own-message-and-nothing-loops) |  | Active |  |  |
@@ -712,7 +712,7 @@ The named pipe: external agents and the wire — [area file](pipe-external.md)
 | [PIPEEXTERNAL-09](pipe-external.md#pipeexternal-09--reconnecting-under-the-same-name-keeps-the-agent-id-and-creates-no-second-room) |  | Active |  |  |
 | [PIPEEXTERNAL-10](pipe-external.md#pipeexternal-10--reconnecting-with-different-letter-case-is-the-same-agent-and-the-stored-name-does-not-change) |  | Active |  |  |
 | [PIPEEXTERNAL-11](pipe-external.md#pipeexternal-11--disconnecting-an-external-agent-changes-nothing-visible-in-the-room--the-silent-case) |  | Active |  |  |
-| [PIPEEXTERNAL-12](pipe-external.md#pipeexternal-12--where-a-disconnect-is-visible-the-agent-dot-in-new-chat-and-invite-agent) |  | Active |  |  |
+| [PIPEEXTERNAL-12](pipe-external.md#pipeexternal-12--where-a-disconnect-is-visible-the-agent-dot-in-new-room-and-invite-agent) |  | Active |  |  |
 | [PIPEEXTERNAL-13](pipe-external.md#pipeexternal-13--an-offline-agent-receives-nothing-and-nothing-is-replayed-on-reconnect) |  | Active |  |  |
 | [PIPEEXTERNAL-14](pipe-external.md#pipeexternal-14--an-invalid-name-is-refused-with-invalidname-the-connection-closes-and-no-room-appears) |  | Active |  |  |
 | [PIPEEXTERNAL-15](pipe-external.md#pipeexternal-15--the-humans-name-is-reserved-on-the-pipe) |  | Active |  |  |
@@ -1022,9 +1022,9 @@ Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, a
 | --- | --- | --- | --- | --- |
 | [TEAMCHATS-01](team-chats.md#teamchats-01--the-team-room-appears-under-its-team-with-every-member-and-rooms-does-not-list-it) |  | Active |  |  |
 | [TEAMCHATS-02](team-chats.md#teamchats-02--an-agent-who-joins-the-team-is-invited-into-the-team-room-and-the-transcript-says-so) |  | Active |  |  |
-| [TEAMCHATS-03](team-chats.md#teamchats-03--new-chat-on-a-team-scopes-the-room-to-that-team-and-a-non-member-can-be-ticked) |  | Active |  |  |
+| [TEAMCHATS-03](team-chats.md#teamchats-03--new-room-on-a-team-scopes-the-room-to-that-team-and-a-non-member-can-be-ticked) |  | Active |  |  |
 | [TEAMCHATS-04](team-chats.md#teamchats-04--message-on-the-members-tab-opens-the-teams-own-one-to-one-not-the-root-one) |  | Active |  |  |
-| [TEAMCHATS-05](team-chats.md#teamchats-05--new-chat-in-the-rooms-group-still-makes-a-root-room) |  | Active |  |  |
+| [TEAMCHATS-05](team-chats.md#teamchats-05--new-room-in-the-rooms-group-still-makes-a-root-room) |  | Active |  |  |
 | [TEAMCHATS-06](team-chats.md#teamchats-06--the-team-room-has-no-rename-pencil-and-a-rename-through-the-chat-header-is-refused) |  | Active |  |  |
 | [TEAMCHATS-07](team-chats.md#teamchats-07--renaming-the-team-folder-in-explorer-archives-its-rooms-history-intact) |  | Active |  |  |
 | [TEAMCHATS-08](team-chats.md#teamchats-08--an-archived-team-room-is-not-recreated-or-refilled) |  | Active |  |  |

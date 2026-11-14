@@ -1,6 +1,6 @@
 # Application shell, navigation and layout
 
-Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/agents`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New chat** inside it), the `Teams` group, **Agents**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
+Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/agents`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New room** inside it), the `Teams` group, **Agents**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
 **43 tests** · 43 free, none paid · about 3.5 hours.
 
@@ -701,12 +701,12 @@ If `document.activeElement` reports the DevTools console itself or an `<input>` 
 1. In the browser, open a room page and wait for the Network tab to go quiet.
 2. In the DevTools Console, type `window.__probe = 42` and press Enter.
 3. In the Network tab, set the filter to **WS** and note the `_blazor` websocket row and its start time.
-4. Click **New chat** in the sidebar so the panel opens. Leave it open.
+4. Click **New room** in the sidebar so the panel opens. Leave it open.
 5. Click **Agents** in the sidebar.
 6. Watch the page as it changes: note whether it white-flashes.
 7. In the Console, type `window.__probe` and press Enter.
 8. In the Network WS filter, check whether the `_blazor` websocket row is the SAME one from step 3 or a new one.
-9. Look at the sidebar: is the **New chat** panel still open?
+9. Look at the sidebar: is the **New room** panel still open?
 10. Click the **Settings** gear icon at the bottom of the sidebar (it has no text; `aria-label` `Settings`, `MainLayout.razor:28`) and repeat steps 7 and 8.
 
 **Pass if — all of these**
@@ -714,12 +714,12 @@ If `document.activeElement` reports the DevTools console itself or an `<input>` 
 - Step 7 printed `42` both times - the JavaScript context survived, so no document reload happened.
 - The `_blazor` websocket row is the same single row throughout; it is not torn down and re-established.
 - No white flash between routes.
-- The **New chat** panel is still open after navigating, and the sidebar's scroll position is unchanged.
+- The **New room** panel is still open after navigating, and the sidebar's scroll position is unchanged.
 
 **Fail if — any of these**
 
 - `window.__probe` printed `undefined` -> the browser did a full document reload on the sidebar click. Enhanced navigation is broken; the usual cause is `blazor.web.js` failing to load - go to SHELLNAV-02 and check the JS filter for a 404 on `blazor.web.*.js`.
-- A second `_blazor` websocket appears on every navigation -> the circuit is being rebuilt each time; expect the room list to lose live updates and the New chat panel to reset.
+- A second `_blazor` websocket appears on every navigation -> the circuit is being rebuilt each time; expect the room list to lose live updates and the New room panel to reset.
 - The panel closes and the sidebar scrolls back to the top on every navigation -> the same full-reload symptom seen from the UI side.
 
 **Inconclusive if**
@@ -729,7 +729,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 > [!NOTE]
 > Do not use the `blazor-enhanced-nav` response header as an oracle from `curl.exe` - it is not reliably present on a plain request. The `window.__probe` survival check is decisive and needs no header.
 
-### SHELLNAV-17 — The New chat panel toggles, lists agents with status dots, and gates Start chat
+### SHELLNAV-17 — The New room panel toggles, lists agents with status dots, and gates Open room
 
 **Free** · about 7 min
 
@@ -742,18 +742,18 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 **Steps**
 
 1. In the browser, open any room page.
-2. Click **New chat** in the sidebar. It sits inside the `Rooms` group, below the Room list (`RoomList.razor:76`), not at the top of the sidebar.
+2. Click **New room** in the sidebar. It sits inside the `Rooms` group, below the Room list (`RoomList.razor:76`), not at the top of the sidebar.
 3. Confirm a panel opens below the button.
 4. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter.
 5. Read the panel: confirm one checkbox per agent, each with a small coloured dot before the name.
 6. Hover the mouse over one dot and wait for the tooltip. Read it.
 7. In the Console, type `[...document.querySelectorAll('.agent-dot')].map(d => d.title)` and press Enter. Record the array.
-8. In the Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Start chat').disabled` and press Enter.
+8. In the Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Open room').disabled` and press Enter.
 9. Tick the checkbox beside `Ada`.
 10. Re-run the Console command from step 8.
 11. Untick `Ada`.
 12. Re-run the Console command from step 8.
-13. Click **New chat** again.
+13. Click **New room** again.
 14. Re-run the Console command from step 4.
 
 **Pass if — all of these**
@@ -762,14 +762,14 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 - Every agent has a checkbox and a coloured dot.
 - The tooltip text is exactly one of `online`, `offline`, `starting` or `degraded` - lowercase, single word.
 - Step 7's array contains only those four words.
-- Step 8 printed `true` - the button reads **Start chat** (title case; buttons are not upper-cased here, `ThemeDefaults.cs:46`) and is disabled while nothing is ticked.
+- Step 8 printed `true` - the button reads **Open room** (title case; buttons are not upper-cased here, `ThemeDefaults.cs:46`) and is disabled while nothing is ticked.
 - Step 10 printed `false` - ticking one agent enables it.
 - Step 12 printed `true` again after unticking.
 
 **Fail if — any of these**
 
 - The panel does not collapse on the second click -> the toggle is one-way. Defect.
-- **Start chat** is enabled with nothing ticked -> the gate is missing; clicking it would attempt a chat with no agents.
+- **Open room** is enabled with nothing ticked -> the gate is missing; clicking it would attempt a chat with no agents.
 - Every dot shows the same colour and the same tooltip regardless of state -> status is being derived from pipe liveness alone rather than through the resolver that puts health FIRST. A deaf runner with an open pipe must read `degraded`, never `online`. Defect.
 - A tooltip reads a capitalised or different word -> the tooltip text and the CSS class have diverged.
 
@@ -788,26 +788,26 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Before you start**
 
-- Two or more Agents listed in the New chat panel (`Ada` and `Bo` from `P-LAUNCH-UAT`).
+- Two or more Agents listed in the New room panel (`Ada` and `Bo` from `P-LAUNCH-UAT`).
 - SHELLNAV-17 passed, so the panel is known to work.
 
 **Steps**
 
 1. Note the current entries in the sidebar room list.
-2. Click **New chat** in the sidebar.
+2. Click **New room** in the sidebar.
 3. Tick the checkbox beside `Ada`.
 4. Tick the checkbox beside `Bo`.
-5. Click **Start chat**.
+5. Click **Open room**.
 6. Read the address bar.
 7. Read the `<h1>` in the main column.
 8. Read the member line directly below the `<h1>`.
 9. Read the sidebar room list.
-10. Click **New chat** again and look at the checkboxes.
+10. Click **New room** again and look at the checkboxes.
 11. In `T-B` run: `Get-ChildItem C:\seeds\huddle\uat\data` and confirm `team.db` is present. That is `<data>` under `P-LAUNCH-UAT` (`common.md:325`), not `src\Huddle.App\App_Data`.
 
 **Pass if — all of these**
 
-- The panel closed by itself after **Start chat**.
+- The panel closed by itself after **Open room**.
 - The address bar reads `http://localhost:5100/rooms/<32-hex-id>`, with a real id and never a trailing empty `/rooms/`.
 - The `<h1>` reads exactly `Ada, Bo` - the agent names comma-space joined in selection order.
 - The member line below the heading lists `You` plus both agent names.
@@ -819,11 +819,11 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 - Navigating to `/rooms/` with no id -> the created room's id was lost. Defect.
 - The new room does not appear in the sidebar until F5 -> the rooms-changed event did not reach the list; see SHELLNAV-20.
 - The room is named something other than the joined agent names -> the naming rule changed.
-- The checkboxes stay ticked after **Start chat** -> a second click silently makes a duplicate room.
+- The checkboxes stay ticked after **Open room** -> a second click silently makes a duplicate room.
 
 **Inconclusive if**
 
-If `sqlite3` is installed you can confirm with `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT id, name FROM rooms ORDER BY created DESC LIMIT 1;"`. If it is NOT installed, judge from the sidebar entry and the `<h1>` alone and say the DB check was skipped - do not call the test inconclusive on that account. If **Start chat** shows an error line instead, read it and report it verbatim.
+If `sqlite3` is installed you can confirm with `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT id, name FROM rooms ORDER BY created DESC LIMIT 1;"`. If it is NOT installed, judge from the sidebar entry and the `<h1>` alone and say the DB check was skipped - do not call the test inconclusive on that account. If **Open room** shows an error line instead, read it and report it verbatim.
 
 > [!NOTE]
 > Ticking a SINGLE agent reuses that agent's existing room rather than creating a new one - so if you tick only `Ada` you land back on the existing `Ada` room and the sidebar does not grow. That is correct, not a failure. Leaves a new room behind; it does no harm to later tests.
@@ -895,7 +895,7 @@ If the message sends but `Ada` never replies, the composer half still PASSED - r
 6. Read TERMINAL C's output and wait for a line containing `"type":"welcome"`.
 7. Without touching the browser, watch TAB 1's sidebar for up to five seconds.
 8. Switch to TAB 2 and watch its sidebar too, again without refreshing.
-9. In TAB 1, click **New chat** and read the agent checkbox list.
+9. In TAB 1, click **New room** and read the agent checkbox list.
 10. Now provoke the leak case: in TAB 1, click **Agents**, then **Settings**, then a room, then **Agents** again - four navigations in all (the **Settings** link is the gear icon at the bottom of the sidebar). Repeat the whole sequence once more so there are eight.
 11. Read TAB 1's sidebar carefully for duplicate or stale entries.
 12. Scroll `T-A` and look for repeated handler errors or exception stacks.
@@ -905,7 +905,7 @@ If the message sends but `Ada` never replies, the composer half still PASSED - r
 
 - A new sidebar entry reading `mybot` appears in TAB 1 within about a second, with no page refresh and no navigation.
 - The same entry appears in TAB 2 without a refresh.
-- The **New chat** checkbox list gained `mybot` as well.
+- The **New room** checkbox list gained `mybot` as well.
 - After the eight navigations the sidebar shows each room exactly once - no duplicates, no rooms that no longer exist.
 - `T-A` shows the pipe connection for `mybot` and no repeated handler errors, before or after closing TAB 2.
 
@@ -997,7 +997,7 @@ If the file watcher does not react within ten seconds, restart the app in `T-A` 
 - Step 6 printed `False`.
 - In the private window, the sidebar, heading and transcript are complete in the first painted frame - no flash of empty layout.
 - The Appearance tab and the Agents page are likewise complete on first paint.
-- Interactivity (clicking **New chat**, ticking a checkbox) starts working a moment later, once the websocket connects.
+- Interactivity (clicking **New room**, ticking a checkbox) starts working a moment later, once the websocket connects.
 
 **Fail if — any of these**
 
@@ -1022,12 +1022,12 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 **Before you start**
 
 - Two browser tabs against the same `http://localhost:5100`.
-- `P-LAUNCH-UAT` has been run, so `Ada` and `Bo` are listed in the New chat panel.
+- `P-LAUNCH-UAT` has been run, so `Ada` and `Bo` are listed in the New room panel.
 
 **Steps**
 
 1. Open TAB A on a room page and TAB B on `http://localhost:5100/agents`.
-2. In TAB A, click **New chat**, tick `Ada` and `Bo`, and click **Start chat**.
+2. In TAB A, click **New room**, tick `Ada` and `Bo`, and click **Open room**.
 3. Without touching TAB B, switch to it and read its sidebar.
 4. Switch back to TAB A and navigate to `http://localhost:5100/settings/appearance`.
 5. In the theme list, under the **Dark** heading, select `Huddle Dark` (there is no mode select since ADR-0017; the theme list is the only control, `Appearance.razor:66-80`).
@@ -1149,7 +1149,7 @@ If step 6 still returns a redirect, the app did not start on the empty data fold
 > [!NOTE]
 > The step-11 `BODY` result is the same accessibility observation as SHELLNAV-15's last step - report it once, not twice. This test leaves the app in the empty state, which SHELLNAV-28 needs next. Restore afterwards with the cleanup in SHELLNAV-28.
 
-### SHELLNAV-28 — The New chat panel with no agents shows its own guidance instead of an empty list
+### SHELLNAV-28 — The New room panel with no agents shows its own guidance instead of an empty list
 
 **Free** · about 6 min
 
@@ -1163,9 +1163,9 @@ If step 6 still returns a redirect, the app did not start on the empty data fold
 **Steps**
 
 1. In the browser, navigate to `http://localhost:5100/`.
-2. Click **New chat** in the sidebar.
+2. Click **New room** in the sidebar.
 3. Read the panel contents.
-4. In the DevTools Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Start chat')` and press Enter.
+4. In the DevTools Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Open room')` and press Enter.
 5. In the Console, type `document.querySelector('.new-chat .new-chat-agents')` and press Enter.
 6. In the Console, type `[...document.querySelectorAll('.new-chat .empty-state code')].map(c => c.textContent)` and press Enter.
 7. CLEANUP: in `T-A` press Ctrl+C.
@@ -1177,7 +1177,7 @@ If step 6 still returns a redirect, the app did not start on the empty data fold
 
 - The panel shows exactly one empty state: the title `No agents have connected yet` with the line `Start one with tools/echo-bot.ps1, or enable the demo agent in appsettings.json.` under it.
 - Each file name in that sentence is rendered in a monospace face.
-- Step 4 printed `undefined` (`find` returns `undefined` when nothing matches) - the **Start chat** button is not rendered at all in this state.
+- Step 4 printed `undefined` (`find` returns `undefined` when nothing matches) - the **Open room** button is not rendered at all in this state.
 - Step 5 printed `null` - there is no agent list.
 - Step 6 printed `['tools/echo-bot.ps1', 'appsettings.json']`, each a real file.
 - After cleanup, the original rooms are back in the sidebar.
@@ -1185,7 +1185,7 @@ If step 6 still returns a redirect, the app did not start on the empty data fold
 **Fail if — any of these**
 
 - An empty panel with no explanation -> the user is given no way to learn what to do next. Defect.
-- A **Start chat** button is rendered (and clickable) with nothing to select -> a dead control. Defect.
+- A **Open room** button is rendered (and clickable) with nothing to select -> a dead control. Defect.
 - The guidance names a script or file that does not exist in the repository -> stale wording; check `tools/` for the real name.
 
 **Inconclusive if**

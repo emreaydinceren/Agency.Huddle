@@ -580,7 +580,7 @@ public sealed class RoomListTests
     private static Agency.Huddle.Tests.Teams.FakeTeamCatalog KnownTeam(string name) =>
         new() { Teams = [new Agency.Huddle.App.Teams.TeamSummary(name, [], ["coo"], true)] };
 
-    /// <summary>When there are rooms, the collapsible "Rooms" group also offers the "New chat" control inside it.</summary>
+    /// <summary>When there are rooms, the collapsible "Rooms" group also offers the "New room" control inside it.</summary>
     [Fact]
     public async Task Rooms_OffersNewChatControlInsideNavGroup()
     {
@@ -593,8 +593,8 @@ public sealed class RoomListTests
         await using var ctx = NewContext(directory, chat, events, dir);
         var cut = RenderRoomList(ctx);
 
-        var group = cut.Find(".mud-nav-group");
-        Assert.Contains("New chat", group.TextContent, StringComparison.Ordinal);
+        var link = cut.Find(".mud-nav-group .nav-action-link");
+        Assert.Equal("New room", link.TextContent.Trim());
     }
 
     /// <summary>The link's text without the 1:1 avatar's monogram (UX-016), trimmed.</summary>

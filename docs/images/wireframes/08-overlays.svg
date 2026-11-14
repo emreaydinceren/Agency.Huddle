@@ -144,7 +144,7 @@
 <text x="677.0" y="150.0" font-size="10" font-weight="500" fill="#1f2430" text-anchor="middle">Actions ▾</text>
 <rect x="632" y="162" width="156" height="126" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2" filter="url(#sh)"/>
 <rect x="642" y="176" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>
-<text x="662" y="186" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">New chat</text>
+<text x="662" y="186" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">New room</text>
 <rect x="642" y="202" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>
 <text x="662" y="212" font-size="11" font-weight="400" fill="#1f2430" text-anchor="start">New project</text>
 <rect x="642" y="228" width="12" height="12" rx="3" fill="#6b7280" stroke="none"/>

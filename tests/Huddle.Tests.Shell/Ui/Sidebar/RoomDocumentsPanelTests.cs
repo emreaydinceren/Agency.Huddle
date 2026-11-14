@@ -15,7 +15,7 @@ using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
-/// <summary>Pins <see cref="RoomDocumentsPanel"/>: the Library files a Room's Messages mention, resolved for existence (Spec Documents in this chat, D-8).</summary>
+/// <summary>Pins <see cref="RoomDocumentsPanel"/>: the Library files a Room's Messages mention, resolved for existence (Spec Documents in this Room, D-8).</summary>
 public sealed class RoomDocumentsPanelTests
 {
     private const string RoomId = "r1";
@@ -224,7 +224,7 @@ public sealed class RoomDocumentsPanelTests
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("No documents mentioned in this chat yet.", cut.Find("[role='status']").TextContent.Trim());
+            Assert.Equal("No documents mentioned in this Room yet.", cut.Find("[role='status']").TextContent.Trim());
             Assert.Equal(0, rig.Panel.Count);
         });
     }

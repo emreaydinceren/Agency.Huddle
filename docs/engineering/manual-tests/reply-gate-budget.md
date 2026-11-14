@@ -1279,9 +1279,9 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 1. Type `@nobodyhere hello` and press Enter, then wait 10 seconds and watch the whole page.
 2. Read both bot terminals for that Message.
-3. In the sidebar click **New chat** and note the colour of the dot beside each Agent, then click **New chat** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Invite agent** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
+3. In the sidebar click **New room** and note the colour of the dot beside each Agent, then click **New room** again to close the panel. (This panel lists every Agent, Members or not, with its presence dot. The Room's **Invite agent** panel lists only Agents who are not yet Members, so Ada and Bo are not in it.)
 4. In `T-B` press Ctrl+C to take `Ada` offline, and wait 5 seconds.
-5. Click **New chat** again and note the colour of the dot beside `Ada`, then close the panel.
+5. Click **New room** again and note the colour of the dot beside `Ada`, then close the panel.
 6. Type `@Ada are you there?` and press Enter, then wait 10 seconds.
 7. Read `T-B` (now stopped) and TERMINAL C.
 8. Restart the `Ada` bot in `T-B` and repeat step 6.
@@ -1436,7 +1436,7 @@ If the app or the Persona restarted, or her session in this Room was stopped, be
 3. Stop the app with Ctrl+C.
 4. Start the app with PROFILE C and `$env:Team__AgentMessageBudget = '6'` — set this BEFORE `dotnet run`.
 5. On **Agents**, wait until both tiles read **Online**, then set each one's **Model** to the Haiku entry and **Effort** to `low` via **Edit** and **Save**.
-6. In the sidebar click **New chat**, tick both `Ana` and `Ben`, and click **Start chat**.
+6. In the sidebar click **New room**, tick both `Ana` and `Ben`, and click **Open room**.
 7. Confirm the member line names three people.
 8. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
 9. Watch the Room continuously. Count every agent Message as it lands and keep your hand near Ctrl+C in `T-A`.
@@ -1487,7 +1487,7 @@ If the models simply stop talking to each other before six (they may not obey th
    Turn would otherwise bill at the account default. Stop the app with Ctrl+C, then start it with
    PROFILE C and `$env:Team__AgentMessageBudget = '2'` set BEFORE `dotnet run`, and wait for both
    tiles to read **Online**.
-3. Click **New chat**, tick `Ana` and `Ben`, and click **Start chat**.
+3. Click **New room**, tick `Ana` and `Ben`, and click **Open room**.
 4. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
 5. Wait until the Room halts and the pause block appears.
 6. Read `T-A` and find the `declined a turn in room` warning; note which Persona it names.

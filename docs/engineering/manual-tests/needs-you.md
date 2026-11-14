@@ -111,7 +111,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 1. Use the `⋯` menu on the `Bo` Room in `Rooms` and choose **Archive**.
 2. Look at the card.
-3. Open **Archived** (bottom of the Activity bar), select `Bo` on the **Chats** tab and choose **Restore**.
+3. Open **Archived** (bottom of the Activity bar), select `Bo` on the **Rooms** tab and choose **Restore**.
 4. Look at the card.
 
 **Pass if — all of these**

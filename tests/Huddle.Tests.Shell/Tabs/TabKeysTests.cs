@@ -37,6 +37,16 @@ public sealed class TabKeysTests
         Assert.Equal(expectedKey, TabKeys.Describe(url).Key);
     }
 
+    /// <summary>
+    /// A Room's Tab is titled "Room" with the chat icon until its menu click or TabSync gives it the Room's Name, so
+    /// even the fallback title names the thing a Room, never a chat.
+    /// </summary>
+    [Fact]
+    public void Describe_RoomAddress_FallbackTitleIsRoom()
+    {
+        Assert.Equal(new TabDescriptor("room:ab12", "Room", "chat"), TabKeys.Describe("/rooms/ab12"));
+    }
+
     /// <summary>An absolute address is reduced to its path, and a fragment is dropped.</summary>
     [Fact]
     public void ToRelative_AbsoluteWithFragment_KeepsPathAndQuery()

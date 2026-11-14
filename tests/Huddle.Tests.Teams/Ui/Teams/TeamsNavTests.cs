@@ -104,7 +104,7 @@ public sealed class TeamsNavTests
         Assert.Equal(expectedProjects, ProjectTexts(cut));
     }
 
-    /// <summary>The Team row's link goes to the Team page, and its "Team actions" button opens a menu whose items are "New chat" and "New project".</summary>
+    /// <summary>The Team row's link goes to the Team page, and its "Team actions" button opens a menu whose items are "New room" and "New project".</summary>
     [Fact]
     public async Task Team_Row_LinksToTheTeamPage_AndHasAMenuWithNewProject()
     {
@@ -120,7 +120,7 @@ public sealed class TeamsNavTests
         Assert.Equal("Actions for Business", button.GetAttribute("aria-label"));
         await cut.InvokeAsync(() => button.ClickAsync());
 
-        string[] expected = ["New chat", "New project…", "Rename team…", "Archive team…"];
+        string[] expected = ["New room", "New project…", "Rename team…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -190,7 +190,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => RowFor(cut, "Business").ContextMenuAsync());
 
-        string[] expected = ["New chat", "New project…", "Rename team…", "Archive team…"];
+        string[] expected = ["New room", "New project…", "Rename team…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -242,7 +242,7 @@ public sealed class TeamsNavTests
         Assert.NotNull(card.QuerySelector(".teams-nav-switcher-button"));
     }
 
-    /// <summary>Under a Team shortcut with nothing waiting on the Human, the Rooms section lists its Rooms flat, with no Needs you or All folder and no "New chat" row (the header's "+" opens it).</summary>
+    /// <summary>Under a Team shortcut with nothing waiting on the Human, the Rooms section lists its Rooms flat, with no Needs you or All folder and no "New room" row (the header's "+" opens it).</summary>
     [Fact]
     public async Task Team_SetAndNothingWaiting_ListsTheRoomsFlat_UnderTheRoomsHeader()
     {
@@ -260,7 +260,7 @@ public sealed class TeamsNavTests
             Assert.Equal(rooms, SectionHrefs(cut, "rooms"));
             Assert.Empty(cut.FindAll(".teams-nav-subfolder"));
             Assert.Empty(cut.FindAll(".teams-nav-new-chat"));
-            Assert.DoesNotContain("New chat", cut.Find(".teams-nav").TextContent, StringComparison.Ordinal); // contains-ok: haystack is the rendered nav's text
+            Assert.DoesNotContain("New room", cut.Find(".teams-nav").TextContent, StringComparison.Ordinal); // contains-ok: haystack is the rendered nav's text
         });
     }
 
@@ -339,8 +339,8 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-panel").GetAttribute("aria-label")));
-        Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim());
+        cut.WaitForAssertion(() => Assert.Equal("New room in Business", cut.Find(".new-chat-panel").GetAttribute("aria-label")));
+        Assert.Equal("New room in Business", cut.Find(".new-chat-heading").TextContent.Trim());
 
         await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
@@ -1043,7 +1043,7 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button.teams-nav-new-view")));
 
-        Assert.Equal("New chat in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label"));
+        Assert.Equal("New room in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label"));
         Assert.Equal("New task view", cut.Find("button.teams-nav-new-view").GetAttribute("aria-label"));
         Assert.Single(Section(cut, "rooms").QuerySelectorAll(".mud-tooltip-root"));
         Assert.Single(Section(cut, "tasks").QuerySelectorAll(".mud-tooltip-root"));
@@ -1155,7 +1155,7 @@ public sealed class TeamsNavTests
             await cut.InvokeAsync(() => button.ClickAsync());
         }
 
-        string[] expected = ["New chat", "Rename team…", "Archive team…"];
+        string[] expected = ["New room", "Rename team…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -1169,7 +1169,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
-        string[] expected = ["New chat", "Rename team…", "Archive team…"];
+        string[] expected = ["New room", "Rename team…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -1262,7 +1262,7 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal("Rooms", Section(cut, "rooms").QuerySelector(".teams-nav-section-title")?.TextContent.Trim());
-            Assert.Equal("New chat in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label"));
+            Assert.Equal("New room in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label"));
             Assert.Empty(SectionHrefs(cut, "rooms"));
         });
     }
@@ -1398,7 +1398,7 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("a[href='/rooms/fresh']")));
     }
 
-    /// <summary>T5 entry: choosing New chat in the Team menu opens the panel headed "New chat in Business".</summary>
+    /// <summary>T5 entry: choosing New chat in the Team menu opens the panel headed "New room in Business".</summary>
     [Fact]
     public async Task NewChatMenuItem_OpensThePanelForThatTeam()
     {
@@ -1407,9 +1407,9 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New chat", StringComparison.Ordinal)).ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New room", StringComparison.Ordinal)).ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New room in Business", cut.Find(".new-chat-heading").TextContent.Trim()));
     }
 
     /// <summary>An archived Team Room is not listed, and is not listed as one of the other scoped Rooms either.</summary>
@@ -1485,10 +1485,10 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         await OpenNewChatAsync(cut, "Business");
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New room in Business", cut.Find(".new-chat-heading").TextContent.Trim()));
 
         await OpenNewChatAsync(cut, "Sales");
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Sales", cut.Find(".new-chat-heading").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("New room in Sales", cut.Find(".new-chat-heading").TextContent.Trim()));
 
         await OpenNewChatAsync(cut, "Sales");
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-heading")));
@@ -1498,7 +1498,7 @@ public sealed class TeamsNavTests
     private static async Task OpenNewChatAsync(IRenderedComponent<ContainerFragment> cut, string team)
     {
         await cut.InvokeAsync(() => MenuButton(cut, team).ClickAsync());
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New chat", StringComparison.Ordinal)).ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(item => string.Equals(item.TextContent.Trim(), "New room", StringComparison.Ordinal)).ClickAsync());
     }
 
     /// <summary>The twin: with either feature still on, the Team menu offers "New project".</summary>
@@ -1513,7 +1513,7 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
-        string[] expected = ["New chat", "New project…", "Rename team…", "Archive team…"];
+        string[] expected = ["New room", "New project…", "Rename team…", "Archive team…"];
         Assert.Equal(expected, MenuItemTexts(cut));
     }
 
@@ -2044,13 +2044,13 @@ public sealed class TeamsNavTests
         FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label")));
+        cut.WaitForAssertion(() => Assert.Equal("New room in Business", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label")));
 
         await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("New chat in Business", cut.Find(".new-chat-heading").TextContent.Trim());
+            Assert.Equal("New room in Business", cut.Find(".new-chat-heading").TextContent.Trim());
             Assert.Single(cut.FindAll(".new-chat-panel"));
             Assert.Single(Section(cut, "rooms").QuerySelectorAll(".new-chat-panel"));
         });
@@ -2064,13 +2064,13 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Business/projects/Marketing");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
-        cut.WaitForAssertion(() => Assert.Equal("New chat in Marketing", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label")));
+        cut.WaitForAssertion(() => Assert.Equal("New room in Marketing", cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").GetAttribute("aria-label")));
 
         await cut.InvokeAsync(() => cut.Find(".teams-nav-section-rooms button.teams-nav-section-add").ClickAsync());
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("New chat in Business / Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
+            Assert.Equal("New room in Business / Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
             Assert.Single(Section(cut, "rooms").QuerySelectorAll(".new-chat-panel"));
         });
     }

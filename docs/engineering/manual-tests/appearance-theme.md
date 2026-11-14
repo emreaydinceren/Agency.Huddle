@@ -662,8 +662,8 @@ If the click produced neither of the two outcomes above — no file change AND n
 
 1. Press Ctrl+Shift+R on http://localhost:5100/ and confirm the whole application is dark.
 2. In DevTools -> Elements, select `<body>` and read Computed `background-color`. It must be `rgb(11, 11, 15)` (Lumen Dark's Background, `#0b0b0f`; `Themes/Skins/lumen.dark.json`).
-3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New chat` button; the room list; and the two nav links `Agents` and `Settings`. Note anything light.
-4. (b) Click `New chat`. Inspect the panel: the agent rows for `Ada` and `Bo`, their coloured status dots, and the `Start chat` button.
+3. (a) With no room selected, inspect: the page body; the sidebar drawer; the `New room` button; the room list; and the two nav links `Agents` and `Settings`. Note anything light.
+4. (b) Click `New room`. Inspect the panel: the agent rows for `Ada` and `Bo`, their coloured status dots, and the `Open room` button.
 5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message {Room name}… (/invite @Agent)`, and the budget note line.
 6. (d) Type `hello` and press Enter. WATCH THE DRAFT STREAM IN: inspect the streaming row, its caret, the stop control (a small outlined button), and any tool-activity line while they are on screen.
 7. (e) Type a fenced code block: type three backticks, then `code`, then three backticks, and press Enter. Inspect the rendered code block - it exercises the monospace token, still declared in `wwwroot/app-vars.css` since MudBlazor's theme has no monospace equivalent.
@@ -703,7 +703,7 @@ Save it, then press F5 on /agents.
 
 **Inconclusive if**
 
-If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If /agents shows `No Personas yet. Choose New agent to add one.`, parts (f) and (g) are INCONCLUSIVE until you add a Persona.
+If the sidebar has no `Ada` Room or `New room` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If /agents shows `No Personas yet. Choose New agent to add one.`, parts (f) and (g) are INCONCLUSIVE until you add a Persona.
 
 > [!NOTE]
 > TWO THINGS MUST NOT SWITCH AND ARE NOT BUGS. (1) The `An unhandled error has occurred.` banner stays LIGHT YELLOW in dark mode on purpose - it is shown when the application has already failed, the one moment a Theme cannot be trusted. (2) The Persona's Markdown source shown on the agent dialog deliberately keeps the inherited font rather than the monospace token. Free: Ada runs on the mock adapter and needs no Claude turn.
@@ -723,7 +723,7 @@ If the sidebar has no `Ada` Room or `New chat` lists no agents, parts (c), (d) a
 
 1. Go to http://localhost:5100/ and hover a room row in the sidebar. Note the highlight colour.
 2. In DevTools -> Elements, select that room row, click the `:hov` button in the Styles pane, tick `:hover`, and read Computed `background-color`. Write the value down.
-3. Click `New chat` and hover a row in the agent list. Force `:hover` on it the same way and read Computed `background-color`. Write it down.
+3. Click `New room` and hover a row in the agent list. Force `:hover` on it the same way and read Computed `background-color`. Write it down.
 4. Click `Agents` in the sidebar and hover an agent tile. Force `:hover` and read Computed `background-color`. Write it down.
 5. Compare the three values.
 6. Go back to a Room and click it so it shows as the ACTIVE/selected room in the sidebar. Read that row's Computed `background-color` and confirm it is a dark selected-surface colour, visibly different from the hover colour but still dark.
@@ -897,7 +897,7 @@ If the Blazor circuit drops mid-walk (the reconnect modal appears), reload and s
 
 1. Confirm the accent field is labelled `Accent for Lumen Light` and that no `Reset` link is shown. Click `Lumen Dark` and confirm the label becomes `Accent for Lumen Dark`.
 2. Click `Lumen Light` again. In the accent field enter the pale yellow `#ffeb3b` and press Tab. Run `type <data>\appearance.json` and confirm it holds `customizations` with a `lumen-light` entry whose `palette.primary` is `#ffeb3b`, and that a `Reset` link has appeared.
-3. Look at the primary-coloured controls: the `New chat` button and the active sidebar link. In DevTools -> Elements, select `<html>` and read the custom property `--mud-palette-primary` in Computed. It must NOT be `#ffeb3b`: it is a darker yellow of the same hue. Check that the `New chat` label or the active link text is readable against its background.
+3. Look at the primary-coloured controls: the `New room` button and the active sidebar link. In DevTools -> Elements, select `<html>` and read the custom property `--mud-palette-primary` in Computed. It must NOT be `#ffeb3b`: it is a darker yellow of the same hue. Check that the `New room` label or the active link text is readable against its background.
 4. Click `Lumen Dark`. The field now shows no accent and no `Reset` (the customization belongs to `Lumen Light`). Enter the dark navy `#1a1a40` and press Tab. Read `--mud-palette-primary` again: it is a LIGHTER blue of the same hue, not `#1a1a40`, and the primary controls are readable on the dark ground (`rgb(11, 11, 15)`).
 5. Run `type <data>\appearance.json` and confirm both `lumen-light` (`#ffeb3b`) and `lumen-dark` (`#1a1a40`) entries are present.
 6. Click `Reset`. The accent returns to Lumen Dark's own `#8379d8`, the `Reset` link goes, and the `lumen-dark` entry is removed from the file while `lumen-light` stays.
@@ -921,7 +921,7 @@ If the Blazor circuit drops mid-walk (the reconnect modal appears), reload and s
 
 **Inconclusive if**
 
-If you cannot read `--mud-palette-primary` in DevTools, compare the `New chat` button against a colour picker instead and record the two values you measured.
+If you cannot read `--mud-palette-primary` in DevTools, compare the `New room` button against a colour picker instead and record the two values you measured.
 
 ### APPEARANCETHEME-29 — There is no Library pane setting, and a leftover `libraryPaneSide` key is ignored without a warning and kept in the file
 

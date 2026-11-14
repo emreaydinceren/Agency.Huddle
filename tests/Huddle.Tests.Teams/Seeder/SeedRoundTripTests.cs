@@ -403,13 +403,13 @@ public sealed class SeedRoundTripTests
         IReadOnlyDictionary<string, string> ids = seed.Summary.Ids.RoomIds;
         Assert.Equal(
             [
-                $"| Chat | Q2 retro (root) | - | `{ids[SoftwareCoRooms.Q2Retro]}` |",
-                $"| Chat | Legacy Site (Legacy Site Team Room) | - | `{ids[SoftwareCoArchive.TeamLegacySite]}` |",
-                $"| Chat | Checkout v1 sunset (Legacy Site / Checkout v1 chat) | - | `{ids[SoftwareCoArchive.ChatLegacyCheckout]}` |",
-                $"| Chat | Log shipping spike (Platform / Observability chat) | - | `{ids[SoftwareCoArchive.ChatPlatformLogSpike]}` |",
-                $"| Chat | Spring promo wrap-up (Growth / Spring Promo chat) | - | `{ids[SoftwareCoArchive.ChatGrowthSpringPromo]}` |",
+                $"| Room | Q2 retro (root) | - | `{ids[SoftwareCoRooms.Q2Retro]}` |",
+                $"| Room | Legacy Site (Legacy Site Team Room) | - | `{ids[SoftwareCoArchive.TeamLegacySite]}` |",
+                $"| Room | Checkout v1 sunset (in Legacy Site / Checkout v1) | - | `{ids[SoftwareCoArchive.ChatLegacyCheckout]}` |",
+                $"| Room | Log shipping spike (in Platform / Observability) | - | `{ids[SoftwareCoArchive.ChatPlatformLogSpike]}` |",
+                $"| Room | Spring promo wrap-up (in Growth / Spring Promo) | - | `{ids[SoftwareCoArchive.ChatGrowthSpringPromo]}` |",
             ],
-            manifest.Split('\n').Where(static line => line.StartsWith("| Chat | ", StringComparison.Ordinal)));
+            manifest.Split('\n').Where(static line => line.StartsWith("| Room | ", StringComparison.Ordinal) && !line.StartsWith("| Room | File |", StringComparison.Ordinal)));
     }
 
     private static async Task<string?[]> RolesAsync(SeededFolder seed, string[] names, CancellationToken ct)

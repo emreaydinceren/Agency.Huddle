@@ -214,7 +214,7 @@ the Project, showing the Files tab scoped to the Project's folder, with no Membe
 - The Members tab is not present.
 - The Files and Tasks tabs are present.
 - In the sidebar, the `Marketing Project` row is selected and the Business row is not; the row has no chevron and no `⋮` menu. The sections below the list now belong to the Project: **ROOMS** (empty until it has a Room), **TASKS** and **LIBRARY**.
-- Press the "+" on **ROOMS**: the panel reads "New chat in Business / Marketing Project". Start a chat; the Room is listed under **ROOMS** while `Marketing Project` is selected, and not under Business's own **ROOMS** once you select the Business row.
+- Press the "+" on **ROOMS**: the panel reads "New room in Business / Marketing Project". Start a chat; the Room is listed under **ROOMS** while `Marketing Project` is selected, and not under Business's own **ROOMS** once you select the Business row.
 - The **LIBRARY** link opens `/teams/Business/projects/Marketing%20Project/files`. A Task View under **TASKS** opens `/teams/Business/projects/Marketing%20Project/tasks/{View}` and lists only that Project's Tasks, with the Tab titled "{View} · Business / Marketing Project"; `Marketing Project` stays selected.
 - Select the Business row: it opens `/teams/Business`. Its **LIBRARY** is one link to `/teams/Business/files`, its **TASKS** views list only Tasks with no Project, and its open Task count counts only those.
 

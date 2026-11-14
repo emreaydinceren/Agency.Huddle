@@ -105,7 +105,7 @@
                                            OnClick="menuContext.ToggleAsync" />
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New chat</MudMenuItem>
+                            <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New room</MudMenuItem>
                             @if (this.ProjectsAllowed)
                             {
                                 <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">New project…</MudMenuItem>
@@ -572,7 +572,7 @@
         List<Room> rooms = project is null && !noProject ? [.. allRooms] : [.. ScopeRooms(team, allRooms, project)];
         string scopeKey = ScopeFolderSuffix(project, noProject);
         string roomsKey = FolderKey(team.Name, RoomsFolder + scopeKey);
-        string newChatLabel = $"New chat in {project ?? team.Name}";
+        string newChatLabel = $"New room in {project ?? team.Name}";
         RenderFragment add = @<MudTooltip Text="@newChatLabel">
             <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add"
                            aria-label="@newChatLabel"
