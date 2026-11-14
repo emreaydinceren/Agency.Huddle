@@ -13,7 +13,7 @@ Coverage: use cases L1 to L16 (except L4 and L5, removed with professions on 202
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free), which also defines the terminals and the standing conventions. This area adds:
 
 1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup first. The picker copies files into `<data>\avatars` and rewrites `<data>\avatars.json`, and that backup is the only undo.
-2. **The library.** The app ships with its library: 126 pixel-art PNGs, each 256 × 256 with a transparent background and under the 512 000-byte cap, and a `master.json` index, in `<repo>\src\Huddle.App\AvatarLibrary`, copied beside the app by the build. `tools/avatar-pixel-art/generate.py` generates both. The records carry no profession (the picker has no professions since 2026-11-12), and the files are named `pixel-avatar_<skin>_<m|f>_<nn>.png`, where the skin is `fair`, `tan` or `dark` (42 each, the **Light**, **Tan** and **Dark** groups) and `nn` runs from `01` to `21`, for example `pixel-avatar_tan_f_01.png`. The tag cloud holds 21 tags, most frequent first: `glasses` 76, `short hair` 54, `no-glasses` 50, `black hair` 48, `brown hair` 44, `medium hair` 38, `long hair` 34, `blue glasses` 26, `red glasses` 26, `black glasses` 24, `beard` 19, then `beige top`, `black top`, `blonde hair`, `blue top`, `gray top`, `pink top`, `red top` and `white top` 18 each, `red hair` 16 and `mustache` 9. With `Team:AvatarLibrary:Dir` unset the app uses it, so most tests need no configuration. On this page `<lib>` is the library folder the app is using: that repo folder, or your copy when `Dir` is set.
+2. **The library.** The app ships with its library: 126 pixel-art PNGs, each 256 × 256 with a transparent background and under the 512 000-byte cap, and a `master.json` index, in `<repo>\src\Huddle.App\AvatarLibrary`, copied beside the app by the build. `tools/avatar-pixel-art/generate.py` generates both. The records carry no profession (the picker has no professions since 2026-11-12), and the files are named `pixel-avatar_<skin>_<m|f>_<nn>.png`, where the skin is `fair`, `tan` or `dark` (42 each, the **Light**, **Tan** and **Dark** groups) and `nn` runs from `01` to `21`, for example `pixel-avatar_tan_f_01.png`. The tag cloud holds 21 tags, most frequent first: `glasses` 76, `short hair` 54, `no-glasses` 50, `black hair` 48, `brown hair` 44, `medium hair` 38, `long hair` 34, `blue glasses` 26, `red glasses` 26, `silver glasses` 24, `beard` 19, then `beige top`, `black top`, `blonde hair`, `blue top`, `gray top`, `pink top`, `red top` and `white top` 18 each, `red hair` 16 and `mustache` 9. With `Team:AvatarLibrary:Dir` unset the app uses it, so most tests need no configuration. On this page `<lib>` is the library folder the app is using: that repo folder, or your copy when `Dir` is set.
 3. **A copy to edit.** AVATARLIB-02, -20, -21, -22 and -26 rename, edit or delete library files, so they use a copy of the library. Never edit the repo's folder. Copy it first and point the app at the copy. In `T-A`, before the two lines of `P-LAUNCH-FREE`:
 
    ```powershell
@@ -266,7 +266,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Before you start**
 
-- The dialog is open, unfiltered. The tag cloud starts `glasses`, `short hair`, `no-glasses`, and `beard` is the 11th chip, between `black glasses` and `beige top`.
+- The dialog is open, unfiltered. The tag cloud starts `glasses`, `short hair`, `no-glasses`, and `beard` is the 11th chip, between `silver glasses` and `beige top`.
 
 **Steps**
 
@@ -279,7 +279,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 - After step 1, `beard` sits at the far left with an X, ahead of `glasses`, and the count reads `19 of 126`.
 - The chip carries `aria-pressed="true"` in the accessibility view.
-- After step 3, `beard` is back in its place between `black glasses` and `beige top`, and the count is `126 of 126` again.
+- After step 3, `beard` is back in its place between `silver glasses` and `beige top`, and the count is `126 of 126` again.
 
 **Fail if — any of these**
 
@@ -463,7 +463,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Pass if — all of these**
 
-- Before **Show all**, the cloud shows 12 tags, the most frequent first, then alphabetical: `glasses`, `short hair`, `no-glasses`, `black hair`, `brown hair`, `medium hair`, `long hair`, `blue glasses`, `red glasses`, `black glasses`, `beard`, `beige top`. The button reads **Show all (21)**.
+- Before **Show all**, the cloud shows 12 tags, the most frequent first, then alphabetical: `glasses`, `short hair`, `no-glasses`, `black hair`, `brown hair`, `medium hair`, `long hair`, `blue glasses`, `red glasses`, `silver glasses`, `beard`, `beige top`. The button reads **Show all (21)**.
 - After **Show all**, all 21 tags are shown, ending `pink top`, `red top`, `white top`, `red hair`, `mustache`, and the button reads **Show fewer**.
 - There is no **Professions** cloud: the tag cloud is the only chip cloud.
 - The tag chosen in step 3 remains visible after the cloud is collapsed, at the left with an X, because a selected tag is shown beyond the cap.

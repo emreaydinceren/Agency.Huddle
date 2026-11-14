@@ -29,13 +29,14 @@ The rest are spread across each gender's 63 avatars by ratio:
 | Attribute | Men | Women |
 | --- | --- | --- |
 | Hair length | 60% short, 25% medium, 15% long | 25% short, 35% medium, 40% long |
-| Glasses | 40% none, 20% each red, blue and black frames | same |
+| Glasses | 40% none, 20% each red, blue and silver frames | same |
 | Facial hair | 55% none, 15% mustache, 30% beard | none |
 
 The counts are exact (largest remainder), and who gets which value is a shuffle seeded by `SEED`,
 so every run writes byte-identical files. A last pass (`repair`) swaps glasses or hair colour
-between avatars until no colours clash: red hair never has red frames or a red top, and black hair
-on darker skin never has black frames. The swaps keep every count exact.
+between avatars until no colours clash: red hair never has red frames or a red top. The swaps keep
+every count exact. There are no black frames: they fused with dark hair, the outline and the eyes,
+so they read as a bar on fair skin and vanished on darker skin. Silver reads on every skin and hair.
 
 ## Regenerate
 
@@ -82,11 +83,22 @@ Options:
 ## How a picture is drawn
 
 Each avatar is painted in layers on a 32 × 32 grid: hair behind the head, the body and neckline,
-the head and face, the fringe, the hair's edge, a mustache or short boxed beard, then glasses on
-top. Wearers of glasses have no brow row, because the top of the frame sits right under it. An
-outline is added around the whole figure. Hair gets a darker edge where it meets skin, and where
-brown hair meets the darker skin (close in tone) that edge is drawn in the outline colour so the two
-stay apart. Facial hair sits on the mouth row and moves the lip one row down, which keeps a row of
-skin between it and the glasses; its colour is the hair colour stepped darker until it stands off
-the skin (`facial_tones`), so a blonde beard on fair skin or a brown one on darker skin still shows. The PNG is that grid scaled 8 times with nearest-neighbour, so the
-pixels stay square.
+the head and face, the fringe, the hair's edge, a mustache or a full beard (from the sideburns down
+the jaw, rounded under the chin to row 21 with a two-pixel chin shadow, so the head keeps a neck),
+then glasses on top. Wearers of glasses have no brow row, because the top of the frame sits right
+under it. An outline is added around the whole figure. Hair gets a darker edge where it meets skin,
+and where brown hair meets the darker skin (close in tone) that edge is drawn in the outline colour
+so the two stay apart.
+
+Facial hair sits on the mouth row and moves the lip one row down, which keeps a row of skin between
+it and the glasses; the lip is toned 45% into the hair colour so it does not glare. The hair colour
+is stepped darker until it stands off the skin (`facial_tones`), with three exceptions: black stays
+at its own base (anything darker is darker than the outline, and hair, beard and outline fuse), and
+blonde takes a fixed colour on tan and darker skin (`FACIAL_OVERRIDES`), where stepping landed on a
+muddy olive or a bright scarf. Frames take a per-skin tone where the default is too close in
+brightness to the skin (`FRAME_OVERRIDES`): silver is darker on fair and lighter on tan, and red is
+brighter on darker skin.
+
+Women have a lash pixel at each eye and a scoop neck; men a crew neck, and some a mustache or beard.
+There is no blush: it was the most stereotyped cue and barely showed on darker skin. The PNG is that
+grid scaled 8 times with nearest-neighbour, so the pixels stay square.

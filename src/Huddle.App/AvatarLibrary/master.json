@@ -1,6 +1,6 @@
 {
  "description": "Master index of the bundled pixel-art avatars. One record per PNG in this folder.",
- "generated": "2026-11-12",
+ "generated": "2026-11-13",
  "generator": "tools/avatar-pixel-art/generate.py",
  "count": 126,
  "notes": [
@@ -30,10 +30,10 @@
    "red": 16
   },
   "glasses_color": {
-   "black": 24,
    "blue": 26,
    "none": 50,
-   "red": 26
+   "red": 26,
+   "silver": 24
   },
   "facial_hair": {
    "beard": 19,
@@ -53,7 +53,6 @@
  "distinct_tags": [
   "beard",
   "beige top",
-  "black glasses",
   "black hair",
   "black top",
   "blonde hair",
@@ -71,6 +70,7 @@
   "red hair",
   "red top",
   "short hair",
+  "silver glasses",
   "white top"
  ],
  "avatars": [
@@ -337,7 +337,7 @@
    "hair_length": "medium",
    "hair_color": "red",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "beard",
    "outfit": "pink top",
    "outfit_color": "pink",
@@ -348,7 +348,7 @@
     "red hair",
     "pink top",
     "glasses",
-    "black glasses",
+    "silver glasses",
     "beard"
    ]
   },
@@ -361,7 +361,7 @@
    "hair_length": "short",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "beard",
    "outfit": "white top",
    "outfit_color": "white",
@@ -372,7 +372,7 @@
     "blonde hair",
     "white top",
     "glasses",
-    "black glasses",
+    "silver glasses",
     "beard"
    ]
   },
@@ -408,7 +408,7 @@
    "hair_length": "long",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "white top",
    "outfit_color": "white",
@@ -419,7 +419,7 @@
     "blonde hair",
     "white top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -498,7 +498,7 @@
    "hair_length": "medium",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "gray top",
    "outfit_color": "gray",
@@ -509,7 +509,7 @@
     "blonde hair",
     "gray top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -589,7 +589,7 @@
    "hair_length": "short",
    "hair_color": "brown",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "black top",
    "outfit_color": "black",
@@ -600,7 +600,7 @@
     "brown hair",
     "black top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -612,7 +612,7 @@
    "hair_length": "short",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "mustache",
    "outfit": "black top",
    "outfit_color": "black",
@@ -623,7 +623,7 @@
     "black hair",
     "black top",
     "glasses",
-    "black glasses",
+    "silver glasses",
     "mustache"
    ]
   },
@@ -660,7 +660,7 @@
    "hair_length": "short",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "blue top",
    "outfit_color": "blue",
@@ -671,7 +671,7 @@
     "blonde hair",
     "blue top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -706,7 +706,7 @@
    "hair_length": "long",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "beard",
    "outfit": "red top",
    "outfit_color": "red",
@@ -717,7 +717,7 @@
     "black hair",
     "red top",
     "glasses",
-    "black glasses",
+    "silver glasses",
     "beard"
    ]
   },
@@ -913,7 +913,7 @@
    "hair_length": "medium",
    "hair_color": "brown",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "beige top",
    "outfit_color": "beige",
@@ -924,7 +924,7 @@
     "brown hair",
     "beige top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -959,7 +959,7 @@
    "hair_length": "long",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "beige top",
    "outfit_color": "beige",
@@ -970,7 +970,7 @@
     "black hair",
     "beige top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -1027,7 +1027,7 @@
    "hair_length": "short",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "gray top",
    "outfit_color": "gray",
@@ -1038,7 +1038,7 @@
     "black hair",
     "gray top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -1421,7 +1421,7 @@
    "hair_length": "short",
    "hair_color": "brown",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "beige top",
    "outfit_color": "beige",
@@ -1432,7 +1432,7 @@
     "brown hair",
     "beige top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -1535,7 +1535,7 @@
    "hair_length": "medium",
    "hair_color": "red",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "black top",
    "outfit_color": "black",
@@ -1546,7 +1546,7 @@
     "red hair",
     "black top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -1558,7 +1558,7 @@
    "hair_length": "short",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "red",
    "facial_hair": "none",
    "outfit": "black top",
    "outfit_color": "black",
@@ -1569,7 +1569,7 @@
     "black hair",
     "black top",
     "glasses",
-    "black glasses"
+    "red glasses"
    ]
   },
   {
@@ -1581,7 +1581,7 @@
    "hair_length": "short",
    "hair_color": "red",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "black top",
    "outfit_color": "black",
@@ -1592,7 +1592,7 @@
     "red hair",
     "black top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -1604,7 +1604,7 @@
    "hair_length": "short",
    "hair_color": "brown",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "red",
    "facial_hair": "none",
    "outfit": "blue top",
    "outfit_color": "blue",
@@ -1615,7 +1615,7 @@
     "brown hair",
     "blue top",
     "glasses",
-    "black glasses"
+    "red glasses"
    ]
   },
   {
@@ -1645,8 +1645,8 @@
    "file": "pixel-avatar_fair_f_06.png",
    "skin_tone": "fair",
    "gender_presentation": "woman",
-   "hair": "medium brown",
-   "hair_length": "medium",
+   "hair": "long brown",
+   "hair_length": "long",
    "hair_color": "brown",
    "glasses": true,
    "glasses_color": "red",
@@ -1656,7 +1656,7 @@
    "tags": [
     "skin-fair",
     "woman",
-    "medium hair",
+    "long hair",
     "brown hair",
     "blue top",
     "glasses",
@@ -1695,7 +1695,7 @@
    "hair_length": "long",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "red top",
    "outfit_color": "red",
@@ -1706,7 +1706,7 @@
     "blonde hair",
     "red top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -1987,7 +1987,7 @@
    "hair_length": "medium",
    "hair_color": "red",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "gray top",
    "outfit_color": "gray",
@@ -1998,7 +1998,7 @@
     "red hair",
     "gray top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2032,7 +2032,7 @@
    "hair_length": "long",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "black top",
    "outfit_color": "black",
@@ -2043,7 +2043,7 @@
     "blonde hair",
     "black top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2192,7 +2192,7 @@
    "hair_length": "short",
    "hair_color": "brown",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "red top",
    "outfit_color": "red",
@@ -2203,7 +2203,7 @@
     "brown hair",
     "red top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2395,7 +2395,7 @@
    "hair_length": "long",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "beige top",
    "outfit_color": "beige",
@@ -2406,7 +2406,7 @@
     "black hair",
     "beige top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2418,7 +2418,7 @@
    "hair_length": "long",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "gray top",
    "outfit_color": "gray",
@@ -2429,7 +2429,7 @@
     "black hair",
     "gray top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2464,7 +2464,7 @@
    "hair_length": "short",
    "hair_color": "blonde",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "gray top",
    "outfit_color": "gray",
@@ -2475,7 +2475,7 @@
     "blonde hair",
     "gray top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2752,29 +2752,6 @@
    "file": "pixel-avatar_dark_f_13.png",
    "skin_tone": "dark",
    "gender_presentation": "woman",
-   "hair": "long black",
-   "hair_length": "long",
-   "hair_color": "black",
-   "glasses": true,
-   "glasses_color": "red",
-   "facial_hair": "none",
-   "outfit": "white top",
-   "outfit_color": "white",
-   "tags": [
-    "skin-dark",
-    "woman",
-    "long hair",
-    "black hair",
-    "white top",
-    "glasses",
-    "red glasses"
-   ]
-  },
-  {
-   "id": 119,
-   "file": "pixel-avatar_dark_f_14.png",
-   "skin_tone": "dark",
-   "gender_presentation": "woman",
    "hair": "medium black",
    "hair_length": "medium",
    "hair_color": "black",
@@ -2794,6 +2771,29 @@
    ]
   },
   {
+   "id": 119,
+   "file": "pixel-avatar_dark_f_14.png",
+   "skin_tone": "dark",
+   "gender_presentation": "woman",
+   "hair": "medium black",
+   "hair_length": "medium",
+   "hair_color": "black",
+   "glasses": true,
+   "glasses_color": "silver",
+   "facial_hair": "none",
+   "outfit": "white top",
+   "outfit_color": "white",
+   "tags": [
+    "skin-dark",
+    "woman",
+    "medium hair",
+    "black hair",
+    "white top",
+    "glasses",
+    "silver glasses"
+   ]
+  },
+  {
    "id": 120,
    "file": "pixel-avatar_dark_f_15.png",
    "skin_tone": "dark",
@@ -2802,7 +2802,7 @@
    "hair_length": "short",
    "hair_color": "black",
    "glasses": true,
-   "glasses_color": "red",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "white top",
    "outfit_color": "white",
@@ -2813,7 +2813,7 @@
     "black hair",
     "white top",
     "glasses",
-    "red glasses"
+    "silver glasses"
    ]
   },
   {
@@ -2825,7 +2825,7 @@
    "hair_length": "short",
    "hair_color": "brown",
    "glasses": true,
-   "glasses_color": "black",
+   "glasses_color": "silver",
    "facial_hair": "none",
    "outfit": "beige top",
    "outfit_color": "beige",
@@ -2836,7 +2836,7 @@
     "brown hair",
     "beige top",
     "glasses",
-    "black glasses"
+    "silver glasses"
    ]
   },
   {
