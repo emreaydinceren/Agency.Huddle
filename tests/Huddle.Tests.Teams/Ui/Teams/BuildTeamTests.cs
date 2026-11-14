@@ -6,8 +6,10 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Avatars;
@@ -493,6 +495,113 @@ public sealed class BuildTeamTests
 
         Assert.Equal(2, cut.FindAll(".roster-card").Count);
         Assert.DoesNotContain(fixture.Personas.Entries, entry => string.Equals(entry.Title, "Bookkeeper", StringComparison.Ordinal));
+    }
+
+    /// <summary>Registers what the roster card's Adapter, Model and Effort rows read: a model catalog, one Adapter and the real <see cref="AgentProfiles"/> over the fixture's stores.</summary>
+    /// <param name="ctx">The context to register into, before anything renders.</param>
+    /// <param name="catalog">The fake model catalog.</param>
+    private static void AddProfiles(MudBunitContext ctx, FakeModelCatalog catalog)
+    {
+        ctx.Services.AddSingleton<IModelCatalog>(catalog);
+        ctx.Services.AddSingleton(AgentProfileCardTestSupport.BuildAdapterCatalog(("claude", "Claude Code")));
+        ctx.Services.AddSingleton(services => new AgentProfiles(
+            services.GetRequiredService<PersonaStore>(),
+            services.GetRequiredService<TeamTypeCatalog>(),
+            services.GetRequiredService<HiringPoolCatalog>(),
+            services.GetRequiredService<AvatarStore>(),
+            services.GetRequiredService<ITeamCatalog>(),
+            services.GetRequiredService<ITeamDirectory>(),
+            services.GetRequiredService<IAgentGateway>(),
+            services.GetRequiredService<PersonaHealth>(),
+            services.GetRequiredService<AdapterCatalog>(),
+            services.GetRequiredService<IModelCatalog>(),
+            NullLogger<AgentProfiles>.Instance));
+    }
+
+    /// <summary>A draft's Model and Effort picked in the Agent card and saved show on its roster card, so the Human sees what the Agent will run on before approving (#542). Nothing is cached, so the card reads the stored ids: Haiku replaces the tier's default Sonnet.</summary>
+    [Fact]
+    public async Task Roster_DraftEditedToAModel_ShowsTheChosenModelAndEffortOnItsCard()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+
+        // The Agent card injects services the page itself never touches (supervisor, spend, reset, host actions); the app's own stand in for them.
+        ctx.Services.CopyFrom(
+            factory.Services,
+            typeof(PersonaSpend),
+            typeof(PersonaCommands),
+            typeof(PersonaSupervisor),
+            typeof(BuiltinAgentReset),
+            typeof(Agency.Huddle.App.Gateway.HostActions),
+            typeof(Agency.Huddle.App.Gateway.IRemoteAccessState));
+        FakeModelCatalog catalog = new()
+        {
+            Models = [new AgentModelOption("haiku", "Haiku", null), new AgentModelOption("sonnet", "Sonnet", null)],
+            DefaultEffortLevels = [new AgentEffortOption("low", "Low", null), new AgentEffortOption("high", "High", null)],
+        };
+        AddProfiles(ctx, catalog);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.roster-edit").ClickAsync());
+        cut.WaitForAssertion(() => Assert.False(AgentProfileCardTestSupport.IsSelectInert(cut, "Model")));
+
+        await AgentProfileCardTestSupport.OpenSelectAsync(cut, "Model");
+        await AgentProfileCardTestSupport.ClickSelectItemAsync(cut, "Haiku");
+        cut.WaitForAssertion(() => Assert.False(AgentProfileCardTestSupport.IsSelectInert(cut, "Effort")));
+        await AgentProfileCardTestSupport.OpenSelectAsync(cut, "Effort");
+        await AgentProfileCardTestSupport.ClickSelectItemAsync(cut, "Low");
+        await AgentProfileCardTestSupport.ClickButtonAsync(cut, "Save draft");
+
+        cut.WaitForAssertion(() =>
+        {
+            IElement card = Assert.Single(cut.FindAll(".roster-card"));
+            Assert.Equal("Claude Code", card.QuerySelector(".roster-runtime-adapter")?.TextContent.Trim());
+            Assert.Equal("haiku", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+            Assert.Equal("low", card.QuerySelector(".roster-runtime-effort")?.TextContent.Trim());
+        });
+    }
+
+    /// <summary>A fresh draft that has no Effort picked still says what it runs on: the Adapter, the Model its tier gave it (an id, as the cache holds no name) and the default wording for Effort.</summary>
+    [Fact]
+    public async Task Roster_FreshDraft_ShowsTheAdapterAndTheDefaultWording()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        AddProfiles(ctx, new FakeModelCatalog());
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal("Claude Code", card.QuerySelector(".roster-runtime-adapter")?.TextContent.Trim());
+        Assert.Equal("sonnet", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+        Assert.Equal("Model default", card.QuerySelector(".roster-runtime-effort")?.TextContent.Trim());
+        Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
+    }
+
+    /// <summary>A member on the Team page's Members tab shows the Model and Effort stored for it, as its avatar popover does.</summary>
+    [Fact]
+    public async Task Roster_ExistingMember_ShowsItsStoredModel()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.Personas.Add(new PersonaIdentity("Ada", "Lead", "ada", Teams: ["Garden"], Role: new RoleRef("t01", "tutor", "1.0.0")), "You lead.", "sonnet", "high");
+        fixture.Catalog.Teams = [new TeamSummary("Garden", [], ["Ada"], true) { TeamType = new VersionedRef("t01", "1.0.0"), Manager = "Ada" }];
+        fixture.Folders.UpdateResult = true;
+        fixture.Folders.ReadResult = new TeamFile(new VersionedRef("t01", "1.0.0"), "Ada", null, null, string.Empty);
+        await using MudBunitContext ctx = fixture.NewContext();
+        AddProfiles(ctx, new FakeModelCatalog { Runtime = new RuntimeNames("Sonnet", "High") });
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal("Sonnet", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+        Assert.Equal("High", card.QuerySelector(".roster-runtime-effort")?.TextContent.Trim());
     }
 
     /// <summary>A role with suggested avatars draws one of them; a role without draws from the whole library; the draft shows the image, and Re-roll draws again.</summary>

@@ -41,6 +41,21 @@ public sealed class AgentProfilesTests
         Assert.Equal(new ProfileRuntime("Codex", "gpt-5", "high"), view.Profile.Runtime);
     }
 
+    /// <summary>A selection with no Persona behind it (a Build a team draft) reads from the cache alone: the Adapter's display name, the cached names, and no probe.</summary>
+    [Fact]
+    public void DescribeRuntime_Selection_ReadsTheCacheWithoutProbing()
+    {
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Sonnet", "Medium");
+
+        ProfileRuntime chosen = fixture.Profiles.DescribeRuntime("codex", "sonnet", "medium");
+        ProfileRuntime unchosen = fixture.Profiles.DescribeRuntime(null, null, null);
+
+        Assert.Equal(new ProfileRuntime("Codex", "Sonnet", "Medium"), chosen);
+        Assert.Equal(new ProfileRuntime("Claude Code", "Sonnet (default)", "Medium (default)"), unchosen);
+        Assert.Equal(0, fixture.ModelCatalog.ProbeCount);
+    }
+
     /// <summary>An Agent that chose nothing reads as the default Adapter, with the Agent card's own default wording.</summary>
     [Fact]
     public async Task BuildAsync_NoChoices_ReadsDefaults()
