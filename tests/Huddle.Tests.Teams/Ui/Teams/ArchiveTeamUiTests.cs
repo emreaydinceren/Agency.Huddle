@@ -20,6 +20,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -487,8 +488,8 @@ public sealed class ArchiveTeamUiTests
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         ctx.Services.AddSingleton<IArchiveService>(archive);
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(null);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
         return ctx;
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Tabs;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -193,7 +194,7 @@ public sealed class TabHostTests
 
         _ = RenderHost(ctx);
 
-        ctx.JSInterop.VerifyInvoke("huddleTabs.attach");
+        ctx.Module(JsModule.Tabs).VerifyInvoke("attach");
     }
 
     /// <summary>The page of the active Tab is mounted, resolved from the Tab's address with its route values.</summary>

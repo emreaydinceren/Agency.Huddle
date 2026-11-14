@@ -1,12 +1,25 @@
-// Behaviour harness for window.teamComposer's Reference picker (app.js). Run by ComposerScriptTests with
-// `node composer-picker.harness.js <path to app.js>`; prints one JSON object of scenario results.
-// app.js is loaded into a vm context with just enough of a DOM: a textarea stand-in, a recording
+// Behaviour harness for the Reference picker in composer.js (exposed here as window.teamComposer). Run by
+// ComposerScriptTests with `node composer-picker.harness.js <path to composer.js>`; prints one JSON object of
+// scenario results. composer.js is loaded into a vm context with just enough of a DOM: a textarea stand-in, a recording
 // DotNetObjectReference, and a document.execCommand that either succeeds or is refused.
 "use strict";
 const fs = require("fs");
 const vm = require("vm");
 
 const source = fs.readFileSync(process.argv[2], "utf8");
+
+// composer.js is an ES module that exports only its public members. The tests also drive internals such as
+// findToken, so the final export statement is cut off and the whole object is exposed as window.teamComposer
+// inside the vm context only; production code exports nothing extra.
+function asScript(moduleSource) {
+    const exportStatement = /^export const \{[^}]*\} = composer;[ \t]*\r?\n?$/m;
+    if (!exportStatement.test(moduleSource)) {
+        throw new Error("composer.js no longer ends with `export const { ... } = composer;`.");
+    }
+    return moduleSource.replace(exportStatement, "") + "\nwindow.teamComposer = composer;";
+}
+
+const script = asScript(source);
 
 function load(execCommandWorks) {
     const context = { setTimeout: () => 0, console };
@@ -27,7 +40,7 @@ function load(execCommandWorks) {
         },
     };
     vm.createContext(context);
-    vm.runInContext(source, context);
+    vm.runInContext(script, context);
     return context;
 }
 

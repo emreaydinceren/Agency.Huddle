@@ -110,7 +110,7 @@ If BOTH the sidebar (title `No rooms yet`, line `Start an agent to create one.`)
 
 **Fail if — any of these**
 
-- Enter inserts a newline in the textarea and nothing posts -> the keydown listener in `wwwroot/app.js` never attached; check the browser Console for an error naming `teamComposer.attach`.
+- Enter inserts a newline in the textarea and nothing posts -> the keydown listener in `wwwroot/composer.js` never attached; check the browser Console, and the server log for "Unhandled exception in circuit", for an error from `attach`.
 - The textarea still holds `hello there` after Enter -> the JS clear did not run even though the send did.
 - The row appears only after pressing F5 -> the live `MessagePosted` subscription on the Room page is broken; the store is fine but the page is not listening.
 - `Lines` grew by 2 or more for one Enter -> the Message is being appended more than once (or an Agent answered an unmentioned Message in a three-Member Room, which is a Reply Gate defect to report separately).
@@ -122,7 +122,7 @@ If BOTH the sidebar (title `No rooms yet`, line `Start an agent to create one.`)
 If `$data\rooms` does not exist AND no row appeared, you cannot tell a posting failure from a storage failure. Check `T-A` for an exception, then retry once in the seeded `Bo` Room. If it works there, record a FAIL scoped to the first Room; if it fails in both, record INCONCLUSIVE and report the console output verbatim.
 
 > [!NOTE]
-> The textarea is cleared by JavaScript right after the server call returns (`app.js:54-55` awaits `SendAsync`, then clears), whether or not the server accepted the text. That is why a rejected send still loses the typed text — tested deliberately in ROOMMESSAGING-22, not here.
+> The textarea is cleared by JavaScript right after the server call returns (`send` in `composer.js` awaits `SendAsync`, then clears), whether or not the server accepted the text. That is why a rejected send still loses the typed text — tested deliberately in ROOMMESSAGING-22, not here.
 
 ### ROOMMESSAGING-03 — Shift+Enter inserts a newline and does not send
 
@@ -895,7 +895,7 @@ If `Bo` is already a member of the `Ada` Room, the invite will behave differentl
 If the composer shows no line at all AND nothing posts, you cannot tell a missing error line from a dead submit path. Send a valid Message first to confirm posting still works, then re-run — if valid sends work and errors are silent, that is a FAIL, not INCONCLUSIVE.
 
 > [!NOTE]
-> TWO FINDINGS TO RECORD (both current behaviour, so file as findings, not regressions): (1) the textarea is cleared by JavaScript once the send call returns (`app.js:54-55` awaits `SendAsync` and then clears it, whatever the result), so a rejected submit destroys what the Human typed with no way to recover or edit it; (2) a legitimate message that merely begins with a slash — a file path like `/usr/local/bin ...` — is rejected as `Unknown command` and can never be posted.
+> TWO FINDINGS TO RECORD (both current behaviour, so file as findings, not regressions): (1) the textarea is cleared by JavaScript once the send call returns (`send` in `composer.js` awaits `SendAsync` and then clears it, whatever the result), so a rejected submit destroys what the Human typed with no way to recover or edit it; (2) a legitimate message that merely begins with a slash — a file path like `/usr/local/bin ...` — is rejected as `Unknown command` and can never be posted.
 
 ### ROOMMESSAGING-23 — Typed-but-unsent composer text carries over into the Room you switch to
 

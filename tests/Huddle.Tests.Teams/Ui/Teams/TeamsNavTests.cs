@@ -24,6 +24,7 @@ using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -1549,7 +1550,7 @@ public sealed class TeamsNavTests
     /// <summary>
     /// A fresh MudBlazor-aware bUnit context holding everything <c>TeamsNav</c> injects: the catalog
     /// fake as <see cref="ITeamCatalog"/> and default <see cref="TeamOptions"/>, plus the
-    /// <c>huddleStorage</c> JS calls: <c>get</c> answers <paramref name="stored"/> (or throws), and
+    /// <c>storage.js</c> calls: <c>get</c> answers <paramref name="stored"/> (or throws), and
     /// <c>set</c> is recorded (or throws when <paramref name="storageThrows"/>). Later tasks add their
     /// own services here so these rows stay green. The create actions' <see cref="ITeamFolders"/> is
     /// <paramref name="folders"/> (a fresh fake when omitted), <paramref name="libraryEnabled"/> /
@@ -1601,26 +1602,26 @@ public sealed class TeamsNavTests
         ctx.Services.AddSingleton<Agency.Huddle.App.Tabs.TabService>();
         if (storageThrows)
         {
-            ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetException(new JSException("blocked"));
-            ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetException(new JSException("blocked"));
+            ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetException(new JSException("blocked"));
+            ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetException(new JSException("blocked"));
         }
         else
         {
-            ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(stored);
-            ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
+            ctx.Module(JsModule.Storage).Setup<string?>("get", _ => true).SetResult(stored);
+            ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
         }
 
         return ctx;
     }
 
-    /// <summary>How many times the nav has read <c>huddleStorage.get</c>.</summary>
+    /// <summary>How many times the nav has read <c>get</c> in <c>storage.js</c>.</summary>
     private static int Reads(MudBunitContext ctx) =>
-        ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "huddleStorage.get", StringComparison.Ordinal));
+        ctx.Module(JsModule.Storage).Invocations.Count(invocation => string.Equals(invocation.Identifier, "get", StringComparison.Ordinal));
 
-    /// <summary>The arguments of every <c>huddleStorage.set</c> call, in order.</summary>
+    /// <summary>The arguments of every <c>set</c> call in <c>storage.js</c>, in order.</summary>
     private static IReadOnlyList<object?>[] Writes(MudBunitContext ctx) =>
-        [.. ctx.JSInterop.Invocations
-            .Where(invocation => string.Equals(invocation.Identifier, "huddleStorage.set", StringComparison.Ordinal))
+        [.. ctx.Module(JsModule.Storage).Invocations
+            .Where(invocation => string.Equals(invocation.Identifier, "set", StringComparison.Ordinal))
             .Select(invocation => invocation.Arguments)];
 
     /// <summary>The chevron button of <paramref name="team"/>'s row.</summary>

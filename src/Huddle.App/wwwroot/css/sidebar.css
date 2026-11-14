@@ -698,7 +698,7 @@
     border-radius: var(--hu-radius-card);
 }
 
-/* The Room jump (spec 9.1): the matching Message row is flashed by app.js for about two seconds. */
+/* The Room jump (spec 9.1): the matching Message row is flashed by toMessage in scroll.js for about two seconds. */
 @keyframes search-hit-flash-fade {
     from {
         background-color: color-mix(in srgb, var(--mud-palette-primary) 24%, var(--mud-palette-surface));

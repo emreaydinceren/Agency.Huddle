@@ -740,7 +740,7 @@
 
     /// <summary>
     /// The page's own copy path (corrections-B7 "15.2.i" item 2, J52): a Board card's or a List row's
-    /// "Copy id" calls <c>huddleClipboard.copy</c> directly, with no other <c>await</c> before it (the
+    /// "Copy id" calls <c>copy</c> in <c>clipboard.js</c> directly, with no other <c>await</c> before it (the
     /// Spec §13.13.1 warning), and shows the same success/warning toast as the detail header's button.
     /// </summary>
     /// <param name="id">The Task id to copy.</param>

@@ -250,6 +250,7 @@ Singleton Agency.Huddle.App.Uploads.IRoomUploadFolders -> Agency.Huddle.App.Uplo
 Scoped Agency.Huddle.App.Uploads.PendingUploads -> Agency.Huddle.App.Uploads.PendingUploads
 Singleton Agency.Huddle.App.Uploads.TaskUploadFolders -> Agency.Huddle.App.Uploads.TaskUploadFolders
 Singleton Agency.Huddle.App.Uploads.TaskUploadService -> Agency.Huddle.App.Uploads.TaskUploadService
+Scoped Microsoft.AspNetCore.Components.Server.Circuits.CircuitHandler -> Agency.Huddle.App.Circuits.JsModulePreloader
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Feed.FeedWriter
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Tasks.TaskFeedStartup
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Tasks.TaskFeedPublisher

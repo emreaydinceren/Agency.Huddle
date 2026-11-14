@@ -743,7 +743,7 @@ If no second machine/device is available, record the fallback half as not-checke
 
 *Proves the composer's `#` picker end to end with the keyboard: opening, narrowing, arrow/Tab/Enter
 insertion, Escape, and the two near-misses that must not open it. This is the one behaviour the
-Spec itself (TK-T19) says bUnit cannot reach, since the key handling lives in `app.js`.*
+Spec itself (TK-T19) says bUnit cannot reach, since the key handling lives in `composer.js`.*
 
 **Before you start**
 

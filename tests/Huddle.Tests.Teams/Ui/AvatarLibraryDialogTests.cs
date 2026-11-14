@@ -7,6 +7,7 @@ using MudBlazor;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.Tests.Avatars;
 using Agency.Huddle.Tests.Css;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -367,7 +368,7 @@ public sealed class AvatarLibraryDialogTests
         harness.Cut.WaitForAssertion(
             () =>
             {
-                IReadOnlyList<JSRuntimeInvocation> invocations = harness.Context.JSInterop.VerifyInvoke("huddleAvatarLibrary.guardSearchEscape", 1);
+                IReadOnlyList<JSRuntimeInvocation> invocations = harness.Context.Module(JsModule.AvatarLibrary).VerifyInvoke("guardSearchEscape", 1);
                 Assert.Single(invocations[0].Arguments);
             },
             TimeSpan.FromSeconds(5));
@@ -406,13 +407,15 @@ public sealed class AvatarLibraryDialogTests
         Assert.InRange(declaration, rule, close);
     }
 
-    /// <summary><c>app.js</c> defines the search box Escape guard, which stops a first Escape with text in the box at the DOM level.</summary>
+    /// <summary><c>avatar-library.js</c> exports <c>guardSearchEscape</c> (the export line is pinned), the search box Escape guard, which stops a first Escape with text in the box at the DOM level.</summary>
     [Fact]
-    public void AppJs_DefinesSearchEscapeGuard()
+    public void AvatarLibraryJs_DefinesSearchEscapeGuard()
     {
-        string js = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        string js = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "avatar-library.js"));
 
-        int guard = js.IndexOf("window.huddleAvatarLibrary", StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - avatar-library.js's own text is what's pinned.
+        Assert.Contains("export const { guardSearchEscape } = avatarLibrary;", js, StringComparison.Ordinal);
+        int guard = js.IndexOf("guardSearchEscape", StringComparison.Ordinal);
         Assert.True(guard >= 0);
         int stop = js.IndexOf("stopPropagation()", guard, StringComparison.Ordinal);
         Assert.True(stop > guard);

@@ -303,7 +303,7 @@ A `SidebarPanel` (id `recent-edits`, after Outline and Linked documents) registe
 (RightSidebar D-1, D-2). It reads `DocHistoryStore`, listens to `Changed` and shows `DocHistoryView.Recent(entries,
 5)`: avatar, actor, summary (for an empty Human summary, "Saved"), and the time. **See all** sends a new Page command,
 `ScrollToHistory` (RightSidebar D-6), which the document answers in Read mode by scrolling to the History's element id
-through the existing `huddleLibrary.scrollToHeading` script. In Edit and Split modes the History is not shown, so the
+through the existing `scrollToHeading` in `library-document.js`. In Edit and Split modes the History is not shown, so the
 command is ignored. An empty history is the one-line collapsed state of
 RightSidebar D-8: "No edits logged."
 

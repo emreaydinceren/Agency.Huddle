@@ -3,6 +3,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -45,7 +46,7 @@ public sealed class PromptsPanelHighlightTests
 
         _ = Render(ctx, "/settings/prompts?highlight=" + Key);
 
-        JSRuntimeInvocation call = Assert.Single(ctx.JSInterop.Invocations["teamScroll.intoView"]);
+        JSRuntimeInvocation call = Assert.Single(ctx.Module(JsModule.Scroll).Invocations["intoView"]);
         Assert.Equal("prompt-field-" + Key, Assert.Single(call.Arguments));
     }
 
@@ -58,7 +59,7 @@ public sealed class PromptsPanelHighlightTests
         IRenderedComponent<PromptsPanel> cut = Render(ctx, "/settings/prompts");
 
         Assert.Empty(cut.FindAll(".search-hit-flash"));
-        Assert.DoesNotContain(ctx.JSInterop.Invocations, static invocation => string.Equals(invocation.Identifier, "teamScroll.intoView", StringComparison.Ordinal));
+        Assert.DoesNotContain(ctx.Module(JsModule.Scroll).Invocations, static invocation => string.Equals(invocation.Identifier, "intoView", StringComparison.Ordinal));
     }
 
     /// <summary>A highlight naming no prompt marks nothing and does not scroll.</summary>
@@ -70,6 +71,6 @@ public sealed class PromptsPanelHighlightTests
         IRenderedComponent<PromptsPanel> cut = Render(ctx, "/settings/prompts?highlight=no.such.prompt");
 
         Assert.Empty(cut.FindAll(".search-hit-flash"));
-        Assert.DoesNotContain(ctx.JSInterop.Invocations, static invocation => string.Equals(invocation.Identifier, "teamScroll.intoView", StringComparison.Ordinal));
+        Assert.DoesNotContain(ctx.Module(JsModule.Scroll).Invocations, static invocation => string.Equals(invocation.Identifier, "intoView", StringComparison.Ordinal));
     }
 }

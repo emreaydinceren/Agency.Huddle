@@ -128,6 +128,7 @@ component here, move it onto the component rather than writing another copy.
 | To update UI from a background event | `RendererDispatch.RunAsync(this.InvokeAsync, …)` | [Catalog: helpers](#helpers) |
 | To copy text to the clipboard | `ClipboardCopier.CopyAsync` (with a snackbar) or `TryCopyAsync` (your own notice) | [Catalog: helpers](#helpers) |
 | To remember a small view choice in the browser | `BrowserStorage.TryGetAsync` / `TrySetAsync` | [Catalog: helpers](#helpers) |
+| To call browser code | An `export` in a `wwwroot/` module, reached through `JsModule.X.ImportAsync` or `BrowserCall`; never a `window.*` global | [Catalog: helpers](#helpers) |
 | To check a MudBlazor parameter or default | The "Facts already checked" table, then the local check | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md#checking-an-api-against-the-pinned-package) |
 
 ## Reusable parts catalog
@@ -265,10 +266,11 @@ id or a snapshot: an open dialog ignores new parameters.
 | `Plural` | `Components/Shared/Plural.cs` | `Of(count, one, many)`: the word for a count, so "1 member" and "2 members" |
 | `ByteSize` | `Components/Shared/ByteSize.cs` | `Format(bytes)`: a file size in the unit it falls in |
 | `MessageDisplay.TimeLabel`, `FileName` | `Components/Shared/MessageDisplay.cs` | The time of a Message (the day only when it is not today) and the last segment of a path |
-| `ClipboardCopier` | `Components/Shared/ClipboardCopier.cs` | The one `huddleClipboard.copy` call. `CopyAsync(js, snackbar, text, copiedMessage, failedMessage, key, ct)` copies and reports in a snackbar; `TryCopyAsync(js, text, ct)` copies and returns whether it worked, for a surface with its own notice. A gone circuit counts as not copied and shows nothing. A component never calls `huddleClipboard.copy` itself |
+| `JsModule` | `Components/Shared/JsModule.cs` | One instance per browser module in `wwwroot/` (`JsModule.Feed`, `JsModule.Composer`, ... see [Browser scripts](#browser-scripts)). `ImportAsync(js, ct)` returns the module's reference, imported once per circuit and shared, so never dispose it; call its exports inside your own try/catch (`BL0016`), or through the `BrowserCall` overloads that take a module. `Circuits/JsModulePreloader` imports every module when the circuit opens, before the first render. A new browser function is an `export` in a module, never a `window.*` global; bUnit tests set it up through `MudBunitContext.Module(JsModule.X)` |
+| `ClipboardCopier` | `Components/Shared/ClipboardCopier.cs` | The one call to `copy` in `clipboard.js`. `CopyAsync(js, snackbar, text, copiedMessage, failedMessage, key, ct)` copies and reports in a snackbar; `TryCopyAsync(js, text, ct)` copies and returns whether it worked, for a surface with its own notice. A gone circuit counts as not copied and shows nothing. A component never calls the clipboard module itself |
 | `RoomLinkCopier` | `Components/Shared/RoomLinkCopier.cs` | `CopyAsync`: copies a Room's link; `ClipboardCopier` with the Room wording |
 | `TaskClipboard` | `Components/Tasks/TaskClipboard.cs` | Copying a Task's id or link; `ClipboardCopier` with the Task wording |
-| `BrowserStorage` | `Components/Shared/BrowserStorage.cs` | `TryGetAsync(js, key)` returns the stored text or `null`; `TrySetAsync(js, key, value)` returns whether it was written. Both swallow a gone circuit, blocked storage and prerendering, so a remembered choice is never a fault. A component never calls `huddleStorage.get` or `set` itself |
+| `BrowserStorage` | `Components/Shared/BrowserStorage.cs` | `TryGetAsync(js, key)` returns the stored text or `null`; `TrySetAsync(js, key, value)` returns whether it was written. Both swallow a gone circuit, blocked storage and prerendering, so a remembered choice is never a fault. A component never calls `storage.js` itself |
 | `TaskDates` | `Tasks/TaskDates.cs` | `IsOverdue` and the Task date labels, in the local zone |
 | `HuddleDialogOptions`, `ConfirmAsync` | `Components/Shared/Dialogs/` | See [Dialogs](#dialogs-o1) |
 | `RoomDeleteCopy` | `Components/Shared/RoomDeleteCopy.cs` | `Prompt(roomName, uploadCount)`: the words of a Room's delete confirmation |
@@ -344,12 +346,21 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 
 ### Browser scripts
 
-Browser-side code lives in `wwwroot/` and is loaded once from `Components/App.razor`.
+Browser-side code lives in `wwwroot/` as ES modules. `Components/App.razor` loads none of them with a `<script>` tag: C# imports each one through its [`JsModule`](#helpers) (fingerprinted by the `<ImportMap />`), and `Circuits/JsModulePreloader` imports them all when the circuit opens, before anything renders (waiting at most 5 s, so a stalled fetch cannot keep the page from becoming interactive; a module past the limit is imported on first use). That matters twice over: a first-render call finds its module cached, so it never waits for an import while its component is disposed (a redirect or a re-keyed Tab would hand the module a disposed `DotNetObjectReference` or a removed element), and the first Copy click reaches the clipboard while the browser still counts the click. Feature modules that one component owns (`library-editor.js`, `markdown-textarea.js`, `emoji-picker.js`, `theme-lab.js`) are imported by that component directly.
 
-| Script | Does |
+| Module (`JsModule`) | Does |
 | --- | --- |
-| `app.js` | Resize handles, clipboard, CodeMirror and the other shared browser code |
-| `task-list-resize.js` | Drag-to-resize columns on any `.task-list-grid`. A drag trades width between the two columns beside the border, so the table keeps its width; neither goes below 56px or its content. `TaskListView` registers through `window.taskListResize.register`, and a finished drag calls its `[JSInvokable] OnColumnsResized`, which saves the widths to `TaskView.ColumnWidths`. Each handle is focusable (`tabindex="0"`, an `aria-label` naming its column); Left and Right move the border 16px, Shift 64px, and each press is saved, like `T7a` |
+| `composer.js` (`Composer`) | The chat Composer: drafts in `sessionStorage`, the `@`/`#` reference picker, paste and drop of files, Enter to send |
+| `scroll.js` (`Scroll`) | Message list scrolling (`toBottom`, `toMessage`, `isAtBottom`) and `intoView` for a highlighted card |
+| `feed.js` (`Feed`) | The Feed list's scroll awareness and chip focus |
+| `sidebar.js` (`Sidebar`) | Right sidebar panel collapse and the Outline's heading watch |
+| `tabs.js` (`Tabs`), `search.js` (`Search`) | The Tab and global search keyboard shortcuts |
+| `storage.js` (`Storage`) | Guarded `localStorage`; use `BrowserStorage` |
+| `clipboard.js` (`Clipboard`) | Copy with an `execCommand` fallback; use `ClipboardCopier` |
+| `resize.js` (`Resize`) | Drag-to-resize for the left and right sidebars; imports `storage.js` |
+| `library-document.js` (`LibraryDocument`) | A Library document's visibility refresh and heading scroll |
+| `avatar-library.js` (`AvatarLibrary`) | The Avatar Library search box's Escape guard |
+| `task-list-resize.js` (`TaskListResize`) | Drag-to-resize columns on any `.task-list-grid`. A drag trades width between the two columns beside the border, so the table keeps its width; neither goes below 56px or its content. `TaskListView` registers through the module's `register`, and a finished drag calls its `[JSInvokable] OnColumnsResized`, which saves the widths to `TaskView.ColumnWidths`. Each handle is focusable (`tabindex="0"`, an `aria-label` naming its column); Left and Right move the border 16px, Shift 64px, and each press is saved, like `T7a` |
 
 Many rules in `wwwroot/css/` are pinned by tests (`ThemeSourceTests`, `AppStylesheetTests`, the
 `AppCss*Tests` in `tests/Huddle.Tests.Shell/Ui/`, and source tests per feature). If a CSS
@@ -374,7 +385,7 @@ the catalog above.
 | Themes and typography defaults | `src/Huddle.App/Themes/` |
 | Global stylesheet | `src/Huddle.App/wwwroot/css/*.css` (and `app-vars.css` for `--font-mono`) |
 | A component's own styles | `ComponentName.razor.css` beside it |
-| Browser-side code (resize handles, clipboard, CodeMirror) | `src/Huddle.App/wwwroot/app.js`; List column resizing in `task-list-resize.js` (see [Browser scripts](#browser-scripts)) |
+| Browser-side code (resize handles, clipboard, CodeMirror) | One ES module per feature in `src/Huddle.App/wwwroot/`, reached through `Components/Shared/JsModule.cs` (see [Browser scripts](#browser-scripts)) |
 | Component tests (bUnit) | The feature test project for the component's feature, `tests/Huddle.Tests.<Feature>/` (see *Where a test goes* in `agents/Testing.md`) |
 | The bUnit host for MudBlazor | `tests/Huddle.Tests.Common/Ui/MudBunitContext.cs` (`RenderWithPopovers`) |
 | Wireframe figures | `docs/images/wireframes/` |

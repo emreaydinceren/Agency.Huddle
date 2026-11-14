@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Components.Shared;
 
 /// <summary>
 /// The one place that reads and writes the browser's <c>localStorage</c> through the
-/// <c>huddleStorage</c> helper in <c>app.js</c>. Remembered view state (open panels, folders, tabs,
+/// <c>get</c> and <c>set</c> exports of <see cref="JsModule.Storage"/>. Remembered view state (open panels, folders, tabs,
 /// the last View) is a convenience, never a requirement, so every failure to reach storage reads as
 /// "nothing remembered" rather than a fault. The services are arguments so the helper holds no state.
 /// </summary>
@@ -19,11 +19,11 @@ namespace Agency.Huddle.App.Components.Shared;
 /// </remarks>
 internal static class BrowserStorage
 {
-    /// <summary>The storage read helper.</summary>
-    private const string GetHelper = "huddleStorage.get";
+    /// <summary>The storage module's read function.</summary>
+    internal const string GetFunction = "get";
 
-    /// <summary>The storage write helper.</summary>
-    private const string SetHelper = "huddleStorage.set";
+    /// <summary>The storage module's write function.</summary>
+    internal const string SetFunction = "set";
 
     /// <summary>Reads <paramref name="key"/>.</summary>
     /// <param name="js">The JavaScript runtime that owns the storage helper.</param>
@@ -37,7 +37,8 @@ internal static class BrowserStorage
 
         try
         {
-            return await js.InvokeAsync<string?>(BrowserStorage.GetHelper, ct, new object?[] { key });
+            IJSObjectReference storage = await JsModule.Storage.ImportAsync(js, ct);
+            return await storage.InvokeAsync<string?>(BrowserStorage.GetFunction, ct, key);
         }
         catch (Exception ex) when (BrowserStorage.IsStorageUnavailable(ex))
         {
@@ -59,7 +60,8 @@ internal static class BrowserStorage
 
         try
         {
-            await js.InvokeVoidAsync(BrowserStorage.SetHelper, ct, new object?[] { key, value });
+            IJSObjectReference storage = await JsModule.Storage.ImportAsync(js, ct);
+            await storage.InvokeVoidAsync(BrowserStorage.SetFunction, ct, key, value);
             return true;
         }
         catch (Exception ex) when (BrowserStorage.IsStorageUnavailable(ex))

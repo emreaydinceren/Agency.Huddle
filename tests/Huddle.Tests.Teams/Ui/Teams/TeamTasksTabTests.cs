@@ -11,6 +11,7 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
@@ -323,13 +324,13 @@ public sealed class TeamTasksTabTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         Seeded tasks = Seed(harness);
         await using MudBunitContext ctx = new();
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", tasks.Taxes.Id.ToString()).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", tasks.Taxes.Id.ToString()).SetResult(true);
         Rig rig = Render(ctx, harness, "Business");
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         await rig.ChooseCopyIdAsync(tasks.Taxes);
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
         Assert.Equal(tasks.Taxes.Id.ToString(), Assert.Single(invocation.Arguments));
         rig.Tab.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Snackbar shown = snackbar.ShownSnackbars.Single();
@@ -345,7 +346,7 @@ public sealed class TeamTasksTabTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         Seeded tasks = Seed(harness);
         await using MudBunitContext ctx = new();
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", tasks.Taxes.Id.ToString()).SetResult(false);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", tasks.Taxes.Id.ToString()).SetResult(false);
         Rig rig = Render(ctx, harness, "Business");
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 

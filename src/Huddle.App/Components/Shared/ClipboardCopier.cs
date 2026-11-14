@@ -4,15 +4,15 @@ using MudBlazor;
 namespace Agency.Huddle.App.Components.Shared;
 
 /// <summary>
-/// The one place that copies text through the <c>huddleClipboard.copy</c> JavaScript helper and, when
+/// The one place that copies text through the <c>copy</c> export of <see cref="JsModule.Clipboard"/> and, when
 /// asked, tells the Human how it went. Every copy entry point (Room link, Task id and link, skill path,
 /// gateway link) goes through it, so a dead circuit and a refused clipboard are handled the same way
 /// everywhere. The services are arguments so the helper holds no state of its own.
 /// </summary>
 internal static class ClipboardCopier
 {
-    /// <summary>The clipboard helper the copy calls.</summary>
-    private const string CopyHelper = "huddleClipboard.copy";
+    /// <summary>The clipboard module's copy function.</summary>
+    internal const string CopyFunction = "copy";
 
     /// <summary>
     /// Puts <paramref name="text"/> on the clipboard. A circuit that is already gone
@@ -35,7 +35,8 @@ internal static class ClipboardCopier
     {
         try
         {
-            return await js.InvokeAsync<bool>(ClipboardCopier.CopyHelper, ct, new object?[] { text });
+            IJSObjectReference clipboard = await JsModule.Clipboard.ImportAsync(js, ct);
+            return await clipboard.InvokeAsync<bool>(ClipboardCopier.CopyFunction, ct, text);
         }
         catch (JSDisconnectedException)
         {

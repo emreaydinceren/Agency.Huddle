@@ -173,7 +173,7 @@ File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-18--s
 
 ### SHELLNAV-19 — app.js is proven functionally: Enter sends and clears, and the transcript scrolls
 
-File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-19--appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls)
+File: [`docs/engineering/manual-tests/shell-nav.md`](shell-nav.md#shellnav-19--composerjs-and-scrolljs-are-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -6318,7 +6318,7 @@ File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote
 
 ### REMOTE-12 — A Huddle crash kills the Tailscale child (Job object)
 
-File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object)
+File: [`docs/engineering/manual-tests/remote-access.md`](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-kill-on-parent-exit)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |

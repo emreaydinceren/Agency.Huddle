@@ -6,6 +6,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.SkillPacks;
 
@@ -131,7 +132,7 @@ public sealed class AddWithAiDialogTests : IDisposable
 
         Assert.Contains(wsl, PromptText(cut), StringComparison.Ordinal); // contains-ok: the whole prompt is pinned by SkillPromptBuilderTests; this checks the path form
         Assert.Equal(PathFormat.Wsl, ctx.Services.GetRequiredService<PathFormatChoice>().Format);
-        Assert.Equal(wsl, Assert.IsType<string>(ctx.JSInterop.Invocations["huddleClipboard.copy"][^1].Arguments[0]));
+        Assert.Equal(wsl, Assert.IsType<string>(ctx.Module(JsModule.Clipboard).Invocations["copy"][^1].Arguments[0]));
         Assert.Equal("Path copied.", ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars.Last().Message);
 
         await cut.InvokeAsync(() => cut.Find(".add-with-ai-close").ClickAsync());
@@ -154,7 +155,7 @@ public sealed class AddWithAiDialogTests : IDisposable
 
         await cut.InvokeAsync(() => cut.Find(".add-with-ai-copy").ClickAsync());
 
-        Assert.Equal(prompt, Assert.IsType<string>(Assert.Single(ctx.JSInterop.Invocations["huddleClipboard.copy"]).Arguments[0]));
+        Assert.Equal(prompt, Assert.IsType<string>(Assert.Single(ctx.Module(JsModule.Clipboard).Invocations["copy"]).Arguments[0]));
         Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
         Assert.Equal(accepts ? PromptClipboard.CopiedMessage : PromptClipboard.RefusedMessage, shown.Message);
     }

@@ -585,11 +585,11 @@ public sealed class MessageListTests
         await using var ctx = MessageListTests.NewContext(factory);
         ctx.JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
         var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit()]));
-        int scrollsBefore = ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "teamScroll.toBottom", StringComparison.Ordinal));
+        int scrollsBefore = ctx.Module(JsModule.Scroll).Invocations.Count(invocation => string.Equals(invocation.Identifier, "toBottom", StringComparison.Ordinal));
 
         await cut.InvokeAsync(() => cut.Find("button.turn-detail-toggle").ClickAsync());
 
-        int scrollsAfter = ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "teamScroll.toBottom", StringComparison.Ordinal));
+        int scrollsAfter = ctx.Module(JsModule.Scroll).Invocations.Count(invocation => string.Equals(invocation.Identifier, "toBottom", StringComparison.Ordinal));
         Assert.Equal(scrollsBefore, scrollsAfter);
     }
 

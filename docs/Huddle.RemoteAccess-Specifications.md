@@ -279,7 +279,7 @@ shown only by `auth-token --show` on a terminal (OpenClaw refuses to print it to
 | --- | --- | --- |
 | Status | `tailscale status --json` | `BackendState`, `Self.DNSName`, `Self.TailscaleIPs`, the node owner. 3 attempts 500 ms apart (OpenClaw's constants). The JSON format is undocumented ("subject to change"); tests pin a captured sample |
 | Claim | `tailscale serve --bg=false --yes --https={tsPort} http://127.0.0.1:{managed}`; Funnel: `tailscale funnel --bg=false --yes --https={tsPort} …` | A foreground child process holds the route. 15 s start timeout. If the output says "listener already exists for port N", stop with **Tailscale port N belongs to something else** (OpenClaw's `TailscaleRouteOwnershipConflictError`), never take it over |
-| Release | Kill the child's process tree at once (`Process.Kill(entireProcessTree: true)`; Windows has no Ctrl-C) | No `tailscale serve reset`, ever. On Windows the child is assigned to a Job object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` (`[LibraryImport]`, which needs `AllowUnsafeBlocks` in `Huddle.App.csproj`), so a Huddle crash does not orphan it. That the route disappears when the child dies is checked by hand (manual tests) |
+| Release | Kill the child's process tree at once (`Process.Kill(entireProcessTree: true)`; Windows has no Ctrl-C) | No `tailscale serve reset`, ever. On Windows and Linux the child starts with `ProcessStartInfo.KillOnParentExit` (.NET 11), so a Huddle crash does not orphan it; macOS has no equivalent, so a crash there can leave the child and its route running. That the route disappears when the child dies is checked by hand (manual tests) |
 | Restart | On an unexpected exit, retry with backoff from 1 s to 1 min | As OpenClaw |
 | Who | `tailscale whois --json {ip}` | `UserProfile.LoginName`, `Node` (tags). Cached per `IPAddress` for 60 s, failures for 5 s |
 | Stray routes | `tailscale serve status --json` every 30 s | Routes that point at Huddle's **app** port were set up by hand; listed in the Security check |
@@ -997,7 +997,7 @@ change and where it lives.
 - **Host filtering (D-7, D-10).** `PostConfigure`, no bare machine name, explicit hosts exempt from §8.8. §6.4, §8.8.
 - **Effective scheme (D-8).** Set from `X-Forwarded-Proto` on managed and trusted-proxy ingress. §6.8.
 - **Origin rules (D-9).** Host and port compared; rule 6 uses the ingress; rule 2 strict. §8.7.
-- **Tailscale processes (D-11).** Kill the tree at once; Job object on Windows; `ITailscaleChild`. §6.3.
+- **Tailscale processes (D-11).** Kill the tree at once; `KillOnParentExit` on Windows and Linux; `ITailscaleChild`. §6.3.
 - **Trusted-proxy attribution (D-12, D-14).** In the classifier; a loopback request may still use a token. §6.10.
 - **Funnel password (D-13).** Mandatory for Funnel ingress; a refused claim does not stop the app. §6.11.
 - **Bootstrap in password mode.** Accepted, because the launcher always uses one. §6.9.

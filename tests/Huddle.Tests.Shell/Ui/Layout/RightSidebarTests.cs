@@ -6,6 +6,7 @@ using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -29,7 +30,7 @@ public sealed class RightSidebarTests
         sidebar.WaitForAssertion(() => Assert.True(service.IsOpen));
         await sidebar.InvokeAsync(service.Toggle);
 
-        sidebar.WaitForAssertion(() => Assert.Contains(ctx.JSInterop.Invocations["huddleStorage.set"], static call => call.Arguments is ["shell:rightSidebarOpen", "false"]));
+        sidebar.WaitForAssertion(() => Assert.Contains(ctx.Module(JsModule.Storage).Invocations["set"], static call => call.Arguments is ["shell:rightSidebarOpen", "false"]));
     }
 
     /// <summary>A sidebar the viewer left closed stays closed.</summary>

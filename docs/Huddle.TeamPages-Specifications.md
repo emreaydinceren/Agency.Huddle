@@ -622,7 +622,7 @@ depends on the Room scope that §3 defers.
 `Href`, but the design needs the Team name to navigate. A link plus a separate chevron gives both,
 and keeps each keyboard-reachable.
 
-**Expansion state** is kept in `window.huddleStorage` under `teamsNav:expanded`, a JSON array of
+**Expansion state** is kept in `localStorage` through `BrowserStorage` (`storage.js`) under `teamsNav:expanded`, a JSON array of
 the lower-cased names of the Teams the Human **opened**. Absent means every Team is collapsed, so
 that rule also holds for a Team created later. Missing, unreadable or malformed storage means the
 same. The old `teamsNav:collapsed` key is ignored. The Team of the current route is expanded even
@@ -1007,7 +1007,7 @@ lines here.
 
 ### 7.5 Browser storage
 
-| `window.huddleStorage` key | Holds |
+| `localStorage` key (through `BrowserStorage`) | Holds |
 | --- | --- |
 | `teamsNav:expanded` | JSON array of lower-cased names of the Teams the Human opened. Absent means all collapsed, also for a Team created later |
 | `library:team:<scope>…` | Set by `LibraryExplorer` from `StateKey` (expanded folders, open file, divider) |

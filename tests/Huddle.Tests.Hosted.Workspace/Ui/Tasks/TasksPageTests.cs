@@ -17,6 +17,7 @@ using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
 using TasksPage = Agency.Huddle.App.Components.Pages.Tasks;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
@@ -262,7 +263,7 @@ public sealed class TasksPageTests
 
     /// <summary>
     /// Spec §13.9: the page writes the current ViewId to <c>huddle.tasks.lastView</c> through
-    /// <c>huddleStorage.set</c>, only from <c>OnAfterRenderAsync</c> - bUnit runs that lifecycle
+    /// <c>set</c> in <c>storage.js</c>, only from <c>OnAfterRenderAsync</c> - bUnit runs that lifecycle
     /// method during a normal render, so the JSInterop call is directly observable here.
     /// </summary>
     [Fact]
@@ -270,7 +271,7 @@ public sealed class TasksPageTests
     {
         using TaskToolHarness harness = new();
         await using MudBunitContext ctx = NewContext(harness);
-        ctx.JSInterop.SetupVoid("huddleStorage.set", new object[] { "huddle.tasks.lastView", ViewStore.AllTasksId });
+        ctx.Module(JsModule.Storage).SetupVoid("set", new object[] { "huddle.tasks.lastView", ViewStore.AllTasksId });
 
         ctx.RenderWithPopovers(builder =>
         {
@@ -279,7 +280,7 @@ public sealed class TasksPageTests
             builder.CloseComponent();
         });
 
-        ctx.JSInterop.VerifyInvoke("huddleStorage.set");
+        ctx.Module(JsModule.Storage).VerifyInvoke("set");
     }
 
     /// <summary>U13 (UX-047): the page looks up Room names, so a List row's Origin shows the origin Room's name and not its id.</summary>

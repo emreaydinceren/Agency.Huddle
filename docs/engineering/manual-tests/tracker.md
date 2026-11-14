@@ -221,7 +221,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-16](shell-nav.md#shellnav-16--sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active |  |  |
 | [SHELLNAV-17](shell-nav.md#shellnav-17--the-new-room-panel-toggles-lists-agents-with-status-dots-and-gates-open-room) |  | Active |  |  |
 | [SHELLNAV-18](shell-nav.md#shellnav-18--starting-a-chat-creates-a-room-named-after-its-agents-and-navigates-straight-to-it) |  | Active |  |  |
-| [SHELLNAV-19](shell-nav.md#shellnav-19--appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active |  |  |
+| [SHELLNAV-19](shell-nav.md#shellnav-19--composerjs-and-scrolljs-are-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active |  |  |
 | [SHELLNAV-20](shell-nav.md#shellnav-20--the-room-list-updates-live-with-no-refresh-when-a-room-appears-from-outside-the-app) |  | Active |  |  |
 | [SHELLNAV-23](shell-nav.md#shellnav-23--a-bad-appearancejson-does-not-break-the-shell-no-theme-link-no-blank-page-only-a-log-warning) |  | Active |  |  |
 | [SHELLNAV-24](shell-nav.md#shellnav-24--a-deep-link-renders-complete-content-on-a-cold-first-request-before-any-circuit-attaches) |  | Active |  |  |
@@ -1263,7 +1263,7 @@ Remote access: the connect page, pairing, Tailscale Serve and Funnel, the LAN bi
 | [REMOTE-09](remote-access.md#remote-09--a-hand-made-serve-route-is-refused-and-shown-in-the-security-check) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-10](remote-access.md#remote-10--funnel-refused-in-token-mode-and-in-password-mode-a-phone-off-the-tailnet-needs-the-password-and-approval) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-11](remote-access.md#remote-11--with-remote-access-configured-the-open-action-and-library-open-and-reveal-are-gone) |  | Active |  | not yet run by a person |
-| [REMOTE-12](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-job-object) |  | Active |  | not yet run by a person; needs Tailscale |
+| [REMOTE-12](remote-access.md#remote-12--a-huddle-crash-kills-the-tailscale-child-kill-on-parent-exit) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-13](remote-access.md#remote-13--killing-the-tailscale-child-removes-the-serve-route) |  | Active |  | not yet run by a person; needs Tailscale |
 | [REMOTE-14](remote-access.md#remote-14--strict-local-default) |  | Partial |  | run 2026-11-07 by an agent. Steps 1, 3, 4, 5 and 6 pass. Step 2 is inconclusive: with `--urls http://localhost:<port>` nothing listens on the LAN address, so the request is refused at TCP rather than answered 403. |
 | [REMOTE-15](remote-access.md#remote-15--turning-strict-local-on-disconnects-remote-devices) |  | Active |  | not yet run by a person; needs a second device |

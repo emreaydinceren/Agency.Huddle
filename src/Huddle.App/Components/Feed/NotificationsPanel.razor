@@ -99,7 +99,8 @@
         this.focusChosen = false;
         try
         {
-            await this.Js.InvokeVoidAsync("huddleFeed.focusChecked", this.categoryGroup);
+            IJSObjectReference feed = await JsModule.Feed.ImportAsync(this.Js);
+            await feed.InvokeVoidAsync("focusChecked", this.categoryGroup);
         }
         catch (Exception ex) when (ex is JSDisconnectedException or JSException)
         {

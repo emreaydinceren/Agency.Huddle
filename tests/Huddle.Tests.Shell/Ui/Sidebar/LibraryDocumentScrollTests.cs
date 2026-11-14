@@ -11,6 +11,7 @@ using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Ui.Library;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -19,7 +20,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
 {
     private const string TabId = "t1";
     private const string ModulePath = "./library-editor.js";
-    private const string ScrollCall = "huddleLibrary.scrollToHeading";
+    private const string ScrollCall = "scrollToHeading";
 
     private readonly LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
 
@@ -32,14 +33,14 @@ public sealed class LibraryDocumentScrollTests : IDisposable
     {
         LibraryPath path = this.NewDoc();
         await using MudBunitContext ctx = this.NewContext();
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
+        ctx.Module(JsModule.LibraryDocument).Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
 
         await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync(LibraryDocumentScrollTests.TabId, new ScrollToHeading("doc-h-a", 3)));
 
-        ctx.JSInterop.VerifyInvoke(LibraryDocumentScrollTests.ScrollCall);
-        JSRuntimeInvocation call = Assert.Single(ctx.JSInterop.Invocations[LibraryDocumentScrollTests.ScrollCall]);
+        ctx.Module(JsModule.LibraryDocument).VerifyInvoke(LibraryDocumentScrollTests.ScrollCall);
+        JSRuntimeInvocation call = Assert.Single(ctx.Module(JsModule.LibraryDocument).Invocations[LibraryDocumentScrollTests.ScrollCall]);
         Assert.Equal(2, call.Arguments.Count);
         Assert.Equal("doc-h-a", call.Arguments[1]);
     }
@@ -56,7 +57,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         handle.SetupVoid("setText", _ => true).SetVoidResult();
         handle.SetupVoid("revealLine", _ => true).SetVoidResult();
         handle.SetupVoid("dispose", _ => true).SetVoidResult();
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
+        ctx.Module(JsModule.LibraryDocument).Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudToggleGroup<LibraryMode>>()));
         MudToggleGroup<LibraryMode> toggle = cut.FindComponent<MudToggleGroup<LibraryMode>>().Instance;
@@ -68,7 +69,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
 
         JSRuntimeInvocation call = Assert.Single(handle.Invocations["revealLine"]);
         Assert.Equal(3, call.Arguments[0]);
-        Assert.DoesNotContain(ctx.JSInterop.Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
+        Assert.DoesNotContain(ctx.Module(JsModule.LibraryDocument).Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
     }
 
     /// <summary>A command sent to another Tab is ignored: nothing scrolls.</summary>
@@ -77,13 +78,13 @@ public sealed class LibraryDocumentScrollTests : IDisposable
     {
         LibraryPath path = this.NewDoc();
         await using MudBunitContext ctx = this.NewContext();
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
+        ctx.Module(JsModule.LibraryDocument).Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-toolbar")));
 
         await cut.InvokeAsync(() => ctx.Services.GetRequiredService<PageCommandBus>().SendAsync("t2", new ScrollToHeading("doc-h-a", 3)));
 
-        Assert.DoesNotContain(ctx.JSInterop.Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
+        Assert.DoesNotContain(ctx.Module(JsModule.LibraryDocument).Invocations, i => string.Equals(i.Identifier, LibraryDocumentScrollTests.ScrollCall, StringComparison.Ordinal));
     }
 
     /// <summary>Clicking the byline's time opens the Right sidebar on its Subject panels, where the History is; the document itself carries no History under its text.</summary>
@@ -99,7 +100,7 @@ public sealed class LibraryDocumentScrollTests : IDisposable
         ctx.Services.AddPersonaStore();
         RightSidebarService sidebar = new();
         ctx.Services.AddSingleton(sidebar);
-        ctx.JSInterop.Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
+        ctx.Module(JsModule.LibraryDocument).Setup<bool>(LibraryDocumentScrollTests.ScrollCall, _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = LibraryDocumentTestSupport.RenderDoc(ctx, path, tabPage: new TabPageContext("/library", LibraryDocumentScrollTests.TabId));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".doc-byline-time")));
 

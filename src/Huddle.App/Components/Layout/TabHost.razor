@@ -43,7 +43,7 @@
         }
 
         this.self = DotNetObjectReference.Create(this);
-        _ = await BrowserCall.InvokeVoidAsync(this.JS, "huddleTabs.attach", this.self);
+        _ = await BrowserCall.InvokeVoidAsync(this.JS, JsModule.Tabs, "attach", this.self);
     }
 
     /// <summary>

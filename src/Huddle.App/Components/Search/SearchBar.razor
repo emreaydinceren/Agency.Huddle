@@ -186,18 +186,20 @@
             if (firstRender)
             {
                 this.self = DotNetObjectReference.Create(this);
-                await this.JS.InvokeVoidAsync("huddleSearch.attach", this.disposed.Token, this.self, this.host);
+                IJSObjectReference attachSearch = await JsModule.Search.ImportAsync(this.JS, this.disposed.Token);
+                await attachSearch.InvokeVoidAsync("attach", this.disposed.Token, this.self, this.host);
             }
 
             if (this.open != this.openSent)
             {
                 this.openSent = this.open;
-                await this.JS.InvokeVoidAsync("huddleSearch.setOpen", this.disposed.Token, this.open);
+                IJSObjectReference search = await JsModule.Search.ImportAsync(this.JS, this.disposed.Token);
+                await search.InvokeVoidAsync("setOpen", this.disposed.Token, this.open);
             }
         }
-        catch (JSDisconnectedException)
+        catch (Exception ex) when (BrowserCall.IsGone(ex))
         {
-            // The circuit is gone; there is nothing to register keys on.
+            // The circuit is gone, or the box was disposed while search.js was first imported: nothing to register keys on.
         }
         catch (OperationCanceledException)
         {
@@ -222,7 +224,8 @@
     {
         try
         {
-            await js.InvokeVoidAsync("huddleSearch.detach");
+            IJSObjectReference search = await JsModule.Search.ImportAsync(js);
+            await search.InvokeVoidAsync("detach");
         }
         catch (JSDisconnectedException)
         {
@@ -279,7 +282,7 @@
 
     private async Task RestoreFocusAsync()
     {
-        _ = await BrowserCall.InvokeVoidAsync(this.JS, "huddleSearch.restoreFocus", this.disposed.Token);
+        _ = await BrowserCall.InvokeVoidAsync(this.JS, JsModule.Search, "restoreFocus", this.disposed.Token);
     }
 
     private Task CloseAsync()

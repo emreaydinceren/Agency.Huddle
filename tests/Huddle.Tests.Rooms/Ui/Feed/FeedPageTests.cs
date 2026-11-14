@@ -10,6 +10,7 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -281,7 +282,7 @@ public sealed partial class FeedPageTests
         using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         _ = Post(host, "Nova", "Growth", 5, "GRO-1");
         await using MudBunitContext ctx = NewContext(host);
-        ctx.JSInterop.Setup<bool>("huddleFeed.isScrolled", _ => true).SetResult(true);
+        ctx.Module(JsModule.Feed).Setup<bool>("isScrolled", _ => true).SetResult(true);
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         Assert.Equal("Needs you 0", Segments(cut)[1]);
         FeedItem fresh = host.Feed.PostNeedsYou();

@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace Agency.Huddle.Tests.Ui.References;
 
 /// <summary>
-/// Behaviour tests for the Reference picker's script (<c>window.teamComposer</c> in <c>app.js</c>): token
+/// Behaviour tests for the Reference picker's script (the composer object in <c>composer.js</c>): token
 /// detection, suppression, IME and the post-pick rule. They run <c>composer-picker.harness.js</c> under Node
 /// against a stand-in textarea, so they pin what the script does, not what its source says. A machine without
 /// <c>node</c> on PATH fails them, as it fails the other Node-backed tests.
@@ -101,7 +101,7 @@ public sealed class ComposerScriptTests
             StandardOutputEncoding = Encoding.UTF8,
         };
         info.ArgumentList.Add(RepoPaths.Data("composer-picker.harness.js"));
-        info.ArgumentList.Add(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
+        info.ArgumentList.Add(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "composer.js"));
         using Process process = Process.Start(info) ?? throw new InvalidOperationException("node did not start.");
         Task<string> error = process.StandardError.ReadToEndAsync(ct);
         Task<string> output = process.StandardOutput.ReadToEndAsync(ct);

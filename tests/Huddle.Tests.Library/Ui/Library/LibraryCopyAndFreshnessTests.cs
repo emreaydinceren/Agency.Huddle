@@ -6,6 +6,7 @@ using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
 using static Agency.Huddle.Tests.Ui.Library.LibraryDocumentTestSupport;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -22,7 +23,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
     /// <summary>Disposes the underlying temp <c>DataDir</c> and stores.</summary>
     public void Dispose() => this.fixture.Dispose();
 
-    /// <summary>(Spec §6.14) The document header's Copy button invokes <c>huddleClipboard.copy</c> with the
+    /// <summary>(Spec §6.14) The document header's Copy button invokes <c>copy</c> in <c>clipboard.js</c> with the
     /// file's absolute path and shows <c>Path copied</c> on success.</summary>
     [Fact]
     public async Task Copy_WritesAbsolutePath_ShowsSnackbar()
@@ -32,14 +33,14 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", path.FullPath).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", path.FullPath).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-copy")));
 
         await cut.InvokeAsync(() => cut.Find(".library-document-copy").ClickAsync());
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
         Assert.Equal(path.FullPath, Assert.Single(invocation.Arguments));
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Assert.Equal("Path copied", snackbar.ShownSnackbars.Single().Message);
@@ -55,7 +56,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", path.FullPath).SetResult(false);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", path.FullPath).SetResult(false);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-copy")));
@@ -76,14 +77,14 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", path.FullPath).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", path.FullPath).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
         IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
         LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
 
         await cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.CopyPath, path, null)));
 
-        JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
+        JSRuntimeInvocation invocation = ctx.Module(JsModule.Clipboard).VerifyInvoke("copy");
         Assert.Equal(path.FullPath, Assert.Single(invocation.Arguments));
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Assert.Equal("Path copied", snackbar.ShownSnackbars.Single().Message);
@@ -99,7 +100,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "a.md");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", path.FullPath).SetResult(false);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", path.FullPath).SetResult(false);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
         IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
         LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;

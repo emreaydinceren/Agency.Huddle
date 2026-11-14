@@ -4,7 +4,7 @@ using System.Text.Json;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Runs <c>teamComposer.attach</c> and <c>teamComposer.send</c> from the real <c>app.js</c> under
+/// Runs <c>attach</c> and <c>send</c> from the real <c>composer.js</c> under
 /// <c>node</c> against a hand-made DOM (<c>composer-attach-harness.mjs</c>), so paste, drop and the
 /// held send are tested as behaviour. Needs <c>node</c> on PATH, like the other node-backed tests.
 /// </summary>

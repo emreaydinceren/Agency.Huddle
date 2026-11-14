@@ -93,7 +93,7 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 
 **Free** · about 5 min
 
-*Proves `blazor.web.js` and `app.js` resolved, which no test in the repo checks because the automated regex matches only `<link rel="stylesheet">` — and that MudBlazor's own script, linked BEFORE both, is present and correctly unfingerprinted.*
+*Proves `blazor.web.js` and the app's own JS modules resolved, which no test in the repo checks because the automated regex matches only `<link rel="stylesheet">` — and that MudBlazor's own script, linked BEFORE `blazor.web.js`, is present and correctly unfingerprinted. The app's JS is ES modules (`composer.js`, `scroll.js` and ten more), loaded through the import map rather than `<script>` tags, and imported when the circuit opens.*
 
 **Before you start**
 
@@ -108,22 +108,22 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 4. For each src, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the src here>"` and record the status.
 5. In the browser, press Ctrl+Shift+R. In DevTools Network, set the filter to **JS**.
 6. Read the Status column for every row in the filtered JS list.
-7. In the DevTools Console, type `typeof window.teamComposer` and press Enter.
-8. Type `typeof window.teamScroll` and press Enter.
-9. Type `typeof window.mudElementRef` and press Enter, to confirm MudBlazor's own script executed.
+7. Run: `[regex]::Matches($html, '"\./([a-z-]+)\.js":\s*"\./([^"]+)"') | ForEach-Object { "$($_.Groups[1].Value) -> $($_.Groups[2].Value)" }` to list the import map's module entries.
+8. In DevTools Network (filter **JS**, after the Ctrl+Shift+R of step 5), find `composer.<hash>.js`, `scroll.<hash>.js`, `clipboard.<hash>.js` and `storage.<hash>.js`.
+9. In the DevTools Console, type `typeof window.mudElementRef` and press Enter, to confirm MudBlazor's own script executed.
 
 **Pass if — all of these**
 
-- Step 2 printed, in this order: `Components/Layout/ReconnectModal.<hash>.razor.js` (the reconnect modal's module comes first, because `<ReconnectModal />` sits above the other scripts in `App.razor`), then `_content/MudBlazor/MudBlazor.min.js` (no fingerprint — deliberate, see notes), then `_framework/blazor.web.<hash>.js`, then `app.<hash>.js`. A development host may append further scripts (for example browser-refresh); ignore any after `app.<hash>.js`.
-- The ReconnectModal, `blazor.web` and `app` entries carry a fingerprint segment (the hash sits before `.razor.js` in the first one); none is the bare key `app.js` or `_framework/blazor.web.js`.
+- Step 2 printed, in this order: `Components/Layout/ReconnectModal.<hash>.razor.js` (the reconnect modal's module comes first, because `<ReconnectModal />` sits above the other scripts in `App.razor`), then `_content/MudBlazor/MudBlazor.min.js` (no fingerprint — deliberate, see notes), then `_framework/blazor.web.<hash>.js`. There is no `app.js`. A development host may append further scripts (for example browser-refresh); ignore any after `blazor.web.<hash>.js`.
+- The ReconnectModal and `blazor.web` entries carry a fingerprint segment (the hash sits before `.razor.js` in the first one); neither is the bare key `_framework/blazor.web.js`.
+- Step 7 lists, among others, `composer`, `scroll`, `feed`, `sidebar`, `tabs`, `search`, `storage`, `resize`, `clipboard`, `library-document`, `avatar-library` and `task-list-resize`, each mapped to a fingerprinted file (`composer -> composer.<hash>.js`).
 - Every status in step 4 is `200`.
-- No row in the DevTools JS list shows 404.
-- Step 7 and step 8 both printed `"object"`.
+- No row in the DevTools JS list shows 404, and step 8 found all four modules with status 200 (every module is imported when the circuit opens, before you click anything).
 - Step 9 printed `"object"`.
 
 **Fail if — any of these**
 
-- `app.js`'s src has no hash, or 404s, or step 7 printed `"undefined"` -> the `@Assets["app.js"]` key did not resolve. Nothing on screen says so; the symptom is that pressing Enter in the composer inserts a newline instead of sending, and the transcript never auto-scrolls. Confirm with SHELLNAV-19 and report as a defect plus a test-coverage gap.
+- A module is missing from step 7, maps to an unfingerprinted name, or 404s in step 8 -> its `JsModule` path does not match a file in `wwwroot/`, or the `<ImportMap />` in `App.razor` is gone. Nothing on screen says so; for `composer.js` the symptom is that pressing Enter in the composer inserts a newline instead of sending, and for `scroll.js` that the transcript never auto-scrolls. Confirm with SHELLNAV-19 and report as a defect plus a test-coverage gap.
 - `blazor.web.js` 404s -> nothing on the page will be interactive and no `_blazor` websocket will open. Loud, but the same root cause.
 - `MudBlazor.min.js` 404s, or step 9 printed `"undefined"` -> every MudBlazor interactive feature (dialogs, popovers, ripples) will silently fail to initialise.
 - The `ReconnectModal.<hash>.razor.js` entry never appears anywhere in the document -> the reconnect modal in SHELLNAV-26 will never appear at all.
@@ -131,7 +131,7 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 
 **Inconclusive if**
 
-If the Console shows a Content-Security-Policy or extension error rather than a 404, disable browser extensions or use a private window and re-run. If `typeof` returns `"undefined"` but Network shows `app.js` at 200, the script loaded but threw - open the Console, find the exception, and report THAT rather than an asset failure.
+If the Console shows a Content-Security-Policy or extension error rather than a 404, disable browser extensions or use a private window and re-run. If a module shows 200 in Network but its feature does not work, the module loaded but threw - open the Console, find the exception (or the server log's "Unhandled exception in circuit"), and report THAT rather than an asset failure.
 
 > [!NOTE]
 > The automated stylesheet guard deliberately matches only stylesheets, so this test is the only thing standing between a stale script key and production. Note it as a coverage gap when reporting, regardless of outcome.
@@ -828,11 +828,11 @@ If `sqlite3` is installed you can confirm with `sqlite3 C:\seeds\huddle\uat\data
 > [!NOTE]
 > Ticking a SINGLE agent reuses that agent's existing room rather than creating a new one - so if you tick only `Ada` you land back on the existing `Ada` room and the sidebar does not grow. That is correct, not a failure. Leaves a new room behind; it does no harm to later tests.
 
-### SHELLNAV-19 — app.js is proven functionally: Enter sends and clears, and the transcript scrolls
+### SHELLNAV-19 — composer.js and scroll.js are proven functionally: Enter sends and clears, and the transcript scrolls
 
 **Free** · about 6 min
 
-*Turns the silent app.js asset failure into something visible, because a stale script key produces no error anywhere.*
+*Turns a silent module failure into something visible, because a module that fails to import produces no error on screen.*
 
 **Before you start**
 
@@ -862,13 +862,13 @@ If `sqlite3` is installed you can confirm with `sqlite3 C:\seeds\huddle\uat\data
 
 **Fail if — any of these**
 
-- Enter inserts a newline instead of sending, and the textarea keeps its text -> `window.teamComposer` never attached. Almost always a stale `@Assets["app.js"]` key that 404ed silently. Go back to SHELLNAV-02, confirm the 404, and report BOTH the asset failure and the coverage gap.
-- The message sends but the transcript does not auto-scroll -> `window.teamScroll` is missing; same root cause, milder symptom.
+- Enter inserts a newline instead of sending, and the textarea keeps its text -> `composer.js` never attached. Either the module failed to import (go back to SHELLNAV-02 and confirm it in Network) or its `attach` threw (the server log shows "Unhandled exception in circuit"). Report BOTH the failure and the coverage gap.
+- The message sends but the transcript does not auto-scroll -> `scroll.js` did not run; same causes, milder symptom.
 - Nothing at all responds to clicks -> `blazor.web.js` failed and the whole page is non-interactive; SHELLNAV-02 will name it.
 
 **Inconclusive if**
 
-If the message sends but `Ada` never replies, the composer half still PASSED - record the reply timeout separately as a chat-area observation, not as an app.js failure. If the circuit has not connected yet, the textarea will not respond at all; wait for the `_blazor` websocket and retry once.
+If the message sends but `Ada` never replies, the composer half still PASSED - record the reply timeout separately as a chat-area observation, not as a module failure. If the circuit has not connected yet, the textarea will not respond at all; wait for the `_blazor` websocket and retry once.
 
 > [!NOTE]
 > Leaves two messages in the `Ada` room. That is harmless and actively useful - SHELLNAV-24 looks for the text `hi there` in the prerendered HTML of the `Ada` room, so it needs this message on screen first.

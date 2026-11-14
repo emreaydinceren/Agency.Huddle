@@ -8,6 +8,7 @@ using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using static Agency.Huddle.Tests.Ui.Tasks.TaskDetailFieldsTestSupport;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
@@ -19,7 +20,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 public sealed class TaskClipboardTests
 {
     /// <summary>The clipboard helper the copy calls.</summary>
-    private const string CopyHelper = "huddleClipboard.copy";
+    private const string CopyHelper = "copy";
 
     /// <summary>The id copies as its own text and says "Copied {id}" or the Ctrl+C warning.</summary>
     /// <param name="copied">What the clipboard helper answers.</param>
@@ -32,7 +33,7 @@ public sealed class TaskClipboardTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         TaskId id = new("T", 7);
         await using MudBunitContext ctx = new();
-        ctx.JSInterop.Setup<bool>(CopyHelper, id.ToString()).SetResult(copied);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(CopyHelper, id.ToString()).SetResult(copied);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         await TaskClipboard.CopyIdAsync(ctx.Services.GetRequiredService<IJSRuntime>(), snackbar, id, ct);
@@ -53,7 +54,7 @@ public sealed class TaskClipboardTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         TaskId id = new("T", 7);
         await using MudBunitContext ctx = new();
-        ctx.JSInterop.Setup<bool>(CopyHelper, $"http://localhost:1111/tasks/item/{id}").SetResult(copied);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(CopyHelper, $"http://localhost:1111/tasks/item/{id}").SetResult(copied);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         await TaskClipboard.CopyLinkAsync(ctx.Services.GetRequiredService<IJSRuntime>(), snackbar, "http://localhost:1111/", id, ct);
@@ -71,7 +72,7 @@ public sealed class TaskClipboardTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         string link = $"{ctx.Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().BaseUri}tasks/item/{task.Id}";
-        ctx.JSInterop.Setup<bool>(CopyHelper, link).SetResult(true);
+        ctx.Module(JsModule.Clipboard).Setup<bool>(CopyHelper, link).SetResult(true);
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);
 

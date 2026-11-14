@@ -1,5 +1,6 @@
 using Agency.Huddle.Tests.SkillPacks.RegistryService;
 using Bunit;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.SkillPacks;
 
@@ -18,7 +19,7 @@ internal sealed class SkillsUiFixture : IDisposable
     {
         MudBunitContext ctx = new();
         SkillsTestServices.AddFromHost(ctx.Services, this.Host);
-        ctx.JSInterop.Setup<bool>("huddleClipboard.copy", _ => true).SetResult(this.ClipboardAccepts);
+        ctx.Module(JsModule.Clipboard).Setup<bool>("copy", _ => true).SetResult(this.ClipboardAccepts);
         ctx.JSInterop.Mode = JSRuntimeMode.Loose;
         return ctx;
     }

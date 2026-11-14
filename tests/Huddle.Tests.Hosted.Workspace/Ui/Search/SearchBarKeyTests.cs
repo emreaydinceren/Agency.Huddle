@@ -1,23 +1,24 @@
 using Bunit;
 using Bunit.Rendering;
 using Agency.Huddle.App.Components.Search;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Search;
 
 /// <summary>
-/// Pins how the search box is wired to the global key script <c>window.huddleSearch</c> (Global Search spec
+/// Pins how the search box is wired to the global key script <c>search.js</c> (Global Search spec
 /// §5.2, §6.5, §11): when it attaches and detaches, what the keys the script reports do to the chips, and the
-/// focus restore on Esc. bUnit's <c>JSInterop</c> records the calls.
+/// focus restore on Esc. The module handler bUnit sets up for <c>search.js</c> records the calls.
 /// </summary>
 public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClassFixture<TeamWebApplicationFactory>
 {
     /// <summary>The number of recorded calls of a script function.</summary>
     /// <param name="h">The harness whose context records the calls.</param>
-    /// <param name="identifier">The function, such as <c>huddleSearch.attach</c>.</param>
+    /// <param name="identifier">The function, such as <c>attach</c> in <c>search.js</c>.</param>
     /// <returns>The count.</returns>
     private static int Calls(SearchBarHarness h, string identifier)
     {
-        return h.Ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, identifier, StringComparison.Ordinal));
+        return h.Ctx.Module(JsModule.Search).Invocations.Count(invocation => string.Equals(invocation.Identifier, identifier, StringComparison.Ordinal));
     }
 
     /// <summary>The text of the chip that is checked.</summary>
@@ -91,13 +92,13 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
     {
         await using SearchBarHarness h = new(factory);
         IRenderedComponent<ContainerFragment> cut = h.Render();
-        int afterFirst = SearchBarKeyTests.Calls(h, "huddleSearch.attach");
+        int afterFirst = SearchBarKeyTests.Calls(h, "attach");
 
         await SearchBarHarness.OpenAsync(cut);
         await SearchBarHarness.TypeAsync(cut, "abc");
 
         Assert.Equal(1, afterFirst);
-        Assert.Equal(1, SearchBarKeyTests.Calls(h, "huddleSearch.attach"));
+        Assert.Equal(1, SearchBarKeyTests.Calls(h, "attach"));
     }
 
     /// <summary>The script is told when the dropdown opens and closes, so the chip keys exist only while it is open.</summary>
@@ -112,8 +113,8 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
 
         object?[] flags =
         [
-            .. h.Ctx.JSInterop.Invocations
-                .Where(static invocation => string.Equals(invocation.Identifier, "huddleSearch.setOpen", StringComparison.Ordinal))
+            .. h.Ctx.Module(JsModule.Search).Invocations
+                .Where(static invocation => string.Equals(invocation.Identifier, "setOpen", StringComparison.Ordinal))
                 .Select(static invocation => invocation.Arguments[0]),
         ];
         Assert.Equal(new object?[] { true, false }, flags);
@@ -129,7 +130,7 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
 
         await SearchBarHarness.PressAsync(cut, "Escape");
 
-        Assert.Equal(1, SearchBarKeyTests.Calls(h, "huddleSearch.restoreFocus"));
+        Assert.Equal(1, SearchBarKeyTests.Calls(h, "restoreFocus"));
     }
 
     /// <summary>Disposing the box removes the script's listener.</summary>
@@ -141,7 +142,7 @@ public sealed class SearchBarKeyTests(TeamWebApplicationFactory factory) : IClas
 
         await h.Ctx.DisposeComponentsOnDispatcherAsync();
 
-        Assert.Equal(1, SearchBarKeyTests.Calls(h, "huddleSearch.detach"));
+        Assert.Equal(1, SearchBarKeyTests.Calls(h, "detach"));
         Assert.NotNull(cut);
     }
 }

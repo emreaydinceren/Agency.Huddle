@@ -188,7 +188,8 @@
     {
         try
         {
-            return await this.Js.InvokeAsync<bool>("huddleFeed.isScrolled", cancellationToken, this.root);
+            IJSObjectReference feed = await JsModule.Feed.ImportAsync(this.Js, cancellationToken);
+            return await feed.InvokeAsync<bool>("isScrolled", cancellationToken, this.root);
         }
         catch (Exception ex) when (ex is JSDisconnectedException or JSException or TaskCanceledException)
         {
@@ -198,7 +199,7 @@
 
     private async Task ScrollToTopAsync()
     {
-        _ = await BrowserCall.InvokeVoidAsync(this.Js, "huddleFeed.scrollToTop", this.root);
+        _ = await BrowserCall.InvokeVoidAsync(this.Js, JsModule.Feed, "scrollToTop", this.root);
     }
 
     /// <summary>Items drawn at once come first, newest first, minus any the parent has since loaded itself.</summary>

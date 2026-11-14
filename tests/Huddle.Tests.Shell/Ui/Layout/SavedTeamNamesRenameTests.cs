@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -23,7 +24,7 @@ public sealed class SavedTeamNamesRenameTests
     {
         using TempDataDir dir = new();
         await using MudBunitContext ctx = new();
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", TeamShortcutStore.StorageKey).SetResult("{\"Off\":false,\"Removed\":[\"Marketing\"]}");
+        ctx.Module(JsModule.Storage).Setup<string?>("get", TeamShortcutStore.StorageKey).SetResult("{\"Off\":false,\"Removed\":[\"Marketing\"]}");
         TeamShortcutStore store = new(ctx.JSInterop.JSRuntime, null, Journal(dir));
 
         await store.LoadAsync();
@@ -44,8 +45,8 @@ public sealed class SavedTeamNamesRenameTests
         TabService tabs = new();
         ctx.Services.AddSingleton(tabs);
         ctx.Services.AddSingleton<ITeamRenames>(Journal(dir));
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", "huddle:tabs").SetResult(source.Export().ToJson());
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", "huddle:tabs").SetResult(source.Export().ToJson());
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/Growth");
 
         IRenderedComponent<TabPersistence> cut = ctx.Render<TabPersistence>();

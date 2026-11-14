@@ -5,7 +5,7 @@
    label and a value: stacked, label over value, in a narrow drawer; two columns, label left and value right
    (the Library Properties block's grid: .library-properties-list), once the container is 368px wide - a 400px
    drawer less its 16px padding on each side. A container query on .task-detail-groups, not a viewport media
-   query, because the drawer is resizable (huddleResize). The visible label is .task-detail-prop-label; the
+   query, because the drawer is resizable (resize.js). The visible label is .task-detail-prop-label; the
    control's own MudBlazor label stays in the DOM, visually hidden, as its accessible name. */
 .task-detail-groups {
     container-type: inline-size;

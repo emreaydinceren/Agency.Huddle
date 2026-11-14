@@ -1,4 +1,5 @@
-// Drives window.teamComposer.attach / send from src/Huddle.App/wwwroot/app.js against a hand-made
+// Drives the composer.attach / send members of src/Huddle.App/wwwroot/composer.js (exposed here as
+// window.teamComposer) against a hand-made
 // DOM, one scenario per argv[2], and prints a JSON object of what happened. ComposerAttachJsTests
 // runs this with `node` and asserts on the output.
 import fs from "node:fs";
@@ -6,7 +7,20 @@ import path from "node:path";
 import vm from "node:vm";
 
 const root = process.argv[3];
-const source = fs.readFileSync(path.join(root, "src", "Huddle.App", "wwwroot", "app.js"), "utf8");
+const source = fs.readFileSync(path.join(root, "src", "Huddle.App", "wwwroot", "composer.js"), "utf8");
+
+// composer.js is an ES module that exports only its public members. The tests also drive internals such as
+// findToken, so the final export statement is cut off and the whole object is exposed as window.teamComposer
+// inside the vm context only; production code exports nothing extra.
+function asScript(moduleSource) {
+    const exportStatement = /^export const \{[^}]*\} = composer;[ \t]*\r?\n?$/m;
+    if (!exportStatement.test(moduleSource)) {
+        throw new Error("composer.js no longer ends with `export const { ... } = composer;`.");
+    }
+    return moduleSource.replace(exportStatement, "") + "\nwindow.teamComposer = composer;";
+}
+
+const script = asScript(source);
 
 class FakeNode {
     constructor() {
@@ -59,7 +73,7 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
-vm.runInContext(source, context);
+vm.runInContext(script, context);
 
 const file = { name: "image.png" };
 const calls = [];

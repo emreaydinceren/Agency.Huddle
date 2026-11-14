@@ -283,11 +283,11 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 - At step 2 none of them is shown, and a stale link to one is refused.
 - At step 3 they return.
 
-### REMOTE-12 — A Huddle crash kills the Tailscale child (Job object)
+### REMOTE-12 — A Huddle crash kills the Tailscale child (kill on parent exit)
 
 **Free** · about 10 min · needs Tailscale
 
-*Proves the Windows Job object: if Huddle dies without cleaning up, the `tailscale serve` child dies with it. Needs Tailscale; Windows only.*
+*Proves `KillOnParentExit`: if Huddle dies without cleaning up, the `tailscale serve` child dies with it. Needs Tailscale; Windows (the steps below) or Linux, not macOS.*
 
 **Before you start**
 

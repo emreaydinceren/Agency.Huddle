@@ -11,7 +11,7 @@
     TimeProvider, corrections-B5 D14 item 10), MudExitPrompt, create mode's Save via
     TaskService.Create with refusals shown (corrections-B7 "14.4" item 2), the Description Preview's
     Task-id links (item 3), and the Budget banner's role="status" (item 4). 15.2.i (this dispatch) adds
-    the header's copy button and its Copy link menu item (Spec §13.13.1, huddleClipboard, success/warning
+    the header's copy button and its Copy link menu item (Spec §13.13.1, clipboard.js, success/warning
     toasts) and the Closed chip (Spec §13.13.3 step 3) - none shown in create mode.
 
     TaskDetailDialog (Components/Tasks/TaskDetailDialog.razor) passes only Id (or a Draft for
@@ -1575,7 +1575,7 @@ else if (this.loaded is { } task)
 
     /// <summary>
     /// The copy button (Spec §13.13.1): copies exactly <paramref name="id"/>'s text via
-    /// <c>huddleClipboard.copy</c>, called directly from the click handler with no other <c>await</c>
+    /// <c>copy</c> in <c>clipboard.js</c>, called directly from the click handler with no other <c>await</c>
     /// before it, so the browser's clipboard permission stays inside the click's own user-activation
     /// window (the Spec's own warning).
     /// </summary>

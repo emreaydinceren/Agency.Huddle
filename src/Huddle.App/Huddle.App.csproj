@@ -3,8 +3,6 @@
 
   <PropertyGroup>
     <RootNamespace>Agency.Huddle.App</RootNamespace>
-    <!-- [LibraryImport] (the Windows Job object in ProcessTailscaleCli) generates unsafe code. -->
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <NoWarn>$(NoWarn);CA1031;CA1848</NoWarn>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <!-- MUD0002 (the analyzer inside the MudBlazor package): an attribute on a Mud component that is not one of its

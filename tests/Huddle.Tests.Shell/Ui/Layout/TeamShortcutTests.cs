@@ -6,6 +6,7 @@ using Agency.Huddle.App.Components.Layout;
 using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Layout;
 
@@ -73,8 +74,8 @@ public sealed class TeamShortcutTests
         await store.AddAsync("Data", ThreeTeams);
 
         Assert.Equal(["Data"], Names(store.Visible(ThreeTeams)));
-        object? written = ctx.JSInterop.Invocations
-            .Last(invocation => string.Equals(invocation.Identifier, "huddleStorage.set", StringComparison.Ordinal))
+        object? written = ctx.Module(JsModule.Storage).Invocations
+            .Last(invocation => string.Equals(invocation.Identifier, "set", StringComparison.Ordinal))
             .Arguments[1];
         Assert.Equal("""{"Off":false,"Removed":["DevTeam","Ops"]}""", written);
     }
@@ -175,7 +176,7 @@ public sealed class TeamShortcutTests
     {
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = ThreeTeams });
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", TeamShortcutStore.StorageKey); // never answered
+        ctx.Module(JsModule.Storage).Setup<string?>("get", TeamShortcutStore.StorageKey); // never answered
 
         IRenderedComponent<TeamShortcutButton> cut = ctx.Render<TeamShortcutButton>(p => p.Add(c => c.Team, "Ops"));
 
@@ -185,13 +186,13 @@ public sealed class TeamShortcutTests
 
     private static string Label(IRenderedComponent<TeamShortcutButton> cut) => cut.Find("button.team-shortcut-toggle").TextContent.Trim();
 
-    /// <summary>A context whose catalog lists <see cref="ThreeTeams"/> and whose <c>huddleStorage.get</c> answers <paramref name="stored"/>.</summary>
+    /// <summary>A context whose catalog lists <see cref="ThreeTeams"/> and whose <c>get</c> in <c>storage.js</c> answers <paramref name="stored"/>.</summary>
     private static MudBunitContext NewContext(string? stored)
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamCatalog>(new FakeTeamCatalog { Teams = ThreeTeams });
-        ctx.JSInterop.Setup<string?>("huddleStorage.get", TeamShortcutStore.StorageKey).SetResult(stored);
-        ctx.JSInterop.SetupVoid("huddleStorage.set", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Storage).Setup<string?>("get", TeamShortcutStore.StorageKey).SetResult(stored);
+        ctx.Module(JsModule.Storage).SetupVoid("set", _ => true).SetVoidResult();
         return ctx;
     }
 

@@ -22,13 +22,13 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class MessageListJumpTests
 {
     /// <summary>The script that scrolls to a target row.</summary>
-    private const string ToMessage = "teamScroll.toMessage";
+    private const string ToMessage = "toMessage";
 
     /// <summary>The script that sticks to the bottom.</summary>
-    private const string ToBottom = "teamScroll.toBottom";
+    private const string ToBottom = "toBottom";
 
     /// <summary>The script that reports whether the list is scrolled to its bottom.</summary>
-    private const string IsAtBottom = "teamScroll.isAtBottom";
+    private const string IsAtBottom = "isAtBottom";
 
     /// <summary>The Human's user id in these tests.</summary>
     private const string HumanId = "u-human";
@@ -97,7 +97,7 @@ public sealed class MessageListJumpTests
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
         int jumped = 0;
 
         IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
@@ -116,7 +116,7 @@ public sealed class MessageListJumpTests
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
         ChatMessage[] messages = MessageListJumpTests.Three();
         IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
             .Add(p => p.Messages, messages)
@@ -136,8 +136,8 @@ public sealed class MessageListJumpTests
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.IsAtBottom, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.IsAtBottom, static _ => true).SetResult(true);
         ChatMessage[] messages = MessageListJumpTests.Three();
         IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
             .Add(p => p.Messages, messages)
@@ -156,7 +156,7 @@ public sealed class MessageListJumpTests
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
         ChatMessage[] messages = MessageListJumpTests.Three();
         IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
             .Add(p => p.Messages, messages)
@@ -175,7 +175,7 @@ public sealed class MessageListJumpTests
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(false);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(false);
         int jumped = 0;
 
         IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
@@ -193,7 +193,7 @@ public sealed class MessageListJumpTests
     {
         await using TeamWebApplicationFactory factory = new();
         await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
-        ctx.JSInterop.Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
+        ctx.Module(JsModule.Scroll).Setup<bool>(MessageListJumpTests.ToMessage, static _ => true).SetResult(true);
         ChatMessage[] messages = MessageListJumpTests.Three();
         IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
             .Add(p => p.Messages, messages)
@@ -210,12 +210,12 @@ public sealed class MessageListJumpTests
     /// <param name="ctx">The context whose recorded invocations to count.</param>
     /// <param name="identifier">The script name.</param>
     private static int Calls(MudBunitContext ctx, string identifier) =>
-        ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, identifier, StringComparison.Ordinal));
+        ctx.Module(JsModule.Scroll).Invocations.Count(invocation => string.Equals(invocation.Identifier, identifier, StringComparison.Ordinal));
 
-    /// <summary>The Message ids <c>teamScroll.toMessage</c> was called with, in order.</summary>
+    /// <summary>The Message ids <c>toMessage</c> in <c>scroll.js</c> was called with, in order.</summary>
     /// <param name="ctx">The context whose recorded invocations to read.</param>
     private static string[] TargetsJumpedTo(MudBunitContext ctx) =>
-        [.. ctx.JSInterop.Invocations
+        [.. ctx.Module(JsModule.Scroll).Invocations
             .Where(invocation => string.Equals(invocation.Identifier, MessageListJumpTests.ToMessage, StringComparison.Ordinal))
             .Select(invocation => (string)invocation.Arguments[1]!)];
 

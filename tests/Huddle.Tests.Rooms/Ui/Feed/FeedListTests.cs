@@ -2,6 +2,7 @@ using Agency.Huddle.App.Components.Feed;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.Tests.Library;
 using Bunit;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -73,8 +74,8 @@ public sealed class FeedListTests
     {
         using LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
         await using MudBunitContext ctx = FeedTestData.NewContext(library);
-        ctx.JSInterop.Setup<bool>("huddleFeed.isScrolled", _ => true).SetResult(true);
-        ctx.JSInterop.SetupVoid("huddleFeed.scrollToTop", _ => true).SetVoidResult();
+        ctx.Module(JsModule.Feed).Setup<bool>("isScrolled", _ => true).SetResult(true);
+        ctx.Module(JsModule.Feed).SetupVoid("scrollToTop", _ => true).SetVoidResult();
         IRenderedComponent<FeedList> cut = Render(ctx, [Archived(1, "Vera", Now.AddHours(-1))]);
 
         await cut.InvokeAsync(() => cut.Instance.AddNewItemsAsync([Archived(3, "Kai", Now), Archived(2, "Nova", Now.AddMinutes(-30))], Xunit.TestContext.Current.CancellationToken));
@@ -86,7 +87,7 @@ public sealed class FeedListTests
 
         Assert.Equal(3, cut.FindAll(".feed-row").Count);
         Assert.Empty(cut.FindAll(".feed-new-pill"));
-        ctx.JSInterop.VerifyInvoke("huddleFeed.scrollToTop");
+        ctx.Module(JsModule.Feed).VerifyInvoke("scrollToTop");
     }
 
     /// <summary>One waiting item reads "↑ 1 new item", and the pill counts items, not groups.</summary>
@@ -95,7 +96,7 @@ public sealed class FeedListTests
     {
         using LibraryFileServiceFixture library = LibraryFileServiceFixture.Build();
         await using MudBunitContext ctx = FeedTestData.NewContext(library);
-        ctx.JSInterop.Setup<bool>("huddleFeed.isScrolled", _ => true).SetResult(true);
+        ctx.Module(JsModule.Feed).Setup<bool>("isScrolled", _ => true).SetResult(true);
         IRenderedComponent<FeedList> cut = Render(ctx, [Archived(1, "Vera", Now.AddHours(-1))]);
 
         await cut.InvokeAsync(() => cut.Instance.AddNewItemsAsync([Archived(2, "Nova", Now)], Xunit.TestContext.Current.CancellationToken));

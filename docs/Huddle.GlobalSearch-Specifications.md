@@ -117,11 +117,11 @@ these.
 | A Room is `Room(Id, Name, Created) { Archived }` from the Team Directory (`ITeamDirectory.GetRoomsAsync`). **A Room has no Team.** | `src/Huddle.App/Data/Models.cs:7`, `src/Huddle.App/Data/SqliteTeamDirectory.cs:241` |
 | A Transcript is one JSONL file per Room, `{DataDir}/rooms/<id>.jsonl` (ADR-0002), each line a `ChatMessage(Id, Timestamp, SenderId, SenderName, Text)`. Tool activity, Drafts and Turn detail are never written to it. `ReadAllAsync` reads the whole file under the Room's lock and skips an unparsable line with a warning. | `src/Huddle.Contracts/ChatMessage.cs`, `src/Huddle.App/Data/FileChatStore.cs:51`, `src/Huddle.App/Data/IChatStore.cs` |
 | **The Room view loads the whole Transcript** (`IChatStore.ReadAllAsync`) and renders every Message. Nothing is paged or virtualised. | `src/Huddle.App/Components/Pages/Chat.razor:325` |
-| **The only scroll code is "to the bottom".** `MessageList.OnAfterRenderAsync` calls `teamScroll.toBottom` whenever the rendered signature (Messages plus Draft growth) changes, unconditionally. Message rows carry no DOM id. There is no scroll-to-Message. | `src/Huddle.App/Components/Shared/MessageList.razor:290`, `src/Huddle.App/wwwroot/app.js:155` |
+| **The only scroll code is "to the bottom".** `MessageList.OnAfterRenderAsync` calls `toBottom` in `scroll.js` whenever the rendered signature (Messages plus Draft growth) changes, unconditionally. Message rows carry no DOM id. There is no scroll-to-Message. | `src/Huddle.App/Components/Shared/MessageList.razor:290`, `src/Huddle.App/wwwroot/scroll.js` (`toBottom`) |
 | **The Top Bar is built** (PR #162). `TopBar.razor` is a fixed `MudAppBar` across the whole window, above the left menu (the drawer uses `ClipMode="DrawerClipMode.Always"`, so it starts below the bar) and every pane. It draws `PageBreadcrumbs` for `TabService.Active`, so the trail follows the focused pane; a crumb navigates that Tab in place. It has three cells, `.top-bar-start` (the trail), `.top-bar-center` and `.top-bar-end`, and two `RenderFragment?` parameters, **`Search`** (drawn in `.top-bar-center`) and **`Actions`** (`.top-bar-end`). `MainLayout` draws `<TopBar />` with both slots empty today. | `src/Huddle.App/Components/Layout/TopBar.razor`, `src/Huddle.App/Components/Layout/MainLayout.razor` |
 | **No pane draws a breadcrumb.** `TabPageHost` mounts only the page; `PageBreadcrumbs` has `Crumbs` and `OnNavigate` and no `Collapse` (a trail spanning the window is never collapsed). `TabTrail.Build` makes a page with no trail show its title alone, as `/settings` does. | `src/Huddle.App/Components/Layout/TabPageHost.razor`, `src/Huddle.App/Components/Shared/PageBreadcrumbs.razor`, `tests/Huddle.Tests/Ui/Layout/PageBreadcrumbsTests.cs` |
 | **The page is not zoomed.** The UI renders at 100% with plain `vh` and `px` sizes ([ADR-0056](adr/0056-the-ui-renders-at-100-percent-with-a-px-type-scale.md) removed the old 90% `zoom`): `.main-column` is `height: 100vh`, a popover needs no zoom rule, and no rule in `app.css` sets `zoom` (`AppCss_SetsNoZoomAnywhere`). Every `var()` in `app.css` must still name a MudBlazor variable (`ThemeSourceTests`). | `src/Huddle.App/wwwroot/app.css` (`.main-column`) |
-| Global keys: `window.huddleTabs.attach` adds one `document` `keydown` listener for Alt+W, Alt+PageDown and Alt+PageUp, attached from `TabHost.OnAfterRenderAsync`. Alt, because the browser keeps Ctrl+W and Ctrl+Tab. | `src/Huddle.App/wwwroot/app.js:164`, `src/Huddle.App/Components/Layout/TabHost.razor:36` |
+| Global keys: `attach` in `tabs.js` adds one `document` `keydown` listener for Alt+W, Alt+PageDown and Alt+PageUp, attached from `TabHost.OnAfterRenderAsync`. Alt, because the browser keeps Ctrl+W and Ctrl+Tab. | `src/Huddle.App/wwwroot/tabs.js` (`attach`), `src/Huddle.App/Components/Layout/TabHost.razor:36` |
 | `TabService` has `Open(url)`, `Navigate(id, url)` (in place; focuses another Tab with the same key instead), `Keep(id)` (makes permanent) and `Active`. | `src/Huddle.App/Tabs/TabService.cs` |
 | `TabPageRoutes` copies every query value onto the page's `[Parameter]` of the same name, so a page reads `?message=` without `SupplyParameterFromQuery`. | `src/Huddle.App/Tabs/TabPageRoutes.cs:88-97` |
 | The Agents page has no per-Agent URL. A tile opens the card with `IDialogService.ShowAsync<AgentProfileCard>(name, Agents.BuildViewParameters(…), AgentProfileCard.Options)`; `BuildViewParameters` is an `internal static` pure function of the Persona's entry, its `Persona`, its status, its Room id and its file path. | `src/Huddle.App/Components/Pages/Agents.razor:239`, `:270` |
@@ -170,8 +170,8 @@ its middle cell.
 > from the address bar, the next candidate is `Ctrl+Shift+K` (D-4). Record the result in the manual
 > test (GS-M2) and in [known-limits.md](engineering/known-limits.md) if it fails.
 
-**Where the keys attach.** A new `window.huddleSearch` object in `wwwroot/app.js`, shaped like
-`window.huddleTabs`: `attach(dotnetRef, inputElement)` adds one `keydown` listener, and `detach()`
+**Where the keys attach.** A new `search.js` module in `wwwroot/` (`JsModule.Search`), shaped like
+`tabs.js`: `attach(dotnetRef, inputElement)` adds one `keydown` listener, and `detach()`
 removes it. It listens on `window` in the **capture** phase, so a component that handles `keydown`
 itself (the composer, CodeMirror) cannot swallow `Ctrl+K` first. The search bar component attaches
 it in `OnAfterRenderAsync(firstRender)` and detaches it in `Dispose`, the way `TabHost` attaches,
@@ -276,7 +276,7 @@ at all, §14).
 | `Esc` | Closes and returns focus (§5.2) |
 
 `Alt+1`…`Alt+6` are registered only while the dropdown is open, so they never collide with the
-Tab shortcuts in `window.huddleTabs`, which use `Alt+W` and `Alt+PageUp/PageDown`.
+Tab shortcuts in `tabs.js`, which use `Alt+W` and `Alt+PageUp/PageDown`.
 
 ### 6.6 Cards
 
@@ -687,7 +687,7 @@ Today none of this exists (§4). The work:
    focused group's Tab. The Tab key is still `room:{id}`, so the query never opens a second Tab.
 2. **`MessageList.razor` marks every row** with its Message id (`data-message-id="@message.Id"`),
    and takes the target id as a parameter.
-3. **`app.js` gains `teamScroll.toMessage(container, messageId)`**: finds the row, scrolls it into
+3. **`scroll.js` gains `toMessage(container, messageId)`**: finds the row, scrolls it into
    the middle of the list, adds a `search-hit-flash` class, and removes it after the fade. The
    colour comes from `--mud-palette-*` in `app.css`; the fade is a CSS transition, and
    `prefers-reduced-motion` drops it to a plain outline that clears. `scrollIntoView` works in the
@@ -818,7 +818,7 @@ providers under them are not faked in §12.2.
 | GS-T18 | Reopening shows `Search results for: 'x'`, an empty box and the last filter, and re-runs the query |
 | GS-T19 | ARIA: `role="combobox"`, `aria-expanded`, `aria-activedescendant` following `Down`; groups and options roles |
 | GS-T20 | **Delivered (PR #162).** The Top Bar draws one breadcrumb for the focused group, follows focus, and `TabPageHost` draws none: `PageBreadcrumbsTests` |
-| GS-T21 | `Chat.razor` with `Message` set calls `teamScroll.toMessage`, not `toBottom`, on its first render, and a later Message does not call `toBottom` until the Human returns to the bottom |
+| GS-T21 | `Chat.razor` with `Message` set calls `toMessage` in `scroll.js`, not `toBottom`, on its first render, and a later Message does not call `toBottom` until the Human returns to the bottom |
 | GS-T22 | `MessageList` rows carry `data-message-id` |
 | GS-T23 | The search box is drawn in the Top Bar's `.top-bar-center` cell through the `Search` slot, and `TopBar` itself is unchanged |
 | GS-T24 | `app.css` pins the dropdown's size as source facts: `.search-dropdown` has `max-height: 80vh;` in plain viewport units, and no rule sets `zoom` on a search popover or anywhere else (ADR-0056) |
@@ -950,7 +950,7 @@ as they need to be (PR #162) and do not change.
 | `src/Huddle.App/Components/Pages/Chat.razor` | A `Message` target parameter; passes it to `MessageList` |
 | `src/Huddle.App/Components/Shared/MessageList.razor` | `data-message-id` on every row; the jump instead of `toBottom`, and the rule that holds stick-to-bottom off |
 | `src/Huddle.App/Components/Pages/Agents.razor` | Its card opening moves into the shared opener the search bar also calls (§9); behaviour unchanged |
-| `src/Huddle.App/wwwroot/app.js` | `window.huddleSearch` (keys, focus restore) and `teamScroll.toMessage` |
+| `src/Huddle.App/wwwroot/search.js`, `src/Huddle.App/wwwroot/scroll.js` | `search.js` (keys, focus restore) and `toMessage` in `scroll.js` |
 | `src/Huddle.App/wwwroot/app.css` | A `/* Global search */` block: the dropdown size in viewport units (§6.8), the flash, the dimmed group. A protected shared root file: announce the change |
 | `src/Huddle.App/Library/LibraryFileService.cs` | The shared walk gains the content test (§8.3); `FindAsync` behaves as before |
 | `src/Huddle.App/TeamOptions.cs` | A `Search` property of the new `SearchOptions` |

@@ -650,6 +650,7 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `Components/Layout/TabPersistence.razor` | Restores the stored Tabs after the first render and saves every change (`huddle:tabs`). |
 | `Circuits/ICircuitConnection.cs` | Whether the browser behind a circuit is still connected. |
 | `Circuits/CircuitConnectionTracker.cs` | The circuit's `CircuitHandler`: follows the framework's connection callbacks and answers `ICircuitConnection`. |
+| `Circuits/JsModulePreloader.cs` | A second `CircuitHandler`: imports every app JS module (`Components/Shared/JsModule.cs`) when the circuit opens, before the first render. |
 | `Circuits/ServerNavigator.cs` | Navigates for a handler that a server event started and skips the call once the browser is gone; `TabSync` and `Chat` use it. |
 | `Circuits/CircuitServiceCollectionExtensions.cs` | `AddCircuitConnection`: registers one scoped tracker as both the handler and the connection. |
 
@@ -668,7 +669,7 @@ Tabs — the open pages in the strip above the content, `docs/Huddle.Tabs-Specif
 | `SessionRegistry.cs`, `CookieSessionResolver.cs`, `IGatewaySessionResolver.cs`, `GatewayAuthenticationHandler.cs`, `GatewayPrincipal.cs`, `GatewayConnectionGuard.cs` | Sessions, the `HuddleGateway` authentication scheme, and the hub filter that aborts a revoked device's open `/_blazor` connections. |
 | `BootstrapTokenStore.cs`, `BootstrapLinks.cs`, `DesktopPortChoice.cs`, `QrCoderPngEncoder.cs` | Single-use bootstrap tokens, setup links and their QR codes, and the stable desktop port. |
 | `GatewayListener.cs`, `GatewayListenerPlan.cs`, `GatewayKestrelConfigurator.cs`, `GatewayListenerStartup.cs`, `SocketProbe.cs`, `GatewayDynamicHosts.cs` | Which endpoints Kestrel binds, the managed listener, busy-port probing, and the host-filter list. |
-| `TailscaleRuntime.cs`, `TailscaleServeClaim.cs`, `TailscaleStatusPoller.cs`, `TailscaleWhois.cs`, `ProcessTailscaleCli.cs`, `ITailscaleCli.cs`, `ITailscaleChild.cs` | The Tailscale controller: status, the foreground `serve` or `funnel` child (Job object on Windows), whois, stray routes. |
+| `TailscaleRuntime.cs`, `TailscaleServeClaim.cs`, `TailscaleStatusPoller.cs`, `TailscaleWhois.cs`, `ProcessTailscaleCli.cs`, `ITailscaleCli.cs`, `ITailscaleChild.cs` | The Tailscale controller: status, the foreground `serve` or `funnel` child (`KillOnParentExit` on Windows and Linux), whois, stray routes. |
 | `GatewayAdminService.cs`, `GatewayAdminEndpoints.cs`, `GatewayRuntimeView.cs`, `GatewaySecurityCheck.cs` | What Settings and the `devices` verbs call, `/_gateway/*` for the CLI, and the Security check items. |
 
 `src/Huddle.App/Cli` — the `huddle` verbs, run before the web host is built:

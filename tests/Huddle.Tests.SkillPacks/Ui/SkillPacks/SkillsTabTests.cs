@@ -5,6 +5,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.SkillPacks;
 
@@ -50,7 +51,7 @@ public sealed class SkillsTabTests : IDisposable
         await OpenMenuAsync(cut, "alpha");
         await cut.InvokeAsync(() => cut.Find(".skills-menu-copy-prompt").ClickAsync());
 
-        JSRuntimeInvocation copy = Assert.Single(ctx.JSInterop.Invocations["huddleClipboard.copy"]);
+        JSRuntimeInvocation copy = Assert.Single(ctx.Module(JsModule.Clipboard).Invocations["copy"]);
         Assert.Contains("alpha", Assert.IsType<string>(copy.Arguments[0]), StringComparison.Ordinal); // contains-ok: the prompt text itself is pinned by SkillPromptBuilderTests
         Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
         Assert.Equal(PromptClipboard.CopiedMessage, shown.Message);

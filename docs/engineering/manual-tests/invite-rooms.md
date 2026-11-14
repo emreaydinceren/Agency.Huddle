@@ -828,7 +828,7 @@ If the line that appears is neither clearly red nor clearly green, read its CSS 
 If the textarea does NOT clear, check whether you pressed Shift+Enter (which inserts a newline and does not send). Re-test with a plain Enter before recording anything.
 
 > [!NOTE]
-> BOTH of these are CURRENT behaviour and must NOT be filed as defects: (a) an ordinary message that legitimately begins with a slash (e.g. `/opt/bin is the path`) cannot be posted at all, because every leading-slash text goes through the parser; (b) the client-side Enter handler clears the textarea as soon as `SendAsync` returns (`app.js:54-55`), whether or not the server accepted the text, so a rejected command loses what you typed. Neither is listed in `known-limits.md`; note both in your report.
+> BOTH of these are CURRENT behaviour and must NOT be filed as defects: (a) an ordinary message that legitimately begins with a slash (e.g. `/opt/bin is the path`) cannot be posted at all, because every leading-slash text goes through the parser; (b) the client-side Enter handler clears the textarea as soon as `SendAsync` returns (`send` in `composer.js`), whether or not the server accepted the text, so a rejected command loses what you typed. Neither is listed in `known-limits.md`; note both in your report.
 
 ### INVITEROOMS-20 — A Room's name is always its Agent Members joined by ", " in membership order, with the Human excluded
 
