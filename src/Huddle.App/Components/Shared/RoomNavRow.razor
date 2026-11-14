@@ -34,7 +34,7 @@
     @if (this.confirmingDelete)
     {
         @* The sidebar form: "Delete?" on one line, Cancel then Delete, in the row's indent. The full sentence (with the
-           Recycle Bin note) is the row's title, and the Archived page's Chats tab keeps the long prompt. *@
+           Recycle Bin note) is the row's title, and the Archived page's Rooms tab keeps the long prompt. *@
         <div class="room-list-confirm-host" title="@RoomDeleteCopy.Prompt(this.Room.Name, this.uploadCount)">
             <InlineConfirm Class="room-list-confirm" Narrow="true" Prompt="Delete?" Busy="this.busy"
                            OnConfirm="this.ConfirmDeleteAsync" OnCancel="this.CancelDelete" />

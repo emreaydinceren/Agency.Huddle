@@ -780,9 +780,9 @@ public static class ServiceCollectionExtensions
         // The Right sidebar's panels (docs/Huddle.RightSidebar-Specifications.md): one registration each, no page changes.
         services.AddSidebarPanel(new Sidebar.SidebarPanel("members", "Members", MudBlazor.Icons.Material.Filled.Group, 10,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.MembersPanel)));
-        services.AddSidebarPanel(new Sidebar.SidebarPanel("room-tasks", "Tasks in this chat", MudBlazor.Icons.Material.Filled.TaskAlt, 20,
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("room-tasks", "Tasks in this Room", MudBlazor.Icons.Material.Filled.TaskAlt, 20,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.RoomTasksPanel), static options => options.Tasks.Enabled));
-        services.AddSidebarPanel(new Sidebar.SidebarPanel("room-documents", "Documents in this chat", MudBlazor.Icons.Material.Filled.Description, 30,
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("room-documents", "Documents in this Room", MudBlazor.Icons.Material.Filled.Description, 30,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.RoomDocumentsPanel), static options => options.Library.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("outline", "Outline", MudBlazor.Icons.Material.Filled.Toc, 10,
             static subject => subject is Sidebar.DocumentSubject { Kind: Library.LibraryFileKind.Markdown }, typeof(Components.Sidebar.OutlinePanel), static options => options.Library.Enabled));

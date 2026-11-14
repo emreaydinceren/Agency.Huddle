@@ -13,7 +13,7 @@ public sealed class ArchivedTabsTests
     [InlineData("/archived", "Teams")]
     [InlineData("/archived/teams", "Teams")]
     [InlineData("/archived/projects", "Projects")]
-    [InlineData("/archived/Chats?x=1", "Chats")]
+    [InlineData("/archived/Rooms?x=1", "Rooms")]
     [InlineData("/archived/nonsense", "Teams")]
     [InlineData(null, "Teams")]
     public void FromUrl_NamesTheTab(string? url, string expected)
@@ -21,12 +21,26 @@ public sealed class ArchivedTabsTests
         Assert.Equal(Enum.Parse<ArchivedTab>(expected), ArchivedTabs.FromUrl(url));
     }
 
+    /// <summary>
+    /// The Rooms tab's old address, <c>/archived/chats</c>, still opens the Rooms tab, so a Tab the browser saved
+    /// before the tab was renamed opens where it did; the tab's own address is <c>/archived/rooms</c>.
+    /// </summary>
+    /// <param name="url">The old address, in any case and with a query.</param>
+    [Theory]
+    [InlineData("/archived/chats")]
+    [InlineData("/archived/Chats?x=1")]
+    public void FromUrl_OldChatsAddress_IsTheRoomsTab(string url)
+    {
+        Assert.Equal(ArchivedTab.Rooms, ArchivedTabs.FromUrl(url));
+        Assert.Equal("/archived/rooms", ArchivedTabs.Href(ArchivedTab.Rooms));
+    }
+
     /// <summary>Each tab's address reads back as that tab.</summary>
     /// <param name="tab">The name of the tab.</param>
     [Theory]
     [InlineData("Teams")]
     [InlineData("Projects")]
-    [InlineData("Chats")]
+    [InlineData("Rooms")]
     public void Href_RoundTrips(string tab)
     {
         ArchivedTab parsed = Enum.Parse<ArchivedTab>(tab);
@@ -39,7 +53,7 @@ public sealed class ArchivedTabsTests
     [Theory]
     [InlineData("/archived")]
     [InlineData("/archived/projects")]
-    [InlineData("/archived/chats")]
+    [InlineData("/archived/rooms")]
     public void TabKeys_EveryAddressIsTheArchivedTab(string url)
     {
         TabDescriptor descriptor = TabKeys.Describe(url);

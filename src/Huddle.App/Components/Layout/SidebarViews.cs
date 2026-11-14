@@ -8,11 +8,11 @@ namespace Agency.Huddle.App.Components.Layout;
 internal static class SidebarViews
 {
     /// <summary>The view the Sidebar opens on.</summary>
-    public const SidebarView Default = SidebarView.Chats;
+    public const SidebarView Default = SidebarView.Rooms;
 
     private static readonly SidebarViewItem[] All =
     [
-        new(SidebarView.Chats, "Chats", ActionIcons.Chat),
+        new(SidebarView.Rooms, "Rooms", ActionIcons.Chat),
         new(SidebarView.Teams, "Teams", Icons.Material.Outlined.Groups),
         new(SidebarView.Agents, "Agents", Icons.Material.Filled.Group),
         new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.Checklist),
@@ -98,8 +98,8 @@ internal static class SidebarViews
     /// The view the Sidebar shows once the focused page moves into <paramref name="area"/> (audit B3a): the area's own
     /// view, except that a Team page keeps a Team shortcut's view open; <see langword="null"/> (the Sidebar collapsed) for
     /// Settings, whose sections are the page's own left menu;
-    /// and, for a Room, the current view, or Chats when the Sidebar was collapsed, because a Room is listed under
-    /// Chats or under a Team and the Human may be looking at either.
+    /// and, for a Room, the current view, or Rooms when the Sidebar was collapsed, because a Room is listed under
+    /// Rooms or under a Team and the Human may be looking at either.
     /// </summary>
     /// <param name="area">An area from <see cref="AreaOf(string?)"/>.</param>
     /// <param name="current">The view selected now, or <see langword="null"/> while the Sidebar is collapsed.</param>
@@ -111,6 +111,6 @@ internal static class SidebarViews
         "library" => SidebarView.Library,
         "scheduled" => SidebarView.Scheduled,
         "settings" => null,
-        _ => current ?? SidebarView.Chats,
+        _ => current ?? SidebarView.Rooms,
     };
 }

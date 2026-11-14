@@ -12,7 +12,7 @@
 @inject TabService Tabs
 
 @*
-    The "Tasks in this chat" panel (Spec D-8): every Task the Room's Messages mention, newest mention first, each
+    The "Tasks in this Room" panel (Spec D-8): every Task the Room's Messages mention, newest mention first, each
     re-resolved for its current title and state. The Transcript is reloaded when a Message is posted in this Room;
     a Task change only re-resolves, because no Message changed.
     Anything but a Room Subject renders nothing; the jump navigates the Tab the panel lives in; the row count goes to the frame.
@@ -22,7 +22,7 @@
 {
     @if (this.loaded)
     {
-        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No Tasks mentioned in this chat yet.</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary" role="status">No Tasks mentioned in this Room yet.</MudText>
     }
 }
 else

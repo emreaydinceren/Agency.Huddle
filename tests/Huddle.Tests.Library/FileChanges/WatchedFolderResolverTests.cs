@@ -231,7 +231,7 @@ public sealed class WatchedFolderResolverTests
 
         Assert.False(resolved);
         Assert.Null(folder);
-        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+        Assert.Equal("Uploads are announced in the Room, not watched.", reason);
     }
 
     /// <summary>Spec 6.8: a full path at or under the Uploads root is refused too.</summary>
@@ -245,7 +245,7 @@ public sealed class WatchedFolderResolverTests
 
         Assert.False(resolved);
         Assert.Null(folder);
-        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+        Assert.Equal("Uploads are announced in the Room, not watched.", reason);
     }
 
     /// <summary>Spec 6.8: a Team's raw folder and anything under it is refused with the same text, whichever case and separator.</summary>
@@ -263,7 +263,7 @@ public sealed class WatchedFolderResolverTests
 
         Assert.False(resolved);
         Assert.Null(folder);
-        Assert.Equal("Uploads are announced in the chat, not watched.", reason);
+        Assert.Equal("Uploads are announced in the Room, not watched.", reason);
     }
 
     /// <summary>A Team's other folders, a folder merely starting with <c>raw</c> inside a Team, and a Team folder named <c>Uploads</c> (no longer reserved) still resolve.</summary>

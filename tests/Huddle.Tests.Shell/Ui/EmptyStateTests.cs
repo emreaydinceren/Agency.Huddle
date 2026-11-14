@@ -79,7 +79,7 @@ public sealed class EmptyStateTests
     public async Task Action_RendersInsideTheState()
     {
         await using MudBunitContext ctx = new();
-        RenderFragment action = builder => builder.AddMarkupContent(0, "<button class=\"empty-action\">New chat</button>");
+        RenderFragment action = builder => builder.AddMarkupContent(0, "<button class=\"empty-action\">New room</button>");
 
         var cut = ctx.Render<EmptyState>(parameters => parameters
             .Add(p => p.Title, Title)

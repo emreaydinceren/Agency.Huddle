@@ -18,8 +18,8 @@ public sealed class ActivityBarTests
     /// <param name="clicked">The view clicked.</param>
     /// <param name="expected">The view selected after the click, or <see langword="null"/> when collapsed.</param>
     [Theory]
-    [InlineData(SidebarView.Chats, SidebarView.Chats, null)]
-    [InlineData(SidebarView.Chats, SidebarView.Teams, SidebarView.Teams)]
+    [InlineData(SidebarView.Rooms, SidebarView.Rooms, null)]
+    [InlineData(SidebarView.Rooms, SidebarView.Teams, SidebarView.Teams)]
     [InlineData(null, SidebarView.Library, SidebarView.Library)]
     public void Next_TogglesOnlyTheSelectedView(SidebarView? current, SidebarView clicked, SidebarView? expected)
     {
@@ -37,7 +37,7 @@ public sealed class ActivityBarTests
 
         IEnumerable<SidebarView> views = SidebarViews.Available(options).Select(static item => item.View);
 
-        Assert.Equal([SidebarView.Chats, SidebarView.Teams, SidebarView.Agents], views);
+        Assert.Equal([SidebarView.Rooms, SidebarView.Teams, SidebarView.Agents], views);
     }
 
     /// <summary>With every feature on, Scheduled is the last view button, after Library.</summary>
@@ -46,7 +46,7 @@ public sealed class ActivityBarTests
     {
         IEnumerable<SidebarView> views = SidebarViews.Available(new TeamOptions()).Select(static item => item.View);
 
-        Assert.Equal([SidebarView.Chats, SidebarView.Teams, SidebarView.Agents, SidebarView.Tasks, SidebarView.Library, SidebarView.Scheduled], views);
+        Assert.Equal([SidebarView.Rooms, SidebarView.Teams, SidebarView.Agents, SidebarView.Tasks, SidebarView.Library, SidebarView.Scheduled], views);
     }
 
     /// <summary>Only the selected view's button is pressed, and every button names the Sidebar it controls.</summary>
@@ -90,10 +90,10 @@ public sealed class ActivityBarTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTeamOptions(options => { options.Tasks.Enabled = true; options.Library.Enabled = true; });
         List<SidebarView?> reported = [];
         IRenderedComponent<ActivityBar> cut = ctx.Render<ActivityBar>(p => p
-            .Add(c => c.Selected, SidebarView.Chats)
+            .Add(c => c.Selected, SidebarView.Rooms)
             .Add(c => c.SelectedChanged, (SidebarView? view) => reported.Add(view)));
 
-        await cut.Find("button[data-view='Chats']").ClickAsync(new());
+        await cut.Find("button[data-view='Rooms']").ClickAsync(new());
         await cut.Find("button[data-view='Tasks']").ClickAsync(new());
 
         Assert.Equal([null, SidebarView.Tasks], reported);
@@ -111,6 +111,6 @@ public sealed class ActivityBarTests
         int settings = layout.IndexOf("Href=\"/settings\"", StringComparison.Ordinal);
         Assert.True(bottom >= 0 && bottom < archived && archived < settings && settings < bottomEnd, "Archived and Settings must sit inside the Activity bar's Bottom slot");
         Assert.Contains("sidebarView = SidebarViews.Default", layout, StringComparison.Ordinal); // contains-ok: a source pin on one field initialiser in a file that holds much else
-        Assert.Equal(SidebarView.Chats, SidebarViews.Default);
+        Assert.Equal(SidebarView.Rooms, SidebarViews.Default);
     }
 }

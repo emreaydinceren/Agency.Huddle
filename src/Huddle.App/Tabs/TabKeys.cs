@@ -48,7 +48,7 @@ internal static class TabKeys
         return segments switch
         {
             [] => new("chat", "Rooms", "chat"),
-            ["rooms", var roomId, ..] => new($"room:{roomId}", "Chat", "chat"),
+            ["rooms", var roomId, ..] => new($"room:{roomId}", "Room", "chat"),
             ["teams", "build"] => new("team-build", "Build a team", "team"),
             ["teams", var team, "projects", var project, "tasks", var view] => new($"project-tasks:{Lower(team)}/{Lower(project)}/{view}", view, "tasks"),
             ["teams", var team, "projects", var project, ..] => new($"project:{Lower(team)}/{Lower(project)}", project, "project"),

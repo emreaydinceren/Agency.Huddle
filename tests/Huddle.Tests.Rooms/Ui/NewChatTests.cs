@@ -20,7 +20,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Pins <see cref="NewChat"/>'s optional <c>Team</c> parameter (Team chats spec §6.5): with a Team the
-/// panel is headed "New chat in {Team}", lists the Team's Agents first and starts a Room scoped to the
+/// panel is headed "New room in {Team}", lists the Team's Agents first and starts a Room scoped to the
 /// Team; without one it behaves as it always did and starts a root Room (T7). Real
 /// <see cref="SqliteTeamDirectory"/> and <see cref="ChatService"/> over a <see cref="TempDataDir"/>.
 /// </summary>
@@ -36,7 +36,7 @@ public sealed class NewChatTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx, "Marketing");
 
-        Assert.Equal("New chat in Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
+        Assert.Equal("New room in Marketing", cut.Find(".new-chat-heading").TextContent.Trim());
     }
 
     /// <summary>With a Project the heading names the Team and the Project.</summary>
@@ -49,7 +49,7 @@ public sealed class NewChatTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx, "Marketing", project: "Launch");
 
-        Assert.Equal("New chat in Marketing / Launch", cut.Find(".new-chat-heading").TextContent.Trim());
+        Assert.Equal("New room in Marketing / Launch", cut.Find(".new-chat-heading").TextContent.Trim());
     }
 
     /// <summary>Choosing Start with a Project creates a Room that carries the Team and the Project.</summary>
@@ -109,7 +109,7 @@ public sealed class NewChatTests
         Assert.Equal($"rooms/{room.Id}", navigation.ToBaseRelativePath(navigation.Uri));
     }
 
-    /// <summary>T7: without a Team there is no heading, the "New chat" link opens the panel, and Start creates the root Room.</summary>
+    /// <summary>T7: without a Team there is no heading, the "New room" link opens the panel, and Start creates the root Room.</summary>
     [Fact]
     public async Task WithoutTeam_Start_CreatesARootRoom()
     {

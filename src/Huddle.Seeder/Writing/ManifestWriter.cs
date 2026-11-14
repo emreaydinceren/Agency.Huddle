@@ -111,7 +111,7 @@ internal static partial class ManifestWriter
         text.Append('\n');
     }
 
-    /// <summary>What is already archived (SEED-SC-16 to -18), as the Archived page's Teams, Projects and Chats tabs list it.</summary>
+    /// <summary>What is already archived (SEED-SC-16 to -18), as the Archived page's Teams, Projects and Rooms tabs list it.</summary>
     private static void AppendArchive(StringBuilder text, SeedPlan plan, DatabaseResult ids)
     {
         if (plan.ArchivedTeams.Count == 0 && !plan.Teams.Any(t => t.ArchivedProjects.Count > 0))
@@ -135,7 +135,7 @@ internal static partial class ManifestWriter
 
         foreach (SeedRoom room in plan.Rooms.Where(r => r.Archived))
         {
-            text.Append(CultureInfo.InvariantCulture, $"| Chat | {room.Name} ({RoomScope(room)}) | - | `{ids.RoomIds[room.Key]}` |\n");
+            text.Append(CultureInfo.InvariantCulture, $"| Room | {room.Name} ({RoomScope(room)}) | - | `{ids.RoomIds[room.Key]}` |\n");
         }
 
         text.Append('\n');
@@ -214,7 +214,7 @@ internal static partial class ManifestWriter
             return $"{room.Team} Team Room";
         }
 
-        return room.Project is null ? $"{room.Team} chat" : $"{room.Team} / {room.Project} chat";
+        return room.Project is null ? $"in {room.Team}" : $"in {room.Team} / {room.Project}";
     }
 
     private static void AppendSprints(StringBuilder text, SeedPlan plan)
@@ -302,7 +302,7 @@ internal static partial class ManifestWriter
             text.Append(CultureInfo.InvariantCulture, $"- `{file.RelativePath}` (plain text)\n");
         }
 
-        text.Append("\nA reference to a Library file that no longer exists (shows \"not found\" in Documents in this chat): `Customer-Update-Draft.md` in the Incident 0412 war room.\n\n");
+        text.Append("\nA reference to a Library file that no longer exists (shows \"not found\" in Documents in this Room): `Customer-Update-Draft.md` in the Incident 0412 war room.\n\n");
     }
 
     private static void AppendViews(StringBuilder text, SeedPlan plan)

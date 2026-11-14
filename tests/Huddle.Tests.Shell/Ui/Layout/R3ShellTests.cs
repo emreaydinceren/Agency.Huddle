@@ -39,16 +39,16 @@ public sealed partial class R3ShellTests
     /// <param name="current">The view shown before.</param>
     /// <param name="expected">The view shown after, or <see langword="null"/> for a collapsed Sidebar.</param>
     [Theory]
-    [InlineData("library", SidebarView.Chats, SidebarView.Library)]
-    [InlineData("agents", SidebarView.Chats, SidebarView.Agents)]
-    [InlineData("teams", SidebarView.Chats, SidebarView.Teams)]
+    [InlineData("library", SidebarView.Rooms, SidebarView.Library)]
+    [InlineData("agents", SidebarView.Rooms, SidebarView.Agents)]
+    [InlineData("teams", SidebarView.Rooms, SidebarView.Teams)]
     [InlineData("teams", SidebarView.Team, SidebarView.Team)]
     [InlineData("rooms", SidebarView.Team, SidebarView.Team)]
     [InlineData("tasks", SidebarView.Library, SidebarView.Tasks)]
-    [InlineData("scheduled", SidebarView.Chats, SidebarView.Scheduled)]
-    [InlineData("settings", SidebarView.Chats, null)]
+    [InlineData("scheduled", SidebarView.Rooms, SidebarView.Scheduled)]
+    [InlineData("settings", SidebarView.Rooms, null)]
     [InlineData("rooms", SidebarView.Teams, SidebarView.Teams)]
-    [InlineData("rooms", null, SidebarView.Chats)]
+    [InlineData("rooms", null, SidebarView.Rooms)]
     public void ViewForArea_ShowsTheAreasView(string area, SidebarView? current, SidebarView? expected)
     {
         Assert.Equal(expected, SidebarViews.ViewForArea(area, current));
@@ -65,7 +65,7 @@ public sealed partial class R3ShellTests
         Assert.Contains("string.Equals(area, this.followedArea, StringComparison.Ordinal)", layout, StringComparison.Ordinal); // contains-ok: a source pin on the change-of-area guard
     }
 
-    /// <summary>A group header is 32px like a row (B3b), and "Show all" is 13px like "New chat" (B3c).</summary>
+    /// <summary>A group header is 32px like a row (B3b), and "Show all" is 13px like "New room" (B3c).</summary>
     [Fact]
     public void AppCss_GroupHeaderAndShowAll_AreOneRowHigh_AndThirteenPixels()
     {
@@ -100,7 +100,7 @@ public sealed partial class R3ShellTests
         Assert.DoesNotMatch(@"flex-direction:\s*column", R3ShellTests.DeclarationsFor(".needs-you-text"));
     }
 
-    /// <summary>The Archived page, which replaced the Archived chats dialog, offers Restore as its one filled primary button and a chat's Delete as Error text, asked first.</summary>
+    /// <summary>The Archived page, which replaced the Archived rooms dialog, offers Restore as its one filled primary button and a chat's Delete as Error text, asked first.</summary>
     [Fact]
     public void ArchivedPage_RestoreIsFilledPrimary_AndDeleteIsErrorTextAskedFirst()
     {
@@ -120,7 +120,7 @@ public sealed partial class R3ShellTests
 
         Assert.Matches(@"class=""new-chat-panel floating-panel""", source);
         Assert.Matches(@"new-chat-cancel[^>]*>Cancel</MudButton>", source);
-        Assert.Matches(@"new-chat-start[^>]*>Start chat</MudButton>", source);
+        Assert.Matches(@"new-chat-start[^>]*>Open room</MudButton>", source);
         Assert.DoesNotMatch(@"FullWidth=""true""", source);
     }
 
