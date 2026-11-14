@@ -6107,6 +6107,13 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 | 2026-11-03 | Pass | `b018a212` |  | All three searches found their items; Feed shows no message text. Spent: Family 1.250, Harbor Lane Bakery 1.151, Dev Team 3.798 USD; Helpers 17 and 1 calls, 0.0076 USD; Chief of Staff not shown in the UI. Raw/Memory/Outputs/Tasks: Dev 3/1/0/4, Family 6/8/3/13, Bakery 5/4/2/8. Run took about 1h45 on models from the cast table; session logs show no Opus Turn. |
 | 2026-11-05 | Fail | `365cd12f` |  | task:permission finds nothing: Nothing in Tasks matches "permission", while FAMI-0001 holds permission in its action line; task:museum finds it, so Task search matches titles only (draft issue g). lib:Millstone and room:Blue Gull passed; the Feed shows no Message text; no "nothing to log" in 30 room files. Spending: Dev Team 15.954, Family 1.338, Harbor Lane Bakery 1.354, Chief of Staff 0.033, Helpers 0.018, Total 18.697 USD; with the discarded 0.23 and Route A 0.335, 19.262 USD. Counts Raw/Memory/Outputs/Tasks: Dev Team 6/4/0/3, Family 9/8/3/11, Harbor Lane Bakery 5/5/2/7. |
 
+### ZERO-28 — The Chief of Staff asks a manager and the question Task ends Closed
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-28--the-chief-of-staff-asks-a-manager-and-the-question-task-ends-closed)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 
 ### FEED-01 — The bell counts unseen Notifications and opening the panel marks them seen

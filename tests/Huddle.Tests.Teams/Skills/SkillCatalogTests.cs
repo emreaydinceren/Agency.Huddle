@@ -43,6 +43,17 @@ public sealed class SkillCatalogTests
         Assert.Equal(["list_teams", "file_request", "triage_request", "confirm_request", "propose_sprint"], validation.Tools);
     }
 
+    /// <summary>#535: the <c>team-management</c> Skill tells a manager to answer a question Task with add_evidence and close it with close_task, and that an already-closed Task is fine.</summary>
+    [Fact]
+    public void TeamManagement_TeachesAnsweringAndClosingAQuestionTask()
+    {
+        string text = string.Join(' ', SkillCatalog.All["team-management"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("1. Record it on the Task with `add_evidence`. Put the whole answer in `note`, so it is on record without the conversation.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("3. Close the Task with `close_task`. Closing is not marking it Done, so it needs no QA Evidence and does not break the rule that you never mark work Done yourself.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If `close_task` says the Task is already closed, the one who asked closed it first, and there is nothing more to do.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
     /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c>.</summary>
     [Fact]
     public void All_ContainsTeamRollup_GrantingListTeamsOnly()

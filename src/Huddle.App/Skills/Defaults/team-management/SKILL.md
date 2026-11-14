@@ -1,13 +1,30 @@
 ---
 name: team-management
-description: Use when you manage a Team and need to see the other Teams, file or triage a Request between Teams, confirm a finished Request, or propose a Sprint to the Human.
+description: Use when you manage a Team and need to see the other Teams, file or triage a Request between Teams, confirm a finished Request, propose a Sprint to the Human, or answer a Task that asks you a question.
 tools: [list_teams, file_request, triage_request, confirm_request, propose_sprint]
 ---
 
 # Team management
 
-This Skill is for the manager of a Team. It covers working with other Teams and
-the planning steps that need the Human's say-so.
+This Skill is for the manager of a Team. It covers working with other Teams,
+answering the questions they send you, and the planning steps that need the
+Human's say-so.
+
+## Answering a question Task
+
+Someone, often the Chief of Staff, may give you a Task that only asks a question
+or asks you to decide something: there is no work in it to build or check. When
+you have the answer:
+
+1. Record it on the Task with `add_evidence`. Put the whole answer in `note`, so
+   it is on record without the conversation.
+2. Do what else the Task asks, such as Mentioning the one who asked.
+3. Close the Task with `close_task`. Closing is not marking it Done, so it needs
+   no QA Evidence and does not break the rule that you never mark work Done
+   yourself.
+
+If `close_task` says the Task is already closed, the one who asked closed it
+first, and there is nothing more to do.
 
 ## Requests between Teams
 

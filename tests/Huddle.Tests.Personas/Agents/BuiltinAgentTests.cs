@@ -136,4 +136,15 @@ public sealed class BuiltinAgentTests
     {
         Assert.DoesNotContain("mcp__team__", BuiltinAgent.DefaultText, StringComparison.Ordinal);
     }
+
+    /// <summary>#535: the Chief of Staff text says how a question Task ends: the manager records the answer with add_evidence and closes it, and the Chief of Staff closes it once it has passed the answer on if it is still open.</summary>
+    [Fact]
+    public void ChiefOfStaff_SaysHowAQuestionTaskEnds()
+    {
+        string text = string.Join(' ', BuiltinAgent.DefaultText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("the manager records the answer with add_evidence, putting it in note, and closes the Task with close_task.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Once you have passed the answer on to the Human, close the Task with close_task if it is still open.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If close_task says it is already closed, the manager closed it, and that is fine.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
 }
