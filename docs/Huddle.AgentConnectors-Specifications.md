@@ -327,15 +327,16 @@ There is no "always allow".
   A `claude -p` run from Bash is not intercepted (known limit).
 ## 9. `requires` and `connectors.json` (decision 6)
 
-Nothing changes in who gets access. `RoleSpec.Requires` (`RoleSpec.cs:14`) only feeds the **Needs setup** label through
-`CardResolver.Resolve` (`CardResolver.cs:42-46`) and `FileConnectorStatus.IsConnected`. They name the connectors the Human has
+Nothing changes in who gets access. `RoleSpec.Requires` (`RoleSpec.cs:14`) only feeds the hire card's **Not connected yet**
+line through `CardResolver.Resolve` (`CardState.Unconnected`) and `FileConnectorStatus.IsConnected`. That line is information:
+it is not a **Needs setup** reason, and it never holds a hire on Build a team or Team duplicate (#545). They name the connectors the Human has
 set up in Huddle's own file. They are not the claude.ai connectors the switch controls: two lists with one word.
 
 | Question | Answer |
 | --- | --- |
 | Does a role needing `email:read` switch the Human's setting on? | No. Hiring such a role does not write a row. |
 | Does it ask the Human to? | Yes, once, on the hire card: a line "This role reads your mail. Turn on account connectors for {Name} after it is hired." No button, no prefilled switch. |
-| Should **Needs setup** change? | It stays a label about Huddle's `connectors.json`. It does not read the switch. The label is not an access check and must not look like one. |
+| Should **Needs setup** change? | A connector is no longer a Needs setup reason (#545): the **Not connected yet** line is about Huddle's `connectors.json`. It does not read the switch. It is not an access check and must not look like one. |
 | Does a listed connector grant anything? | No. |
 
 The hire-card line is a stage-3 detail and may be dropped without changing the design.

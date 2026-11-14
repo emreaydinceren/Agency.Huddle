@@ -57,7 +57,7 @@ public sealed class HireServiceStartTests
     {
         CardState card = new(roleId, name, new ModelPick("claude-agent-acp", "sonnet"),
             [new SkillRef("tdd", "builtin", null), new SkillRef(roleId == "lead" ? "planning" : "coding", "builtin", null)],
-            [], readiness, [], []);
+            [], readiness, [], [], []);
         return new HireRequest(TeamName, "web", roleId, card);
     }
 

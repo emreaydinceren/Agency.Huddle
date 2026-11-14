@@ -372,7 +372,7 @@ Use [Hiring a Team](#hiring-a-team-the-same-way-each-time) with these values:
 | Library folder | Leave it empty |
 | Roles | **Business Manager**, **Bookkeeper**, **Customer Support** |
 
-The Customer Support draft shows **Needs setup** with `connector email:read not connected`. That warning must not stop the hire.
+The Customer Support draft shows the information line `Not connected yet: email:read` and no **Needs setup** line. It must not stop the hire.
 
 Then, on **Bea**'s Edit card, tick `team-management` under **Skills** and click **Save**. It lets Bea file a Request in ZERO-26.
 

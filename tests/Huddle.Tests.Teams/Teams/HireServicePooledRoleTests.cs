@@ -48,7 +48,7 @@ public sealed class HireServicePooledRoleTests
         HireLimitHarness harness = new(TestOptions.Create());
         AvatarStore avatars = new(dir.Options(), NullLogger<AvatarStore>.Instance);
         HireService service = new(personas, types, packs, avatars, harness.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
-        CardState card = new("tutor", "Tess", new ModelPick("claude-agent-acp", "sonnet"), [], [], CardReadiness.Ready, [], []);
+        CardState card = new("tutor", "Tess", new ModelPick("claude-agent-acp", "sonnet"), [], [], CardReadiness.Ready, [], [], []);
 
         HireResult result = service.Hire(new HireRequest("Web Team", "web", "tutor", card));
 

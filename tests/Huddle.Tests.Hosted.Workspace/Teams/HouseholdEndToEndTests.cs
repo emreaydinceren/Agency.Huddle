@@ -17,7 +17,8 @@ namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
 /// Task 83 (NF-11, Spec Phases): the Household built-in type end to end through the real host. A Household Team with no
-/// workspace hires its manager and its School Liaison (Needs setup until <c>connectors.json</c> lists <c>email:read</c>),
+/// workspace hires its manager and its School Liaison (Ready throughout; its card lists <c>email:read</c> as unconnected
+/// until <c>connectors.json</c> lists it, which never blocks the hire),
 /// starts, and takes a Task from To do to Done under the <c>household-basics</c> process with no gate refusal, although
 /// the type has no QA role.
 /// </summary>
@@ -33,7 +34,7 @@ public sealed class HouseholdEndToEndTests
 
     private const string Connector = "email:read";
 
-    /// <summary>The liaison card needs setup until the connector is listed; then the Team starts with both Agents and a Task reaches Done with no gate refusal.</summary>
+    /// <summary>The liaison card is Ready but lists its connector as unconnected until the connector is listed; then the Team starts with both Agents and a Task reaches Done with no gate refusal.</summary>
     [Fact]
     public async Task HouseholdTeam_NoWorkspace_HiresStartsAndTakesATaskToDone()
     {
@@ -51,12 +52,14 @@ public sealed class HouseholdEndToEndTests
         CardState waiting = Resolve(services, type, LiaisonRole);
 
         Assert.Equal(CardReadiness.Ready, manager.Readiness);
-        Assert.Equal(CardReadiness.NeedsSetup, waiting.Readiness);
+        Assert.Equal(CardReadiness.Ready, waiting.Readiness);
+        Assert.Equal([Connector], waiting.Unconnected);
 
         File.WriteAllText(Path.Combine(root.DataDirPath, TeamPaths.ConnectorsFileName), $$"""{"connected": ["{{Connector}}"]}""");
         CardState liaison = Resolve(services, type, LiaisonRole);
 
         Assert.Equal(CardReadiness.Ready, liaison.Readiness);
+        Assert.Empty(liaison.Unconnected);
 
         HireService hiring = services.GetRequiredService<HireService>();
         Assert.Null(hiring.Hire(new HireRequest(TeamName, type.Id, manager.RoleId, manager)).Error);

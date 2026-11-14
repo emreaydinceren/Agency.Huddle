@@ -81,6 +81,10 @@
     {
         <span class="roster-setup">Needs setup: @string.Join("; ", profile.SetupReasons)</span>
     }
+    @if (profile.UnconnectedConnectors.Count > 0)
+    {
+        <span class="roster-connect">Not connected yet: @string.Join("; ", profile.UnconnectedConnectors)</span>
+    }
     @if (this.Actions is not null)
     {
         <div class="roster-actions">@this.Actions</div>

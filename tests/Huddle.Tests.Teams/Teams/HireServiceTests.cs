@@ -61,7 +61,7 @@ public sealed class HireServiceTests
     {
         CardState card = new(roleId, name, new ModelPick("claude-agent-acp", model),
             [new SkillRef("test-driven-development", "builtin", null), new SkillRef("target-authoring", "builtin", null)],
-            [new VersionedRef("msbuild-authoring", "1.0.0")], CardReadiness.Ready, [], []);
+            [new VersionedRef("msbuild-authoring", "1.0.0")], CardReadiness.Ready, [], [], []);
         return new HireRequest(TeamName, "web", roleId, card);
     }
 

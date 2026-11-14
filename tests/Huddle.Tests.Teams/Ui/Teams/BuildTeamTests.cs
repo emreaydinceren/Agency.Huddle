@@ -704,9 +704,9 @@ public sealed class BuildTeamTests
         Assert.DoesNotContain(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
     }
 
-    /// <summary>A role that needs a connector that is not connected is flagged Needs setup with the reason, and does not stop the approval.</summary>
+    /// <summary>A role that needs a connector that is not connected shows an informational "Not connected yet" line, no Needs setup line, and is hired by Approve.</summary>
     [Fact]
-    public async Task Hire_RoleNeedingAnUnconnectedConnector_IsFlaggedButApprovable()
+    public async Task Hire_RoleNeedingAnUnconnectedConnector_ShowsNotConnectedYetAndIsHired()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
@@ -716,8 +716,13 @@ public sealed class BuildTeamTests
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
 
-        Assert.Equal("Needs setup: connector email:read not connected", cut.Find(".roster-setup").TextContent.Trim());
+        Assert.Equal("Not connected yet: email:read", cut.Find(".roster-connect").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".roster-setup"));
         Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
     }
 
     /// <summary>A name an existing Agent already has is refused before the Team is created, and nothing is written.</summary>

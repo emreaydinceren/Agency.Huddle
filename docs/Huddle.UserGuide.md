@@ -916,8 +916,10 @@ Turn. So set each draft's **Model** before you approve. With Adapters off the ma
 so a Team hired then is not onboarded; ask the manager to work through the steps yourself.
 
 Each draft card shows how many **Skills** the role brings (hover for the names) and, when
-something is missing, **Needs setup** with the reason, such as "connector email:read not
-connected". That warning does not stop the approval. Before anything is created, **Approve &
+something is missing, **Needs setup** with the reason, such as "no logged-in adapter for
+tier Balanced". A role that reads a connector you have not set up shows a grey line instead,
+such as "Not connected yet: email:read". That line is information only and never stops the
+approval. Before anything is created, **Approve &
 hire** copies the Skills the roster needs into `Skills/`. A Skill that cannot be copied (not downloaded,
 broken, or withdrawn by its Source) stops the approval with "Skills not ready: …" and nothing is created.
 A card that names such a Skill already shows **Needs setup** with a **Copy prompt**; paste it into your AI
@@ -1267,17 +1269,16 @@ The default process, household basics, keeps a few family rules:
 At onboarding the manager writes notes on allergies, emergency contacts, bin day, the
 check-in day and the school's usual senders.
 
-A card whose connector is not yet connected shows **Needs setup** and "Connect
-<connector> to finish setup", with the path of the file to edit. A connector counts
-as connected when it is listed in `connectors.json` in your data folder, such as
-`{"connected": ["email:read"]}`. Huddle rereads the file each time, so an edit
-shows at once; a missing or malformed file means nothing is connected. Once the
-connector is listed there, select **I connected it** on the card to check again.
-Huddle does not connect anything itself. A Household has no workspace requirement.
+A card whose connector is not yet connected shows "Not connected yet: <connector>".
+It is information, not **Needs setup**: the Agent is hired either way. A connector
+counts as connected when it is listed in `connectors.json` in your data folder, such
+as `{"connected": ["email:read"]}`. Huddle rereads the file each time it makes a
+card; a missing or malformed file means nothing is connected. Huddle does not
+connect anything itself. A Household has no workspace requirement.
 
 > **Example (Scenario 5).** Emre picks **Household** and hires a School Liaison. The
-> card shows **Needs setup** until he connects email. After that the liaison's card
-> is Ready.
+> card shows "Not connected yet: email:read" and he hires it anyway. Once email is
+> listed in `connectors.json`, the line is gone from the next card.
 
 ## Chatting in Rooms
 
@@ -2608,5 +2609,5 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | An Agent's `git push` was denied | The Team's `checks-before-merge` gate wants an Evidence line showing the `checkCommand` passing. The reason is in the log, not shown to the Agent. |
 | A Task I edited by hand went back to its old status | A gate refused the new status; the Change log says `outside edit refused by gate`. |
 | An imported Skill says it already exists | The name belongs to a built-in Skill or to one from another source. Nothing was changed. |
-| A card says **Needs setup** for a connector | List it in `connectors.json` in the data folder, then select **I connected it**. |
+| A card says **Not connected yet** for a connector | Nothing blocks the hire. To clear it, list the connector in `connectors.json` in the data folder. |
 | An Agent shows Offline with *Claude needs you to sign in again* | Your Claude sign-in has expired or was never made. Run `claude` in a terminal, sign in, then send the Message again. |

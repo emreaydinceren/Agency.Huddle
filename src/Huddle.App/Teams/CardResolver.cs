@@ -9,8 +9,9 @@ internal static class CardResolver
     /// so a ref's own source and path are ignored (Skill Packs spec §6.10.2).</summary>
     public const string RegistrySource = "registry";
 
-    /// <summary>Resolves a role's card. Needs setup when a default is missing (a name conflict, no adapter for the tier, an
-    /// unmet connector) or a Pack or Skill is not ready to hire.</summary>
+    /// <summary>Resolves a role's card. Needs setup when a default is missing (a name conflict, no adapter for the tier) or a
+    /// Pack or Skill is not ready to hire. A connector that is not connected is listed in <see cref="CardState.Unconnected"/>
+    /// and never blocks.</summary>
     /// <param name="role">The role being hired.</param>
     /// <param name="namesInUse">The Agent names already taken, compared without case.</param>
     /// <param name="answered">The adapters that answered their model probe.</param>
@@ -39,13 +40,7 @@ internal static class CardResolver
             reasons.Add($"no logged-in adapter for tier {role.Model.Tier}");
         }
 
-        foreach (string connector in role.Requires)
-        {
-            if (!connectors.IsConnected(connector))
-            {
-                reasons.Add(CardResolver.ConnectorReason(connector));
-            }
-        }
+        List<string> unconnected = [.. role.Requires.Where(connector => !connectors.IsConnected(connector))];
 
         List<string> names = [.. role.Skills.Select(static skill => skill.Name)];
         List<VersionedRef> usedPacks = [];
@@ -66,7 +61,7 @@ internal static class CardResolver
         reasons.AddRange(setup.Select(SkillSetupText.Reason));
         IReadOnlyList<SkillRef> distinctSkills = [.. names.Distinct(StringComparer.Ordinal).Select(static skillName => new SkillRef(skillName, RegistrySource, null))];
         CardReadiness readiness = reasons.Count == 0 ? CardReadiness.Ready : CardReadiness.NeedsSetup;
-        return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons, setup);
+        return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons, setup, unconnected);
     }
 
     /// <summary>Picks the card's name: the chosen one, else the first free suggestion, else the first suggestion.</summary>
@@ -97,14 +92,6 @@ internal static class CardResolver
         }
 
         return name;
-    }
-
-    /// <summary>The reason a card gives when <paramref name="connector"/> is not connected.</summary>
-    /// <param name="connector">The connector id from a role's <c>requires</c>.</param>
-    /// <returns>The reason text.</returns>
-    public static string ConnectorReason(string connector)
-    {
-        return $"connector {connector} not connected";
     }
 
     /// <summary>Tells whether <paramref name="name"/> is in <paramref name="namesInUse"/>, without regard to case.</summary>

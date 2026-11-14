@@ -341,7 +341,7 @@ Keeper, Finance Tracker, Comparison Shopper and Retro Agent are optional. Its
 household-basics process gives every job one owner, opens one Task per occurrence of a
 recurring chore, gates every spend or signature behind the Human, and runs a weekly check-in
 and a 28-day retro. A role whose connector (such as `email:read`) is not listed in
-`connectors.json` shows **Needs setup**. PRs: #136, then #281.
+`connectors.json` shows **Not connected yet**, which never blocks the hire. PRs: #136, then #281, then #545.
 
 ## Running a Team
 
