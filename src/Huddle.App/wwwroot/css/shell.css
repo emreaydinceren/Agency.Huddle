@@ -809,11 +809,12 @@ emoji-picker {
     margin-top: auto;
 }
 
-/* Each button is a 40px tile inside the 52px column, so the pressed one reads as the Selected shape. */
+/* Each button is a 40px tile inside the 52px column, so the pressed one reads as the Selected shape. The tiles stack
+   2px above and below, so neighbours sit 4px apart: flex items' margins do not collapse. */
 .activity-bar-item.mud-icon-button {
     width: 40px;
     height: 40px;
-    margin: 4px;
+    margin: 2px 4px;
     border-radius: var(--hu-radius-control);
     color: var(--mud-palette-text-secondary);
 }
@@ -845,7 +846,7 @@ emoji-picker {
     justify-content: center;
     width: 40px;
     height: 40px;
-    margin: 4px;
+    margin: 2px 4px;
     padding: 0;
     border: 0;
     border-radius: var(--hu-radius-control);
@@ -888,7 +889,7 @@ emoji-picker {
     align-items: center;
     width: 40px;
     min-height: 40px;
-    margin: 4px;
+    margin: 2px 4px;
     padding: 0;
 }
 
@@ -1682,7 +1683,7 @@ body.sidebar-resizing {
     width: 40px;
     height: 40px;
     min-height: 40px;
-    margin: 4px auto;
+    margin: 2px auto;
     border-radius: var(--hu-radius-card);
     color: var(--mud-palette-text-secondary);
     transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
