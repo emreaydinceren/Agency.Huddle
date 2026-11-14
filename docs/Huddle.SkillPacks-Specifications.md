@@ -2899,7 +2899,7 @@ Changes in `BuildTeam.razor`:
 | `DraftSkillChoices` (line 958) | Uses the registry: the role's Skills that are not in `Skills/` come first, tagged `Copyable` or `NotDownloaded`; then other `Copyable` registry Skills. The catalog is no longer walked |
 | `SkillRefFor` (line 981) | Always `new SkillRef(name, "registry", null)`; the catalog branch goes |
 | Draft creation (line 1004) | `CardResolver.Resolve(spec, [], …, this.Registry, …)`; `DraftMember.Reasons` carries the reasons, and a new field `SkillSetup` carries the `SkillSetupItem`s |
-| After **Save draft** | `DraftMember.SkillSetup` is recomputed with `SkillSetupCheck.For(draft skills, draft packs, this.Registry)` and the draft's `Reasons` replace the Skill lines with the new ones; non-Skill reasons (name, adapter, connector) are kept |
+| After **Save draft** | `DraftMember.SkillSetup` is recomputed with `SkillSetupCheck.For(draft skills, draft packs, this.Registry)` and the draft's `Reasons` replace the Skill lines with the new ones; non-Skill reasons (name, adapter) are kept, and so is the separate list of unconnected connectors (never a reason, #545) |
 | `ProfileCard` | Shows the draft's reasons as today, *"Needs setup: Pack "MSBuild Authoring" not downloaded"*. Under it, **Copy prompt** (`skillPrompt.needsSetup`, listing every item, grouped by Pack) when any item is not `Withdrawn`, and for `Withdrawn` the words *"Edit the draft to drop it."* The card's own buttons (Re-roll, Edit, Remove) stay |
 | `CanApprove` | Adds `&& !this.drafts.Any(draft => !draft.Existing && draft.SkillSetup.Count > 0)` |
 | `ApproveHint` | A new first case: *"Some Agents need setup. Copy their prompt, paste it into your AI tool, and they update here by themselves."* |

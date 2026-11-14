@@ -513,6 +513,7 @@
         Tier = draft.RoleId.Length > 0 ? TierOfModel.Of(draft.Tier, draft.Model, this.HireContext.TierMap) : null,
         SkillNames = [.. draft.Skills.Select(static skill => skill.Name)],
         SetupReasons = draft.Reasons,
+        UnconnectedConnectors = draft.UnconnectedConnectors,
         PendingImage = draft.Image,
         PendingImageExtension = draft.ImageExtension,
     };
@@ -935,8 +936,12 @@
     /// <param name="Reasons">Why the draft needs setup before it runs well, such as no adapter for its strength; empty when nothing is missing.</param>
     /// <param name="Existing">Whether this is a member of the Team being edited rather than a new draft; a member is never hired again.</param>
     /// <param name="Setup">The Packs and Skills that are not ready, from the card resolver and again after each edit or registry change.</param>
-    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false, IReadOnlyList<SkillSetupItem>? Setup = null)
+    /// <param name="Unconnected">The role's connectors that are not connected, from the card resolver; shown as information, never a reason.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false, IReadOnlyList<SkillSetupItem>? Setup = null, IReadOnlyList<string>? Unconnected = null)
     {
+        /// <summary>The role's connectors that are not connected yet; informational, never blocks a hire; empty when all are.</summary>
+        public IReadOnlyList<string> UnconnectedConnectors => this.Unconnected ?? [];
+
         /// <summary>What the draft needs before it can be hired (Skill Packs spec §6.10.6); empty when ready.</summary>
         public IReadOnlyList<SkillSetupItem> SkillSetup => this.Setup ?? [];
     }
@@ -1042,7 +1047,7 @@
     private SkillRef SkillRefFor(string name) => new(name, CardResolver.RegistrySource, null);
 
     /// <summary>The draft with its setup items worked out again from its Skills and Packs, and its reasons with the old Skill
-    /// lines replaced by the new ones; the name, adapter and connector reasons stay (§6.10.6).</summary>
+    /// lines replaced by the new ones; the name and adapter reasons stay, and so does the list of unconnected connectors (§6.10.6).</summary>
     private DraftMember Rechecked(DraftMember draft)
     {
         IReadOnlyList<SkillSetupItem> setup = SkillSetupCheck.For([.. draft.Skills.Select(static skill => skill.Name)], draft.Packs, this.Availability);
@@ -1102,7 +1107,7 @@
     {
         CardState card = CardResolver.Resolve(spec, [], this.HireContext.Answered, this.HireContext.TierMap, this.HireContext.AvoidAdapters, this.Availability, this.HireContext.Connectors, name);
         return new DraftMember(Guid.NewGuid().ToString("N"), roleId, title, description, tier, manager, name, text, nameChoices, RandomAvatar(), avatarChoices, null, null, null,
-            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons, Setup: card.SkillSetup);
+            card.Skills, card.Packs, card.Pick?.AdapterId, card.Pick?.Model, null, card.Reasons, Setup: card.SkillSetup, Unconnected: card.Unconnected);
     }
 
     /// <summary>The draft with a library avatar drawn for it.</summary>

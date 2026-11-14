@@ -67,6 +67,29 @@ public sealed class ProfileCardTests
         Assert.Empty(cut.FindAll(".roster-runtime"));
     }
 
+    /// <summary>Unconnected connectors draw one informational "Not connected yet" line, and no Needs setup line.</summary>
+    [Fact]
+    public async Task UnconnectedConnectors_Set_DrawsNotConnectedYetLine()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain with { UnconnectedConnectors = ["email:read", "calendar:read"] });
+
+        Assert.Equal("Not connected yet: email:read; calendar:read", cut.Find(".roster-connect").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".roster-setup"));
+    }
+
+    /// <summary>With no unconnected connectors the card draws no "Not connected yet" line.</summary>
+    [Fact]
+    public async Task UnconnectedConnectors_Empty_DrawsNothing()
+    {
+        await using MudBunitContext ctx = new();
+
+        var cut = RenderIt(ctx, Plain);
+
+        Assert.Empty(cut.FindAll(".roster-connect"));
+    }
+
     /// <summary>A null state draws no status dot.</summary>
     [Fact]
     public async Task State_Null_DrawsNoStatusDot()

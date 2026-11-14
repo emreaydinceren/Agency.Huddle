@@ -80,14 +80,29 @@ public sealed class CardResolverTests
         Assert.Equal(["no logged-in adapter for tier Balanced"], state.Reasons);
     }
 
-    /// <summary>Only the connector that is not connected is reported.</summary>
+    /// <summary>Only the connector that is not connected is listed, and a connector alone never blocks: the card is Ready with no reasons.</summary>
     [Fact]
-    public void Resolve_OneConnectorUnmet_NeedsSetupNamingIt()
+    public void Resolve_OneConnectorUnmet_IsReadyAndListsOnlyThatConnector()
     {
         CardState state = CardResolverTests.Resolve(CardResolverTests.Role(requires: ["email:read", "calendar:read"]), connectors: new FakeConnectors("email:read"));
 
+        Assert.Equal(CardReadiness.Ready, state.Readiness);
+        Assert.Empty(state.Reasons);
+        Assert.Equal(["calendar:read"], state.Unconnected);
+    }
+
+    /// <summary>A missing Skill still blocks when a connector is also unconnected; the connector is only listed, never a reason.</summary>
+    [Fact]
+    public void Resolve_SkillMissingAndConnectorUnmet_NeedsSetupForTheSkillOnly()
+    {
+        FakeSkillAvailability skills = new FakeSkillAvailability().WithSkill("tdd", SkillAvailability.NotDownloaded);
+
+        CardState state = CardResolverTests.Resolve(CardResolverTests.Role(requires: ["email:read"], skills: [new SkillRef("tdd", "builtin", null)]), skills: skills);
+
         Assert.Equal(CardReadiness.NeedsSetup, state.Readiness);
-        Assert.Equal(["connector calendar:read not connected"], state.Reasons);
+        Assert.NotEmpty(state.SkillSetup);
+        Assert.DoesNotContain(state.Reasons, reason => reason.Contains("email:read", StringComparison.Ordinal));
+        Assert.Equal(["email:read"], state.Unconnected);
     }
 
     /// <summary>Pack skills merge into the role skills, de-duplicated by name, and the packs are listed at their version.</summary>
@@ -215,13 +230,15 @@ public sealed class CardResolverTests
         Assert.Equal(CardReadiness.Ready, state.Readiness);
     }
 
-    /// <summary>Several problems are all reported, in name, adapter, connector order.</summary>
+    /// <summary>Several problems are all reported, in name, adapter order; the unconnected connector is listed apart, not as a reason.</summary>
     [Fact]
     public void Resolve_SeveralProblems_ReportsAll()
     {
         CardState state = CardResolverTests.Resolve(CardResolverTests.Role(requires: ["email:read"]), namesInUse: ["Jane", "Priya"], answered: []);
 
-        Assert.Equal(["name conflict", "no logged-in adapter for tier Balanced", "connector email:read not connected"], state.Reasons);
+        Assert.Equal(CardReadiness.NeedsSetup, state.Readiness);
+        Assert.Equal(["name conflict", "no logged-in adapter for tier Balanced"], state.Reasons);
+        Assert.Equal(["email:read"], state.Unconnected);
     }
 
     /// <summary>A stock install (no catalog, every name unknown, no Pack provided) still resolves the built-in developer's

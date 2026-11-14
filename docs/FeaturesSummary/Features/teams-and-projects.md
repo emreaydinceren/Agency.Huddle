@@ -58,7 +58,7 @@ A Project's page has **Files** and **Tasks**. Any ordinary sub-folder of a Team 
 
 - Teams can't be renamed or deleted in the app. They can be archived.
 - By default, a Team holds up to 8 Agents and Huddle runs up to 16 live processes.
-- A role that needs a connector you haven't set up shows **Needs setup**.
+- A role that needs a connector you haven't set up shows **Not connected yet**, which never blocks the hire.
 
 ## In more detail
 

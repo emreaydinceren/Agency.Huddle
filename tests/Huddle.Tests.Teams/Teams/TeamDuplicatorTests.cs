@@ -27,7 +27,7 @@ public sealed class TeamDuplicatorTests
           "processes": [{ "id": "flow", "file": "processes/flow.md", "default": true }],
           "roles": [
             { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true, "suggestedNames": ["Ada", "Grace"] },
-            { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md", "maxPerTeam": 3, "suggestedNames": ["Dev1", "Dev2", "Dev3"] }
+            { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md", "maxPerTeam": 3, "requires": ["email:read"], "suggestedNames": ["Dev1", "Dev2", "Dev3"] }
           ] }
         """;
 
@@ -152,6 +152,20 @@ public sealed class TeamDuplicatorTests
             [new SkippedMember("Ada", "no logged-in adapter for tier Balanced"), new SkippedMember("Dev1", "no logged-in adapter for tier Balanced")],
             result.Skipped);
         Assert.NotNull(f.Folders.ReadTeamFile(Target));
+    }
+
+    /// <summary>A member whose role requires a connector that is not connected is still copied: a connector is information, never a reason to skip (the Developer role requires email:read and the fixture connects nothing).</summary>
+    [Fact]
+    public void Duplicate_RoleWithUnconnectedConnector_IsCopied()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Equal(["Grace", "Dev2"], result.Hired);
+        Assert.Empty(result.Skipped);
     }
 
     /// <summary>A target name that already exists is refused and nothing is hired.</summary>

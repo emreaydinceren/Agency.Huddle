@@ -30,6 +30,9 @@ public sealed record AgentProfile(string Name, string Title, string Description,
     /// <summary>Why the Agent cannot work yet; drives the "Needs setup" line.</summary>
     public IReadOnlyList<string> SetupReasons { get; init; } = [];
 
+    /// <summary>Connectors the Agent's role reads that are not connected yet; drives the informational "Not connected yet" line; never blocks a hire.</summary>
+    public IReadOnlyList<string> UnconnectedConnectors { get; init; } = [];
+
     /// <summary>An unsaved avatar image, passed through to the avatar, or <see langword="null"/>.</summary>
     [SuppressMessage("Performance", "CA1819:Properties should not return arrays", Justification = "Passed through unchanged to the byte[] PendingImage parameter of the avatar components; a ReadOnlyMemory would force a copy on every render.")]
     public byte[]? PendingImage { get; init; }
