@@ -1183,16 +1183,24 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
   confirmed, with `close_task` or `update_task`, is refused. You can still close one
   yourself.
 - Four tools do this, each granted by a Skill the Agent holds. The built-in
-  `team-management` Skill grants all of them, and the manager of a Development Team
-  or a Household carries it, as does the Development QA Engineer, so the QA can
-  confirm a Request without any setup. Holding the Skill does not make the QA a
-  manager: `file_request`, `triage_request` and `list_teams` still refuse a caller
-  who is not the right manager, and so does `propose_sprint`. The tools are
-  `file_request` (a manager files a bug, feature, feedback or question into another
-  Team; the body needs the sections the kind asks for, such as **Steps to
-  reproduce** and **Expected and actual** for a bug), `triage_request` (the
-  receiving manager), `confirm_request` (the requesting Team's QA) and `list_teams`
-  (every Team with its type, manager, what it owns and its open Requests).
+  `team-management` Skill grants `file_request`, `triage_request` and `list_teams`,
+  and the manager of a Development Team or a Household carries it. `confirm_request`
+  comes from the built-in `request-confirmation` Skill, which every role whose
+  coverage includes verify carries when hired: the Development QA Engineer, a
+  Content fact-checker, a manager whose role covers verify, and so on. The
+  requesting Team's verifier can confirm without any setup. Holding a Skill does
+  not make an Agent a manager: `file_request`, `triage_request` and `list_teams`
+  still refuse a caller who is not the right manager, and so does `propose_sprint`.
+  The tools are `file_request` (a manager files a bug, feature, feedback or
+  question into another Team; the body needs the sections the kind asks for, such
+  as **Steps to reproduce** and **Expected and actual** for a bug),
+  `triage_request` (the receiving manager), `confirm_request` (the requesting
+  Team's verifier) and `list_teams` (every Team with its type, manager, what it
+  owns and its open Requests). An Agent hired before `request-confirmation`
+  shipped keeps the Skills it was hired with. A Development QA Engineer still lists
+  `team-management`: its manager tools refuse her, so it is harmless, and you can
+  untick it on her Edit card by hand. Such an Agent, and a Household manager hired
+  then, can no longer confirm until you tick `request-confirmation` on its Edit card.
 - **Who is woken.** Filing a Request wakes the receiving manager. A needs-info,
   accept or decline wakes the requesting manager; a decline also wakes the Chief of
   Staff. Work and the QA's evidence wake the requesting manager; the
@@ -2377,9 +2385,10 @@ invalid Skill is listed under **Problems** with the reason.
 
 ### Changing a built-in Skill
 
-Huddle ships eight Skills: `team-building` and `team-rollup`, used by the Chief of
-Staff, `team-management`, used by Team managers to see other Teams, handle Requests,
-answer and close a Task that only asks a question, and propose Sprints, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
+Huddle ships nine Skills: `team-building` and `team-rollup`, used by the Chief of
+Staff, `team-management`, used by Team managers to see other Teams, file and triage Requests,
+answer and close a Task that only asks a question, and propose Sprints, `request-confirmation`, used by
+whoever verifies on a Team to confirm a Request their Team filed, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
 and `brain-check`, which keep a [Second Brain](#keeping-it-tidy) tidy, and `browser-check`, used by a Development Team's QA Engineer (and its manager when no QA is hired) to drive a web page with Playwright when the acceptance names a UI. To change one,
 create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
 same name in it, for example `onboarding.md`. Your file replaces that one file; the
