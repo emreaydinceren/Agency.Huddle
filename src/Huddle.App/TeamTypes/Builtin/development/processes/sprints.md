@@ -1,7 +1,7 @@
 ---
 title: 'Sprints'
 template: 'sprints@1.0.0'
-gates: ['qa-evidence-before-done', 'checks-before-merge', 'accept-before-merge']
+gates: ['qa-evidence-before-done', 'checks-before-merge', 'accept-before-merge', 'blockers-done-before-start']
 retro: { every: 10, unit: 'done-tasks' }
 digest: { every: 1, unit: 'days' }
 checkCommand: 'dotnet test'
@@ -19,7 +19,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 
 ## Stages
 
-1. **Plan**: the manager sets the sprint goal and chooses the Tasks. Done when each Task has an acceptance line and an assignee.
+1. **Plan**: the manager sets the sprint goal and chooses the Tasks. Done when each Task has an acceptance line and an assignee. A Task with blockers waits here until every blocker is finished and the manager gives the go-ahead; do no work on it before then.
 2. **In progress**: the developer works the Task and its tests. Done when the build and the tests pass locally.
 3. **Review**: a reviewer reads the diff, runs the Team's check command on it and records the outcome on the Task as an Evidence line with that command. Done when no open finding remains.
 4. **Verify**: QA starts only after the review has no open finding. QA checks the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists. If the change gets a new commit after the review, QA runs the verify again on that commit.
@@ -45,6 +45,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
 - `accept-before-merge`: Huddle refuses a merge into main, whoever runs it, until a Task of the Team has the Human's Accept. Put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
 
 ## Definition of Done
 

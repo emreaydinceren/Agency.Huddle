@@ -31,6 +31,7 @@ public sealed partial class ProcessTemplatesTests
         "accept-before-merge",
         "spec-approved-before-build",
         "failing-test-before-fix",
+        "blockers-done-before-start",
     ];
 
     /// <summary>A process file split into the lines between its frontmatter fences and the lines of its body.</summary>
@@ -179,14 +180,14 @@ public sealed partial class ProcessTemplatesTests
         Assert.Equal(processId + "@1.0.0", Scalar(file, "template"));
     }
 
-    /// <summary>Each process declares exactly the gates the plan gives it, and every gate is one of the five known ids.</summary>
+    /// <summary>Each process declares exactly the gates the plan gives it, and every gate is one of the six known ids.</summary>
     /// <param name="processId">The process file to check.</param>
     /// <param name="expectedGates">The expected gate ids, in file order.</param>
     [Theory]
-    [InlineData("lightweight-flow", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge" })]
-    [InlineData("spec-driven", new[] { "qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build", "accept-before-merge" })]
-    [InlineData("sprints", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge" })]
-    [InlineData("maintenance", new[] { "qa-evidence-before-done", "checks-before-merge", "failing-test-before-fix", "accept-before-merge" })]
+    [InlineData("lightweight-flow", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge", "blockers-done-before-start" })]
+    [InlineData("spec-driven", new[] { "qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build", "accept-before-merge", "blockers-done-before-start" })]
+    [InlineData("sprints", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge", "blockers-done-before-start" })]
+    [InlineData("maintenance", new[] { "qa-evidence-before-done", "checks-before-merge", "failing-test-before-fix", "accept-before-merge", "blockers-done-before-start" })]
     public void Process_Gates_AreExpectedKnownIds(string processId, string[] expectedGates)
     {
         ProcessFile file = LoadProcess(processId);
@@ -211,6 +212,23 @@ public sealed partial class ProcessTemplatesTests
 
         Assert.NotEmpty(roles);
         Assert.All(roles, role => Assert.Contains(role, manifestRoles));
+    }
+
+    /// <summary>#538: every Development process lists the blocker gate under Gates and tells the stage before the work starts to wait for blockers and the manager's go-ahead.</summary>
+    /// <param name="processId">The process id.</param>
+    /// <param name="stage">The stage line that carries the sentence: the first, or Build in spec-driven, whose first stage is the spec.</param>
+    [Theory]
+    [InlineData("lightweight-flow", "1. ")]
+    [InlineData("spec-driven", "4. ")]
+    [InlineData("sprints", "1. ")]
+    [InlineData("maintenance", "1. ")]
+    public void Process_Blockers_GatesAndStageSayTheTaskWaits(string processId, string stage)
+    {
+        ProcessFile file = LoadProcess(processId);
+        string firstStage = Section(file, "Stages").First(line => line.StartsWith(stage, StringComparison.Ordinal));
+
+        Assert.Contains("- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.", Section(file, "Gates")); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("A Task with blockers waits here until every blocker is finished and the manager gives the go-ahead; do no work on it before then.", firstStage, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
     /// <summary>#536: every Development process tells QA to drive a UI acceptance in a browser, and tells the manager to do the same when no QA Engineer is hired.</summary>

@@ -32,7 +32,7 @@ the only way to change a Task. Every shell command an Agent asks to run goes thr
 
 ## The decision
 
-**Four gates, named in the Team's `Process.md`.**
+**Four gates, named in the Team's `Process.md`.** (Six can be declared today; see the amendment at the end.)
 
 ```markdown
 ---
@@ -109,10 +109,18 @@ a merge the Human runs in a terminal is never refused by it.
 - **`checks-before-merge` is only as strong as the permission prompt.** In a work mode that
   does not ask, or through an alias, the merge is not refused. The UI says so, and the known
   gaps are listed in the handler's remarks.
-- **Evidence is the proof for three of the four gates.** A gate is met by an Evidence line an
+- **Evidence is the proof for three of the original four gates.** A gate is met by an Evidence line an
   Agent or a member wrote, so a false line passes. The Evidence is in the Task file, where the
   Human can read it.
 - **Gates are read from `Process.md` on each check.** A Team that edits its gates sees the
   change at the next Task change, with no restart.
 - **A Team's process can be copied from a type's process template.** The four gate ids are
   fixed in code. A template can choose which of them to enable, and cannot add a fifth.
+
+## Amendment, 2026-11-14 (issue #538)
+
+The text above describes the four gates as first built. Six gates can now be declared in `gates`: those four,
+`accept-before-merge` ([ADR-0078](0078-a-merge-into-main-waits-for-the-humans-accept-by-team.md)) and
+`blockers-done-before-start` ([ADR-0085](0085-a-blocked-task-waits-for-its-blockers.md)). Two more ids, the Human gate and
+the Proof gate, are refusal ids that are never declared. Where this page says a Task gate refuses a move into "In Progress,
+Review or Done", the new gate also covers Needs You, and an outside edit and a create check Needs You as well.

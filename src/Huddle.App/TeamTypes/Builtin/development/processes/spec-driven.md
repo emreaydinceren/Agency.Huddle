@@ -1,7 +1,7 @@
 ---
 title: 'Spec-driven'
 template: 'spec-driven@1.0.0'
-gates: ['qa-evidence-before-done', 'checks-before-merge', 'spec-approved-before-build', 'accept-before-merge']
+gates: ['qa-evidence-before-done', 'checks-before-merge', 'spec-approved-before-build', 'accept-before-merge', 'blockers-done-before-start']
 retro: { every: 10, unit: 'done-tasks' }
 checkCommand: 'dotnet test'
 ---
@@ -21,7 +21,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 1. **Spec**: a spec Task holds the behaviour, the scope and the open questions. Done when the spec is complete enough to review.
 2. **Approved**: the human approves the spec Task. Done when the approval is recorded on it.
 3. **Break down**: the tech lead splits the spec into build Tasks, each with an acceptance line. Done when every build Task has one.
-4. **Build**: the developer writes the change and its tests against the spec. Done when the build and the tests pass locally.
+4. **Build**: the developer writes the change and its tests against the spec. Done when the build and the tests pass locally. A Task with blockers waits here until every blocker is finished and the manager gives the go-ahead; do no work on it before then.
 5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded.
 6. **Done**: the manager moves the build Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
@@ -47,6 +47,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
 - `accept-before-merge`: Huddle refuses a merge into main, whoever runs it, until a Task of the Team has the Human's Accept. Put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept.
 - `spec-approved-before-build`: Huddle refuses to move a build Task to In Progress until its parent spec Task is marked approved by the human.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
 
 ## Definition of Done
 

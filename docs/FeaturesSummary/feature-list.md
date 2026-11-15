@@ -351,10 +351,12 @@ and a 28-day retro. A role whose connector (such as `email:read`) is not listed 
 **Process and gates.** A Team's process is its `AGENTS.md` prose (steps, onboarding,
 Definition of Done) plus settings in `_team.md`: gates, `checkCommand`, WIP limit and digest
 and retro cadence. Build a team writes them, or the manager's card does, from the type's
-template or blank, and neither overwrites what is there. Five gates exist:
+template or blank, and neither overwrites what is there. Six gates exist:
 `accept-before-merge`, `qa-evidence-before-done`, `checks-before-merge` (refuses an Agent's
 `git merge` or `git push` until the check command's Evidence passes),
-`spec-approved-before-build` and `failing-test-before-fix`. In a Team without
+`spec-approved-before-build`, `failing-test-before-fix` and `blockers-done-before-start`
+(refuses a move to In Progress, Review, Needs You or Done while a blocker is not Done,
+Cancelled, Duplicate or Rejected; the development processes have it, ADR-0085). In a Team without
 `accept-before-merge`, the assignee of an open gated Task with no valid Accept is refused a
 `git merge` of anything but `main`, and a `git push` to `main`. A generated hook makes the Claude Adapter ask before any `git merge`
 or `git push`, even in its `auto` mode, so the gate is consulted. The **Process** tab shows
@@ -377,7 +379,7 @@ no exit code is refused. Every tool call is logged to
 
 **Digests, retros and manager wake-ups.** Digests run on time and retros run after N Done
 Tasks or N days, posted in the Team Room. The manager is woken about Task changes, and the
-assignee of a blocked Task is woken once when its last blocker finishes. PRs: #136.
+assignee of a blocked Task is woken once when its last blocker finishes (Done, Cancelled, Duplicate or Rejected). PRs: #136.
 
 **Requests between Teams.** One Team files a bug, feature, feedback or question into
 another's Backlog as a Task marked **Needs triage**. The receiving manager accepts it,

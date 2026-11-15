@@ -27,7 +27,11 @@ internal static class TaskGateText
         $"---\nteamType: 'web@1.2.0'\ngates: [{gates}]\ncheckCommand: '{Check}'\n---\n";
 
     /// <summary>Builds a gate service for Team Platform whose <c>_team.md</c> is <paramref name="teamFileText"/>, or has no settings when null.</summary>
-    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText, ITeamRenames? renames = null)
+    /// <param name="dir">The data folder.</param>
+    /// <param name="teamFileText">The Team file text, or <see langword="null"/>.</param>
+    /// <param name="renames">Resolves old Team names; optional.</param>
+    /// <param name="manager">The Team's manager in the catalog; optional.</param>
+    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText, ITeamRenames? renames = null, string? manager = null)
     {
         VersionedRef type = new("web", "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
@@ -39,7 +43,7 @@ internal static class TaskGateText
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
             ReadResult = teamFile,
         };
-        FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type }] };
+        FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type, Manager = manager }] };
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {
             ["web/team-type.json"] = Manifest,

@@ -1019,7 +1019,7 @@ A Team's **process** says how its work is done, in two files in the Team folder:
   steps, the `## Onboarding` section and the Definition of Done. See
   [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 - **`_team.md`** holds the settings Huddle enforces, as lines in its frontmatter:
-  - `gates:` lists the gates the Team enforces, from [the five gates](#the-five-gates).
+  - `gates:` lists the gates the Team enforces, from [the six gates](#the-six-gates).
   - `checkCommand:` names the command whose passing Evidence the merge gate looks for.
   - `wip:` sets a limit on work in progress.
   - `retro:` and `digest:` set when a retrospective and a digest run, such as
@@ -1050,7 +1050,7 @@ line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab 
 lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 `AGENTS.md` nor a gate says "This Team has no process yet."
 
-### The five gates
+### The six gates
 
 | Gate | Refuses |
 | --- | --- |
@@ -1059,6 +1059,7 @@ lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
 | `failing-test-before-fix` | A bug Task moving to **Review** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
+| `blockers-done-before-start` | A Task moving to **In Progress**, **Review**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. The development processes have it, and development Teams you already had get it once, when you first start the new version; switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
 
 A Task in a Team with gates shows a line such as `Gates: qa-evidence-before-done`
 in its panel.
@@ -1137,7 +1138,7 @@ the count, so nothing fires at once. The last run is remembered across restarts.
 
 Besides the assignee, Huddle wakes the Team's **manager** about a Task change, unless
 the manager made the change, is the assignee, or is you. When the last Task that was
-blocking another is finished, Huddle wakes the blocked Task's assignee (or the
+blocking another is finished (Done, Cancelled, Duplicate or Rejected), Huddle wakes the blocked Task's assignee (or the
 manager when it has none) once, however many blockers finished together. These wake-ups
 use the same per-Task wake budget as any other.
 
@@ -1931,7 +1932,7 @@ Draft the October invoice run and check it against last month.
 | `tags`, `start_date`, `due_date` | Dates are `yyyy-MM-dd`. |
 | `request`, `from_team`, `requester`, `triage`, `decline_reason`, `confirmed_by` | Present on a Request from another Team; see [Requests between Teams](#requests-between-teams). |
 | Body | The description, in Markdown. |
-| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The five gates](#the-five-gates). |
+| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The six gates](#the-six-gates). |
 | `## Change log` | An append-only history. Huddle adds lines and never edits old ones. |
 
 The Team and Project are not fields. They come from the folder the file is in.
@@ -2015,7 +2016,7 @@ offline, so this change won't reach them."
 Agents use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
 `close_task`, `reopen_task` and `add_evidence`. Their changes follow the same rules
 and write the same files, and they are also subject to a Team's
-[gates](#the-five-gates) and to the [Request](#requests-between-teams) rules, which
+[gates](#the-six-gates) and to the [Request](#requests-between-teams) rules, which
 you can override from the Task panel and they cannot.
 
 ### Chips
