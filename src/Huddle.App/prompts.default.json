@@ -19,6 +19,7 @@
   "turn.referenceGone": "- {{kind}} {{key}}: no longer exists",
   "turn.referencesMore": "- …and {{count}} more not listed",
   "turn.referencesHint": "To learn more, list Agents and their Teams with {{listAgents}}. You cannot read the Messages of a Room you are not a Member of.",
+  "turn.referencesHintChiefOfStaff": "To learn more, list Agents and their Teams with {{listAgents}}. You can read any Room's Messages with {{search}}: give the Room's id as 'room' and no query for its newest Messages.",
   "turn.referencesTaskHint": "Read a Task in full with {{getTask}}.",
   "turn.catchUpHeader": "{{roomLabel}} You were not addressed in these earlier messages, they are context only:",
   "turn.catchUpLine": "{{sender}}: {{text}}",

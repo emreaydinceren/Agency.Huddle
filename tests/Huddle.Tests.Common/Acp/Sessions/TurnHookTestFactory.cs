@@ -43,8 +43,9 @@ public static class TurnHookTestFactory
     /// <param name="readsFiles">Whether the Adapter can read files.</param>
     /// <param name="references">The Referenced items expander, or <see langword="null"/> for none.</param>
     /// <param name="logger">Receives the Library enricher's log lines, or <see langword="null"/> for none.</param>
+    /// <param name="isChiefOfStaff">Whether a Persona, by Name, is the Chief of Staff for the Referenced items hint, or <see langword="null"/> for no Persona being it.</param>
     /// <returns>The pipeline, or <see langword="null"/> when neither collaborator is given.</returns>
-    internal static TurnEnricherPipeline? Enrichers(LibraryDocumentCollector? libraryDocs = null, bool readsFiles = true, ReferenceExpander? references = null, ILogger? logger = null)
+    internal static TurnEnricherPipeline? Enrichers(LibraryDocumentCollector? libraryDocs = null, bool readsFiles = true, ReferenceExpander? references = null, ILogger? logger = null, Func<string, bool>? isChiefOfStaff = null)
     {
         List<ITurnEnricher> enrichers = [];
         if (libraryDocs is not null)
@@ -54,7 +55,7 @@ public static class TurnHookTestFactory
 
         if (references is not null)
         {
-            enrichers.Add(new ReferencedItemsEnricher(references));
+            enrichers.Add(new ReferencedItemsEnricher(references, isChiefOfStaff ?? (static _ => false)));
         }
 
         return enrichers.Count == 0 ? null : TurnEnricherPipeline.ForPersona(enrichers, NullLogger.Instance);

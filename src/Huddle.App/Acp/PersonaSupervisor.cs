@@ -783,7 +783,7 @@ internal sealed class PersonaSupervisor : BackgroundService, Agency.Huddle.App.T
 
         if (this.references is not null)
         {
-            enrichers.Add(new ReferencedItemsEnricher(this.references));
+            enrichers.Add(ReferencedItemsEnricher.ForPersonas(this.references, this.personaStore));
         }
 
         return TurnEnricherPipeline.ForPersona(enrichers, this.loggerFactory.CreateLogger<TurnEnricherPipeline>());

@@ -43,7 +43,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(184,PromptCatalog.All.Count);
+        Assert.Equal(185,PromptCatalog.All.Count);
     }
 
     /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>
@@ -871,6 +871,7 @@ public sealed partial class PromptCatalogTests
     [InlineData("turn.referenceGone", "kind,key")]
     [InlineData("turn.referencesMore", "count")]
     [InlineData("turn.referencesHint", "listAgents")]
+    [InlineData("turn.referencesHintChiefOfStaff", "listAgents,search")]
     [InlineData("turn.referencesTaskHint", "getTask")]
     public void ReferencePrompts_Exist_WithRequiredPlaceholders(string key, string names)
     {
@@ -892,6 +893,21 @@ public sealed partial class PromptCatalogTests
             prompt.Default.TrimEnd('\r', '\n'));
     }
 
+    /// <summary>
+    /// Issue 581 (D-18, amended 2026-11-14): the Chief of Staff's hint is the verbatim spec §9.2 text. It names
+    /// <c>search</c>, which reads any Room for the Chief of Staff, and never says a Room is unreadable.
+    /// </summary>
+    [Fact]
+    public void ReferencesHintChiefOfStaff_DefaultIsVerbatim()
+    {
+        var prompt = PromptCatalog.Get("turn.referencesHintChiefOfStaff");
+
+        Assert.Equal(
+            "To learn more, list Agents and their Teams with {{listAgents}}. You can read any Room's Messages with {{search}}: give the Room's id as 'room' and no query for its newest Messages.",
+            prompt.Default.TrimEnd('\r', '\n'));
+        Assert.DoesNotContain("cannot read", prompt.Default, StringComparison.Ordinal);
+    }
+
     /// <summary>AT-T18: every Referenced items prompt is Live, so an edit takes effect on the next Turn.</summary>
     [Fact]
     public void ReferencePrompts_AreLive()
@@ -905,6 +921,7 @@ public sealed partial class PromptCatalogTests
             "turn.referenceGone",
             "turn.referencesMore",
             "turn.referencesHint",
+            "turn.referencesHintChiefOfStaff",
             "turn.referencesTaskHint",
         ];
 
