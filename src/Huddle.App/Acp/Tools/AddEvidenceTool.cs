@@ -7,6 +7,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
 
 /// <summary>
 /// Adds a line to a Task's append-only "## Evidence" section (Spec Evidence). The line carries the caller's name, the
@@ -19,7 +20,8 @@ internal sealed class AddEvidenceTool(
     ITeamDirectory directory,
     TimeProvider clock,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    IProofSource? proofs = null) : IAppTool
 {
     private const string FieldSeparator = " | ";
     private const string LogMarker = "#L";
@@ -107,8 +109,34 @@ internal sealed class AddEvidenceTool(
         }
 
         return result is TaskResult.Saved saved
-            ? $"Added evidence to {saved.Task.Id}."
+            ? this.AddedText(saved.Task)
             : TaskToolText.Refusal(result, this.Name);
+    }
+
+    /// <summary>
+    /// Words the success: the Task's status after the write, and, while that is not Needs You and the Proof has an open item, the
+    /// Proof count and the first open item, so the Agent holds the fact instead of guessing it. The Task is read again because
+    /// <see cref="TaskService.AddEvidence"/> may have moved it to Needs You after the write it reports.
+    /// </summary>
+    /// <param name="savedTask">The Task as the write saved it.</param>
+    private string AddedText(TaskItem savedTask)
+    {
+        TaskItem task = store.Get(savedTask.Id) ?? savedTask;
+        string text = $"Added evidence to {task.Id}. Its status is {task.Status.ToWire()}.";
+        if (task.Status == TaskState.NeedsYou)
+        {
+            return text;
+        }
+
+        Proof? proof = proofs?.For(task);
+        ProofItem? open = proof?.Items.FirstOrDefault(static item => !item.Met);
+        if (proof is null || open is null)
+        {
+            return text;
+        }
+
+        text = string.Create(CultureInfo.InvariantCulture, $"{text} Proof {proof.MetCount}/{proof.Total}; first open item: {TaskToolText.OpenProofItem(open)}.");
+        return task.HumanGate ? $"{text} It can go to Needs You once its Proof is complete." : text;
     }
 
     /// <summary>

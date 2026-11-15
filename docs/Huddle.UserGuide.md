@@ -1280,7 +1280,8 @@ The default process, household basics, keeps a few family rules:
 - **A recurring chore is one Task each time.** Huddle has no repeating Tasks, so the
   owner opens the next one a week before it is due.
 - **Every spend and signature waits for you.** Such a Task carries an `action:` line,
-  so it waits in **Needs You** however small the amount.
+  so it waits in Review until its Proof is complete, then in **Needs You** however small
+  the amount.
 - **Notes say where a document is kept, never its number.** "Passports in the blue
   folder", never a passport, policy or account number.
 - **A weekly check-in.** Huddle wakes the Household Manager every 7 days, counted from

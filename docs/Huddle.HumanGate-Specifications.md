@@ -346,6 +346,9 @@ Done is an acceptance, or the assignee's move after one.
 - `get_task` returns `human_gate`, `action`, the Proof (`3/4`, and each open item as
   `- <label> (<owner>): <detail>`, the owner and the detail only when it has them)
   and the acceptance (`none`, `accepted by <Human> at <time>`, or `stale`).
+- `add_evidence` states the Task's status after the write and, while the Task is not in Needs You, the Proof count and its
+  first open item in the same format, so an Agent never tells the Human a Task waits in Needs You while its Proof is open
+  (Tasks spec §11.10).
 - `list_tasks` accepts the status `Needs You`.
 - `TaskToolText` gains a paragraph, reached through `get_help` (progressive discovery): what
   counts as outward (§1.1), that an Agent sets the Action before doing it, that only the Human

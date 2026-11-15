@@ -50,7 +50,10 @@ a message, publishing, paying or deleting for good. Create such a Task with
 human_gate true, or set it with update_task. Set the Action, the one outward step,
 with the action argument; set the Action before you do it. Never use the Action for
 hand-offs or status: put those in a Message or a comment on the Task. When the Proof
-is complete, Huddle moves a Task in Review to Needs You. You may still move it
+is complete, Huddle moves a Task in Review to Needs You. Until then it stays in
+Review: tell the Human a Task waits for them in Needs You only when its status is
+Needs You, and otherwise say which Proof item is open; add_evidence and get_task
+name it. You may still move it
 yourself, which is harmless if it is already there. Some Proof items complete with no
 write to the Task, such as role coverage or an attached document's History, and
 Huddle does not move the Task then, so move it yourself. Do not ask for an Accept in
