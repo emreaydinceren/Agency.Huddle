@@ -2138,6 +2138,8 @@ and a rule:
 | `task tagged <tag>` | a sub-Task with that tag is Done |
 | `document reviewed by <step>` | a document attached to the Task was reviewed by that step after its last edit, and nobody has objected since |
 
+The development templates start their Definition of Done with `- Review: evidence from challenge`, so a Task does not reach you until a reviewer (or a tech lead or security engineer) has run the check command and posted an Evidence line. A note-only line does not count. The order, review first and verify after, is written in the process and in the Reviewer and QA Engineer personas; Huddle does not check it.
+
 The **Proof** list on the Task panel shows a tick or an open circle per line, with
 who owns the open ones and what is missing, such as "19 of 23 in #RSH-209". On an
 open line, **Ask <name>** posts a Message from you in the Task's Room: "@Ruth,

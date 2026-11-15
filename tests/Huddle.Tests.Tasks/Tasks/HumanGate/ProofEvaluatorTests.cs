@@ -1,3 +1,4 @@
+using System.Reflection;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
@@ -542,6 +543,70 @@ public sealed class ProofEvaluatorTests
 
         Assert.Equal(Reviewed, item.Label);
         Assert.Equal(ProofItemSource.Process, item.Source);
+    }
+
+    /// <summary>#537: with only QA's passing run the shipped lightweight-flow Review item is open, owned by the reviewer, and the Proof is not complete.</summary>
+    [Fact]
+    public void LightweightFlow_OnlyQaRun_ReviewIsOpenOwnedByReviewer()
+    {
+        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0)]);
+
+        ProofItem review = Assert.Single(proof.Items, static item => string.Equals(item.Label, "Review", StringComparison.Ordinal));
+        Assert.False(review.Met);
+        Assert.Equal(Ruth, review.Owner);
+        Assert.False(proof.IsComplete);
+    }
+
+    /// <summary>#537: the reviewer's passing run on top of QA's meets every item of the shipped lightweight-flow Proof.</summary>
+    [Fact]
+    public void LightweightFlow_ReviewerAndQaRuns_EveryItemMet()
+    {
+        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0), Run(Ruth, "dotnet test", 0, minutes: 1)]);
+
+        Assert.All(proof.Items, static item => Assert.True(item.Met, item.Label));
+        Assert.True(proof.IsComplete);
+    }
+
+    /// <summary>#537: a reviewer's note-only line leaves the shipped Review item open.</summary>
+    [Fact]
+    public void LightweightFlow_ReviewerNoteOnly_ReviewStaysOpen()
+    {
+        EvidenceLine note = new(Noon, Ruth, string.Empty, null, null, null, "Looks good");
+
+        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0), note]);
+
+        ProofItem review = Assert.Single(proof.Items, static item => string.Equals(item.Label, "Review", StringComparison.Ordinal));
+        Assert.False(review.Met);
+    }
+
+    /// <summary>Evaluates the shipped lightweight-flow Definition of Done with QA covering verify and a reviewer covering challenge.</summary>
+    /// <param name="evidence">The Task's Evidence lines.</param>
+    private static Proof ShippedLightweightProof(IReadOnlyList<EvidenceLine> evidence)
+    {
+        string text = ReadShippedProcess("TeamTypes/Builtin/development/processes/lightweight-flow.md");
+        Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
+        Assert.NotNull(document);
+        Dictionary<string, string> covers = new(StringComparer.Ordinal)
+        {
+            [Dev] = "build",
+            [Quinn] = "verify",
+            [Ruth] = "challenge",
+        };
+        ProofContext context = new(document.DefinitionOfDone, [], false, evidence, covers, Roster, [], []);
+        return ProofEvaluator.Evaluate(TestTasks.Make(assignee: Dev), context);
+    }
+
+    /// <summary>Reads a shipped process template from the App assembly's embedded resources.</summary>
+    /// <param name="target">The resource name with forward slashes.</param>
+    private static string ReadShippedProcess(string target)
+    {
+        Assembly assembly = typeof(ProcessDocument).Assembly;
+        string? resource = assembly.GetManifestResourceNames().SingleOrDefault(n => string.Equals(n.Replace('\\', '/'), target, StringComparison.Ordinal));
+        Assert.NotNull(resource);
+        using Stream? stream = assembly.GetManifestResourceStream(resource);
+        Assert.NotNull(stream);
+        using StreamReader reader = new(stream);
+        return reader.ReadToEnd();
     }
 
     /// <summary>Evaluates the Task assigned to Dev against <paramref name="context"/> and returns its only item.</summary>

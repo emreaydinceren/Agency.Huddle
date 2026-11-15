@@ -21,8 +21,8 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 
 1. **Plan**: the manager sets the sprint goal and chooses the Tasks. Done when each Task has an acceptance line and an assignee.
 2. **In progress**: the developer works the Task and its tests. Done when the build and the tests pass locally.
-3. **Review**: a reviewer reads the diff. Done when no open finding remains.
-4. **Verify**: QA checks the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists.
+3. **Review**: a reviewer reads the diff, runs the Team's check command on it and records the outcome on the Task as an Evidence line with that command. Done when no open finding remains.
+4. **Verify**: QA starts only after the review has no open finding. QA checks the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists. If the change gets a new commit after the review, QA runs the verify again on that commit.
 5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
 
 ## Who does what
@@ -36,7 +36,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 ## If a role is not hired
 
 - No `tech-lead`: the manager breaks each goal into Tasks itself.
-- No `reviewer`: the manager reviews the diff before it is merged.
+- No `reviewer`: the manager reviews the diff before it is merged. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`.
 - No `qa-engineer`: the manager verifies the acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
@@ -48,6 +48,7 @@ This Team delivers software in fixed sprints, as the sprints process of the `dev
 
 ## Definition of Done
 
+- Review: evidence from challenge
 - QA evidence: evidence from verify
 - Tests pass: command `dotnet test` exits 0
 
