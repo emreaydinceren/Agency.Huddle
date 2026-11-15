@@ -1086,7 +1086,10 @@ in its panel.
 **Evidence.** A Task file can have an `## Evidence` section above its Change log.
 Each line is the time, the author, the command, and optionally the exit code and a
 pointer to the tool-call log, separated by ` | `; a plain line of text is a note.
-Agents add lines with the `add_evidence` tool, and lines are only ever appended.
+Agents add lines with the `add_evidence` tool, and lines are only ever appended. Each new
+entry is written as a list item (`- `), so the Task view shows one entry per line; plain
+lines in older Task files still count as Evidence. In the Task view, a file path in the
+Evidence section shows in full, not as just its file name.
 The Task panel does not have a separate Evidence view; you read it in the Task file
 in the Library.
 

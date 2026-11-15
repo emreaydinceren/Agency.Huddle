@@ -59,7 +59,7 @@ public sealed class TaskServiceEvidenceTests
         string text = ReadText(harness, task.Id);
         Assert.True(text.IndexOf("## Evidence", StringComparison.Ordinal) < text.IndexOf("## Change log", StringComparison.Ordinal));
         Assert.True(text.IndexOf("Body text.", StringComparison.Ordinal) < text.IndexOf("## Evidence", StringComparison.Ordinal));
-        Assert.Equal(["2026-10-08T12:00Z | Nova | dotnet test | exit 0"], SectionLines(text));
+        Assert.Equal(["- 2026-10-08T12:00Z | Nova | dotnet test | exit 0"], SectionLines(text));
     }
 
     /// <summary>A second line lands after the first, in the same section.</summary>
@@ -74,9 +74,10 @@ public sealed class TaskServiceEvidenceTests
 
         string text = ReadText(harness, task.Id);
         Assert.Equal(
-            ["2026-10-08T12:00Z | Nova | dotnet build | exit 0", "2026-10-08T12:00Z | Nova | dotnet test | exit 1"],
+            ["- 2026-10-08T12:00Z | Nova | dotnet build | exit 0", "- 2026-10-08T12:00Z | Nova | dotnet test | exit 1"],
             SectionLines(text));
         Assert.Equal(1, text.Split("## Evidence").Length - 1);
+        Assert.Equal(["dotnet build", "dotnet test"], EvidenceLine.ParseSection(text).Select(static line => line.Command));
     }
 
     /// <summary>Lines already in the section, including a human note, stay byte-identical, and the text around them is kept.</summary>
@@ -92,8 +93,9 @@ public sealed class TaskServiceEvidenceTests
 
         string after = ReadText(harness, task.Id);
         Assert.Equal(
-            ["Checked by hand on staging.", "2026-10-07T09:30Z | Kai | npm test | exit 0", "2026-10-08T12:00Z | Nova | dotnet test | exit 0"],
+            ["Checked by hand on staging.", "2026-10-07T09:30Z | Kai | npm test | exit 0", "- 2026-10-08T12:00Z | Nova | dotnet test | exit 0"],
             SectionLines(after));
+        Assert.Equal(["npm test", "dotnet test"], EvidenceLine.ParseSection(after).Where(static line => line.Command.Length > 0).Select(static line => line.Command));
         string intro = before[..before.IndexOf("\n\n## Notes", StringComparison.Ordinal)];
         Assert.Equal(intro, after[..intro.Length]);
         int notes = after.IndexOf("## Notes", StringComparison.Ordinal);

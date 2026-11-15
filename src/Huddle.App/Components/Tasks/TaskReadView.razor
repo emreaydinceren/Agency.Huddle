@@ -269,7 +269,7 @@ else if (this.loaded is { } task)
         }
         else
         {
-            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(task.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToTaskHtml(task.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
         }
     </section>
 

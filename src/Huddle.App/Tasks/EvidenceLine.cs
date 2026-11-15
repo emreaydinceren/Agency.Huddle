@@ -16,6 +16,8 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
     private const string Separator = " | ";
     private const string NotePrefix = "note: ";
     private const string EvidenceHeading = "## Evidence";
+    private const string ListMarker = "- ";
+    private static readonly string[] BulletMarkers = ["- ", "* ", "+ "];
 
     /// <summary>Parses one Evidence line. Free text without a separator becomes a note; a line with separators must have a valid time, an author and a command.</summary>
     /// <param name="line">The line to parse, without its line break.</param>
@@ -123,6 +125,13 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
         return string.Join(Separator, parts);
     }
 
+    /// <summary>
+    /// Formats the line as a Markdown list item, the form <c>add_evidence</c> writes so each entry renders as its own item
+    /// rather than running into the next as one paragraph.
+    /// </summary>
+    /// <returns>The list marker followed by <see cref="Format"/>, without a line break.</returns>
+    public string FormatListItem() => ListMarker + this.Format();
+
     /// <summary>Parses every line under the "## Evidence" heading of a Task document, in order. Other sections are ignored.</summary>
     /// <param name="markdown">The whole Task document.</param>
     /// <returns>The Evidence lines; a line that does not parse is kept as a note so no human text is lost.</returns>
@@ -138,7 +147,7 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
                 continue;
             }
 
-            string text = raw.Trim();
+            string text = StripBullet(raw.Trim());
             if (!inSection || text.Length == 0)
             {
                 continue;
@@ -150,6 +159,20 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
         }
 
         return lines;
+    }
+
+    /// <summary>Removes one leading Markdown bullet marker (<c>- </c>, <c>* </c> or <c>+ </c>) and the spaces after it.</summary>
+    private static string StripBullet(string text)
+    {
+        foreach (string marker in BulletMarkers)
+        {
+            if (text.StartsWith(marker, StringComparison.Ordinal))
+            {
+                return text[marker.Length..].Trim();
+            }
+        }
+
+        return text;
     }
 
     private static bool TryParseTime(string text, out DateTimeOffset time) =>
