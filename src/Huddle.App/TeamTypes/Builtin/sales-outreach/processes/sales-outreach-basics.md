@@ -22,9 +22,11 @@ Follow the voice principles in `Teams/AGENTS.md`. Every first email gives one re
 ## Stages
 
 1. **Ready**: the Task names the prospect or list and states its acceptance in one line. Done when the Sales Lead assigns it.
-2. **In progress**: the Prospect Researcher gathers the brief, then a writer drafts the email or proposal and the CRM Steward updates the record. Done when the draft and the record are in the Task.
+2. **In progress**: the Prospect Researcher gathers the brief, then a writer drafts the email or proposal and the CRM Steward updates the record. Done when the draft is attached to the Task and the record is updated.
 3. **Verify**: the Sales Lead checks the draft against the brief and the offer and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human sends, prices or approves and marks the Task Done.
+
+A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

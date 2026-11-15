@@ -201,7 +201,7 @@ attached to the Task (a Library path line in its description, as the Task attach
 
 | Rule | Met | Owner when open | Detail when open |
 | --- | --- | --- | --- |
-| `EvidenceFrom(step)` | Evidence line with a command, by an author covering `step` | First member covering `step`, by roster order | none |
+| `EvidenceFrom(step)` | Evidence line by an author covering `step`: with a command, or a note with none when the Definition of Done has no `CommandExits` item (ADR-0062 amendment, #550). An author-less old note never counts | First member covering `step`, by roster order | `no Evidence from a member covering <step>`, or `no Evidence with a command from a member covering <step>` when a command is needed |
 | `CommandExits(cmd)` | Latest Evidence line whose command trims equal to `cmd` has exit 0 | The assignee | `last run exit <n>` or `not run` |
 | `TaskTagged(tag)` | A child with `tag` is Done | The child's assignee | `<checked> of <boxes> in #<id>` (counting `- [x]` and `- [ ]` lines in the child's description, outside fences), or `no Task yet` |
 | `DocumentReviewedBy(step)` | An attached Markdown document has a `Reviewed` history entry by an author covering `step`, later than its latest `Created` or `Edited`, with no later `Objected` | First member covering `step` | `no document attached`, `<file> — not reviewed yet`, `<file> — edited after <name>'s review` or `<file> — <name> objected: <summary>` |
@@ -343,7 +343,8 @@ Done is an acceptance, or the assignee's move after one.
 
 - `update_task` and `create_task` accept `human_gate` (true only) and `action`. A refused change
   returns the §6.4 message.
-- `get_task` returns `human_gate`, `action`, the Proof (`3/4`, and each open item with its owner)
+- `get_task` returns `human_gate`, `action`, the Proof (`3/4`, and each open item as
+  `- <label> (<owner>): <detail>`, the owner and the detail only when it has them)
   and the acceptance (`none`, `accepted by <Human> at <time>`, or `stale`).
 - `list_tasks` accepts the status `Needs You`.
 - `TaskToolText` gains a paragraph, reached through `get_help` (progressive discovery): what

@@ -26,6 +26,8 @@ Follow the voice principles in `Teams/AGENTS.md`. Write each step as an action t
 3. **Verify**: the Docs Tester follows every step, the Copy Editor reads it, and the Docs Lead checks both results and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human merges, or approves the merge, and marks the Task Done.
 
+A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
+
 ## Who does what
 
 - `docs-lead` picks pages, writes acceptance lines, checks the test and copy results and posts the Evidence line.

@@ -24,7 +24,7 @@ A Team's process has two parts:
 | Gate | What it requires |
 | --- | --- |
 | `accept-before-merge` | Your Accept on one of the Team's Tasks before an Agent merges or pushes into `main` |
-| `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done |
+| `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done; only a note when the Definition of Done names no command |
 | `checks-before-merge` | Evidence that the Team's check command passed, before an Agent's `git merge` or `git push` |
 | `spec-approved-before-build` | An approved parent spec Task before a Task moves to In Progress |
 | `failing-test-before-fix` | Evidence of a failing run and then a passing one, before a bug Task moves to Review |

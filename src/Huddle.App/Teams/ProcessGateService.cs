@@ -160,11 +160,14 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         return $"Gate blockers-done-before-start: this Task is blocked by {list}. A blocked Task waits until every blocker is Done, Cancelled, Duplicate or Rejected, and for the manager's go-ahead.";
     }
 
-    private static bool HasVerifierEvidence(GateContext context) =>
-        context.Evidence.Any(line =>
-            line.Command.Length > 0
+    private bool HasVerifierEvidence(GateContext context)
+    {
+        bool notesCount = !DoneRule.NamesCommand(this.ProcessOf(context.Team)?.DefinitionOfDone ?? []);
+        return context.Evidence.Any(line =>
+            (line.Command.Length > 0 || notesCount)
             && context.AuthorRoleCovers.TryGetValue(line.Author, out string? covers)
             && covers.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase));
+    }
 
     /// <summary>Whether a run with a non-zero exit code is followed by a later run with exit code 0.</summary>
     /// <param name="evidence">The Task's Evidence lines.</param>

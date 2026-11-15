@@ -308,6 +308,65 @@ public sealed partial class ProcessTemplatesTests
         Assert.DoesNotContain("the evidence shows the checks passing", reviewer, StringComparison.Ordinal);
     }
 
+    /// <summary>#550: every built-in process whose Definition of Done has a document-reviewed item says, in its Stages section, that the draft is a file attached to the Task and who logs the review.</summary>
+    [Fact]
+    public void Process_DocumentReviewedItem_StagesSayTheDraftIsAFile()
+    {
+        const string paragraph = "A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.";
+        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
+        string[] resources = assembly.GetManifestResourceNames()
+            .Select(static n => n.Replace('\\', '/'))
+            .Where(static n => n.Contains("TeamTypes/Builtin/", StringComparison.Ordinal) && n.Contains("/processes/", StringComparison.Ordinal) && n.EndsWith(".md", StringComparison.Ordinal)) // contains-ok: resource path filter
+            .ToArray();
+        int checkedCount = 0;
+        List<string> failures = [];
+        foreach (string resource in resources)
+        {
+            string text = ReadResourceText(resource);
+            Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document), resource);
+            Assert.NotNull(document);
+            if (!document.DefinitionOfDone.Any(static item => item.Rule is DoneRule.DocumentReviewedBy))
+            {
+                continue;
+            }
+
+            checkedCount++;
+            string[] stages = StagesLines(text);
+            if (!stages.Contains(paragraph, StringComparer.Ordinal))
+            {
+                failures.Add(resource);
+            }
+        }
+
+        Assert.NotEqual(0, checkedCount);
+        Assert.True(failures.Count == 0, "Stages lack the attached-file paragraph in: " + string.Join(", ", failures));
+    }
+
+    /// <summary>Returns the trimmed lines of the Stages section of a raw process file.</summary>
+    /// <param name="text">The raw file text.</param>
+    /// <returns>The lines between <c>## Stages</c> and the next level-two heading.</returns>
+    private static string[] StagesLines(string text)
+    {
+        List<string> lines = [];
+        bool inside = false;
+        foreach (string raw in text.Split('\n'))
+        {
+            string line = raw.TrimEnd('\r');
+            if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                inside = string.Equals(line, "## Stages", StringComparison.Ordinal);
+                continue;
+            }
+
+            if (inside)
+            {
+                lines.Add(line);
+            }
+        }
+
+        return lines.ToArray();
+    }
+
     /// <summary>Returns the position of the Definition of Done item with a label, or -1.</summary>
     /// <param name="items">The items in written order.</param>
     /// <param name="label">The label to find.</param>

@@ -262,6 +262,34 @@ public sealed class HumanGateToolTests
         Assert.Contains("- Citation check", lines);
     }
 
+    /// <summary>An open item with an owner and a Detail prints <c>- Label (Owner): Detail</c> (#550).</summary>
+    [Fact]
+    public async Task GetTask_OpenItemWithOwnerAndDetail_PrintsBoth()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FixedProofSource proof = new(new Proof([new ProofItem("Plan checked", false, "Nova", "no Evidence from a member covering verify", ProofItemSource.Process)]));
+        using TaskToolHarness harness = await BuildAsync(proof, ct);
+        TaskItem task = GatedInReview(harness);
+
+        string result = await GetOver(harness, proof).InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString() }, ct);
+
+        Assert.Contains("- Plan checked (Nova): no Evidence from a member covering verify", result.Split('\n'));
+    }
+
+    /// <summary>An open item with a Detail and no owner prints <c>- Label: Detail</c> (#550).</summary>
+    [Fact]
+    public async Task GetTask_OpenItemWithDetailAndNoOwner_PrintsTheDetail()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FixedProofSource proof = new(new Proof([new ProofItem("Plan reviewed", false, null, "no document attached", ProofItemSource.Process)]));
+        using TaskToolHarness harness = await BuildAsync(proof, ct);
+        TaskItem task = GatedInReview(harness);
+
+        string result = await GetOver(harness, proof).InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString() }, ct);
+
+        Assert.Contains("- Plan reviewed: no document attached", result.Split('\n'));
+    }
+
     /// <summary>A valid acceptance prints as <c>accepted: &lt;UTC time&gt; by &lt;name&gt;</c>.</summary>
     [Fact]
     public async Task GetTask_ValidAcceptance_ShowsWhenAndBy()
