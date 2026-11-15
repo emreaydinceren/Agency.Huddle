@@ -517,6 +517,16 @@ The goldens that change are the ones Tasks §16 lists: `getHelp.txt` and `toolDe
 Delete them, run the tests to reseed them, and review the diff. It should be exactly these
 sentences.
 
+### 10.5 Sprint proposals under the Needs You level (ADR-0087)
+
+`propose_sprint` normally waits for the Human to approve. When every Task the proposal names runs under the level Run inside the Team
+(resolved per Task, from its folder), `SprintApprover.ApproveWithoutHuman` approves it at once instead:
+
+- It creates the Sprint (an existing name is accepted) and sets it on each named Task that still exists and is not Done.
+- Each Task added gets a Change log entry by Huddle: "proceeded under <scope> level Run inside the Team: Sprint '<name>' approved without the
+  Human". The Feed gets one `sprint-proceeded` item for the Sprint.
+- One Task under Ask me sends the whole proposal to the Human as before.
+
 ---
 
 ## 11. Views

@@ -258,6 +258,13 @@ pins the pairing and is unit-tested for every value.
 | `HelperFailing` | `helper-failing` | `HelperFeed` | Yes | `helper:<id>` | `HelperFailingPayload(HelperId, Name, Failures, LastError)` |
 | `AgentsMdChangeSkipped` | `agents-md-change-skipped` | `AgentsMdChangeHelper` | No | `helper:<id>` | `AgentsMdChangeSkippedPayload(HelperId, Name, Path, Reason)` |
 | `AgentConnectorsChanged` | `agent-connectors-changed` | `PersonaStore` | No | The Agent's name | `AgentConnectorsPayload(Name, On)` |
+| `TaskProceeded` | `task-proceeded` | `TaskService` (through `TaskFeedRules`) | No | Task id | `TaskProceededPayload(Id, Title, Team, Scope)` |
+| `SprintProceeded` | `sprint-proceeded` | `SprintApprover` | No | Sprint id | `SprintProceededPayload(Name, Team, Scope, TaskCount)` |
+| `SpendCapReached` | `spend-cap-reached` | `NeedsYouCaps` | Yes | The scope key | `SpendCapReachedPayload(Scope, Team?, Cap, Message)` |
+
+`task-proceeded` and `sprint-proceeded` record a step that went ahead under the level Run inside the Team (a local merge into main, a Sprint
+approved without the Human), so the Human can see what Huddle did on their behalf ([ADR-0087](adr/0087-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md)).
+`spend-cap-reached` is a Notification with a Yes/No question; it resolves when the Human answers or changes the level or cap.
 
 The `helper-paused` and `helper-failing` rows and the `Reason` of `task-gate-on` are slice 3 ([Helpers in the Feed](Huddle.HelpersInFeed-Specifications.md)).
 A Helper's `task-gate-on` carries the actor kind `helper` and is resolved when the Human turns the gate off or decides, the Task waits in Needs You, or it

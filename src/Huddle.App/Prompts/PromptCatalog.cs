@@ -2012,7 +2012,9 @@ internal static class PromptCatalog
                 carries out the Action and then moves the Task to Done. In a Team with the
                 accept-before-merge gate, a merge into main is refused until a Task of the Team has
                 the Human's Accept, whoever runs it: put the merge in the Task's Action, wait in
-                Needs You, and merge after the Accept. Use list_tasks with the
+                Needs You, and merge after the Accept. If the Team's Needs You level is Run inside
+                the Team, do not set a merge Action: a local merge proceeds when the Proof is
+                complete, and any push still waits for the Accept. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.
                 """,
             Placeholders: [],

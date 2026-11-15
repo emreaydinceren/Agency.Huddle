@@ -23,7 +23,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 2. **Reproduce**: the developer writes a test that fails on the current code. Done when the failing test is recorded as Evidence.
 3. **Fix**: the developer changes the code until the test passes. Done when the build and the tests pass locally.
 4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded.
-5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
+5. **Done**: the manager moves the Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge follows the `accept-before-merge` gate below.
 
 ## Who does what
 
@@ -43,7 +43,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
-- `accept-before-merge`: Huddle refuses a merge into main, whoever runs it, until a Task of the Team has the Human's Accept. Put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept.
+- `accept-before-merge`: a merge into main waits for the Human, as the Team's or project's Needs You level says. Under Ask me (the default) put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept. Under Run inside the Team do not set a merge Action: when the Proof is complete in Review, Huddle releases the Task and wakes its assignee, who merges into the local main and then moves the Task to Done. Any push waits for the Human's Accept at every level: put the push in the Task's Action.
 - `failing-test-before-fix`: Huddle refuses to move a bug Task to Review until an Evidence line shows a failing test written before the fix.
 - `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
 

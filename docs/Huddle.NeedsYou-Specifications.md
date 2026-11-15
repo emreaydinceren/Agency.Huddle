@@ -391,6 +391,21 @@ Nothing in the ACP effort's subtree changes.
 
 ---
 
+## 11. The spend cap question (ADR-0087)
+
+A scope whose Needs You level is Run inside the Team may carry a spend cap. When the scope has spent its cap it falls back to Ask me, and
+`NeedsYouCaps` holds one open question for it. This is not a Room entry and has no reason flag: `NeedsYouCard` lists one row per open
+question ("Spend cap reached", linking to `/needs-you#cap`), and the Needs You page draws `NeedsYouCapAskCard` with Yes and No buttons.
+The count of the card includes these rows.
+
+- The question reads "<scope> has spent 5.00 USD running inside the Team, its cap. Let it spend another 5.00 USD?".
+- **Yes** lets the scope spend exactly one more cap, and the question returns when that is spent. **No** keeps the scope at Ask me until the
+  Human changes the level or the cap.
+- Only the Human answers. No Agent tool calls the grant or the decline.
+- The same question is posted to the Feed as the Notification `spend-cap-reached` and resolves with the answer.
+
+---
+
 ## Appendix A. Tasks, in order, test first
 
 Each task is one commit-sized change. Write the failing test, watch it fail, make it pass,

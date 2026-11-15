@@ -34,7 +34,8 @@ Under Run inside the Team, three steps proceed without the Human:
 
 Under both levels, these always wait for the Human's Accept:
 
-- **any `git push`**, whatever the remote: a network URL, a file path, a bare `push` or `--all`;
+- **any `git push` the merge gate holds**, whatever the remote: a network URL, a file path, a bare `push`, `--all`, or a push to
+  `main` or `HEAD`. A push of a named feature branch is not held for an Accept at any level, as before; `checks-before-merge` still applies to it ([known limits](../engineering/known-limits.md));
 - every Task that carries an Action (send, pay, publish, sign, delete, or any other) or has `human_gate: true`;
 - every connector call (ADR-0080: every call asks).
 
