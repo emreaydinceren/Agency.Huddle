@@ -182,7 +182,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: check, approval, guard.
 
 **Evidence**
-: A line added to a Task that records what was checked, and by whom. Gates read
+: A comment tagged `evidence` on a Task's **Timeline** that records what was checked, and by whom (ADR-0086). Gates read
   Evidence: a Task's move to Done needs it, and a merge needs one whose check command
   passed. One line of Evidence can meet one item of **Proof**.
 : *Avoid*: proof (that is the checklist), log, result.
@@ -811,7 +811,7 @@ See
 **Task**
 : A unit of work that the Human and the Agents share. It is one Markdown file at
   `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md`: a title, a status,
-  a priority, at most one assignee, at most one Sprint, a description, and a Change log. Its identity is the `id`
+  a priority, at most one assignee, at most one Sprint, a description, and a **Timeline**. Its identity is the `id`
   in its frontmatter, such as `PLAT-0042`, and it never changes, even when the Task moves. In
   code the record is `TaskItem`, because a type named `Task` would shadow
   `System.Threading.Tasks.Task`.
@@ -861,12 +861,16 @@ See
 : *Avoid*: invalid, won't fix, discarded, abandoned.
 
 **Change log**
-: The history at the end of a Task file, under a `## Change log` heading. Only
-  the app writes to it, and only by appending. Each line records when, who, and
-  what changed. It is the Task's only history: the Created, Updated and Closed
-  dates are derived from it. This is the name in the interface as well as in the
-  docs.
-: *Avoid*: activity, history, audit log, timeline (the component that draws it).
+: The events on a Task's **Timeline**: when, who, and what changed. Only `TaskService` writes them, and only by
+  appending. The Created and Closed dates are derived from them. A Task file written before the Timeline keeps them
+  under a `## Change log` heading until its first write.
+: *Avoid*: activity, history, audit log.
+
+**Timeline**
+: A Task's comments, **Evidence** and **Change log** events in one list, oldest first, under the `## Timeline`
+  heading at the end of its file (ADR-0086). Nobody edits or deletes an entry; the description is the only text that
+  is edited. In the interface it is the Task view's Timeline section, with the comment box under it.
+: *Avoid*: activity, history, thread.
 
 **Origin**
 : The Room a Task was created from, if it came from a conversation. When the

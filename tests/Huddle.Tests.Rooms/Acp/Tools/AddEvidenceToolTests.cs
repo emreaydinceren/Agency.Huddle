@@ -32,9 +32,9 @@ public sealed class AddEvidenceToolTests
     /// <summary>The Evidence lines now on the Task.</summary>
     private static IReadOnlyList<EvidenceLine> Evidence(TaskToolHarness harness, TaskItem task)
     {
-        string? text = harness.Store.ReadText(task.Id);
-        Assert.NotNull(text);
-        return EvidenceLine.ParseSection(text);
+        TaskItem? stored = harness.Store.Get(task.Id);
+        Assert.NotNull(stored);
+        return stored.Evidence;
     }
 
     /// <summary>A command with a matching log entry gets the caller's name, the clock time, the exit code and the log reference.</summary>

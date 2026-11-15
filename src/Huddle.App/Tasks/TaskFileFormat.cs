@@ -9,9 +9,10 @@ using Agency.Huddle.App.Library;
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// Parses, composes and version-hashes a Task file: the frontmatter and Change log grammar in
-/// Spec §7. This is the only place that reads or writes a Task file's text; <c>TaskStore</c> is
-/// the only class that touches the file system for Task files.
+/// Parses, composes and version-hashes a Task file: the frontmatter and the description-plus-timeline
+/// body in Spec §7 and ADR-0086 (the timeline half is in <c>TaskFileFormat.Timeline.cs</c>). This is
+/// the only place that reads or writes a Task file's text; <c>TaskStore</c> is the only class that
+/// touches the file system for Task files.
 /// </summary>
 internal static partial class TaskFileFormat
 {
@@ -38,10 +39,13 @@ internal static partial class TaskFileFormat
     private static readonly char[] LineBreakCharacters = ['\n', '\r'];
 
     /// <summary>
-    /// Parses a Task file's text into a <see cref="TaskItem"/> (Spec §7.2-§7.3 steps 1-2). Every
-    /// known key is validated per Spec §7.2; the first violation is returned as
-    /// <paramref name="error"/>. <see cref="TaskItem.Description"/> is the whole body for now -
-    /// splitting out the Change log is Task 2.2.
+    /// Parses a Task file's text into a <see cref="TaskItem"/> (Spec §7.2-§7.3). Every known key is
+    /// validated per Spec §7.2; the first violation is returned as <paramref name="error"/>. The body
+    /// is split at the last <c>## Timeline</c> heading: the text before it is
+    /// <see cref="TaskItem.Description"/>, the lines after it are the comments, Evidence and events
+    /// (Spec §7.7, ADR-0086). A body without that heading is an older file and is read by Spec §7.7.3:
+    /// its Change log lines are the events and its <c>## Evidence</c> sections are Evidence entries,
+    /// not description.
     /// </summary>
     /// <param name="text">The Task file's raw text.</param>
     /// <param name="path">The Task file's absolute path, passed through unchanged.</param>
@@ -79,8 +83,7 @@ internal static partial class TaskFileFormat
 
         string? assignee = TryGetField(fields, "assignee", out string? assigneeRaw) ? NullIfEmpty(assigneeRaw) : null;
         string? originRoomId = TryGetField(fields, "origin", out string? originRaw) ? NullIfEmpty(originRaw) : null;
-        (string description, IReadOnlyList<ChangeLogEntry> changeLog) = SplitChangeLog(body);
-
+        ParsedBody parsedBody = ParseBody(body);
         task = new TaskItem
         {
             Id = required.Id,
@@ -99,13 +102,14 @@ internal static partial class TaskFileFormat
             Sprint = relations.Sprint,
             HumanGate = relations.HumanGate,
             Action = relations.Action,
-            Description = description,
+            Description = parsedBody.Description,
             Location = location,
-            ChangeLog = changeLog,
+            ChangeLog = parsedBody.ChangeLog,
+            Comments = parsedBody.Comments,
             UnknownFields = UnknownFieldsOf(fields),
             Path = path,
             Version = ComputeVersion(text),
-            ClosedAt = ComputeClosedAt(changeLog, location.Closed),
+            ClosedAt = ComputeClosedAt(parsedBody.ChangeLog,location.Closed),
         };
         error = "";
         return true;
@@ -219,30 +223,31 @@ internal static partial class TaskFileFormat
     }
 
     /// <summary>Composes a Task's canonical file text (Spec §7.4): the §7.2 keys in order, then
-    /// any unknown keys, then the description, a blank line, the Change log heading and its
-    /// entries. Line endings are '\n' only.</summary>
+    /// any unknown keys, then the description, a blank line, the Timeline heading and every
+    /// timeline entry. Line endings are '\n' only.</summary>
     /// <param name="task">The Task to compose.</param>
     public static string Compose(TaskItem task)
     {
         ArgumentNullException.ThrowIfNull(task);
 
         List<string> lines = ComposeHeadLines(task);
-        lines.Add(ChangeLogHeading);
-        foreach (ChangeLogEntry entry in task.ChangeLog)
+        lines.Add(TimelineHeading);
+        foreach (TimelineEntry entry in task.Timeline)
         {
-            lines.Add(FormatEntry(entry));
+            lines.Add(FormatTimelineEntry(entry));
         }
 
         return string.Join('\n', lines);
     }
 
     /// <summary>
-    /// Composes <paramref name="after"/>'s frontmatter and description (Spec §7.4), then keeps
-    /// <paramref name="currentText"/>'s own text from its last fence-aware
-    /// <see cref="ChangeLogHeading"/> line onward, byte for byte (Settled corrections-B2 D6 item 1:
-    /// never recompose a whole existing file for an update - a hand-edited Change log line must
-    /// survive untouched). When <paramref name="currentText"/> has no such heading, the result is
-    /// just the composed head; <see cref="AppendEntry"/> adds a fresh heading when it appends next.
+    /// Composes <paramref name="after"/>'s frontmatter and description (Spec §7.4), then keeps the
+    /// text of <paramref name="currentText"/> from its last fence-aware <see cref="TimelineHeading"/>
+    /// line onward, byte for byte (Settled corrections-B2 D6 item 1: never recompose a whole
+    /// existing file for an update - a hand-edited timeline line must survive untouched, and a
+    /// description write must never reach an Evidence entry, #586). A file written before the
+    /// timeline is converted first (<see cref="Upgrade"/>), so it has a heading to keep from. The
+    /// result has '\n' line endings.
     /// </summary>
     /// <param name="currentText">The Task file's current raw text on disk.</param>
     /// <param name="after">The Task as it should be after the update, for its frontmatter and description.</param>
@@ -251,8 +256,8 @@ internal static partial class TaskFileFormat
         ArgumentNullException.ThrowIfNull(currentText);
         ArgumentNullException.ThrowIfNull(after);
 
-        string[] rawLines = currentText.Split('\n');
-        int headingIndex = FindChangeLogHeadingLineIndex(rawLines);
+        string[] rawLines = Upgrade(currentText).Split('\n');
+        int headingIndex = FindHeadingLineIndex(rawLines, TimelineHeading);
         (string opening, string closing) = ExistingFences(rawLines);
         List<string> headLines = ComposeHeadLines(after, opening, closing);
 
@@ -369,16 +374,6 @@ internal static partial class TaskFileFormat
         }
     }
 
-    /// <summary>True when <paramref name="description"/> has a line that trims (case-insensitively) to <see cref="ChangeLogHeading"/> outside a fenced code block.</summary>
-    /// <param name="description">The text to search.</param>
-    public static bool ContainsChangeLogHeading(string description)
-    {
-        ArgumentNullException.ThrowIfNull(description);
-
-        string normalized = description.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-        return FindChangeLogHeadingLineIndex(normalized.Split('\n')) >= 0;
-    }
-
     /// <summary>Writes one frontmatter scalar line, quoting the value when Spec §7.4 requires it.</summary>
     private static string ComposeScalarLine(string key, string value) =>
         string.Create(CultureInfo.InvariantCulture, $"{key}: {ComposeScalarValue(value)}");
@@ -427,22 +422,19 @@ internal static partial class TaskFileFormat
     private static string QuoteScalar(string value) =>
         string.Create(CultureInfo.InvariantCulture, $"'{value.Replace("'", "''", StringComparison.Ordinal)}'");
 
-    /// <summary>Formats one Change log entry as its file line (Spec §7.4).</summary>
+    /// <summary>Formats one event as its timeline file line (Spec §7.4, §7.7.1): <c>- {at} | {actor} | event | {summary}</c>.</summary>
     /// <param name="entry">The entry to format.</param>
     public static string FormatEntry(ChangeLogEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
 
-        string at = entry.At.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
-        string actor = EscapeEntryField(entry.Actor);
-        string summary = EscapeEntryField(entry.Summary);
-        return string.Create(CultureInfo.InvariantCulture, $"- {at} | {actor} | {summary}");
+        return FormatTimelineEntry(new TimelineEntry(entry.At, entry.Actor, TimelineEntryKind.Event, entry.Summary));
     }
 
     /// <summary>
-    /// Appends a formatted Change log entry to <paramref name="fileText"/>, adding the
-    /// <see cref="ChangeLogHeading"/> first when the file has none outside a fenced code block.
-    /// Existing log lines are never rewritten.
+    /// Appends a formatted event to <paramref name="fileText"/>, converting an older file first
+    /// (<see cref="Upgrade"/>) and adding the <see cref="TimelineHeading"/> when the file has none
+    /// outside a fenced code block. Existing lines are never rewritten.
     /// </summary>
     /// <param name="fileText">The Task file's raw text.</param>
     /// <param name="entry">The entry to append.</param>
@@ -451,71 +443,7 @@ internal static partial class TaskFileFormat
         ArgumentNullException.ThrowIfNull(fileText);
         ArgumentNullException.ThrowIfNull(entry);
 
-        string formatted = FormatEntry(entry);
-        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-        string[] lines = normalized.Split('\n');
-        int headingIndex = FindChangeLogHeadingLineIndex(lines);
-
-        string trimmed = normalized.TrimEnd('\n');
-        return headingIndex < 0
-            ? trimmed + "\n\n" + ChangeLogHeading + "\n" + formatted + "\n"
-            : trimmed + "\n" + formatted + "\n";
-    }
-
-    /// <summary>
-    /// Adds one line at the end of the "## Evidence" section of <paramref name="fileText"/>, creating the section
-    /// just before the Change log heading (or at the end when there is none) when it is absent. Every other line is
-    /// left exactly as it was.
-    /// </summary>
-    /// <param name="fileText">The Task file's raw text.</param>
-    /// <param name="evidenceLine">The formatted Evidence line, without a line break.</param>
-    public static string AddEvidenceLine(string fileText, string evidenceLine)
-    {
-        ArgumentNullException.ThrowIfNull(fileText);
-        ArgumentException.ThrowIfNullOrWhiteSpace(evidenceLine);
-
-        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-        List<string> lines = [.. normalized.Split('\n')];
-        int changeLog = FindChangeLogHeadingLineIndex([.. lines]);
-        int limit = changeLog < 0 ? lines.Count : changeLog;
-
-        int heading = -1;
-        bool inFence = false;
-        for (int i = 0; i < limit && heading < 0; i++)
-        {
-            string trimmed = lines[i].Trim();
-            if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
-            {
-                inFence = !inFence;
-            }
-            else if (!inFence && string.Equals(trimmed, EvidenceHeading, StringComparison.OrdinalIgnoreCase))
-            {
-                heading = i;
-            }
-        }
-
-        if (heading >= 0)
-        {
-            int last = heading;
-            for (int i = heading + 1; i < limit && !lines[i].StartsWith('#'); i++)
-            {
-                if (lines[i].Trim().Length > 0)
-                {
-                    last = i;
-                }
-            }
-
-            lines.Insert(last + 1, evidenceLine);
-            return string.Join('\n', lines);
-        }
-
-        if (changeLog < 0)
-        {
-            return normalized.TrimEnd('\n') + "\n\n" + EvidenceHeading + "\n" + evidenceLine + "\n";
-        }
-
-        lines.InsertRange(changeLog, [EvidenceHeading, evidenceLine, string.Empty]);
-        return string.Join('\n', lines);
+        return AppendTimelineEntry(fileText, new TimelineEntry(entry.At, entry.Actor, TimelineEntryKind.Event, entry.Summary));
     }
 
     /// <summary>
@@ -777,58 +705,6 @@ internal static partial class TaskFileFormat
 
         error = "";
         return true;
-    }
-
-    /// <summary>
-    /// Splits a Task file's body at the last line that trims (case-insensitively) to
-    /// <see cref="ChangeLogHeading"/> and is outside a fenced code block. Everything before that
-    /// line, trailing whitespace trimmed, is the description; everything after it is log lines
-    /// (Spec §7.3 step 3).
-    /// </summary>
-    private static (string Description, IReadOnlyList<ChangeLogEntry> ChangeLog) SplitChangeLog(string body)
-    {
-        string[] lines = body.Split('\n');
-        int headingIndex = FindChangeLogHeadingLineIndex(lines);
-
-        if (headingIndex < 0)
-        {
-            return (body.TrimEnd(), []);
-        }
-
-        string description = string.Join('\n', lines[..headingIndex]).TrimEnd();
-        List<ChangeLogEntry> entries = [];
-        for (int i = headingIndex + 1; i < lines.Length; i++)
-        {
-            if (TryParseLogLine(lines[i], out ChangeLogEntry? entry))
-            {
-                entries.Add(entry);
-            }
-        }
-
-        return (description, entries);
-    }
-
-    /// <summary>The index of the last line that trims to <see cref="ChangeLogHeading"/> outside a fenced code block, or -1.</summary>
-    private static int FindChangeLogHeadingLineIndex(string[] lines)
-    {
-        bool inFence = false;
-        int found = -1;
-        for (int i = 0; i < lines.Length; i++)
-        {
-            string trimmed = lines[i].Trim();
-            if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
-            {
-                inFence = !inFence;
-                continue;
-            }
-
-            if (!inFence && string.Equals(trimmed, ChangeLogHeading, StringComparison.OrdinalIgnoreCase))
-            {
-                found = i;
-            }
-        }
-
-        return found;
     }
 
     /// <summary>

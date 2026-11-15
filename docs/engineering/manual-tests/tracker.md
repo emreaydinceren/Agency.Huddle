@@ -845,6 +845,8 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-21](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Pass |  | run 2026-11-06 at `eb1b8c78`, mock lane, see the Run log |
 | [TASKS-22](tasks.md#tasks-22--a-request-held-by-a-spent-room-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Pass |  | run by an agent 2026-11-06, mock lane, see the Run log |
 | [TASKS-23](tasks.md#tasks-23--a-developer-asked-to-start-a-task-blocked-by-an-open-task-is-refused-and-can-start-it-once-the-blocker-is-done) | 💰 | Pass |  | run by an agent 2026-11-14, paid lane, see the Run log |
+| [TASKS-24](tasks.md#tasks-24--evidence-survives-description-edits-by-an-agent-and-by-the-form-and-comments-show-on-the-timeline) | 💰 | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
+| [TASKS-25](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write) |  | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
 
 ## adapters
 

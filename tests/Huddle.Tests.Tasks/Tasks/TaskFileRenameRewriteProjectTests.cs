@@ -45,7 +45,7 @@ public sealed class TaskFileRenameRewriteProjectTests
         Assert.Contains($"`{Join("Growth", "Launch2", "a.md")}`", text, StringComparison.Ordinal);
         Assert.Contains($"`{Join("Ops", "Launch", "b.md")}`", text, StringComparison.Ordinal);
         Assert.Contains($"`{Join("Growth", "c.md")}`", text, StringComparison.Ordinal);
-        Assert.Single(text.Split('\n'), static line => line.TrimEnd('\r').EndsWith("| Huddle | Project renamed from Launch to Debut", StringComparison.Ordinal));
+        Assert.Single(text.Split('\n'), static line => line.TrimEnd('\r').EndsWith("| Huddle | event | Project renamed from Launch to Debut", StringComparison.Ordinal));
     }
 
     /// <summary>A Request whose <c>from_team</c> is the Project's Team is not a Project reference: nothing is rewritten and no Team is listed.</summary>

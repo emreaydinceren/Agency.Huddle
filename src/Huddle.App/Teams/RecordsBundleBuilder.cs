@@ -37,7 +37,7 @@ internal sealed class RecordsBundleBuilder(TaskStore tasks, ITeamCatalog teams, 
 
         List<TaskItem> changed = [.. tasks.All
             .Where(task => string.Equals(task.Location.Team, name, StringComparison.OrdinalIgnoreCase)
-                && task.ChangeLog.Any(entry => entry.At >= since))
+                && task.Timeline.Any(entry => entry.At >= since))
             .OrderBy(static task => task.Id.ToString(), StringComparer.Ordinal)];
 
         List<TaskRecord> taskRecords = [];

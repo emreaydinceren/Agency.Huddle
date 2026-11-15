@@ -289,11 +289,8 @@ else if (this.loaded is { } task)
         <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="false" OnReload="this.OnDecisionReload" />
     }
 
-    @* T15g: the History and the footer meta, as TaskDetail ends. *@
-    <section class="task-detail-history">
-        <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
-        <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
-    </section>
+    @* T15g: the Timeline with its comment box (T15h), and the footer meta, as TaskDetail ends. *@
+    <TaskTimeline Task="@task" />
 
     <div class="task-detail-footer-meta">
         <span class="task-detail-created" title="@TaskDates.Tooltip(task.Created, this.Clock)">@($"Created {TaskDates.HumanMomentInPhrase(task.Created, this.Clock)}")</span>

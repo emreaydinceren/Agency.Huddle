@@ -43,7 +43,7 @@ public sealed class AddEvidenceToolNeedsYouMoveTests
         public Proof For(TaskItem task)
         {
             DoneItem rule = new("Tests pass", new DoneRule.CommandExits("dotnet test"), ProofItemSource.Process);
-            ProofContext context = new([rule], [], false, EvidenceLine.ParseSection(task.Description), new Dictionary<string, string>(StringComparer.Ordinal), [], [], []);
+            ProofContext context = new([rule], [], false, task.Evidence, new Dictionary<string, string>(StringComparer.Ordinal), [], [], []);
             return ProofEvaluator.Evaluate(task, context);
         }
     }
@@ -79,6 +79,7 @@ public sealed class AddEvidenceToolNeedsYouMoveTests
         Assert.DoesNotContain("Added evidence", result, StringComparison.Ordinal);
         TaskItem? after = harness.Store.Get(task.Id);
         Assert.Equal(TaskState.Review, after?.Status);
-        Assert.Empty(EvidenceLine.ParseSection(after?.Description ?? string.Empty));
+        Assert.NotNull(after);
+        Assert.Empty(after.Evidence);
     }
 }

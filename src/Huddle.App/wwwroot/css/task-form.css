@@ -163,6 +163,61 @@
     margin-bottom: 8px;
 }
 
+/* The Timeline (TaskTimeline): a Comment's Markdown sits in a bordered body, an Evidence entry stacks its run, log and note, and
+   the comment box closes the section. All colours are the house tokens, so Dark follows. */
+.task-timeline-comment-body {
+    margin-top: 4px;
+    padding: 8px 12px;
+    border: 1px solid var(--hu-line-region);
+    border-radius: var(--hu-radius-control);
+    font-size: var(--mud-typography-body2-size);
+    overflow-wrap: anywhere;
+}
+
+.task-timeline-comment-body > :first-child {
+    margin-top: 0;
+}
+
+.task-timeline-comment-body > :last-child {
+    margin-bottom: 0;
+}
+
+.task-timeline-evidence-body {
+    margin-top: 2px;
+    min-width: 0;
+}
+
+.task-timeline-evidence-run {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.task-timeline-evidence-command {
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-body2-size);
+    overflow-wrap: anywhere;
+}
+
+.task-timeline-evidence-log {
+    margin-top: 2px;
+    font-family: var(--font-mono);
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.task-timeline-comment-box {
+    margin-top: 8px;
+}
+
+.task-timeline-comment-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
 /* The Description keeps its Group label with the Edit | Preview toggle on its line, and its own floating label is visually hidden. */
 .task-detail-description-header {
     display: flex;

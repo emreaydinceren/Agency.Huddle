@@ -106,7 +106,7 @@ public sealed class TaskReadViewTests
         Assert.Equal($"/tasks/item/{blocker.Id}", cut.Find(".task-read-view-blocked-by a").GetAttribute("href"));
     }
 
-    /// <summary>The read view draws no <c>input</c>, <c>textarea</c> or <c>select</c>: it reads (D-1).</summary>
+    /// <summary>The read view draws no <c>input</c>, <c>textarea</c> or <c>select</c> for a Task field: it reads (D-1). The Timeline's comment box (T15h) is the one control, and it writes no field.</summary>
     [Fact]
     public async Task Render_TaskWithEveryField_HasNoFormControl()
     {
@@ -118,7 +118,7 @@ public sealed class TaskReadViewTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
 
         Assert.NotEmpty(cut.FindAll(".task-read-view"));
-        Assert.Empty(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"));
+        Assert.DoesNotContain(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"), static control => control.Closest(".task-timeline-comment-box") is null);
     }
 
     /// <summary>An empty value is a dash in Quiet ink, so a Task with little set still has every row.</summary>
@@ -235,7 +235,7 @@ public sealed class TaskReadViewTests
         Assert.Equal("no longer needed", cut.Find(".task-read-view-reason dd").TextContent.Trim());
     }
 
-    /// <summary>The History is always open under its own heading with the entry count: no expansion panel to open before the entries show.</summary>
+    /// <summary>The Timeline is always open under its own heading with the entry count: no expansion panel to open before the entries show.</summary>
     [Fact]
     public async Task History_IsAlwaysOpen_WithoutAnExpansionPanel()
     {
@@ -247,7 +247,7 @@ public sealed class TaskReadViewTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
 
         Assert.Empty(cut.FindComponents<MudExpansionPanels>());
-        Assert.StartsWith("History (", cut.Find(".task-detail-history-heading").TextContent.Trim(), StringComparison.Ordinal);
+        Assert.Equal("Timeline (1)", cut.Find(".task-detail-history-heading").TextContent.Trim());
         Assert.NotEmpty(cut.FindAll(".task-detail-history-row"));
     }
 }

@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**23 tests** · 17 free, 6 paid 💰 · about 4 hours.
+**25 tests** · 18 free, 7 paid 💰 · about 4.3 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -13,7 +13,7 @@ cannot drag, cannot press real keys through the browser, and answers only throug
 `FakeAgentHostFactory` — so every drag, every keyboard-only path and every live-Agent reaction
 exists only here. The tests are ordered cheapest-first: TASKS-01 to TASKS-09 need no Agent at all,
 TASKS-13 and TASKS-14 need only a chat surface already covered elsewhere, and TASKS-10, -11, -12,
--15, -19 and -23 are the only ones that spend money.
+-15, -19, -23 and -24 are the only ones that spend money.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -1078,6 +1078,77 @@ names the blocker, and the move is allowed once the blocker is Done.*
 - The second Task moves while the first is open -> the gate is not on for the Team, or `TaskService.CheckGates` is not
   passed the stored blockers.
 - It stays refused after the first is Done -> `OpenBlockersOf` counts a finished blocker.
+
+---
+
+### TASKS-24 — Evidence survives description edits by an Agent and by the form, and comments show on the Timeline
+
+**Paid 💰** · about 15 min · 4-6 Turns
+
+*Proves #586 ([ADR-0086](../../adr/0086-a-task-is-a-description-plus-an-immutable-timeline.md)): a Task is a
+description plus a Timeline. A description edit by `update_task` or by the edit page's Save keeps every Evidence entry
+and the Proof; an Agent's `add_comment` and the Human's comment box add comments; nothing on the Timeline can be edited
+or deleted.*
+
+**Before you start**
+
+- A development Team on `lightweight-flow` with a manager, a Developer and a QA Engineer on a live Adapter (Sonnet or
+  better). A Task assigned to the Developer, marked **Requires your acceptance**, in **In Progress**.
+
+**Steps**
+
+1. Ask the Developer to run the Team's check command and record it with `add_evidence`, then move the Task to Review.
+   Ask the QA Engineer to verify it and record Evidence. Note the Proof count in the Task panel.
+2. Ask the manager to rewrite the Task's description with `update_task`.
+3. Open the Task's edit page, change the description and choose **Save**.
+4. Ask the Developer to leave a comment on the Task with `add_comment`. Type a comment of two lines in **Add a comment**
+   and choose **Comment**.
+5. Open the Task file in the Library.
+
+**Pass if — all of these**
+
+- After steps 2 and 3 the Timeline still shows every Evidence entry from step 1, with its Evidence chip and exit code,
+  and the Proof count is the same as in step 1.
+- Step 4: both comments show on the Timeline, oldest first, with their authors; the two-line comment keeps its line
+  break. No entry has an edit or delete control.
+- Step 5: the file has one `## Timeline` section and no `## Evidence` or `## Change log` heading; each line reads
+  `- <time> | <author> | <comment, evidence or event> | <text>`.
+
+**Fail if — any of these**
+- An Evidence entry is missing after step 2 or 3 -> a description write reaches the Timeline (`TaskFileFormat.ReplaceHead`).
+- The Proof count drops -> Proof reads the description instead of `TaskItem.Evidence`.
+
+---
+
+### TASKS-25 — A Task file written before the Timeline shows the same Timeline and Proof, before and after its first write
+
+**Free** · about 5 min
+
+*Proves #586's compatibility promise: an older Task file with `## Evidence` and `## Change log` is read with no
+migration step, and the first write converts it without changing what it shows.*
+
+**Before you start**
+
+- A gated Task in a development Team, closed Huddle or not. Edit its file in another program so that, under the
+  description, it has an `## Evidence` section with two lines in the old form
+  (`- 2026-11-01T10:00Z | <QA Engineer> | dotnet test | exit 0`) and a `## Change log` with its lines in the old
+  form (`- 2026-11-01T09:00:00Z | You | created`), and no `## Timeline`.
+
+**Steps**
+
+1. Open the Task panel. Note the Timeline and the Proof count.
+2. Change the Task's priority on its edit page and choose **Save**.
+3. Open the Task file in the Library.
+
+**Pass if — all of these**
+
+- Step 1: the Timeline shows the two Evidence entries and the old Change log lines as events; the description shows no
+  Evidence.
+- Step 2: the Timeline and the Proof count are the same as in step 1, plus the new priority event.
+- Step 3: the file now has `## Timeline` with the old Change log lines unchanged and the Evidence as `evidence` lines.
+
+**Fail if — any of these**
+- The Proof count changes -> the older file's Evidence is read by a different rule than before (`TaskFileFormat` §7.7.3).
 
 ---
 

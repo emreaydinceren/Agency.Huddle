@@ -357,10 +357,17 @@ due_date: 2026-10-15
 ---
 Implement SAML 2.0 provider integration alongside the existing OAuth2 flow.
 
-## Change log
-- 2026-09-24T11:20:00Z | Emre | created
-- 2026-09-24T14:05:12Z | Nova | status: To Do → In Progress
+## Timeline
+- 2026-09-24T11:20:00Z | Emre | event | created
+- 2026-09-24T14:05:12Z | Nova | event | status: To Do → In Progress
+- 2026-09-24T16:41:03Z | Nova | evidence | dotnet test Auth.slnx | exit 0 | .huddle/logs/nova/tool-calls.md#L12
+- 2026-09-24T16:42:10Z | Emre | comment | Looks right.\nPlease also cover the logout redirect.
 ```
+
+A Task is a **description plus a timeline** ([ADR-0086](adr/0086-a-task-is-a-description-plus-an-immutable-timeline.md)).
+The description is the only text anyone edits. The timeline holds comments, Evidence (a comment
+tagged `evidence`) and events (the old Change log), oldest first, and nobody edits or deletes an
+entry. §7.7 has the grammar and how files written before it are read.
 
 ### 7.2 Frontmatter keys
 
@@ -415,11 +422,13 @@ public static class TaskFileFormat
    `"; "`, so `blocked_by` and `tags` are split on `"; "` here, which is why tags can't contain `;`
    (D-18).
 2. A file with **no frontmatter** is an error: *"has no frontmatter block between --- lines"*.
-3. **Split the body** at the **last** line that trims to exactly `## Change log`
+3. **Split the body** at the **last** line that trims to exactly `## Timeline`
    (case-insensitive) and is outside a fenced code block (` ``` ` or `~~~`). Everything before it,
-   with trailing whitespace trimmed, is the `Description`. Everything after it is log lines. If
-   there's no such line, the log is empty.
-4. **Log lines** match `^- (\S+) \| (.*?) \| (.*)$` after the `\|` unescaping in §7.4.
+   with trailing whitespace trimmed, is the `Description`. Everything after it is timeline lines
+   (§7.7). A body with no such line is an older file and is read by §7.7.3, which splits it at the
+   last `## Change log` line the same way.
+4. **Event lines** (an older file's Change log lines, and a timeline line of kind `event`) match
+   `^- (\S+) \| (.*?) \| (.*)$` after the `\|` unescaping in §7.4.
    - The timestamp is parsed with `DateTimeOffset.TryParseExact(…, "yyyy-MM-dd'T'HH:mm:ss'Z'", InvariantCulture, AssumeUniversal)`.
    - Lines that don't match are **kept in the file but ignored**: no dates are derived from them,
      and they cause no error.
@@ -438,9 +447,9 @@ public static class TaskFileFormat
     Duplicate. Otherwise empty keys are left out.
   - Line endings are `\n`, following `PersonaFrontmatter.Compose` (:172). Files edited by hand may
     arrive with CRLF, and parsing normalises them (traps.md L184).
-- **The body** is the description, a blank line, `## Change log`, then one line per entry.
-- **An entry** is `- {At:yyyy-MM-ddTHH:mm:ssZ} | {Actor} | {Summary}`, formatted in UTC with
-  `CultureInfo.InvariantCulture`.
+- **The body** is the description, a blank line, `## Timeline`, then one line per entry (§7.7).
+- **An event entry** is `- {At:yyyy-MM-ddTHH:mm:ssZ} | {Actor} | event | {Summary}`, formatted in
+  UTC with `CultureInfo.InvariantCulture`. (An older file's Change log line has no `event` field.)
   - In `Actor` and `Summary`, `\` becomes `\\`, `|` becomes `\|`, and any line break becomes a
     single space.
   - Parsing reverses this.
@@ -486,6 +495,101 @@ outside-edit path all use this one function.
 `Version` is the first 16 hex characters of the SHA-256 of the file text **after CRLF has been
 normalised to `\n`**. It's used for three things: "has this file changed since I last saw it"
 (§8.4), the UI's base version (§9.3), and the watcher's content comparison (principle 3).
+
+### 7.7 The timeline
+
+Decided by the owner on 2026-11-14 (#586, [ADR-0086](adr/0086-a-task-is-a-description-plus-an-immutable-timeline.md)):
+
+1. A Task is a description plus a list of timeline entries. The description is the only editable
+   text: `update_task` with `description` and the Task view's Save change it and nothing else.
+2. Evidence is a comment tagged `evidence`. Proof and the gates read only those entries.
+3. Entries are immutable. No tool or control edits or deletes one, the Human's included.
+4. The Change log is part of the timeline as `event` entries, and only `TaskService` writes them.
+   Callers write comments (`add_comment`, the Task view's comment box) and Evidence (`add_evidence`).
+
+#### 7.7.1 Grammar
+
+The section starts at the `## Timeline` heading (§7.3 step 3) and runs to the end of the file.
+Each entry is one line:
+
+```text
+- {At:yyyy-MM-ddTHH:mm:ssZ} | {Author} | {kind} | {text}
+```
+
+| Kind | Written by | `text` |
+| --- | --- | --- |
+| `comment` | `add_comment`, the Task view's comment box | Markdown. Backslashes and pipes are escaped as in §7.4, and each line break is written as the two characters `\n`, so a comment of several lines stays one entry |
+| `evidence` | `add_evidence` | The Evidence fields after the author, unescaped: `{command} \| exit {code}`, then an optional `{path}#L{line}` and `note: {note}`; or `note: {note}` alone for a remark with no command. `add_evidence` already turns line breaks and ` \| ` inside a field into spaces and ` / ` |
+| `event` | `TaskService` only | The §7.4 summary vocabulary, escaped as §7.4 |
+
+- `At` is whole seconds in UTC, the same clock as events. Evidence written before this format
+  has minute precision (`HH:mm`); it keeps it when converted (§7.7.4).
+- The kind is matched case-sensitively. A line under `## Timeline` that matches the older
+  Change log grammar (`- {At} | {Actor} | {Summary}`, no kind) is read as an `event`, so a
+  Change log line copied in by hand still counts. Any other line is kept in the file and
+  ignored, as Change log lines always were.
+- Entries are kept in file order. Huddle only appends, so file order is time order.
+- `add_evidence` and `add_comment` append one entry and **no** event: the entry is the record.
+  The `TaskChange` they raise carries `evidence added by {actor}` or `comment added by {actor}` as
+  its in-memory summary, so wakes and feeds read as before, but that summary is not written.
+
+#### 7.7.2 The model
+
+`TaskItem` gains `Comments` (`IReadOnlyList<TaskComment>`: `At`, `Author`, `Kind` of `Comment` or
+`Evidence`, `Text`), in file order. `ChangeLog` keeps its type and holds the `event` entries, so
+`Acceptance`, `ClosedAt`, `Created` and every Change log reader are unchanged. `Timeline` is both
+lists merged by `At`, a comment before an event at the same second. `Updated` is the last entry of
+the timeline, not of the Change log. Evidence (`EvidenceLine`) is read from the `Evidence`
+comments, so Proof, the gates and `checks-before-merge` see the same lines they saw in the
+`## Evidence` section.
+
+#### 7.7.3 Reading a file written before the timeline
+
+A body with no `## Timeline` heading is an older file. It is read with no migration step, and
+Proof on it reads the same as before:
+
+1. Split the body at the last `## Change log` line outside a fence, as §7.3 used to. The lines
+   after it are events by the Change log grammar.
+2. In the part before it, the `## Evidence` sections are removed by the rule the content
+   fingerprint has always used (`ContentFingerprint.WithoutEvidence`: fence-aware, heading matched
+   case-insensitively, a section running to the next `## ` line). What remains, trailing whitespace
+   trimmed, is the description, so an acceptance recorded before the change still matches.
+3. The Evidence entries are the lines `EvidenceLine.ParseSection` reads from that same part, in
+   order, so Proof sees exactly the lines it saw. A removed line that `ParseSection` did not read
+   (a sub-heading inside the section, say) becomes an Evidence note, so no text is lost.
+4. Events and Evidence are merged by time, each keeping its own order. An Evidence line with no
+   time (a note) sorts with the Evidence line before it, or first when there is none.
+
+#### 7.7.4 The first write converts an older file
+
+The first time Huddle writes an older file (any update, Evidence, comment, close, outside-edit
+log entry or rename) it rewrites the body in this format before applying the change:
+
+- The frontmatter is kept byte for byte, as `ReplaceHead` keeps it.
+- The description is written as §7.7.3 step 2 read it.
+- `## Timeline` follows, with the entries in §7.7.3 step 4's order. Change log lines are copied
+  **verbatim**, including lines that never parsed (a hand-edited line survives, as §7.3 step 4
+  promises). Evidence lines are rewritten as `evidence` entries; one with no time takes the time it
+  sorts at (or the first entry's time) and an empty author.
+
+The parse after conversion equals the parse before it: same description, same events, same
+Evidence and the same Proof. A later description edit keeps every byte from `## Timeline` onward,
+which is the fix for #586.
+
+#### 7.7.5 What writes and reads the timeline
+
+| Caller | Does |
+| --- | --- |
+| `TaskService.Update` / `Create`, the Task view's Save, `update_task` | Write the description through `ReplaceHead`, which never reaches the timeline. A description with a `## Timeline`, `## Change log` or `## Evidence` heading outside a fence is refused (§9.2) |
+| `TaskService.AddEvidence` (`add_evidence`) | Appends an `evidence` entry |
+| `TaskService.AddComment` (`add_comment`, the comment box) | Appends a `comment` entry: 1-4000 characters after trimming |
+| Every other `TaskService` change, the outside-edit log, startup reconciliation, Team rename | Append an `event` entry |
+| An outside edit of the file | Read as written. Huddle does not restore a timeline line changed in an editor; see [known limits](engineering/known-limits.md) |
+| Proof, the gates, `checks-before-merge`, the Decision card | Read `Evidence` entries |
+| `get_task` | Prints the description, then `Timeline:` with the last 50 comment and Evidence entries; with `include_change_log: true`, the last 50 entries of every kind |
+| `read_records` with a Task, the records bundle | List events, Evidence and comments; a Task with any timeline entry since the date counts as changed |
+| `search` (Tasks) | Matches the description and the comment and Evidence text |
+| Startup reconciliation (§8.5) | Compares the file's write time with the last timeline entry |
 
 ---
 
@@ -716,7 +820,7 @@ the store propagates. The UI catches it and shows it, and the tools turn it into
 | Rule | Problem text |
 | --- | --- |
 | Title 1–200 characters, one line | `Title is empty.` / `Title is 240 characters; the limit is 200.` / `Title must be one line.` |
-| The description doesn't contain the log heading (§7.3) | `The description must not contain a '## Change log' heading; that heading is reserved for the task's history.` |
+| The description doesn't contain a timeline heading (§7.3, §7.7.5): `## Timeline`, `## Change log` or `## Evidence`, outside a fence, case-insensitive | `The description must not contain a '## Timeline' heading; that heading is reserved for the task's timeline.` (the heading named is the one found). For `## Evidence` the text adds `Record evidence with add_evidence.` |
 | The Team is a known Team label **or** an existing Team folder | `Unknown team 'X'. Known teams: A, B.` |
 | The Team name can be a folder name | `The team name 'X' cannot be a folder name on this computer (it contains ':').` Check against `Path.GetInvalidFileNameChars()`, plus a trailing `.` or space, and reserved names such as `CON` |
 | The Project can be a folder name and doesn't start with `_` | the same wording for Project |
@@ -1092,7 +1196,13 @@ Created PLAT-0042 "Support SAML login" in Platform/Auth v2, assigned to Kai. Kai
 - **Arguments:** `taskId` (required), and `include_change_log` (a boolean, default false).
 - **Output:** the §11.1 line, then `key: value` lines for every non-empty field, then a blank line,
   then the description.
-- `include_change_log` adds `Change log:` followed by the last 50 entries.
+- After the description, when the Task has a comment or Evidence entry, a `Timeline:` block lists the last 50
+  entries of the timeline (§7.7), oldest first: `{time} {author} comment: {text}` and
+  `{time} {author} evidence: {text}`; a multi-line comment's later lines are indented by two spaces.
+  Events (the Change log) are left out.
+- `include_change_log` adds the events to that block, each as `{time} {actor}: {summary}`, in time order among the
+  comments. With no comment or Evidence and no `include_change_log`, there is no block.
+- Evidence is not part of the description, so the description never shows it.
 - References are shown with their status: `blocked_by: PLAT-0011 (Done), PLAT-0030 (In Progress)`.
 
 ### 11.4 `list_tasks`
@@ -1168,6 +1278,16 @@ checks each description.
 
 **`systemPrompt.tools`** (`PromptCatalog.cs:99-118`) gains one clause in the same style as the
 others: *"… to track work as Tasks and hand it to an Agent …"*.
+
+### 11.10 `add_evidence` and `add_comment`
+
+Both are offered to every Agent with the Task tools and append one timeline entry (§7.7) and no event.
+`add_evidence` records a check (`command` with `exitCode`, or `note`). `add_comment` takes `taskId` and `text`
+(Markdown, several lines fine): the entry carries the caller's name and the clock. **Success:** *"Added a comment to
+PLAT-0042."* Blank text is refused naming `text`, with nothing added; text over 4000 characters returns the service's
+refusal (§9.1). Its description is `tool.addComment.description` (NextSession). `read_records` with a `taskId` lists
+the Task's Evidence from the timeline, then its comments; the records bundle counts a Task as changed when any
+timeline entry is in the window; and search matches a comment or Evidence entry's text as a ContentMatch (§7.7.5).
 
 ---
 

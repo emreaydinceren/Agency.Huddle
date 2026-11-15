@@ -436,10 +436,54 @@ internal sealed class TaskService : IDisposable
         return result;
     }
 
+    /// <summary>The most characters a comment may have, after trimming (Spec §7.7).</summary>
+    internal const int MaxCommentLength = 4000;
+
     /// <summary>
-    /// Appends <paramref name="line"/> to the Task's "## Evidence" section (creating it before the Change log when
-    /// absent), records "evidence added by {actor}" in the Change log, and never rewrites an earlier line. Like
-    /// <see cref="Close"/>, it has no base version: a concurrent change is reported as a <see cref="TaskResult.Conflict"/>.
+    /// Appends a comment to the Task's timeline (Spec §7.7) and never rewrites an earlier line. The text is trimmed; empty text, or
+    /// more than <see cref="MaxCommentLength"/> characters, is <see cref="TaskResult.Refused"/>. A closed Task can be commented on.
+    /// Like <see cref="AddEvidence"/>, it has no base version: a concurrent change is reported as a <see cref="TaskResult.Conflict"/>.
+    /// The raised change's entry ("comment added by {actor}") is a summary for wakes and feeds; it is not written to the file.
+    /// </summary>
+    /// <param name="id">The Task to comment on.</param>
+    /// <param name="text">The comment, which may span lines.</param>
+    /// <param name="actor">Who comments; becomes the entry's author.</param>
+    public TaskResult AddComment(TaskId id, string text, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        string trimmed = text.Trim();
+        if (trimmed.Length == 0)
+        {
+            return new TaskResult.Refused(["A comment needs some text."]);
+        }
+
+        if (trimmed.Length > MaxCommentLength)
+        {
+            return new TaskResult.Refused([string.Create(CultureInfo.InvariantCulture, $"A comment can be at most {MaxCommentLength} characters; this one has {trimmed.Length}.")]);
+        }
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.AddCommentCore(id, trimmed, actor);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Appends one <c>evidence</c> entry to the Task's timeline (Spec §7.7), timed by the clock rather than by the line, and never
+    /// rewrites an earlier line. Like <see cref="Close"/>, it has no base version: a concurrent change is reported as a
+    /// <see cref="TaskResult.Conflict"/>. The raised change's entry ("evidence added by {actor}") is a summary for wakes and
+    /// feeds; it is not written to the file.
     /// </summary>
     /// <param name="id">The Task to add Evidence to.</param>
     /// <param name="line">The Evidence line to append.</param>
@@ -544,8 +588,31 @@ internal sealed class TaskService : IDisposable
 
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
         ChangeLogEntry entry = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"evidence added by {actor.Name}"));
-        string withEvidence = TaskFileFormat.AddEvidenceLine(currentText, line.FormatListItem().ReplaceLineEndings(" "));
-        string finalText = TaskFileFormat.AppendEntry(withEvidence, entry);
+        string finalText = TaskFileFormat.AppendTimelineEntry(currentText, new TimelineEntry(at, actor.Name, TimelineEntryKind.Evidence, line.FormatEntryText()));
+
+        TaskItem? written = this.store.Write(current, current.Version, finalText);
+        if (written is null)
+        {
+            return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
+        }
+
+        TaskChange change = new(current, written, [], actor, entry);
+        return (new TaskResult.Saved(written, change), change);
+    }
+
+    /// <summary>The body of <see cref="AddComment"/>, run under <see cref="mutateGate"/>.</summary>
+    private (TaskResult Result, TaskChange? Change) AddCommentCore(TaskId id, string text, TaskActor actor)
+    {
+        TaskItem? current = this.store.Get(id);
+        string? currentText = current is null ? null : this.store.ReadText(id);
+        if (current is null || currentText is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+        ChangeLogEntry entry = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"comment added by {actor.Name}"));
+        string finalText = TaskFileFormat.AppendTimelineEntry(currentText, new TimelineEntry(at, actor.Name, TimelineEntryKind.Comment, text));
 
         TaskItem? written = this.store.Write(current, current.Version, finalText);
         if (written is null)
@@ -1188,7 +1255,7 @@ internal sealed class TaskService : IDisposable
     /// </summary>
     /// <param name="current">The Task before the change.</param>
     /// <param name="candidate">The Task as the patch would leave it.</param>
-    /// <param name="text">The Task's file text, for its Evidence section.</param>
+    /// <param name="text">The Task's file text, for its timeline's Evidence.</param>
     /// <param name="actor">Who makes the change.</param>
     /// <returns>The first refusal, or <see langword="null"/> when no gate refuses or none is configured.</returns>
     private GateRefusal? CheckGates(TaskItem current, TaskItem candidate, string text, TaskActor actor)
@@ -1198,7 +1265,7 @@ internal sealed class TaskService : IDisposable
             return null;
         }
 
-        IReadOnlyList<EvidenceLine> evidence = EvidenceLine.ParseSection(text);
+        IReadOnlyList<EvidenceLine> evidence = TaskFileFormat.ReadEvidence(text);
         Dictionary<string, string> covers = new(StringComparer.Ordinal);
         foreach (string author in evidence.Select(static line => line.Author).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
         {
@@ -1615,12 +1682,13 @@ internal sealed class TaskService : IDisposable
         }
     }
 
-    /// <summary>Spec §9.2: the description doesn't contain a reserved Change log heading.</summary>
+    /// <summary>Spec §9.2: the description doesn't contain a heading reserved for the timeline (<c>## Timeline</c>, <c>## Change log</c>, <c>## Evidence</c>).</summary>
     private static void AddDescriptionProblems(string description, List<string> problems)
     {
-        if (TaskFileFormat.ContainsChangeLogHeading(description))
+        if (TaskFileFormat.FindReservedHeading(description) is { } heading)
         {
-            problems.Add("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.");
+            string problem = string.Create(CultureInfo.InvariantCulture, $"The description must not contain a '{heading}' heading; that heading is reserved for the task's timeline.");
+            problems.Add(string.Equals(heading, TaskFileFormat.EvidenceHeading, StringComparison.Ordinal) ? problem + " Record evidence with add_evidence." : problem);
         }
     }
 

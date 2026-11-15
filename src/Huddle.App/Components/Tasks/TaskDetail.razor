@@ -570,11 +570,8 @@ else if (this.loaded is { } task)
     RenderFragment logContent = @<text>
             @if (!this.createMode)
             {
-                @* The History closes the left column, drawn by TaskHistory like a document's History panel. *@
-                <section class="task-detail-history">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
-                    <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
-                </section>
+                @* The Timeline closes the left column, drawn by TaskTimeline (with its comment box) like a document's History panel. *@
+                <TaskTimeline Task="@task" />
             }
         </text>;
 

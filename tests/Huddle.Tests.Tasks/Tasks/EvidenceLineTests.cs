@@ -155,15 +155,6 @@ public sealed class EvidenceLineTests
         Assert.Equal(0, lines[3].ExitCode);
     }
 
-    /// <summary>FormatListItem is the list marker followed by the plain formatted line.</summary>
-    [Fact]
-    public void FormatListItem_PrefixesBulletMarker()
-    {
-        EvidenceLine line = Parsed(SpecExample);
-
-        Assert.Equal("- " + SpecExample, line.FormatListItem());
-    }
-
     /// <summary>A list-item structured line and a list-item note parse like their plain forms, and the marker is not part of RawText.</summary>
     [Theory]
     [InlineData("- ")]

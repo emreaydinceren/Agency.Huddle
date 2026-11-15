@@ -63,6 +63,36 @@ public sealed record TaskItem
     /// <summary>The log of all changes made to this Task.</summary>
     public IReadOnlyList<ChangeLogEntry> ChangeLog { get; init; } = [];
 
+    /// <summary>The Task's comments and Evidence entries, in file order (Spec §7.7.2). Events are in <see cref="ChangeLog"/>.</summary>
+    public IReadOnlyList<TimelineEntry> Comments { get; init; } = [];
+
+    /// <summary>The whole timeline: <see cref="Comments"/> and <see cref="ChangeLog"/> merged by time, a comment before an event at the same time.</summary>
+    public IReadOnlyList<TimelineEntry> Timeline
+    {
+        get
+        {
+            List<TimelineEntry> merged = new(this.Comments.Count + this.ChangeLog.Count);
+            foreach ((bool isEvent, int index) in TimelineMerge.Order(this.Comments, this.ChangeLog))
+            {
+                if (isEvent)
+                {
+                    ChangeLogEntry entry = this.ChangeLog[index];
+                    merged.Add(new TimelineEntry(entry.At, entry.Actor, TimelineEntryKind.Event, entry.Summary));
+                }
+                else
+                {
+                    merged.Add(this.Comments[index]);
+                }
+            }
+
+            return merged;
+        }
+    }
+
+    /// <summary>The Evidence entries of <see cref="Comments"/> read as Evidence lines, the form Proof and the gates read.</summary>
+    internal IReadOnlyList<EvidenceLine> Evidence =>
+        [.. this.Comments.Where(static entry => entry.Kind == TimelineEntryKind.Evidence).Select(EvidenceLine.FromEntry)];
+
     /// <summary>Fields from the Task file that the parser did not recognize.</summary>
     public IReadOnlyList<KeyValuePair<string, string>> UnknownFields { get; init; } = [];
 
@@ -78,6 +108,6 @@ public sealed record TaskItem
     /// <summary>The creation date, derived from the first ChangeLog entry.</summary>
     public DateTimeOffset? Created => this.ChangeLog.Count > 0 ? this.ChangeLog[0].At : null;
 
-    /// <summary>The last update date, derived from the last ChangeLog entry.</summary>
-    public DateTimeOffset? Updated => this.ChangeLog.Count > 0 ? this.ChangeLog[^1].At : null;
+    /// <summary>The last update date, derived from the last entry of the <see cref="Timeline"/>: a comment or Evidence entry counts as well as an event.</summary>
+    public DateTimeOffset? Updated => TimelineMerge.LastAt(this.Comments, this.ChangeLog);
 }

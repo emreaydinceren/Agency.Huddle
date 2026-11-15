@@ -518,6 +518,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 ActivatorUtilities.CreateInstance<CloseTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<ReopenTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<AddEvidenceTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<AddCommentTool>(this.serviceProvider, agentId),
             ];
         }
 

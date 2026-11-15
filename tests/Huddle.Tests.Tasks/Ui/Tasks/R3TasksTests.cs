@@ -535,7 +535,7 @@ public sealed class R3TasksTests
 
         IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
-        Assert.Equal(["Planning", "Dates", "Description", "History (1)"], cut.FindAll(".task-detail h3.group-label").Select(h => h.TextContent.Trim()));
+        Assert.Equal(["Planning", "Dates", "Description", "Timeline (1)"], cut.FindAll(".task-detail h3.group-label").Select(h => h.TextContent.Trim()));
         Assert.Empty(cut.FindAll(".task-detail .group-heading"));
         Assert.NotNull(cut.Find(".task-detail-description-box .task-detail-description-bar .task-detail-description-toggle"));
     }
@@ -557,7 +557,7 @@ public sealed class R3TasksTests
         Assert.Contains("clip-path: inset(50%);", CssText.RuleBody(CssText.AppCss(), ".task-detail-description-field .mud-input-label"), StringComparison.Ordinal);
     }
 
-    /// <summary>The History is always open: a heading with the entry count over the list, with no expansion panel to toggle.</summary>
+    /// <summary>The Timeline is always open: a heading with the entry count over the list, with no expansion panel to toggle.</summary>
     [Fact]
     public async Task History_IsAlwaysOpen_WithoutAnExpansionPanel()
     {
@@ -568,7 +568,7 @@ public sealed class R3TasksTests
         IRenderedComponent<ContainerFragment> cut = TaskDetailFieldsTestSupport.RenderDetail(ctx, task.Id);
 
         Assert.Empty(cut.FindComponents<MudExpansionPanels>());
-        Assert.StartsWith("History (", cut.Find(".task-detail-history-heading").TextContent.Trim(), StringComparison.Ordinal);
+        Assert.Equal("Timeline (1)", cut.Find(".task-detail-history-heading").TextContent.Trim());
         Assert.NotEmpty(cut.FindAll(".task-detail-history-row"));
     }
 

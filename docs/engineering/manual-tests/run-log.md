@@ -4228,6 +4228,22 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-23--a-developer-
 | --- | --- | --- | --- | --- |
 | 2026-11-14 | Pass *(run by an agent, paid lane)* | `fix/issue-538-enforce-blocked-by`, uncommitted | #538 | Fresh lane, Dev Team from lightweight-flow (its `_team.md` carried `blockers-done-before-start`; the migration marker was written), Omar and Leo on Sonnet 5.5. DEVT-0001 created In Progress; DEVT-0002 created To Do for Leo, blocked by it. Woken by the assignment, Leo read the blocker and posted that he would wait and had written no code. Asked to call `update_task` to In Progress anyway, he got `Gate blockers-done-before-start: this Task is blocked by DEVT-0001 (Review). …` and the Task stayed in To Do; asked to clear `blocked_by`, he got `Only the Team's manager or the Human can remove a blocker from blocked_by.` After the Human moved DEVT-0001 to Done, DEVT-0002 logged `Unblocked: DEVT-0002 by DEVT-0001`, Leo was woken and moved it To Do → In Progress → Review. Spend 0.79 USD (Chief of Staff 0.24, Omar 0.28, Leo 0.26). |
 
+### TASKS-24 — Evidence survives description edits by an Agent and by the form, and comments show on the Timeline
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-24--evidence-survives-description-edits-by-an-agent-and-by-the-form-and-comments-show-on-the-timeline)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass *(run by an agent, paid lane)* | `feat/issue-586-task-timeline` `ec9c0956` | #586 | Fresh lane, Calc Team from lightweight-flow (Joe manager, Otto QA, both Sonnet 5.5 in `persona_models`; the repo's check was `pwsh -File test.ps1`). Joe created gated CALC-0001; Joe and Otto each ran the check and called `add_evidence` (exit 0); Otto moved it to Review: Proof 2/3 (Review open: no role covers challenge). Joe's `update_task` with only `description` (tool-call log `Joe/2026-11-15.jsonl`) and the Human's edit-page Save, made after a comment from the same page while the description edit was pending, each logged `description edited`; both Evidence entries stayed and Proof stayed 2/3. Otto's `add_comment` and the Human's two-line comment (a pipe and a backslash) show on the Timeline with no edit or delete control; the file holds one `## Timeline` section. The comment's line break renders as a space (Markdown soft break). |
+
+### TASKS-25 — A Task file written before the Timeline shows the same Timeline and Proof, before and after its first write
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass *(run by an agent, paid lane)* | `feat/issue-586-task-timeline` `ec9c0956` | #586 | CALC-0002 written in the old form while the app was stopped (last Change log entry dated ahead so startup reconciliation did not write). After start the file was byte-identical; the panel showed the description without Evidence, Proof 2/3 and 7 Timeline entries (two Evidence, one undated note with no author, four events). A priority change on the edit page converted it: `## Timeline` with the Change log lines copied verbatim, Evidence as `evidence` lines (the note dated with the line before it), Proof still 2/3, 8 entries. Lane spend for TASKS-24 and -25 together: 0.78 USD (Calc 0.53, Chief of Staff 0.25 on its own first-run Turns). |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

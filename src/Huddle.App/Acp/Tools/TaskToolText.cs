@@ -17,6 +17,27 @@ namespace Agency.Huddle.App.Acp.Tools;
 internal static class TaskToolText
 {
     /// <summary>
+    /// Indents every non-blank line after the first by two spaces, so a multi-line comment stays one readable block under its
+    /// heading line. A blank line stays empty rather than carrying trailing spaces.
+    /// </summary>
+    /// <param name="text">The text, with any line ending.</param>
+    public static string IndentContinuation(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        string[] lines = text.ReplaceLineEndings("\n").Split('\n');
+        for (int index = 1; index < lines.Length; index++)
+        {
+            if (lines[index].Length > 0)
+            {
+                lines[index] = "  " + lines[index];
+            }
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>
     /// Renders <paramref name="task"/> as the one-line summary every listing tool shows (Spec
     /// §11.1): id, status, priority, assignee (or "unassigned"), <c>Team[/Project]</c> (with
     /// "(closed)" appended when Closed), and title, separated by " | ".
