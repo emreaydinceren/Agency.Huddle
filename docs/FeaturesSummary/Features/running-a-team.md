@@ -162,8 +162,9 @@ use the Task's normal wake budget.
 - **Leaving Backlog.** Only triage moves a Request out, and an Agent that tries otherwise is refused. You can
   override from the Task panel.
 - **Bug Requests** need sections such as **Steps to reproduce** and **Expected and actual**.
-- **Permissions.** The built-in `team-management` Skill grants the Request tools. Holding it doesn't make an Agent a
-  manager, and the manager-only tools still refuse anyone else.
+- **Permissions.** The built-in `team-management` Skill grants `file_request`, `triage_request` and `list_teams`. The
+  built-in `request-confirmation` Skill grants `confirm_request`, and every role whose coverage includes verify carries
+  it. Holding a Skill doesn't make an Agent a manager, and the manager-only tools still refuse anyone else.
 - **Finding them.** The **Requests** chip filters a View, and a Task shows a chip such as **Request · bug · from Web
   Team**.
 

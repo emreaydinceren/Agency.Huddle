@@ -60,9 +60,9 @@ public sealed class BuiltinDevelopmentTypeTests
         Assert.Equal("builtin", skill.Source);
     }
 
-    /// <summary>The QA role covers verify and holds exactly the built-in team-management skill (so it is offered confirm_request) and the built-in browser-check skill (#536), in that order.</summary>
+    /// <summary>The QA role covers verify and holds exactly the built-in browser-check skill (#536) and, because it covers verify, the built-in request-confirmation skill (#539), in that order: no manager's team-management.</summary>
     [Fact]
-    public void Manifest_QaEngineer_HoldsTheBuiltinTeamManagementSkill()
+    public void Manifest_QaEngineer_HoldsRequestConfirmationNotTeamManagement()
     {
         TeamTypeManifest manifest = LoadManifest();
 
@@ -70,7 +70,7 @@ public sealed class BuiltinDevelopmentTypeTests
 
         Assert.Equal(["verify"], qa.Covers);
         Assert.Equal(
-            [new SkillRef("team-management", "builtin", "team-management"), new SkillRef("browser-check", "builtin", "browser-check")],
+            [new SkillRef("browser-check", "builtin", "browser-check"), new SkillRef("request-confirmation", "builtin", "request-confirmation")],
             qa.Skills);
     }
 

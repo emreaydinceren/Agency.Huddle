@@ -30,7 +30,7 @@ public sealed class SkillCatalogTests
         Assert.Equal(expectedFiles, teamBuilding.Keys.ToHashSet(StringComparer.Ordinal));
     }
 
-    /// <summary>The catalog holds <c>team-management</c> (Tasks 62, 68): valid, and it lists the four Request tools and <c>propose_sprint</c>.</summary>
+    /// <summary>The catalog holds <c>team-management</c> (Tasks 62, 68): valid, and it lists the manager's three Request tools and <c>propose_sprint</c>, but not <c>confirm_request</c>, which only <c>request-confirmation</c> grants (#539).</summary>
     [Fact]
     public void All_ContainsTeamManagement_GrantingRequestToolsAndProposeSprint()
     {
@@ -40,7 +40,33 @@ public sealed class SkillCatalogTests
 
         Assert.Equal(["SKILL.md"], files.Keys.ToList());
         Assert.Empty(validation.Issues);
-        Assert.Equal(["list_teams", "file_request", "triage_request", "confirm_request", "propose_sprint"], validation.Tools);
+        Assert.Equal(["list_teams", "file_request", "triage_request", "propose_sprint"], validation.Tools);
+        Assert.DoesNotContain("confirm_request", files["SKILL.md"], StringComparison.Ordinal);
+    }
+
+    /// <summary>#539: the catalog holds <c>request-confirmation</c>: valid, one file, and its tools list is exactly <c>confirm_request</c>.</summary>
+    [Fact]
+    public void All_ContainsRequestConfirmation_GrantingOnlyConfirmRequest()
+    {
+        Assert.Contains("request-confirmation", SkillCatalog.All.Keys);
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["request-confirmation"];
+
+        SkillValidation validation = SkillValidator.Validate("request-confirmation", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["confirm_request"], validation.Tools);
+    }
+
+    /// <summary>#539: the <c>request-confirmation</c> Skill tells a verifier to check the delivery itself before confirming, to leave a note, and not to confirm a Request that was not delivered as asked.</summary>
+    [Fact]
+    public void RequestConfirmation_TeachesCheckingBeforeConfirming()
+    {
+        string text = string.Join(' ', SkillCatalog.All["request-confirmation"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("Check the delivery yourself, the way you verify your own Team's work. Do not confirm from the other Team's Evidence alone.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("call `confirm_request` with the `taskId` and a `note` that says what you checked.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If it was not, do not confirm it. Tell your manager what is missing, so they can take it up with the other Team.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
     /// <summary>#535: the <c>team-management</c> Skill tells a manager to answer a question Task with add_evidence and close it with close_task, and that an already-closed Task is fine.</summary>
@@ -108,12 +134,13 @@ public sealed class SkillCatalogTests
         Assert.Equal(["read_records", "propose_retro_changes", "mark_retro_row"], validation.Tools);
     }
 
-    /// <summary>The catalog lists both team skills by name next to <c>team-building</c> (Task 68).</summary>
+    /// <summary>The catalog lists the team skills by name next to <c>team-building</c> (Task 68), <c>request-confirmation</c> among them (#539).</summary>
     [Fact]
     public void All_ListsTeamBuildingTeamManagementAndRetrospective()
     {
         Assert.Contains("team-building", SkillCatalog.All.Keys);
         Assert.Contains("team-management", SkillCatalog.All.Keys);
+        Assert.Contains("request-confirmation", SkillCatalog.All.Keys);
         Assert.Contains("retrospective", SkillCatalog.All.Keys);
     }
 

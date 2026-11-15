@@ -117,6 +117,9 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.True(closed.Location.Closed);
         Assert.Equal(webQa.Name, FieldsOf(closed).ConfirmedBy);
         Assert.Equal(1, run.Wakes(apiManager.Name, "Request event: Confirm"));
+        // #539: the hired QA holds the Skill that grants confirm_request, and not the manager's team-management.
+        Assert.Contains("request-confirmation", SkillsOf(run, webQa.Name));
+        Assert.DoesNotContain("team-management", SkillsOf(run, webQa.Name));
     }
 
     /// <summary>
@@ -280,6 +283,8 @@ public sealed class TeamsPhase4EndToEndTests
 
         Assert.Equal($"Confirmed {request.Id}; it is closed.", confirmed);
         Assert.True(Current(store, request.Id).Location.Closed);
+        // #539: a manager whose role covers verify is hired with the Skill that grants confirm_request.
+        Assert.Contains("request-confirmation", SkillsOf(run, bea.Name));
     }
 
     /// <summary>Flow 2 (RQ-3): declining a Request with a reason moves it to Rejected and wakes the requesting manager and the Chief of Staff.</summary>

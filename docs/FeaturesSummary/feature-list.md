@@ -537,8 +537,8 @@ timeline in the Right sidebar. Renames carry the history with them. PRs: #220, t
 ## Skills and Skill Packs
 
 **Skills.** A Skill is a folder of Markdown instructions (`Skills/<name>/SKILL.md`) that an
-Agent reads on demand with `read_skill`. It is assigned on the Agent's card. Eight ship built
-in: `team-building`, `team-rollup`, `team-management`, `retrospective`, `ingest`, `wrap-up`,
+Agent reads on demand with `read_skill`. It is assigned on the Agent's card. Nine ship built
+in: `team-building`, `team-rollup`, `team-management`, `request-confirmation`, `retrospective`, `ingest`, `wrap-up`,
 `brain-check` and `browser-check`. A built-in Skill can be overridden file by file and restored. PRs: #71, then
 #136, #335.
 
