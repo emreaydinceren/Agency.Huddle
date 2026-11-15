@@ -35,7 +35,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 
 ## If a role is not hired
 
-- No `reviewer`: the manager reviews the fix before it is merged.
+- No `reviewer`: the manager reviews the fix before it is merged. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`.
 - No `qa-engineer`: the manager confirms the symptom is gone and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
@@ -48,6 +48,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 
 ## Definition of Done
 
+- Review: evidence from challenge
 - QA evidence: evidence from verify
 - Tests pass: command `dotnet test` exits 0
 

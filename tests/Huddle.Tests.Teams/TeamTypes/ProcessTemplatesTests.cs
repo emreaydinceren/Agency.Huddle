@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.App.TeamTypes;
 
 namespace Agency.Huddle.Tests.TeamTypes;
@@ -237,6 +238,87 @@ public sealed partial class ProcessTemplatesTests
 
         Assert.Contains("When the acceptance names a web page or a UI, drive it in a browser and record what you did as Evidence: read your browser-check Skill and follow it. If you cannot, say in the Evidence line that the verify is partial.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("When no QA Engineer is hired, you verify each acceptance line yourself. When it names a web page or a UI, drive it in a browser with your browser-check Skill and record what you did as Evidence.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#537: every Development process starts its Definition of Done with a Review item that needs Evidence from challenge, before QA evidence.</summary>
+    /// <param name="processId">The process id.</param>
+    [Theory]
+    [InlineData("lightweight-flow")]
+    [InlineData("spec-driven")]
+    [InlineData("sprints")]
+    [InlineData("maintenance")]
+    public void Process_DefinitionOfDone_HasReviewEvidenceBeforeQa(string processId)
+    {
+        string text = ReadResourceText("TeamTypes/Builtin/development/processes/" + processId + ".md");
+        Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
+        Assert.NotNull(document);
+
+        int review = IndexOfLabel(document.DefinitionOfDone, "Review");
+        int qa = IndexOfLabel(document.DefinitionOfDone, "QA evidence");
+
+        Assert.True(review >= 0, "The Definition of Done has no Review item.");
+        Assert.True(review < qa, "Review must come before QA evidence.");
+        DoneRule.EvidenceFrom rule = Assert.IsType<DoneRule.EvidenceFrom>(document.DefinitionOfDone[review].Rule);
+        Assert.Equal("challenge", rule.Step);
+    }
+
+    /// <summary>#537: the lightweight flow and sprints stages say QA starts only after the review, and what the reviewer records.</summary>
+    /// <param name="processId">The process id.</param>
+    [Theory]
+    [InlineData("lightweight-flow")]
+    [InlineData("sprints")]
+    public void Process_Stages_QaStartsAfterReview(string processId)
+    {
+        ProcessFile file = LoadProcess(processId);
+        string text = string.Join(' ', file.Body);
+
+        Assert.Contains("QA starts only after the review has no open finding.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If the change gets a new commit after the review, QA runs the verify again on that commit.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("runs the Team's check command on it and records the outcome on the Task as an Evidence line with that command", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#537: the QA Engineer waits for the review, and the Reviewer records every review as an Evidence line with a command.</summary>
+    [Fact]
+    public void Personas_QaAndReviewer_OrderReviewBeforeVerify()
+    {
+        string qa = ReadPersona("qa-engineer");
+        string reviewer = ReadPersona("reviewer");
+
+        Assert.Contains("Start the verify only after the Task's review has no open finding: the reviewer's Evidence line is on the Task and nothing it raised is still open.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If the change gets a new commit after the review, run the checks again on that commit and add a new Evidence line.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Record every review on the Task, approval or bounce, as one Evidence line with the check command you ran, its exit code and your verdict in the note. A line with only a note does not count as a review in the Task's Proof.", reviewer, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.DoesNotContain("the evidence shows the checks passing", reviewer, StringComparison.Ordinal);
+    }
+
+    /// <summary>Returns the position of the Definition of Done item with a label, or -1.</summary>
+    /// <param name="items">The items in written order.</param>
+    /// <param name="label">The label to find.</param>
+    /// <returns>The index, or -1 when absent.</returns>
+    private static int IndexOfLabel(IReadOnlyList<DoneItem> items, string label)
+    {
+        for (int index = 0; index < items.Count; index++)
+        {
+            if (string.Equals(items[index].Label, label, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>Reads any embedded resource as text, so the test sees the file that ships.</summary>
+    /// <param name="target">The resource name with forward slashes.</param>
+    /// <returns>The raw file text.</returns>
+    private static string ReadResourceText(string target)
+    {
+        Assembly assembly = typeof(TeamTypeCatalog).Assembly;
+        string? resource = assembly.GetManifestResourceNames().SingleOrDefault(n => n.Replace('\\', '/') == target);
+        Assert.NotNull(resource);
+        using Stream? stream = assembly.GetManifestResourceStream(resource);
+        Assert.NotNull(stream);
+        using StreamReader reader = new(stream);
+        return reader.ReadToEnd();
     }
 
     /// <summary>Reads an embedded hiring-pool persona file, so the test sees the text that ships.</summary>

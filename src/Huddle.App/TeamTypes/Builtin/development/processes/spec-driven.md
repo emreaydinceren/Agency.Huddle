@@ -37,7 +37,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 ## If a role is not hired
 
 - No `tech-lead`: the manager writes the spec and does the breakdown itself.
-- No `reviewer`: the manager reviews the diff against the spec.
+- No `reviewer`: the manager reviews the diff against the spec. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`.
 - No `qa-engineer`: the manager verifies each acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
@@ -50,6 +50,7 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 
 ## Definition of Done
 
+- Review: evidence from challenge
 - QA evidence: evidence from verify
 - Tests pass: command `dotnet test` exits 0
 - Spec reviewed: document reviewed by verify
