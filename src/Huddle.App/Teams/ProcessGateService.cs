@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Globalization;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
@@ -27,6 +28,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         GateId.SpecApprovedBeforeBuild => "Work can then start on a Task before its spec is approved.",
         GateId.FailingTestBeforeFix => "A bug can then move to Review without a test that failed first.",
         GateId.AcceptBeforeMerge => "Code can then be merged into main without the Human's Accept.",
+        GateId.BlockersDoneBeforeStart => "A Task can then start, or reach Done, while a Task it is blocked by is still open.",
         GateId.HumanGate => "A Task can then reach Done without the Human's acceptance.",
         GateId.ProofIncomplete => "A Task can then reach Needs You with its Proof incomplete.",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
@@ -45,6 +47,11 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         bool toDone = string.Equals(context.ToStatus, TaskState.Done.ToWire(), StringComparison.Ordinal);
         bool toInProgress = string.Equals(context.ToStatus, TaskState.InProgress.ToWire(), StringComparison.Ordinal);
         bool toReview = string.Equals(context.ToStatus, TaskState.Review.ToWire(), StringComparison.Ordinal);
+
+        if (context.OpenBlockers.Count > 0 && enabled.Contains(GateId.BlockersDoneBeforeStart) && IsBlockerGated(context.ToStatus))
+        {
+            return new GateRefusal(GateId.BlockersDoneBeforeStart, BlockerRefusal(context.OpenBlockers));
+        }
 
         if (toDone && enabled.Contains(GateId.QaEvidenceBeforeDone) && !HasVerifierEvidence(context))
         {
@@ -123,6 +130,35 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         role is not null
         && this.CoverageOf(role) is { } coverage
         && coverage.Split(',', StringSplitOptions.TrimEntries).Contains("challenge", StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Finds the manager the Team's catalog entry names.</summary>
+    /// <param name="team">The Team name; an old name is resolved to today's.</param>
+    /// <returns>The manager's name, or <see langword="null"/> for a blank or unknown Team or one with no manager.</returns>
+    internal string? ManagerOf(string team)
+    {
+        if (string.IsNullOrWhiteSpace(team))
+        {
+            return null;
+        }
+
+        return teams.Find(renames?.Resolve(team) ?? team)?.Manager;
+    }
+
+    /// <summary>Whether <c>blockers-done-before-start</c> covers a move into a status: In Progress, Review, Needs You and Done.</summary>
+    /// <param name="toStatus">The wire name of the proposed status.</param>
+    private static bool IsBlockerGated(string toStatus) =>
+        string.Equals(toStatus, TaskState.InProgress.ToWire(), StringComparison.Ordinal)
+        || string.Equals(toStatus, TaskState.Review.ToWire(), StringComparison.Ordinal)
+        || string.Equals(toStatus, TaskState.NeedsYou.ToWire(), StringComparison.Ordinal)
+        || string.Equals(toStatus, TaskState.Done.ToWire(), StringComparison.Ordinal);
+
+    /// <summary>The refusal that names every open blocker with its status, in <c>blocked_by</c> order.</summary>
+    /// <param name="open">The open blockers; never empty.</param>
+    private static string BlockerRefusal(IReadOnlyList<OpenBlocker> open)
+    {
+        string list = string.Join(", ", open.Select(static blocker => string.Create(CultureInfo.InvariantCulture, $"{blocker.Id} ({blocker.Status.ToWire()})")));
+        return $"Gate blockers-done-before-start: this Task is blocked by {list}. A blocked Task waits until every blocker is Done, Cancelled, Duplicate or Rejected, and for the manager's go-ahead.";
+    }
 
     private static bool HasVerifierEvidence(GateContext context) =>
         context.Evidence.Any(line =>

@@ -43,7 +43,9 @@ same Task get a field-by-field merge.
 
 - **A change wakes the Agent it concerns.** It gets a Message in the Task's Room, and changes within
   5 seconds are combined.
-- **A blocked Task wakes its assignee** once its last blocker finishes.
+- **A blocked Task wakes its assignee** once its last blocker finishes (Done, Cancelled, Duplicate or Rejected).
+- **A blocked Task waits.** In a Team with the `blockers-done-before-start` gate, a Task cannot move to In Progress,
+  Review, Needs You or Done while a blocker is open. A blocker in Needs You still blocks.
 - **Runaway hand-offs stop.** Each Task allows 10 Agent-made wake-ups, then you choose
   **Allow 10 more**.
 

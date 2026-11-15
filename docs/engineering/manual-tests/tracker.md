@@ -844,6 +844,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-20](tasks.md#tasks-20--the-task-opens-in-the-right-sidebar-edit-opens-the-edit-page-in-its-own-tab-and-a-new-task-opens-at-the-top) |  | Active |  |  |
 | [TASKS-21](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Pass |  | run 2026-11-06 at `eb1b8c78`, mock lane, see the Run log |
 | [TASKS-22](tasks.md#tasks-22--a-request-held-by-a-spent-room-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Pass |  | run by an agent 2026-11-06, mock lane, see the Run log |
+| [TASKS-23](tasks.md#tasks-23--a-developer-asked-to-start-a-task-blocked-by-an-open-task-is-refused-and-can-start-it-once-the-blocker-is-done) | 💰 | Pass |  | run by an agent 2026-11-14, paid lane, see the Run log |
 
 ## adapters
 

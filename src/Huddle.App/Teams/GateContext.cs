@@ -21,4 +21,8 @@ internal sealed record GateContext(
     bool ParentSpecApproved,
     IReadOnlyList<EvidenceLine> Evidence,
     IReadOnlyDictionary<string, string> AuthorRoleCovers,
-    string? Actor);
+    string? Actor)
+{
+    /// <summary>The Tasks in the stored <c>blocked_by</c> that are not finished (Done, Cancelled, Duplicate or Rejected); empty when none.</summary>
+    public IReadOnlyList<OpenBlocker> OpenBlockers { get; init; } = [];
+}

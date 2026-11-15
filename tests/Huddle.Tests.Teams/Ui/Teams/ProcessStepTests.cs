@@ -282,6 +282,7 @@ public sealed class ProcessStepTests
         Assert.Equal("Code can then be merged into main without the Human's Accept.", ProcessGateService.GateRisk(GateId.AcceptBeforeMerge));
         Assert.Equal("Work can then start on a Task before its spec is approved.", ProcessGateService.GateRisk(GateId.SpecApprovedBeforeBuild));
         Assert.Equal("A bug can then move to Review without a test that failed first.", ProcessGateService.GateRisk(GateId.FailingTestBeforeFix));
+        Assert.Equal("A Task can then start, or reach Done, while a Task it is blocked by is still open.", ProcessGateService.GateRisk(GateId.BlockersDoneBeforeStart));
     }
 
     /// <summary>Writes the two-gate arrangement: the prose in <c>AGENTS.md</c> and the gates, check command and template in the Team file.</summary>

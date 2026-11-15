@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**22 tests** · 17 free, 5 paid 💰 · about 3.8 hours.
+**23 tests** · 17 free, 6 paid 💰 · about 4 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -13,7 +13,7 @@ cannot drag, cannot press real keys through the browser, and answers only throug
 `FakeAgentHostFactory` — so every drag, every keyboard-only path and every live-Agent reaction
 exists only here. The tests are ordered cheapest-first: TASKS-01 to TASKS-09 need no Agent at all,
 TASKS-13 and TASKS-14 need only a chat surface already covered elsewhere, and TASKS-10, -11, -12,
--15 and -19 are the only ones that spend money.
+-15, -19 and -23 are the only ones that spend money.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -43,7 +43,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 6. **Firefox will not start a drag from a `<button>` inside a draggable card.** TASKS-03 is written
    for Chrome/Edge; if you must use Firefox, drag from the card body, never from its ⋮ menu button,
    and record which browser you used.
-7. MONEY. TASKS-01 to -09, -13/-14 and -16 to -18 are free. TASKS-10, -11, -12, -15 and -19 are
+7. MONEY. TASKS-01 to -09, -13/-14 and -16 to -18 are free. TASKS-10, -11, -12, -15, -19 and -23 are
    marked and each spends the Persona's Budget the same way any Room does.
 
 ## Tests
@@ -1047,6 +1047,37 @@ position into the next one.*
 - **Edit** opens a preview Tab, a second Tab, or none -> `TaskReadView.EditAsync` or the Tab key
   `task-edit:{id}` has regressed.
 - The next Task's read view is scrolled down -> `TaskDetailPanel` is not keyed by the Task's id.
+
+### TASKS-23 — A Developer asked to start a Task blocked by an open Task is refused, and can start it once the blocker is Done
+
+**Paid 💰** · about 10 min · 3-4 Turns
+
+*Proves #538 ([ADR-0085](../../adr/0085-a-blocked-task-waits-for-its-blockers.md)): in a development Team with the
+`blockers-done-before-start` gate, an Agent cannot start a Task while a Task it is blocked by is open, the refusal
+names the blocker, and the move is allowed once the blocker is Done.*
+
+**Before you start**
+
+- A development Team with a Developer on a live Adapter (Sonnet or better) and the `blockers-done-before-start` gate on
+  (check the **Process** tab). Two Tasks in the Team: the first in **Needs you** or **In Progress**, the second in
+  **To Do**, assigned to the Developer, with the first in its Blocked by.
+
+**Steps**
+
+1. Ask the Developer in the Team Room to start the second Task.
+2. Open the second Task's Change log and the Developer's reply.
+3. Move the first Task to **Done** (Accept it if it is in Needs you). Ask the Developer again to start the second Task.
+
+**Pass if — all of these**
+
+- Step 1 and 2: the Task stays in **To Do**, and the Developer's tool result or reply carries
+  `Gate blockers-done-before-start: this Task is blocked by <first id> (<its status>)`.
+- Step 3: the second Task moves to **In Progress**.
+
+**Fail if — any of these**
+- The second Task moves while the first is open -> the gate is not on for the Team, or `TaskService.CheckGates` is not
+  passed the stored blockers.
+- It stays refused after the first is Done -> `OpenBlockersOf` counts a finished blocker.
 
 ---
 

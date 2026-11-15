@@ -200,10 +200,10 @@ public sealed class ProcessDocumentTests
     /// <param name="hasDigest">Whether the template declares a digest cadence.</param>
     /// <param name="wip">The expected WIP limit, or zero for none.</param>
     [Theory]
-    [InlineData("lightweight-flow", 3, false, 0)]
-    [InlineData("spec-driven", 4, false, 0)]
-    [InlineData("sprints", 3, true, 0)]
-    [InlineData("maintenance", 4, false, 2)]
+    [InlineData("lightweight-flow", 4, false, 0)]
+    [InlineData("spec-driven", 5, false, 0)]
+    [InlineData("sprints", 4, true, 0)]
+    [InlineData("maintenance", 5, false, 2)]
     public void TryParse_ShippedTemplates_ParseCompletely(string processId, int gateCount, bool hasDigest, int wip)
     {
         Assembly assembly = typeof(TeamTypeCatalog).Assembly;
@@ -237,6 +237,7 @@ public sealed class ProcessDocumentTests
         Assert.Equal("Spec approved before build", ProcessDocument.DisplayName(GateId.SpecApprovedBeforeBuild));
         Assert.Equal("Failing test before fix", ProcessDocument.DisplayName(GateId.FailingTestBeforeFix));
         Assert.Equal("Accept before merge", ProcessDocument.DisplayName(GateId.AcceptBeforeMerge));
+        Assert.Equal("Blockers done before start", ProcessDocument.DisplayName(GateId.BlockersDoneBeforeStart));
     }
 
     /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give a document, and a fence line in the body does not end anything.</summary>

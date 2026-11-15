@@ -374,7 +374,7 @@ Implement SAML 2.0 provider integration alongside the existing OAuth2 flow.
 | `assignee` | no | Name | empty or missing means unassigned |
 | `origin` | no | Room id | stored as written. A Room that no longer exists isn't an error |
 | `parent` | no | `TaskId` | parses, and isn't the Task itself |
-| `blocked_by` | no | list of `TaskId` | each parses, no duplicates, doesn't contain the Task itself |
+| `blocked_by` | no | list of `TaskId` | each parses, no duplicates, doesn't contain the Task itself. A note by default; in a Team with the `blockers-done-before-start` gate it is enforced: the Task cannot move to In Progress, Review, Needs You or Done while a listed Task exists and is not Done, Cancelled, Duplicate or Rejected, and only the manager or the Human removes a blocker ([ADR-0085](adr/0085-a-blocked-task-waits-for-its-blockers.md)) |
 | `duplicate_of` | when status is `Duplicate` | `TaskId` | parses, isn't the Task itself. Required when status is Duplicate, and an error on any other status |
 | `tags` | no | list | each 1–40 characters, no `,` or `;` or line break (D-18) |
 | `start_date`, `due_date` | no | `yyyy-MM-dd` | `DateOnly.TryParseExact(…, CultureInfo.InvariantCulture)` |

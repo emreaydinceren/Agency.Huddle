@@ -654,7 +654,7 @@ internal sealed class TaskService : IDisposable
             return backlogReverted;
         }
 
-        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
             && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
         {
             ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by gate: {refusal.Message}"));
@@ -951,7 +951,7 @@ internal sealed class TaskService : IDisposable
         }
 
         // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
-        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
             ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
             : null;
         if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || candidate.IsGated))
@@ -1080,9 +1080,9 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.NotFound(id), null);
         }
 
-        if (LeavesBacklogWithoutTriage(current, candidate) && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        if (this.RefuseBeforeGates(current, candidate, actor, humanOverridesGates) is { } early)
         {
-            return (new TaskResult.Refused([LeaveBacklogRefusal]), null);
+            return (early, null);
         }
 
         if (this.RefuseUpdate(current, candidate, currentText, actor, humanOverridesGates, out GateRefusal? refusal, out Proof proof) is { } refused)
@@ -1215,9 +1215,14 @@ internal sealed class TaskService : IDisposable
         bool parentApproved = candidate.Parent is not { } parentId
             || (this.store.Get(parentId) is { } parent && IsApproved(parent));
 
+        // The stored blockers decide, never the candidate's: an update that clears blocked_by while it starts the Task must not pass.
+        IReadOnlyList<OpenBlocker> openBlockers = this.OpenBlockersOf(current);
         foreach (string team in new[] { current.Location.Team, candidate.Location.Team }.Distinct(StringComparer.Ordinal))
         {
-            GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name);
+            GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name)
+            {
+                OpenBlockers = openBlockers,
+            };
             if (this.gates.CheckTaskChange(context) is { } refusal)
             {
                 return refusal;
@@ -1226,6 +1231,58 @@ internal sealed class TaskService : IDisposable
 
         return null;
     }
+
+    /// <summary>Lists the Tasks in a Task's stored <c>blocked_by</c> that are not finished; a blocker that no longer exists blocks nothing.</summary>
+    /// <param name="task">The Task as stored.</param>
+    private List<OpenBlocker> OpenBlockersOf(TaskItem task)
+    {
+        List<OpenBlocker> open = [];
+        foreach (TaskId id in task.BlockedBy)
+        {
+            if (this.store.Get(id) is { } blocker && !blocker.Status.IsTerminal())
+            {
+                open.Add(new OpenBlocker(id, blocker.Status));
+            }
+        }
+
+        return open;
+    }
+
+    /// <summary>The refusals that come before the process gates: a Request leaving Backlog without triage, and a blocker removed without authority (#538).</summary>
+    /// <param name="current">The Task as stored.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    /// <param name="actor">Who makes the change.</param>
+    /// <param name="humanOverridesGates">Whether the Human asked to override.</param>
+    /// <returns>The refusal, or <see langword="null"/> when the change may go on to the gates.</returns>
+    private TaskResult.Refused? RefuseBeforeGates(TaskItem current, TaskItem candidate, TaskActor actor, bool humanOverridesGates)
+    {
+        if (LeavesBacklogWithoutTriage(current, candidate) && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        {
+            return new TaskResult.Refused([LeaveBacklogRefusal]);
+        }
+
+        return this.RemovesBlockerWithoutAuthority(current, candidate, actor) ? new TaskResult.Refused([BlockerRemovalRefusal]) : null;
+    }
+
+    /// <summary>Tells whether a patch takes a blocker off a Task whose Team runs the <c>blockers-done-before-start</c> gate and the actor may not (#538).</summary>
+    /// <param name="current">The Task as stored.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    /// <param name="actor">Who makes the change.</param>
+    private bool RemovesBlockerWithoutAuthority(TaskItem current, TaskItem candidate, TaskActor actor)
+    {
+        if (actor.Kind != TaskActorKind.Agent
+            || this.gates is null
+            || !current.BlockedBy.Any(id => !candidate.BlockedBy.Contains(id))
+            || !this.gates.EnabledGates(current.Location.Team).Contains(GateId.BlockersDoneBeforeStart))
+        {
+            return false;
+        }
+
+        return !string.Equals(this.gates.ManagerOf(current.Location.Team), actor.Name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Refusal for an Agent other than the Team's manager taking a blocker off a Task in a Team with the <c>blockers-done-before-start</c> gate (#538).</summary>
+    private const string BlockerRemovalRefusal = "Only the Team's manager or the Human can remove a blocker from blocked_by.";
 
     /// <summary>Refusal for an agent moving a Request out of Backlog without a triage accept or decline.</summary>
     private const string LeaveBacklogRefusal = "A Request leaves Backlog only when its receiving manager accepts or declines it with triage_request.";
