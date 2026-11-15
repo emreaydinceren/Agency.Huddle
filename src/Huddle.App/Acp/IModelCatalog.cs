@@ -79,6 +79,7 @@ internal interface IModelCatalog
     /// A chosen id maps to its display name in the cached model list (or, for effort, the cached effort
     /// list of that (Adapter, Model)). A <see langword="null"/> id means "none chosen", and then the name of
     /// the Adapter's own default is returned, learned from the throwaway session's reported current values.
+    /// A chosen Claude alias id (<c>sonnet</c>, <c>opus</c>, <c>haiku</c>) reads by its alias name while nothing is cached for that Adapter.
     /// The Adapter's <c>"default"</c> effort sentinel names no level, so it counts as unknown. The default
     /// Effort is only known for the Adapter's default model, so it is unknown when a model was chosen.
     /// </remarks>

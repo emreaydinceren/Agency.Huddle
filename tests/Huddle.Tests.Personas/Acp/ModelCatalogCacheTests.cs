@@ -286,9 +286,9 @@ public sealed class ModelCatalogCacheTests
             CurrentEffort = currentEffort,
         };
 
-    /// <summary>Peeking an empty cache returns nothing and never reaches the probe runner.</summary>
+    /// <summary>Peeking an empty cache knows nothing but a chosen Claude alias's name, and never reaches the probe runner.</summary>
     [Fact]
-    public void PeekRuntime_EmptyCache_ReturnsNothingAndDoesNotProbe()
+    public void PeekRuntime_EmptyCache_ReturnsOnlyTheAliasNameAndDoesNotProbe()
     {
         using TempDataDir dir = new();
         FakeAdapterProbeRunner runner = new();
@@ -298,8 +298,78 @@ public sealed class ModelCatalogCacheTests
         RuntimeNames chosen = probe.PeekRuntime("claude", "opus", "high");
 
         Assert.Equal(default, names);
-        Assert.Equal(default, chosen);
+        Assert.Equal(new RuntimeNames("Opus", null), chosen);
         Assert.Empty(runner.Calls);
+    }
+
+    /// <summary>The alias names belong to the Claude Adapter only: another Adapter's "sonnet" stays unknown.</summary>
+    [Fact]
+    public void PeekRuntime_EmptyCacheNonClaudeAdapter_AliasIsUnknown()
+    {
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        RuntimeNames names = probe.PeekRuntime("agency", "sonnet", null);
+
+        Assert.Null(names.Model);
+        Assert.Empty(runner.Calls);
+    }
+
+    /// <summary>A Claude model id that is not an alias stays unknown on an empty cache.</summary>
+    [Fact]
+    public void PeekRuntime_EmptyCacheUnknownModelId_IsUnknown()
+    {
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        RuntimeNames names = probe.PeekRuntime("claude", "claude-sonnet-x", null);
+
+        Assert.Null(names.Model);
+    }
+
+    /// <summary>Once a catalog is cached, its name wins over the alias name.</summary>
+    [Fact]
+    public async Task PeekRuntime_CachedCatalog_NameWinsOverTheAlias()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", "opus", null);
+
+        Assert.Equal("Opus 5.5", names.Model);
+    }
+
+    /// <summary>Once a list is cached, an id missing from it stays unknown: there is no alias fallback.</summary>
+    [Fact]
+    public async Task PeekRuntime_CachedCatalogWithoutTheId_IsUnknownDespiteTheAlias()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        RuntimeNames names = probe.PeekRuntime("claude", "haiku", null);
+
+        Assert.Null(names.Model);
+    }
+
+    /// <summary>An unnamed Adapter resolves to the default Claude Adapter, so its alias reads by name.</summary>
+    [Fact]
+    public void PeekRuntime_EmptyCacheUnnamedAdapter_UsesTheDefaultAdaptersAlias()
+    {
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        RuntimeNames names = probe.PeekRuntime(null, "sonnet", null);
+
+        Assert.Equal("Sonnet", names.Model);
     }
 
     /// <summary>The null-model probe caches the Adapter's defaults, which peek reports by display name.</summary>
