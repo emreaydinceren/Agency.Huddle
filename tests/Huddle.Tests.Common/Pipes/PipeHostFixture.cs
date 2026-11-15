@@ -77,6 +77,26 @@ public sealed class PipeHostFixture : IAsyncDisposable
     }
 
     /// <summary>
+    /// Starts the fixture as <see cref="StartAsync(IReadOnlyDictionary{string, string?}?, BehaviourBudget)"/> does, applying
+    /// <paramref name="configureServices"/> to the service collection after the composition root and the fixture's removals.
+    /// </summary>
+    /// <param name="additionalConfig">Configuration pairs applied after the fixture's own; <see langword="null"/> for none.</param>
+    /// <param name="configureServices">Replaces or decorates registrations, for a test that needs a seam in the host.</param>
+    /// <param name="budget">The test's behaviour budget, paused while the fixture starts.</param>
+    public static async Task<PipeHostFixture> StartAsync(
+        IReadOnlyDictionary<string, string?>? additionalConfig, Action<IServiceCollection> configureServices, BehaviourBudget budget)
+    {
+        ArgumentNullException.ThrowIfNull(configureServices);
+        ArgumentNullException.ThrowIfNull(budget);
+        budget.Pause();
+        using CancellationTokenSource boot = CancellationTokenSource.CreateLinkedTokenSource(budget.Token);
+        boot.CancelAfter(TestBudgets.Slowest);
+        PipeHostFixture fixture = await StartAsync(additionalConfig, useSkillSourcesTemplate: true, boot.Token, configureServices);
+        budget.Restart();
+        return fixture;
+    }
+
+    /// <summary>
     /// Starts the fixture under <paramref name="ct"/>. A test whose token also bounds the behaviour it checks passes a
     /// <see cref="BehaviourBudget"/> instead, so a slow start cannot spend that budget.
     /// </summary>
@@ -90,8 +110,9 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// <param name="additionalConfig">Configuration pairs applied after the fixture's own; <see langword="null"/> for none.</param>
     /// <param name="useSkillSourcesTemplate"><see langword="false"/> to let the host's own first-start move write the Skill Sources folder.</param>
     /// <param name="ct">Cancels the start.</param>
+    /// <param name="configureServices">Applied to the service collection after <see cref="ServiceCollectionExtensions.AddTeamServices"/> and the fixture's removals; <see langword="null"/> for none.</param>
     internal static async Task<PipeHostFixture> StartAsync(
-        IReadOnlyDictionary<string, string?>? additionalConfig, bool useSkillSourcesTemplate, CancellationToken ct)
+        IReadOnlyDictionary<string, string?>? additionalConfig, bool useSkillSourcesTemplate, CancellationToken ct, Action<IServiceCollection>? configureServices = null)
     {
         var dataDir = new TempDataDir();
         var pipeName = "team-test-" + Guid.NewGuid().ToString("N");
@@ -118,9 +139,13 @@ public sealed class PipeHostFixture : IAsyncDisposable
         builder.Services.AddTeamServices(builder.Configuration);
         RemovePersonaSupervisorHostedService(builder.Services);
         RemoveBuiltinAgentSeederHostedService(builder.Services);
+        configureServices?.Invoke(builder.Services);
 
         var loggerProvider = new RecordingLoggerProvider();
         builder.Logging.AddProvider(loggerProvider);
+
+        // Debug for the connection category only: WaitForConnectionsOpenedAsync reads its "opened" line.
+        builder.Logging.AddFilter<RecordingLoggerProvider>(typeof(AgentConnection).FullName, LogLevel.Debug);
 
         var host = builder.Build();
         if (useSkillSourcesTemplate
@@ -141,6 +166,24 @@ public sealed class PipeHostFixture : IAsyncDisposable
         return new JsonLineStream(client);
     }
 
+    /// <summary>
+    /// Waits until the server has accepted <paramref name="count"/> connections, by their Debug "opened" line. A client that
+    /// connects and closes at once can beat the accept: Windows lets a client connect to an instance before the server has
+    /// accepted it, and the server then sees a client that left, not a connection, so a test that asserts on what the
+    /// connection logged about the client leaving waits here first.
+    /// </summary>
+    /// <param name="count">How many connections must have opened.</param>
+    /// <param name="ct">Bounds the wait.</param>
+    /// <returns>A task that completes when that many connections have opened.</returns>
+    public Task WaitForConnectionsOpenedAsync(int count, CancellationToken ct) =>
+        Eventually.UntilAsync(
+            () => this.LogEntries.Count(entry => entry.Level == LogLevel.Debug
+                && string.Equals(entry.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal)
+                && entry.Message.EndsWith(" opened.", StringComparison.Ordinal)) >= count,
+            ct,
+            timeout: TestBudgets.Standard,
+            interval: TimeSpan.FromMilliseconds(20));
+
     public async ValueTask DisposeAsync()
     {
         await this.host.StopAsync();
@@ -150,7 +193,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
     }
 
     /// <summary>
-    /// Copies every <see cref="AgentConnection"/> Warning to the current test's output, which xUnit prints under a failed
+    /// Copies every <see cref="AgentConnection"/> and <see cref="PipeServer"/> Warning to the current test's output, which xUnit prints under a failed
     /// test. A server-side reason is otherwise only in memory, so a CI failure on the client side of the pipe (the
     /// RoomSessionResumeTests broken pipe and connection reset in agents/CIPipeline.md) would show no trace of why the
     /// server ended the connection.
@@ -164,7 +207,9 @@ public sealed class PipeHostFixture : IAsyncDisposable
 
         foreach (LogEntry entry in this.loggerProvider.Entries)
         {
-            if (entry.Level >= LogLevel.Warning && string.Equals(entry.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
+            if (entry.Level >= LogLevel.Warning
+                && (string.Equals(entry.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal)
+                    || string.Equals(entry.Category, typeof(PipeServer).FullName, StringComparison.Ordinal)))
             {
                 output.WriteLine($"[{entry.Level}] {entry.Category}: {entry.Message}{(entry.Exception is { } ex ? Environment.NewLine + ex : string.Empty)}");
             }

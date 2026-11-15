@@ -40,6 +40,9 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
     /// </summary>
     private const int PipeBufferBytes = 64 * 1024;
 
+    /// <summary>The HRESULT of Win32 ERROR_NO_DATA (0xE8), which a pending accept reports when the client closed first.</summary>
+    private const int ErrorNoData = unchecked((int)0x800700E8);
+
     /// <summary>The pause after a failed accept before listening again.</summary>
     private static readonly TimeSpan AcceptRetryDelay = TimeSpan.FromMilliseconds(250);
 
@@ -66,20 +69,22 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
         {
             while (!stoppingToken.IsCancellationRequested)
             {
-                bool connected = await this.WaitForClientAsync(listening, stoppingToken).ConfigureAwait(false);
+                AcceptOutcome outcome = await this.WaitForClientAsync(listening, stoppingToken).ConfigureAwait(false);
 
                 // Replace the listening instance first, whichever way the wait ended, so the listener
                 // it shares with every other instance of this name always has a live owner.
                 NamedPipeServerStream finished = listening;
                 listening = this.CreateInstance();
 
-                if (connected)
+                if (outcome == AcceptOutcome.Connected)
                 {
                     onConnected(finished);
+                    continue;
                 }
-                else
+
+                await finished.DisposeAsync().ConfigureAwait(false);
+                if (outcome == AcceptOutcome.Failed)
                 {
-                    await finished.DisposeAsync().ConfigureAwait(false);
                     await Task.Delay(AcceptRetryDelay, stoppingToken).ConfigureAwait(false);
                 }
             }
@@ -102,19 +107,46 @@ internal sealed class PipeAcceptLoop(string pipeName, Action<NamedPipeServerStre
     /// wait is about to read and fails it with a <see cref="NullReferenceException"/>. The token alone
     /// ends the wait on both platforms; <see cref="RunAsync"/> disposes the instance after it has.
     /// </param>
-    /// <returns><see langword="true"/> when a client connected; <see langword="false"/> when the accept failed and was logged.</returns>
-    private async Task<bool> WaitForClientAsync(NamedPipeServerStream listening, CancellationToken stoppingToken)
+    /// <returns>
+    /// <see cref="AcceptOutcome.Connected"/> when a client connected; <see cref="AcceptOutcome.LeftBeforeAccept"/> when a client
+    /// connected and closed its end before the accept was issued; <see cref="AcceptOutcome.Failed"/> when the accept failed.
+    /// The last two are logged.
+    /// </returns>
+    /// <remarks>
+    /// On Windows an instance accepts a client's connect as soon as it exists, before the accept is issued, so a client that
+    /// connects and closes in that gap makes the accept fail with ERROR_NO_DATA ("The pipe is being closed."). That is a client
+    /// leaving, not a fault of the listener, so it is not retried after a pause.
+    /// </remarks>
+    private async Task<AcceptOutcome> WaitForClientAsync(NamedPipeServerStream listening, CancellationToken stoppingToken)
     {
         try
         {
             await listening.WaitForConnectionAsync(stoppingToken).ConfigureAwait(false);
-            return true;
+            return AcceptOutcome.Connected;
+        }
+        catch (IOException ex) when (!stoppingToken.IsCancellationRequested && ex.HResult == ErrorNoData)
+        {
+            logger.LogWarning("A client connected to pipe {PipeName} and closed its end before it was accepted.", pipeName);
+            return AcceptOutcome.LeftBeforeAccept;
         }
         catch (IOException ex) when (!stoppingToken.IsCancellationRequested)
         {
             logger.LogWarning(ex, "Failed to accept a connection on pipe {PipeName}.", pipeName);
-            return false;
+            return AcceptOutcome.Failed;
         }
+    }
+
+    /// <summary>How one wait for a client ended.</summary>
+    private enum AcceptOutcome
+    {
+        /// <summary>A client connected and the instance can be handed off.</summary>
+        Connected,
+
+        /// <summary>A client connected and closed its end before the accept was issued.</summary>
+        LeftBeforeAccept,
+
+        /// <summary>The accept failed for another reason.</summary>
+        Failed,
     }
 
     /// <summary>

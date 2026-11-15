@@ -100,6 +100,10 @@ internal sealed class AgentConnection
         var lineStream = new JsonLineStream(this.pipe);
         await using var lineStreamScope = lineStream.ConfigureAwait(false);
         this.stream = lineStream;
+        if (this.logger.IsEnabled(LogLevel.Debug))
+        {
+            this.logger.LogDebug("Agent connection {ConnectionId} opened.", this.ConnectionId);
+        }
 
         try
         {

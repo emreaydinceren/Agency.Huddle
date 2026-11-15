@@ -1,7 +1,9 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.IO.Pipes;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Elicitation;
 
 namespace Agency.Huddle.Tests.Pipes;
 
@@ -72,6 +74,68 @@ public sealed class PipeAcceptLoopTests
 
         Assert.Equal(1, read);
         Assert.Equal(42, echoed[0]);
+    }
+
+    /// <summary>
+    /// A client that connects to the next instance and closes before the loop has issued its accept - Windows lets a client connect
+    /// as soon as an instance exists - is logged as a client that left, not as a failed accept, the loop goes straight back to
+    /// listening, and the next client is served. The accept then fails with ERROR_NO_DATA ("The pipe is being closed."), which the loop
+    /// once logged as "Failed to accept" and paused 250 ms for. The first handler holds the loop while the second client connects
+    /// and closes, so the loop meets the closed instance deterministically.
+    /// </summary>
+    [Fact]
+    public async Task ClientClosingBeforeItIsAccepted_IsLoggedAsLeftAndTheNextClientIsServed()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "Only Windows lets a client connect to an instance before the server accepts it; elsewhere the second client is simply accepted.");
+
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string pipeName = "pipe-accept-loop-tests-" + Guid.NewGuid().ToString("N");
+        RecordingLogger logger = new();
+        TaskCompletionSource leaverGone = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int connections = 0;
+
+        void OnConnected(NamedPipeServerStream server)
+        {
+            if (Interlocked.Increment(ref connections) > 1)
+            {
+                _ = EchoOneByteAsync(server, ct);
+                return;
+            }
+
+            using (NamedPipeClientStream leaver = new(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous))
+            {
+                leaver.Connect(ConnectTimeoutMilliseconds);
+            }
+
+            server.Dispose();
+            leaverGone.TrySetResult();
+        }
+
+        using CancellationTokenSource stop = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        PipeAcceptLoop loop = new(pipeName, OnConnected, logger);
+        Task loopTask = loop.RunAsync(stop.Token);
+
+        await using NamedPipeClientStream first = new(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await first.ConnectAsync(ct);
+
+        // The third client must not dial until the leaver has taken the one waiting instance.
+        await leaverGone.Task.WaitAsync(ct);
+        await using NamedPipeClientStream third = new(".", pipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await third.ConnectAsync(ConnectTimeoutMilliseconds, ct);
+
+        byte[] sent = [7];
+        await third.WriteAsync(sent, ct);
+        byte[] echoed = new byte[1];
+        int read = await third.ReadAsync(echoed, ct);
+
+        await stop.CancelAsync();
+        await loopTask;
+
+        Assert.Equal(1, read);
+        Assert.Equal(7, echoed[0]);
+        IReadOnlyList<LogEntry> warnings = logger.AtExactly(LogLevel.Warning);
+        LogEntry warning = Assert.Single(warnings);
+        Assert.Equal($"A client connected to pipe {pipeName} and closed its end before it was accepted.", warning.Message);
     }
 
     /// <summary>
