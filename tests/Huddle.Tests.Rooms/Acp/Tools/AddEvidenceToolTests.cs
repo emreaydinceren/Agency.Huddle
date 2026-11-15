@@ -53,7 +53,7 @@ public sealed class AddEvidenceToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal($"Added evidence to {task.Id}.", result);
+        Assert.Equal($"Added evidence to {task.Id}. Its status is To Do.", result);
         EvidenceLine line = Assert.Single(Evidence(harness, task));
         Assert.Equal("Nova", line.Author);
         Assert.Equal(Noon, line.Time);
@@ -114,7 +114,7 @@ public sealed class AddEvidenceToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal($"Added evidence to {task.Id}.", result);
+        Assert.Equal($"Added evidence to {task.Id}. Its status is To Do.", result);
         EvidenceLine line = Assert.Single(Evidence(harness, task));
         Assert.Equal("Checked on staging.", line.RawText);
         Assert.Equal(string.Empty, line.Command);
@@ -207,7 +207,7 @@ public sealed class AddEvidenceToolTests
         JsonObject retry = new() { ["taskId"] = task.Id.ToString(), ["note"] = "Checked on staging." };
         string added = await tool.InvokeAsync(retry, ct);
 
-        Assert.Equal($"Added evidence to {task.Id}.", added);
+        Assert.Equal($"Added evidence to {task.Id}. Its status is To Do.", added);
         EvidenceLine line = Assert.Single(Evidence(harness, task));
         Assert.Equal("Checked on staging.", line.RawText);
     }
@@ -282,7 +282,7 @@ public sealed class AddEvidenceToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Equal($"Added evidence to {task.Id}.", result);
+        Assert.Equal($"Added evidence to {task.Id}. Its status is To Do.", result);
         IReadOnlyList<EvidenceLine> lines = Evidence(harness, task);
         Assert.Equal(exitCode, Assert.Single(lines).ExitCode);
         DoneItem rule = new("Tests pass", new DoneRule.CommandExits("dotnet test"), ProofItemSource.Process);

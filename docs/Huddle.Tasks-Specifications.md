@@ -1282,7 +1282,13 @@ others: *"… to track work as Tasks and hand it to an Agent …"*.
 ### 11.10 `add_evidence` and `add_comment`
 
 Both are offered to every Agent with the Task tools and append one timeline entry (§7.7) and no event.
-`add_evidence` records a check (`command` with `exitCode`, or `note`). `add_comment` takes `taskId` and `text`
+`add_evidence` records a check (`command` with `exitCode`, or `note`). Its success text states the Task's status after the write,
+read again because the write may have moved the Task to Needs You: *"Added evidence to PLAT-0042. Its status is Needs You."* When the
+status is not Needs You and the Task's Proof has an open item, the text adds the Proof count and the first open item as
+`get_task` prints it (label, then owner in brackets and detail when it has them), and for a gated Task the sentence that it can
+go to Needs You once its Proof is complete: *"Added evidence to FAMI-0002. Its status is Review. Proof 0/2; first open item: Plan
+checked (Maya): no Evidence from a member covering verify. It can go to Needs You once its Proof is complete."* An Agent
+therefore holds the Task's status and never has to guess whether the Human is waiting. `add_comment` takes `taskId` and `text`
 (Markdown, several lines fine): the entry carries the caller's name and the clock. **Success:** *"Added a comment to
 PLAT-0042."* Blank text is refused naming `text`, with nothing added; text over 4000 characters returns the service's
 refusal (§9.1). Its description is `tool.addComment.description` (NextSession). `read_records` with a `taskId` lists

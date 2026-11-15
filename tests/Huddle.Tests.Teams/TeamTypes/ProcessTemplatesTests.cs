@@ -342,6 +342,55 @@ public sealed partial class ProcessTemplatesTests
         Assert.True(failures.Count == 0, "Stages lack the attached-file paragraph in: " + string.Join(", ", failures));
     }
 
+    /// <summary>#547: the household process's Gates section says a gated Task waits in Review until its Proof is complete, and only then in Needs You.</summary>
+    [Fact]
+    public void Process_HouseholdBasicsGates_SayTheTaskWaitsInReviewUntilItsProofIsComplete()
+    {
+        string text = ReadResourceText("TeamTypes/Builtin/household/processes/household-basics.md");
+        string gates = string.Join('\n', GatesLines(text));
+
+        Assert.Contains("That Task waits in Review until its Proof is complete, then in Needs You until a parent accepts it", gates, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#547: no built-in process claims a Task waits in Needs You without the Review and Proof step first.</summary>
+    [Fact]
+    public void Process_EveryBuiltIn_NeverSaysTheTaskWaitsInNeedsYouUntil()
+    {
+        string[] resources = typeof(TeamTypeCatalog).Assembly.GetManifestResourceNames()
+            .Select(static n => n.Replace('\\', '/'))
+            .Where(static n => n.Contains("TeamTypes/Builtin/", StringComparison.Ordinal) && n.Contains("/processes/", StringComparison.Ordinal) && n.EndsWith(".md", StringComparison.Ordinal)) // contains-ok: resource path filter
+            .ToArray();
+
+        Assert.NotEmpty(resources);
+        List<string> failures = [.. resources.Where(static resource => ReadResourceText(resource).Contains("waits in Needs You until", StringComparison.Ordinal))]; // contains-ok: scanning shipped text for a banned claim
+        Assert.True(failures.Count == 0, "These processes say a Task waits in Needs You with no Review step first: " + string.Join(", ", failures));
+    }
+
+    /// <summary>Returns the trimmed lines of the Gates section of a raw process file.</summary>
+    /// <param name="text">The raw file text.</param>
+    /// <returns>The lines between <c>## Gates</c> and the next level-two heading.</returns>
+    private static string[] GatesLines(string text)
+    {
+        List<string> lines = [];
+        bool inside = false;
+        foreach (string raw in text.Split('\n'))
+        {
+            string line = raw.TrimEnd('\r');
+            if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                inside = string.Equals(line, "## Gates", StringComparison.Ordinal);
+                continue;
+            }
+
+            if (inside)
+            {
+                lines.Add(line);
+            }
+        }
+
+        return lines.ToArray();
+    }
+
     /// <summary>Returns the trimmed lines of the Stages section of a raw process file.</summary>
     /// <param name="text">The raw file text.</param>
     /// <returns>The lines between <c>## Stages</c> and the next level-two heading.</returns>

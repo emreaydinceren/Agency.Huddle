@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -57,6 +59,20 @@ internal static class TaskToolText
         }
 
         return $"{task.Id} | {task.Status.ToWire()} | {task.Priority.ToWire()} | {assignee} | {location} | {task.Title}";
+    }
+
+    /// <summary>
+    /// Renders one open Proof item as <c>label (owner): detail</c>, the owner and the detail only when it has them: the one format
+    /// <c>get_task</c> and <c>add_evidence</c> both print.
+    /// </summary>
+    /// <param name="item">The open Proof item.</param>
+    public static string OpenProofItem(ProofItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        string owner = item.Owner is null ? string.Empty : $" ({item.Owner})";
+        string detail = item.Detail is null ? string.Empty : $": {item.Detail}";
+        return string.Create(CultureInfo.InvariantCulture, $"{item.Label}{owner}{detail}");
     }
 
     /// <summary>

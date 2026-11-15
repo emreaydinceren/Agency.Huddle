@@ -158,9 +158,7 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"proof: {proof.MetCount}/{proof.Total}"));
             foreach (ProofItem item in proof.Items.Where(static candidate => !candidate.Met))
             {
-                string owner = item.Owner is null ? string.Empty : $" ({item.Owner})";
-                string detail = item.Detail is null ? string.Empty : $": {item.Detail}";
-                lines.Add(string.Create(CultureInfo.InvariantCulture, $"- {item.Label}{owner}{detail}"));
+                lines.Add($"- {TaskToolText.OpenProofItem(item)}");
             }
         }
 

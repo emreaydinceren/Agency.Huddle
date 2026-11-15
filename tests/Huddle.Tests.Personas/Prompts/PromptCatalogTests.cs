@@ -70,6 +70,7 @@ public sealed partial class PromptCatalogTests
         Assert.Contains("don't ask for approval in chat", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("Huddle moves a Task in Review to Needs You", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("Huddle does not move the Task then, so move it yourself", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("only when its status is Needs You", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
     }
 
     /// <summary>3.3.t (LR-R12, correction C10): <c>turn.transcriptOmittedOwn</c> is in the catalog directly after <c>turn.transcriptOmitted</c>.</summary>
