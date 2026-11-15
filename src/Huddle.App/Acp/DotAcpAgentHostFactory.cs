@@ -229,7 +229,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetRequiredService<MemoryWarnings>(),
             this.agentPaths,
             this.options.Outputs.MaxIndexEntries,
-            this.serviceProvider.GetService<OverCapNotifier>());
+            this.serviceProvider.GetService<OverCapNotifier>(),
+            this.serviceProvider.GetService<NeedsYouLevels>());
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
@@ -729,7 +730,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.TeamsRoot(),
             this.options.Teams.MaxMemoryEntries,
             this.options.Teams.MaxHuddleMemoryEntries,
-            sources.MaxOutputsEntries);
+            sources.MaxOutputsEntries,
+            levels: sources.Levels);
 
         IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
             persona,
@@ -748,7 +750,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             warnings: sources.Warnings,
             huddleMemory: inputs.HuddleMemory,
             outputs: inputs.Outputs,
-            workspaces: inputs.Workspaces);
+            workspaces: inputs.Workspaces,
+            needsYou: inputs.NeedsYou);
         return (parts, profile.Id);
     }
 }

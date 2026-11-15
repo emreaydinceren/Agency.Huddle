@@ -43,7 +43,7 @@ internal sealed class NeedsYouLevelRig : IDisposable
         string levelLine = teamLevel is { } level ? $"needsYouLevel: {level.ToWire()}\n" : string.Empty;
         FakeTeamFolders folders = new();
         string teamText = TaskGateText.Process(gates).Replace("checkCommand:", levelLine + "checkCommand:", StringComparison.Ordinal);
-        ProcessGateService gateService = TaskGateText.BuildGates(this.gateDir, teamText, sharedFolders: folders);
+        ProcessGateService gateService = this.Gates = TaskGateText.BuildGates(this.gateDir, teamText, sharedFolders: folders);
         if (projectLevel is { } projectValue)
         {
             folders.ProjectFiles[Project] = ProjectFile.Empty with { NeedsYouLevel = projectValue };
@@ -97,6 +97,9 @@ internal sealed class NeedsYouLevelRig : IDisposable
 
     /// <summary>Resolves the level of a Task.</summary>
     public NeedsYouLevels Levels { get; }
+
+    /// <summary>The Team's process gates, which say whether <c>accept-before-merge</c> is on.</summary>
+    public ProcessGateService Gates { get; }
 
     /// <summary>The Task service under test, which knows the levels.</summary>
     public TaskService Service { get; }

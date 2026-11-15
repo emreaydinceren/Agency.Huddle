@@ -21,6 +21,7 @@ internal static class SessionPromptInputs
     /// <param name="maxHuddleMemoryEntries">The cap on the Huddle-wide Memory entries of <c>Teams/memory/</c>, which every Persona gets.</param>
     /// <param name="maxOutputsEntries">The cap on the outputs index across the Persona's Teams, in the order they are listed.</param>
     /// <param name="overCap">Told about each folder whose index left files out, or <see langword="null"/> where nobody is told (a preview).</param>
+    /// <param name="levels">Resolves each Team's and Project's Needs You level; <see langword="null"/> where none is wired, which leaves the prompt without that section.</param>
     /// <returns>The five snapshots.</returns>
     internal static SessionPromptSnapshot Build(
         AgentsMdReader agentsMd,
@@ -34,7 +35,8 @@ internal static class SessionPromptInputs
         int maxTeamMemoryEntries,
         int maxHuddleMemoryEntries,
         int maxOutputsEntries,
-        OverCapNotifier? overCap = null)
+        OverCapNotifier? overCap = null,
+        NeedsYouLevels? levels = null)
     {
         var (entries, notListed) = MemoryIndex.Build(memoryDir, maxMemoryEntries, warnings);
         MemorySnapshot memory = new(memoryDir, entries, notListed);
@@ -64,7 +66,45 @@ internal static class SessionPromptInputs
             ReportOverCap(overCap, personaName, memory, teamMemory, huddleMemory, outputs, (maxMemoryEntries, maxTeamMemoryEntries, maxHuddleMemoryEntries, maxOutputsEntries));
         }
 
-        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs, ReadableWorkspaces(catalogTeams, teamNames));
+        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs, ReadableWorkspaces(catalogTeams, teamNames), NeedsYouScopes(levels, catalogTeams, teamNames));
+    }
+
+    /// <summary>
+    /// Lists the effective Needs You level of each of the Persona's Teams and their Projects, but only when one of them runs inside the Team;
+    /// when every scope is Ask me it returns <see langword="null"/>, so the default prompt is unchanged (ADR-0087).
+    /// </summary>
+    /// <param name="levels">Resolves the levels; <see langword="null"/> means none is known and nothing is listed.</param>
+    /// <param name="catalogTeams">The catalog's Teams, which name each Team's Projects.</param>
+    /// <param name="teamNames">The Persona's Teams, in the order written, spelled as the catalog spells them.</param>
+    /// <returns>The <c>(scope, level)</c> pairs in Team then Project order, or <see langword="null"/>.</returns>
+    private static List<(string Scope, string Level)>? NeedsYouScopes(NeedsYouLevels? levels, IReadOnlyList<TeamSummary> catalogTeams, IReadOnlyList<string> teamNames)
+    {
+        if (levels is null)
+        {
+            return null;
+        }
+
+        List<(string Scope, string Level)> scopes = [];
+        bool anyRunsInside = false;
+        foreach (string name in teamNames)
+        {
+            if (catalogTeams.FirstOrDefault(team => string.Equals(team.Name, name, StringComparison.OrdinalIgnoreCase)) is not { } summary)
+            {
+                continue;
+            }
+
+            NeedsYouLevel teamLevel = levels.For(summary.Name, null).Level;
+            scopes.Add((summary.Name, teamLevel.ToDisplay()));
+            anyRunsInside |= teamLevel == NeedsYouLevel.RunInsideTheTeam;
+            foreach (string project in summary.Projects)
+            {
+                NeedsYouLevel projectLevel = levels.For(summary.Name, project).Level;
+                scopes.Add(($"{summary.Name} › {project}", projectLevel.ToDisplay()));
+                anyRunsInside |= projectLevel == NeedsYouLevel.RunInsideTheTeam;
+            }
+        }
+
+        return anyRunsInside ? scopes : null;
     }
 
     /// <summary>Lists, in the given order, each Team whose catalog entry names a workspace that is a repository or a readable folder (Spec §6.4).</summary>

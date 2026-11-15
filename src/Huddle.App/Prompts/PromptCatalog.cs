@@ -47,6 +47,7 @@ internal static class PromptCatalog
         ..BuildPart02(),
         ..BuildPart03(),
         ..BuildPart54(),
+        ..BuildNeedsYou(),
         ..BuildPart04(),
         ..BuildPart05(),
         ..BuildPart06(),
@@ -380,6 +381,42 @@ internal static class PromptCatalog
                 """,
             Placeholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
             RequiredPlaceholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the Needs You level prompts (ADR-0087): the system prompt section and the note on a Task result.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildNeedsYou() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.needsYou",
+            Label: "Needs You level",
+            HelperText:
+                "Tells an Agent which Needs You level applies to each scope of its Teams, so it does not put a merge in a " +
+                "Task's Action where the level releases it. Added only when a scope of one of the Agent's Teams runs inside " +
+                "the Team. Must keep {{levels}}, where one line per scope is substituted in.",
+            Default:
+                """
+                Needs You level (what waits for the Human):
+                {{levels}}
+                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review and its assignee merges it into the local main. A push, and any step that leaves the Team, still goes in the Task's Action.
+                """,
+            Placeholders: ["{{levels}}"],
+            RequiredPlaceholders: ["{{levels}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.taskActionNote",
+            Label: "Task Action note",
+            HelperText:
+                "One sentence added to the result of create_task or update_task when the Task has an Action but its scope " +
+                "runs inside the Team. Must keep {{taskId}} and {{scope}}.",
+            Default:
+                """
+                Note: {{taskId}}'s {{scope}} runs inside the Team, so a local merge into main needs no Action; this Action sends the Task to the Human. Use an Action only for a step that leaves the Team, such as a push.
+                """,
+            Placeholders: ["{{taskId}}", "{{scope}}"],
+            RequiredPlaceholders: ["{{taskId}}", "{{scope}}"],
             Timing: PromptTiming.NextSession),
     ];
 

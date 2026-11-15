@@ -275,7 +275,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.teamsOptions.MaxMemoryEntries,
             this.teamsOptions.MaxHuddleMemoryEntries,
             this.sources.MaxOutputsEntries,
-            this.sources.OverCap);
+            this.sources.OverCap,
+            this.sources.Levels);
 
         return SystemPromptComposer.Compose(
             this.persona,
@@ -294,7 +295,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             warnings: this.sources.Warnings,
             huddleMemory: inputs.HuddleMemory,
             outputs: inputs.Outputs,
-            workspaces: inputs.Workspaces);
+            workspaces: inputs.Workspaces,
+            needsYou: inputs.NeedsYou);
     }
 
     /// <summary>

@@ -297,6 +297,38 @@ public sealed class PromptPartsTests
         Assert.DoesNotContain(parts, IsWorkspacePart);
     }
 
+    /// <summary>The Needs You scopes given are listed one line each under the prompt's heading, with the guidance sentence, and no placeholder is left open.</summary>
+    [Fact]
+    public void ComposeParts_NeedsYouScopes_ListsEachScopeWithItsLevel()
+    {
+        var parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared,
+            needsYou: [("Dev Team", "Ask me"), ("Dev Team › Lib", "Run inside the Team")]);
+
+        PromptPart part = Assert.Single(parts, static p => p.Source is PromptPartSource.Prompt { Key: "systemPrompt.needsYou" });
+        string expected = string.Join(
+            '\n',
+            "Needs You level (what waits for the Human):",
+            "- Dev Team: Ask me",
+            "- Dev Team › Lib: Run inside the Team",
+            "Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review and its assignee merges it into the local main. A push, and any step that leaves the Team, still goes in the Task's Action.");
+        Assert.Equal(expected, part.Text);
+    }
+
+    /// <summary>No Needs You scopes, or none given, adds no part, and the prompt equals the one composed without the argument.</summary>
+    [Fact]
+    public void ComposeParts_NoNeedsYouScopes_AddsNoPartAndLeavesOutputUnchanged()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+
+        string without = SystemPromptComposer.Compose(persona, prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+        string empty = SystemPromptComposer.Compose(persona, prompts, "mcp__team__get_help", SummaryToolNames, [], string.Empty, memory: null, SessionScope.Shared, needsYou: []);
+
+        Assert.Equal(without, empty);
+        Assert.DoesNotContain("Needs You level", without, StringComparison.Ordinal);
+    }
+
     /// <summary>Task 130: an override of the Prompt flips <c>Overridden</c> and the override text is filled in.</summary>
     [Fact]
     public void ComposeParts_WorkspaceOverridden_SourceIsOverriddenAndTextIsOverride()

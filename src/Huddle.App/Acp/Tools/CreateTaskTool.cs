@@ -9,6 +9,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Creates a Task (Spec §11.2): validates its arguments in the §11.2 order - required fields, an
@@ -29,7 +30,9 @@ internal sealed class CreateTaskTool(
     ISprintCatalog sprints,
     IPromptSource prompts,
     string callerAgentId,
-    TurnActivity? turnActivity = null) : IAppTool
+    TurnActivity? turnActivity = null,
+    NeedsYouLevels? levels = null,
+    ProcessGateService? gates = null) : IAppTool
 {
     /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
     private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
@@ -412,7 +415,7 @@ internal sealed class CreateTaskTool(
         WakePreview preview = triggers.Preview(saved.Change.Before, saved.Change.After, actor);
         string notify = TaskToolText.NotifyClause(preview, actor.Name);
 
-        return string.Create(CultureInfo.InvariantCulture, $"Created {task.Id} \"{task.Title}\" in {location}, {assigneeClause}. {notify}");
+        return string.Create(CultureInfo.InvariantCulture, $"Created {task.Id} \"{task.Title}\" in {location}, {assigneeClause}. {notify}{TaskActionNote.For(task, levels, gates, prompts)}");
     }
 
     /// <summary>Parses an optional <c>yyyy-MM-dd</c> date argument (Spec §11.2 check 4).</summary>

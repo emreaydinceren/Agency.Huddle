@@ -7,6 +7,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Changes one or more fields of an existing Task (Spec §11.5). Every optional argument is parsed
@@ -22,7 +23,9 @@ internal sealed class UpdateTaskTool(
     ITeamDirectory directory,
     ISprintCatalog sprints,
     IPromptSource prompts,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    NeedsYouLevels? levels = null,
+    ProcessGateService? gates = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "update_task";
@@ -104,7 +107,7 @@ internal sealed class UpdateTaskTool(
         string summary = TaskDiff.Summarise(saved.Change.Changes);
         WakePreview preview = triggers.Preview(saved.Change.Before, saved.Task, actor);
         string notify = TaskToolText.NotifyClause(preview, actor.Name);
-        return $"Updated {saved.Task.Id}: {summary}. {notify}";
+        return $"Updated {saved.Task.Id}: {summary}. {notify}{TaskActionNote.For(saved.Task, levels, gates, prompts)}";
     }
 
     /// <summary>
