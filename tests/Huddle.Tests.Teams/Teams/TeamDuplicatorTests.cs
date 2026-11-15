@@ -66,6 +66,21 @@ public sealed class TeamDuplicatorTests
         Assert.Equal([Source], f.Identity("Ada").Teams);
     }
 
+    /// <summary>The manager is hired first whatever order the source lists its members in, so the new Team's manager exists before the rest.</summary>
+    [Fact]
+    public void Duplicate_ManagerListedLast_ManagerHiredFirst()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        f.Catalog.Teams = [new TeamSummary(Source, [], ["Dev1", "Ada"], HasFolder: true)];
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Equal(["Grace", "Dev2"], result.Hired);
+        Assert.Equal("Grace", f.Folders.ReadTeamFile(Target)?.Manager);
+    }
+
     /// <summary>A source Agent with account connectors on is hired afresh: every new Agent is off (AgentConnectors spec T-9, section 10).</summary>
     [Fact]
     public void Duplicate_SourceWithConnectorsOn_NewAgentsAreOff()

@@ -63,6 +63,11 @@ TeamTypes/<type>/
   then hires the manager and the rest. A failed check or install leaves no Agent behind.
   A member who already exists in the same Team and role of the same type, from an earlier start
   that timed out waiting for the manager, counts as started, so a retry does not collide with it.
+  *Note (2026-11-14, #562):* `StartTeamAsync` had no production caller and was removed, with its
+  retry rule. The check lives on the production path now: **Approve & hire** in Build a team runs
+  `HireService.CheckDrafts` (names and hire limits for the whole batch) and `EnsureSkillsAsync`
+  before it creates the Team or writes an Agent; a single `HireService.Hire` checks the name, the
+  role limit and the hire limits under one lock; and `TeamDuplicator` hires the manager first.
 - **`FindTeam` reads, `EnsureTeam` creates.** `ITeamFolders.EnsureTeam` creates a Team folder
   and refuses a Team that already exists. `FindTeam` only locates an existing folder on disk
   and never creates one. It reads the disk, so it also finds a Team folder the catalog has not
