@@ -9,6 +9,8 @@ TaskPriority
 TaskPriorities
 TaskLocation
 ChangeLogEntry
+TimelineEntry
+TimelineEntryKind
 TaskActor
 TaskActorKind
 FieldChange

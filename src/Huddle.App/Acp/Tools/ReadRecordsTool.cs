@@ -236,7 +236,7 @@ internal sealed class ReadRecordsTool(
         return newest ?? latest;
     }
 
-    /// <summary>Renders one Task's Change log and Evidence.</summary>
+    /// <summary>Renders one Task's Change log, Evidence and comments.</summary>
     /// <param name="team">The named Team.</param>
     /// <param name="taskId">The Task id as the caller gave it.</param>
     /// <returns>The text, or a refusal.</returns>
@@ -260,11 +260,21 @@ internal sealed class ReadRecordsTool(
             _ = text.Append(CultureInfo.InvariantCulture, $"\n{entry.At.UtcDateTime.ToString(MinuteFormat, CultureInfo.InvariantCulture)} {entry.Actor} {entry.Summary}");
         }
 
-        IReadOnlyList<EvidenceLine> evidence = EvidenceLine.ParseSection(task.Description);
+        IReadOnlyList<EvidenceLine> evidence = task.Evidence;
         _ = text.Append(evidence.Count == 0 ? "\nevidence: none" : "\nevidence:");
         foreach (EvidenceLine line in evidence)
         {
-            _ = text.Append('\n').Append(line.RawText);
+            // A structured line already carries its time and author; a note carries them only when its entry had an author.
+            _ = text.Append('\n').Append(line.Command.Length == 0 && line.Author.Length > 0
+                ? $"{line.Author} note: {line.RawText}"
+                : line.RawText);
+        }
+
+        List<TimelineEntry> comments = [.. task.Comments.Where(static entry => entry.Kind == TimelineEntryKind.Comment)];
+        _ = text.Append(comments.Count == 0 ? "\ncomments: none" : "\ncomments:");
+        foreach (TimelineEntry comment in comments)
+        {
+            _ = text.Append(CultureInfo.InvariantCulture, $"\n{comment.At.UtcDateTime.ToString(MinuteFormat, CultureInfo.InvariantCulture)} {comment.Author} {TaskToolText.IndentContinuation(comment.Text)}");
         }
 
         return Cap(text.ToString());

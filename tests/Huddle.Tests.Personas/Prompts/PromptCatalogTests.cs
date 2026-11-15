@@ -38,12 +38,12 @@ public sealed partial class PromptCatalogTests
     /// blocks design §6.5 (count now 71), plus <c>tool.fileRequest.description</c>, <c>tool.confirmRequest.description</c> and
     /// <c>tool.triageRequest.description</c> added for the tool descriptions batch 2 (count now 84), plus
     /// <c>tool.proposeSprint.description</c>, <c>tool.markRetroRow.description</c> and <c>tool.proposeRetroChanges.description</c>
-    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141), plus <c>turn.transcriptOmittedOwn</c> added for Long-Running Rooms LR-R12 (Task 3.3.t; count now 142), plus <c>tool.jobs.description</c> for scheduled Jobs (count now 143), plus <c>systemPrompt.rawRefusal</c> for the Raw guard (Task 3.1.i; count now 144), plus <c>systemPrompt.agentsMdLevels</c> and minus <c>systemPrompt.instructions</c> and <c>systemPrompt.instructionsSection</c> for the AGENTS.md block (Task 5.5.i; <c>instructionsCut</c> is renamed <c>agentsMdCut</c>; count now 143), minus <c>systemPrompt.processBlockManager</c> and <c>systemPrompt.processBlockMember</c> for the retired process blocks (Task 51c, C5; count now 141), plus the five teaching Prompts shipped as overlay files (Task 10.2; count now 148), plus <c>tool.proposeTeamMemory.noTeam</c>, the refusal for a missing Team (count now 150), plus the four Team Rename prompts <c>turn.teamRenamed</c>, <c>turn.projectRenamed</c>, <c>room.teamRenamed</c> and <c>room.projectRenamed</c> (count now 184).
+    /// added for the tool descriptions batch 3 (count now 87), plus the eight Referenced items prompts (count now 95), plus the seven Skill Packs prompts (count now 102), plus <c>tool.logChange.description</c> added for DocHistory spec §6.3 (count now 103), plus <c>systemPrompt.docHistory</c> added for the same spec section 10 (count now 104), plus <c>helper.needsHuman.system</c> and <c>helper.needsHuman.task</c> added for Helpers spec §6.10 (count now 106), plus <c>tool.search.description</c> added for the Agent search tool (count now 107), plus the twenty-three Instructions and Memory prompts (four for Instructions, <c>systemPrompt.memoryChanges</c>, <c>tool.memory.description</c>, the two Team Memory role paragraphs, fourteen memory refusals and the path-alias refusal; count now 130), plus the nine Team Memory Helper prompts (<c>helper.teamMemory.system</c>, <c>helper.teamMemory.proposal</c>, <c>tool.proposeTeamMemory.description</c> and its six replies; count now 139), plus <c>systemPrompt.memoryReadFailed</c>, the memory tool's own read failure (count now 140), plus <c>systemPrompt.memoryOnlyFrontmatter</c> for a write whose text is only a header (count now 141), plus <c>turn.transcriptOmittedOwn</c> added for Long-Running Rooms LR-R12 (Task 3.3.t; count now 142), plus <c>tool.jobs.description</c> for scheduled Jobs (count now 143), plus <c>systemPrompt.rawRefusal</c> for the Raw guard (Task 3.1.i; count now 144), plus <c>systemPrompt.agentsMdLevels</c> and minus <c>systemPrompt.instructions</c> and <c>systemPrompt.instructionsSection</c> for the AGENTS.md block (Task 5.5.i; <c>instructionsCut</c> is renamed <c>agentsMdCut</c>; count now 143), minus <c>systemPrompt.processBlockManager</c> and <c>systemPrompt.processBlockMember</c> for the retired process blocks (Task 51c, C5; count now 141), plus the five teaching Prompts shipped as overlay files (Task 10.2; count now 148), plus <c>tool.proposeTeamMemory.noTeam</c>, the refusal for a missing Team (count now 150), plus the four Team Rename prompts <c>turn.teamRenamed</c>, <c>turn.projectRenamed</c>, <c>room.teamRenamed</c> and <c>room.projectRenamed</c> (count now 184), plus <c>tool.addComment.description</c> for the Task timeline (#586; count now 186).
     /// </summary>
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(185,PromptCatalog.All.Count);
+        Assert.Equal(186,PromptCatalog.All.Count);
     }
 
     /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>
@@ -470,7 +470,7 @@ public sealed partial class PromptCatalogTests
     /// </summary>
     [Theory]
     [InlineData("tool.addEvidence.description", "Adds a line of evidence to a Task: the command you ran with its exit code, or a note when you ran no command. A command needs its exit code, or the line is refused and nothing is added. Evidence is append-only; earlier lines are never changed.")]
-    [InlineData("tool.readRecords.description", "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.")]
+    [InlineData("tool.readRecords.description", "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log, Evidence and comments. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.")]
     [InlineData("tool.listTeams.description", "Lists every Team with its type, manager, what it owns and how many Requests are open in its backlog. Use it to choose the Team to file a Request with.")]
     [InlineData("tool.fileRequest.description", "Files a Request in another Team's backlog. Give the Team, the kind (bug, feature, feedback or question), a title and a body whose '## ' headings cover what the kind needs. Optionally name one of your own Tasks that waits on the answer.")]
     [InlineData("tool.confirmRequest.description", "Confirms that a Done Request you filed was delivered as asked, and closes it. Only your Team's verifier may call it, and only once the Request is in Done. Optionally add a note.")]
@@ -789,8 +789,35 @@ public sealed partial class PromptCatalogTests
         var prompt = PromptCatalog.Get("tool.getTask.description");
 
         Assert.Equal(
-            "Reads one Task by its id, such as PLAT-0042, with an option to also see its full Change log. Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.",
+            "Reads one Task by its id, such as PLAT-0042: its fields, its description, then its timeline's comments and Evidence, with an option to also see its events (the Change log). Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.",
             prompt.Default);
+    }
+
+    /// <summary>#586: <c>getHelp.tasks</c> names add_evidence and add_comment, says the timeline is never edited, and sends hand-offs to a comment rather than the description.</summary>
+    [Fact]
+    public void GetHelpTasks_NamesCommentsAndTheTimeline()
+    {
+        string help = PromptCatalog.Get("getHelp.tasks").Default.ReplaceLineEndings(" ");
+
+        Assert.Contains("reopen_task, add_evidence and add_comment to work with them", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("A Task's description is the only text you edit; its comments and Evidence are a timeline that nobody edits or deletes.", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("put those in a Message or a comment on the Task", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+    }
+
+    /// <summary>#586: <c>tool.addComment.description</c> sends a check you ran to add_evidence, and an override saved for it is what the tool's Description returns.</summary>
+    [Fact]
+    public async Task AddCommentDescription_PointsToAddEvidenceAndIsRenderedFromTheCatalog()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        var store = new PromptStore(dataDir.Options(), NullLogger<PromptStore>.Instance);
+        const string overriddenText = "Leaves a remark on a Task.";
+        store.Save("tool.addComment.description", overriddenText);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        AddCommentTool tool = new(harness.Service, harness.Store, harness.Directory, "caller-id", store);
+
+        Assert.Contains("use add_evidence instead", PromptCatalog.Get("tool.addComment.description").Default, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Equal(overriddenText, tool.Description);
     }
 
     /// <summary>Spec §11.9: <c>getHelp.tasks</c> exists and is <see cref="PromptTiming.Live"/> (rendered fresh into <c>BuildHelp</c>'s output, not baked into the system prompt at session start).</summary>

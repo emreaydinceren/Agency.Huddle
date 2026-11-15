@@ -9,8 +9,9 @@ using Agency.Huddle.App.Tasks.HumanGate;
 
 /// <summary>
 /// Reads one Task's full text (Spec §11.3): the §11.1 line, a <c>key: value</c> line for every
-/// non-empty field, a blank line, the description, and - only when <c>include_change_log</c> asks
-/// for it - the Change log's last 50 entries. Read-only, unlike the other five App Tools (D10): it
+/// non-empty field, a blank line, the description, and a "Timeline:" block of the last 50 entries,
+/// oldest first: the comments and Evidence, plus the events (the Change log) only when
+/// <c>include_change_log</c> asks for them. Read-only, unlike the other five App Tools (D10): it
 /// takes no <c>callerAgentId</c> and no <see cref="TaskService"/> (corrections-B4 D10 item 1),
 /// because reading a Task changes nothing, so there is no actor to resolve and no notify clause to
 /// build.
@@ -67,7 +68,7 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
 
     /// <summary>Builds the §11.3 output for <paramref name="task"/>.</summary>
     /// <param name="task">The Task to render.</param>
-    /// <param name="includeChangeLog">Whether to append the last 50 Change log entries.</param>
+    /// <param name="includeChangeLog">Whether the timeline block also carries the events (the Change log).</param>
     private string Render(TaskItem task, bool includeChangeLog)
     {
         List<string> lines = [TaskToolText.Line(task)];
@@ -118,17 +119,16 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
         string header = string.Join('\n', lines);
         string body = string.Create(CultureInfo.InvariantCulture, $"{header}\n\n{task.Description}");
 
-        if (!includeChangeLog || task.ChangeLog.Count == 0)
+        List<TimelineEntry> entries = [.. task.Timeline.Where(entry => includeChangeLog || entry.Kind != TimelineEntryKind.Event)];
+        if (entries.Count == 0)
         {
             return body;
         }
 
-        IEnumerable<ChangeLogEntry> lastFifty = task.ChangeLog.Count > 50
-            ? task.ChangeLog.Skip(task.ChangeLog.Count - 50)
-            : task.ChangeLog;
+        IEnumerable<TimelineEntry> lastFifty = entries.Count > 50 ? entries.Skip(entries.Count - 50) : entries;
         string entriesText = string.Join('\n', lastFifty.Select(FormatEntry));
 
-        return string.Create(CultureInfo.InvariantCulture, $"{body}\n\nChange log:\n{entriesText}");
+        return string.Create(CultureInfo.InvariantCulture, $"{body}\n\nTimeline:\n{entriesText}");
     }
 
     /// <summary>
@@ -185,8 +185,15 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
             : string.Create(CultureInfo.InvariantCulture, $"{id} ({referenced.Status.ToWire()})");
     }
 
-    /// <summary>Formats one Change log entry.</summary>
+    /// <summary>
+    /// Formats one timeline entry: <c>time author comment: text</c> or <c>time author evidence: text</c> (a multi-line text has its
+    /// continuation lines indented), and an event as <c>time actor: summary</c>, as the Change log has always printed it.
+    /// </summary>
     /// <param name="entry">The entry to format.</param>
-    private static string FormatEntry(ChangeLogEntry entry) =>
-        string.Create(CultureInfo.InvariantCulture, $"{entry.At:yyyy-MM-dd HH:mm} {entry.Actor}: {entry.Summary}");
+    private static string FormatEntry(TimelineEntry entry) => entry.Kind switch
+    {
+        TimelineEntryKind.Comment => string.Create(CultureInfo.InvariantCulture, $"{entry.At:yyyy-MM-dd HH:mm} {entry.Author} comment: {TaskToolText.IndentContinuation(entry.Text)}"),
+        TimelineEntryKind.Evidence => string.Create(CultureInfo.InvariantCulture, $"{entry.At:yyyy-MM-dd HH:mm} {entry.Author} evidence: {TaskToolText.IndentContinuation(entry.Text)}"),
+        _ => string.Create(CultureInfo.InvariantCulture, $"{entry.At:yyyy-MM-dd HH:mm} {entry.Author}: {entry.Text}"),
+    };
 }

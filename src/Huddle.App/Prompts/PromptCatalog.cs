@@ -64,6 +64,7 @@ internal static class PromptCatalog
         ..BuildPart18(),
         ..BuildPart19(),
         ..BuildPart20(),
+        ..BuildPart20Records(),
         ..BuildPart21(),
         ..BuildPart22(),
         ..BuildPart23(),
@@ -1137,7 +1138,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.createRoom.description</c> to <c>tool.readRecords.description</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.createRoom.description</c> to <c>tool.addComment.description</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart20() =>
     [
@@ -1170,6 +1171,26 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "tool.addComment.description",
+            Label: "add_comment description",
+            HelperText:
+                "The one-line job description a model reads for the add_comment tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Adds a comment to a Task's timeline, where everyone working on the Task reads it: a question, a hand-off or what you found. Comments, like Evidence, are never edited or deleted. To record a check you ran, use add_evidence instead.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.readRecords.description</c> to <c>tool.search.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart20Records() =>
+    [
+
+        new PromptDefinition(
             Key: "tool.readRecords.description",
             Label: "read_records description",
             HelperText:
@@ -1177,7 +1198,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.
+                Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the compact records bundle. With 'taskId' it returns that Task's Change log, Evidence and comments. With 'room' it returns the last 200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1192,7 +1213,7 @@ internal static class PromptCatalog
                 "when to pass scope 'all', and the Room-only arguments: regex, context, count, room, team, sender, since and until.",
             Default:
                 """
-                Finds Teams, Agents, Library files, Tasks and Rooms by an exact phrase, ignoring case: the words must appear together, in that order, so a long query often finds nothing. Search one or two words, never a sentence; an empty result is not proof that nothing exists. Tasks match on title, id, assignee, Action and description. 'query' is required (except with 'room', below) and needs at least 3 characters. 'filter' limits the search to one of: all (the default), teams, agents, library, tasks, rooms. 'limit' is the most hits per group (5 for all, 20 for one filter, at most 50). Closed Tasks are listed in their own group. Library hits give the root id and path, with a snippet when the file's text matched. Rooms work like grep over every Room's Messages: you get every matching Message, newest first up to 'limit', each with its Room id and name, Message id, sender, time and a snippet, and a line saying how many more matched. Arguments for Rooms only (giving one searches Rooms only): 'regex' true makes the query a regular expression, ignoring case, so 'hold|wait for|go-ahead' tries several wordings at once; 'context' n (0 to 10) shows n Messages before and after each match; 'count' true gives only the number of matches per Room; 'room' (an id or exact name) limits the search to one Room, and 'room' with no query returns that Room's newest Messages; 'team' limits it to Rooms of one Team; 'sender' to one sender's Messages; 'since' and 'until' (a date like 2026-10-01, or an ISO 8601 time) to a time window. By default Rooms are limited to those you are a Member of and those scoped to one of your Teams; the Chief of Staff searches every Room by default. Pass scope 'all' only when you genuinely need another Room's history, for example to find a decision made elsewhere; every such search is logged, and what you find there is not for quoting into other Rooms without need. Output is capped at 12000 characters.
+                Finds Teams, Agents, Library files, Tasks and Rooms by an exact phrase, ignoring case: the words must appear together, in that order, so a long query often finds nothing. Search one or two words, never a sentence; an empty result is not proof that nothing exists. Tasks match on title, id, assignee, Action, description, and the text of their comments and Evidence. 'query' is required (except with 'room', below) and needs at least 3 characters. 'filter' limits the search to one of: all (the default), teams, agents, library, tasks, rooms. 'limit' is the most hits per group (5 for all, 20 for one filter, at most 50). Closed Tasks are listed in their own group. Library hits give the root id and path, with a snippet when the file's text matched. Rooms work like grep over every Room's Messages: you get every matching Message, newest first up to 'limit', each with its Room id and name, Message id, sender, time and a snippet, and a line saying how many more matched. Arguments for Rooms only (giving one searches Rooms only): 'regex' true makes the query a regular expression, ignoring case, so 'hold|wait for|go-ahead' tries several wordings at once; 'context' n (0 to 10) shows n Messages before and after each match; 'count' true gives only the number of matches per Room; 'room' (an id or exact name) limits the search to one Room, and 'room' with no query returns that Room's newest Messages; 'team' limits it to Rooms of one Team; 'sender' to one sender's Messages; 'since' and 'until' (a date like 2026-10-01, or an ISO 8601 time) to a time window. By default Rooms are limited to those you are a Member of and those scoped to one of your Teams; the Chief of Staff searches every Room by default. Pass scope 'all' only when you genuinely need another Room's history, for example to find a decision made elsewhere; every such search is logged, and what you find there is not for quoting into other Rooms without need. Output is capped at 12000 characters.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1879,7 +1900,7 @@ internal static class PromptCatalog
                 "an id such as PLAT-0042 seen in a Message means. Takes no placeholders.",
             Default:
                 """
-                Reads one Task by its id, such as PLAT-0042, with an option to also see its full Change log. Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.
+                Reads one Task by its id, such as PLAT-0042: its fields, its description, then its timeline's comments and Evidence, with an option to also see its events (the Change log). Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -1966,8 +1987,10 @@ internal static class PromptCatalog
                 """
                 TASKS
                 Tasks track work outside this conversation. Changing one wakes its assignee, unless
-                you are the assignee. Use create_task, get_task, list_tasks, update_task, close_task
-                and reopen_task to work with them. Write a Task's id, for example PLAT-0042, to refer
+                you are the assignee. Use create_task, get_task, list_tasks, update_task, close_task,
+                reopen_task, add_evidence and add_comment to work with them. A Task's description is
+                the only text you edit; its comments and Evidence are a timeline that nobody edits or
+                deletes. Write a Task's id, for example PLAT-0042, to refer
                 to it in a Message; the Human sees it as a link. A sprint groups Tasks in time and
                 spans Teams. Give create_task, update_task or list_tasks a sprint as its name or id, or
                 as current; it must already exist, because you cannot create one.
@@ -1976,7 +1999,7 @@ internal static class PromptCatalog
                 a message, publishing, paying or deleting for good. Create such a Task with
                 human_gate true, or set it with update_task. Set the Action, the one outward step,
                 with the action argument; set the Action before you do it. Never use the Action for
-                hand-offs or status: put those in a Message or the Task's description. When the Proof
+                hand-offs or status: put those in a Message or a comment on the Task. When the Proof
                 is complete, Huddle moves a Task in Review to Needs You. You may still move it
                 yourself, which is harmless if it is already there. Some Proof items complete with no
                 write to the Task, such as role coverage or an attached document's History, and

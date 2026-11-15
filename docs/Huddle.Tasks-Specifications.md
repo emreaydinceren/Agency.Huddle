@@ -1196,7 +1196,13 @@ Created PLAT-0042 "Support SAML login" in Platform/Auth v2, assigned to Kai. Kai
 - **Arguments:** `taskId` (required), and `include_change_log` (a boolean, default false).
 - **Output:** the §11.1 line, then `key: value` lines for every non-empty field, then a blank line,
   then the description.
-- `include_change_log` adds `Change log:` followed by the last 50 entries.
+- After the description, when the Task has a comment or Evidence entry, a `Timeline:` block lists the last 50
+  entries of the timeline (§7.7), oldest first: `{time} {author} comment: {text}` and
+  `{time} {author} evidence: {text}`; a multi-line comment's later lines are indented by two spaces.
+  Events (the Change log) are left out.
+- `include_change_log` adds the events to that block, each as `{time} {actor}: {summary}`, in time order among the
+  comments. With no comment or Evidence and no `include_change_log`, there is no block.
+- Evidence is not part of the description, so the description never shows it.
 - References are shown with their status: `blocked_by: PLAT-0011 (Done), PLAT-0030 (In Progress)`.
 
 ### 11.4 `list_tasks`
@@ -1272,6 +1278,16 @@ checks each description.
 
 **`systemPrompt.tools`** (`PromptCatalog.cs:99-118`) gains one clause in the same style as the
 others: *"… to track work as Tasks and hand it to an Agent …"*.
+
+### 11.10 `add_evidence` and `add_comment`
+
+Both are offered to every Agent with the Task tools and append one timeline entry (§7.7) and no event.
+`add_evidence` records a check (`command` with `exitCode`, or `note`). `add_comment` takes `taskId` and `text`
+(Markdown, several lines fine): the entry carries the caller's name and the clock. **Success:** *"Added a comment to
+PLAT-0042."* Blank text is refused naming `text`, with nothing added; text over 4000 characters returns the service's
+refusal (§9.1). Its description is `tool.addComment.description` (NextSession). `read_records` with a `taskId` lists
+the Task's Evidence from the timeline, then its comments; the records bundle counts a Task as changed when any
+timeline entry is in the window; and search matches a comment or Evidence entry's text as a ContentMatch (§7.7.5).
 
 ---
 

@@ -190,11 +190,11 @@ public sealed class GetTaskToolTests
             expectedLines.Add(string.Create(CultureInfo.InvariantCulture, $"{at:yyyy-MM-dd HH:mm} Nova: {summary}"));
         }
 
-        string expectedTail = "\n\nChange log:\n" + string.Join('\n', expectedLines);
+        string expectedTail = "\n\nTimeline:\n" + string.Join('\n', expectedLines);
         Assert.Equal(expectedTail, result[^expectedTail.Length..]);
     }
 
-    /// <summary>The Change log block's exact shape (Spec §11.3): a blank line, then "Change log:", then one line per entry via the §11.3 entry format, oldest first.</summary>
+    /// <summary>The timeline block's exact shape (Spec §11.3): a blank line, then "Timeline:", then one line per entry, oldest first; an event keeps the §11.3 entry format.</summary>
     [Fact]
     public async Task GetTask_IncludeChangeLog_ExactBlockShape()
     {
@@ -212,10 +212,110 @@ public sealed class GetTaskToolTests
         string result = await tool.InvokeAsync(arguments, ct);
 
         const string expectedTail =
-            "\n\nChange log:\n" +
+            "\n\nTimeline:\n" +
             "2026-09-01 09:00 Nova: created\n" +
             "2026-09-02 10:30 Kai: status: To Do -> In Progress";
         Assert.Equal(expectedTail, result[^expectedTail.Length..]);
+    }
+
+    /// <summary>The Task a timeline test reads: an event, a comment and an Evidence entry, in that time order.</summary>
+    private static TaskItem TimelineTask(string commentText = "Please check the cookie.") =>
+        TestTasks.Make(
+            id: "PLAT-0001",
+            description: "Some details.",
+            changeLog: [new ChangeLogEntry(new DateTimeOffset(2026, 9, 1, 9, 0, 0, TimeSpan.Zero), "Nova", "created")]) with
+        {
+            Comments =
+            [
+                new TimelineEntry(new DateTimeOffset(2026, 9, 1, 10, 0, 0, TimeSpan.Zero), "Kai", TimelineEntryKind.Comment, commentText),
+                new TimelineEntry(new DateTimeOffset(2026, 9, 1, 11, 0, 0, TimeSpan.Zero), "Kai", TimelineEntryKind.Evidence, "dotnet test | exit 0"),
+            ],
+        };
+
+    /// <summary>By default the Timeline block lists the comments and Evidence, oldest first, and leaves the events out.</summary>
+    [Fact]
+    public async Task GetTask_Default_TimelineShowsCommentsAndEvidenceNotEvents()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        _ = CreateInStore(harness.Store, TimelineTask());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001" }, ct);
+
+        const string expectedTail =
+            "\n\nTimeline:\n" +
+            "2026-09-01 10:00 Kai comment: Please check the cookie.\n" +
+            "2026-09-01 11:00 Kai evidence: dotnet test | exit 0";
+        Assert.Equal(expectedTail, result[^expectedTail.Length..]);
+        Assert.DoesNotContain("Nova: created", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>With <c>include_change_log</c> true the Timeline block also carries the events, in time order among the comments.</summary>
+    [Fact]
+    public async Task GetTask_IncludeChangeLog_TimelineShowsEventsToo()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        _ = CreateInStore(harness.Store, TimelineTask());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001", ["include_change_log"] = true }, ct);
+
+        const string expectedTail =
+            "\n\nTimeline:\n" +
+            "2026-09-01 09:00 Nova: created\n" +
+            "2026-09-01 10:00 Kai comment: Please check the cookie.\n" +
+            "2026-09-01 11:00 Kai evidence: dotnet test | exit 0";
+        Assert.Equal(expectedTail, result[^expectedTail.Length..]);
+    }
+
+    /// <summary>A multi-line comment has its continuation lines indented by two spaces.</summary>
+    [Fact]
+    public async Task GetTask_MultiLineComment_IsIndented()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        _ = CreateInStore(harness.Store, TimelineTask("First line.\nSecond line.\n\n- third"));
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001" }, ct);
+
+        const string expectedTail =
+            "\n\nTimeline:\n" +
+            "2026-09-01 10:00 Kai comment: First line.\n  Second line.\n\n  - third\n" +
+            "2026-09-01 11:00 Kai evidence: dotnet test | exit 0";
+        Assert.Equal(expectedTail, result[^expectedTail.Length..]);
+    }
+
+    /// <summary>The description block no longer shows Evidence: it appears under Timeline only.</summary>
+    [Fact]
+    public async Task GetTask_Description_DoesNotShowEvidence()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        _ = CreateInStore(harness.Store, TimelineTask());
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001" }, ct);
+
+        string beforeTimeline = result[..result.IndexOf("\n\nTimeline:", StringComparison.Ordinal)];
+        Assert.DoesNotContain("dotnet test", beforeTimeline, StringComparison.Ordinal);
+        Assert.DoesNotContain("## Evidence", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Task with only an event and no <c>include_change_log</c> has no Timeline block at all.</summary>
+    [Fact]
+    public async Task GetTask_NoCommentsOrEvidence_HasNoTimelineBlock()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", changeLog: [TestTasks.Entry("2026-09-01T09:00:00Z", "Nova", "created")]));
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001" }, ct);
+
+        Assert.DoesNotContain("Timeline:", result, StringComparison.Ordinal);
     }
 
     /// <summary>An <c>include_change_log</c> given as text rather than a boolean is refused, naming the argument, rather than thrown.</summary>

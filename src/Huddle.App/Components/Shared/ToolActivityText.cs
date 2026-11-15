@@ -42,6 +42,7 @@ internal static partial class ToolActivityText
         ["read_records"] = "Reading records",
         ["log_change"] = "Logging a change",
         ["add_evidence"] = "Adding evidence",
+        ["add_comment"] = "Adding a comment",
         ["validate_agent"] = "Checking an Agent",
         ["propose_agents"] = "Proposing Agents",
         ["propose_sprint"] = "Proposing a Sprint",
