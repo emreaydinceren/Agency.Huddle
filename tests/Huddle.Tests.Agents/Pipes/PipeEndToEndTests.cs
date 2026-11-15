@@ -6,6 +6,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Pipes;
@@ -1029,7 +1030,10 @@ public sealed class PipeEndToEndTests
     /// and logs the pre-existing faulted-connection Warning. Dropping the raw <see cref="NamedPipeClientStream"/>
     /// right after sending <c>hello</c>, before reading the reply, leaves no reader on the pipe by the time the
     /// server tries to write the <see cref="Welcome"/> back, so that write fails with "the pipe is broken" instead
-    /// of the clean end-of-stream a graceful close produces.
+    /// of the clean end-of-stream a graceful close produces. The test makes that order certain instead of hoping for it:
+    /// the server's first room lookup while it builds the <see cref="Welcome"/> is held, the client sends <c>hello</c>,
+    /// and once the lookup has been entered (the connection is accepted and the hello read) the client closes and the
+    /// hold is released, so the Welcome write always meets a closed pipe.
     /// </summary>
     [Fact]
     public async Task Disconnect_AbruptClose_StillLogsTheFaultedConnectionWarning()
@@ -1037,16 +1041,51 @@ public sealed class PipeEndToEndTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        TaskTriggerTestSupport.HoldingTeamDirectory? directory = null;
+        await using var fixture = await PipeHostFixture.StartAsync(
+            null,
+            services =>
+            {
+                ServiceDescriptor original = services.Single(static d => d.ServiceType == typeof(ITeamDirectory));
+                services.Remove(original);
+                services.AddSingleton<SqliteTeamDirectory>();
+                services.AddSingleton<ITeamDirectory>(sp => directory = new TaskTriggerTestSupport.HoldingTeamDirectory(sp.GetRequiredService<SqliteTeamDirectory>()));
+            },
+            cts);
+        _ = fixture.Services.GetRequiredService<ITeamDirectory>();
+        Assert.NotNull(directory);
 
-        var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        await pipe.ConnectAsync(ct);
-        await using (var client = new JsonLineStream(pipe, leaveOpen: true))
+        // The first room lookup of the Welcome parks until the pipe is closed; later ones pass through.
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int calls = 0;
+        directory.BeforeGetRoomMembers = () =>
         {
-            await client.WriteAsync(new Hello("echo", null), ct);
-        }
+            if (Interlocked.Increment(ref calls) != 1)
+            {
+                return Task.CompletedTask;
+            }
 
-        pipe.Dispose();
+            entered.TrySetResult();
+            return release.Task;
+        };
+
+        try
+        {
+            var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(ct);
+            await using (var client = new JsonLineStream(pipe, leaveOpen: true))
+            {
+                await client.WriteAsync(new Hello("echo", null), ct);
+            }
+
+            await entered.Task.WaitAsync(ct);
+            pipe.Dispose();
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
 
         List<CapturedLogEntry> Warnings() => fixture.LogEntries
             .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal) && e.Level == LogLevel.Warning)
@@ -1063,7 +1102,9 @@ public sealed class PipeEndToEndTests
     /// <summary>
     /// A client that connects and leaves before sending anything ends the connection before its Welcome, and the server
     /// logs exactly one Warning naming the handshake step and the reason, so a client-side broken pipe in CI
-    /// (agents/CIPipeline.md, RoomSessionResumeTests) can be matched to why the server let the connection go.
+    /// (agents/CIPipeline.md, RoomSessionResumeTests) can be matched to why the server let the connection go. The client
+    /// leaves only after the server has accepted it: a client that closes before the accept is issued never becomes a
+    /// connection, so there would be no handshake to log.
     /// </summary>
     [Fact]
     public async Task Disconnect_BeforeHello_LogsOneWarningWithTheStepAndReason()
@@ -1074,6 +1115,7 @@ public sealed class PipeEndToEndTests
         await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         var client = await fixture.ConnectClientAsync(ct);
+        await fixture.WaitForConnectionsOpenedAsync(1, ct);
         await client.DisposeAsync();
 
         List<CapturedLogEntry> warnings = await ConnectionWarningsAsync(fixture, ct);
