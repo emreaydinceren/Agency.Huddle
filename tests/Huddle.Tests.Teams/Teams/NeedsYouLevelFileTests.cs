@@ -3,7 +3,7 @@ using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.Tests.Teams;
 
-/// <summary>Pins the <c>needsYouLevel</c> and <c>spendCap</c> keys of <see cref="TeamFile"/> and <see cref="ProjectFile"/> (ADR-0087).</summary>
+/// <summary>Pins the <c>needsYouLevel</c> and <c>spendCap</c> keys of <see cref="TeamFile"/> and <see cref="ProjectFile"/> (ADR-0088).</summary>
 public sealed class NeedsYouLevelFileTests
 {
     private const string TeamText = "---\nteamType: 'development@1.0.0'\nneedsYouLevel: 'run-inside-team'\nspendCap: '5.50'\nowner: 'Ada'\n---\nNotes\n";

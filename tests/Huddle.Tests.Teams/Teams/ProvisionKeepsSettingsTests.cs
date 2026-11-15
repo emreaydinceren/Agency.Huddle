@@ -44,7 +44,7 @@ public sealed class ProvisionKeepsSettingsTests
         Assert.Equal("ships the platform", folders.File.Owns);
     }
 
-    /// <summary>Provisioning rewrites <c>_team.md</c> and keeps the Team's Needs You level and spend cap (ADR-0087), on disk too.</summary>
+    /// <summary>Provisioning rewrites <c>_team.md</c> and keeps the Team's Needs You level and spend cap (ADR-0088), on disk too.</summary>
     [Fact]
     public void Provision_TeamHasNeedsYouLevel_KeepsLevelAndCap()
     {

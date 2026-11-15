@@ -71,7 +71,7 @@ internal static class SessionPromptInputs
 
     /// <summary>
     /// Lists the effective Needs You level of each of the Persona's Teams and their Projects, but only when one of them runs inside the Team;
-    /// when every scope is Ask me it returns <see langword="null"/>, so the default prompt is unchanged (ADR-0087).
+    /// when every scope is Ask me it returns <see langword="null"/>, so the default prompt is unchanged (ADR-0088).
     /// </summary>
     /// <param name="levels">Resolves the levels; <see langword="null"/> means none is known and nothing is listed.</param>
     /// <param name="catalogTeams">The catalog's Teams, which name each Team's Projects.</param>

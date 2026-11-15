@@ -1482,7 +1482,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         return this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine ? text + "\n" + confirmLine : text;
     }
 
-    /// <summary>The line a release (ADR-0087) adds to the wake: the merge needs no Accept, a push still does.</summary>
+    /// <summary>The line a release (ADR-0088) adds to the wake: the merge needs no Accept, a push still does.</summary>
     /// <param name="latest">The Task's latest state.</param>
     /// <param name="scope">The scope word the release names: <c>global</c>, <c>Team</c> or <c>project</c>.</param>
     private static string ReleaseSentence(TaskItem latest, string scope) => string.Create(

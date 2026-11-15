@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Agency.Huddle.Tests.Tasks;
 
 /// <summary>
-/// A Task service and a merge gate wired to the same Needs You levels (ADR-0087): Team Platform has the gates the caller names, its Project
+/// A Task service and a merge gate wired to the same Needs You levels (ADR-0088): Team Platform has the gates the caller names, its Project
 /// <c>Site</c> and the Team itself may set a level, and the global level is the configured one. Shared by the Task service and merge gate tests.
 /// </summary>
 internal sealed class NeedsYouLevelRig : IDisposable

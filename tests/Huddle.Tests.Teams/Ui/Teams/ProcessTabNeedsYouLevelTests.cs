@@ -5,7 +5,7 @@ using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.Tests.Ui.Teams;
 
-/// <summary>Pins that the Process tab offers the Needs You level (ADR-0087) and no longer offers the accept-before-merge switch the level replaced.</summary>
+/// <summary>Pins that the Process tab offers the Needs You level (ADR-0088) and no longer offers the accept-before-merge switch the level replaced.</summary>
 public sealed class ProcessTabNeedsYouLevelTests
 {
     private static IRenderedComponent<ContainerFragment> RenderTab(MudBunitContext ctx) =>

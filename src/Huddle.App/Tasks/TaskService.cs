@@ -595,7 +595,7 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
-    /// Whether the Task is the one case a Needs You level releases (ADR-0087): ungated, in a Team with <c>accept-before-merge</c>, the Human has
+    /// Whether the Task is the one case a Needs You level releases (ADR-0088): ungated, in a Team with <c>accept-before-merge</c>, the Human has
     /// not turned its gate off, and the level that applies to it is Run inside the Team. Under Ask me, or with no levels wired, it is not.
     /// </summary>
     /// <param name="task">The Task as just written.</param>
@@ -631,7 +631,7 @@ internal sealed class TaskService : IDisposable
 
     /// <summary>
     /// Appends one Change log entry written by Huddle and nothing else: no field changes, no move. It records a step Huddle took under a
-    /// Needs You level (ADR-0087) on a Task, such as a Sprint approved without the Human. The change is raised like any other write.
+    /// Needs You level (ADR-0088) on a Task, such as a Sprint approved without the Human. The change is raised like any other write.
     /// </summary>
     /// <param name="id">The Task.</param>
     /// <param name="summary">The entry's summary.</param>

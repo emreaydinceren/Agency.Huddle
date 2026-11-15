@@ -10,7 +10,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
 /// <c>create_task</c> and <c>update_task</c> tell an Agent, after the fact, that an Action in a scope that runs inside the Team sends the Task to
-/// the Human (ADR-0087). The note appears only when the Task has an Action, its level is Run inside the Team and its Team has
+/// the Human (ADR-0088). The note appears only when the Task has an Action, its level is Run inside the Team and its Team has
 /// <c>accept-before-merge</c>; every other result is unchanged.
 /// </summary>
 public sealed class TaskActionNoteTests

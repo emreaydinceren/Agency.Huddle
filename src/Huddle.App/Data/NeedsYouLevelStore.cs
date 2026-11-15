@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace Agency.Huddle.App.Data;
 
 /// <summary>
-/// Keeps the global Needs You level and spend cap the Human saved in Settings (ADR-0087), as one row of <c>team.db</c>. While a row exists it
+/// Keeps the global Needs You level and spend cap the Human saved in Settings (ADR-0088), as one row of <c>team.db</c>. While a row exists it
 /// wins over <c>Team:NeedsYouLevel</c>. No tool writes it: only the Settings page does, through <c>NeedsYouLevels.SetGlobal</c>.
 /// </summary>
 /// <remarks>Deliberately synchronous, in the style of <see cref="PersonaModelStore"/>.</remarks>

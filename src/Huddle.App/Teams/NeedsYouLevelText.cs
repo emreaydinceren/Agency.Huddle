@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>The wire names, display names and spend-cap text of the Needs You level (ADR-0087), shared by <c>_team.md</c>, <c>_project.md</c>, <c>team.db</c> and the configuration.</summary>
+/// <summary>The wire names, display names and spend-cap text of the Needs You level (ADR-0088), shared by <c>_team.md</c>, <c>_project.md</c>, <c>team.db</c> and the configuration.</summary>
 internal static class NeedsYouLevelText
 {
     /// <summary>The wire name of <see cref="NeedsYouLevel.AskMe"/>.</summary>

@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App;
 
 /// <summary>
-/// The global Needs You level, bound from <c>Team:NeedsYouLevel</c> (ADR-0087). The value Settings saves in <c>team.db</c> wins over
+/// The global Needs You level, bound from <c>Team:NeedsYouLevel</c> (ADR-0088). The value Settings saves in <c>team.db</c> wins over
 /// these keys once it exists.
 /// </summary>
 public sealed class NeedsYouOptions

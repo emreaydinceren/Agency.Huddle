@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>Tells a retro change that would touch a Needs You level or its spend cap from every other, so neither a proposal nor an Accept can change them (ADR-0087).</summary>
+/// <summary>Tells a retro change that would touch a Needs You level or its spend cap from every other, so neither a proposal nor an Accept can change them (ADR-0088).</summary>
 internal static class RetroChangeGuard
 {
     /// <summary>Whether a change to <paramref name="targetFile"/> names <c>needsYouLevel</c> or <c>spendCap</c> in its find or replace text.</summary>

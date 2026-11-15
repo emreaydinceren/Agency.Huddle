@@ -60,7 +60,7 @@ internal interface ITeamFolders
     /// <returns><see langword="false"/> when the Project folder does not exist or cannot be written.</returns>
     bool UpdateProjectAvatar(string team, string project, Avatars.Avatar avatar) => false;
 
-    /// <summary>Reads a Project's <c>_project.md</c> (ADR-0087 reads its Needs You level from it). The default knows no Project file.</summary>
+    /// <summary>Reads a Project's <c>_project.md</c> (ADR-0088 reads its Needs You level from it). The default knows no Project file.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="project">The Project's name.</param>
     /// <returns>The parsed file, or <see langword="null"/> when the Project folder or its file is missing or unreadable.</returns>

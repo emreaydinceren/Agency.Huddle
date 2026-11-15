@@ -15,7 +15,7 @@ internal static class PermissionGuardList
     /// <param name="protectedDirectory">Refuses a write into the Agent's own configuration directory; <see langword="null"/> when it cannot be resolved.</param>
     /// <param name="mergeGate">Asks the Team's gate about <c>git merge</c> and <c>git push</c>; <see langword="null"/> leaves them approved.</param>
     /// <param name="renamedFolder">Refuses a write under a renamed Team's old folder, consulted after Team Memory; <see langword="null"/> when no rename journal is registered.</param>
-    /// <param name="needsYouLevel">Refuses a write that changes the Needs You level or spend cap of a <c>_team.md</c> or <c>_project.md</c> (ADR-0087), consulted right after <c>AGENTS.md</c>; <see langword="null"/> when absent.</param>
+    /// <param name="needsYouLevel">Refuses a write that changes the Needs You level or spend cap of a <c>_team.md</c> or <c>_project.md</c> (ADR-0088), consulted right after <c>AGENTS.md</c>; <see langword="null"/> when absent.</param>
     /// <returns>The guards, in the order the handler consults them.</returns>
     public static IReadOnlyList<IToolCallGuard> InOrder(
         AgentsMdGuard agentsMd,

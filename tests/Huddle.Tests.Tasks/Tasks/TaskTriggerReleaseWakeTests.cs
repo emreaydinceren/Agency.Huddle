@@ -5,7 +5,7 @@ using static Agency.Huddle.Tests.Tasks.TaskTriggerTestSupport;
 
 namespace Agency.Huddle.Tests.Tasks;
 
-/// <summary>The wake <see cref="TaskTriggerService"/> posts for a release (ADR-0087): the assignee is told the merge needs no Accept and a push still does.</summary>
+/// <summary>The wake <see cref="TaskTriggerService"/> posts for a release (ADR-0088): the assignee is told the merge needs no Accept and a push still does.</summary>
 public sealed class TaskTriggerReleaseWakeTests
 {
     private const string ReleaseSummary = "proceeded under project level Run inside the Team: its merge into main needs no Accept";

@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
-/// The spend cap of a scope that runs inside the Team (ADR-0087): spend counted from the moment the Human set the level, the fall back to
+/// The spend cap of a scope that runs inside the Team (ADR-0088): spend counted from the moment the Human set the level, the fall back to
 /// Ask me at the cap, the one question per allowance, and Yes granting exactly one more cap.
 /// </summary>
 public sealed class NeedsYouCapTests

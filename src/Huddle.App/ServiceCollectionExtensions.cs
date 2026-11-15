@@ -570,7 +570,7 @@ public static class ServiceCollectionExtensions
         // The Team's process gates; TaskService asks it before every Task status change (PR-7).
         services.AddSingleton<Agency.Huddle.App.Teams.ProcessGateService>();
 
-        // The Needs You level per scope (ADR-0087): global in team.db, Team in _team.md, Project in _project.md.
+        // The Needs You level per scope (ADR-0088): global in team.db, Team in _team.md, Project in _project.md.
         services.AddSingleton<NeedsYouLevelStore>();
         services.AddSingleton<NeedsYouCapStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.NeedsYouCaps>(); // the spend cap's counting and its Yes/No question.

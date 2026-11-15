@@ -267,7 +267,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Paid** · about 40 min · Sonnet at low Effort, never Opus
 
-*Proves [ADR-0087](../../adr/0087-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md): under Run inside the Team a Development Team finishes a small build with no Needs You entry for a local merge, and a `git push` still waits for the Human's Accept.*
+*Proves [ADR-0088](../../adr/0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md): under Run inside the Team a Development Team finishes a small build with no Needs You entry for a local merge, and a `git push` still waits for the Human's Accept.*
 
 **Before you start**
 

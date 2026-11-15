@@ -16,7 +16,7 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
     <PageHeader Title="@HumanGateCopy.NeedsYouTitle" />
 
-    @* The spend cap questions (ADR-0087) come first: a scope that ran out of its allowance is asking you for each step until you answer. *@
+    @* The spend cap questions (ADR-0088) come first: a scope that ran out of its allowance is asking you for each step until you answer. *@
     <div id="cap">
         @foreach (CapAsk ask in this.capAsks)
         {

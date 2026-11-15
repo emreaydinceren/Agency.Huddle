@@ -4,7 +4,7 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Re-evaluates the scopes that count a Persona's spend each time it grows, so the question that a cap raises opens as the cap is reached
-/// and not only when something next reads a level (ADR-0087). It holds no timer or token: it is a subscription for the life of the host.
+/// and not only when something next reads a level (ADR-0088). It holds no timer or token: it is a subscription for the life of the host.
 /// </summary>
 /// <param name="spend">Raises an event when a Persona's persisted spend grows.</param>
 /// <param name="levels">Evaluating a level is what opens the question, so the watcher asks for the levels of the scopes the Persona counts in.</param>

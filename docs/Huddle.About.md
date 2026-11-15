@@ -19,7 +19,8 @@ working: its tool calls, file edits and running cost appear as it goes.
   Household, and Huddle hires a manager and the roles around it. A built-in
   Chief of Staff helps you put a team together and hires no one until you approve.
 - **Hand out real work with Tasks.** Every Task has a status, a priority, an
-  assignee, due dates, sub-tasks and blockers, and a change log of who did what.
+  assignee, due dates, sub-tasks and blockers, and a timeline of comments,
+  evidence and who changed what.
   View them as a list or a Kanban board, and save filtered Views such as "My
   Tasks". Assign a Task to an Agent and it wakes up to do it. Reference a Task
   from any chat with `#`, and see the same history the Agent does. Agents
@@ -49,8 +50,9 @@ working: its tool calls, file edits and running cost appear as it goes.
   readable, searchable and versionable. Edit one by hand and Huddle picks it up.
 - **A team, not a chatbot.** Agents have roles, belong to Teams and Projects,
   and work from a shared Task list and a shared Library.
-- **Transparent by design.** Every change is logged: Tasks keep a change log, tool
-  calls are recorded, and a rule override is written down.
+- **Transparent by design.** Every change is logged: a Task's timeline records
+  every change and nobody edits it afterwards, tool calls are recorded, and a rule
+  override is written down.
 - **Approvals where they matter.** Proposals such as hiring, Sprints and process
   changes wait for your yes.
 - **No setup ceremony.** One command installs it on Windows or macOS with no admin

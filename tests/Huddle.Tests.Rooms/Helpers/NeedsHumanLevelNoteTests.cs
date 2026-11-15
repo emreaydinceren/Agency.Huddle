@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 namespace Agency.Huddle.Tests.Helpers;
 
 /// <summary>
-/// The Needs Human Helper is told when the Human set a Task's scope to Run inside the Team (ADR-0087), so it does not gate a local merge
+/// The Needs Human Helper is told when the Human set a Task's scope to Run inside the Team (ADR-0088), so it does not gate a local merge
 /// that the level lets through; under Ask me it is told nothing.
 /// </summary>
 public sealed class NeedsHumanLevelNoteTests

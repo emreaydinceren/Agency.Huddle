@@ -866,7 +866,7 @@
     margin-bottom: 16px;
 }
 
-/* The spend cap question (ADR-0087): the sentence over its two buttons, on the page and under a level control. */
+/* The spend cap question (ADR-0088): the sentence over its two buttons, on the page and under a level control. */
 .needs-you-cap-ask {
     display: flex;
     flex-direction: column;

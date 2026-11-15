@@ -15,7 +15,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="gates">Decides the <c>checks-before-merge</c> gate.</param>
 /// <param name="catalog">Maps a Teams-line label to the Team, so a stale label is ignored.</param>
 /// <param name="timeProvider">The clock for the window after an Accept that went straight to Done; the system clock when <see langword="null"/>.</param>
-/// <param name="levels">Resolves the Needs You level of a Task, so a local merge of a released Task needs no Accept (ADR-0087); <see langword="null"/> means Ask me everywhere.</param>
+/// <param name="levels">Resolves the Needs You level of a Task, so a local merge of a released Task needs no Accept (ADR-0088); <see langword="null"/> means Ask me everywhere.</param>
 internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, ProcessGateService gates, ITeamCatalog catalog, TimeProvider? timeProvider = null, NeedsYouLevels? levels = null) : IMergeGate
 {
     /// <summary>

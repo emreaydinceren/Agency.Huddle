@@ -3,7 +3,7 @@ using Agency.Huddle.App.Acp;
 namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
-/// <see cref="GitCommandLine.HasPush"/> and <see cref="GitCommandLine.OnlyLocalMergesIntoMain"/> (ADR-0087): any push is a push whatever
+/// <see cref="GitCommandLine.HasPush"/> and <see cref="GitCommandLine.OnlyLocalMergesIntoMain"/> (ADR-0088): any push is a push whatever
 /// its arguments, and only a line that merges into main and pushes nothing counts as a local merge.
 /// </summary>
 public sealed class GitCommandLinePushTests

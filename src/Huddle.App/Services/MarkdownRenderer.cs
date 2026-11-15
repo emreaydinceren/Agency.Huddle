@@ -131,6 +131,8 @@ public static partial class MarkdownRenderer
         Pipeline.Setup(renderer);
 
         var document = Markdown.Parse(markdown, Pipeline);
+        renderer.ObjectRenderers.Insert(0, new GuideDiagramInlineRenderer());
+        MarkdownRenderer.InlineGuideDiagrams(document);
         MarkdownRenderer.MarkStandaloneBoldParagraphsAsHeadings(document);
         if (tasks is not null)
         {

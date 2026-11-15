@@ -13,7 +13,7 @@ using Agency.Huddle.Tests.Ui.Teams;
 namespace Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
-/// <c>propose_sprint</c> under the Needs You level (ADR-0087): when every Task it names runs inside the Team, Huddle approves the Sprint
+/// <c>propose_sprint</c> under the Needs You level (ADR-0088): when every Task it names runs inside the Team, Huddle approves the Sprint
 /// at once and writes it down on each Task and in the Feed; when any Task is under Ask me, the proposal waits for the Human as before.
 /// </summary>
 public sealed class ProposeSprintNeedsYouLevelTests

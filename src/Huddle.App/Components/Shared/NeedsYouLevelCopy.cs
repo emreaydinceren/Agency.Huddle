@@ -3,7 +3,7 @@ using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Components.Shared;
 
-/// <summary>Every word of the Needs You level controls (ADR-0087) in one place, so the three places that set a level, and the cap question, say the same thing.</summary>
+/// <summary>Every word of the Needs You level controls (ADR-0088) in one place, so the three places that set a level, and the cap question, say the same thing.</summary>
 internal static class NeedsYouLevelCopy
 {
     /// <summary>What Ask me means, under the choice.</summary>

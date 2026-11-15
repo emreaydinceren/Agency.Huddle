@@ -81,7 +81,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     public string? ArchivedManager { get; init; }
 
     /// <summary>
-    /// The Team's Needs You level (ADR-0087), kept in the optional <c>needsYouLevel</c> key; <see langword="null"/> means unset, so the Team
+    /// The Team's Needs You level (ADR-0088), kept in the optional <c>needsYouLevel</c> key; <see langword="null"/> means unset, so the Team
     /// inherits the global level. Only the Human sets it: an Agent's write that changes the line is refused (<c>NeedsYouLevelGuard</c>).
     /// </summary>
     public NeedsYouLevel? NeedsYouLevel { get; init; }

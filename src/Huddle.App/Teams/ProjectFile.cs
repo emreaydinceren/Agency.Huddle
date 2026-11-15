@@ -26,7 +26,7 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
     /// </summary>
     public IReadOnlyList<string> UnknownLines { get; init; } = [];
 
-    /// <summary>The Project's Needs You level (ADR-0087), kept in the optional <c>needsYouLevel</c> key; <see langword="null"/> means unset, so the Project inherits its Team's. Only the Human sets it.</summary>
+    /// <summary>The Project's Needs You level (ADR-0088), kept in the optional <c>needsYouLevel</c> key; <see langword="null"/> means unset, so the Project inherits its Team's. Only the Human sets it.</summary>
     public NeedsYouLevel? NeedsYouLevel { get; init; }
 
     /// <summary>The spend cap in USD that travels with <see cref="NeedsYouLevel"/>, in the optional <c>spendCap</c> key; <see langword="null"/> means no cap.</summary>

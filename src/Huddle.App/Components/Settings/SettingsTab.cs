@@ -19,7 +19,7 @@ public enum SettingsTab
     /// <summary>What Adapters have reported spending: per Team, Agent and the Helpers, and a Total per currency. Read-only.</summary>
     Spending,
 
-    /// <summary>The global Needs You level and its spend cap (ADR-0087): how much of the Teams' work waits for the Human.</summary>
+    /// <summary>The global Needs You level and its spend cap (ADR-0088): how much of the Teams' work waits for the Human.</summary>
     NeedsYou,
 
     /// <summary>Choosing a theme, the accent colour and the Library pane side.</summary>

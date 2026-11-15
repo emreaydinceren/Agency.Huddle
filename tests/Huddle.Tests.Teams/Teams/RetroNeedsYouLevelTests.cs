@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
-/// Pins that a retro change can never set the Needs You level or its spend cap (ADR-0087): <c>propose_retro_changes</c> refuses such a proposal and
+/// Pins that a retro change can never set the Needs You level or its spend cap (ADR-0088): <c>propose_retro_changes</c> refuses such a proposal and
 /// logs it, and an Accept refuses one that is already stored, even one that names no key but would change a value.
 /// </summary>
 public sealed class RetroNeedsYouLevelTests

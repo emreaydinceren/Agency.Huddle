@@ -8,7 +8,7 @@ using NeedsYouPageComponent = Agency.Huddle.App.Components.NeedsYou.NeedsYouPage
 
 namespace Agency.Huddle.Tests.Ui;
 
-/// <summary>Pins that a spend cap question (ADR-0087) is listed on the Needs You page and the sidebar card, answered with Yes or No, and gone once answered.</summary>
+/// <summary>Pins that a spend cap question (ADR-0088) is listed on the Needs You page and the sidebar card, answered with Yes or No, and gone once answered.</summary>
 public sealed class NeedsYouCapAskTests
 {
     /// <summary>The page shows the open question as a card with its two buttons and no empty state.</summary>

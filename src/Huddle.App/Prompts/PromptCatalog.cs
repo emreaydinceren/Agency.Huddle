@@ -384,7 +384,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds the Needs You level prompts (ADR-0087): the system prompt section and the note on a Task result.</summary>
+    /// <summary>Builds the Needs You level prompts (ADR-0088): the system prompt section and the note on a Task result.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildNeedsYou() =>
     [
@@ -2311,7 +2311,7 @@ internal static class PromptCatalog
             Label: "Needs You level change refused",
             HelperText:
                 "The reason logged when an Agent's tool call that would change the needsYouLevel or spendCap line of a " +
-                "_team.md or _project.md is refused (ADR-0087).",
+                "_team.md or _project.md is refused (ADR-0088).",
             Default: "Only the Human sets the Needs You level and its spend cap, in the app. Do not edit the needsYouLevel or spendCap lines.",
             Placeholders: [],
             RequiredPlaceholders: [],

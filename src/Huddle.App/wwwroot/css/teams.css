@@ -433,7 +433,7 @@
     }
 }
 
-/* The Needs You level control (ADR-0087): the choice, one line under it for what it means, the cap, Save, what is in force, the open question. */
+/* The Needs You level control (ADR-0088): the choice, one line under it for what it means, the cap, Save, what is in force, the open question. */
 .needs-you-level {
     display: flex;
     flex-direction: column;

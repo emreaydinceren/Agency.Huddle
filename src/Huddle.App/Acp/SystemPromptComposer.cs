@@ -448,7 +448,7 @@ internal static class SystemPromptComposer
                     ["{{searchTool}}"] = toolNames.FirstOrDefault(static name => AppToolNames.Matches(name, "search")) ?? ToolUnavailable,
                 })));
 
-    /// <summary>Adds the Needs You level part (ADR-0087) when the Persona's session start found a scope that runs inside the Team; one line per scope.</summary>
+    /// <summary>Adds the Needs You level part (ADR-0088) when the Persona's session start found a scope that runs inside the Team; one line per scope.</summary>
     /// <param name="parts">The prompt parts so far.</param>
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="needsYou">The <c>(scope, level)</c> pairs, or <see langword="null"/> or empty for none.</param>

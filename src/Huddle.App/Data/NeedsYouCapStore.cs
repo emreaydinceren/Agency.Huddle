@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace Agency.Huddle.App.Data;
 
 /// <summary>
-/// Keeps, per scope that sets Run inside the Team with a spend cap, how far its spend has come (ADR-0087). One row of <c>team.db</c> per
+/// Keeps, per scope that sets Run inside the Team with a spend cap, how far its spend has come (ADR-0088). One row of <c>team.db</c> per
 /// scope key (<c>global</c>, <c>team:Team</c> or <c>project:Team/Project</c>). Amounts are invariant-culture decimal text.
 /// </summary>
 /// <remarks>Deliberately synchronous, in the style of <see cref="NeedsYouLevelStore"/>. The caller serialises its read-modify-write.</remarks>

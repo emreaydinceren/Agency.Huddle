@@ -10,7 +10,7 @@ using Agency.Huddle.Tests.Teams;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Pins <see cref="NeedsYouLevelGuard"/> (ADR-0087): an Agent cannot set the Needs You level or its spend cap. An edit that names either key, or whose
+/// Pins <see cref="NeedsYouLevelGuard"/> (ADR-0088): an Agent cannot set the Needs You level or its spend cap. An edit that names either key, or whose
 /// result would change one, a write that carries a different level or cap than the file on disk, and a delete or move of a file that carries one are
 /// refused; a read and every other edit of those files are allowed.
 /// </summary>

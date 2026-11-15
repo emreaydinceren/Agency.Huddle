@@ -5,7 +5,7 @@ date: 2026-11-05
 
 # A merge into main waits for the Human's Accept, decided by Team
 
-> Amended by [ADR-0087](0087-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md) (2026-11-15):
+> Amended by [ADR-0088](0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md) (2026-11-15):
 > the Process tab's switch is gone and the Needs You level replaces it. Under Run inside the Team a local merge into main
 > passes once a Task is released; a push waits for an Accept under every level. `AcceptBeforeMergeMigration` is removed.
 

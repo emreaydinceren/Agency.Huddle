@@ -8,7 +8,7 @@ using Agency.Huddle.Tests.Tasks;
 namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
-/// Pins <see cref="NeedsYouLevels"/> (ADR-0087): the Project's level beats the Team's, which beats the global one; an unset scope inherits;
+/// Pins <see cref="NeedsYouLevels"/> (ADR-0088): the Project's level beats the Team's, which beats the global one; an unset scope inherits;
 /// the saved global value beats the configuration; and the scope that supplies the level also supplies the cap.
 /// </summary>
 public sealed class NeedsYouLevelsTests

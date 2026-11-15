@@ -15,7 +15,7 @@ namespace Agency.Huddle.App.Helpers.NeedsHuman;
 /// <param name="service">Makes the change, through the same service the Human and the Agents use.</param>
 /// <param name="overrides">The Tasks the Human turned the gate off on.</param>
 /// <param name="settings">Tells whether the Helper has been turned off since the run started.</param>
-/// <param name="levels">Resolves the Task's Needs You level, so the Helper is told when a local merge stays inside the Team (ADR-0087); <see langword="null"/> means Ask me.</param>
+/// <param name="levels">Resolves the Task's Needs You level, so the Helper is told when a local merge stays inside the Team (ADR-0088); <see langword="null"/> means Ask me.</param>
 internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, NeedsHumanOverrideStore overrides, HelperSettingsResolver settings, NeedsYouLevels? levels = null)
     : IHelperAgent<NeedsHumanInput, NeedsHumanVerdict>
 {
@@ -61,7 +61,7 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
 
     /// <summary>
     /// The note that tells the model the Human set the Task's scope to Run inside the Team, so a merge into the local main stays inside the
-    /// Team (ADR-0087); empty under Ask me, when no levels are wired, or when the Task is gone.
+    /// Team (ADR-0088); empty under Ask me, when no levels are wired, or when the Task is gone.
     /// </summary>
     /// <param name="input">The input.</param>
     internal string LevelNote(NeedsHumanInput input)

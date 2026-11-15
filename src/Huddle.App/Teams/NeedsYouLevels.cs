@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// Resolves the Needs You level that applies to a Team, a Project or a Task, and lets the Human set it (ADR-0087). The most specific scope
+/// Resolves the Needs You level that applies to a Team, a Project or a Task, and lets the Human set it (ADR-0088). The most specific scope
 /// that sets a level wins: the Project's <c>_project.md</c>, else the Team's <c>_team.md</c>, else the global value (the one Settings saved
 /// in <c>team.db</c>, else <c>Team:NeedsYouLevel</c>). The spend cap of the scope that supplied the level comes with it.
 /// </summary>

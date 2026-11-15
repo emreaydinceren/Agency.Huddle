@@ -75,7 +75,7 @@ internal static class TaskFeedRules
         return new FeedEffects(posts, resolutions);
     }
 
-    /// <summary>Adds the Activity item for a release (ADR-0087): Huddle let the Task's merge into main go ahead without an Accept.</summary>
+    /// <summary>Adds the Activity item for a release (ADR-0088): Huddle let the Task's merge into main go ahead without an Accept.</summary>
     /// <param name="change">The change.</param>
     /// <param name="actor">Who made the change.</param>
     /// <param name="posts">Receives the item.</param>

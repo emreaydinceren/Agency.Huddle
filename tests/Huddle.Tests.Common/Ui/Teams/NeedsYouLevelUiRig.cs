@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
-/// The services the Needs You level control draws and saves through (ADR-0087), registered on a bUnit context: Team Dev (member Nova, Project Site)
+/// The services the Needs You level control draws and saves through (ADR-0088), registered on a bUnit context: Team Dev (member Nova, Project Site)
 /// whose files are in memory, the stores under a temporary data folder, and the Feed that receives the cap question.
 /// </summary>
 internal sealed class NeedsYouLevelUiRig : IDisposable

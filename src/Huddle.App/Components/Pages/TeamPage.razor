@@ -148,7 +148,7 @@
                 <Actions>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
                                Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</MudButton>
-                    @* A Project has no tab for settings, so its Needs You level (ADR-0087) opens in a dialog. *@
+                    @* A Project has no tab for settings, so its Needs You level (ADR-0088) opens in a dialog. *@
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.NotificationsActive"
                                Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</MudButton>
                     @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
@@ -433,7 +433,7 @@
         }
     }
 
-    /// <summary>Opens <see cref="NeedsYouLevelDialog"/> for <paramref name="project"/>'s Needs You level (ADR-0087).</summary>
+    /// <summary>Opens <see cref="NeedsYouLevelDialog"/> for <paramref name="project"/>'s Needs You level (ADR-0088).</summary>
     private async Task EditProjectLevelAsync(string team, string project)
     {
         DialogParameters<NeedsYouLevelDialog> parameters = new()

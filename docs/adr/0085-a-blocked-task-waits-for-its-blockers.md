@@ -64,7 +64,7 @@ The gate is new, so a Team created before it has none. `BlockersDoneBeforeStartM
 the first start after the upgrade, recorded by the marker file `blockers-done-before-start.migrated` in the data folder.
 It adds `blockers-done-before-start` to the `gates` of every Team whose Team type is `development`. Teams of other types
 are not touched. The marker means a Human who turns the gate off later keeps it off. It shares its logic with
-`AcceptBeforeMergeMigration` (since removed by [ADR-0087](0087-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md)) in `DevelopmentGateMigration`; see [ADR-0078](0078-a-merge-into-main-waits-for-the-humans-accept-by-team.md).
+`AcceptBeforeMergeMigration` (since removed by [ADR-0088](0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md)) in `DevelopmentGateMigration`; see [ADR-0078](0078-a-merge-into-main-waits-for-the-humans-accept-by-team.md).
 
 New Teams get the gate from the process template. The four templates (`lightweight-flow`, `maintenance`, `spec-driven`,
 `sprints`) carry it in the `gates:` line, in a `## Gates` bullet, and in a sentence in the stage before work starts:

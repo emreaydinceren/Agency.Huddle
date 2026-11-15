@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Feed;
 
-/// <summary>A Task proceeded under the level Run inside the Team: its Proof is complete and its merge into main needs no Accept (ADR-0087).</summary>
+/// <summary>A Task proceeded under the level Run inside the Team: its Proof is complete and its merge into main needs no Accept (ADR-0088).</summary>
 /// <param name="Id">The Task id.</param>
 /// <param name="Title">The Task title.</param>
 /// <param name="Team">The Task's Team.</param>

@@ -391,7 +391,7 @@ Nothing in the ACP effort's subtree changes.
 
 ---
 
-## 11. The spend cap question (ADR-0087)
+## 11. The spend cap question (ADR-0088)
 
 A scope whose Needs You level is Run inside the Team may carry a spend cap. When the scope has spent its cap it falls back to Ask me, and
 `NeedsYouCaps` holds one open question for it. This is not a Room entry and has no reason flag: `NeedsYouCard` lists one row per open

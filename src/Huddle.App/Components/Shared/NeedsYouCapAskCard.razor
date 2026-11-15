@@ -2,7 +2,7 @@
 @inject NeedsYouCaps Caps
 
 @*
-    The spend cap's Yes/No question (ADR-0087): a scope that ran inside the Team spent its cap and fell back to Ask me. Yes lets it
+    The spend cap's Yes/No question (ADR-0088): a scope that ran inside the Team spent its cap and fell back to Ask me. Yes lets it
     spend exactly one more cap; No keeps it at Ask me until the Human changes the level or the cap. The card draws the open question
     for one scope key and answers it through NeedsYouCaps, the only caller of Grant and Decline. The caller removes the card by
     repainting on NeedsYouCaps.Changed; this component also hides itself the moment it was answered.

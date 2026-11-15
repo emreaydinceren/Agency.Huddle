@@ -517,7 +517,7 @@ The goldens that change are the ones Tasks §16 lists: `getHelp.txt` and `toolDe
 Delete them, run the tests to reseed them, and review the diff. It should be exactly these
 sentences.
 
-### 10.5 Sprint proposals under the Needs You level (ADR-0087)
+### 10.5 Sprint proposals under the Needs You level (ADR-0088)
 
 `propose_sprint` normally waits for the Human to approve. When every Task the proposal names runs under the level Run inside the Team
 (resolved per Task, from its folder), `SprintApprover.ApproveWithoutHuman` approves it at once instead:

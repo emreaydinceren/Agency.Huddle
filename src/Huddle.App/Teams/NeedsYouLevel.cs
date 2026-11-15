@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// How much of a scope's work waits for the Human (ADR-0087). A scope that sets no level inherits the one above it, so "unset" is a
+/// How much of a scope's work waits for the Human (ADR-0088). A scope that sets no level inherits the one above it, so "unset" is a
 /// <see langword="null"/> level and never a member of this enum.
 /// </summary>
 internal enum NeedsYouLevel

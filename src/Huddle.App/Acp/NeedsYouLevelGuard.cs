@@ -8,7 +8,7 @@ namespace Agency.Huddle.App.Acp;
 
 /// <summary>
 /// Refuses an Agent's tool call that would change the <c>needsYouLevel</c> or <c>spendCap</c> line of a <c>_team.md</c> or <c>_project.md</c>
-/// under the Teams root (ADR-0087). The level and its cap are the Human's standing decision for a whole scope, so only the Human sets them.
+/// under the Teams root (ADR-0088). The level and its cap are the Human's standing decision for a whole scope, so only the Human sets them.
 /// </summary>
 /// <remarks>
 /// A read is never refused, and neither is an edit of any other line of those files. An edit is refused when its old or new text mentions either key,

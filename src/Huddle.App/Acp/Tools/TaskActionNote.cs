@@ -6,7 +6,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 
 /// <summary>
 /// The sentence <c>create_task</c> and <c>update_task</c> add to a success result when an Agent leaves a Task with an Action in a scope that
-/// runs inside the Team: such a scope releases a local merge without an Action, and an Action sends the Task to the Human (ADR-0087). It
+/// runs inside the Team: such a scope releases a local merge without an Action, and an Action sends the Task to the Human (ADR-0088). It
 /// only informs; the call has already succeeded and nothing is refused.
 /// </summary>
 internal static class TaskActionNote

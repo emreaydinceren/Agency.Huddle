@@ -6,7 +6,7 @@ using Agency.Huddle.App.Services;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// Counts what a scope that runs inside the Team has spent against its cap, and asks the Human once the cap is reached (ADR-0087). Spend
+/// Counts what a scope that runs inside the Team has spent against its cap, and asks the Human once the cap is reached (ADR-0088). Spend
 /// is recorded per Agent, so the global scope counts every Agent's persisted USD spend and a Team or Project scope counts its Team's
 /// members. The count starts when the Human sets the level or cap, or when the scope is first evaluated with a cap, and it starts again
 /// when the cap in the file differs from the one counted for.

@@ -9,7 +9,7 @@ using Agency.Huddle.App.Teams;
 namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
-/// Pins the Needs You level control that Settings, the Team page's Process tab and a Project's dialog share (ADR-0087): what a scope sets and
+/// Pins the Needs You level control that Settings, the Team page's Process tab and a Project's dialog share (ADR-0088): what a scope sets and
 /// inherits, what is in force, saving through the setters, the refusal of a bad cap, and the cap's Yes/No question.
 /// </summary>
 public sealed class NeedsYouLevelControlTests

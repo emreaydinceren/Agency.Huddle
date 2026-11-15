@@ -5,7 +5,7 @@ using Agency.Huddle.Tests.Tasks;
 namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
-/// <see cref="ProcessMergeGate"/> under the Needs You levels (ADR-0087): a released Task passes a local merge into main and never a push;
+/// <see cref="ProcessMergeGate"/> under the Needs You levels (ADR-0088): a released Task passes a local merge into main and never a push;
 /// Ask me keeps the texts it always had.
 /// </summary>
 public sealed class NeedsYouLevelMergeGateTests

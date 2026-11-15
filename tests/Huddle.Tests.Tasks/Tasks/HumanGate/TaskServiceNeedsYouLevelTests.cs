@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Tasks;
 
 /// <summary>
 /// What <see cref="TaskService"/> does with a ready ungated Task of a Team with <c>accept-before-merge</c> under each Needs You level
-/// (ADR-0087): Ask me names the merge and moves it to Needs You (#416); Run inside the Team releases it instead, in Review, with no Action.
+/// (ADR-0088): Ask me names the merge and moves it to Needs You (#416); Run inside the Team releases it instead, in Review, with no Action.
 /// </summary>
 public sealed class TaskServiceNeedsYouLevelTests
 {

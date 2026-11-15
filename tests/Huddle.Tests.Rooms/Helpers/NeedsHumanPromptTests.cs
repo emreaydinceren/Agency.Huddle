@@ -86,7 +86,7 @@ public sealed class NeedsHumanPromptTests
 
     /// <summary>
     /// Under Run inside the Team the Task prompt ends with the level note, which tells the model a local merge stays inside the Team and a
-    /// push does not (ADR-0087); under Ask me the note is empty, so the prompt is exactly as before.
+    /// push does not (ADR-0088); under Ask me the note is empty, so the prompt is exactly as before.
     /// </summary>
     [Fact]
     public void TaskPrompt_RunInsideTheTeam_EndsWithTheLevelNote()

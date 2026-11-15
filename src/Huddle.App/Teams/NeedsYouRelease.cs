@@ -3,7 +3,7 @@ using Agency.Huddle.App.Tasks;
 namespace Agency.Huddle.App.Teams;
 
 /// <summary>
-/// The release a Task gets under the level Run inside the Team (ADR-0087): its Proof is complete in Review, so its merge into main
+/// The release a Task gets under the level Run inside the Team (ADR-0088): its Proof is complete in Review, so its merge into main
 /// needs no Accept. Huddle writes the release as a Change log entry in one fixed wording; the merge gate, the wake and the Feed read it
 /// back through this class rather than from the Task's Action, so the wording lives in this one place.
 /// </summary>

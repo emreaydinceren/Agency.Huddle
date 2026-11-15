@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
 /// Puts Tasks into a Sprint, for the Human's approval of a proposal (<see cref="SprintProposalService"/>) and for the approval Huddle gives
-/// itself when every Task runs under the level Run inside the Team (ADR-0087). One place holds the create-and-add rules, so the two paths
+/// itself when every Task runs under the level Run inside the Team (ADR-0088). One place holds the create-and-add rules, so the two paths
 /// cannot drift apart. It has no chat dependency, so the manager's <c>propose_sprint</c> tool can hold it without a cycle.
 /// </summary>
 /// <param name="sprints">Creates the Sprint.</param>
