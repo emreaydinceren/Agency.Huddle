@@ -346,6 +346,8 @@ public sealed record LibraryReference(string RootId, string RelativePath, bool E
 - **In chat Messages,** only absolute paths are linked: a Windows path (`E:\…`) or `file:` URL
   whose resolved location passes `LibraryPathResolver`. Paths inside code spans are linked too,
   since Agents usually put paths in backticks. A path outside every root stays plain text.
+  The link text is the file name; the one exception is a bare path in the `## Evidence` section
+  of a Task in the Task view, which shows the path as written (`MarkdownRenderer.ToTaskHtml`).
 - **In a Library note,** wikilinks and relative Markdown links (`[x](../plan.md)`) are resolved
   from the note's own location.
 - **The link** is `?library=<rootId>/<url-encoded relative path>`, with class `library-ref`

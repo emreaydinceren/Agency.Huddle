@@ -544,7 +544,7 @@ internal sealed class TaskService : IDisposable
 
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
         ChangeLogEntry entry = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"evidence added by {actor.Name}"));
-        string withEvidence = TaskFileFormat.AddEvidenceLine(currentText, line.Format().ReplaceLineEndings(" "));
+        string withEvidence = TaskFileFormat.AddEvidenceLine(currentText, line.FormatListItem().ReplaceLineEndings(" "));
         string finalText = TaskFileFormat.AppendEntry(withEvidence, entry);
 
         TaskItem? written = this.store.Write(current, current.Version, finalText);

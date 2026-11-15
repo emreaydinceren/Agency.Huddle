@@ -97,7 +97,8 @@ naming the risk.
 
 A Task's `## Evidence` section holds lines with the time, author, command, and optionally an exit code and a
 pointer to the log. A plain line of text is a note. A command with no exit code is refused, and lines are only
-ever added. There is no separate Evidence view, so read it in the Task file in the Library.
+ever added. Each entry is a list item (older plain lines still count), and a file path in it shows in full in the
+Task view. There is no separate Evidence view, so read it in the Task file in the Library.
 
 Every tool call is written to `logs/tool-calls/<Agent>/<date>.jsonl` in your data folder. An Evidence line can
 point to one line of it, such as `logs/tool-calls/Joe/2026-10-08.jsonl#L12`.

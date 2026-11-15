@@ -52,7 +52,7 @@ test-first task list. Every decision is in §9 with the alternative it beat.
 | A7 | The Human saves | One Change log entry for Description; the assignee is woken once, as for any description edit |
 | A8 | The Human clicks **Revert** after attaching two files | The description goes back; the two files uploaded since the last Save are deleted, as an unsent chat upload is |
 | A9 | The Human reloads the page with unsaved attachments | The pending edit is gone; the uploaded files stay in the Task's folder |
-| A10 | The Human opens the Description **Preview** | Each path line renders as the Library link chat uses: the file name, its relative path as the tooltip; a missing file is dimmed (`library-ref-missing`) |
+| A10 | The Human opens the Description **Preview** | Each path line renders as the Library link chat uses: the file name, its relative path as the tooltip; a missing file is dimmed (`library-ref-missing`). Only the `## Evidence` section differs: a bare path there shows in full |
 | A11 | The Task is closed, moved to another Project, or moved to another Team | The folder stays where it is; every link still opens |
 | A12 | The assignee runs `get_task GROW-0002` | The description holds the path lines; the Agent opens them with its own tools. An Adapter with `ReadsFiles: false` cannot (the existing limit) |
 | A13 | The Human opens the Library | The Uploads root lists `Tasks/GROW-0002/` beside the Room folders |
