@@ -265,7 +265,8 @@ order decides per Token, independently.
 | `TaskItem.cs` | The Task record itself, plus `TaskActor`, `TaskActorKind`, `TaskLocation` and `ChangeLogEntry`. |
 | `TaskState.cs` | `TaskState` and `TaskPriority`, their wire names, declaration order and `TryParse`/`ToWire` extensions. |
 | `TaskLayout.cs` | Maps a file path to a `TaskLocation` under the Team/Project/`_closed` folder rules, and back to a file path. |
-| `TaskFileFormat.cs` | Parses, composes and version-hashes a Task file (Spec §7); the only place that reads or writes a Task file's text. |
+| `TaskFileFormat.cs`, `TaskFileFormat.Timeline.cs` | Parses, composes and version-hashes a Task file (Spec §7); the only place that reads or writes a Task file's text. The Timeline half holds the `## Timeline` grammar, the reading of older `## Evidence`/`## Change log` files and `Upgrade`, which converts one on its first write (Spec §7.7, ADR-0086). |
+| `TimelineEntry.cs`, `TimelineEntryKind.cs`, `TimelineMerge.cs` | One timeline entry (a comment, Evidence or an event) and the rule that merges `TaskItem.Comments` with `ChangeLog` into `TaskItem.Timeline`. |
 | `TaskStore.cs` | Owns every file under `{DataDir}/{Tasks.Dir}`: the in-memory index, rejected files, Team/Project listing, writes and moves, and the outside-edit watcher (Spec §8). |
 | `RejectedTaskFile.cs` | A file under the Tasks scan root that did not become an indexed `TaskItem` (Spec §8.1-§8.2). |
 | `TeamFolder.cs` | A Team folder found under the Tasks scan root, with its Project sub-folders (Spec §8.2). |
@@ -380,7 +381,8 @@ order decides per Token, independently.
 | `Acp/Tools/JobsTool.cs` (`jobs`) | Creates, lists, changes, pauses, deletes and runs Jobs. Offered to every Persona while Jobs are on; only the Chief of Staff may act on another's Job. |
 | `Jobs/` | Scheduled Jobs: `JobRecurrence` (the `when` grammar and next-run rule), `JobDocument` (`schedule.md`), `JobStore` (every owner's file, watched), `JobScheduler` (the once-a-minute hosted service), `JobRunner` (the Job Room and the Huddle post). `Data/JobStateStore.cs` and `Data/JobRoomStore.cs` hold the firing state and the Room link. ADR-0074. |
 | `Components/Jobs/` | The Scheduled view: `ScheduledNav` (the Sidebar), `ScheduledPage` (`/scheduled`, `/scheduled/{id}`), `JobEditorDialog` over the pure `JobForm`, and `JobText` for every word shown. |
-| `Acp/Tools/AddEvidenceTool.cs` (`add_evidence`) | Adds an Evidence line to a Task, the input the gates read. |
+| `Acp/Tools/AddEvidenceTool.cs` (`add_evidence`) | Adds an Evidence entry to a Task's timeline, the input the gates and Proof read. |
+| `Acp/Tools/AddCommentTool.cs` (`add_comment`) | Adds a comment to a Task's timeline; offered to every Agent, like `add_evidence`. |
 | `Acp/Tools/ReadRecordsTool.cs` (`read_records`) | Gives the retro role a Team's evidence bundle, or one Task's change log and Evidence; the Chief of Staff reads any Team's (ADR-0066 amendment). |
 | `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |
 | `Acp/Tools/MarkRetroRowTool.cs` (`mark_retro_row`) | Updates one `Retro register.md` row's status. |

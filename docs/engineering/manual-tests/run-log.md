@@ -4228,6 +4228,20 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-23--a-developer-
 | --- | --- | --- | --- | --- |
 | 2026-11-14 | Pass *(run by an agent, paid lane)* | `fix/issue-538-enforce-blocked-by`, uncommitted | #538 | Fresh lane, Dev Team from lightweight-flow (its `_team.md` carried `blockers-done-before-start`; the migration marker was written), Omar and Leo on Sonnet 5.5. DEVT-0001 created In Progress; DEVT-0002 created To Do for Leo, blocked by it. Woken by the assignment, Leo read the blocker and posted that he would wait and had written no code. Asked to call `update_task` to In Progress anyway, he got `Gate blockers-done-before-start: this Task is blocked by DEVT-0001 (Review). …` and the Task stayed in To Do; asked to clear `blocked_by`, he got `Only the Team's manager or the Human can remove a blocker from blocked_by.` After the Human moved DEVT-0001 to Done, DEVT-0002 logged `Unblocked: DEVT-0002 by DEVT-0001`, Leo was woken and moved it To Do → In Progress → Review. Spend 0.79 USD (Chief of Staff 0.24, Omar 0.28, Leo 0.26). |
 
+### TASKS-24 — Evidence survives description edits by an Agent and by the form, and comments show on the Timeline
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-24--evidence-survives-description-edits-by-an-agent-and-by-the-form-and-comments-show-on-the-timeline)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TASKS-25 — A Task file written before the Timeline shows the same Timeline and Proof, before and after its first write
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

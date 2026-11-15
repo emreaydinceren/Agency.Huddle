@@ -1084,15 +1084,13 @@ in its panel.
   Huddle puts the status back, keeps the rest of your edit, and adds `outside edit
   refused by gate: <reason>` to the Change log. Evidence-only edits are kept.
 
-**Evidence.** A Task file can have an `## Evidence` section above its Change log.
-Each line is the time, the author, the command, and optionally the exit code and a
-pointer to the tool-call log, separated by ` | `; a plain line of text is a note.
-Agents add lines with the `add_evidence` tool, and lines are only ever appended. Each new
-entry is written as a list item (`- `), so the Task view shows one entry per line; plain
-lines in older Task files still count as Evidence. In the Task view, a file path in the
-Evidence section shows in full, not as just its file name.
-The Task panel does not have a separate Evidence view; you read it in the Task file
-in the Library.
+**Evidence.** Evidence is a comment tagged `evidence` on the Task's
+[Timeline](#the-timeline-and-comments): the time, the author, the command, and optionally the
+exit code and a pointer to the tool-call log; an entry with no command is a note. Agents add
+it with the `add_evidence` tool, and entries are only ever appended. The gates and the Proof
+read only these entries, so editing the description cannot change them. The Task view shows
+each one on the Timeline with an Evidence chip, its exit code and the log path in full. Older
+Task files with an `## Evidence` section still count: Huddle reads those lines the same way.
 
 **Checking a web page.** When a Task's acceptance names a web page or a UI, a Development Team's QA Engineer verifies it in a headless browser with the built-in `browser-check` Skill. It installs Playwright in a temporary folder outside the repository, so the tree it checks stays clean, and drives the page with the Edge installed on Windows or Chrome elsewhere. The Evidence line names the command, its exit code and the browser, and lists the steps it drove. When no QA Engineer is hired, the manager does the same. Opening `localhost` only is a rule the Skill states, not a guard Huddle enforces; a governed browser is planned (#548). Agents hired before this change keep their copied role text and Skills list: to give an existing QA Engineer the Skill, add `browser-check` on its card and paste this sentence into its role text: "When the acceptance names a web page or a UI, drive it in a browser and record what you did as Evidence: read your browser-check Skill and follow it. If you cannot, say in the Evidence line that the verify is partial."
 
@@ -1887,8 +1885,8 @@ see the same Tasks, and a change to an assigned Task wakes the assignee.
 
 Click a Task in the List or on the Board and it opens in a panel on the right. The panel is for reading: it shows
 the Task's status, priority, assignee, Team and Project, Sprint, parent, blockers, tags, dates, origin and its
-description, then the Human gate, Proof and your decision if the Task has them, and the Change log. Nothing in it
-changes the Task, so a stray key cannot leave an unsaved edit behind. You can still **Accept**, **Request changes**
+description, then the Human gate, Proof and your decision if the Task has them, and the **Timeline**. Nothing in it
+changes the Task, so a stray key cannot leave an unsaved edit behind, except the comment box under the Timeline. You can still **Accept**, **Request changes**
 or **Decline** a gated Task there, **Ask** for Proof, copy the id or link, make a copy, and close or reopen the Task.
 
 Choose **Edit** to change the Task. The Task opens in a Tab of its own, "Edit BUSI-0001", next to the Tab you were in.
@@ -1904,6 +1902,24 @@ While an edit Tab is open, the [Right sidebar](#the-right-sidebar) shows what Hu
 **Activity** (the Room it last woke an Agent in, how many of its wakes are used, and who is working on it now),
 **Blocked by**, **Blocks** (the open Tasks waiting on it) and **Linked documents** (the Library files its description
 links to). They show the Task as saved, not your unsaved edits.
+
+### The Timeline and comments
+
+A Task is its description plus a **Timeline**, like an issue in a tracker. The description is the only text anyone
+edits. The Timeline lists, oldest first:
+
+- **Comments**, from you or an Agent, in Markdown.
+- **Evidence**, marked with an Evidence chip: the command an Agent ran, its exit code (green for 0, red otherwise),
+  the full path of its tool-call log line, and any note. A remark with no command shows just the note.
+- **Events**, the Task's history: `created`, `status: To Do → In Progress`, `description edited` and the rest.
+
+Type in **Add a comment** under the Timeline and choose **Comment** to add yours. It is saved at once, on its own: it
+does not save or discard edits you have pending on the edit page. A comment wakes the Task's assignee like any other
+change. Agents comment with the `add_comment` tool and add Evidence with `add_evidence`.
+
+Nothing on the Timeline can be edited or deleted, by an Agent or by you. Editing the description, by the form or by an
+Agent's `update_task`, never touches it, so the Evidence the Proof reads cannot be lost that way. Only an edit to the
+Task file in another program can change a Timeline line; Huddle reads the file as written.
 
 ### What a Task file looks like
 
@@ -1923,9 +1939,10 @@ due_date: 2026-10-15
 ---
 Draft the October invoice run and check it against last month.
 
-## Change log
-- 2026-09-25T08:30:00Z | You | created
-- 2026-09-25T09:12:41Z | You | assignee: — → Nova
+## Timeline
+- 2026-09-25T08:30:00Z | You | event | created
+- 2026-09-25T09:12:41Z | You | event | assignee: — → Nova
+- 2026-09-25T10:02:17Z | Nova | comment | Last month's run is in the Library.\nStarting on the draft now.
 ```
 
 | Field | Meaning |
@@ -1940,8 +1957,11 @@ Draft the October invoice run and check it against last month.
 | `tags`, `start_date`, `due_date` | Dates are `yyyy-MM-dd`. |
 | `request`, `from_team`, `requester`, `triage`, `decline_reason`, `confirmed_by` | Present on a Request from another Team; see [Requests between Teams](#requests-between-teams). |
 | Body | The description, in Markdown. |
-| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The six gates](#the-six-gates). |
-| `## Change log` | An append-only history. Huddle adds lines and never edits old ones. |
+| `## Timeline` | One line per entry: time, author, kind (`comment`, `evidence` or `event`) and text. Huddle adds lines and never edits old ones. A comment's line breaks are written as `\n`. See [The Timeline and comments](#the-timeline-and-comments). |
+
+A Task file written before the Timeline has an `## Evidence` section and a `## Change log` instead. Huddle reads it as
+it is, with the same Proof, and rewrites it in the form above the first time it changes the Task. Its Change log lines
+are copied over unchanged.
 
 The Team and Project are not fields. They come from the folder the file is in.
 
@@ -2022,7 +2042,7 @@ The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
 
 Agents use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
-`close_task`, `reopen_task` and `add_evidence`. Their changes follow the same rules
+`close_task`, `reopen_task`, `add_evidence` and `add_comment`. Their changes follow the same rules
 and write the same files, and they are also subject to a Team's
 [gates](#the-six-gates) and to the [Request](#requests-between-teams) rules, which
 you can override from the Task panel and they cannot.
