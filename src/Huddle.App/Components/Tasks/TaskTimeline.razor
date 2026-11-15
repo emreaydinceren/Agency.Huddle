@@ -1,0 +1,163 @@
+@*
+    A Task's Timeline (Spec §7.7, ADR-0086): the one list of what happened to the Task, oldest first like an issue tracker, drawn as a
+    document's History panel is (DocHistoryComponentBase's DocumentHistory). Each entry shows the author's avatar and name, a "you"
+    mark for the Human, and the day and time. An Event is one compact summary row; a Comment is its Markdown in a bordered body; an
+    Evidence entry wears an "Evidence" chip, the command in monospace, the exit code as a chip, the log reference as its full path and
+    the note. Entries are immutable, so none has an edit or delete control. Under the list sits the comment box, which writes only the
+    timeline (TaskService.AddComment): it never saves or discards the form's pending edits. TaskDetail and TaskReadView share this
+    component so the two never drift apart.
+*@
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@inject TimeProvider Clock
+@inject Agency.Huddle.App.Avatars.AvatarStore Avatars
+@inject TaskStore Store
+@inject TaskService Service
+@inject IOptions<TeamOptions> Options
+@inject ILibraryReferenceResolver LibraryResolver
+@inject IHumanIdentity Human
+@inject ISnackbar Snackbar
+
+@{
+    IReadOnlyList<TimelineEntry> timeline = this.Task.Timeline;
+}
+<section class="task-detail-history task-timeline">
+    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">Timeline (@timeline.Count)</MudText>
+    <MudTimeline TimelinePosition="TimelinePosition.Start" Modifiers="false" Class="doc-history-timeline task-detail-history-list">
+        @foreach (TimelineEntry entry in timeline)
+        {
+            <MudTimelineItem Size="Size.Small" Class="@($"doc-history-entry task-detail-history-row task-timeline-{KindClass(entry.Kind)}")">
+                <div class="doc-history-body task-detail-history-entry">
+                    <div class="doc-history-head">
+                        <span class="doc-history-actor">
+                            <AgentAvatar Name="@entry.Author" Avatar="this.Avatars.Get(entry.Author)" Size="Size.Small" />
+                            <strong class="doc-history-actor-name task-detail-history-actor">@entry.Author</strong>
+                        </span>
+                        @if (string.Equals(entry.Author, this.Human.Name, StringComparison.Ordinal))
+                        {
+                            <span class="chip-meta task-detail-history-pill">you</span>
+                        }
+                        @if (entry.Kind == TimelineEntryKind.Evidence)
+                        {
+                            <Chip T="string" Look="ChipLook.Tag" Class="task-timeline-evidence-chip">Evidence</Chip>
+                        }
+                    </div>
+                    @switch (entry.Kind)
+                    {
+                        case TimelineEntryKind.Comment:
+                            <div class="task-timeline-comment-body">@((MarkupString)MarkdownRenderer.ToTaskHtml(entry.Text, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                            break;
+                        case TimelineEntryKind.Evidence:
+                            @this.EvidenceBody(entry)
+                            break;
+                        default:
+                            <div class="doc-history-summary task-detail-history-summary">@entry.Text</div>
+                            break;
+                    }
+                    <div class="doc-history-when task-detail-history-date">@TaskDetail.FormatHistoryDate(entry.At, this.Clock)</div>
+                </div>
+            </MudTimelineItem>
+        }
+    </MudTimeline>
+
+    @if (!this.ReadOnly)
+    {
+        @* The comment box: independent of the form's pending edits, so it never saves or discards them. *@
+        <div class="task-timeline-comment-box">
+            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Add a comment" Lines="3" Immediate="true"
+                          Value="@this.commentText" ValueChanged="this.OnCommentChanged"
+                          Error="@(this.commentError is not null)" ErrorText="@this.commentError"
+                          Class="task-timeline-comment-field long-text-field markdown-field" />
+            <div class="task-timeline-comment-actions">
+                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="task-timeline-comment-send"
+                           Disabled="@(string.IsNullOrWhiteSpace(this.commentText))" OnClick="this.AddComment">Comment</MudButton>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private string commentText = string.Empty;
+    private string? commentError;
+
+    /// <summary>The Task whose Timeline is drawn.</summary>
+    [Parameter, EditorRequired]
+    public required TaskItem Task { get; set; }
+
+    /// <summary>Hides the comment box, for a Task that cannot be commented on (an archived one).</summary>
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    /// <summary>The CSS word for an entry kind: <c>comment</c>, <c>evidence</c> or <c>event</c>.</summary>
+    /// <param name="kind">The entry's kind.</param>
+    private static string KindClass(TimelineEntryKind kind) => kind switch
+    {
+        TimelineEntryKind.Comment => "comment",
+        TimelineEntryKind.Evidence => "evidence",
+        _ => "event",
+    };
+
+    /// <summary>An Evidence entry's body: the command in monospace, its exit code as a chip, the full log reference and the note.</summary>
+    /// <param name="entry">An entry of kind Evidence.</param>
+    private RenderFragment EvidenceBody(TimelineEntry entry)
+    {
+        EvidenceLine line = EvidenceLine.FromEntry(entry);
+        return @<div class="task-timeline-evidence-body">
+            @if (line.Command.Length > 0)
+            {
+                <div class="task-timeline-evidence-run">
+                    <code class="task-timeline-evidence-command">@line.Command</code>
+                    @if (line.ExitCode is int exitCode)
+                    {
+                        <StatusChip Color="@(exitCode == 0 ? Color.Success : Color.Error)"
+                                    Icon="@(exitCode == 0 ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                    Class="task-timeline-evidence-exit">@($"exit {exitCode}")</StatusChip>
+                    }
+                </div>
+                @if (line.LogPath is not null && line.LogLine is int logLine)
+                {
+                    <div class="task-timeline-evidence-log">@($"{line.LogPath}#L{logLine}")</div>
+                }
+                @if (line.Note.Length > 0)
+                {
+                    <div class="doc-history-summary task-timeline-evidence-note">@line.Note</div>
+                }
+            }
+            else
+            {
+                <div class="doc-history-summary task-timeline-evidence-note">@line.RawText</div>
+            }
+        </div>;
+    }
+
+    /// <summary>Keeps the typed text, and clears an earlier refusal once the Human edits it.</summary>
+    /// <param name="value">The field's new text.</param>
+    private void OnCommentChanged(string? value)
+    {
+        this.commentText = value ?? string.Empty;
+        this.commentError = null;
+    }
+
+    /// <summary>
+    /// Adds the typed text as a comment by the Human. On Saved the box clears (the view redraws on the Task's change event); a
+    /// refusal shows under the field; a Task that is gone or changed underneath shows a snackbar and keeps the text.
+    /// </summary>
+    private void AddComment()
+    {
+        TaskResult result = this.Service.AddComment(this.Task.Id, this.commentText, TaskActors.Human(this.Human));
+        switch (result)
+        {
+            case TaskResult.Saved:
+                this.commentText = string.Empty;
+                this.commentError = null;
+                break;
+            case TaskResult.Refused refused:
+                this.commentError = string.Join(' ', refused.Problems);
+                break;
+            default:
+                this.Snackbar.Add("The comment was not added: the Task changed or is gone. Try again.", Severity.Warning, configure: null, key: "task-comment");
+                break;
+        }
+    }
+}

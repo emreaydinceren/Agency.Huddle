@@ -42,7 +42,7 @@ public sealed class TaskPanelsTests
             builder.CloseComponent();
         });
 
-    /// <summary>The Task panel draws the Task's read view with its id line and title, since the Right sidebar has no header of its own for it, and no form control.</summary>
+    /// <summary>The Task panel draws the Task's read view with its id line and title, since the Right sidebar has no header of its own for it, and no form control for a Task field (the Timeline's comment box is the one control).</summary>
     [Fact]
     public async Task Detail_DrawsTheReadViewWithItsIdLineAndTitle()
     {
@@ -60,7 +60,7 @@ public sealed class TaskPanelsTests
 
         Assert.Equal($"{task.Id} · Platform", cut.Find(".task-read-view-eyebrow").TextContent.Trim());
         Assert.Equal("Legal review of price claims", cut.Find(".task-read-view-title").TextContent.Trim());
-        Assert.Empty(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"));
+        Assert.DoesNotContain(cut.FindAll(".task-read-view input, .task-read-view textarea, .task-read-view select"), static control => control.Closest(".task-timeline-comment-box") is null);
     }
 
     /// <summary>The Task panel renders nothing for a Subject that is not a selected Task.</summary>
