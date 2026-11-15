@@ -23,6 +23,7 @@ internal static class FeedPayloads
         FeedSourceType.TaskNeedsYou => typeof(TaskNeedsYouPayload),
         FeedSourceType.TaskWakesPaused => typeof(TaskWakesPausedPayload),
         FeedSourceType.TaskProceeded => typeof(TaskProceededPayload),
+        FeedSourceType.SprintProceeded => typeof(SprintProceededPayload),
         FeedSourceType.TaskAssignedToYou => typeof(TaskAssignedPayload),
         FeedSourceType.RequestAwaitsYou => typeof(RequestAwaitsPayload),
         FeedSourceType.GateDecisionDue => typeof(GateDecisionPayload),

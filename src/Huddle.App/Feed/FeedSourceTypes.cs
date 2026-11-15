@@ -36,6 +36,7 @@ internal static class FeedSourceTypes
         FeedSourceType.SecondBrainOverCap => "second-brain-over-cap",
         FeedSourceType.TaskWakesPaused => "task-wakes-paused",
         FeedSourceType.TaskProceeded => "task-proceeded",
+        FeedSourceType.SprintProceeded => "sprint-proceeded",
         FeedSourceType.TeamArchived => "team-archived",
         FeedSourceType.BuiltinAgentUpdateAvailable => "builtin-agent-update-available",
         FeedSourceType.AgentConnectorsChanged => "agent-connectors-changed",

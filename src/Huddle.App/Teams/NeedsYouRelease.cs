@@ -11,6 +11,8 @@ internal static class NeedsYouRelease
 {
     private const string Prefix = "proceeded under ";
     private const string Suffix = " level Run inside the Team: its merge into main needs no Accept";
+    private const string SprintInfix = " level Run inside the Team: Sprint '";
+    private const string SprintSuffix = "' approved without the Human";
     private const string StatusPrefix = "status: ";
     private const string IntoDone = " → Done";
     private const string PartSeparator = "; ";
@@ -25,6 +27,29 @@ internal static class NeedsYouRelease
     /// <param name="scope">The scope that supplied the level.</param>
     /// <returns><c>proceeded under &lt;scope&gt; level Run inside the Team: its merge into main needs no Accept</c>.</returns>
     public static string SummaryFor(NeedsYouScope scope) => Prefix + scope.ToDisplay() + Suffix;
+
+    /// <summary>
+    /// The Change log summary a Task gets when its Sprint was approved without the Human. It is not a release: it never lets a merge go
+    /// ahead, and <see cref="IsRelease"/> is <see langword="false"/> for it.
+    /// </summary>
+    /// <param name="scope">The scope that supplied the level.</param>
+    /// <param name="sprintName">The Sprint's name.</param>
+    /// <returns><c>proceeded under &lt;scope&gt; level Run inside the Team: Sprint '&lt;name&gt;' approved without the Human</c>.</returns>
+    public static string SprintSummaryFor(NeedsYouScope scope, string sprintName)
+    {
+        ArgumentNullException.ThrowIfNull(sprintName);
+        return Prefix + scope.ToDisplay() + SprintInfix + sprintName + SprintSuffix;
+    }
+
+    /// <summary>Whether a Change log summary records a Sprint approved without the Human.</summary>
+    /// <param name="summary">The summary.</param>
+    public static bool IsSprintApproval(string summary)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+        return summary.StartsWith(Prefix, StringComparison.Ordinal)
+            && summary.Contains(SprintInfix, StringComparison.Ordinal)
+            && summary.EndsWith(SprintSuffix, StringComparison.Ordinal);
+    }
 
     /// <summary>Whether a Change log summary is a release.</summary>
     /// <param name="summary">The summary.</param>

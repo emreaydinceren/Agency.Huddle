@@ -24,9 +24,8 @@ internal sealed class SprintProposalService(
 {
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, SemaphoreSlim> approveGates = new(StringComparer.Ordinal);
 
-    private const string MissingReason = "no longer exists";
-    private const string DoneReason = "already Done";
-    private const string NotUpdatedReason = "could not be updated";
+    private readonly SprintApprover approver = new(sprints, tasks, taskStore);
+
     private const string NoDeclineReason = "no reason given.";
 
     /// <summary>The proposals waiting in a room: those of the Teams whose manager is a member of it.</summary>
@@ -113,33 +112,12 @@ internal sealed class SprintProposalService(
         _ = proposals.Remove(proposal.Id);
 
         TaskActor human = TaskActors.Human(humanIdentity);
-        List<string> applied = [];
-        List<SkippedTask> skipped = [];
-        foreach (string idText in proposal.TaskIds)
-        {
-            string? reason = this.AddToSprint(idText, sprint, human);
-            if (reason is null)
-            {
-                applied.Add(idText);
-            }
-            else
-            {
-                skipped.Add(new SkippedTask(idText, reason));
-            }
-        }
+        SprintApprover.Additions additions = this.approver.AddTasks(sprint, proposal.TaskIds, human);
 
         string mention = await HumanPost.MentionAsync(directory, proposal.Proposer, ct).ConfigureAwait(false);
-        string added = applied.Count == 0 ? "none" : string.Join(", ", applied);
-        string text = $"Approved Sprint '{proposal.Name}'{(existed ? " (it already existed)" : string.Empty)}. Added: {added}.";
-        if (skipped.Count > 0)
-        {
-            string skippedList = string.Join(", ", skipped.Select(static each => string.Concat(each.Id, " (", each.Reason, ")")));
-            text = string.Concat(text, " Skipped: ", skippedList, ".");
-        }
-
-        text += mention;
+        string text = $"Approved Sprint '{proposal.Name}'{(existed ? " (it already existed)" : string.Empty)}. {SprintApprover.Tail(additions)}{mention}";
         await this.PostAsync(roomId, text, ct).ConfigureAwait(false);
-        return new SprintProposalOutcome(SprintProposalOutcomeKind.Approved, existed, applied, skipped, text);
+        return new SprintProposalOutcome(SprintProposalOutcomeKind.Approved, existed, additions.Applied, additions.Skipped, text);
     }
 
     /// <summary>Declines a proposal: removes it, creates nothing and posts the reason to the manager.</summary>
@@ -179,34 +157,6 @@ internal sealed class SprintProposalService(
         IReadOnlyList<SprintProposal> pending = await this.PendingAsync(roomId, ct).ConfigureAwait(false);
         SprintProposal? proposal = pending.FirstOrDefault(each => string.Equals(each.Id, proposalId, StringComparison.Ordinal));
         return proposal is not null && proposals.Remove(proposal.Id) ? proposal : null;
-    }
-
-    /// <summary>Sets the Sprint on one Task as the Human.</summary>
-    /// <param name="idText">The Task id as the manager wrote it.</param>
-    /// <param name="sprint">The Sprint to set.</param>
-    /// <param name="human">The actor recorded in the Change log.</param>
-    /// <returns><see langword="null"/> when the Task now carries the Sprint; otherwise why it was skipped.</returns>
-    private string? AddToSprint(string idText, Sprint sprint, TaskActor human)
-    {
-        if (!TaskId.TryParse(idText, out TaskId id) || taskStore.Get(id) is not { } task)
-        {
-            return MissingReason;
-        }
-
-        if (task.Status == TaskState.Done)
-        {
-            return DoneReason;
-        }
-
-        TaskPatch patch = new() { Sprint = Optional<SprintId?>.Set(sprint.Id) };
-        return tasks.Update(id, patch, null, human) switch
-        {
-            TaskResult.Saved or TaskResult.Unchanged => null,
-            TaskResult.NotFound => MissingReason,
-            TaskResult.GateRefused gate => gate.Message,
-            TaskResult.Refused refused => string.Join("; ", refused.Problems),
-            _ => NotUpdatedReason,
-        };
     }
 
     /// <summary>Posts <paramref name="text"/> in the room as the Human; a refused post is logged, never thrown.</summary>

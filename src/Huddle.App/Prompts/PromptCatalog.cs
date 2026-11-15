@@ -1293,7 +1293,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.
+                Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves, unless every Task runs inside the Team: then Huddle approves it at once and says so. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

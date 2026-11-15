@@ -629,6 +629,36 @@ internal sealed class TaskService : IDisposable
         return written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry);
     }
 
+    /// <summary>
+    /// Appends one Change log entry written by Huddle and nothing else: no field changes, no move. It records a step Huddle took under a
+    /// Needs You level (ADR-0087) on a Task, such as a Sprint approved without the Human. The change is raised like any other write.
+    /// </summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="summary">The entry's summary.</param>
+    /// <returns><see langword="true"/> when the entry was written.</returns>
+    internal bool RecordHuddleStep(TaskId id, string summary)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(summary);
+
+        TaskChange? change = null;
+        lock (this.mutateGate)
+        {
+            if (this.store.Get(id) is { } task && this.store.ReadText(id) is { } text)
+            {
+                ChangeLogEntry entry = new(TruncateToSeconds(this.clock.GetUtcNow()), TaskActors.Huddle.Name, summary);
+                TaskItem? written = this.store.Write(task, task.Version, TaskFileFormat.AppendEntry(text, entry));
+                change = written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry);
+            }
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return change is not null;
+    }
+
     /// <summary>The Task as it goes to the Human: itself when gated, with the merge named when its Team's merge waits for an Accept (#416).</summary>
     /// <param name="task">The Task as just written.</param>
     /// <returns>The gated Task, or <see langword="null"/> when this Task does not go to the Human.</returns>

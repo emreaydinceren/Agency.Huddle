@@ -9,8 +9,8 @@ using Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Lets a Team's manager propose a Sprint to the Human (PL-4). A successful call only stores a
-/// <see cref="SprintProposal"/>; it never calls <c>SprintStore.Create</c> - the Human's approval is the only path that
-/// creates a Sprint (ADR-0037). Offered only to a Persona holding a Skill that lists it - see
+/// <see cref="SprintProposal"/>; the Human's approval creates the Sprint (ADR-0037). The one exception is a proposal whose
+/// Tasks all run inside the Team (ADR-0087): <see cref="SprintApprover"/> approves it at once and nothing is stored. Offered only to a Persona holding a Skill that lists it - see
 /// <see cref="Agency.Huddle.App.Skills.SkillGrants"/>.
 /// </summary>
 internal sealed class ProposeSprintTool(
@@ -20,7 +20,8 @@ internal sealed class ProposeSprintTool(
     ITeamCatalog teams,
     ITeamDirectory directory,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    SprintApprover? approver = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "propose_sprint";
@@ -87,6 +88,12 @@ internal sealed class ProposeSprintTool(
         if (proposals.Pending(team.Name).Any(each => string.Equals(each.Name, name, StringComparison.OrdinalIgnoreCase)))
         {
             return $"A proposal named '{name}' is already waiting for the Human.";
+        }
+
+        // ADR-0087: when every Task runs inside the Team, Huddle approves the Sprint itself and nothing waits for the Human.
+        if (approver?.ApproveWithoutHuman(name, found) is { } approved)
+        {
+            return approved;
         }
 
         SprintProposal proposal = new(Guid.NewGuid().ToString("N"), name, [.. found.Select(static each => each.Id.ToString())], actor.Name, team.Name);
