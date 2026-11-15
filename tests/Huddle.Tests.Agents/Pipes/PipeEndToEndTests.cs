@@ -469,7 +469,7 @@ public sealed class PipeEndToEndTests
         Assert.False(gateway.IsOnline(welcome.AgentId));
     }
 
-    /// <summary>An Agent's open Drafts are cleared when its connection drops, so a crashed Agent leaves no frozen Draft on screen.</summary>
+    /// <summary>An Agent's open Drafts are cleared when its connection drops, so a crashed Agent leaves no frozen Draft on screen. The gateway takes the Agent offline before it clears the Drafts, so the test waits for both (issue #596).</summary>
     [Fact]
     public async Task Disconnect_ClearsTheAgentsDrafts()
     {
@@ -497,7 +497,8 @@ public sealed class PipeEndToEndTests
 
         await client.DisposeAsync();
 
-        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId), ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
+        // The gateway takes the Agent offline before it clears its Drafts, so "offline" does not yet mean "cleared".
+        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId) && drafts.ForRoom(roomId).Count == 0, ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
         Assert.Empty(drafts.ForRoom(roomId));
