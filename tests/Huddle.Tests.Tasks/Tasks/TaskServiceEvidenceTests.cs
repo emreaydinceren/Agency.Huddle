@@ -320,7 +320,10 @@ public sealed class TaskServiceEvidenceTests
     [Fact]
     public void TaskService_PublicSurface_HasNoWayToEditOrRemoveATimelineEntry()
     {
-        string[] names = [.. typeof(TaskService).GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Select(static method => method.Name).Distinct(StringComparer.Ordinal)];
+        string[] names = [.. typeof(TaskService).GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(static method => method.IsPublic || method.IsAssembly)
+            .Select(static method => method.Name)
+            .Distinct(StringComparer.Ordinal)];
 
         Assert.Equal(["AddComment"], names.Where(static name => name.Contains("Comment", StringComparison.OrdinalIgnoreCase)));
         Assert.Equal(["AddEvidence"], names.Where(static name => name.Contains("Evidence", StringComparison.OrdinalIgnoreCase)));
