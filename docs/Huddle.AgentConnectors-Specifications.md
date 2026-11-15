@@ -345,7 +345,7 @@ The hire-card line is a stage-3 detail and may be dropped without changing the d
 
 | Path | What it does with the setting | Why it cannot copy "on" |
 | --- | --- | --- |
-| Team duplication (`TeamDuplicator.CopyOne`, `TeamDuplicator.cs:143`) | Hires each member afresh from its role spec (`CardResolver.Resolve`), through `PersonaStore.Add`. The source's rows are never read. | `Add` writes no connectors row. A copied Agent is off. |
+| Team duplication (`TeamDuplicator.CopyOne`, `TeamDuplicator.cs:143`) | Hires each member afresh from its role spec (`CardResolver.Resolve`), through `PersonaStore.Add`. Only the source's Model, Effort and Adapter are carried over (#565); its connectors row is never read. | `Add` writes no connectors row. A copied Agent is off. |
 | `propose_agents` (`ProposeAgentsTool.cs`, `Candidate.cs`) | Cannot carry the flag. | No such field exists in `Candidate`, and none is added. |
 | Retro and Pack updates (`RetroProposalService`, `PackUpdater`, `TeamMembership`) | Call `Update` with the Persona's own values. | `Update` neither reads nor writes the flag (section 6.3). |
 | Library import or a copied Persona file | Frontmatter is the only thing carried. | The flag is not in frontmatter. |

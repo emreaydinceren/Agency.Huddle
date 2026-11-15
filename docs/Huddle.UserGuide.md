@@ -822,8 +822,10 @@ Under a Team's title (not a Project's), the header has two more things:
 - **Duplicate** copies the Team's roster into a new Team. A small dialog asks for
   the **New team name** and a **Workspace folder** (left blank, it means none,
   which is refused when the type requires one). The new Team has
-  the same team type, and each member is hired afresh under a new name; no
-  memory, Library file or Task is copied. A member whose role no longer exists
+  the same team type, and each member is hired afresh under a new name, on the
+  same Model, Effort and Adapter as the member it copies (a member left on the
+  default stays on the default); no memory, Library file or Task is copied, and
+  account connectors start off. A member whose role no longer exists
   in the type, or who was added without a role, is listed as skipped before you
   select **Open Team**. A title that is taken, or a workspace folder that does
   not exist, is refused in the dialog.

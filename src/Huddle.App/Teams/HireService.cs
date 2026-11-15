@@ -257,7 +257,7 @@ internal sealed class HireService(
 
         try
         {
-            _ = personas.Add(identity, template.Stance, request.Card.Pick?.Model);
+            _ = personas.Add(identity, template.Stance, request.Card.Pick?.Model, request.Effort);
         }
         catch (ChatException ex)
         {

@@ -419,4 +419,59 @@ public sealed class TeamDuplicatorTests
         Assert.Equal(Avatar.None, f.Folders.ReadTeamFile(Target)?.Avatar);
         Assert.False(Directory.Exists(f.Avatars.ImageDirectory) && Directory.GetFiles(f.Avatars.ImageDirectory).Length > 0);
     }
+
+    /// <summary>A copied member runs on exactly its source's stored Model and Effort, not the tier-map pick (the fixture's pick is <c>sonnet</c>).</summary>
+    [Fact]
+    public void Duplicate_SourceWithModelAndEffort_CopiesThem()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        Persona ada = f.Personas.Get("Ada") ?? throw new InvalidOperationException("Ada was not seeded.");
+        _ = f.Personas.Update("Ada", ada.Text, "opus", "high", ada.WorkMode);
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Persona? grace = f.Personas.Get("Grace");
+        Assert.NotNull(grace);
+        Assert.Equal("opus", grace.Model);
+        Assert.Equal("high", grace.Effort);
+    }
+
+    /// <summary>A source with no stored Model or Effort gives a copy with none, even though the tier-map pick carries a model.</summary>
+    [Fact]
+    public void Duplicate_SourceWithoutModelOrEffort_CopyHasNone()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        Persona dev = f.Personas.Get("Dev1") ?? throw new InvalidOperationException("Dev1 was not seeded.");
+        _ = f.Personas.Update("Dev1", dev.Text, null, null, dev.WorkMode);
+        Assert.Null(f.Personas.Get("Dev1")?.Model);
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Persona? copy = f.Personas.Get("Dev2");
+        Assert.NotNull(copy);
+        Assert.Null(copy.Model);
+        Assert.Null(copy.Effort);
+    }
+
+    /// <summary>A source whose frontmatter adapter was changed after the hire gives a copy on the same adapter.</summary>
+    [Fact]
+    public void Duplicate_SourceAdapterChanged_CopyKeepsIt()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        Persona ada = f.Personas.Get("Ada") ?? throw new InvalidOperationException("Ada was not seeded.");
+        string edited = ada.Text.Replace("adapter: 'claude-agent-acp'", "adapter: 'other-acp'", StringComparison.Ordinal);
+        Assert.NotEqual(ada.Text, edited);
+        _ = f.Personas.Update("Ada", edited, ada.Model, ada.Effort, ada.WorkMode);
+        Assert.Equal("other-acp", f.Personas.Get("Ada")?.Adapter);
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Equal("other-acp", f.Personas.Get("Grace")?.Adapter);
+    }
 }
