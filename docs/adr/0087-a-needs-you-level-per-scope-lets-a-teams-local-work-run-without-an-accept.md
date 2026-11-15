@@ -120,6 +120,19 @@ level also supplies the cap, and a scope with no cap has no bound.
 - **What it does not do.** The cap does not stop Agents' Turns. Under Ask me, Agents stop at the next step that waits
   for the Human. The Room Budget (`Team:AgentMessageBudget`, ADR-0006) remains the runaway-loop guard and is unchanged.
 
+### Agents and the Needs Human Helper are told the level
+
+An Action set by anyone gates the Task, and only the Human can clear it, so the level only helps if nobody names the
+local merge as an Action. The first live run showed both ways it happens: the manager named it because nothing told her
+the project's level, and the Needs Human Helper named it because its prompt lists "merging to main". So:
+
+- An Agent's system prompt lists the effective level of each of its Teams and their projects, but only when one of them
+  runs inside the Team, so the default prompt is unchanged. `create_task` and `update_task` add a note when a Task under
+  Run inside the Team carries an Action.
+- The Needs Human Helper's Task prompt ends with a note when the Task's scope runs inside the Team: a merge into the
+  local main stays inside the Team, and a push does not. Under Ask me the note is empty and the prompt is as before. The
+  Helper is a model, so this is guidance, not a guarantee; the Human can still clear an Action it set.
+
 ### Visibility
 
 Every step that proceeds under the level writes a timeline event on the Task, written by Huddle. The event says

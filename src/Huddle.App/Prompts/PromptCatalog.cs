@@ -2722,7 +2722,7 @@ internal static class PromptCatalog
                 - moving or committing money: paying, refunding, ordering, quoting a price;
                 - signing or accepting a contract, terms or an offer;
                 - publishing anything public: a post, a release, a press note;
-                - merging to main, deploying, or deleting data.
+                - merging to main (unless the task says it runs inside the team: then a local merge does not), deploying, or deleting data.
 
                 A task does not need the human when it stays inside the team: notes, drafts, research,
                 analysis, internal reviews, and updates to tasks.
@@ -2746,7 +2746,7 @@ internal static class PromptCatalog
             Label: "Needs Human: the Task",
             HelperText:
                 "The message that shows the Needs Human Helper one Task. Used from the Helper's next call. Must keep " +
-                "{{title}} and {{description}}; {{taskId}}, {{team}} and {{tags}} are optional.",
+                "{{title}} and {{description}}; {{taskId}}, {{team}}, {{tags}} and {{level}} (the Needs You level note, empty under Ask me) are optional.",
             Default:
                 """
                 Task {{taskId}} in team {{team}}. Tags: {{tags}}
@@ -2757,9 +2757,9 @@ internal static class PromptCatalog
 
                 <description>
                 {{description}}
-                </description>
+                </description>{{level}}
                 """,
-            Placeholders: ["{{taskId}}", "{{team}}", "{{tags}}", "{{title}}", "{{description}}"],
+            Placeholders: ["{{taskId}}", "{{team}}", "{{tags}}", "{{title}}", "{{description}}", "{{level}}"],
             RequiredPlaceholders: ["{{title}}", "{{description}}"],
             Timing: PromptTiming.Live),
     ];
