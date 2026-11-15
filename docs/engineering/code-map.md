@@ -352,7 +352,7 @@ order decides per Token, independently.
 | `Teams/PackMembership.cs` | Adds or removes one Pack on an Agent's `skills`, `_packs` and `consult_when`, keeping Skills another Pack or the Role still gives (`PackContents`). Pure. |
 | `Teams/RoleHirer.cs` | Turns a type's roles into hire cards for `HireService`. `IHireContext` says which adapters answered and which connectors are connected. |
 | `Teams/HireContext.cs` | The production `IHireContext`: every Adapter profile counts as answered, and models come from `Team:Teams:Tiers`. |
-| `Teams/CardResolver.cs` | Resolves one role's defaults into a hire card: `Ready` when all resolve, `NeedsSetup` otherwise. |
+| `Teams/CardResolver.cs` | Resolves one role's defaults into a hire card: `Ready` when all resolve, `NeedsSetup` otherwise. `SkillSetupOf` is the Skill and Pack part on its own, which `CandidateChecker` also uses to refuse a `propose_agents` or `validate_agent` role whose Skills are not ready. |
 | `Teams/TierModelPicker.cs` | Picks a card's model from `Team:Teams:Tiers:<adapterId>:<tier>`; an adapter with no entry for a tier uses its default model. |
 | `Teams/FileConnectorStatus.cs` | Reads the connected connectors from `connectors.json` in the data folder on every call; a missing or malformed file means none. |
 | `Teams/MemberWarnings.cs` | The setup warnings for one member: a shared vendor, too many Skills, and Skills sharing a catalog sub-category. |

@@ -105,7 +105,7 @@ points. Every Candidate has these fields:
 | `title` | Required. The job, in two or three words: `Researcher`, `Tech Lead`. |
 | `teams` | Optional list of Team labels, such as `['Business']`. A label must not contain `,` or `;`. A label is a view for the Human; it grants nothing. |
 | `consult_when` | Optional, one line. Other Agents read it in `list_agents`, so say when to bring this Agent in. For a character, write `Never. Only the Human addresses this Agent.` |
-| `role` | Optional. `<type-id>/<role-id>` for a role of the team type the Human chose, such as `development/developer`. The role is hired from that type's template, so the Agent gets the role's skills and model tier. A role needs a Team in `teams`, and a Team can have only one manager role. |
+| `role` | Optional. `<type-id>/<role-id>` for a role of the team type the Human chose, such as `development/developer`. The role is hired from that type's template, so the Agent gets the role's skills and model tier. A role needs a Team in `teams`, and a Team can have only one manager role. A role whose Skills or Packs are not ready is refused, so pick only a role that is ready. |
 | `body` | Required. The instructions. Must not start with `---`. See below. |
 
 **Write the body in the second person**, as a brief to a new colleague:
@@ -191,6 +191,7 @@ If `propose_agents` refuses:
 | It says | You |
 | --- | --- |
 | A Candidate has problems | Fix them and call it again. |
+| A role cannot be hired yet because a Skill or Pack it needs is not ready | Propose a role it lists as ready, or leave `role` out and write a plain Candidate. Tell the Human which Skill the role needs; only they can set it up. |
 | How many Agents exist, the limit, and how many you may propose | Tell the Human, and offer to reuse an existing Agent or drop a role. Let them choose. Never shrink or merge roles to fit without asking. |
 | A Proposal from another Agent is already waiting in this Room | Tell the Human. They answer that one first. |
 

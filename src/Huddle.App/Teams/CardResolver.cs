@@ -1,4 +1,5 @@
 using Agency.Huddle.App.TeamTypes;
+using Agency.Huddle.SkillPacks.Resolving;
 
 namespace Agency.Huddle.App.Teams;
 
@@ -44,24 +45,46 @@ internal static class CardResolver
 
         List<string> names = [.. role.Skills.Select(static skill => skill.Name)];
         List<VersionedRef> usedPacks = [];
-        foreach (string packId in role.Packs)
+        foreach (PackEntry pack in CardResolver.UsedPacks(role, skills))
         {
-            // A Pack no row provides is skipped silently: R008 warns on the Packs tab, and a stock install with no skills
-            // repository must still be able to hire a role that names one.
-            if (skills.FindPack(packId) is not { } pack)
-            {
-                continue;
-            }
-
             usedPacks.Add(new VersionedRef(pack.Id, pack.Version));
             names.AddRange(pack.SkillNames);
         }
 
-        IReadOnlyList<SkillSetupItem> setup = SkillSetupCheck.For([.. role.Skills.Select(static skill => skill.Name)], usedPacks, skills);
+        IReadOnlyList<SkillSetupItem> setup = CardResolver.SkillSetupOf(role, skills);
         reasons.AddRange(setup.Select(SkillSetupText.Reason));
         IReadOnlyList<SkillRef> distinctSkills = [.. names.Distinct(StringComparer.Ordinal).Select(static skillName => new SkillRef(skillName, RegistrySource, null))];
         CardReadiness readiness = reasons.Count == 0 ? CardReadiness.Ready : CardReadiness.NeedsSetup;
         return new CardState(role.Id, name, pick, distinctSkills, usedPacks, readiness, reasons, setup, unconnected);
+    }
+
+    /// <summary>What a role needs set up before it can be hired: the one rule <see cref="Resolve"/> and the Candidate check share.</summary>
+    /// <param name="role">The role being hired.</param>
+    /// <param name="skills">The registry: which Packs exist and which Skills are ready.</param>
+    /// <returns>One item per Skill or Pack that is not ready; empty when the role is ready.</returns>
+    public static IReadOnlyList<SkillSetupItem> SkillSetupOf(RoleSpec role, ISkillAvailability skills)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+        ArgumentNullException.ThrowIfNull(skills);
+
+        List<VersionedRef> usedPacks = [.. CardResolver.UsedPacks(role, skills).Select(static pack => new VersionedRef(pack.Id, pack.Version))];
+        return SkillSetupCheck.For([.. role.Skills.Select(static skill => skill.Name)], usedPacks, skills);
+    }
+
+    /// <summary>The role's Packs the registry finds. A Pack no row provides is skipped silently: R008 warns on the Packs tab, and a
+    /// stock install with no skills repository must still be able to hire a role that names one.</summary>
+    private static List<PackEntry> UsedPacks(RoleSpec role, ISkillAvailability skills)
+    {
+        List<PackEntry> found = [];
+        foreach (string packId in role.Packs)
+        {
+            if (skills.FindPack(packId) is { } pack)
+            {
+                found.Add(pack);
+            }
+        }
+
+        return found;
     }
 
     /// <summary>Picks the card's name: the chosen one, else the first free suggestion, else the first suggestion.</summary>
