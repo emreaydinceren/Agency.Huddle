@@ -91,7 +91,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
     /// <summary>Lists the gates the Team's <c>_team.md</c> enables.</summary>
     /// <param name="team">The Team name.</param>
-    /// <returns>The gates in file order; empty when the Team has no <c>_team.md</c> or no known team type.</returns>
+    /// <returns>The gates in file order; empty when the Team is blank (a new Task whose Team is not chosen yet), has no <c>_team.md</c> or no known team type.</returns>
     public IReadOnlyList<GateId> EnabledGates(string team)
     {
         ArgumentNullException.ThrowIfNull(team);
@@ -156,6 +156,12 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
     private ProcessSettings? Load(string team)
     {
+        // A blank Team (a new Task whose Team is not chosen yet) names no Team, so it has no gates; the rename lookup refuses a blank name.
+        if (string.IsNullOrWhiteSpace(team))
+        {
+            return null;
+        }
+
         // A label written before a rename still carries the old name; resolve it so the gates never fail open.
         team = renames?.Resolve(team) ?? team;
         if (teams.Find(team) is not { } summary || folders.ReadTeamFile(team) is not { } file)

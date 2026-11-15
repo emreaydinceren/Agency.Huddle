@@ -29,4 +29,17 @@ public sealed class ProcessGateRenameTests
 
         Assert.Empty(gates.EnabledGates("Marketing"));
     }
+
+    /// <summary>Issue #571: a new Task whose Team is not chosen yet has a blank Team, which names no Team, so it has no gates rather than failing the rename lookup.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("  ")]
+    public void EnabledGates_BlankTeam_HasNoGatesAndDoesNotThrow(string team)
+    {
+        using TempDataDir dir = new();
+        TeamRenameStore renames = new(dir.Options());
+        ProcessGateService gates = TaskGateText.BuildGates(dir, TaskGateText.Process(TaskGateText.QaGate), renames);
+
+        Assert.Empty(gates.EnabledGates(team));
+    }
 }

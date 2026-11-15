@@ -15,7 +15,7 @@
     PROJECTS (the "+" starts a Project; the Project rows, then, once there is a Project, the quiet "No project" toggle,
     which narrows the sections below to what belongs to no Project), ROOMS (the "+" opens the New chat panel for the Team and the selected
     Project; Team scope lists every Room of the Team, No project the Rooms with no Project or whose Project is gone, a
-    Project its own), TASKS (the "+" opens New view; the same Views as TaskViewNav.razor, each linking to
+    Project its own), TASKS (the "+" creates a New view and opens it in the scope's own route; the same Views as TaskViewNav.razor, each linking to
     /teams/{Team}/tasks/{ViewId}, /teams/{Team}/no-project/tasks/{ViewId} or /teams/{Team}/projects/{Project}/tasks/{ViewId};
     Rename and Delete stay on the Tasks view's own rows) and LIBRARY (one Files link to the Library tab of the scope; No
     project links to /teams/{Team}/no-project/files, the Team's folder without its Project folders).
@@ -660,7 +660,7 @@
         string? titleScope = noProject ? Tasks.NoProjectLabel : project;
         RenderFragment add = @<MudTooltip Text="New task view">
             <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add teams-nav-new-view"
-                           aria-label="New task view" OnClick="this.NewTaskView" />
+                           aria-label="New task view" OnClick="@(() => this.NewTaskView(team, project, noProject))" />
         </MudTooltip>;
         return @<div class="teams-nav-section teams-nav-section-tasks" data-section="tasks">
             @SectionHeader("Tasks", add)
@@ -907,11 +907,22 @@
         }
     }
 
-    /// <summary>The Tasks section's "+": opens the New view page in the preview Tab, as the Tasks view's "New view" link does.</summary>
-    private void NewTaskView()
+    /// <summary>
+    /// The Tasks section's "+": creates a "New view" and opens it in a permanent Tab under the section's own scope route, the
+    /// address and title the section's rows use, so its "New task" belongs to the Team (and Project). It does not open
+    /// <c>/tasks/new</c>: that page makes a View and moves its Tab, and the browser's later location change for it opened a
+    /// second Tab and a second View. When the View store refuses the save, the scope's All Tasks View opens instead, whose page shows why.
+    /// </summary>
+    /// <param name="team">The Team the section belongs to.</param>
+    /// <param name="project">The selected Project, or <see langword="null"/> for the Team scope or No project.</param>
+    /// <param name="noProject">Whether No project is the selected scope.</param>
+    private void NewTaskView(string team, string? project, bool noProject)
     {
-        const string href = "/tasks/new";
-        _ = this.Tabs.Open(href, "New view");
+        TaskView? view = ViewActions.CreateNew(this.Views) ?? this.Views.Get(ViewStore.AllTasksId);
+        string href = ViewHref(team, project, noProject, view?.Id ?? ViewStore.AllTasksId);
+        string title = Tasks.TeamViewTitle(team, view?.Name ?? "All Tasks", noProject ? Tasks.NoProjectLabel : project);
+        _ = this.Tabs.Open(href, title);
+        this.Tabs.KeepByKey(TabKeys.Describe(href).Key);
         this.Navigation.NavigateTo(href);
     }
 

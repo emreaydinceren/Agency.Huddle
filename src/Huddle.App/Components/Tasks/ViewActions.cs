@@ -88,6 +88,18 @@ internal static class ViewActions
 
         return candidate;
     }
+
+    /// <summary>Saves a new List View under <see cref="NewViewName"/>, as the Tasks page's New view route and the sidebar's Tasks "+" both do.</summary>
+    /// <param name="store">The View store the View is saved to.</param>
+    /// <returns>The saved View, or <see langword="null"/> when the store refused it (its <c>views.json</c> is unreadable).</returns>
+    public static TaskView? CreateNew(ViewStore store)
+    {
+        ArgumentNullException.ThrowIfNull(store);
+
+        TaskView created = new() { Id = Guid.NewGuid().ToString("N"), Name = NewViewName(store), Kind = ViewKind.List };
+        return store.Save(created).Saved ? created : null;
+    }
+
     /// <summary>Asks whether to delete <paramref name="view"/> through the shared confirm and returns the answer.</summary>
     /// <param name="dialogService">The dialog service.</param>
     /// <param name="view">The View about to be deleted.</param>
