@@ -1,0 +1,284 @@
+@implements IDisposable
+@using System.Globalization
+@using Agency.Huddle.App.Data
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Teams
+@using Microsoft.Extensions.Options
+@inject NeedsYouLevels Levels
+@inject NeedsYouCaps Caps
+@inject ITeamFolders Folders
+@inject NeedsYouLevelStore Store
+@inject IOptions<TeamOptions> Options
+
+@*
+    The one Needs You level control (ADR-0087), drawn on Settings (no Team), a Team's Process tab (Team) and a Project's dialog (Team and
+    Project). It shows what the scope itself sets, what is in force and why, and saves through NeedsYouLevels, whose setters only this
+    UI calls. The cap's open question is drawn under it. It repaints on NeedsYouLevels.Changed and NeedsYouCaps.Changed.
+*@
+
+<div class="needs-you-level" data-scope="@this.ScopeKind">
+    @if (!this.canSet)
+    {
+        <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="needs-you-level-unavailable">@this.UnavailableText</MudAlert>
+    }
+    else
+    {
+        <HuddleSegmentedControl T="string" Value="@this.choice" ValueChanged="this.OnChoiceChanged" Class="needs-you-level-choice"
+                                ItemCount="@(this.Inherits ? 3 : 2)">
+            @if (this.Inherits)
+            {
+                <MudToggleItem Value="@InheritChoice">Inherit</MudToggleItem>
+            }
+            <MudToggleItem Value="@AskMeChoice">@NeedsYouLevel.AskMe.ToDisplay()</MudToggleItem>
+            <MudToggleItem Value="@RunChoice">@NeedsYouLevel.RunInsideTheTeam.ToDisplay()</MudToggleItem>
+        </HuddleSegmentedControl>
+
+        @if (this.choice == RunChoice)
+        {
+            <MudText Typo="Typo.caption" Class="needs-you-level-note">@NeedsYouLevelCopy.RunInsideNote</MudText>
+            <MudTextField T="string" Value="@this.capText" ValueChanged="this.OnCapChanged" Immediate="true" Label="Spend cap (USD)"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="needs-you-level-cap" Error="@(this.capError is not null)"
+                          ErrorText="@this.capError" HelperText="@NeedsYouLevelCopy.CapNote" />
+        }
+        else if (this.choice == AskMeChoice)
+        {
+            <MudText Typo="Typo.caption" Class="needs-you-level-note">@NeedsYouLevelCopy.AskMeNote</MudText>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="needs-you-level-save"
+                   Disabled="@(!this.Dirty)" OnClick="this.Save">Save</MudButton>
+    }
+
+    @if (this.effective is not null)
+    {
+        <MudText Typo="Typo.body2" Class="@(this.effective.CapReached ? "needs-you-level-effective needs-you-level-cap-reached" : "needs-you-level-effective")" role="status">
+            @NeedsYouLevelCopy.InForce(this.effective, this.OwnsEffective, this.ScopeLabel)
+        </MudText>
+    }
+
+    @if (this.saveError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="needs-you-level-error">@this.saveError</MudAlert>
+    }
+
+    @foreach (CapAsk ask in this.asks)
+    {
+        <NeedsYouCapAskCard @key="ask.Scope" Key="@ask.Scope" ScopeName="@ask.ScopeName" Cap="@ask.Cap" Spent="@ask.Spent" OnAnswered="this.Reload" />
+    }
+</div>
+
+@code {
+    private const string InheritChoice = "inherit";
+    private const string AskMeChoice = "ask-me";
+    private const string RunChoice = "run-inside-team";
+
+    private string? loadedScope;
+    private string choice = AskMeChoice;
+    private string storedChoice = AskMeChoice;
+    private string capText = string.Empty;
+    private string storedCapText = string.Empty;
+    private string? capError;
+    private string? saveError;
+    private bool canSet = true;
+    private EffectiveLevel? effective;
+    private IReadOnlyList<CapAsk> asks = [];
+
+    /// <summary>The Team whose level this sets; <see langword="null"/> sets the global level, on Settings.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    /// <summary>The Project whose level this sets, inside <see cref="Team"/>; <see langword="null"/> sets the Team's.</summary>
+    [Parameter]
+    public string? Project { get; set; }
+
+    private bool Inherits => this.Team is not null;
+
+    private bool IsProject => this.Team is not null && !string.IsNullOrWhiteSpace(this.Project);
+
+    /// <summary>The scope this control shows and sets.</summary>
+    private NeedsYouScope Scope
+    {
+        get
+        {
+            if (this.Team is null)
+            {
+                return NeedsYouScope.Global;
+            }
+
+            return this.IsProject ? NeedsYouScope.Project : NeedsYouScope.Team;
+        }
+    }
+
+    private string ScopeKind => this.Scope.ToDisplay();
+
+    private string ScopeLabel => this.IsProject ? "the project" : "the Team";
+
+    private bool Dirty => this.choice != this.storedChoice || (this.choice == RunChoice && !string.Equals(this.capText.Trim(), this.storedCapText, StringComparison.Ordinal));
+
+    private string UnavailableText => this.IsProject
+        ? "This project has no folder it can keep a level in, so it follows the Team."
+        : "This Team has no team file to keep a level in, so it follows Settings.";
+
+    /// <summary>Whether the level in force was set by the scope this control shows, so the line reads "In force" rather than "Inherits".</summary>
+    private bool OwnsEffective => this.effective is { } level && level.Scope == this.Scope;
+
+    private string OwnKey => this.Scope switch
+    {
+        NeedsYouScope.Project => NeedsYouCaps.ProjectKey(this.Team ?? string.Empty, this.Project ?? string.Empty),
+        NeedsYouScope.Team => NeedsYouCaps.TeamKey(this.Team ?? string.Empty),
+        _ => NeedsYouCaps.GlobalKey,
+    };
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Levels.Changed += this.OnSourceChanged;
+        this.Caps.Changed += this.OnSourceChanged;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        // A parent that repaints must not drop what the Human is typing: reload only when the scope itself changed.
+        string scope = this.OwnKey;
+        if (!string.Equals(scope, this.loadedScope, StringComparison.Ordinal))
+        {
+            this.loadedScope = scope;
+            this.Reload();
+        }
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.Levels.Changed -= this.OnSourceChanged;
+        this.Caps.Changed -= this.OnSourceChanged;
+    }
+
+    /// <summary>Reads what the scope sets, what is in force and the open questions, and drops an unsaved edit.</summary>
+    private void Reload()
+    {
+        (NeedsYouLevel? level, decimal? cap) = this.ReadOwn();
+        this.canSet = this.Team is null || this.CanKeepLevel();
+        this.storedChoice = level switch
+        {
+            NeedsYouLevel.AskMe => AskMeChoice,
+            NeedsYouLevel.RunInsideTheTeam => RunChoice,
+            _ => this.Inherits ? InheritChoice : AskMeChoice,
+        };
+        this.storedCapText = level == NeedsYouLevel.RunInsideTheTeam && cap is { } own ? NeedsYouLevelText.FormatCap(own) : string.Empty;
+        this.choice = this.storedChoice;
+        this.capText = this.storedCapText;
+        this.capError = null;
+        this.Refresh();
+    }
+
+    /// <summary>Reads the level in force and the open questions, and leaves what the Human is typing alone.</summary>
+    private void Refresh()
+    {
+        this.effective = this.Levels.For(this.Team ?? string.Empty, this.IsProject ? this.Project : null);
+        string key = this.OwnKey;
+        this.asks = [.. this.Caps.Pending.Where(ask => string.Equals(ask.Scope, key, StringComparison.Ordinal))];
+    }
+
+    /// <summary>The level and cap the scope itself sets, read from the same places the setters write.</summary>
+    private (NeedsYouLevel? Level, decimal? Cap) ReadOwn()
+    {
+        if (this.Team is null)
+        {
+            if (this.Store.Get() is { } saved)
+            {
+                return (saved.Level, saved.SpendCap);
+            }
+
+            NeedsYouOptions configured = this.Options.Value.NeedsYouLevel;
+            return (NeedsYouLevelText.ParseOrNull(configured.Level) ?? NeedsYouLevel.AskMe, NeedsYouLevelText.Usable(configured.SpendCap));
+        }
+
+        if (this.IsProject)
+        {
+            return this.Folders.ReadProjectFile(this.Team, this.Project ?? string.Empty) is { } project ? (project.NeedsYouLevel, project.SpendCap) : (null, null);
+        }
+
+        return this.Folders.ReadTeamFile(this.Team) is { } team ? (team.NeedsYouLevel, team.SpendCap) : (null, null);
+    }
+
+    /// <summary>Whether a Team has a team file, or a Project a folder, to keep a level in; a Project's file may be absent until the first save.</summary>
+    private bool CanKeepLevel() => this.IsProject
+        ? this.Folders.FindTeam(this.Team ?? string.Empty).Value is not null
+        : this.Folders.ReadTeamFile(this.Team ?? string.Empty) is not null;
+
+    private void OnChoiceChanged(string? value)
+    {
+        this.choice = value ?? this.storedChoice;
+        this.saveError = null;
+        this.capError = this.choice == RunChoice ? CapProblem(this.capText) : null;
+    }
+
+    private void OnCapChanged(string? value)
+    {
+        this.capText = value ?? string.Empty;
+        this.saveError = null;
+        this.capError = CapProblem(this.capText);
+    }
+
+    /// <summary>The refusal for a cap text, or <see langword="null"/> when it is empty (no cap) or a number above zero.</summary>
+    private static string? CapProblem(string text) => text.Trim().Length == 0 || ParseCap(text) is not null ? null : NeedsYouLevelCopy.CapInvalid;
+
+    private static decimal? ParseCap(string text) =>
+        decimal.TryParse(text.Trim(), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out decimal cap) && cap > 0 ? cap : null;
+
+    /// <summary>Saves through the setter for the scope; a cap that is not a number above zero is refused and nothing is written.</summary>
+    private void Save()
+    {
+        this.saveError = null;
+        decimal? cap = null;
+        if (this.choice == RunChoice)
+        {
+            this.capError = CapProblem(this.capText);
+            if (this.capError is not null)
+            {
+                return;
+            }
+
+            cap = ParseCap(this.capText);
+        }
+
+        NeedsYouLevel? level = this.choice switch
+        {
+            AskMeChoice => NeedsYouLevel.AskMe,
+            RunChoice => NeedsYouLevel.RunInsideTheTeam,
+            _ => null,
+        };
+
+        bool written = true;
+        if (this.Team is null)
+        {
+            this.Levels.SetGlobal(level ?? NeedsYouLevel.AskMe, cap);
+        }
+        else if (this.IsProject)
+        {
+            written = this.Levels.SetProject(this.Team, this.Project ?? string.Empty, level, cap);
+        }
+        else
+        {
+            written = this.Levels.SetTeam(this.Team, level, cap);
+        }
+
+        if (!written)
+        {
+            this.saveError = "The level could not be saved. Check that the folder can be written.";
+            return;
+        }
+
+        this.Reload();
+    }
+
+    private void OnSourceChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        // Another place changed the level or a question: show what is in force now, and keep what is being typed.
+        this.Refresh();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

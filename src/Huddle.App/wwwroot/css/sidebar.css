@@ -861,6 +861,21 @@
     gap: 0;
 }
 
-.needs-you-page-task {
+.needs-you-page-task,
+.needs-you-page-cap {
     margin-bottom: 16px;
+}
+
+/* The spend cap question (ADR-0087): the sentence over its two buttons, on the page and under a level control. */
+.needs-you-cap-ask {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+}
+
+.needs-you-cap-ask-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }

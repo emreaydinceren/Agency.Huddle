@@ -433,6 +433,32 @@
     }
 }
 
+/* The Needs You level control (ADR-0087): the choice, one line under it for what it means, the cap, Save, what is in force, the open question. */
+.needs-you-level {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    max-width: 640px;
+}
+
+.process-tab-level {
+    margin-bottom: 24px;
+}
+
+.needs-you-level-note,
+.needs-you-level-effective {
+    color: var(--mud-palette-text-secondary);
+}
+
+.needs-you-level-cap {
+    width: 240px;
+}
+
+.needs-you-level .needs-you-cap-ask {
+    align-self: stretch;
+}
+
 /* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
    Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's

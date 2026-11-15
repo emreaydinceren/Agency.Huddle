@@ -148,6 +148,9 @@
                 <Actions>
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
                                Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</MudButton>
+                    @* A Project has no tab for settings, so its Needs You level (ADR-0087) opens in a dialog. *@
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.NotificationsActive"
+                               Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</MudButton>
                     @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
                     <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
                                Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</MudButton>
@@ -428,6 +431,17 @@
         {
             _ = this.Snackbar.Add($"The avatar of {project} could not be saved.", Severity.Warning, configure: null, key: "project-avatar-error");
         }
+    }
+
+    /// <summary>Opens <see cref="NeedsYouLevelDialog"/> for <paramref name="project"/>'s Needs You level (ADR-0087).</summary>
+    private async Task EditProjectLevelAsync(string team, string project)
+    {
+        DialogParameters<NeedsYouLevelDialog> parameters = new()
+        {
+            { dialog => dialog.Team, team },
+            { dialog => dialog.Project, project },
+        };
+        _ = await this.DialogService.ShowAsync<NeedsYouLevelDialog>($"Needs You level of {project}", parameters, NeedsYouLevelDialog.Options);
     }
 
     /// <summary>Asks T16's question and archives the Team; once archived the page goes Home, as the Details tab's Archive does.</summary>

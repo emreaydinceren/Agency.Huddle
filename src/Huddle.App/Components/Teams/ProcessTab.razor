@@ -6,13 +6,22 @@
 @inject NavigationManager Navigation
 
 @*
-    Task 57 (PR-2, PR-8, NF-5): the Process tab of a Team page. AGENTS.md rendered as Markdown, Edit
-    (opens the file in the Library page), and one switch per enabled hard gate. Turning a gate off asks
+    Task 57 (PR-2, PR-8, NF-5): the Process tab of a Team page. The Needs You level, AGENTS.md rendered as Markdown, Edit
+    (opens the file in the Library page), and one switch per enabled hard gate except accept-before-merge, which the level replaced. Turning a gate off asks
     first, naming the gate and its risk; only Turn off rewrites the gates line of _team.md
     (TeamFile.WithGates keeps every other line). Cancel leaves the file alone and the switch on.
 *@
 
 <div class="process-tab">
+    @* The Needs You level (ADR-0087) replaced the accept-before-merge switch: it is the Team's one standing answer to what waits for the Human. *@
+    <section class="process-tab-level" aria-label="Needs You level">
+        <div class="group-label">Needs You level</div>
+        <NeedsYouLevelControl Team="@this.Team" />
+        @if (this.gates.Contains(GateId.AcceptBeforeMerge))
+        {
+            <MudText Typo="Typo.caption" Class="process-tab-gate-note">This Team asks before a merge into main. The level above decides what that waits for.</MudText>
+        }
+    </section>
     @if (this.text is null && this.gates.Count == 0)
     {
         <EmptyState Icon="@Icons.Material.Outlined.AccountTree" Title="No process yet"
@@ -29,10 +38,10 @@
         {
             <MudAlert Severity="Severity.Error" role="alert" Class="process-tab-error">@this.error</MudAlert>
         }
-        @if (this.gates.Count > 0)
+        @if (this.gates.Any(static gate => gate != GateId.AcceptBeforeMerge))
         {
             <MudStack Spacing="1" Class="my-2">
-                @foreach (GateId gate in this.gates)
+                @foreach (GateId gate in this.gates.Where(static gate => gate != GateId.AcceptBeforeMerge))
                 {
                     GateId current = gate;
                     string id = ProcessDocument.ToId(current);

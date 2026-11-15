@@ -62,7 +62,7 @@ public sealed class SettingsPageTests
 
         List<string?> hrefs = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(static link => link.GetAttribute("href"))];
         Assert.Equal(
-            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/spending", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/sessions", "/settings/remoteaccess"],
+            ["/settings/profile", "/settings/prompts", "/settings/helpers", "/settings/spending", "/settings/needsyou", "/settings/appearance", "/settings/personas", "/settings/skills", "/settings/teamtypes", "/settings/library", "/settings/sessions", "/settings/remoteaccess"],
             hrefs);
     }
 
@@ -145,7 +145,7 @@ public sealed class SettingsPageTests
 
         Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.RemoteAccess.RemoteAccessPanel>());
         List<AngleSharp.Dom.IElement> items = cut.FindAll(".settings-nav .mud-nav-item").ToList();
-        Assert.Equal(10, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(11, items.FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
         Assert.Equal("Remote access", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 
@@ -173,7 +173,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "library"));
 
         Assert.Single(cut.FindComponents<LibraryPanel>());
-        Assert.Equal(8, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(9, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
     }
 
     /// <summary>The <c>/settings/sessions</c> route highlights the ninth row, "Sessions", directly after Library, and renders the Sessions panel (Spec §5.4, T2).</summary>
@@ -186,7 +186,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "sessions"));
 
         Assert.Single(cut.FindComponents<Agency.Huddle.App.Components.Settings.SessionsPanel>());
-        Assert.Equal(9, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
+        Assert.Equal(10, cut.FindAll(".settings-nav .mud-nav-item").ToList().FindIndex(static item => item.ClassList.Contains("settings-nav-item-active")));
         Assert.Equal("Sessions", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 

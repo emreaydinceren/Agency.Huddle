@@ -11,7 +11,9 @@
 @implements IDisposable
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.NeedsYou
+@using Agency.Huddle.App.Teams
 @inject NeedsYouTaskSource TaskSource
+@inject IServiceProvider Services
 
 <MudPaper Outlined="true" Class="needs-you-card" hidden="@(this.Total == 0)" role="region" aria-label="Needs you">
     <div class="needs-you-title">
@@ -32,25 +34,59 @@
             </NavTabLink>
         </div>
     }
+    @* A spend cap question (ADR-0087): one row per open question; the Yes/No buttons are on the Needs You page. *@
+    @foreach (CapAsk ask in this.capAsks)
+    {
+        <div class="needs-you-row needs-you-task-row needs-you-cap-row" @key="ask.Scope">
+            <NavTabLink Href="/needs-you#cap" TabTitle="@HumanGateCopy.NeedsYouTitle">
+                <span class="needs-you-text">
+                    <span class="needs-you-name" title="@ask.ScopeName">@ask.ScopeName</span>
+                    <span class="needs-you-detail">Spend cap reached</span>
+                </span>
+            </NavTabLink>
+        </div>
+    }
 </MudPaper>
 
 @code {
     private int roomCount;
     private IReadOnlyList<NeedsYouTaskEntry> taskEntries = [];
+    private IReadOnlyList<CapAsk> capAsks = [];
+    private NeedsYouCaps? caps;
 
-    private int Total => this.roomCount + this.taskEntries.Count;
+    private int Total => this.roomCount + this.taskEntries.Count + this.capAsks.Count;
 
     /// <inheritdoc />
     protected override void OnInitialized()
     {
         this.taskEntries = this.TaskSource.Entries;
         this.TaskSource.Changed += this.OnTasksChanged;
+        this.caps = this.Services.GetService<NeedsYouCaps>();
+        if (this.caps is not null)
+        {
+            this.capAsks = this.caps.Pending;
+            this.caps.Changed += this.OnCapsChanged;
+        }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
         this.TaskSource.Changed -= this.OnTasksChanged;
+        if (this.caps is not null)
+        {
+            this.caps.Changed -= this.OnCapsChanged;
+        }
+    }
+
+    private void OnCapsChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.capAsks = this.caps?.Pending ?? [];
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     private void OnCountChanged(int value)
