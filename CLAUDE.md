@@ -22,8 +22,9 @@ When you add, rename or delete a page under `docs/`, change `docs/Index.md` in t
 same commit. `agents/scripts/Check-DocIndex.ps1` (run by `Check-All.ps1`) fails
 otherwise.
 
-Do not orient from `README.md`: it belongs to the ACP effort and is not kept in step
-with the chat surface's pages, which `docs/Index.md` routes.
+Do not orient from `README.md`: it is the product's front door for visitors, a shared
+root file, and it routes to `docs/Index.md` rather than repeating it. A change to what
+the product does, how it installs or how it builds may need a line there too.
 
 ## Two projects, one build root
 
@@ -35,7 +36,7 @@ subtree, and root files are shared — announce changes before making them.
 | --- | --- | --- |
 | Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter`, `src/Huddle.SkillPacks`, `src/Huddle.Packs`, `src/Huddle.Analyzers` |
 | Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests.*`, `tests/Huddle.Analyzers.Tests` |
-| Docs | `docs/engineering/acp-*.md`, `README.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md`, `docs/Huddle.SkillPacks*.md` |
+| Docs | `docs/engineering/acp-*.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md`, `docs/Huddle.SkillPacks*.md` |
 
 `src/Huddle.MockAdapter` (assembly `mock-acp`) is the one place the two subtrees touch by
 design: it **links** `FakeAcpAgent.cs`, `PromptContext.cs` and `FakeRpcError.cs` out of

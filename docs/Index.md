@@ -16,8 +16,8 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 > Two pages are **binding**: [rules.md](engineering/rules.md) before editing
 > anything in `src/Huddle.App`, and [traps.md](engineering/traps.md) before touching
 > `Huddle.Acp`, `Huddle.Contracts` or the wire protocol. Do not orient from
-> [README.md](../README.md): it belongs to the ACP effort and its chat section is
-> several milestones behind.
+> [README.md](../README.md): it is the product's front door for visitors and routes
+> here rather than repeating these pages.
 
 ## 1. By task
 
