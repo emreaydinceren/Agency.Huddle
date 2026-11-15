@@ -16,8 +16,8 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 > Two pages are **binding**: [rules.md](engineering/rules.md) before editing
 > anything in `src/Huddle.App`, and [traps.md](engineering/traps.md) before touching
 > `Huddle.Acp`, `Huddle.Contracts` or the wire protocol. Do not orient from
-> [README.md](../README.md): it belongs to the ACP effort and its chat section is
-> several milestones behind.
+> [README.md](../README.md): it is the product's front door for visitors and routes
+> here rather than repeating these pages.
 
 ## 1. By task
 
@@ -155,7 +155,6 @@ that exercise it. All are **chat** unless stated.
 | [acp-agent-guide.md](engineering/acp-agent-guide.md) | What was verified against the real adapter and what is only assumed. Written under the old `Team.*` names | acp | ~9k |
 | [acp-session-config.md](engineering/acp-session-config.md) | How an ACP agent advertises models and effort, and how a client selects them | acp | ~4k |
 | [Huddle.UserGuide.md](Huddle.UserGuide.md) | What the app does from the Human's side, and what changes in the files behind each action | chat | ~12k |
-| [Huddle.About.md](Huddle.About.md) | A one-page, non-technical description of the product for marketing copy, distilled from the user guide | chat | ~1k |
 
 ## 4. Decisions (ADRs)
 

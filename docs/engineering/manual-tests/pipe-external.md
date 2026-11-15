@@ -161,7 +161,7 @@ If `T-C` throws `Exception calling "Connect" with "1" argument(s): "The operatio
 If `T-C`'s scrollback has been lost, do not reconstruct the line from memory: Ctrl+C the bot, re-run `pwsh tools/echo-bot.ps1 -Name mybot`, and read the fresh welcome (reconnecting is safe and is itself tested by PIPEEXTERNAL-09).
 
 > [!NOTE]
-> The Engineering Guide's sample welcome now shows `"version":3`. Only `README.md` still shows `"version":2`; that sample is stale and the app is right at 3. Do not file the README's number as the expected value.
+> The Engineering Guide's sample welcome shows `"version":3`, and the app is right at 3. An older sample elsewhere may still show `"version":2`; do not file that number as the expected value.
 
 ### PIPEEXTERNAL-07 — An Agent never receives its own Message, and nothing loops
 
