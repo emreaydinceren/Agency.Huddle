@@ -47,7 +47,7 @@ public sealed class ProofEvaluatorTests
         Assert.Null(item.Detail);
     }
 
-    /// <summary>With no qualifying Evidence the item is open, owned by the first member covering the step in roster order, with no detail.</summary>
+    /// <summary>With no qualifying Evidence the item is open, owned by the first member covering the step in roster order, and says whose Evidence it waits for (#550).</summary>
     [Fact]
     public void EvidenceFrom_Open_OwnerAndDetail()
     {
@@ -57,20 +57,81 @@ public sealed class ProofEvaluatorTests
 
         Assert.False(item.Met);
         Assert.Equal(Quinn, item.Owner);
+        Assert.Equal("no Evidence from a member covering review", item.Detail);
+    }
+
+    /// <summary>#550 D1: in a Definition of Done that names no command, a note-only Evidence entry by a member covering the step meets <c>evidence from</c>.</summary>
+    [Fact]
+    public void EvidenceFrom_NoteFromCoveringMember_NoCommandInDefinition_IsMet()
+    {
+        ProofContext context = Context([Item(new DoneRule.EvidenceFrom(Verify))], evidence: [Note(Quinn, "Compared the reply with the school's email")]);
+
+        ProofItem item = Single(context);
+
+        Assert.True(item.Met);
+        Assert.Null(item.Owner);
         Assert.Null(item.Detail);
     }
 
-    /// <summary>A human note (an Evidence line with no command) never meets <c>evidence from</c>.</summary>
+    /// <summary>#550 D1: a note-only entry by a member whose role does not cover the step leaves the item open.</summary>
     [Fact]
-    public void EvidenceFrom_NoteLine_DoesNotCount()
+    public void EvidenceFrom_NoteFromMemberWithoutCoverage_IsOpen()
     {
-        EvidenceLine note = new(default, Quinn, string.Empty, null, null, null, "Looked fine to me");
-        ProofContext context = Context([Item(new DoneRule.EvidenceFrom(Verify))], evidence: [note]);
+        ProofContext context = Context([Item(new DoneRule.EvidenceFrom(Verify))], evidence: [Note(Dev, "Checked it myself")]);
 
         ProofItem item = Single(context);
 
         Assert.False(item.Met);
         Assert.Equal(Quinn, item.Owner);
+        Assert.Equal("no Evidence from a member covering verify", item.Detail);
+    }
+
+    /// <summary>#550: an old undated note has no author, so it never meets <c>evidence from</c>, even in a Definition of Done that names no command.</summary>
+    [Fact]
+    public void EvidenceFrom_NoteWithoutAuthor_IsOpen()
+    {
+        ProofContext context = Context([Item(new DoneRule.EvidenceFrom(Verify))], evidence: [Note(string.Empty, "Looked fine to me")]);
+
+        Assert.False(Single(context).Met);
+    }
+
+    /// <summary>#550 D1: when the Definition of Done names a command, <c>evidence from</c> still needs an entry with a command, and the detail says so.</summary>
+    [Fact]
+    public void EvidenceFrom_NoteWhenDefinitionNamesACommand_IsOpen()
+    {
+        ProofContext context = Context(
+            [Item(new DoneRule.EvidenceFrom(Verify), "QA evidence"), Item(new DoneRule.CommandExits("dotnet test"), "Tests pass")],
+            evidence: [Note(Quinn, "Looked fine to me")]);
+
+        ProofItem item = ProofEvaluator.Evaluate(TestTasks.Make(assignee: Dev), context).Items[0];
+
+        Assert.False(item.Met);
+        Assert.Equal(Quinn, item.Owner);
+        Assert.Equal("no Evidence with a command from a member covering verify", item.Detail);
+    }
+
+    /// <summary>#550: a note by a member covering verify never meets <c>command … exits 0</c>.</summary>
+    [Fact]
+    public void CommandExits_NoteFromVerifyMember_IsOpen()
+    {
+        ProofContext context = Context([Item(new DoneRule.CommandExits("dotnet test"))], evidence: [Note(Quinn, "dotnet test")]);
+
+        ProofItem item = Single(context);
+
+        Assert.False(item.Met);
+        Assert.Equal("not run", item.Detail);
+    }
+
+    /// <summary>#550: the QA evidence gate item follows the same rule; with no command in the Definition of Done a verify member's note meets it.</summary>
+    [Fact]
+    public void QaGateEnabled_NoCommandInDefinition_NoteFromVerifyMember_IsMet()
+    {
+        ProofContext context = Context([], gates: [GateId.QaEvidenceBeforeDone], evidence: [Note(Quinn, "Checked every flag against its source")]);
+
+        ProofItem item = Single(context);
+
+        Assert.Equal(ProofItemSource.Gate, item.Source);
+        Assert.True(item.Met);
     }
 
     /// <summary>A command by a member whose role does not cover the step does not meet it.</summary>
@@ -642,6 +703,12 @@ public sealed class ProofEvaluatorTests
     /// <param name="minutes">Minutes after noon.</param>
     private static EvidenceLine Run(string author, string command, int exitCode, int minutes = 0) =>
         new(Noon.AddMinutes(minutes), author, command, exitCode, null, null, $"{author} | {command}");
+
+    /// <summary>A note-only Evidence entry, read back from the timeline the way <c>TaskItem.Evidence</c> reads it.</summary>
+    /// <param name="author">The entry's author; empty for an old undated note.</param>
+    /// <param name="text">What the author wrote.</param>
+    private static EvidenceLine Note(string author, string text) =>
+        EvidenceLine.FromEntry(new TimelineEntry(Noon, author, TimelineEntryKind.Evidence, "note: " + text));
 
     /// <summary>A child Task of the Task under test.</summary>
     /// <param name="id">The child's id.</param>

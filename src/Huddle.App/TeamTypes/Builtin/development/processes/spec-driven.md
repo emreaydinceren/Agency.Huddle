@@ -18,12 +18,14 @@ This Team delivers features and changes that touch shared contracts, the wire pr
 
 ## Stages
 
-1. **Spec**: a spec Task holds the behaviour, the scope and the open questions. Done when the spec is complete enough to review.
+1. **Spec**: a spec Task holds the behaviour, the scope and the open questions. Done when the spec is complete enough to review and is attached to the Task.
 2. **Approved**: the human approves the spec Task. Done when the approval is recorded on it.
 3. **Break down**: the tech lead splits the spec into build Tasks, each with an acceptance line. Done when every build Task has one.
 4. **Build**: the developer writes the change and its tests against the spec. Done when the build and the tests pass locally. A Task with blockers waits here until every blocker is finished and the manager gives the go-ahead; do no work on it before then.
 5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded.
 6. **Done**: the manager moves the build Task to Done. Done when every gate in Gates is met. A Task whose work ends in a merge names that merge as its Action, such as `Merge feat/x into main`, so the Human's Accept leads to the merge.
+
+A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

@@ -22,9 +22,11 @@ Follow the voice principles in `Teams/AGENTS.md`. Write each section to the fund
 ## Stages
 
 1. **Ready**: the Task names the section, quotes the call's requirement and has an owner. Done when the proposal lead assigns it.
-2. **In progress**: the funder researcher, grant writer or budget analyst drafts the section from cited facts. Done when the draft is in the Task.
+2. **In progress**: the funder researcher, grant writer or budget analyst drafts the section from cited facts. Done when the draft is attached to the Task.
 3. **Verify**: the compliance checker reports gaps against the call, and the proposal lead checks the draft and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line.
+
+A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

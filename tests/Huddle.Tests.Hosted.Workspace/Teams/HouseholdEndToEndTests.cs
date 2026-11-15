@@ -6,8 +6,10 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Ui;
@@ -34,6 +36,10 @@ public sealed class HouseholdEndToEndTests
 
     private const string Connector = "email:read";
 
+    private const string PlanChecked = "Plan checked";
+
+    private const string PlanReviewed = "Plan reviewed";
+
     /// <summary>The liaison card is Ready but lists its connector as unconnected until the connector is listed; then the Team starts with both Agents and a Task reaches Done with no gate refusal.</summary>
     [Fact]
     public async Task HouseholdTeam_NoWorkspace_HiresStartsAndTakesATaskToDone()
@@ -43,10 +49,7 @@ public sealed class HouseholdEndToEndTests
         await using WebApplicationFactory<Program> host = OpenHost(root);
         IServiceProvider services = host.Services;
         TeamTypeManifest type = services.GetRequiredService<TeamTypeCatalog>().Find(TypeId) ?? throw new InvalidOperationException("The household type is not in the catalog.");
-        ITeamFolders folders = services.GetRequiredService<ITeamFolders>();
-        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, null, null, string.Empty);
-        Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(TeamName, file).Outcome);
-        Assert.Equal(ProvisionResult.Created, services.GetRequiredService<ProcessProvisioner>().ProvisionDefault(TeamName));
+        CreateTeam(services, type);
 
         CardState manager = Resolve(services, type, ManagerRole);
         CardState waiting = Resolve(services, type, LiaisonRole);
@@ -61,9 +64,95 @@ public sealed class HouseholdEndToEndTests
         Assert.Equal(CardReadiness.Ready, liaison.Readiness);
         Assert.Empty(liaison.Unconnected);
 
+        await HireBothAsync(services, type, manager, liaison, ct);
+
+        TaskService service = services.GetRequiredService<TaskService>();
+        TaskActor actor = await AgentActorAsync(services, manager.Name, ct);
+        TaskActor human = TaskActors.Human(services.GetRequiredService<IOptions<TeamOptions>>().Value);
+        TaskItem task = Saved(service.Create(new TaskDraft("Plan the school trip", TeamName, null, TaskState.ToDo, Assignee: manager.Name), human));
+
+        _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, actor, false));
+        _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, actor, false));
+        _ = Saved(service.AddEvidence(task.Id, VerifierNote(), actor));
+        IProofSource proofs = services.GetRequiredService<IProofSource>();
+        TaskItem checkedTask = services.GetRequiredService<TaskStore>().Get(task.Id) ?? throw new InvalidOperationException("The Task is gone.");
+        Assert.True(proofs.For(checkedTask).Items.Single(static item => string.Equals(item.Label, PlanChecked, StringComparison.Ordinal)).Met);
+        TaskItem done = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, actor, false));
+
+        Assert.Equal(TaskState.Done, done.Status);
+    }
+
+    /// <summary>
+    /// The owner's D2 case on the real host (#550): the liaison saves a reply slip under the Team's <c>outputs/</c>, attaches it and
+    /// logs it created; the manager logs it reviewed and posts a note-only Evidence entry; Huddle, not the manager, then moves the
+    /// gated Task from Review to Needs You.
+    /// </summary>
+    [Fact]
+    public async Task GatedTask_FileDraftReviewedAndNoteOnlyEvidence_HuddleMovesItToNeedsYou()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using TeamWebApplicationFactory root = new();
+        await using WebApplicationFactory<Program> host = OpenHost(root);
+        IServiceProvider services = host.Services;
+        (TaskActor manager, TaskActor liaison, string managerName, string liaisonName) = await StartHouseholdAsync(services, root, ct);
+        string draft = WriteDraft(services);
+        TaskItem task = InReview(services, liaison, AttachedDescription(draft));
+        LogChange(services, draft, liaisonName, DocChangeKind.Created, "drafted the reply slip");
+        LogChange(services, draft, managerName, DocChangeKind.Reviewed, "checked it against the school email");
+        TaskService service = services.GetRequiredService<TaskService>();
+        Assert.Equal(TaskState.Review, Current(services, task).Status);
+
+        _ = Saved(service.AddEvidence(task.Id, VerifierNote(), manager));
+
+        Assert.Equal(TaskState.NeedsYou, Current(services, task).Status);
+    }
+
+    /// <summary>
+    /// The same Task with the draft written only in the description (#550): the note meets "Plan checked", but "Plan reviewed"
+    /// stays open with "no document attached", so Huddle leaves the Task in Review.
+    /// </summary>
+    [Fact]
+    public async Task GatedTask_DraftOnlyInDescription_StaysInReviewWithPlanReviewedOpen()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using TeamWebApplicationFactory root = new();
+        await using WebApplicationFactory<Program> host = OpenHost(root);
+        IServiceProvider services = host.Services;
+        (TaskActor manager, TaskActor liaison, _, _) = await StartHouseholdAsync(services, root, ct);
+        TaskItem task = InReview(services, liaison, "Dear teacher, we will attend the trip.");
+
+        _ = Saved(services.GetRequiredService<TaskService>().AddEvidence(task.Id, VerifierNote(), manager));
+
+        TaskItem current = Current(services, task);
+        Assert.Equal(TaskState.Review, current.Status);
+        Proof proof = services.GetRequiredService<IProofSource>().For(current);
+        Assert.True(proof.Items.Single(static item => string.Equals(item.Label, PlanChecked, StringComparison.Ordinal)).Met);
+        ProofItem reviewed = proof.Items.Single(static item => string.Equals(item.Label, PlanReviewed, StringComparison.Ordinal));
+        Assert.False(reviewed.Met);
+        Assert.Equal("no document attached", reviewed.Detail);
+    }
+
+    /// <summary>Creates the Team folder and provisions the default process.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="type">The team type.</param>
+    private static void CreateTeam(IServiceProvider services, TeamTypeManifest type)
+    {
+        TeamFile file = new(new VersionedRef(type.Id, type.Version), null, null, null, string.Empty);
+        Assert.Equal(TeamCreateOutcome.Created, services.GetRequiredService<ITeamFolders>().CreateTeam(TeamName, file).Outcome);
+        Assert.Equal(ProvisionResult.Created, services.GetRequiredService<ProcessProvisioner>().ProvisionDefault(TeamName));
+    }
+
+    /// <summary>Hires the manager and the liaison, onboards the manager and waits until the catalog lists both.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="type">The team type.</param>
+    /// <param name="manager">The manager's card.</param>
+    /// <param name="liaison">The liaison's card.</param>
+    /// <param name="ct">The test's cancellation token.</param>
+    private static async Task HireBothAsync(IServiceProvider services, TeamTypeManifest type, CardState manager, CardState liaison, CancellationToken ct)
+    {
         HireService hiring = services.GetRequiredService<HireService>();
         Assert.Null(hiring.Hire(new HireRequest(TeamName, type.Id, manager.RoleId, manager)).Error);
-        _ = folders.UpdateTeamFile(TeamName, current => current with { Manager = manager.Name });
+        _ = services.GetRequiredService<ITeamFolders>().UpdateTeamFile(TeamName, current => current with { Manager = manager.Name });
         Assert.Null(hiring.Hire(new HireRequest(TeamName, type.Id, liaison.RoleId, liaison)).Error);
         _ = await hiring.OnboardManagerAsync(TeamName, manager.Name, ct);
 
@@ -78,21 +167,93 @@ public sealed class HouseholdEndToEndTests
         TeamSummary team = catalog.Find(TeamName) ?? throw new InvalidOperationException("The Team is not in the catalog.");
         Assert.Equal(manager.Name, team.Manager);
         Assert.Equal(2, team.Members.Count);
-
-        TaskService service = services.GetRequiredService<TaskService>();
-        User? user = await services.GetRequiredService<ITeamDirectory>().UpsertAgentUserAsync(manager.Name, null, ct);
-        Assert.NotNull(user);
-        TaskActor actor = new(TaskActorKind.Agent, manager.Name, user.Id);
-        TaskActor human = TaskActors.Human(services.GetRequiredService<IOptions<TeamOptions>>().Value);
-        TaskItem task = Saved(service.Create(new TaskDraft("Plan the school trip", TeamName, null, TaskState.ToDo, Assignee: manager.Name), human));
-
-        _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, actor, false));
-        _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, actor, false));
-        _ = Saved(service.AddEvidence(task.Id, new EvidenceLine(DateTimeOffset.UtcNow, manager.Name, "compared the draft with the school emails", 0, null, null, string.Empty), actor));
-        TaskItem done = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, actor, false));
-
-        Assert.Equal(TaskState.Done, done.Status);
     }
+
+    /// <summary>Creates the Household Team, connects the liaison's connector and hires both members.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="root">The factory that owns the data directory.</param>
+    /// <param name="ct">The test's cancellation token.</param>
+    /// <returns>The manager's and the liaison's actors and names.</returns>
+    private static async Task<(TaskActor Manager, TaskActor Liaison, string ManagerName, string LiaisonName)> StartHouseholdAsync(IServiceProvider services, TeamWebApplicationFactory root, CancellationToken ct)
+    {
+        TeamTypeManifest type = services.GetRequiredService<TeamTypeCatalog>().Find(TypeId) ?? throw new InvalidOperationException("The household type is not in the catalog.");
+        CreateTeam(services, type);
+        File.WriteAllText(Path.Combine(root.DataDirPath, TeamPaths.ConnectorsFileName), $$"""{"connected": ["{{Connector}}"]}""");
+        CardState manager = Resolve(services, type, ManagerRole);
+        CardState liaison = Resolve(services, type, LiaisonRole);
+        await HireBothAsync(services, type, manager, liaison, ct);
+        return (await AgentActorAsync(services, manager.Name, ct), await AgentActorAsync(services, liaison.Name, ct), manager.Name, liaison.Name);
+    }
+
+    /// <summary>Makes the Agent's user and the actor that acts as it.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="name">The Agent's name.</param>
+    /// <param name="ct">The test's cancellation token.</param>
+    private static async Task<TaskActor> AgentActorAsync(IServiceProvider services, string name, CancellationToken ct)
+    {
+        User? user = await services.GetRequiredService<ITeamDirectory>().UpsertAgentUserAsync(name, null, ct);
+        Assert.NotNull(user);
+        return new TaskActor(TaskActorKind.Agent, name, user.Id);
+    }
+
+    /// <summary>A note-only Evidence line, as <c>add_evidence</c> builds it from a note: no command, no time, no author.</summary>
+    private static EvidenceLine VerifierNote() =>
+        new(default, string.Empty, string.Empty, null, null, null, "checked the draft against the school email");
+
+    /// <summary>Saves the draft under the Team's <c>outputs/</c> folder.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <returns>The draft's full path.</returns>
+    private static string WriteDraft(IServiceProvider services)
+    {
+        string folder = services.GetRequiredService<ITeamFolders>().FindTeam(TeamName).Value?.FullPath ?? throw new InvalidOperationException("The Team has no folder.");
+        string outputs = Path.Combine(folder, "outputs");
+        _ = Directory.CreateDirectory(outputs);
+        string path = Path.Combine(outputs, "reply-slip.md");
+        File.WriteAllText(path, "Dear teacher, we will attend the trip.\n");
+        return path;
+    }
+
+    /// <summary>The description that attaches the draft file.</summary>
+    /// <param name="draft">The draft's full path.</param>
+    private static string AttachedDescription(string draft) =>
+        TaskAttachmentText.AppendPathLine("Reply to the school about the trip.", draft);
+
+    /// <summary>Logs a change to a Library document through the recorder the <c>log_change</c> tool uses.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="path">The document's full path.</param>
+    /// <param name="agent">The logging Agent.</param>
+    /// <param name="kind">What the Agent did.</param>
+    /// <param name="summary">The one line.</param>
+    private static void LogChange(IServiceProvider services, string path, string agent, DocChangeKind kind, string summary)
+    {
+        if (!services.GetRequiredService<LibraryPathResolver>().TryResolveAbsolute(path, out LibraryPath? file))
+        {
+            throw new InvalidOperationException($"'{path}' is not in the Library.");
+        }
+
+        Assert.True(services.GetRequiredService<DocHistoryRecorder>().AgentLogged(file, agent, kind, summary));
+    }
+
+    /// <summary>Creates a gated Task assigned to the liaison and moves it to Review with <paramref name="description"/>.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="liaison">The liaison's actor.</param>
+    /// <param name="description">The description the liaison leaves on the Task.</param>
+    private static TaskItem InReview(IServiceProvider services, TaskActor liaison, string description)
+    {
+        TaskService service = services.GetRequiredService<TaskService>();
+        TaskActor human = TaskActors.Human(services.GetRequiredService<IOptions<TeamOptions>>().Value);
+        TaskDraft draft = new("Reply to the school", TeamName, null, TaskState.ToDo, Assignee: liaison.Name) { HumanGate = true, Action = "Hand the signed slip to school" };
+        TaskItem task = Saved(service.Create(draft, human));
+        _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, liaison, false));
+        _ = Saved(service.Update(task.Id, new TaskPatch { Description = description }, null, liaison, false));
+        return Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, liaison, false));
+    }
+
+    /// <summary>Reads the Task as it is stored now.</summary>
+    /// <param name="services">The host's services.</param>
+    /// <param name="task">The Task.</param>
+    private static TaskItem Current(IServiceProvider services, TaskItem task) =>
+        services.GetRequiredService<TaskStore>().Get(task.Id) ?? throw new InvalidOperationException("The Task is gone.");
 
     /// <summary>Builds a host over the factory's data directory with Acp off, a model for every tier and a recording-free installer.</summary>
     /// <param name="root">The factory that owns the data directory.</param>

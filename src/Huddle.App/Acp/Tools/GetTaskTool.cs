@@ -133,7 +133,7 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
 
     /// <summary>
     /// Adds the Human gate lines (Human gate Spec §6.10): <c>human_gate: true</c>, the <c>action</c>, the Proof as
-    /// <c>proof: met/total</c> with one <c>- label (owner)</c> line per open item, and the acceptance. Each is
+    /// <c>proof: met/total</c> with one <c>- label (owner): detail</c> line per open item (the owner and the detail only when it has them), and the acceptance. Each is
     /// omitted when it does not apply.
     /// </summary>
     /// <param name="lines">The header lines built so far.</param>
@@ -158,9 +158,9 @@ internal sealed class GetTaskTool(TaskStore store, ISprintCatalog sprints, IProm
             lines.Add(string.Create(CultureInfo.InvariantCulture, $"proof: {proof.MetCount}/{proof.Total}"));
             foreach (ProofItem item in proof.Items.Where(static candidate => !candidate.Met))
             {
-                lines.Add(item.Owner is null
-                    ? string.Create(CultureInfo.InvariantCulture, $"- {item.Label}")
-                    : string.Create(CultureInfo.InvariantCulture, $"- {item.Label} ({item.Owner})"));
+                string owner = item.Owner is null ? string.Empty : $" ({item.Owner})";
+                string detail = item.Detail is null ? string.Empty : $": {item.Detail}";
+                lines.Add(string.Create(CultureInfo.InvariantCulture, $"- {item.Label}{owner}{detail}"));
             }
         }
 
