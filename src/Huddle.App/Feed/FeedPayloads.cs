@@ -42,6 +42,7 @@ internal static class FeedPayloads
         FeedSourceType.DevicePaired => typeof(DevicePairedPayload),
         FeedSourceType.DeviceRevoked => typeof(DeviceRevokedPayload),
         FeedSourceType.SecondBrainOverCap => typeof(SecondBrainOverCapPayload),
+        FeedSourceType.SpendCapReached => typeof(SpendCapReachedPayload),
         FeedSourceType.TeamArchived => typeof(TeamArchivedPayload),
         FeedSourceType.BuiltinAgentUpdateAvailable => typeof(BuiltinAgentUpdatePayload),
         FeedSourceType.AgentConnectorsChanged => typeof(AgentConnectorsPayload),

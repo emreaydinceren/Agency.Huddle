@@ -70,6 +70,7 @@ internal static class FeedTestSupport
         FeedSourceType.TaskWakesPaused => new TaskWakesPausedPayload("GRO-44", "Ship the page", team, "Nova"),
         FeedSourceType.TaskProceeded => new TaskProceededPayload("GRO-45", "Ship the page", team, "Team"),
         FeedSourceType.SprintProceeded => new SprintProceededPayload("Launch", team, "Team", 2),
+        FeedSourceType.SpendCapReached => new SpendCapReachedPayload("team:" + team, team, 5m, team + " has spent 5.00 USD running inside the Team, its cap. Let it spend another 5.00 USD?"),
         FeedSourceType.TeamArchived => new TeamArchivedPayload(team, "Team " + team + " archived"),
         FeedSourceType.TeamRenameStuck => new TeamRenameStuckPayload(team, "Renaming " + team + " did not finish"),
         FeedSourceType.BuiltinAgentUpdateAvailable => new BuiltinAgentUpdatePayload(team, "An update exists for " + team),

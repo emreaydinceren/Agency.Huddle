@@ -22,13 +22,15 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="options">Holds the configured global level.</param>
 /// <param name="logger">Logs a store that could not be read; optional.</param>
 /// <param name="renames">Resolves a Team's or Project's old name to today's; optional.</param>
+/// <param name="caps">Counts spend against a cap; without it a cap bounds nothing. Optional.</param>
 internal sealed class NeedsYouLevels(
     ITeamCatalog teams,
     ITeamFolders folders,
     NeedsYouLevelStore store,
     IOptions<TeamOptions> options,
     ILogger<NeedsYouLevels>? logger = null,
-    ITeamRenames? renames = null)
+    ITeamRenames? renames = null,
+    NeedsYouCaps? caps = null)
 {
     /// <summary>Raised after the Human changed a level or cap, so a page can repaint. A subscriber that throws is logged and does not stop the others.</summary>
     public event Action? Changed;
@@ -49,7 +51,7 @@ internal sealed class NeedsYouLevels(
     public EffectiveLevel For(string team, string? project)
     {
         ArgumentNullException.ThrowIfNull(team);
-        return WithinCap(this.Resolve(team, project));
+        return this.WithinCap(this.Resolve(team, project), this.TeamNameOf(team));
     }
 
     /// <summary>Sets or clears a Team's level and cap. A cap travels with a level, so clearing the level clears the cap too.</summary>
@@ -62,9 +64,11 @@ internal sealed class NeedsYouLevels(
         ArgumentException.ThrowIfNullOrWhiteSpace(team);
 
         decimal? cap = level is null ? null : NeedsYouLevelText.Usable(spendCap);
-        bool written = folders.UpdateTeamFile(this.TeamNameOf(team), file => file with { NeedsYouLevel = level, SpendCap = cap });
+        string teamName = this.TeamNameOf(team);
+        bool written = folders.UpdateTeamFile(teamName, file => file with { NeedsYouLevel = level, SpendCap = cap });
         if (written)
         {
+            this.RestartCount(NeedsYouCaps.TeamKey(teamName), level, cap);
             this.RaiseChanged();
         }
 
@@ -88,6 +92,7 @@ internal sealed class NeedsYouLevels(
         bool written = folders.UpdateProjectFile(teamName, projectName, file => file with { NeedsYouLevel = level, SpendCap = cap });
         if (written)
         {
+            this.RestartCount(NeedsYouCaps.ProjectKey(teamName, projectName), level, cap);
             this.RaiseChanged();
         }
 
@@ -99,14 +104,49 @@ internal sealed class NeedsYouLevels(
     /// <param name="spendCap">The cap in USD, or <see langword="null"/> for none; zero or less is none.</param>
     public void SetGlobal(NeedsYouLevel level, decimal? spendCap)
     {
-        store.Set(level, NeedsYouLevelText.Usable(spendCap));
+        decimal? cap = NeedsYouLevelText.Usable(spendCap);
+        store.Set(level, cap);
+        this.RestartCount(NeedsYouCaps.GlobalKey, level, cap);
         this.RaiseChanged();
     }
 
-    /// <summary>Applies the spend cap to a resolved level. Today a cap bounds nothing; the slice that counts spend returns Ask me here once the scope has spent its cap.</summary>
+    /// <summary>
+    /// Applies the spend cap to a resolved level: a scope that runs inside the Team and has spent its allowance falls back to Ask me, and
+    /// every reader of the level follows at once. Ask me and a scope without a cap are unchanged.
+    /// </summary>
     /// <param name="resolved">The level the scopes name.</param>
+    /// <param name="team">The Team the level was asked for.</param>
     /// <returns>The level in force.</returns>
-    private static EffectiveLevel WithinCap(EffectiveLevel resolved) => resolved;
+    private EffectiveLevel WithinCap(EffectiveLevel resolved, string team)
+    {
+        if (caps is null || resolved is not { Level: NeedsYouLevel.RunInsideTheTeam, SpendCap: not null })
+        {
+            return resolved;
+        }
+
+        try
+        {
+            return caps.IsReached(resolved, team) ? resolved with { Level = NeedsYouLevel.AskMe, CapReached = true } : resolved;
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The spend of a scope could not be counted; it falls back to Ask me.");
+            return resolved with { Level = NeedsYouLevel.AskMe };
+        }
+    }
+
+    /// <summary>Starts a scope's count over after the Human set its level or cap; only a scope that runs inside the Team with a cap is counted.</summary>
+    private void RestartCount(string key, NeedsYouLevel? level, decimal? cap)
+    {
+        try
+        {
+            caps?.Restart(key, level == NeedsYouLevel.RunInsideTheTeam ? cap : null);
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The spend count of {Scope} could not be restarted; it starts when the scope is next read.", key);
+        }
+    }
 
     private EffectiveLevel Resolve(string team, string? project)
     {

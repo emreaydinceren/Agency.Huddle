@@ -34,7 +34,8 @@ internal sealed class NeedsYouLevelRig : IDisposable
     /// <param name="projectLevel">The Project file's level, or <see langword="null"/> for none.</param>
     /// <param name="globalLevel">The configured global level text, or <see langword="null"/> for none.</param>
     /// <param name="gates">The Team's gates, comma-joined and quoted.</param>
-    public NeedsYouLevelRig(NeedsYouLevel? teamLevel = null, NeedsYouLevel? projectLevel = null, string? globalLevel = null, string gates = "'accept-before-merge'")
+    /// <param name="globalCap">The configured global spend cap in USD, or <see langword="null"/> for none.</param>
+    public NeedsYouLevelRig(NeedsYouLevel? teamLevel = null, NeedsYouLevel? projectLevel = null, string? globalLevel = null, string gates = "'accept-before-merge'", decimal? globalCap = null)
     {
         this.Clock = new ManualTimeProvider(Noon);
         this.Feed = new RecordingFeedPublisher();
@@ -49,11 +50,18 @@ internal sealed class NeedsYouLevelRig : IDisposable
         }
 
         this.Catalog = new FakeTeamCatalog { Teams = [new TeamSummary(Team, [Project], [], true) { TeamType = new VersionedRef("web", "1.2.0") }] };
+        this.Spend = new PersonaSpendStore(this.levelDir.Options());
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), this.Spend, this.Catalog, this.Feed);
         this.Levels = new NeedsYouLevels(
             this.Catalog,
             folders,
             new NeedsYouLevelStore(this.levelDir.Options()),
-            this.levelDir.Options(options => options.NeedsYouLevel.Level = globalLevel ?? string.Empty));
+            this.levelDir.Options(options =>
+            {
+                options.NeedsYouLevel.Level = globalLevel ?? string.Empty;
+                options.NeedsYouLevel.SpendCap = globalCap;
+            }),
+            caps: this.Caps);
         this.Service = new TaskService(
             this.Harness.Store,
             this.Harness.Ids,
@@ -80,6 +88,12 @@ internal sealed class NeedsYouLevelRig : IDisposable
 
     /// <summary>The Team catalog.</summary>
     public FakeTeamCatalog Catalog { get; }
+
+    /// <summary>The persisted spend the cap counts.</summary>
+    public PersonaSpendStore Spend { get; }
+
+    /// <summary>The spend cap's counting and question.</summary>
+    public NeedsYouCaps Caps { get; }
 
     /// <summary>Resolves the level of a Task.</summary>
     public NeedsYouLevels Levels { get; }

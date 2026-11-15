@@ -87,6 +87,9 @@ public enum FeedSourceType
     /// <summary>A Sprint was approved without the Human because every Task in it runs under the level Run inside the Team.</summary>
     SprintProceeded,
 
+    /// <summary>A scope spent its spend cap running inside the Team, fell back to Ask me and asks whether to let it spend one more cap.</summary>
+    SpendCapReached,
+
     /// <summary>A Team was archived.</summary>
     TeamArchived,
 

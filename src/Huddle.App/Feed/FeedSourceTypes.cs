@@ -37,6 +37,7 @@ internal static class FeedSourceTypes
         FeedSourceType.TaskWakesPaused => "task-wakes-paused",
         FeedSourceType.TaskProceeded => "task-proceeded",
         FeedSourceType.SprintProceeded => "sprint-proceeded",
+        FeedSourceType.SpendCapReached => "spend-cap-reached",
         FeedSourceType.TeamArchived => "team-archived",
         FeedSourceType.BuiltinAgentUpdateAvailable => "builtin-agent-update-available",
         FeedSourceType.AgentConnectorsChanged => "agent-connectors-changed",

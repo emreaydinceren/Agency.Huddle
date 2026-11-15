@@ -572,7 +572,10 @@ public static class ServiceCollectionExtensions
 
         // The Needs You level per scope (ADR-0087): global in team.db, Team in _team.md, Project in _project.md.
         services.AddSingleton<NeedsYouLevelStore>();
+        services.AddSingleton<NeedsYouCapStore>();
+        services.AddSingleton<Agency.Huddle.App.Teams.NeedsYouCaps>(); // the spend cap's counting and its Yes/No question.
         services.AddSingleton<Agency.Huddle.App.Teams.NeedsYouLevels>();
+        services.AddHostedService<Agency.Huddle.App.Teams.NeedsYouCapWatcher>(); // opens the question as spend reaches a cap.
         services.AddSingleton<SprintApprover>(); // propose_sprint approves a Sprint at once when every Task runs inside the Team.
         services.AddSingleton<Agency.Huddle.App.Tasks.IRequestConfirmers, Agency.Huddle.App.Tasks.RequestConfirmers>();
 
