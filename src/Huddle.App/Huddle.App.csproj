@@ -57,6 +57,10 @@
     <EmbeddedResource Include="TeamTypes\Builtin\**\team-type.json;TeamTypes\Builtin\**\candidates\*.md;TeamTypes\Builtin\**\processes\*.md" LogicalName="TeamTypes/Builtin/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Overlays\second-brain\**\*.md" LogicalName="Overlays/second-brain/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="HiringPool\hiringpool.json" LogicalName="HiringPool/hiringpool.json" />
+    <!-- Built-in diagrams (ADR-0087): embedded, never copied out, so no SVG is ever on disk to be served. -->
+    <Content Remove="Guide\**" />
+    <None Remove="Guide\**" />
+    <EmbeddedResource Include="Guide\guide.json;Guide\*.svg" LogicalName="Guide/%(Filename)%(Extension)" />
     <EmbeddedResource Include="HiringPool\personas\*.md" LogicalName="HiringPool/personas/%(Filename)%(Extension)" />
   </ItemGroup>
 
