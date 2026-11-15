@@ -1003,17 +1003,17 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         }
     }
 
-    /// <summary>True when <paramref name="task"/>'s file was written more than 2 seconds after its last Change log entry's <see cref="ChangeLogEntry.At"/>, or it has no entries at all (Spec §8.5).</summary>
+    /// <summary>True when <paramref name="task"/>'s file was written more than 2 seconds after its last timeline entry's <see cref="TimelineEntry.At"/>, or it has no entries at all (Spec §8.5).</summary>
     /// <param name="task">The Task to check, as found by the initial scan.</param>
     private static bool NeedsReconciliation(TaskItem task)
     {
-        if (task.ChangeLog.Count == 0)
+        if (task.Updated is not { } updated)
         {
             return true;
         }
 
         DateTime lastWriteUtc = File.GetLastWriteTimeUtc(task.Path);
-        DateTime lastEntryUtc = task.ChangeLog[^1].At.UtcDateTime;
+        DateTime lastEntryUtc = updated.UtcDateTime;
         return lastWriteUtc > lastEntryUtc + TimeSpan.FromSeconds(2);
     }
 

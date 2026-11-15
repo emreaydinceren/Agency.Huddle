@@ -51,7 +51,7 @@ public sealed class TaskFileRenameRewriteTests
         Assert.Equal(["Research"], touched);
         Assert.Contains("from_team: Growth", text, StringComparison.Ordinal);
         Assert.DoesNotContain("from_team: Marketing", text, StringComparison.Ordinal);
-        Assert.Single(text.Split('\n'), line => line.TrimEnd('\r').EndsWith("| Huddle | Team renamed from Marketing to Growth", StringComparison.Ordinal));
+        Assert.Single(text.Split('\n'), line => line.TrimEnd('\r').EndsWith("| Huddle | event | Team renamed from Marketing to Growth", StringComparison.Ordinal));
     }
 
     /// <summary>A Request from a different Team is left byte for byte, and its Team is not listed.</summary>

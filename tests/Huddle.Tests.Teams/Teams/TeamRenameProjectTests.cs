@@ -194,7 +194,7 @@ public sealed class TeamRenameProjectTests
         string text = await File.ReadAllTextAsync(path, ct);
         Assert.Contains($"`{Path.Combine(f.TeamsRoot, Growth, Launch2027, "x.md")}`", text, StringComparison.Ordinal);
         Assert.Contains($"`{sibling}`", text, StringComparison.Ordinal);
-        Assert.Single(text.Split('\n'), static line => line.TrimEnd('\r').Contains("| Huddle | Project renamed from Launch to Launch-2027", StringComparison.Ordinal));
+        Assert.Single(text.Split('\n'), static line => line.TrimEnd('\r').Contains("| Huddle | event | Project renamed from Launch to Launch-2027", StringComparison.Ordinal));
     }
 
     /// <summary>A move that fails (the destination folder is in use): Renamed is false, the Project folder and the Room are as they were and the journal is empty.</summary>

@@ -79,11 +79,16 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
     /// <param name="dir">The configured Teams folder.</param>
     private static string TeamsSegmentOf(string dir) => dir.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries) is [.., string last] ? last : "Teams";
 
-    /// <summary>The Task file's index of the change-log heading line, or the text length when there is none.</summary>
+    /// <summary>The Task file's index of the timeline heading line, else of an older file's change-log heading line, or the text length when there is neither.</summary>
     /// <param name="text">The file text.</param>
-    private static int ChangeLogStart(string text)
+    private static int TimelineStart(string text)
     {
-        int index = text.IndexOf("\n" + TaskFileFormat.ChangeLogHeading, StringComparison.Ordinal);
+        int index = text.IndexOf("\n" + TaskFileFormat.TimelineHeading, StringComparison.Ordinal);
+        if (index < 0)
+        {
+            index = text.IndexOf("\n" + TaskFileFormat.ChangeLogHeading, StringComparison.Ordinal);
+        }
+
         return index < 0 ? text.Length : index;
     }
 
@@ -131,7 +136,7 @@ internal sealed class TaskFileRenameRewrite(IOptions<TeamOptions> options, TimeP
     {
         string newName = rename.NewName;
         int frontEnd = FrontmatterEnd(text);
-        int bodyEnd = ChangeLogStart(text);
+        int bodyEnd = TimelineStart(text);
         bool changed = false;
 
         Regex fromTeam = new(@"^(from_team:[ \t]*)(.*?)([ \t]*)(\r?)$", RegexOptions.Multiline | RegexOptions.CultureInvariant, RegexTimeout);

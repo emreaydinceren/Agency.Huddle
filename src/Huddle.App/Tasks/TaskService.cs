@@ -1615,12 +1615,13 @@ internal sealed class TaskService : IDisposable
         }
     }
 
-    /// <summary>Spec §9.2: the description doesn't contain a reserved Change log heading.</summary>
+    /// <summary>Spec §9.2: the description doesn't contain a heading reserved for the timeline (<c>## Timeline</c>, <c>## Change log</c>, <c>## Evidence</c>).</summary>
     private static void AddDescriptionProblems(string description, List<string> problems)
     {
-        if (TaskFileFormat.ContainsChangeLogHeading(description))
+        if (TaskFileFormat.FindReservedHeading(description) is { } heading)
         {
-            problems.Add("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.");
+            string problem = string.Create(CultureInfo.InvariantCulture, $"The description must not contain a '{heading}' heading; that heading is reserved for the task's timeline.");
+            problems.Add(string.Equals(heading, TaskFileFormat.EvidenceHeading, StringComparison.Ordinal) ? problem + " Record evidence with add_evidence." : problem);
         }
     }
 

@@ -45,11 +45,31 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
             return false;
         }
 
-        int? exitCode = null;
-        string? logPath = null;
-        int? logLine = null;
-        string note = string.Empty;
-        for (int index = 3; index < fields.Length; index++)
+        if (!TryParseExtras(fields, 3, out int? exitCode, out string? logPath, out int? logLine, out string note))
+        {
+            evidence = null;
+            return false;
+        }
+
+        evidence = new EvidenceLine(time, fields[1], fields[2], exitCode, logPath, logLine, text, note);
+        return true;
+    }
+
+    /// <summary>Parses the optional fields of a structured line (exit code, log reference, note), by the rules and order limits <see cref="TryParse"/> has always had.</summary>
+    /// <param name="fields">The line split on the field separator.</param>
+    /// <param name="start">The index of the first optional field.</param>
+    /// <param name="exitCode">The exit code, or null.</param>
+    /// <param name="logPath">The log file path, or null.</param>
+    /// <param name="logLine">The log line number, or null.</param>
+    /// <param name="note">The note, or empty.</param>
+    /// <returns>False when a field is none of the three or repeats one.</returns>
+    private static bool TryParseExtras(string[] fields, int start, out int? exitCode, out string? logPath, out int? logLine, out string note)
+    {
+        exitCode = null;
+        logPath = null;
+        logLine = null;
+        note = string.Empty;
+        for (int index = start; index < fields.Length; index++)
         {
             Match exit = ExitField().Match(fields[index]);
             Match log = LogField().Match(fields[index]);
@@ -68,13 +88,71 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
             }
             else
             {
-                evidence = null;
                 return false;
             }
         }
 
-        evidence = new EvidenceLine(time, fields[1], fields[2], exitCode, logPath, logLine, text, note);
         return true;
+    }
+
+    /// <summary>
+    /// Reads an <c>evidence</c> timeline entry as an Evidence line (Spec §7.7.1). Text that starts with <c>note: </c> is a note
+    /// line; otherwise the first field is the command and the rest are read as <see cref="TryParse"/> reads them. Text that does
+    /// not parse is kept as a note, so no text is lost.
+    /// </summary>
+    /// <param name="entry">The entry, of any kind; only its time, author and text are read.</param>
+    /// <returns>The Evidence line, timed and authored as the entry is.</returns>
+    internal static EvidenceLine FromEntry(TimelineEntry entry)
+    {
+        string text = entry.Text;
+        if (text.StartsWith(NotePrefix, StringComparison.Ordinal))
+        {
+            return NoteLine(entry, text[NotePrefix.Length..]);
+        }
+
+        string[] fields = text.Split(Separator);
+        if (fields[0].Length == 0 || !TryParseExtras(fields, 1, out int? exitCode, out string? logPath, out int? logLine, out string note))
+        {
+            return NoteLine(entry, text);
+        }
+
+        EvidenceLine line = new(entry.At, entry.Author, fields[0], exitCode, logPath, logLine, string.Empty, note);
+        return line with { RawText = line.Format() };
+    }
+
+    /// <summary>A note line (no command) carrying <paramref name="entry"/>'s time and author.</summary>
+    private static EvidenceLine NoteLine(TimelineEntry entry, string rawText) =>
+        new(entry.At, entry.Author, string.Empty, null, null, null, rawText);
+
+    /// <summary>
+    /// The line as an <c>evidence</c> timeline entry's text (Spec §7.7.1): the fields after the time and author, joined by the
+    /// field separator, or <c>note: </c> and the text for a note line.
+    /// </summary>
+    /// <returns>The entry text, without a line break.</returns>
+    internal string FormatEntryText()
+    {
+        if (this.Command.Length == 0)
+        {
+            return NotePrefix + this.RawText;
+        }
+
+        List<string> parts = [this.Command];
+        if (this.ExitCode is int code)
+        {
+            parts.Add(string.Create(CultureInfo.InvariantCulture, $"exit {code}"));
+        }
+
+        if (this.LogPath is not null && this.LogLine is int line)
+        {
+            parts.Add(string.Create(CultureInfo.InvariantCulture, $"{this.LogPath}#L{line}"));
+        }
+
+        if (this.Note.Length > 0)
+        {
+            parts.Add(NotePrefix + this.Note);
+        }
+
+        return string.Join(Separator, parts);
     }
 
     /// <summary>
@@ -147,18 +225,29 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
                 continue;
             }
 
-            string text = StripBullet(raw.Trim());
-            if (!inSection || text.Length == 0)
+            if (inSection && ParseSectionLine(raw) is { } evidence)
             {
-                continue;
+                lines.Add(evidence);
             }
-
-            lines.Add(TryParse(text, out EvidenceLine? evidence) && evidence is not null
-                ? evidence
-                : new EvidenceLine(default, string.Empty, string.Empty, null, null, null, text));
         }
 
         return lines;
+    }
+
+    /// <summary>Reads one line found inside the "## Evidence" section, as <see cref="ParseSection"/> reads each of its lines.</summary>
+    /// <param name="raw">The line, with its leading and trailing spaces and any list marker.</param>
+    /// <returns>The Evidence line or note, or null for a blank line.</returns>
+    internal static EvidenceLine? ParseSectionLine(string raw)
+    {
+        string text = StripBullet(raw.Trim());
+        if (text.Length == 0)
+        {
+            return null;
+        }
+
+        return TryParse(text, out EvidenceLine? evidence) && evidence is not null
+            ? evidence
+            : new EvidenceLine(default, string.Empty, string.Empty, null, null, null, text);
     }
 
     /// <summary>Removes one leading Markdown bullet marker (<c>- </c>, <c>* </c> or <c>+ </c>) and the spaces after it.</summary>
