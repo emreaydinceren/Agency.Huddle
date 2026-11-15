@@ -1096,6 +1096,9 @@ in the Library.
 makes, one JSON line each, in `logs/tool-calls/<Agent>/<date>.jsonl` in your data
 folder. An Evidence line can point to a line of it, such as
 `logs/tool-calls/Joe/2026-10-08.jsonl#L12`, so you can check that the command was run.
+Each line records the call's arguments, its status and, for Huddle's own tools, what
+the tool answered, so a refused call shows its refusal. Arguments are not redacted
+(the 200-character cap is the only limit), so treat the folder like your Transcripts.
 
 **How the merge gate works, and its limits.** When an Agent asks to run a shell
 command, Huddle reads it. If it is a `git merge` or `git push` and the Team has

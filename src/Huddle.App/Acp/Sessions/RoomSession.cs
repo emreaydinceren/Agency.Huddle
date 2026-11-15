@@ -26,6 +26,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private const int MinUserInputTimeoutSeconds = 30;
     private const int MaxUserInputTimeoutSeconds = 86_400;
 
+    /// <summary>The prefix of every Huddle App Tool's name as <c>claude-agent-acp</c> reports it.</summary>
+    private const string TeamToolPrefix = "mcp__team__";
+
     // Bounds how long the idle-timeout watchdog waits for IAgentSession.CancelAsync to reach the far
     // side (TRAP 2) before giving up and cancelling the Turn's own token anyway. See PersonaRunner's
     // former copy of this comment: an adapter that will not even take a cancel is the same adapter
@@ -2214,7 +2217,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         this.noticeSequence++;
         string rowId = string.Create(CultureInfo.InvariantCulture, $"huddle-notice-{this.noticeSequence}");
-        await this.WriteToolActivityAsync(rowId, text, ToolActivityStatus.Notice, null, null, null, ct).ConfigureAwait(false);
+        await this.WriteToolActivityAsync(rowId, text, ToolActivityStatus.Notice, null, null, null, null, null, ct).ConfigureAwait(false);
     }
 
     /// <summary>Takes the active Turn off <see cref="activeTurn"/> and completes it with the text gathered so far.</summary>
@@ -2369,6 +2372,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="location">The call's first location, or <see langword="null"/> when this notification has none.</param>
     /// <param name="diff">The call's first change, or <see langword="null"/> when this notification has none.</param>
     /// <param name="memoryFile">The file a <c>memory</c> App Tool call names, used when the call has no location or change: the Adapter reports neither for an App Tool.</param>
+    /// <param name="arguments">A compact summary of the call's input, or <see langword="null"/> when this event carried none.</param>
+    /// <param name="result">The text an App Tool returned, or <see langword="null"/> for any other call or an event with no output.</param>
     /// <param name="ct">Cancels the write.</param>
     private async Task WriteToolActivityAsync(
         string toolCallId,
@@ -2377,6 +2382,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         ToolCallLocationInfo? location,
         ToolCallDiffInfo? diff,
         string? memoryFile,
+        string? arguments,
+        string? result,
         CancellationToken ct)
     {
         ActiveTurn? turn;
@@ -2409,7 +2416,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         try
         {
-            await this.owner.WriteAsync(new ToolActivity(turn.RoomId, turn.MessageId, toolCallId, title, status, path, location?.Line, edit), ct).ConfigureAwait(false);
+            await this.owner.WriteAsync(new ToolActivity(turn.RoomId, turn.MessageId, toolCallId, title, status, path, location?.Line, edit, arguments, result), ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
@@ -2483,7 +2490,15 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
 
         string? memoryFile = this.RecordMemoryToolPath(kind, title, toolName, rawInputJson);
-        await this.WriteToolActivityAsync(toolCallId, title, MapToolCallStatus(status), location, diff, memoryFile, ct).ConfigureAwait(false);
+
+        // Only Huddle's own App Tools have their answer recorded: another tool's output may be a file's
+        // contents or a connector's mail, and the lasting log must not hold that.
+        string? callName = toolName ?? title;
+        string? result = callName is not null && callName.StartsWith(TeamToolPrefix, StringComparison.Ordinal)
+            ? ToolCallSummary.Result(rawOutputJson)
+            : null;
+        await this.WriteToolActivityAsync(
+            toolCallId, title, MapToolCallStatus(status), location, diff, memoryFile, ToolCallSummary.Arguments(rawInputJson), result, ct).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -37,6 +37,44 @@ public sealed class RoomSessionTests
         Assert.Equal(new EditChange("one", "two"), activity.Edit);
     }
 
+    /// <summary>A call that starts with an empty input and gets its real input on an update writes no arguments on the start and the compact input on the update.</summary>
+    [Fact]
+    public async Task ToolInputOnAnUpdate_IsWrittenAsCompactArguments()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Bash", ToolKind.Execute, ToolCallStatus.InProgress, "{}"),
+            new ToolCallUpdated("s", "call-1", null, ToolKind.Execute, ToolCallStatus.InProgress, null, "{ \"command\": \"dotnet test\" }"));
+
+        Assert.Equal(2, activities.Count);
+        Assert.Null(activities[0].Arguments);
+        Assert.Equal("""{"command":"dotnet test"}""", activities[1].Arguments);
+    }
+
+    /// <summary>An App Tool's answer, such as a refusal, is written as the call's result.</summary>
+    [Fact]
+    public async Task AppToolRefusal_IsWrittenAsResult()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "mcp__team__add_evidence", ToolKind.Other, ToolCallStatus.InProgress, "{}", ToolName: "mcp__team__add_evidence"),
+            new ToolCallUpdated(
+                "s", "call-1", null, ToolKind.Other, ToolCallStatus.Completed,
+                """[{"type":"text","text":"add_evidence has no argument named text. Nothing was added."}]""",
+                ToolName: "mcp__team__add_evidence"));
+
+        Assert.Equal("add_evidence has no argument named text. Nothing was added.", activities[^1].Result);
+    }
+
+    /// <summary>A tool that is not one of Huddle's own App Tools never has its output written.</summary>
+    [Fact]
+    public async Task OtherToolOutput_IsNotWrittenAsResult()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Read", ToolKind.Read, ToolCallStatus.InProgress, null),
+            new ToolCallUpdated("s", "call-1", "Read", ToolKind.Read, ToolCallStatus.Completed, """[{"type":"text","text":"file contents"}]""", ToolName: "Read"));
+
+        Assert.All(activities, static activity => Assert.Null(activity.Result));
+    }
+
     /// <summary>The Adapter repeats one diff on a later update of the same call; the second update carries the line but not the preview again.</summary>
     [Fact]
     public async Task SamePreviewOnASecondUpdate_IsNotSentAgain()
