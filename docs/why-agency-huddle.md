@@ -163,7 +163,7 @@ Agency.Huddle puts you in the room; it does not make you check.
 
 ## Five pillars, five answers
 
-**Specialized agents.** A **Agent** is a Markdown file,
+**Specialized agents.** An **Agent** is a Markdown file,
 `Agents/<Name>/<Name>.md`. Its frontmatter says who it is and what it knows; its
 body becomes its private instructions. Drop a new file in and `@CFO` comes online
 without a restart.
@@ -224,7 +224,7 @@ never need is paid for when it asks, not on every turn of every session.
 everyone reads, plus a **Team Memory** folder every member of a Team sees. Individual:
 each Agent has its own memory folder and its own **Room Session** per room, so the
 context of one conversation does not leak into another. Work that must outlast a
-chat lives in **Tasks**, a Markdown file with an owner, a status and a change log,
+chat lives in **Tasks**, a Markdown file with an owner, a status and a timeline,
 and in the **Library**, where you and your Agents keep notes side by side. Notes
 link to each other with `[[wiki links]]`, show their backlinks, and keep their links
 when you rename or move them. An Agent is told which watched files changed since
@@ -238,7 +238,7 @@ is files you can open.
 per Project and cards you drag between columns. When a Task assigned to an Agent
 changes, whether you drag a card, edit the file by hand or another Agent updates
 it, Huddle posts a message in a Room that wakes the assignee. Work moves without
-anyone polling a chat. Every change is appended to the Task's change log, and the
+anyone polling a chat. Every change is appended to the Task's timeline, and the
 statuses include **Review**, which is where a Challenge step belongs. Agents
 changing each other's Tasks could loop, so each Task allows ten Agent-made
 wake-ups until you select **Allow 10 more**.
@@ -389,7 +389,7 @@ to run once. Start it later by typing `huddle`, stop it with `huddle stop`, and 
 the same command again to upgrade; your rooms and settings are kept. Real Claude
 agents **spend money**.
 
-To work on the code instead, you need the .NET 10 SDK. For a first run that spends
+To work on the code instead, you need the .NET 11 SDK. For a first run that spends
 nothing, turn the agent process off, because the development configuration starts a
 real one per Agent:
 
@@ -406,7 +406,7 @@ source takes Node.js and a logged-in `claude` CLI; `Team:Acp:Enabled` is the swi
 Tasks and the Library, and
 [`docs/Huddle.EngineeringGuide.md`](Huddle.EngineeringGuide.md) holds the whole design.
 
-Built with .NET 10 and Blazor Server, with thousands of tests and zero build
+Built with .NET 11 and Blazor Server, with thousands of tests and zero build
 warnings.
 
 ## Where this leaves us

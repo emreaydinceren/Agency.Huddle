@@ -37,7 +37,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | See a Room's members, Tasks and files, or a note's outline and links | [The Right sidebar](#the-right-sidebar) |
 | Teach Agents a procedure | [Giving Agents Skills](#giving-agents-skills) |
-| Understand where files go, and use the Second Brain pattern (planned) | [Your Second Brain](#your-second-brain) |
+| Understand where files go, and use the Second Brain pattern | [Your Second Brain](#your-second-brain) |
 | Give every Agent, or one Team, standing rules | [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
@@ -1622,7 +1622,7 @@ Teams/
 | Folder | What goes in it | Who writes it | Can it change? | Agents read it |
 | --- | --- | --- | --- | --- |
 | `raw/` | Files you attach in chat or to a Task: PDFs, emails, screenshots, statements | You, by attaching | **No.** Kept exactly as it arrived. An Agent may add a derived file beside an original, such as a scan or a transcript | When a Message names a file, or when asked |
-| `memory/` | One fact per file: decisions and their reasons, who owns what, agreed ways of working | Agents, and you | Yes. A fact is corrected in place when it changes | **Every session**, as a short index of one line per fact |
+| `memory/` | One topic per file, its `description` line saying what it holds: decisions and their reasons, who owns what, agreed ways of working | Agents, and you | Yes. A topic is corrected in place when it changes | **Every session**, as a short index of each file's `description` |
 | `outputs/` | Documents worth reading again: briefs, plans, comparisons, reports, prep notes | Agents, and you | Yes | **Every session**, as an index of each document's "Read when…" line |
 | `_tasks/` | One file per Task | Huddle, through the Tasks screens | Through Tasks | Through the Task tools |
 | `AGENTS.md` | Rules: how to behave here | **You only** | When you edit it | **Every session**, in full |
