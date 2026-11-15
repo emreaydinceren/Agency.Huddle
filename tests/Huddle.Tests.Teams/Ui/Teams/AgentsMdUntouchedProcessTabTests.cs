@@ -38,6 +38,7 @@ public sealed class AgentsMdUntouchedProcessTabTests
         string prosePath = Path.Combine(Path.GetDirectoryName(created.Path) ?? string.Empty, TeamPaths.AgentsMdFileName);
         await File.WriteAllTextAsync(prosePath, Prose, Xunit.TestContext.Current.CancellationToken);
         ctx.Services.AddSingleton<ITeamFolders>(folders);
+        NeedsYouLevelUiRig.AddTo(ctx, folders, dir);
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<ProcessTab>(0);

@@ -132,13 +132,14 @@ public sealed class AgentProfileCardTests
         await using var factory = new TeamWebApplicationFactory();
         await SeedPersonaAsync(factory, "coo", "x");
         var spend = factory.Services.GetRequiredService<PersonaSpend>();
+        int hostSubscribers = spend.SubscriberCount; // NeedsYouCapWatcher listens for the life of the host.
         await using var ctx = NewContext(factory);
         _ = await OpenViewCardAsync(ctx, factory, "coo");
-        Assert.Equal(1, spend.SubscriberCount);
+        Assert.Equal(hostSubscribers + 1, spend.SubscriberCount);
 
         await ctx.DisposeComponentsOnDispatcherAsync();
 
-        Assert.Equal(0, spend.SubscriberCount);
+        Assert.Equal(hostSubscribers, spend.SubscriberCount);
     }
 
     /// <summary>Spend is shown when reading the card, not in Edit, where the card is a form for changing the Agent.</summary>

@@ -2,6 +2,7 @@ using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Helpers.NeedsHuman;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Helpers;
@@ -23,7 +24,7 @@ public sealed class NeedsHumanPromptTests
         - moving or committing money: paying, refunding, ordering, quoting a price;
         - signing or accepting a contract, terms or an offer;
         - publishing anything public: a post, a release, a press note;
-        - merging to main, deploying, or deleting data.
+        - merging to main (unless the task says it runs inside the team: then a local merge does not), deploying, or deleting data.
 
         A task does not need the human when it stays inside the team: notes, drafts, research,
         analysis, internal reviews, and updates to tasks.
@@ -74,13 +75,30 @@ public sealed class NeedsHumanPromptTests
         Assert.Equal(PromptTiming.Live, task.Timing);
         Assert.Empty(system.Placeholders);
         Assert.Equal(["{{title}}", "{{description}}"], task.RequiredPlaceholders);
-        Assert.Equal(["{{taskId}}", "{{team}}", "{{tags}}", "{{title}}", "{{description}}"], task.Placeholders);
+        Assert.Equal(["{{taskId}}", "{{team}}", "{{tags}}", "{{title}}", "{{description}}", "{{level}}"], task.Placeholders);
         Assert.Equal(
             "What the Needs Human Helper is told about when a Task needs the Human's acceptance. Used from the Helper's next call. Keep the JSON answer at the end: if an edit changes it, the Helper's card shows that its answers can't be read. Takes no placeholders.",
             system.HelperText);
         Assert.Equal(
-            "The message that shows the Needs Human Helper one Task. Used from the Helper's next call. Must keep {{title}} and {{description}}; {{taskId}}, {{team}} and {{tags}} are optional.",
+            "The message that shows the Needs Human Helper one Task. Used from the Helper's next call. Must keep {{title}} and {{description}}; {{taskId}}, {{team}}, {{tags}} and {{level}} (the Needs You level note, empty under Ask me) are optional.",
             task.HelperText);
+    }
+
+    /// <summary>
+    /// Under Run inside the Team the Task prompt ends with the level note, which tells the model a local merge stays inside the Team and a
+    /// push does not (ADR-0088); under Ask me the note is empty, so the prompt is exactly as before.
+    /// </summary>
+    [Fact]
+    public void TaskPrompt_RunInsideTheTeam_EndsWithTheLevelNote()
+    {
+        NeedsHumanInput input = new(new TaskId("DEVT", 1), "abc", "Add Greeting.Hello", "Build it on feat/greeting, then merge into the local main.", "Dev Team", []);
+        IReadOnlyDictionary<string, string> values = NeedsHumanHelper.ValuesFor(input, NeedsHumanHelper.LevelNoteFor(NeedsYouScope.Project));
+
+        string rendered = new FakePromptSource().Render("helper.needsHuman.task", values);
+
+        Assert.EndsWith(
+            "</description>\n\nThe human set this task's project to run inside the team: a merge into the team's local main stays inside the team and does not need the human. A push to any remote still does, and so does everything else listed.",
+            rendered);
     }
 
     /// <summary>The Prompts panel groups both under Helpers, after the Skill Packs groups.</summary>

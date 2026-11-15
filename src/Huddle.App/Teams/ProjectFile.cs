@@ -26,6 +26,12 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
     /// </summary>
     public IReadOnlyList<string> UnknownLines { get; init; } = [];
 
+    /// <summary>The Project's Needs You level (ADR-0088), kept in the optional <c>needsYouLevel</c> key; <see langword="null"/> means unset, so the Project inherits its Team's. Only the Human sets it.</summary>
+    public NeedsYouLevel? NeedsYouLevel { get; init; }
+
+    /// <summary>The spend cap in USD that travels with <see cref="NeedsYouLevel"/>, in the optional <c>spendCap</c> key; <see langword="null"/> means no cap.</summary>
+    public decimal? SpendCap { get; init; }
+
     /// <summary>
     /// Parses the text of a <c>_project.md</c> file. It never fails: a file with no frontmatter, or one that never closes, is all notes
     /// and no avatar, so a rewrite puts the avatar in front of the text rather than losing it.
@@ -46,6 +52,8 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
 
         string? label = null;
         string? background = null;
+        string? level = null;
+        string? cap = null;
         List<string> unknown = [];
         for (int index = 1; index < closing; index++)
         {
@@ -60,6 +68,14 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
             {
                 background = Unquote(line[(colon + 1)..]);
             }
+            else if (string.Equals(key, NeedsYouLevelText.LevelKey, StringComparison.OrdinalIgnoreCase))
+            {
+                level = Unquote(line[(colon + 1)..]);
+            }
+            else if (string.Equals(key, NeedsYouLevelText.SpendCapKey, StringComparison.OrdinalIgnoreCase))
+            {
+                cap = Unquote(line[(colon + 1)..]);
+            }
             else if (line.Length > 0)
             {
                 unknown.Add(line);
@@ -67,7 +83,12 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
         }
 
         Avatar avatar = new(Avatar.TrimLabel(label), null, TeamFile.ValidColour(string.IsNullOrWhiteSpace(background) ? null : background));
-        return new ProjectFile(avatar, string.Join('\n', lines[(closing + 1)..])) { UnknownLines = unknown };
+        return new ProjectFile(avatar, string.Join('\n', lines[(closing + 1)..]))
+        {
+            UnknownLines = unknown,
+            NeedsYouLevel = NeedsYouLevelText.ParseOrNull(level),
+            SpendCap = NeedsYouLevelText.ParseCapOrNull(cap),
+        };
     }
 
     /// <summary>
@@ -82,6 +103,8 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
         builder.Append(Delimiter).Append('\n');
         AppendOptional(builder, AvatarLabelKey, this.Avatar.Label);
         AppendOptional(builder, AvatarBackgroundKey, this.Avatar.Background);
+        AppendOptional(builder, NeedsYouLevelText.LevelKey, this.NeedsYouLevel?.ToWire());
+        AppendOptional(builder, NeedsYouLevelText.SpendCapKey, NeedsYouLevelText.Usable(this.SpendCap) is { } cap ? NeedsYouLevelText.FormatCap(cap) : null);
         foreach (string line in this.UnknownLines)
         {
             builder.Append(line).Append('\n');

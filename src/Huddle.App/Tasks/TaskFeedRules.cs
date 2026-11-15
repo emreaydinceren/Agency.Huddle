@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -33,6 +34,8 @@ internal static class TaskFeedRules
         {
             posts.Add(new(FeedSourceType.TaskCreated, id, actor, false, new TaskCreatedPayload(id, after.Title, team, after.Assignee)));
         }
+
+        AddRelease(change, actor, posts);
 
         bool waits = Waits(after);
         bool waited = before is not null && Waits(before);
@@ -70,6 +73,19 @@ internal static class TaskFeedRules
         }
 
         return new FeedEffects(posts, resolutions);
+    }
+
+    /// <summary>Adds the Activity item for a release (ADR-0088): Huddle let the Task's merge into main go ahead without an Accept.</summary>
+    /// <param name="change">The change.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="posts">Receives the item.</param>
+    private static void AddRelease(TaskChange change, FeedActor actor, List<FeedMessage> posts)
+    {
+        if (NeedsYouRelease.ScopeWordOf(change.Entry.Summary) is { } scope)
+        {
+            string id = change.After.Id.ToString();
+            posts.Add(new(FeedSourceType.TaskProceeded, id, actor, false, new TaskProceededPayload(id, change.After.Title, change.After.Location.Team, scope)));
+        }
     }
 
     /// <summary>

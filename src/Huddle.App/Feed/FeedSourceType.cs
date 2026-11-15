@@ -81,6 +81,15 @@ public enum FeedSourceType
     /// <summary>A Task reached its limit of wake-ups made by Agents, so a hand-off waits until the Human allows more.</summary>
     TaskWakesPaused,
 
+    /// <summary>A Task proceeded under the level Run inside the Team: its merge into main needs no Accept.</summary>
+    TaskProceeded,
+
+    /// <summary>A Sprint was approved without the Human because every Task in it runs under the level Run inside the Team.</summary>
+    SprintProceeded,
+
+    /// <summary>A scope spent its spend cap running inside the Team, fell back to Ask me and asks whether to let it spend one more cap.</summary>
+    SpendCapReached,
+
     /// <summary>A Team was archived.</summary>
     TeamArchived,
 

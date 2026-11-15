@@ -10,4 +10,5 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="HuddleMemory">The Huddle-wide Memory index of <c>Teams/memory/</c>, which every Persona gets; its entries are empty when the folder has no topics (Spec §6.3).</param>
 /// <param name="Outputs">The outputs index of the Persona's Teams, capped by <c>Team:Outputs:MaxIndexEntries</c>; its entries are empty when no Team has outputs (Spec §6.3, §8.1 slot 13).</param>
 /// <param name="Workspaces">The <c>(team, path)</c> of each of the Persona's Teams whose workspace is readable at session start, in <c>teams</c> order (Spec §6.4, §8.1 slot 7).</param>
-internal sealed record SessionPromptSnapshot(MemorySnapshot Memory, TeamMemorySnapshot? TeamMemory, AgentsMdSnapshot AgentsMd, MemorySnapshot HuddleMemory, OutputsSnapshot Outputs, IReadOnlyList<(string Team, string Path)> Workspaces);
+/// <param name="NeedsYou">The <c>(scope, level)</c> of the Persona's Teams and their Projects when any of them runs inside the Team, else <see langword="null"/> (ADR-0088).</param>
+internal sealed record SessionPromptSnapshot(MemorySnapshot Memory, TeamMemorySnapshot? TeamMemory, AgentsMdSnapshot AgentsMd, MemorySnapshot HuddleMemory, OutputsSnapshot Outputs, IReadOnlyList<(string Team, string Path)> Workspaces, IReadOnlyList<(string Scope, string Level)>? NeedsYou = null);

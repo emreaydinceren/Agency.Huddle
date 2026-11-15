@@ -5,6 +5,7 @@ using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Feed;
+using Agency.Huddle.Tests.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using OverCapNotifier = Agency.Huddle.App.SecondBrain.OverCapNotifier;
 using SecondBrainOverCapPayload = Agency.Huddle.App.Feed.SecondBrainOverCapPayload;
@@ -83,6 +84,40 @@ public sealed class SessionPromptInputsTests : IDisposable
         Assert.Equal(
             Compose(expectedMemory, expectedTeam, expectedAgents),
             Compose(actual.Memory, actual.TeamMemory, actual.AgentsMd));
+    }
+
+    /// <summary>Builds the snapshot for a Persona in the rig's Team Platform, which has the Project Site, with the rig's levels.</summary>
+    /// <param name="rig">The rig whose levels and catalog are read.</param>
+    private SessionPromptSnapshot BuildFor(NeedsYouLevelRig rig)
+    {
+        string teamsRoot = Path.Combine(this.root, "Teams");
+        string memoryDir = Path.Combine(this.root, "Agents", "nova", "memory");
+        AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
+        MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
+
+        return SessionPromptInputs.Build(reader, warnings, rig.Catalog.Teams, "nova", memoryDir, 50, ["platform"], teamsRoot, 50, maxHuddleMemoryEntries: 30, maxOutputsEntries: 40, levels: rig.Levels);
+    }
+
+    /// <summary>A Project that runs inside the Team lists the Team and the Project with their effective levels.</summary>
+    [Fact]
+    public void Build_ProjectRunsInsideTheTeam_ListsTeamAndProjectLevels()
+    {
+        using NeedsYouLevelRig rig = new(projectLevel: NeedsYouLevel.RunInsideTheTeam);
+
+        SessionPromptSnapshot actual = this.BuildFor(rig);
+
+        Assert.Equal([("Platform", "Ask me"), ("Platform › Site", "Run inside the Team")], actual.NeedsYou);
+    }
+
+    /// <summary>When every scope is Ask me nothing is listed, so the prompt stays what it was before the section existed.</summary>
+    [Fact]
+    public void Build_EveryScopeAskMe_ListsNothing()
+    {
+        using NeedsYouLevelRig rig = new();
+
+        SessionPromptSnapshot actual = this.BuildFor(rig);
+
+        Assert.Null(actual.NeedsYou);
     }
 
     /// <summary>Task 130 (SB-R15): the snapshot lists <c>(team, path)</c> in the Persona's <c>teams</c> order for a Team whose workspace is a readable folder or repository, and leaves out an unreadable one, a missing one and a Team with none.</summary>

@@ -257,6 +257,53 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         Assert.False(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Business", "Nope")));
     }
 
+    /// <summary>
+    /// <see cref="ITeamFolders.UpdateProjectFile"/> creates the file when the Project has none, keeps every other line and the notes of one that
+    /// exists, writes nothing for an unchanged file, and <see cref="ITeamFolders.ReadProjectFile"/> reads it back; a missing folder or file is a miss.
+    /// </summary>
+    [Fact]
+    public void UpdateProjectFile_AndReadProjectFile_RoundTripTheLevelAndKeepTheRest()
+    {
+        using Fixture fixture = new("Business", Path.Combine("Business", "Launch"));
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        string path = Path.Combine(fixture.TeamsRoot, "Business", "Launch", TeamPaths.ProjectFileName);
+        Assert.Null(provisioner.ReadProjectFile("Business", "Launch"));
+
+        Assert.True(provisioner.UpdateProjectFile("Business", "Launch", file => file with { NeedsYouLevel = NeedsYouLevel.RunInsideTheTeam, SpendCap = 2m }));
+        Assert.Equal("---\nneedsYouLevel: 'run-inside-team'\nspendCap: '2'\n---\n", File.ReadAllText(path));
+
+        File.WriteAllText(path, "---\nneedsYouLevel: 'run-inside-team'\nowner: 'Ada'\n---\nNotes\n");
+        Assert.True(provisioner.UpdateProjectFile("Business", "Launch", file => file with { NeedsYouLevel = NeedsYouLevel.AskMe }));
+        Assert.Equal("---\nneedsYouLevel: 'ask-me'\nowner: 'Ada'\n---\nNotes\n", File.ReadAllText(path));
+        Assert.Equal(NeedsYouLevel.AskMe, provisioner.ReadProjectFile("Business", "Launch")?.NeedsYouLevel);
+
+        Assert.False(provisioner.UpdateProjectFile("Business", "Nope", file => file));
+        Assert.Null(provisioner.ReadProjectFile("Business", "Nope"));
+    }
+
+    /// <summary>
+    /// The Human's setters write through the real provisioner and the resolver reads the result: a Team level and a Project level in their files,
+    /// the Project's winning for its own work, the Team's for work directly under the Team.
+    /// </summary>
+    [Fact]
+    public void NeedsYouLevels_SettersAndResolver_WorkOverRealFiles()
+    {
+        using Fixture fixture = new("Business", Path.Combine("Business", "Launch"));
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        Assert.Equal(TeamCreateOutcome.Created, provisioner.CreateTeam("Business", Sample()).Outcome);
+        NeedsYouLevels levels = new(fixture.Catalog, provisioner, new NeedsYouLevelStore(fixture.Dir.Options()), fixture.Dir.Options());
+
+        Assert.True(levels.SetTeam("Business", NeedsYouLevel.RunInsideTheTeam, 4m));
+        Assert.True(levels.SetProject("Business", "Launch", NeedsYouLevel.AskMe, null));
+
+        Assert.True(TeamFile.TryParse(File.ReadAllText(Path.Combine(fixture.TeamsRoot, "Business", TeamPaths.TeamFileName)), out TeamFile? teamFile));
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, teamFile.NeedsYouLevel);
+        Assert.Equal(4m, teamFile.SpendCap);
+        Assert.Equal(["custom: 'kept'"], teamFile.UnknownLines);
+        Assert.Equal(new EffectiveLevel(NeedsYouLevel.AskMe, NeedsYouScope.Project, "Launch", null), levels.For("Business", "Launch"));
+        Assert.Equal(new EffectiveLevel(NeedsYouLevel.RunInsideTheTeam, NeedsYouScope.Team, "Business", 4m), levels.For("Business", null));
+    }
+
     /// <summary>Reading a Team that does not exist, or has no file, returns null.</summary>
     [Fact]
     public void ReadTeamFile_MissingTeamOrFile_ReturnsNull()
@@ -313,6 +360,10 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         }
 
         public string TeamsRoot => Path.Combine(this.dir.Path, "Teams");
+
+        public TempDataDir Dir => this.dir;
+
+        public TeamCatalog Catalog => this.catalog;
 
         public TeamFolderProvisioner CreateProvisioner() =>
             new(this.personas, this.roots, this.resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog: this.catalog);

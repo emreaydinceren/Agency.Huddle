@@ -31,18 +31,17 @@ internal static class TaskGateText
     /// <param name="teamFileText">The Team file text, or <see langword="null"/>.</param>
     /// <param name="renames">Resolves old Team names; optional.</param>
     /// <param name="manager">The Team's manager in the catalog; optional.</param>
-    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText, ITeamRenames? renames = null, string? manager = null)
+    /// <param name="sharedFolders">The folders fake to fill in, so the caller can read Project files through the same instance; a new one when <see langword="null"/>.</param>
+    internal static ProcessGateService BuildGates(TempDataDir dir, string? teamFileText, ITeamRenames? renames = null, string? manager = null, FakeTeamFolders? sharedFolders = null)
     {
         VersionedRef type = new("web", "1.2.0");
         LibraryRoot root = new("teams", "Teams", dir.Path, LibraryRootKind.Teams);
         TeamFile teamFile = teamFileText is not null && TeamFile.TryParse(teamFileText, out TeamFile? parsed)
             ? parsed
             : new TeamFile(type, null, null, null, string.Empty);
-        FakeTeamFolders folders = new()
-        {
-            TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder)),
-            ReadResult = teamFile,
-        };
+        FakeTeamFolders folders = sharedFolders ?? new();
+        folders.TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(root, Team, dir.Path, LibraryNodeRole.TeamFolder));
+        folders.ReadResult = teamFile;
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary(Team, [], [], true) { TeamType = type, Manager = manager }] };
         Dictionary<string, string> builtins = new(StringComparer.Ordinal)
         {

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization.Metadata;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.HumanGate;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Helpers.NeedsHuman;
 
@@ -14,7 +15,8 @@ namespace Agency.Huddle.App.Helpers.NeedsHuman;
 /// <param name="service">Makes the change, through the same service the Human and the Agents use.</param>
 /// <param name="overrides">The Tasks the Human turned the gate off on.</param>
 /// <param name="settings">Tells whether the Helper has been turned off since the run started.</param>
-internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, NeedsHumanOverrideStore overrides, HelperSettingsResolver settings)
+/// <param name="levels">Resolves the Task's Needs You level, so the Helper is told when a local merge stays inside the Team (ADR-0088); <see langword="null"/> means Ask me.</param>
+internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, NeedsHumanOverrideStore overrides, HelperSettingsResolver settings, NeedsYouLevels? levels = null)
     : IHelperAgent<NeedsHumanInput, NeedsHumanVerdict>
 {
     /// <summary>The id the Helper is registered, configured and stored under.</summary>
@@ -55,11 +57,33 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
     }
 
     /// <inheritdoc/>
-    public IReadOnlyDictionary<string, string> PromptValues(NeedsHumanInput input) => ValuesFor(input);
+    public IReadOnlyDictionary<string, string> PromptValues(NeedsHumanInput input) => ValuesFor(input, this.LevelNote(input));
+
+    /// <summary>
+    /// The note that tells the model the Human set the Task's scope to Run inside the Team, so a merge into the local main stays inside the
+    /// Team (ADR-0088); empty under Ask me, when no levels are wired, or when the Task is gone.
+    /// </summary>
+    /// <param name="input">The input.</param>
+    internal string LevelNote(NeedsHumanInput input)
+    {
+        ArgumentNullException.ThrowIfNull(input);
+        return levels is { } source
+            && tasks.Get(input.Id) is { } task
+            && source.ForTask(task) is { Level: NeedsYouLevel.RunInsideTheTeam } level
+            ? LevelNoteFor(level.Scope)
+            : string.Empty;
+    }
+
+    /// <summary>The note for a scope that runs inside the Team.</summary>
+    /// <param name="scope">The scope that set the level.</param>
+    internal static string LevelNoteFor(NeedsYouScope scope) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"\n\nThe human set this task's {scope.ToDisplay()} to run inside the team: a merge into the team's local main stays inside the team and does not need the human. A push to any remote still does, and so does everything else listed.");
 
     /// <summary>The prompt values for <paramref name="input"/>: the Task, its description without the Evidence section and cut to <see cref="MaxDescriptionLength"/> characters.</summary>
     /// <param name="input">The input.</param>
-    internal static Dictionary<string, string> ValuesFor(NeedsHumanInput input)
+    /// <param name="level">The Needs You level note, empty under Ask me.</param>
+    internal static Dictionary<string, string> ValuesFor(NeedsHumanInput input, string level = "")
     {
         ArgumentNullException.ThrowIfNull(input);
 
@@ -76,6 +100,7 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
             ["{{tags}}"] = input.Tags.Count == 0 ? "none" : string.Join(", ", input.Tags),
             ["{{title}}"] = input.Title,
             ["{{description}}"] = description,
+            ["{{level}}"] = level,
         };
     }
 

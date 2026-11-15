@@ -101,6 +101,28 @@ internal sealed class FakeTeamFolders : ITeamFolders
         return this.UpdateResult;
     }
 
+    /// <summary>The Project files <see cref="ReadProjectFile"/> answers with, by Project name; a Project not listed has no readable file.</summary>
+    public Dictionary<string, ProjectFile> ProjectFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    public ProjectFile? ReadProjectFile(string team, string project) => this.ProjectFiles.GetValueOrDefault(project);
+
+    /// <inheritdoc />
+    /// <remarks>A successful update (<see cref="UpdateResult"/>) applies <paramref name="change"/> to the Project's entry in <see cref="ProjectFiles"/>, or to <see cref="ProjectFile.Empty"/> when it has none, so a test can read back what was written.</remarks>
+    public bool UpdateProjectFile(string team, string project, Func<ProjectFile, ProjectFile> change)
+    {
+        lock (this.gate)
+        {
+            this.calls.Add($"UpdateProjectFile:{team}/{project}");
+            if (this.UpdateResult)
+            {
+                this.ProjectFiles[project] = change(this.ProjectFiles.GetValueOrDefault(project) ?? ProjectFile.Empty);
+            }
+        }
+
+        return this.UpdateResult;
+    }
+
     /// <summary>Every avatar <see cref="UpdateProjectAvatar"/> was given, with its Team and Project, in call order.</summary>
     public List<(string Team, string Project, Avatar Avatar)> ProjectAvatarWrites { get; } = [];
 

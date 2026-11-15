@@ -360,16 +360,23 @@ Cancelled, Duplicate or Rejected; the development processes have it, ADR-0085). 
 `accept-before-merge`, the assignee of an open gated Task with no valid Accept is refused a
 `git merge` of anything but `main`, and a `git push` to `main`. A generated hook makes the Claude Adapter ask before any `git merge`
 or `git push`, even in its `auto` mode, so the gate is consulted. The **Process** tab shows
-`AGENTS.md` and a switch per gate that is on. Turning one off asks first, and only the Human
+`AGENTS.md`, the Team's Needs You level and a switch per gate that is on (not `accept-before-merge`). Turning one off asks first, and only the Human
 can override a gate, which is logged. PRs: #136, then #335, #397, #398.
 
 **Accept before merge.** In every development process, a merge or push into `main` by any
 Agent of the Team is refused until an open Task of that Team has the Human's Accept; merging
 `main` into a feature branch still runs. The Team's process tells the Agent to name the merge as the
 Task's Action, and a refused Agent sees only a plain denial. An Accept counts for 24 hours, or one hour when it took the Task straight to
-Done, and another merge by the Team also passes in that time. Installed development Teams
-gain the gate once at start-up, and one turned off stays off. It guards against an Agent's
+Done, and another merge by the Team also passes in that time. It guards against an Agent's
 ordinary mistake and is not a security boundary. PRs: #402.
+
+**Needs You level.** A level per scope (Settings, a Team, a project; the most specific wins)
+says how much waits for the Human. Under Ask me (the default) nothing changes. Under Run inside
+the Team a local merge into `main`, a Sprint proposal and new Backlog Tasks go ahead without an
+Accept, each recorded on the Task and in the Feed; a push, an Action and a connector call still
+wait. An optional spend cap per scope falls back to Ask me and asks Yes or No for one more cap.
+The level replaces the Process tab's `accept-before-merge` switch and its start-up migration,
+and only the Human can set it or the cap. PRs: pending (#533).
 
 **Evidence and the tool-call log.** Agents append Evidence lines to a Task with
 `add_evidence`. A line holds a command with its exit code, a note, or both, and a command with

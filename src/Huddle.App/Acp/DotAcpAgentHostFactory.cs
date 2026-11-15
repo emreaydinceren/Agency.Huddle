@@ -214,7 +214,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             new AgentSettingsGuard(workDir, Path.Combine(this.options.DataDir, "hooks")),
             protectedDirectory is null ? null : new ProtectedDirectoryGuard(protectedDirectory, workDir),
             mergeGate is null ? null : new MergeGateGuard(mergeGate),
-            this.serviceProvider.GetService<ITeamRenames>() is { } renames ? new RenamedFolderGuard(teamsRoot, workDir, renames) : null);
+            this.serviceProvider.GetService<ITeamRenames>() is { } renames ? new RenamedFolderGuard(teamsRoot, workDir, renames) : null,
+            new NeedsYouLevelGuard(teamsRoot, workDir, prompts));
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>
@@ -228,7 +229,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetRequiredService<MemoryWarnings>(),
             this.agentPaths,
             this.options.Outputs.MaxIndexEntries,
-            this.serviceProvider.GetService<OverCapNotifier>());
+            this.serviceProvider.GetService<OverCapNotifier>(),
+            this.serviceProvider.GetService<NeedsYouLevels>());
     }
 
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
@@ -728,7 +730,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.TeamsRoot(),
             this.options.Teams.MaxMemoryEntries,
             this.options.Teams.MaxHuddleMemoryEntries,
-            sources.MaxOutputsEntries);
+            sources.MaxOutputsEntries,
+            levels: sources.Levels);
 
         IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
             persona,
@@ -747,7 +750,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             warnings: sources.Warnings,
             huddleMemory: inputs.HuddleMemory,
             outputs: inputs.Outputs,
-            workspaces: inputs.Workspaces);
+            workspaces: inputs.Workspaces,
+            needsYou: inputs.NeedsYou);
         return (parts, profile.Id);
     }
 }

@@ -1,0 +1,65 @@
+@using Agency.Huddle.App.Teams
+@inject NeedsYouCaps Caps
+
+@*
+    The spend cap's Yes/No question (ADR-0088): a scope that ran inside the Team spent its cap and fell back to Ask me. Yes lets it
+    spend exactly one more cap; No keeps it at Ask me until the Human changes the level or the cap. The card draws the open question
+    for one scope key and answers it through NeedsYouCaps, the only caller of Grant and Decline. The caller removes the card by
+    repainting on NeedsYouCaps.Changed; this component also hides itself the moment it was answered.
+*@
+
+@if (!this.answered)
+{
+    <MudPaper Outlined="true" Class="needs-you-cap-ask" role="region" aria-label="@($"Spend cap reached: {this.ScopeName}")">
+        <div class="needs-you-cap-ask-text">@NeedsYouLevelCopy.AskText(this.ScopeName, this.Spent, this.Cap)</div>
+        <div class="needs-you-cap-ask-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="needs-you-cap-grant"
+                       OnClick="this.GrantAsync">@NeedsYouLevelCopy.GrantLabel(this.Cap)</MudButton>
+            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="needs-you-cap-decline"
+                       OnClick="this.DeclineAsync">@NeedsYouLevelCopy.DeclineLabel</MudButton>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private bool answered;
+
+    /// <summary>The scope key of the open question: <c>global</c>, <c>team:Name</c> or <c>project:Team/Name</c>.</summary>
+    [Parameter, EditorRequired]
+    public string Key { get; set; } = string.Empty;
+
+    /// <summary>The scope as the question names it: Huddle, a Team, or Team / Project.</summary>
+    [Parameter, EditorRequired]
+    public string ScopeName { get; set; } = string.Empty;
+
+    /// <summary>The cap in USD, which a Yes adds once more.</summary>
+    [Parameter, EditorRequired]
+    public decimal Cap { get; set; }
+
+    /// <summary>What the scope spent running inside the Team, in USD.</summary>
+    [Parameter]
+    public decimal Spent { get; set; }
+
+    /// <summary>Raised after the Human answered, so a holder can repaint.</summary>
+    [Parameter]
+    public EventCallback OnAnswered { get; set; }
+
+    private async Task GrantAsync()
+    {
+        _ = this.Caps.Grant(this.Key);
+        await this.HideAsync();
+    }
+
+    private async Task DeclineAsync()
+    {
+        _ = this.Caps.Decline(this.Key);
+        await this.HideAsync();
+    }
+
+    /// <summary>Hides the card whatever the answer returned (a question another page already answered is gone too), then tells the holder.</summary>
+    private async Task HideAsync()
+    {
+        this.answered = true;
+        await this.OnAnswered.InvokeAsync();
+    }
+}

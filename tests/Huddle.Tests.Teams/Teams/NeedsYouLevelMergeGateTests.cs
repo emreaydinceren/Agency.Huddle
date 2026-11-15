@@ -1,0 +1,119 @@
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Tasks;
+
+namespace Agency.Huddle.Tests.Teams;
+
+/// <summary>
+/// <see cref="ProcessMergeGate"/> under the Needs You levels (ADR-0088): a released Task passes a local merge into main and never a push;
+/// Ask me keeps the texts it always had.
+/// </summary>
+public sealed class NeedsYouLevelMergeGateTests
+{
+    private const string FeatureMerge = "git merge feat/x";
+    private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
+    private const string PushText = "Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in Task PLAT-0001's Action with update_task, for example 'Push main to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.";
+    private const string NothingReadyText = "Cannot merge yet: under Run inside the Team a merge into main runs once a Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
+    private const string AskMeText = "Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in Task PLAT-0001's Action with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.";
+
+    private static NeedsYouLevelRig RunInsideRig(string gates = "'accept-before-merge'") => new(teamLevel: NeedsYouLevel.RunInsideTheTeam, gates: gates);
+
+    private static TaskItem Release(NeedsYouLevelRig rig)
+    {
+        TaskItem task = rig.CreateInReview();
+        _ = rig.AddEvidence(task);
+        Assert.Single(rig.Releases(task));
+        return task;
+    }
+
+    /// <summary>A released Task lets a local merge of a feature branch into main through, and refuses every push with the push text.</summary>
+    [Fact]
+    public void RefusalFor_ReleasedTask_AllowsLocalMergeAndRefusesPushes()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = Release(rig);
+
+        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git pull origin feat/x"));
+        Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push origin main"));
+        Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push ../bare main"));
+        Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push"));
+        Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git merge feat/x && git push"));
+    }
+
+    /// <summary>A release stops carrying a merge as soon as the Human sets the scope back to Ask me: the gate reads the level again.</summary>
+    [Fact]
+    public void RefusalFor_ReleasedThenSetBackToAskMe_RefusesTheMerge()
+    {
+        using NeedsYouLevelRig rig = new(globalLevel: "run-inside-team");
+        _ = Release(rig);
+
+        rig.Levels.SetGlobal(NeedsYouLevel.AskMe, null);
+
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>With nothing released, a local merge is refused with the Run inside the Team text, which tells the Agent not to set an Action.</summary>
+    [Fact]
+    public void RefusalFor_RunInsideNothingReleased_RefusesWithTheRunInsideText()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = rig.CreateInReview();
+
+        Assert.Equal(NothingReadyText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>A release older than 24 hours no longer carries a merge.</summary>
+    [Fact]
+    public void RefusalFor_ReleaseOlderThanADay_IsRefused()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = Release(rig);
+
+        rig.Clock.Advance(TimeSpan.FromHours(24));
+        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+
+        rig.Clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.Equal(NothingReadyText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>A released Task that reached Done carries a merge for an hour and not after.</summary>
+    [Fact]
+    public void RefusalFor_ReleasedTaskDone_AllowsMergeWithinTheHourOnly()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        TaskItem task = Release(rig);
+        _ = Assert.IsType<TaskResult.Saved>(rig.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, NeedsYouLevelRig.Nova));
+
+        rig.Clock.Advance(TimeSpan.FromHours(1));
+        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+
+        rig.Clock.Advance(TimeSpan.FromSeconds(1));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>Under Ask me nothing changes: the merge and the push keep the texts they always had.</summary>
+    [Fact]
+    public void RefusalFor_AskMe_KeepsTheAcceptTexts()
+    {
+        using NeedsYouLevelRig rig = new();
+        _ = rig.CreateInReview();
+
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Equal(AskMeText,rig.Gate.RefusalFor("Nova", "git push origin main"));
+    }
+
+    /// <summary>Evidence on a released Task that reached Done less than an hour ago still counts for <c>checks-before-merge</c>.</summary>
+    [Fact]
+    public void RefusalFor_ChecksGate_CountsReleasedDoneEvidenceWithinTheHour()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig("'checks-before-merge', 'accept-before-merge'");
+        TaskItem task = Release(rig);
+        _ = Assert.IsType<TaskResult.Saved>(rig.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, NeedsYouLevelRig.Nova));
+
+        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+
+        rig.Clock.Advance(TimeSpan.FromHours(1) + TimeSpan.FromSeconds(1));
+        Assert.Equal(ChecksFirst, rig.Gate.RefusalFor("Nova", FeatureMerge));
+    }
+}

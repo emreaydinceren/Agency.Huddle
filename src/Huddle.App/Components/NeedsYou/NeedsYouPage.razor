@@ -8,11 +8,23 @@
 @using Agency.Huddle.App.Components.Tasks
 @using Agency.Huddle.App.NeedsYou
 @using Agency.Huddle.App.Tasks
+@using Agency.Huddle.App.Teams
+@inject IServiceProvider Services
 @inject NeedsYouTaskSource TaskSource
 @inject TaskStore Store
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
     <PageHeader Title="@HumanGateCopy.NeedsYouTitle" />
+
+    @* The spend cap questions (ADR-0088) come first: a scope that ran out of its allowance is asking you for each step until you answer. *@
+    <div id="cap">
+        @foreach (CapAsk ask in this.capAsks)
+        {
+            <div class="needs-you-page-cap" @key="ask.Scope">
+                <NeedsYouCapAskCard Key="@ask.Scope" ScopeName="@ask.ScopeName" Cap="@ask.Cap" Spent="@ask.Spent" OnAnswered="this.OnCapAnswered" />
+            </div>
+        }
+    </div>
 
     @foreach (var card in this.cards)
     {
@@ -23,7 +35,7 @@
 
     <NeedsYouList CountChanged="this.OnRoomCountChanged" />
 
-    @if (this.cards.Count == 0 && this.roomCount == 0)
+    @if (this.cards.Count == 0 && this.roomCount == 0 && this.capAsks.Count == 0)
     {
         <EmptyState Title="@HumanGateCopy.NeedsYouEmptyTitle" Text="@HumanGateCopy.NeedsYouEmptyText" />
     }
@@ -32,18 +44,42 @@
 @code {
     private IReadOnlyList<Card> cards = [];
     private int roomCount;
+    private IReadOnlyList<CapAsk> capAsks = [];
+    private NeedsYouCaps? caps;
 
     /// <inheritdoc />
     protected override void OnInitialized()
     {
         this.cards = this.Snapshot();
         this.TaskSource.Changed += this.OnTasksChanged;
+        this.caps = this.Services.GetService<NeedsYouCaps>();
+        if (this.caps is not null)
+        {
+            this.capAsks = this.caps.Pending;
+            this.caps.Changed += this.OnCapsChanged;
+        }
     }
 
     /// <inheritdoc />
     public void Dispose()
     {
         this.TaskSource.Changed -= this.OnTasksChanged;
+        if (this.caps is not null)
+        {
+            this.caps.Changed -= this.OnCapsChanged;
+        }
+    }
+
+    private void OnCapAnswered() => this.capAsks = this.caps?.Pending ?? [];
+
+    private void OnCapsChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.capAsks = this.caps?.Pending ?? [];
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>Joins the source's entries to their current Task, dropping an entry whose Task is gone.</summary>

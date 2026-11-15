@@ -57,9 +57,16 @@ public sealed class TaskTimelineTests
             builder.CloseComponent();
         });
 
-    /// <summary>Types <paramref name="text"/> into the comment box, as the Human does.</summary>
-    private static void Type(IRenderedComponent<ContainerFragment> cut, string text) =>
+    /// <summary>
+    /// Types <paramref name="text"/> into the comment box, as the Human does, and waits until the box has passed it on: MudTextField hands the
+    /// value to <c>ValueChanged</c> asynchronously, so under load the Comment button can still show the old text's state when Input returns.
+    /// </summary>
+    private static void Type(IRenderedComponent<ContainerFragment> cut, string text)
+    {
         cut.Find(".task-timeline-comment-field textarea").Input(text);
+        bool blank = string.IsNullOrWhiteSpace(text);
+        cut.WaitForAssertion(() => Assert.Equal(blank, cut.Find(".task-timeline-comment-send").HasAttribute("disabled")));
+    }
 
     /// <summary>Clicks Comment and waits for the box to be redrawn.</summary>
     private static Task ClickCommentAsync(IRenderedComponent<ContainerFragment> cut) =>

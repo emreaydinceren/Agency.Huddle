@@ -1043,18 +1043,41 @@ Team, and household basics for a Household.
 
 A Team with a `_team.md` has a **Process** tab on its page. It shows the Team's
 `AGENTS.md` as a document, with an **Edit** button that opens it in the Library.
-Above the document there is one switch for each gate `_team.md` turns on. Turning a
+Above the document sits the Team's [Needs You level](#the-needs-you-level), and below it one switch for each gate `_team.md` turns on (except `accept-before-merge`, which the level replaces). Turning a
 switch off asks first, naming the gate and its risk (for example, "A Task can then
 be marked Done with no verified Evidence."). Only **Turn off** rewrites the `gates:`
 line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab only
 lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 `AGENTS.md` nor a gate says "This Team has no process yet."
 
+### The Needs You level
+
+The **Needs You level** says how much of a Team's work waits for you. There are two levels.
+
+| Level | What waits for you |
+| --- | --- |
+| **Ask me** (the default) | Everything that waits today: every merge into main, every push, every Task with an Action, every connector call. |
+| **Run inside the Team** | The same, except three steps go ahead without you: a **local merge** into main of the Team's own repository, a **Sprint** proposal (approved at once when every Task it names runs inside the Team) and new Backlog Tasks. |
+
+Under both levels these still wait for your **Accept**: any `git push` (to a URL, to a path, to anywhere), every Task with an Action (send, pay, publish,
+sign, delete) or marked **Requires your acceptance**, and every connector call.
+
+You set the level in three places, and the most specific one wins: **Settings › Needs You level** for everything, the **Process** tab of a Team page
+for that Team, and **Needs You level…** on a project for that project. A scope you leave unset inherits from the one above, and the line under the
+control says which level is in force and where it comes from. Only you can set it: an Agent, a Helper or a retro proposal cannot, and a refused
+attempt goes to the log.
+
+Beside **Run inside the Team** you can enter a **Spend cap (USD)**. When the Team (or project) has spent that much running inside the Team it
+falls back to **Ask me** and asks you, in Needs you and in the Feed: **Let it spend another** that amount, or **No, ask me for each step**. Yes lets
+it spend exactly one more cap, then it asks again. No keeps it on Ask me until you change the level or the cap. The cap counts the USD spend of
+the Team's Agents (all Agents for the Settings level) and does not stop a Turn in progress. A step that went ahead shows as a Change log entry
+on the Task, "proceeded under Team level Run inside the Team", and as an item in the Feed.
+
 ### The six gates
 
 | Gate | Refuses |
 | --- | --- |
-| `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. Development Teams you already had get this gate once, when you first start the new version; switch it off in the **Process** tab if you do not want it. |
+| `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. The gate has no switch: set the Team's or project's [Needs You level](#the-needs-you-level) instead. Under **Run inside the Team** a local merge needs no Accept, so Huddle does not move the Task to **Needs you** for it; a push still does. |
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. When the Team's Definition of Done names no command, a note from that member is enough. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
@@ -2561,6 +2584,7 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | **Prompts** | The text Huddle sends to Agents, such as the wake-up message. **Reset all to defaults** (beside the sticky **Save**) asks "Reset every prompt to its default?" and **Reset all** confirms. | One file per changed prompt in `Prompts/`, such as `Prompts/systemPrompt.chatRules.md`; delete a file to restore that prompt's default |
 | **Helpers** | The small background agents that make one judgement for you, such as whether a Task an Agent wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
+| **Needs You level** | How much of the Teams' work waits for you: **Ask me** or **Run inside the Team**, with an optional **Spend cap (USD)**. Every Team and project inherits it until it sets its own. See [The Needs You level](#the-needs-you-level). | `team.db` |
 | **Personas** | The Agent definitions. | `Agents/…` |
 | **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |

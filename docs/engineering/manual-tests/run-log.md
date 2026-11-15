@@ -5730,6 +5730,28 @@ File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-10
 | --- | --- | --- | --- | --- |
 | 2026-11-06 | Pass | `db2a10d0` + uncommitted fix | #432 | By an agent (Sonnet at low Effort, 51 sessions, 1.80 USD), at the handler and Adapter level with the real `_meta`, not through the running app. Steps 1 to 5 as written: merge refused, also after a `settings.local.json` rewrite, a hook-script overwrite and `disableAllHooks` (same and new session, and with no hook); `git -c`, `bash -c` and `git push` refused; `Edit` of `AGENTS.md` and `settings.local.json` refused; ordinary `Edit`, `Write` and `echo` ran. Known limit confirmed: `bash merge.sh` still merges. PowerShell and `acceptEdits` and resume also checked. No Human prompt tested. |
 
+### HUMANGATE-11 — Run inside the Team: local merges need no Accept, a push still waits (issue #533)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-11--run-inside-the-team-local-merges-need-no-accept-a-push-still-waits-issue-533)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass | `b2df3d34` | #533 | By an agent acting as the Human, isolated lane, every Team member on Sonnet. Project Lib at Run inside the Team, global at Ask me. DEVT-0001 (Greeting.Hello + test) went build, review, QA, then Huddle wrote 'proceeded under project level Run inside the Team' and the Developer merged into the local main (563bc32); zero Needs You entries for the merge. Then a file-path remote: the push Task DEVT-0002 waited in Needs You with a push Action, and the Developer's direct `git push origin main` was refused; the remote stayed empty. Two earlier runs failed and were fixed: the manager set a merge Action (Agents now see their scopes' level), then the Needs Human Helper gated the merge (it is now told the level). Spend 3.10 USD over the three runs. |
+
+### HUMANGATE-12 — A spend cap falls back to Ask me and asks (issue #533)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-12--a-spend-cap-falls-back-to-ask-me-and-asks-issue-533)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### HUMANGATE-13 — An Agent cannot change the Needs You level (issue #533)
+
+File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-13--an-agent-cannot-change-the-needs-you-level-issue-533)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the override, the daily cap and a failing Adapter
 
 ### HELPERS-01 — The Helpers tab shows the Needs Human card (U-1 setup)

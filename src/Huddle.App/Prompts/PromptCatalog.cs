@@ -47,6 +47,7 @@ internal static class PromptCatalog
         ..BuildPart02(),
         ..BuildPart03(),
         ..BuildPart54(),
+        ..BuildNeedsYou(),
         ..BuildPart04(),
         ..BuildPart05(),
         ..BuildPart06(),
@@ -380,6 +381,42 @@ internal static class PromptCatalog
                 """,
             Placeholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
             RequiredPlaceholders: ["{{name}}", "{{role}}", "{{team}}", "{{consult}}", "{{skills}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the Needs You level prompts (ADR-0088): the system prompt section and the note on a Task result.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildNeedsYou() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.needsYou",
+            Label: "Needs You level",
+            HelperText:
+                "Tells an Agent which Needs You level applies to each scope of its Teams, so it does not put a merge in a " +
+                "Task's Action where the level releases it. Added only when a scope of one of the Agent's Teams runs inside " +
+                "the Team. Must keep {{levels}}, where one line per scope is substituted in.",
+            Default:
+                """
+                Needs You level (what waits for the Human):
+                {{levels}}
+                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review and its assignee merges it into the local main. A push, and any step that leaves the Team, still goes in the Task's Action.
+                """,
+            Placeholders: ["{{levels}}"],
+            RequiredPlaceholders: ["{{levels}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.taskActionNote",
+            Label: "Task Action note",
+            HelperText:
+                "One sentence added to the result of create_task or update_task when the Task has an Action but its scope " +
+                "runs inside the Team. Must keep {{taskId}} and {{scope}}.",
+            Default:
+                """
+                Note: {{taskId}}'s {{scope}} runs inside the Team, so a local merge into main needs no Action; this Action sends the Task to the Human. Use an Action only for a step that leaves the Team, such as a push.
+                """,
+            Placeholders: ["{{taskId}}", "{{scope}}"],
+            RequiredPlaceholders: ["{{taskId}}", "{{scope}}"],
             Timing: PromptTiming.NextSession),
     ];
 
@@ -1293,7 +1330,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.
+                Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves, unless every Task runs inside the Team: then Huddle approves it at once and says so. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2012,7 +2049,9 @@ internal static class PromptCatalog
                 carries out the Action and then moves the Task to Done. In a Team with the
                 accept-before-merge gate, a merge into main is refused until a Task of the Team has
                 the Human's Accept, whoever runs it: put the merge in the Task's Action, wait in
-                Needs You, and merge after the Accept. Use list_tasks with the
+                Needs You, and merge after the Accept. If the Team's Needs You level is Run inside
+                the Team, do not set a merge Action: a local merge proceeds when the Proof is
+                complete, and any push still waits for the Accept. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.
                 """,
             Placeholders: [],
@@ -2263,6 +2302,17 @@ internal static class PromptCatalog
                 "The reason logged when an Agent's tool call that edits, deletes or moves an AGENTS.md " +
                 "file is refused (Second Brain §6.6).",
             Default: "AGENTS.md is the Human's file. Propose a change in a retrospective instead.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.needsYouLevelRefusal",
+            Label: "Needs You level change refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that would change the needsYouLevel or spendCap line of a " +
+                "_team.md or _project.md is refused (ADR-0088).",
+            Default: "Only the Human sets the Needs You level and its spend cap, in the app. Do not edit the needsYouLevel or spendCap lines.",
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
@@ -2672,7 +2722,7 @@ internal static class PromptCatalog
                 - moving or committing money: paying, refunding, ordering, quoting a price;
                 - signing or accepting a contract, terms or an offer;
                 - publishing anything public: a post, a release, a press note;
-                - merging to main, deploying, or deleting data.
+                - merging to main (unless the task says it runs inside the team: then a local merge does not), deploying, or deleting data.
 
                 A task does not need the human when it stays inside the team: notes, drafts, research,
                 analysis, internal reviews, and updates to tasks.
@@ -2696,7 +2746,7 @@ internal static class PromptCatalog
             Label: "Needs Human: the Task",
             HelperText:
                 "The message that shows the Needs Human Helper one Task. Used from the Helper's next call. Must keep " +
-                "{{title}} and {{description}}; {{taskId}}, {{team}} and {{tags}} are optional.",
+                "{{title}} and {{description}}; {{taskId}}, {{team}}, {{tags}} and {{level}} (the Needs You level note, empty under Ask me) are optional.",
             Default:
                 """
                 Task {{taskId}} in team {{team}}. Tags: {{tags}}
@@ -2707,9 +2757,9 @@ internal static class PromptCatalog
 
                 <description>
                 {{description}}
-                </description>
+                </description>{{level}}
                 """,
-            Placeholders: ["{{taskId}}", "{{team}}", "{{tags}}", "{{title}}", "{{description}}"],
+            Placeholders: ["{{taskId}}", "{{team}}", "{{tags}}", "{{title}}", "{{description}}", "{{level}}"],
             RequiredPlaceholders: ["{{title}}", "{{description}}"],
             Timing: PromptTiming.Live),
     ];

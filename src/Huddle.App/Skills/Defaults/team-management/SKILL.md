@@ -26,6 +26,11 @@ you have the answer:
 If `close_task` says the Task is already closed, the one who asked closed it
 first, and there is nothing more to do.
 
+## Planning the Backlog
+
+Creating Backlog Tasks never needs the Human's approval, at any level. Do not
+ask for it: create the Tasks and carry on.
+
 ## Requests between Teams
 
 Only managers file and triage Requests. If you are a specialist, ask your own
@@ -53,7 +58,11 @@ stretch of work. Give it a `name` and the `taskIds` to include.
   Team and not be Done.
 - The name must not match an earlier Sprint. You may reuse the name of the
   current Sprint to add Tasks to it.
-- Proposing creates nothing. The Human sees the proposal and approves or
-  declines it; only an approval creates the Sprint and moves the Tasks into it.
+- When every Task's project or Team runs inside the Team, Huddle approves the
+  proposal at once: the Sprint is created, the Tasks move into it, and the
+  tool's answer says so. Do not wait for the Human.
+- Otherwise proposing creates nothing yet. The Human sees the proposal and
+  approves or declines it; only an approval creates the Sprint and moves the
+  Tasks into it.
 - After you propose, carry on with other work. Do not propose the same Sprint
   twice while one is waiting.

@@ -66,6 +66,9 @@ public sealed class TeamOptions
     /// <summary>Configuration for team and agent folder names, per Spec §7. Shared with the Tasks feature.</summary>
     public TeamsOptions Teams { get; set; } = new();
 
+    /// <summary>The global Needs You level and its spend cap, bound from <c>Team:NeedsYouLevel</c> (ADR-0088).</summary>
+    public NeedsYouOptions NeedsYouLevel { get; set; } = new();
+
     /// <summary>Configuration for the Tasks feature.</summary>
     public TasksOptions Tasks { get; set; } = new();
 

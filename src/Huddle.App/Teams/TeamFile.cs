@@ -80,6 +80,15 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     /// <summary>The Name of the manager the Team had when it was archived; the <c>archivedManager</c> key is written only while one is set, and unarchive puts the manager back.</summary>
     public string? ArchivedManager { get; init; }
 
+    /// <summary>
+    /// The Team's Needs You level (ADR-0088), kept in the optional <c>needsYouLevel</c> key; <see langword="null"/> means unset, so the Team
+    /// inherits the global level. Only the Human sets it: an Agent's write that changes the line is refused (<c>NeedsYouLevelGuard</c>).
+    /// </summary>
+    public NeedsYouLevel? NeedsYouLevel { get; init; }
+
+    /// <summary>The spend cap in USD that travels with <see cref="NeedsYouLevel"/>, in the optional <c>spendCap</c> key; <see langword="null"/> means no cap.</summary>
+    public decimal? SpendCap { get; init; }
+
     /// <summary>Returns a copy whose gates are <paramref name="gates"/>.</summary>
     /// <param name="gates">The gates the copy lists.</param>
     /// <returns>The new file; every other setting is unchanged.</returns>
@@ -143,6 +152,8 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             UnknownLines = unknown,
             Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
             Avatar = ReadAvatar(values),
+            NeedsYouLevel = NeedsYouLevelText.ParseOrNull(values.GetValueOrDefault(NeedsYouLevelText.LevelKey)),
+            SpendCap = NeedsYouLevelText.ParseCapOrNull(values.GetValueOrDefault(NeedsYouLevelText.SpendCapKey)),
             Process = ProcessSettings.Parse(values),
             ArchivedMembers = values.TryGetValue(ArchivedMembersKey, out string? archived) ? ProcessDocument.SplitList(archived) : [],
             ArchivedRooms = values.TryGetValue(ArchivedRoomsKey, out string? archivedRooms) ? ProcessDocument.SplitList(archivedRooms) : [],
@@ -260,6 +271,8 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         AppendOptional(builder, AvatarLabelKey, this.Avatar.Label);
         AppendOptional(builder, AvatarImageKey, this.Avatar.Image);
         AppendOptional(builder, AvatarBackgroundKey, this.Avatar.Background);
+        AppendOptional(builder, NeedsYouLevelText.LevelKey, this.NeedsYouLevel?.ToWire());
+        AppendOptional(builder, NeedsYouLevelText.SpendCapKey, NeedsYouLevelText.Usable(this.SpendCap) is { } cap ? NeedsYouLevelText.FormatCap(cap) : null);
         this.AppendProcess(builder);
 
         foreach (string line in this.UnknownLines)
@@ -333,7 +346,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         || string.Equals(key, OnboardedKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, AvatarLabelKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, AvatarImageKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(key, AvatarBackgroundKey, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(key, AvatarBackgroundKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, NeedsYouLevelText.LevelKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, NeedsYouLevelText.SpendCapKey, StringComparison.OrdinalIgnoreCase);
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 

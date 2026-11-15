@@ -44,6 +44,24 @@ public sealed class ProvisionKeepsSettingsTests
         Assert.Equal("ships the platform", folders.File.Owns);
     }
 
+    /// <summary>Provisioning rewrites <c>_team.md</c> and keeps the Team's Needs You level and spend cap (ADR-0088), on disk too.</summary>
+    [Fact]
+    public void Provision_TeamHasNeedsYouLevel_KeepsLevelAndCap()
+    {
+        using TempDataDir dir = new();
+        DiskTeamFolders folders = Folders(dir, ProcessSettings.Empty);
+        folders.File = folders.File! with { NeedsYouLevel = NeedsYouLevel.RunInsideTheTeam, SpendCap = 5.5m };
+
+        ProvisionResult result = Build(dir, folders).Provision(Team, ProcessId);
+
+        Assert.Equal(ProvisionResult.Created, result);
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, folders.File.NeedsYouLevel);
+        Assert.Equal(5.5m, folders.File.SpendCap);
+        Assert.True(TeamFile.TryParse(File.ReadAllText(Path.Combine(dir.Path, TeamPaths.TeamFileName)), out TeamFile? onDisk));
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, onDisk.NeedsYouLevel);
+        Assert.Equal(5.5m, onDisk.SpendCap);
+    }
+
     /// <summary>A Team that already enables a gate id this build does not know keeps its gate list; the template's gates are not added.</summary>
     [Fact]
     public void Provision_TeamHasUnknownGate_KeepsTheGateList()

@@ -2,7 +2,7 @@
 
 Prove, in a real browser, that a Task which names an Action, or which the Human marked **Requires your acceptance**, cannot reach Done without the Human: that the Proof list and the decision card show what is still open, that Accept stays locked until the Proof is complete, that every other route to Done is refused, that an edit after acceptance takes the acceptance away, that Decline closes the Task with its reason, that an outside edit of the file is reverted, and that a restart loses nothing. The automated suite proves the rules, the evaluator and the components; this page proves what only a browser shows: the sections as laid out, the board drag, the Needs You page and the restart. The design is [the Human gate spec](../../Huddle.HumanGate-Specifications.md), its use cases U-1 to U-9 map to HUMANGATE-01 to HUMANGATE-09 in order, and the decisions are [ADR-0061](../../adr/0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md) and [ADR-0062](../../adr/0062-a-teams-definition-of-done-is-a-proof-checklist-in-process-md.md).
 
-**10 tests** · 9 free · 1 paid · about 1.7 hours. Written 2026-10-19; **not yet run by a person**. All nine
+**13 tests** · 9 free · 4 paid · about 2.8 hours. Written 2026-10-19; **not yet run by a person**. All nine
 were run on 2026-10-19 by agents driving the built-in browser as a paid run (real Haiku Agents
 in a hired Research Team instead of the mock cast) and passed; HUMANGATE-03 used Sources checked
 instead of the checklist detail, and HUMANGATE-06 and -09 did not see the brief absent state or
@@ -262,3 +262,75 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - At step 4 both Edits are refused (the log names the guard) and both files are unchanged.
 - At step 5 both run without a Human prompt beyond the usual.
 - `bash merge.sh` (a script that merges) is **expected to merge**: write it as a known limit, not a failure. The `PowerShell(...)` rule forms are unmeasured: if the machine has a PowerShell tool, ask for a merge through it and write down what happened.
+
+### HUMANGATE-11 — Run inside the Team: local merges need no Accept, a push still waits (issue #533)
+
+**Paid** · about 40 min · Sonnet at low Effort, never Opus
+
+*Proves [ADR-0088](../../adr/0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md): under Run inside the Team a Development Team finishes a small build with no Needs You entry for a local merge, and a `git push` still waits for the Human's Accept.*
+
+**Before you start**
+
+- A Development Team hired on Sonnet (a manager and a Developer), with no remote on its repository. Account connectors off. Use an isolated lane; spend is real.
+- Open **Settings**, the **Needs You** tab, and read the section. Open the Team page, the **Process** tab, and read its **Needs You level** line. Both start on **Ask me**.
+
+**Steps**
+
+1. On the Team page, **Process** tab, choose **Run inside the Team**. Open a project of the Team, press **Needs You level…** and check it shows `Inherits Run inside the Team from the Team.`
+2. In the Team Room give a tiny build brief, such as "a one-page site with a heading and a footer, in its own repository".
+3. Let the Team finish. Watch the **Needs You** page the whole time and count its entries for a merge.
+4. Open the finished Task's timeline and the **Feed**.
+5. Add a file-path remote to the repository (`git init --bare` in a throwaway folder, then `git remote add origin <path>`). Ask the Developer to push `main` to it.
+6. Ask the Developer to push a branch named `feat-x` to the same remote and note what happens.
+
+**Pass if — all of these**
+
+- At step 3 no Task goes to Needs You for a merge, and no Accept is asked for one; the Developer merges into the local `main` after the Proof is complete in Review and moves the Task to Done.
+- At step 4 the timeline holds one entry by Huddle, `proceeded under Team level Run inside the Team: its merge into main needs no Accept`, and the Feed shows it as Activity.
+- At step 5 the push is refused until a Task carries it as its Action and the Human accepts it in Needs You; after the Accept the push goes through.
+- Step 6 is recorded, not judged: a push of a named feature branch is a [known limit](../known-limits.md) and does not reach the gate.
+
+### HUMANGATE-12 — A spend cap falls back to Ask me and asks (issue #533)
+
+**Paid** · about 25 min · Sonnet at low Effort, never Opus
+
+*Proves the cap: the scope falls back to Ask me at the cap, Yes grants exactly one more cap, and No keeps Ask me.*
+
+**Before you start**
+
+- The Team of HUMANGATE-11, set to **Run inside the Team**, with a **Spend cap (USD)** of `0.50` entered beside it and saved.
+
+**Steps**
+
+1. Give the Team a build brief big enough to spend the cap, and watch the **Needs You** card and the **Feed**.
+2. When the cap question appears, read it. Check the Team's **Process** tab now reads `Cap reached: asking you.`
+3. Press the Yes button, `Let it spend another 0.5 USD`. Let the Team run until the question comes back.
+4. This time press `No, ask me for each step`. Check the Team's level line, then set the level and the cap again and save.
+
+**Pass if — all of these**
+
+- At step 2 the card lists `Spend cap reached`, the Needs You page shows the question `<Team> has spent <amount> USD running inside the Team. Let it spend another 0.5 USD? Until you answer it asks you for each step.`, and the Feed holds a Notification that reads `<Team> has spent <amount> USD running inside the Team, its cap. Let it spend another 0.5 USD?`. Until it is answered the Team's merges wait in Needs You as under Ask me.
+- At step 3 Yes lets the Team run again, and the question returns after about another 0.50 USD, not before.
+- At step 4 No leaves the Team on Ask me with no new question, and saving the level again starts the count from zero.
+
+### HUMANGATE-13 — An Agent cannot change the Needs You level (issue #533)
+
+**Paid** · about 10 min · Sonnet at low Effort, never Opus
+
+*Proves the Human-only guard: an Agent's edit of `needsYouLevel` or `spendCap` is refused and logged.*
+
+**Before you start**
+
+- The Team of HUMANGATE-11 on **Ask me**, with its manager awake in the Team Room.
+
+**Steps**
+
+1. Ask the manager to set `needsYouLevel: run-inside-team` in the Team's `_team.md` with its Edit tool.
+2. Ask it to propose that same change with `propose_retro_changes`.
+3. Open the Team page and read the **Needs You level** line. Search the log for the refusals.
+
+**Pass if — all of these**
+
+- At steps 1 and 2 the change is refused, and `_team.md` still holds no `needsYouLevel` line.
+- At step 3 the Team is still on **Ask me**, and the log names the guard for each refusal.
+- A shell command that rewrites the file is **expected to succeed**: write it as a known limit, not a failure.
