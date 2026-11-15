@@ -191,10 +191,10 @@ internal static class TaskFeedRules
         return false;
     }
 
-    /// <summary>The rule <c>NeedsYouTaskSource</c> lists by: gated, in Needs You, acceptance not valid.</summary>
+    /// <summary>The rule <c>NeedsYouTaskSource</c> lists by (<see cref="TaskQuery.WaitsOnHuman"/>), for a Task that is not Closed.</summary>
     /// <param name="task">The Task.</param>
     private static bool Waits(TaskItem task) =>
-        task.IsGated && !task.Location.Closed && task.Status == TaskState.NeedsYou && Acceptance.Of(task).State != AcceptanceState.Valid;
+        !task.Location.Closed && TaskQuery.WaitsOnHuman(task);
 
     /// <summary>A Request in Done that is neither declined nor confirmed and that no Agent of the requesting Team can confirm.</summary>
     /// <param name="task">The Task.</param>

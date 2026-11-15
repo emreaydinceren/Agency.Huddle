@@ -1,6 +1,7 @@
 @*
-    The Top bar's "N Tasks need you" pill (alignment markup M5): how many open Tasks are assigned to the Human, by
-    the same rule as the Tasks page's "need you" count (TaskQuery.NeedsYou), linking to My Tasks. Nothing renders
+    The Top bar's "N Tasks need you" pill (alignment markup M5): how many Tasks need the Human (open and assigned to
+    them, or gated and waiting in Needs You), by the same rule as the Tasks page's "need you" count
+    (TaskQuery.NeedsHuman), across the whole store, linking to My Tasks. Nothing renders
     while none needs the Human or Tasks are off. Rendered for every Theme and hidden in app.css; a style pack may show
     it (Nordic, ADR-0057).
 *@
@@ -20,7 +21,7 @@
 }
 
 @code {
-    /// <summary>How many open Tasks are assigned to the Human; 0 while Tasks are off.</summary>
+    /// <summary>How many Tasks need the Human (<see cref="TaskQuery.NeedsHuman"/>); 0 while Tasks are off.</summary>
     private int Count
     {
         get
@@ -31,7 +32,7 @@
             }
 
             string human = this.Human.Name;
-            return this.Store.All.Count(task => TaskQuery.NeedsYou(task, human));
+            return this.Store.All.Count(task => TaskQuery.NeedsHuman(task, human));
         }
     }
 
