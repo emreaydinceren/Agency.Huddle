@@ -201,10 +201,9 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
             // Evidence on a finished Task is stale for a later merge; only open work counts, and a Task the Human's Accept
             // took straight to Done counts while the merge window it opened is still open.
             if ((!task.Status.IsTerminal() || InDoneWindow(task, now))
-                && string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)
-                && tasks.ReadText(task.Id) is { } text)
+                && string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase))
             {
-                evidence.AddRange(EvidenceLine.ParseSection(text));
+                evidence.AddRange(task.Evidence);
             }
         }
 

@@ -16,7 +16,6 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
     private const string Separator = " | ";
     private const string NotePrefix = "note: ";
     private const string EvidenceHeading = "## Evidence";
-    private const string ListMarker = "- ";
     private static readonly string[] BulletMarkers = ["- ", "* ", "+ "];
 
     /// <summary>Parses one Evidence line. Free text without a separator becomes a note; a line with separators must have a valid time, an author and a command.</summary>
@@ -202,13 +201,6 @@ internal sealed partial record EvidenceLine(DateTimeOffset Time, string Author, 
 
         return string.Join(Separator, parts);
     }
-
-    /// <summary>
-    /// Formats the line as a Markdown list item, the form <c>add_evidence</c> writes so each entry renders as its own item
-    /// rather than running into the next as one paragraph.
-    /// </summary>
-    /// <returns>The list marker followed by <see cref="Format"/>, without a line break.</returns>
-    public string FormatListItem() => ListMarker + this.Format();
 
     /// <summary>Parses every line under the "## Evidence" heading of a Task document, in order. Other sections are ignored.</summary>
     /// <param name="markdown">The whole Task document.</param>

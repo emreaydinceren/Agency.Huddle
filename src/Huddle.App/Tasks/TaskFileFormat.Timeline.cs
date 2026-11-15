@@ -63,6 +63,25 @@ internal static partial class TaskFileFormat
         return null;
     }
 
+    /// <summary>
+    /// The Evidence of a Task file's text, read as <see cref="TryParse"/> reads the body (the timeline's <c>evidence</c> entries, or
+    /// an older file's Evidence sections). Reads no frontmatter, so it does not validate the Task.
+    /// </summary>
+    /// <param name="fileText">The Task file's raw text.</param>
+    /// <returns>The Evidence lines in file order; empty when the text has no frontmatter block.</returns>
+    internal static IReadOnlyList<EvidenceLine> ReadEvidence(string fileText)
+    {
+        ArgumentNullException.ThrowIfNull(fileText);
+
+        if (!HasFrontmatterBlock(fileText))
+        {
+            return [];
+        }
+
+        (_, string body) = PersonaFrontmatter.Parse(fileText);
+        return [.. ParseBody(body).Comments.Where(static entry => entry.Kind == TimelineEntryKind.Evidence).Select(EvidenceLine.FromEntry)];
+    }
+
     /// <summary>Formats one timeline entry as its file line (Spec §7.7.1).</summary>
     /// <param name="entry">The entry to format.</param>
     public static string FormatTimelineEntry(TimelineEntry entry)

@@ -60,10 +60,10 @@ public sealed class TaskDecisionCardTests
     /// <param name="status">The status.</param>
     /// <param name="acceptance">"none", "valid" or "stale".</param>
     /// <param name="action">The Action, or <see langword="null"/>.</param>
-    /// <param name="description">The description, which carries the Evidence section.</param>
-    private static TaskItem Display(TaskState status = TaskState.NeedsYou, string acceptance = "none", string? action = null, string description = "")
+    /// <param name="comments">The timeline's comment and Evidence entries.</param>
+    private static TaskItem Display(TaskState status = TaskState.NeedsYou, string acceptance = "none", string? action = null, IReadOnlyList<TimelineEntry>? comments = null)
     {
-        TaskItem bare = TestTasks.Make(id: "PLAT-0001", status: status, assignee: Nova, description: description) with { HumanGate = true, Action = action };
+        TaskItem bare = TestTasks.Make(id: "PLAT-0001", status: status, assignee: Nova) with { HumanGate = true, Action = action, Comments = comments ?? [] };
         List<ChangeLogEntry> log = [TestTasks.Entry("2026-10-19T09:00:00Z", Nova, EnteredNeedsYou)];
         if (!string.Equals(acceptance, "none", StringComparison.Ordinal))
         {
@@ -308,8 +308,12 @@ public sealed class TaskDecisionCardTests
     {
         using TaskToolHarness harness = new(proof: new CompleteProofSource());
         await using MudBunitContext ctx = new();
-        const string description = "Body\n\n## Evidence\n2026-10-19T09:00Z | Nova | dotnet build | exit 0\n2026-10-19T09:05Z | Ruth | dotnet test | exit 0\n";
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, harness, Display(description: description), AllMet());
+        TimelineEntry[] evidence =
+        [
+            new(new DateTimeOffset(2026, 10, 19, 9, 0, 0, TimeSpan.Zero), "Nova", TimelineEntryKind.Evidence, "dotnet build | exit 0"),
+            new(new DateTimeOffset(2026, 10, 19, 9, 5, 0, TimeSpan.Zero), "Ruth", TimelineEntryKind.Evidence, "dotnet test | exit 0"),
+        ];
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, harness, Display(comments: evidence), AllMet());
 
         const string expected = "Drafted by Nova · Checked by Ruth · Tracked as PLAT-0001";
         Assert.Equal(expected, HumanGateCopy.Trail(Nova, ["Ruth"], "PLAT-0001"));

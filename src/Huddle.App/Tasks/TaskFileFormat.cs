@@ -447,62 +447,6 @@ internal static partial class TaskFileFormat
     }
 
     /// <summary>
-    /// Adds one line at the end of the "## Evidence" section of <paramref name="fileText"/>, creating the section
-    /// just before the Change log heading (or at the end when there is none) when it is absent. Every other line is
-    /// left exactly as it was.
-    /// </summary>
-    /// <param name="fileText">The Task file's raw text.</param>
-    /// <param name="evidenceLine">The formatted Evidence line, without a line break.</param>
-    public static string AddEvidenceLine(string fileText, string evidenceLine)
-    {
-        ArgumentNullException.ThrowIfNull(fileText);
-        ArgumentException.ThrowIfNullOrWhiteSpace(evidenceLine);
-
-        string normalized = fileText.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
-        List<string> lines = [.. normalized.Split('\n')];
-        int changeLog = FindChangeLogHeadingLineIndex([.. lines]);
-        int limit = changeLog < 0 ? lines.Count : changeLog;
-
-        int heading = -1;
-        bool inFence = false;
-        for (int i = 0; i < limit && heading < 0; i++)
-        {
-            string trimmed = lines[i].Trim();
-            if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
-            {
-                inFence = !inFence;
-            }
-            else if (!inFence && string.Equals(trimmed, EvidenceHeading, StringComparison.OrdinalIgnoreCase))
-            {
-                heading = i;
-            }
-        }
-
-        if (heading >= 0)
-        {
-            int last = heading;
-            for (int i = heading + 1; i < limit && !lines[i].StartsWith('#'); i++)
-            {
-                if (lines[i].Trim().Length > 0)
-                {
-                    last = i;
-                }
-            }
-
-            lines.Insert(last + 1, evidenceLine);
-            return string.Join('\n', lines);
-        }
-
-        if (changeLog < 0)
-        {
-            return normalized.TrimEnd('\n') + "\n\n" + EvidenceHeading + "\n" + evidenceLine + "\n";
-        }
-
-        lines.InsertRange(changeLog, [EvidenceHeading, evidenceLine, string.Empty]);
-        return string.Join('\n', lines);
-    }
-
-    /// <summary>
     /// The version hash of a Task file's text: the first 16 hex characters of the SHA-256 of the
     /// text after CRLF has been normalised to '\n' (Spec §7.6).
     /// </summary>
@@ -762,9 +706,6 @@ internal static partial class TaskFileFormat
         error = "";
         return true;
     }
-
-    /// <summary>The index of the last line that trims to <see cref="ChangeLogHeading"/> outside a fenced code block, or -1.</summary>
-    private static int FindChangeLogHeadingLineIndex(string[] lines) => FindHeadingLineIndex(lines, ChangeLogHeading);
 
     /// <summary>
     /// Parses one Change log line (Spec §7.3 step 4). A line that doesn't match the grammar, or
