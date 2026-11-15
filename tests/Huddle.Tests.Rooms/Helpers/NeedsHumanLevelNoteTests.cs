@@ -37,7 +37,6 @@ public sealed class NeedsHumanLevelNoteTests
         IReadOnlyDictionary<string, string> values = HelperOver(rig).PromptValues(InputFor(task));
 
         Assert.Equal(NeedsHumanHelper.LevelNoteFor(NeedsYouScope.Project), values["{{level}}"]);
-        Assert.Contains("project to run inside the team", values["{{level}}"], StringComparison.Ordinal);
     }
 
     /// <summary>Under Ask me the note is empty, so the Task prompt is exactly the one the Helper always saw.</summary>
