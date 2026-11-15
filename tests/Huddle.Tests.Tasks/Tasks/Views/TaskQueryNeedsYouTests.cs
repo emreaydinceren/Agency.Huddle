@@ -4,8 +4,8 @@ using Agency.Huddle.App.Tasks.Views;
 namespace Agency.Huddle.Tests.Tasks.Views;
 
 /// <summary>
-/// Tests for <see cref="TaskQuery.NeedsYou"/>, the one rule behind the Tasks page's "need you" count and the Top bar's
-/// "N Tasks need you" pill (alignment markup M5).
+/// Tests for <see cref="TaskQuery.NeedsYou"/>, the assignment rule (open and assigned to the Human) that the Feed's
+/// <c>TaskAssignedToYou</c> uses and that <see cref="TaskQuery.NeedsHuman"/> builds on for the "need you" count and the pill.
 /// </summary>
 public sealed class TaskQueryNeedsYouTests
 {

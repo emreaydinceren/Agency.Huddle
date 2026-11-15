@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.HumanGate;
+using Agency.Huddle.App.Tasks.Views;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.NeedsYou;
@@ -41,7 +42,7 @@ internal sealed class NeedsYouTaskSource : IDisposable
 
     /// <summary>The open gated Tasks in Needs You whose acceptance is not valid, oldest first.</summary>
     public IReadOnlyList<NeedsYouTaskEntry> Entries => [.. this.store.All
-        .Where(NeedsYouTaskSource.Waits)
+        .Where(TaskQuery.WaitsOnHuman)
         .Select(this.ToEntry)
         .OrderBy(entry => entry.Since)
         .ThenBy(entry => entry.TaskId.ToString(), StringComparer.Ordinal)];
@@ -52,13 +53,6 @@ internal sealed class NeedsYouTaskSource : IDisposable
         this.events.TaskChanged -= this.OnTaskChanged;
         this.events.TasksReloaded -= this.OnTasksReloaded;
     }
-
-    /// <summary>True when the Task is gated, in Needs You and not validly accepted.</summary>
-    /// <param name="task">The Task.</param>
-    private static bool Waits(TaskItem task) =>
-        task.IsGated
-        && task.Status == TaskState.NeedsYou
-        && Acceptance.Of(task).State != AcceptanceState.Valid;
 
     /// <summary>Builds the entry for a waiting Task.</summary>
     /// <param name="task">The Task.</param>

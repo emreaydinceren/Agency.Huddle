@@ -126,12 +126,12 @@
                          Search="@this.search" SearchChanged="this.OnSearchChangedAsync"
                          OnNewTask="this.OnCreateClickedAsync">
                 <HeaderLeading>
-                    @* Wireframe counts: open and need-you are over the Tasks this View shows (the search included); all is every Task in the store. *@
+                    @* Wireframe counts: open and need-you are over the Tasks this View shows (the search included); all is every Task of this route (Team, Project or No project; the whole store on /tasks), whatever the View's filter. *@
                     <div class="tasks-counts" role="status">
                         <span class="tasks-count-open"><strong>@this.OpenCount</strong> open</span>
                         @* A count wears its signal only above 0 (audit B4e). *@
                         <span class="@(this.NeedYouCount > 0 ? "tasks-count-need-you" : "tasks-count-need-you is-zero")"><strong>@this.NeedYouCount</strong> need you</span>
-                        <span class="tasks-count-all"><strong>@this.Store.All.Count</strong> all</span>
+                        <span class="tasks-count-all"><strong>@this.AllCount</strong> all</span>
                     </div>
                 </HeaderLeading>
                 <HeaderActions>
@@ -558,15 +558,18 @@
     /// <summary>How many of the Tasks the page shows are not yet Done, Cancelled, Duplicate or Rejected.</summary>
     private int OpenCount => this.FilteredTasks(this.search).Count(static task => !task.Status.IsTerminal());
 
-    /// <summary>How many open Tasks are assigned to the Human, so waiting on them.</summary>
+    /// <summary>How many of the Tasks the page shows need the Human: open and assigned to them, or gated and waiting in Needs You (once each).</summary>
     private int NeedYouCount
     {
         get
         {
             string human = this.Human.Name;
-            return this.FilteredTasks(this.search).Count(task => TaskQuery.NeedsYou(task, human));
+            return this.FilteredTasks(this.search).Count(task => TaskQuery.NeedsHuman(task, human));
         }
     }
+
+    /// <summary>How many Tasks this route holds, whatever the View's filter and search: its Team, Project or No project, or the whole store on the unscoped route.</summary>
+    private int AllCount => this.Store.All.Count(this.InRouteScope);
 
     private void SetEffectiveViewFromStore(string id)
     {
