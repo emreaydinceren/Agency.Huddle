@@ -15,6 +15,12 @@ public static class ToolActivityLimits
     /// <summary>The most characters kept of a <see cref="ToolActivity.Title"/>.</summary>
     public const int MaxTitleLength = 200;
 
+    /// <summary>The most characters kept of a <see cref="ToolActivity.Arguments"/>; the runner clips before sending and the server clips again.</summary>
+    public const int MaxArgumentsLength = 512;
+
+    /// <summary>The most characters kept of a <see cref="ToolActivity.Result"/>; the runner clips before sending and the server clips again.</summary>
+    public const int MaxResultLength = 512;
+
     /// <summary>
     /// Cuts <paramref name="text"/> to at most <paramref name="maxLength"/> characters without
     /// splitting a surrogate pair, so the result is always valid text.

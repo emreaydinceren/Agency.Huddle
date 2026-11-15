@@ -170,6 +170,23 @@ public sealed class ProtocolJsonTests
             json);
     }
 
+    /// <summary>An activity with arguments and a result pins the exact wire shape, after the existing members, and round-trips.</summary>
+    [Fact]
+    public void ToolActivity_WithArgumentsAndResult_SerialisesToLiteralJsonAndRoundTrips()
+    {
+        ToolActivity activity = new(
+            "room-1", "m-7", "tc-1", "mcp__team__add_evidence", ToolActivityStatus.Completed, Arguments: "{\"a\":1}", Result: "Nothing was added.");
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"mcp__team__add_evidence\",\"status\":\"completed\",\"arguments\":\"{\\u0022a\\u0022:1}\"," +
+            "\"result\":\"Nothing was added.\",\"version\":3}",
+            json);
+        Assert.Equal(activity, Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(json)));
+    }
+
     /// <summary>An activity with an Edit, including a new-file edit with no old side, round-trips unchanged.</summary>
     [Fact]
     public void ToolActivity_WithEdit_RoundTrips()

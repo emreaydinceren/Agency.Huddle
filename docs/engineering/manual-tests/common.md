@@ -337,10 +337,12 @@ Get-Content "<data>\logs\tool-calls\<Name>\$((Get-Date).ToUniversalTime().ToStri
 ```
 
 Fields, camelCase: `time` (UTC, ISO-8601 with a `Z`), `room`, `task` (`null` when
-unknown), `tool`, `arguments` (a summary, cut to 200 characters with a trailing
-ellipsis), `status`, `durationMs`
-(`src/Huddle.App/Services/ToolCallLogWriter.cs:179`, `:39`, `:73-75`). The folder does not exist until the
-Persona's first tool call.
+unknown), `tool`, `arguments` (the file the call touches, when known, then the
+call's input as compact JSON; cut to 200 characters with a trailing ellipsis),
+`status`, `durationMs`, `result` (the text one of Huddle's own App Tools returned,
+such as a refusal; `null` for every other tool; cut to 200 characters). The writer
+is `ToolCallLogWriter.Append` and the cut is its `Truncate`. The folder does not
+exist until the Persona's first tool call.
 
 ### O-FILE
 

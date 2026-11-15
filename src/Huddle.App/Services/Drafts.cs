@@ -106,6 +106,14 @@ internal sealed class Drafts
     /// <param name="path">The file the call touches, or <see langword="null"/> if this update did not say.</param>
     /// <param name="line">The 1-based line in <paramref name="path"/>, or <see langword="null"/> if this update did not say.</param>
     /// <param name="edit">What the call changes, or <see langword="null"/> if this update did not say.</param>
+    /// <param name="arguments">
+    /// A compact summary of the call's input, or <see langword="null"/> if this update did not carry it. It is kept per call,
+    /// outside the six rows, for the lasting log: a non-null value replaces the stored one, a null leaves it alone.
+    /// </param>
+    /// <param name="result">
+    /// The text an App Tool returned, or <see langword="null"/> if this update carried none. Kept and replaced like
+    /// <paramref name="arguments"/>, and logged when the call finishes.
+    /// </param>
     public void Activity(
         string messageId,
         string toolCallId,
@@ -116,7 +124,9 @@ internal sealed class Drafts
         ToolActivityStatus status,
         string? path = null,
         int? line = null,
-        EditChange? edit = null)
+        EditChange? edit = null,
+        string? arguments = null,
+        string? result = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(toolCallId);
@@ -129,6 +139,16 @@ internal sealed class Drafts
             var state = this.GetOrCreate(messageId, roomId, agentId, senderName);
             DateTimeOffset now = this.timeProvider.GetUtcNow();
             _ = state.FirstSeen.TryAdd(toolCallId, now);
+            if (arguments is not null)
+            {
+                state.Arguments[toolCallId] = arguments;
+            }
+
+            if (result is not null)
+            {
+                state.Results[toolCallId] = result;
+            }
+
             int index = state.ToolCalls.FindIndex(call => string.Equals(call.ToolCallId, toolCallId, StringComparison.Ordinal));
             if (index < 0)
             {
@@ -252,6 +272,15 @@ internal sealed class Drafts
             arguments = $"{path}:{line}";
         }
 
+        // The file the call touches leads, so a memory call still names the file its folder and file resolved to
+        // (PR #303) and the 200-character cut keeps it; the call's input follows.
+        if (state.Arguments.TryGetValue(toolCallId, out string? stored))
+        {
+            arguments = arguments.Length == 0 ? stored : $"{arguments} {stored}";
+        }
+
+        _ = state.Results.TryGetValue(toolCallId, out string? result);
+
         ToolCallLogEntry entry = new(
             now,
             state.RoomId,
@@ -259,7 +288,8 @@ internal sealed class Drafts
             title ?? toolCallId,
             arguments,
             status == ToolActivityStatus.Failed ? "failed" : "completed",
-            Math.Max(0, elapsedMs));
+            Math.Max(0, elapsedMs),
+            result);
 
         try
         {
@@ -320,6 +350,12 @@ internal sealed class Drafts
 
         /// <summary>When each tool call id was first seen; kept past the <see cref="MaxToolCalls"/> trim so durations survive it.</summary>
         public Dictionary<string, DateTimeOffset> FirstSeen { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>The latest input summary of each tool call id; kept past the <see cref="MaxToolCalls"/> trim so the lasting log still has it.</summary>
+        public Dictionary<string, string> Arguments { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>The latest App Tool result text of each tool call id; kept past the <see cref="MaxToolCalls"/> trim.</summary>
+        public Dictionary<string, string> Results { get; } = new(StringComparer.Ordinal);
 
         /// <summary>The tool call ids already written to the lasting log.</summary>
         public HashSet<string> Logged { get; } = new(StringComparer.Ordinal);

@@ -16,6 +16,9 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
     /// <summary>The most characters of <see cref="ToolCallLogEntry.Arguments"/> kept, including the trailing ellipsis.</summary>
     internal const int MaxArgumentsLength = 200;
 
+    /// <summary>The most characters of <see cref="ToolCallLogEntry.Result"/> kept, including the trailing ellipsis.</summary>
+    internal const int MaxResultLength = 200;
+
     private const string Ellipsis = "…";
 
     private static readonly HashSet<string> ReservedNames = new(StringComparer.OrdinalIgnoreCase)
@@ -52,7 +55,7 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         string relativePath = $"logs/tool-calls/{folderName}/{fileName}";
         string fullPath = Path.Combine(this.dataDir, "logs", "tool-calls", folderName, fileName);
 
-        WireEntry written = new(utc.UtcDateTime, entry.Room, entry.Task, entry.Tool, Truncate(entry.Arguments), entry.Status, entry.DurationMs);
+        WireEntry written = new(utc.UtcDateTime, entry.Room, entry.Task, entry.Tool, Truncate(entry.Arguments, MaxArgumentsLength), entry.Status, entry.DurationMs, entry.Result is null ? null : Truncate(entry.Result, MaxResultLength));
         string json = JsonSerializer.Serialize(written, JsonOptions) + "\n";
 
         lock (this.gate)
@@ -155,7 +158,7 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         && (value.GetString()?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false);
 
     /// <summary>The shape of a log line; <see cref="DateTime"/> of kind UTC serialises as ISO-8601 with a <c>Z</c> suffix.</summary>
-    private sealed record WireEntry(DateTime Time, string Room, string? Task, string Tool, string Arguments, string Status, long DurationMs);
+    private sealed record WireEntry(DateTime Time, string Room, string? Task, string Tool, string Arguments, string Status, long DurationMs, string? Result);
 
     /// <summary>Counts the lines already in the open log file and whether its last line lacks a newline.</summary>
     private static (int Lines, bool MissingFinalNewline) CountLines(FileStream stream)
@@ -181,15 +184,17 @@ internal sealed class ToolCallLogWriter(IOptions<TeamOptions> options)
         return (count, last != '\n');
     }
 
-    /// <summary>Cuts the text to <see cref="MaxArgumentsLength"/> characters, the last being an ellipsis, without splitting a surrogate pair.</summary>
-    private static string Truncate(string text)
+    /// <summary>Cuts the text to <paramref name="maxLength"/> characters, the last being an ellipsis, without splitting a surrogate pair.</summary>
+    /// <param name="text">The text to cut.</param>
+    /// <param name="maxLength">The most characters to keep, including the ellipsis.</param>
+    private static string Truncate(string text, int maxLength)
     {
-        if (text.Length <= MaxArgumentsLength)
+        if (text.Length <= maxLength)
         {
             return text;
         }
 
-        int keep = MaxArgumentsLength - Ellipsis.Length;
+        int keep = maxLength - Ellipsis.Length;
         if (char.IsHighSurrogate(text[keep - 1]))
         {
             keep--;

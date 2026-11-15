@@ -1,7 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.IO.Pipes;
 using System.Text;
+using System.Text.Json;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -920,6 +923,37 @@ public sealed class PipeEndToEndTests
         Assert.Equal(ToolActivityLimits.MaxTitleLength, call.Title?.Length);
     }
 
+    /// <summary>
+    /// The arguments and the result of a finished call reach the lasting tool-call log over the pipe. An over-long value is
+    /// clipped to its wire limit before the writer cuts it again to 200 characters, so the log shows the writer's cut and
+    /// the wire clip itself is pinned only by the limits tests.
+    /// </summary>
+    [Fact]
+    public async Task ToolActivity_ArgumentsAndResult_ReachTheToolCallLog()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(
+            fixture, client, roomId, "mcp__team__add_evidence", null, null, null, ct,
+            ToolActivityStatus.Completed,
+            new string('a', ToolActivityLimits.MaxArgumentsLength + 100),
+            "Nothing was added.");
+
+        Assert.Equal(ToolActivityStatus.Completed, call.Status);
+        string dataDir = Path.GetFullPath(fixture.Services.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir);
+        string file = Assert.Single(Directory.GetFiles(Path.Combine(dataDir, "logs", "tool-calls"), "*.jsonl", SearchOption.AllDirectories));
+        using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using StreamReader reader = new(stream);
+        using JsonDocument line = JsonDocument.Parse(await reader.ReadLineAsync(ct) ?? string.Empty);
+        Assert.Equal(new string('a', 199) + "…", line.RootElement.GetProperty("arguments").GetString());
+        Assert.Equal("Nothing was added.", line.RootElement.GetProperty("result").GetString());
+    }
+
     /// <summary>A runner's own truncation flag survives, so a preview the runner already cut still says it was shortened.</summary>
     [Fact]
     public async Task ToolActivity_RunnerMarkedTruncated_StaysTruncated()
@@ -970,14 +1004,17 @@ public sealed class PipeEndToEndTests
         string? path,
         int? line,
         EditChange? edit,
-        CancellationToken ct)
+        CancellationToken ct,
+        ToolActivityStatus status = ToolActivityStatus.InProgress,
+        string? arguments = null,
+        string? result = null)
     {
         var events = fixture.Services.GetRequiredService<RoomEvents>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
         var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         events.DraftChanged += room => changed.TrySetResult(room);
 
-        await client.WriteAsync(new ToolActivity(roomId, "m-tool-1", "call-1", title, ToolActivityStatus.InProgress, path, line, edit), ct);
+        await client.WriteAsync(new ToolActivity(roomId, "m-tool-1", "call-1", title, status, path, line, edit, arguments, result), ct);
 
         using var registration = ct.Register(() => changed.TrySetCanceled(ct));
         await changed.Task;
