@@ -284,7 +284,10 @@ file tools, such as Claude, reads the file itself. PRs: #111, then #338.
 **The `search` tool.** Agents can run Global Search. By default it covers only the Rooms the
 Agent is in or that belong to its Teams; `scope: "all"` searches every Room and is logged. It
 matches the exact phrase, and a multi-word search with no hits says so and suggests one or two
-words. PRs: #260, then #408.
+words. Rooms are searched like grep: every matching Message, with `regex`, `context`, `count`
+and filters on Room, Team, sender and time, and a Room's latest Messages on request. The Chief
+of Staff searches every Room by default and reads any Team's records. PRs: #260, then #408,
+then the #534 PR.
 
 **Agent tools in general.** Agents work through `mcp__team__*` tools: Tasks
 (`create_task`, `update_task`, `close_task` and others), `add_evidence`, `read_skill`,

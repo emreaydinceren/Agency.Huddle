@@ -87,7 +87,11 @@ ordinary status-change wake for the same Task and recipient in the same change b
 
 **`read_records` is scoped to the caller's Team.** A Task id must belong to the named Team. A
 Room is shown only when a member of the Team posted in it and every sender is a member of the
-Team or the Human, so a Room shared with another Team's Persona is refused.
+Team or the Human, so a Room shared with another Team's Persona is refused. *Amended
+2026-11-14 (issue #534, owner decision):* the built-in Chief of Staff is exempt. It reads any
+Team's records and any Room's tail, and holds `read_records` through its `team-rollup` Skill; a
+Task id of another Team is still refused. See the
+[ADR-0066 amendment](0066-an-agents-search-reads-its-own-rooms-unless-it-asks-for-all.md#amendment-2026-11-14).
 
 ## Rejected
 

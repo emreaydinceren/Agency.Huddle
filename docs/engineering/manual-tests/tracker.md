@@ -1175,6 +1175,7 @@ Second Brain from zero: three Teams hired by hand, documents ingested into memor
 | [ZERO-27](second-brain-zero.md#zero-27--find-it-all-and-add-up-the-cost) |  | Fail |  | run 2026-11-05, Task search matches titles only, see the Run log |
 | [ZERO-28](second-brain-zero.md#zero-28--the-chief-of-staff-asks-a-manager-and-the-question-task-ends-closed) | 💰 |  | #535 | not run yet |
 | [ZERO-29](second-brain-zero.md#zero-29--qa-drives-the-ui-in-a-browser-and-reports-a-planted-bug) | 💰 | Pass | #536 | run 2026-11-14 in an isolated lane with a fresh Dev Team on Sonnet, not the ZERO-12 Team, see the Run log |
+| [ZERO-30](second-brain-zero.md#zero-30--the-chief-of-staff-finds-a-fact-said-only-in-a-team-room-and-asks-the-manager-for-one-on-no-record) | 💰 | Pass | #534 | run 2026-11-14 in an isolated lane with a one-member Dev Team on Sonnet, see the Run log |
 
 ## doc-history
 

@@ -181,7 +181,7 @@ order decides per Token, independently.
 | `Tools/PostMessageTool.cs` | Speak into a Room other than the current one. Without this an agent-created Room stays silent. After a successful post it calls `OwnPosts.Record` (RS §6.7), so the target Room's next Turn carries it as *You, from another Room: …* — the only way that Room Session learns of a post its own Turn did not make. |
 | `Tools/TaskToolText.cs` | Shared text and argument-parsing helpers every Task App Tool reuses (Spec §11.1): rendering a Task as one line, resolving an id or actor, phrasing the notify clause, and turning a `TaskService` exception into refusal text. |
 | `Tools/CreateTaskTool.cs` | Creates a Task (Spec §11.2): validates arguments in the spec's order, then hands the rest to `TaskService.Create` and reports who will be notified. |
-| `Tools/SearchTool.cs` | Global Search for Agents (Search spec §18, ADR-0066): calls the five providers directly, Rooms limited to the caller's Member and Team Rooms unless `scope: "all"`, output capped at 12,000 characters. |
+| `Tools/SearchTool.cs` | Global Search for Agents (Search spec §18, ADR-0066): calls the four non-Room providers directly and `RoomGrep` for Rooms, Rooms limited to the caller's Member and Team Rooms unless `scope: "all"` (every Room by default for the Chief of Staff), output capped at 12,000 characters. |
 | `Tools/GetTaskTool.cs` | Reads one Task's full text (Spec §11.3), including its Change log on request; the one read-only Task tool, so it takes no caller identity. |
 | `Tools/ListTasksTool.cs` | Lists Tasks matching a filter, sorted the same way Views are (Spec §11.4), through the same pure `TaskQuery` helpers the Tasks page uses. |
 | `Tools/UpdateTaskTool.cs` | Changes one or more fields of an existing Task (Spec §11.5) through `TaskService.Update`, always with `baseVersion: null` since a tool call tracks no draft version. |
@@ -380,7 +380,7 @@ order decides per Token, independently.
 | `Jobs/` | Scheduled Jobs: `JobRecurrence` (the `when` grammar and next-run rule), `JobDocument` (`schedule.md`), `JobStore` (every owner's file, watched), `JobScheduler` (the once-a-minute hosted service), `JobRunner` (the Job Room and the Huddle post). `Data/JobStateStore.cs` and `Data/JobRoomStore.cs` hold the firing state and the Room link. ADR-0074. |
 | `Components/Jobs/` | The Scheduled view: `ScheduledNav` (the Sidebar), `ScheduledPage` (`/scheduled`, `/scheduled/{id}`), `JobEditorDialog` over the pure `JobForm`, and `JobText` for every word shown. |
 | `Acp/Tools/AddEvidenceTool.cs` (`add_evidence`) | Adds an Evidence line to a Task, the input the gates read. |
-| `Acp/Tools/ReadRecordsTool.cs` (`read_records`) | Gives the retro role a Team's evidence bundle, or one Task's change log and Evidence. |
+| `Acp/Tools/ReadRecordsTool.cs` (`read_records`) | Gives the retro role a Team's evidence bundle, or one Task's change log and Evidence; the Chief of Staff reads any Team's (ADR-0066 amendment). |
 | `Acp/Tools/ProposeRetroChangesTool.cs` (`propose_retro_changes`) | Lets a member holding the `retrospective` Skill propose up to three exact-text changes to the Human. |
 | `Acp/Tools/MarkRetroRowTool.cs` (`mark_retro_row`) | Updates one `Retro register.md` row's status. |
 | `Components/Pages/TeamSetup.razor` | `/teams/new` and `/teams/{Team}/setup`: the New Team from a type form, then the setup screen with the hiring pool, the team check bar and Start Team. |
@@ -543,6 +543,7 @@ Global Search — the search box in the Top Bar, its dropdown and the providers 
 | `Search/LibrarySearchProvider.cs` | Searches the Library by name, then by contents. |
 | `Search/TaskSearchProvider.cs` | Searches Tasks, Closed Tasks included on the Archived pass. |
 | `Search/RoomSearchProvider.cs` | Searches Rooms by name and Message text, Archived Rooms on the Archived pass. |
+| `Search/RoomGrep.cs`, `RoomMatcher.cs`, `RoomGrepOptions.cs`, `RoomGrepResult.cs` | The Agent `search` tool's Rooms section: every matching Message (phrase or regex with a match timeout), context lines, counts, a Room's tail, and the Room, Team, sender and time filters (Search spec §18). Not used by the Human's dropdown. |
 | `Components/Search/SearchBar.razor` | The box, the chips, the dropdown and the keyboard for them. |
 | `Components/Search/SearchCard.razor` | Picks the card for a hit by its kind. |
 | `Components/Search/TeamSearchCard.razor` | The card for a Team hit. |

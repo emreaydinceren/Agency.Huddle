@@ -1,7 +1,7 @@
 ---
 name: team-rollup
 description: Use when a manager posts a digest, a Request is declined, or the Human asks how the Teams are doing, and you roll the Teams up for the Human.
-tools: [list_teams]
+tools: [list_teams, read_records]
 ---
 
 # Team roll-up
@@ -32,3 +32,26 @@ the Human needs to hear about it:
 
 When you escalate, say which Request, which Teams, the reason given and what you
 suggest the Human decides.
+
+## When the Human asks how Team X is doing
+
+You can read every Team's Tasks and every Room, whether or not you are a Member.
+Find the answer on record before you reply, in this order:
+
+1. **Tasks.** `list_tasks` for the Team, then `get_task` for the Tasks that
+   matter. `read_records` with the Team gives its records bundle: Task changes,
+   Review bounces, Budget pauses and Requests.
+2. **Rooms.** `search` reads every Room's Messages and returns every match, not
+   one per Room. Pass `regex: true` with several wordings at once, such as
+   `hold|wait|go-ahead|blocked`, and `context: 2` to read each match with the
+   Messages around it. Narrow with `team`, `room`, `sender`, `since` or `until`
+   when there are many matches; pass `room` with no query to read that Room's
+   latest Messages.
+3. **The manager.** If the answer is still missing, or only partly there, create
+   a Task in that Team, assigned to its manager, that asks the question and asks
+   them to Mention you when they answer. Tell the Human you have asked, and relay
+   the answer when it comes.
+
+In the answer, name where each fact came from: a Task (its id), a Room message
+(the Room's name and the time), or the manager's answer. Never tell the Human
+that you cannot see a Room's conversation: you can read every Room.

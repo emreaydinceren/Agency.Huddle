@@ -105,7 +105,7 @@ through an explicit store.
 | U0 | **Two trip Rooms, options 1 to 3 in each. After 20+ interleaved Turns the Human writes "go with option 2" in Porto** | **Nova confirms Porto's option 2. Lisbon's options are not in that session at all** |
 | U1 | In Room A: "answer in French from now on" | Only Room A's answers are in French |
 | U2 | In Room A: "I prefer C# for any code" | Nova writes `memory\code-language.md`. Its next Turn in Room B lists it, *by you, in Room 'A'*; every new Room Session has it in its memory index |
-| U3 | In Room B: "what did we decide in the Lisbon Room?" | Nova says it cannot see that Room's conversation, and offers what its memory holds |
+| U3 | In Room B: "what did we decide in the Lisbon Room?" | Nova's Room B session does not hold the Lisbon conversation; Nova finds it with `search` (it is a Member of Lisbon), or offers what its memory holds. It does not claim the Room is invisible: `search` reads it. The Chief of Staff reads every Room by default (issue #534) |
 | U4 | Nova's first Mention in a Room with 30 Messages | A new Room Session. Its first prompt carries the 20 Messages before the triggering one |
 | U5 | A Room idles for 30 minutes, then Nova is Mentioned there | The session was closed; it is resumed by id and remembers |
 | U6 | The app restarts | Each Room's next Turn resumes its own session; Messages posted since its last Turn arrive as Catch-up |
@@ -557,6 +557,9 @@ overview that could merge two projects' decisions. It gets it back deliberately:
    Human. `OwnPosts` tells each session what its other sessions posted there.
 3. **The seed.** A `create_room` seed is the Room's first Message, so the coordinator's new session
    there reads its own brief (U11).
+4. **Search (added 2026-11-14, issue #534).** The Chief of Staff's `search` reads every Room's
+   Messages by default, so it no longer tells the Human another Room is not visible to it: it looks
+   in the Team's Tasks, then the Rooms, then asks the Team's manager (ADR-0066 amendment).
 
 Following itself needs no change: `RoomFollows` is keyed by Agent and Room. The `team-building`
 Skill and the built-in Chief of Staff's Persona text need a paragraph saying the above (RS-T13).

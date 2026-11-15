@@ -188,9 +188,9 @@ public sealed class SkillGrantsTests
         Assert.Equal(["post_message", "read_records"], SkillGrants.Offer(all, [TeamBuildingSkill(["read_records"])]).Select(tool => tool.Name));
     }
 
-    /// <summary>Task 79 (OR-3, RQ-2): the Chief of Staff holding team-building and the shipped team-rollup Skill is offered list_teams and no other Request, sprint or records tool.</summary>
+    /// <summary>Task 79 (OR-3, RQ-2): the Chief of Staff holding team-building and the shipped team-rollup Skill is offered list_teams and read_records (issue #534) and no Request, sprint or retro-change tool.</summary>
     [Fact]
-    public void Offer_ChiefOfStaffWithTeamRollup_GetsListTeamsOnly()
+    public void Offer_ChiefOfStaffWithTeamRollup_GetsListTeamsAndReadRecords()
     {
         IReadOnlyList<IAppTool> all =
         [
@@ -207,7 +207,7 @@ public sealed class SkillGrantsTests
 
         IReadOnlyList<IAppTool> offered = SkillGrants.Offer(all, [TeamBuildingSkill([]), rollup]);
 
-        Assert.Equal(["post_message", "list_teams"], offered.Select(tool => tool.Name));
+        Assert.Equal(["post_message", "list_teams", "read_records"], offered.Select(tool => tool.Name));
     }
 
     /// <summary>Builds a resolved <c>team-building</c> Skill granting exactly <paramref name="tools"/>.</summary>
