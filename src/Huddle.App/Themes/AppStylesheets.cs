@@ -29,5 +29,6 @@ internal static class AppStylesheets
         "css/references.css",
         "css/tasks.css",
         "css/task-form.css",
+        "css/guide.css",
     ];
 }

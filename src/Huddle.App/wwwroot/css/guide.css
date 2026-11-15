@@ -1,0 +1,60 @@
+/* Built-in diagrams (ADR-0087). A diagram's SVG is written inline by MarkdownRenderer and carries no colour,
+   font or style of its own: its elements carry g-* classes, and this file is the only place they are coloured,
+   so every Theme, light or dark, and the accent colour reach every diagram. Add a class here before a diagram
+   uses it; GuideDiagramSafetyTests refuses a colour written into an SVG. */
+
+.guide-diagram {
+    display: block;
+    max-width: 640px;
+    margin: 8px 0;
+}
+
+.guide-diagram svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    font-family: var(--mud-typography-default-family);
+}
+
+/* A box on the diagram: a layer, a Room, a Team. */
+.guide-diagram .g-card {
+    fill: var(--mud-palette-surface);
+    stroke: var(--mud-palette-lines-default);
+    stroke-width: 1;
+}
+
+/* A band that spans the others, such as the Rules over every layer: tinted with the accent. */
+.guide-diagram .g-band {
+    fill: var(--mud-palette-primary);
+    fill-opacity: 0.12;
+    stroke: var(--mud-palette-primary);
+    stroke-width: 1;
+}
+
+/* Text sizes come from the Theme's type scale. Inside the SVG they are in the viewBox's units, so a diagram
+   scales its text with its width. */
+.guide-diagram .g-title {
+    fill: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-default-size);
+    font-weight: 600;
+}
+
+.guide-diagram .g-text {
+    fill: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.guide-diagram .g-small {
+    fill: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+}
+
+.guide-diagram .g-arrow {
+    fill: none;
+    stroke: var(--mud-palette-primary);
+    stroke-width: 1.5;
+}
+
+.guide-diagram .g-arrowhead {
+    fill: var(--mud-palette-primary);
+}
