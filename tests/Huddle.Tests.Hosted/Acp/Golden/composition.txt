@@ -60,6 +60,7 @@ Singleton Agency.Huddle.App.Data.ITeamDirectory -> Agency.Huddle.App.Data.Sqlite
 Singleton Agency.Huddle.App.Data.JobRoomStore -> Agency.Huddle.App.Data.JobRoomStore
 Singleton Agency.Huddle.App.Data.JobStateStore -> Agency.Huddle.App.Data.JobStateStore
 Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Data.NeedsHumanOverrideStore
+Singleton Agency.Huddle.App.Data.NeedsYouLevelStore -> Agency.Huddle.App.Data.NeedsYouLevelStore
 Singleton Agency.Huddle.App.Data.PersonaConnectorsStore -> Agency.Huddle.App.Data.PersonaConnectorsStore
 Singleton Agency.Huddle.App.Data.PersonaEffortStore -> Agency.Huddle.App.Data.PersonaEffortStore
 Singleton Agency.Huddle.App.Data.PersonaModelStore -> Agency.Huddle.App.Data.PersonaModelStore
@@ -231,6 +232,7 @@ Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.LedgerRenameRewrite
 Singleton Agency.Huddle.App.Teams.ITeamRenamer -> factory Agency.Huddle.App.Teams.ITeamRenamer
 Singleton Agency.Huddle.App.Teams.ITeamRenames -> factory Agency.Huddle.App.Teams.ITeamRenames
+Singleton Agency.Huddle.App.Teams.NeedsYouLevels -> Agency.Huddle.App.Teams.NeedsYouLevels
 Singleton Agency.Huddle.App.Teams.ProcessGateService -> Agency.Huddle.App.Teams.ProcessGateService
 Singleton Agency.Huddle.App.Teams.ProcessProvisioner -> Agency.Huddle.App.Teams.ProcessProvisioner
 Singleton Agency.Huddle.App.Teams.RecordsBundleBuilder -> Agency.Huddle.App.Teams.RecordsBundleBuilder

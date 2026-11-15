@@ -60,6 +60,22 @@ internal interface ITeamFolders
     /// <returns><see langword="false"/> when the Project folder does not exist or cannot be written.</returns>
     bool UpdateProjectAvatar(string team, string project, Avatars.Avatar avatar) => false;
 
+    /// <summary>Reads a Project's <c>_project.md</c> (ADR-0087 reads its Needs You level from it). The default knows no Project file.</summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="project">The Project's name.</param>
+    /// <returns>The parsed file, or <see langword="null"/> when the Project folder or its file is missing or unreadable.</returns>
+    ProjectFile? ReadProjectFile(string team, string project) => null;
+
+    /// <summary>
+    /// Rewrites a Project's <c>_project.md</c> through <paramref name="change"/>, atomically, creating the file when the Project folder has none.
+    /// The default writes nothing.
+    /// </summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="project">The Project's name.</param>
+    /// <param name="change">Maps the current file (<see cref="ProjectFile.Empty"/> when there is none) to the new one.</param>
+    /// <returns><see langword="false"/> when the Project folder does not exist or cannot be written; <paramref name="change"/> is then not called.</returns>
+    bool UpdateProjectFile(string team, string project, Func<ProjectFile, ProjectFile> change) => false;
+
     /// <summary>Runs <paramref name="action"/> while no label sync or folder creation can touch the Teams root. The default runs it unguarded.</summary>
     /// <typeparam name="T">The action's result.</typeparam>
     /// <param name="action">The folder move; it must not call <c>ITeamMembership</c>.</param>

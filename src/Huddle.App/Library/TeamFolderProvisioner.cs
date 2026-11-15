@@ -365,28 +365,37 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
         ArgumentNullException.ThrowIfNull(project);
         ArgumentNullException.ThrowIfNull(avatar);
 
-        if (LibraryNames.Validate(team) is not null || TaskLayout.IsReservedFolderName(team) || LibraryNames.Validate(project) is not null
-            || !this.resolver.TryResolve(TeamsRootId, $"{team}/{project}", out LibraryPath? projectPath, out _)
-            || projectPath.Role != LibraryNodeRole.ProjectFolder
-            || !Directory.Exists(projectPath.FullPath))
+        Avatars.Avatar wanted = avatar with { Image = null };
+        return this.UpdateProjectFile(team, project, current => current with { Avatar = wanted });
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Serialised with the Team-file updates and written through a temporary file, as <see cref="UpdateTeamFile"/> is. A change that returns an equal file writes nothing: a Project with no file keeps none, and a hand-edited file is not rewritten.</remarks>
+    public bool UpdateProjectFile(string team, string project, Func<ProjectFile, ProjectFile> change)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(project);
+        ArgumentNullException.ThrowIfNull(change);
+
+        string? path = this.ProjectFilePath(team, project);
+        if (path is null)
         {
             return false;
         }
 
-        string path = Path.Combine(projectPath.FullPath, TeamPaths.ProjectFileName);
-        Avatars.Avatar wanted = avatar with { Image = null };
         try
         {
             lock (this.teamFileGate)
             {
                 ProjectFile current = File.Exists(path) ? ProjectFile.Parse(File.ReadAllText(path, TeamFileEncoding)) : ProjectFile.Empty;
-                if (current.Avatar == wanted)
+                ProjectFile updated = change(current);
+                ArgumentNullException.ThrowIfNull(updated);
+                if (updated == current)
                 {
-                    // Nothing to change: a Project with no file keeps none, and a hand-edited file is not rewritten.
                     return true;
                 }
 
-                WriteAtomically(path, (current with { Avatar = wanted }).Compose());
+                WriteAtomically(path, updated.Compose());
             }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -394,9 +403,47 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeam
             return false;
         }
 
-        // As for a Team file: the catalog's watcher is debounced, and the page that saved should see the avatar at once.
+        // As for a Team file: the catalog's watcher is debounced, and the page that saved should see the change at once.
         this.catalog.Refresh();
         return true;
+    }
+
+    /// <inheritdoc/>
+    public ProjectFile? ReadProjectFile(string team, string project)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(project);
+
+        string? path = this.ProjectFilePath(team, project);
+        if (path is null || !File.Exists(path))
+        {
+            return null;
+        }
+
+        try
+        {
+            return ProjectFile.Parse(File.ReadAllText(path, TeamFileEncoding));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The path a Project's <c>_project.md</c> has or would have, or <see langword="null"/> when a name is invalid or the Project folder does not exist.</summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="project">The Project's name.</param>
+    private string? ProjectFilePath(string team, string project)
+    {
+        if (LibraryNames.Validate(team) is not null || TaskLayout.IsReservedFolderName(team) || LibraryNames.Validate(project) is not null
+            || !this.resolver.TryResolve(TeamsRootId, $"{team}/{project}", out LibraryPath? projectPath, out _)
+            || projectPath.Role != LibraryNodeRole.ProjectFolder
+            || !Directory.Exists(projectPath.FullPath))
+        {
+            return null;
+        }
+
+        return Path.Combine(projectPath.FullPath, TeamPaths.ProjectFileName);
     }
 
     /// <summary>Writes <paramref name="text"/> to a temporary file beside <paramref name="path"/> and moves it over, so a reader sees the old or the new file and never a partial one.</summary>

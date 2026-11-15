@@ -7,6 +7,7 @@ using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Ui;
 
 namespace Agency.Huddle.Tests.Teams;
@@ -65,8 +66,14 @@ internal sealed class RetroProposalFixture : IDisposable
             serviceDirectory,
             harness.Chat,
             this.Clock,
-            NullLogger<RetroProposalService>.Instance);
+            this.ServiceLog);
     }
+
+    /// <summary>What the service logged; a refused change to the Needs You level is a warning here.</summary>
+    public RecordingLogger<RetroProposalService> ServiceLog { get; } = new();
+
+    /// <summary>What the propose tool logged; a refused proposal for the Needs You level is a warning here.</summary>
+    public RecordingLogger<ProposeRetroChangesTool> ToolLog { get; } = new();
 
     /// <summary>Holds the service's directory calls while a card test keeps a decision in flight.</summary>
     public DirectoryGate Gate { get; }
@@ -129,7 +136,7 @@ internal sealed class RetroProposalFixture : IDisposable
             ["web/processes/flow.md"] = "# Flow",
         };
         TeamTypeCatalog types = new(this.Harness.Options, NullLogger<TeamTypeCatalog>.Instance, builtins);
-        return new ProposeRetroChangesTool(this.Catalog, this.Proposals, this.Harness.Personas, types, this.Harness.Directory, this.Ids[caller], prompts ?? new FakePromptSource());
+        return new ProposeRetroChangesTool(this.Catalog, this.Proposals, this.Harness.Personas, types, this.Harness.Directory, this.Ids[caller], prompts ?? new FakePromptSource(), logger: this.ToolLog);
     }
 
     /// <summary>Builds the fixture.</summary>
