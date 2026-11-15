@@ -564,6 +564,19 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.referencesHintChiefOfStaff",
+            Label: "Referenced items hint for the Chief of Staff",
+            HelperText:
+                "Replaces the Referenced items hint for the built-in Chief of Staff, who reads every Room. {{listAgents}} and {{search}} are the list-Agents and search tool names for this session and both are required.",
+            Default:
+                """
+                To learn more, list Agents and their Teams with {{listAgents}}. You can read any Room's Messages with {{search}}: give the Room's id as 'room' and no query for its newest Messages.
+                """,
+            Placeholders: ["{{listAgents}}", "{{search}}"],
+            RequiredPlaceholders: ["{{listAgents}}", "{{search}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.referencesTaskHint",
             Label: "Referenced Task hint",
             HelperText:

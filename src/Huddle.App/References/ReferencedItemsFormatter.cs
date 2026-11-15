@@ -29,6 +29,7 @@ internal static class ReferencedItemsFormatter
     /// <param name="maxChars">The character cap on the item lines together.</param>
     /// <param name="listAgentsTool">The <c>list_agents</c> tool name as this session names it.</param>
     /// <param name="getTaskTool">The <c>get_task</c> tool name, or null when Tasks are not offered.</param>
+    /// <param name="chiefOfStaffSearchTool">The <c>search</c> tool name as this session names it when the reader is the Chief of Staff, who reads every Room; null for every other Agent.</param>
     /// <returns>The header text, or null when there is no Task, Room, Team or Gone item.</returns>
     public static string? Format(
         IReadOnlyList<ResolvedReference> items,
@@ -36,7 +37,8 @@ internal static class ReferencedItemsFormatter
         IPromptSource prompts,
         int maxChars,
         string listAgentsTool,
-        string? getTaskTool)
+        string? getTaskTool,
+        string? chiefOfStaffSearchTool)
     {
         List<ResolvedReference> listed = items.Where(static item => !ReferencedItemsFormatter.IsFile(item)).ToList();
         if (listed.Count == 0)
@@ -74,10 +76,7 @@ internal static class ReferencedItemsFormatter
         }
 
         string fence = ReferencedItemsFormatter.ChooseFence(string.Join('\n', lines));
-        string hint = prompts.Render("turn.referencesHint", new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["{{listAgents}}"] = listAgentsTool,
-        });
+        string hint = ReferencedItemsFormatter.Hint(prompts, listAgentsTool, chiefOfStaffSearchTool);
         if (taskWritten && getTaskTool is not null)
         {
             string taskHint = prompts.Render("turn.referencesTaskHint", new Dictionary<string, string>(StringComparer.Ordinal)
@@ -93,6 +92,23 @@ internal static class ReferencedItemsFormatter
         block.Add(hint);
         return string.Join('\n', block);
     }
+
+    /// <summary>Renders the hint closing the block: the Chief of Staff's when a search tool is given, the standard one otherwise.</summary>
+    /// <param name="prompts">Supplies the hint texts.</param>
+    /// <param name="listAgentsTool">The list-Agents tool name.</param>
+    /// <param name="chiefOfStaffSearchTool">The search tool name for the Chief of Staff, or null for every other Agent.</param>
+    /// <returns>The hint text.</returns>
+    private static string Hint(IPromptSource prompts, string listAgentsTool, string? chiefOfStaffSearchTool) =>
+        chiefOfStaffSearchTool is null
+            ? prompts.Render("turn.referencesHint", new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["{{listAgents}}"] = listAgentsTool,
+            })
+            : prompts.Render("turn.referencesHintChiefOfStaff", new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["{{listAgents}}"] = listAgentsTool,
+                ["{{search}}"] = chiefOfStaffSearchTool,
+            });
 
     /// <summary>Whether an item is a Library file, resolved or gone: the Library documents block lists those, never this header (D-16).</summary>
     /// <param name="item">The item to check.</param>

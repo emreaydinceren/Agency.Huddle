@@ -43,7 +43,7 @@ public sealed class BuildPromptReferencesTests
         return new ReferenceExpander(fixture.Resolver(), new FakePromptSource(), Options.Create(options));
     }
 
-    private static async Task<AgentPrompt> RunTurnAsync(WorkItem item, ReferenceExpander? expander, bool usesPrefix = true, Microsoft.Extensions.Logging.ILogger? logger = null)
+    private static async Task<AgentPrompt> RunTurnAsync(WorkItem item, ReferenceExpander? expander, bool usesPrefix = true, Microsoft.Extensions.Logging.ILogger? logger = null, Func<string, bool>? isChiefOfStaff = null)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         FakeAgentSession session = new();
@@ -63,7 +63,7 @@ public sealed class BuildPromptReferencesTests
                 runToken: runCts.Token,
                 persona: Nova,
                 host: host,
-                enrichers: TurnHookTestFactory.Enrichers(references: expander)),
+                enrichers: TurnHookTestFactory.Enrichers(references: expander, isChiefOfStaff: isChiefOfStaff)),
             runCts);
 
         harness.Room.Enqueue(new QueuedWork(1, item));
@@ -117,7 +117,7 @@ public sealed class BuildPromptReferencesTests
         Room room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, fixture.Nova.Id], ct);
         ReferenceExpander expander = BuildPromptReferencesTests.ExpanderOver(fixture, static options => options.Tasks.Enabled = false);
 
-        string? header = await expander.ExpandAsync($"use UTF-8 and [Launch](/rooms/{room.Id})", true, ct);
+        string? header = await expander.ExpandAsync($"use UTF-8 and [Launch](/rooms/{room.Id})", true, false, ct);
 
         Assert.NotNull(header);
         Assert.DoesNotContain("not listed", header, StringComparison.Ordinal);
@@ -139,7 +139,7 @@ public sealed class BuildPromptReferencesTests
         });
         ReferenceExpander expander = new(fixture.Resolver(libraryOverride: recording), new FakePromptSource(), TestOptions.Create());
 
-        string? header = await expander.ExpandAsync($"see `C:\\Docs\\plan.md` and [Launch](/rooms/{room.Id})", true, ct);
+        string? header = await expander.ExpandAsync($"see `C:\\Docs\\plan.md` and [Launch](/rooms/{room.Id})", true, false, ct);
 
         Assert.NotNull(header);
         Assert.Equal(0, asked);
@@ -153,7 +153,7 @@ public sealed class BuildPromptReferencesTests
         using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
         ReferenceExpander expander = BuildPromptReferencesTests.ExpanderOver(fixture);
 
-        string? header = await expander.ExpandAsync("UTF-8, SHA-256 and `C:\\Repos\\x.cs`", true, ct);
+        string? header = await expander.ExpandAsync("UTF-8, SHA-256 and `C:\\Repos\\x.cs`", true, false, ct);
 
         Assert.Null(header);
     }
@@ -269,6 +269,49 @@ public sealed class BuildPromptReferencesTests
 
         Assert.Equal("To learn more, list Agents and their Teams with mcp__team__list_agents. You cannot read the Messages of a Room you are not a Member of.", BuildPromptReferencesTests.HintLine(prompt.Text)[..135]);
         Assert.Contains("with mcp__team__get_task", prompt.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
+    /// <summary>
+    /// Issue 581: the Chief of Staff's Turn with a Room reference is told it can read the Room with the session's
+    /// <c>search</c> name, never that it cannot; the Turn's Persona name is what is checked.
+    /// </summary>
+    /// <param name="usesPrefix">Whether the Adapter names tools with the <c>mcp__team__</c> prefix.</param>
+    /// <param name="search">The <c>search</c> name the hint must give.</param>
+    [Theory]
+    [InlineData(true, "mcp__team__search")]
+    [InlineData(false, "search")]
+    public async Task ChiefOfStaffTurn_HintSaysSearchReadsTheRoom(bool usesPrefix, string search)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, fixture.Nova.Id], ct);
+
+        AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(
+            BuildPromptReferencesTests.MessageWith($"see [Launch](/rooms/{room.Id})"),
+            BuildPromptReferencesTests.ExpanderOver(fixture),
+            usesPrefix,
+            isChiefOfStaff: static name => string.Equals(name, "nova", StringComparison.Ordinal));
+
+        Assert.Contains($"You can read any Room's Messages with {search}: give the Room's id", BuildPromptReferencesTests.HintLine(prompt.Text), StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.DoesNotContain("You cannot read the Messages", prompt.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Issue 581: another Agent's Turn keeps the hint that it cannot read a Room it is not a Member of.</summary>
+    [Fact]
+    public async Task OtherAgentTurn_HintKeepsTheLimit()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, fixture.Nova.Id], ct);
+
+        AgentPrompt prompt = await BuildPromptReferencesTests.RunTurnAsync(
+            BuildPromptReferencesTests.MessageWith($"see [Launch](/rooms/{room.Id})"),
+            BuildPromptReferencesTests.ExpanderOver(fixture),
+            isChiefOfStaff: static name => string.Equals(name, "Alfred", StringComparison.Ordinal));
+
+        Assert.Equal(
+            "To learn more, list Agents and their Teams with mcp__team__list_agents. You cannot read the Messages of a Room you are not a Member of.",
+            BuildPromptReferencesTests.HintLine(prompt.Text));
     }
 
     /// <summary>An Adapter without the prefix is told the bare tool names.</summary>

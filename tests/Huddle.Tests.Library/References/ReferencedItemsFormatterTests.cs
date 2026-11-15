@@ -20,14 +20,38 @@ public sealed class ReferencedItemsFormatterTests
     /// <param name="maxChars">The character cap on the item lines.</param>
     /// <param name="listAgents">The name of the <c>list_agents</c> tool for this session.</param>
     /// <param name="getTask">The name of the <c>get_task</c> tool, or null when Tasks are off.</param>
+    /// <param name="chiefOfStaffSearch">The <c>search</c> tool name when the reader is the Chief of Staff, or null for any other Agent.</param>
     /// <returns>The header, or null when there is nothing to write.</returns>
     private static string? Run(
         IReadOnlyList<ResolvedReference> items,
         int? totalCandidates = null,
         int maxChars = 2000,
         string listAgents = "mcp__team__list_agents",
-        string? getTask = "mcp__team__get_task") =>
-        ReferencedItemsFormatter.Format(items, totalCandidates ?? items.Count(item => item is not (ResolvedLibraryFile or GoneReference { Kind: ReferenceKind.LibraryFile })), new FakePromptSource(), maxChars, listAgents, getTask);
+        string? getTask = "mcp__team__get_task",
+        string? chiefOfStaffSearch = null) =>
+        ReferencedItemsFormatter.Format(items, totalCandidates ?? items.Count(item => item is not (ResolvedLibraryFile or GoneReference { Kind: ReferenceKind.LibraryFile })), new FakePromptSource(), maxChars, listAgents, getTask, chiefOfStaffSearch);
+
+    /// <summary>
+    /// Issue 581: for the Chief of Staff the hint names <c>search</c> for reading any Room and never says a Room is
+    /// unreadable; the Task hint is still appended after it.
+    /// </summary>
+    [Fact]
+    public void Format_ChiefOfStaff_HintNamesSearchNotTheLimit()
+    {
+        ResolvedTask task = new(new TaskId("GROW", 2), "Fix the login redirect", TaskState.InProgress, "Nova", "Growth");
+        ResolvedRoom room = new("0192f", "Findings", 3, "Growth", false);
+
+        string? result = Run([task, room], chiefOfStaffSearch: "mcp__team__search");
+
+        Assert.Equal(
+            Whole(
+                "```",
+                "To learn more, list Agents and their Teams with mcp__team__list_agents. You can read any Room's Messages with mcp__team__search: give the Room's id as 'room' and no query for its newest Messages." + TaskHint,
+                "- Task GROW-0002: title \"Fix the login redirect\", status \"In Progress\", assignee \"Nova\", Team \"Growth\"",
+                "- Room \"Findings\" (id: 0192f, Team \"Growth\"), 3 Members"),
+            result);
+        Assert.DoesNotContain("cannot read", result, StringComparison.Ordinal);
+    }
 
     /// <summary>Joins the header, the fence, the item lines, the closing fence and the hint into the exact text.</summary>
     /// <param name="fence">The fence the lines were wrapped in.</param>
