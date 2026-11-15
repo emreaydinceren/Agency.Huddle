@@ -1473,8 +1473,21 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             text = text + "\n" + ReviewSentence;
         }
 
+        string? releasedScope = batch.Entries.Select(static entry => NeedsYouRelease.ScopeWordOf(entry.Summary)).LastOrDefault(static word => word is not null);
+        if (releasedScope is not null)
+        {
+            text = text + "\n" + ReleaseSentence(latest, releasedScope);
+        }
+
         return this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine ? text + "\n" + confirmLine : text;
     }
+
+    /// <summary>The line a release (ADR-0087) adds to the wake: the merge needs no Accept, a push still does.</summary>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="scope">The scope word the release names: <c>global</c>, <c>Team</c> or <c>project</c>.</param>
+    private static string ReleaseSentence(TaskItem latest, string scope) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"Task {latest.Id}'s Proof is complete and its {scope} level is Run inside the Team, so its merge needs no Accept. Merge its work into the local main now, then move the Task to Done. A push still waits for the Human's Accept: put a push in the Task's Action.");
 
     /// <summary>
     /// #350: the line that tells the requesting Team's manager a Request has reached Done and waits for their Team to confirm it.

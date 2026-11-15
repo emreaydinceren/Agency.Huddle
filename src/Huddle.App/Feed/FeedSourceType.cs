@@ -81,6 +81,9 @@ public enum FeedSourceType
     /// <summary>A Task reached its limit of wake-ups made by Agents, so a hand-off waits until the Human allows more.</summary>
     TaskWakesPaused,
 
+    /// <summary>A Task proceeded under the level Run inside the Team: its merge into main needs no Accept.</summary>
+    TaskProceeded,
+
     /// <summary>A Team was archived.</summary>
     TeamArchived,
 

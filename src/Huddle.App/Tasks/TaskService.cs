@@ -52,6 +52,7 @@ internal sealed class TaskService : IDisposable
     private readonly ProcessGateService? gates;
     private readonly IHumanIdentity human;
     private readonly IProofSource? proofSource;
+    private readonly NeedsYouLevels? levels;
 
     /// <summary>
     /// Wires this service to the Task index and to the Change log's clock. Deliberately does not
@@ -71,6 +72,7 @@ internal sealed class TaskService : IDisposable
     /// <param name="human">The Human's live identity; <see langword="null"/> fixes it at <see cref="TeamOptions.HumanName"/>.</param>
     /// <param name="proof">Evaluates a Task's Proof for the Human gate rules; <see langword="null"/> means an empty, complete Proof.</param>
     /// <param name="renames">Names today's Team when a draft or patch carries the old name of a renamed one; <see langword="null"/> says only that the Team is unknown.</param>
+    /// <param name="levels">Resolves the Needs You level of a Task; <see langword="null"/> means Ask me everywhere.</param>
     public TaskService(
         TaskStore store,
         TaskIdAllocator ids,
@@ -83,9 +85,11 @@ internal sealed class TaskService : IDisposable
         ProcessGateService? gates = null,
         IHumanIdentity? human = null,
         IProofSource? proof = null,
-        ITeamRenames? renames = null)
+        ITeamRenames? renames = null,
+        NeedsYouLevels? levels = null)
     {
         this.renames = renames;
+        this.levels = levels;
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(ids);
         ArgumentNullException.ThrowIfNull(events);
@@ -556,8 +560,17 @@ internal sealed class TaskService : IDisposable
         if (by.Kind == TaskActorKind.Human
             || task.Status != TaskState.Review
             || task.Location.Closed
-            || Acceptance.Of(task).State == AcceptanceState.Valid
-            || this.GatedForTheHuman(task) is not { } gated)
+            || Acceptance.Of(task).State == AcceptanceState.Valid)
+        {
+            return null;
+        }
+
+        if (this.ReleasedByLevel(task))
+        {
+            return this.Release(task);
+        }
+
+        if (this.GatedForTheHuman(task) is not { } gated)
         {
             return null;
         }
@@ -579,6 +592,41 @@ internal sealed class TaskService : IDisposable
 
         TaskItem? written = this.store.Write(task, task.Version, finalText);
         return written is null ? null : new TaskChange(task, written, diff, TaskActors.Huddle, entry);
+    }
+
+    /// <summary>
+    /// Whether the Task is the one case a Needs You level releases (ADR-0087): ungated, in a Team with <c>accept-before-merge</c>, the Human has
+    /// not turned its gate off, and the level that applies to it is Run inside the Team. Under Ask me, or with no levels wired, it is not.
+    /// </summary>
+    /// <param name="task">The Task as just written.</param>
+    private bool ReleasedByLevel(TaskItem task) =>
+        this.levels is { } source
+        && !task.IsGated
+        && this.gates is { } process
+        && process.EnabledGates(task.Location.Team).Contains(GateId.AcceptBeforeMerge)
+        && !HumanGateRules.HumanTurnedGateOff(task)
+        && source.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam;
+
+    /// <summary>
+    /// Writes the release of a Task whose Proof is complete: one Change log entry by Huddle (see <see cref="NeedsYouRelease"/>), no Action and no
+    /// move. At most once a day. The caller raises the returned change, which wakes the assignee and posts to the Feed.
+    /// </summary>
+    /// <param name="task">The Task as just written.</param>
+    /// <returns>The change that was written, or <see langword="null"/> when the Proof is open, the Task was released lately or the write lost a race.</returns>
+    private TaskChange? Release(TaskItem task)
+    {
+        DateTimeOffset now = this.clock.GetUtcNow();
+        if (!this.ProofOf(task).IsComplete
+            || (NeedsYouRelease.LatestAt(task) is { } last && now - last < NeedsYouRelease.Window)
+            || this.levels is not { } source
+            || this.store.ReadText(task.Id) is not { } text)
+        {
+            return null;
+        }
+
+        ChangeLogEntry entry = new(TruncateToSeconds(now), TaskActors.Huddle.Name, NeedsYouRelease.SummaryFor(source.ForTask(task).Scope));
+        TaskItem? written = this.store.Write(task, task.Version, TaskFileFormat.AppendEntry(text, entry));
+        return written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry);
     }
 
     /// <summary>The Task as it goes to the Human: itself when gated, with the merge named when its Team's merge waits for an Accept (#416).</summary>

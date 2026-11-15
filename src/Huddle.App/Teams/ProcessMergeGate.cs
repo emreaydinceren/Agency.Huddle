@@ -15,7 +15,8 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="gates">Decides the <c>checks-before-merge</c> gate.</param>
 /// <param name="catalog">Maps a Teams-line label to the Team, so a stale label is ignored.</param>
 /// <param name="timeProvider">The clock for the window after an Accept that went straight to Done; the system clock when <see langword="null"/>.</param>
-internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, ProcessGateService gates, ITeamCatalog catalog, TimeProvider? timeProvider = null) : IMergeGate
+/// <param name="levels">Resolves the Needs You level of a Task, so a local merge of a released Task needs no Accept (ADR-0087); <see langword="null"/> means Ask me everywhere.</param>
+internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, ProcessGateService gates, ITeamCatalog catalog, TimeProvider? timeProvider = null, NeedsYouLevels? levels = null) : IMergeGate
 {
     /// <summary>
     /// How long after an Accept that took a Task straight to Done its Team may still merge (a Task with no Action has nothing
@@ -96,19 +97,23 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
             }
         }
 
-        return this.AcceptRequiredRefusal(personaName, acceptTeams) ?? this.AssigneeRefusal(personaName, teams, acceptTeams);
+        return this.AcceptRequiredRefusal(personaName, acceptTeams, command) ?? this.AssigneeRefusal(personaName, teams, acceptTeams);
     }
 
     /// <summary>The refusal for a Team with <c>accept-before-merge</c> that has no accepted Task to merge, or <see langword="null"/>.</summary>
     /// <param name="personaName">The Persona running the command.</param>
     /// <param name="acceptTeams">The Persona's Teams that have the gate on.</param>
-    private string? AcceptRequiredRefusal(string personaName, HashSet<string> acceptTeams)
+    /// <param name="command">The shell line; a line that only merges locally into main is passed by a released Task, a line that pushes never is.</param>
+    private string? AcceptRequiredRefusal(string personaName, HashSet<string> acceptTeams, string command)
     {
         if (acceptTeams.Count == 0)
         {
             return null;
         }
 
+        bool localOnly = GitCommandLine.OnlyLocalMergesIntoMain(command);
+        bool released = false;
+        bool runsInside = false;
         DateTimeOffset now = this.clock.GetUtcNow();
         List<TaskItem> own = [];
         TaskItem? old = null;
@@ -135,6 +140,14 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
                 return null;
             }
 
+            // The level is read again, so a scope set back to Ask me (or past its spend cap) stops passing merges at once.
+            if (localOnly && NeedsYouRelease.Holds(task, now) && levels?.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam)
+            {
+                return null;
+            }
+
+            released |= NeedsYouRelease.LatestAt(task) is not null;
+            runsInside |= !task.Status.IsTerminal() && levels?.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam;
             if (!task.Status.IsTerminal() && string.Equals(task.Assignee, personaName, StringComparison.OrdinalIgnoreCase))
             {
                 own.Add(task);
@@ -146,6 +159,31 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
             return string.Create(
                 CultureInfo.InvariantCulture,
                 $"Cannot merge: the Human's Accept on Task {old.Id} is more than 24 hours old. Ask for a fresh one: move the Task to Needs You again with update_task so the Human can Accept it. Do not ask for the Accept in chat.");
+        }
+
+        return NoAcceptRefusal(own, GitCommandLine.HasPush(command), released, runsInside);
+    }
+
+    /// <summary>The refusal text when no Task of the Team carries the command: a push, a merge under Run inside the Team, or a merge under Ask me.</summary>
+    /// <param name="own">The Persona's open Tasks of the Team.</param>
+    /// <param name="push">Whether the line pushes.</param>
+    /// <param name="released">Whether a Task of the Team has been released.</param>
+    /// <param name="runsInside">Whether an open Task of the Team is under the level Run inside the Team.</param>
+    private static string NoAcceptRefusal(List<TaskItem> own, bool push, bool released, bool runsInside)
+    {
+        if (push && (released || runsInside))
+        {
+            string pushWhere = own.Count == 1
+                ? string.Create(CultureInfo.InvariantCulture, $"Task {own[0].Id}'s Action")
+                : "the Action of the Task this push belongs to";
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in {pushWhere} with update_task, for example 'Push main to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.");
+        }
+
+        if (!push && runsInside)
+        {
+            return "Cannot merge yet: under Run inside the Team a merge into main runs once a Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
         }
 
         string where = own.Count == 1
@@ -200,7 +238,7 @@ internal sealed class ProcessMergeGate(PersonaStore personas, TaskStore tasks, P
         {
             // Evidence on a finished Task is stale for a later merge; only open work counts, and a Task the Human's Accept
             // took straight to Done counts while the merge window it opened is still open.
-            if ((!task.Status.IsTerminal() || InDoneWindow(task, now))
+            if ((!task.Status.IsTerminal() || InDoneWindow(task, now) || NeedsYouRelease.InDoneWindow(task, now))
                 && string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase))
             {
                 evidence.AddRange(task.Evidence);

@@ -19,6 +19,7 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
         {
             TaskCreatedPayload p => new(FeedTargetKind.Task, p.Id),
             TaskGatePayload p => new(FeedTargetKind.Task, p.Id),
+            TaskProceededPayload p => new(FeedTargetKind.Task, p.Id),
             TaskNeedsYouPayload p => new(FeedTargetKind.Task, p.Id),
             TaskAssignedPayload p => new(FeedTargetKind.Task, p.Id),
             TaskWakesPausedPayload p => new(FeedTargetKind.Task, p.Id),

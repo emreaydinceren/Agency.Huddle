@@ -35,6 +35,7 @@ internal static class FeedSourceTypes
         FeedSourceType.DeviceRevoked => "device-revoked",
         FeedSourceType.SecondBrainOverCap => "second-brain-over-cap",
         FeedSourceType.TaskWakesPaused => "task-wakes-paused",
+        FeedSourceType.TaskProceeded => "task-proceeded",
         FeedSourceType.TeamArchived => "team-archived",
         FeedSourceType.BuiltinAgentUpdateAvailable => "builtin-agent-update-available",
         FeedSourceType.AgentConnectorsChanged => "agent-connectors-changed",

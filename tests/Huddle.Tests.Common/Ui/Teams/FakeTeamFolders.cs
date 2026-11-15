@@ -101,6 +101,12 @@ internal sealed class FakeTeamFolders : ITeamFolders
         return this.UpdateResult;
     }
 
+    /// <summary>The Project files <see cref="ReadProjectFile"/> answers with, by Project name; a Project not listed has no readable file.</summary>
+    public Dictionary<string, ProjectFile> ProjectFiles { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <inheritdoc />
+    public ProjectFile? ReadProjectFile(string team, string project) => this.ProjectFiles.GetValueOrDefault(project);
+
     /// <summary>Every avatar <see cref="UpdateProjectAvatar"/> was given, with its Team and Project, in call order.</summary>
     public List<(string Team, string Project, Avatar Avatar)> ProjectAvatarWrites { get; } = [];
 

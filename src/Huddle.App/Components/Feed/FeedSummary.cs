@@ -23,6 +23,7 @@ internal static class FeedSummary
         {
             TaskCreatedPayload p => new([Text("created "), TaskChip(p.Id, p.Title)], InTeam(p.Team)),
             TaskGatePayload p => TaskGate(p),
+            TaskProceededPayload p => new([Text("proceeded under " + p.Scope + " level Run inside the Team: "), TaskChip(p.Id, p.Title), Text(" merges into main without an Accept")], InTeam(p.Team)),
             TaskNeedsYouPayload p => new([Text("stopped to wait for your approval on "), TaskChip(p.Id, p.Title)], InTeam(p.Team)),
             TaskAssignedPayload p => new([Text("assigned you "), TaskChip(p.Id, p.Title)], null),
             TaskWakesPausedPayload { RoomId: not null } p => new(
@@ -115,6 +116,7 @@ internal static class FeedSummary
     {
         TaskCreatedPayload p => p.Team,
         TaskGatePayload p => p.Team,
+        TaskProceededPayload p => p.Team,
         TaskNeedsYouPayload p => p.Team,
         TaskWakesPausedPayload p => p.Team,
         TaskAssignedPayload p => p.Team,
@@ -135,7 +137,7 @@ internal static class FeedSummary
     public static string NounOf(FeedSourceType? type) => type switch
     {
         FeedSourceType.TaskCreated or FeedSourceType.TaskGateOn or FeedSourceType.TaskNeedsYou
-            or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue or FeedSourceType.TaskWakesPaused => "Tasks",
+            or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou or FeedSourceType.GateDecisionDue or FeedSourceType.TaskWakesPaused or FeedSourceType.TaskProceeded => "Tasks",
         FeedSourceType.DocumentChanged => "documents",
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
         FeedSourceType.TeamMemoryNotFiled => "proposals",

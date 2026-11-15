@@ -49,6 +49,15 @@ internal static partial class GitCommandLine
             _ => false,
         };
 
+        /// <summary>
+        /// Whether the command is a <c>git push</c>, whatever its arguments: a network URL, a file path, a bare push, <c>--all</c> or a feature
+        /// branch. A push leaves the Team's repository, so a Needs You level never lets one pass without the Human's Accept.
+        /// </summary>
+        internal bool PushesWork => this.Subcommand == "push";
+
+        /// <summary>Whether the command is a <c>git merge</c> or <c>git pull</c> that puts work on main (see <see cref="WouldPutWorkOnMain"/>), which stays in the local repository.</summary>
+        internal bool MergesLocallyIntoMain => this.Subcommand is "merge" or "pull" && this.WouldPutWorkOnMain;
+
         private bool PushesToMain() =>
             this.Args.Contains("--all", StringComparer.Ordinal)
             || this.Args.Contains("--mirror", StringComparer.Ordinal)
@@ -70,6 +79,21 @@ internal static partial class GitCommandLine
     /// <param name="command">The shell line.</param>
     internal static bool NeedsGate(string command) =>
         Parse(command).Exists(static call => call.IsMergeOrPush || (call.Subcommand == "pull" && call.WouldPutWorkOnMain));
+
+    /// <summary>Whether the line holds a <c>git push</c> of any kind, including one inside <c>bash -c "…"</c>.</summary>
+    /// <param name="command">The shell line.</param>
+    internal static bool HasPush(string command) => Parse(command).Exists(static call => call.PushesWork);
+
+    /// <summary>
+    /// Whether the line only merges locally into main: some command merges or pulls work into main and no command pushes. A line that
+    /// holds both counts as a push, which a Needs You level never releases.
+    /// </summary>
+    /// <param name="command">The shell line.</param>
+    internal static bool OnlyLocalMergesIntoMain(string command)
+    {
+        List<Call> calls = Parse(command);
+        return calls.Exists(static call => call.MergesLocallyIntoMain) && !calls.Exists(static call => call.PushesWork);
+    }
 
     /// <summary>Whether the name is main or master, local or on origin.</summary>
     /// <param name="name">The branch name as typed.</param>

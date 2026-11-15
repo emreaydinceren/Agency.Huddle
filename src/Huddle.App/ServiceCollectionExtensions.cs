@@ -886,7 +886,6 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.RegistryWatcher>());
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddHostedService<DataInitializer>();
-        services.AddHostedService<Agency.Huddle.App.Teams.AcceptBeforeMergeMigration>();
         services.AddHostedService<Agency.Huddle.App.Teams.BlockersDoneBeforeStartMigration>();
         services.AddHostedService<Agency.Huddle.App.SecondBrain.RetiredFileScanService>();
         services.AddHostedService<Agency.Huddle.App.SecondBrain.DefaultAgentsMdService>();
