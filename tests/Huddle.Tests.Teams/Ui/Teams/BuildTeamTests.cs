@@ -684,6 +684,33 @@ public sealed class BuildTeamTests
         Assert.Equal("claude-agent-acp", identity.Adapter);
     }
 
+    /// <summary>Two drafts that carry the same Skill ask the copier once with the distinct names, and before the Team or any Agent is written.</summary>
+    [Fact]
+    public async Task Approve_TwoDraftsSharingASkill_CopiesItOnceBeforeAnythingIsWritten()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        bool teamCreatedWhileCopying = true;
+        int teamAgentsWhileCopying = -1;
+        fixture.Installer.OnEnsure = _ =>
+        {
+            teamCreatedWhileCopying = fixture.Folders.Calls.Contains("CreateTeam:Garden");
+            teamAgentsWhileCopying = fixture.Personas.Entries.Count(entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+        };
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Equal(["ext-skill"], Assert.Single(fixture.Installer.Calls));
+        Assert.False(teamCreatedWhileCopying);
+        Assert.Equal(0, teamAgentsWhileCopying);
+        Assert.Equal(2, fixture.Personas.Entries.Count(entry => entry.Teams.Contains("Garden", StringComparer.Ordinal)));
+    }
+
     /// <summary>A Skill that is not ready stops the approval before the Team is created, names the Skill and links to Settings.</summary>
     [Fact]
     public async Task Approve_SkillNotReady_BlocksBeforeAnythingIsWritten()

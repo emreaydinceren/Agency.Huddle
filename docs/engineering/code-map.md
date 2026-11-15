@@ -346,7 +346,7 @@ order decides per Token, independently.
 | `TeamTypes/TeamTypeValidator.cs` | Checks a manifest and reports each problem with a code (`TeamTypeProblem`). |
 | `TeamTypes/CandidateTemplate.cs` | One Candidate: an Agent template read from a type's `candidates/*.md`. |
 | `TeamTypes/Builtin/` | The embedded built-in types: `development/` and `household/` (a manifest, `candidates/` and `processes/` each). No Skill packs ship any more: they come from `SKILLS.md`. Picked up by the csproj glob, so a new built-in file needs no csproj change. |
-| `Teams/HireService.cs` | Writes one hire as an Agent of a Team, enforces the hire limits, copies its Skills through `ISkillCopier` (`EnsureSkillsAsync`) and starts it; `StartTeamAsync` starts the hired members in order. |
+| `Teams/HireService.cs` | Writes one hire as an Agent of a Team, enforces the hire limits, copies its Skills through `ISkillCopier` (`EnsureSkillsAsync`), checks and writes Build a team's drafts (`CheckDrafts`, `HireDrafts`), gives a new Team its process (`ProvisionProcess`) and onboards its manager once it runs (`OnboardManagerAsync`). |
 | `Teams/ISkillAvailability.cs` | What the hire path asks of the registry: a Pack's contents, a Skill's state, and the setup item for one that is not ready. `SkillRegistry` implements it; tests use `FakeSkillAvailability`. |
 | `Teams/SkillSetupCheck.cs` | Turns a card's Packs and Skills into the **Needs setup** items (`For`); a Pack's own problem folds into one item. Pure. |
 | `Teams/PackMembership.cs` | Adds or removes one Pack on an Agent's `skills`, `_packs` and `consult_when`, keeping Skills another Pack or the Role still gives (`PackContents`). Pure. |

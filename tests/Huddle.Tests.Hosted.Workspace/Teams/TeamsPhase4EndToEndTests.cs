@@ -578,7 +578,7 @@ public sealed class TeamsPhase4EndToEndTests
         return new Teams(web, api);
     }
 
-    /// <summary>Creates a Development Team with the Small preset plus extra roles, hires the manager the way Team setup does, and starts everyone.</summary>
+    /// <summary>Creates a Development Team with the Small preset plus extra roles, gives it its default process, hires the manager and then the other members the way Build a team does, and onboards the manager.</summary>
     /// <param name="run">The running host.</param>
     /// <param name="teamName">The Team's name.</param>
     /// <param name="workspace">The repository folder.</param>
@@ -597,6 +597,7 @@ public sealed class TeamsPhase4EndToEndTests
         PersonaStore personas = services.GetRequiredService<PersonaStore>();
         TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(teamName, file).Outcome);
+        _ = hiring.ProvisionProcess(teamName, null);
 
         List<string> used = [.. personas.ListNames()];
         List<CardState> cards = [];
@@ -614,8 +615,13 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Null(hired.Error);
         _ = folders.UpdateTeamFile(teamName, current => current with { Manager = manager.Name });
 
-        StartTeamResult started = await hiring.StartTeamAsync(teamName, [.. cards.Select(card => new HireRequest(teamName, type.Id, card.RoleId, card))], ct);
-        Assert.True(started.Ok, started.Error);
+        foreach (CardState card in cards.Where(card => !ReferenceEquals(card, manager)))
+        {
+            HireResult hiredMember = hiring.Hire(new HireRequest(teamName, type.Id, card.RoleId, card));
+            Assert.Null(hiredMember.Error);
+        }
+
+        _ = await hiring.OnboardManagerAsync(teamName, manager.Name, ct);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
         await Eventually.UntilAsync(() => catalog.Find(teamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));

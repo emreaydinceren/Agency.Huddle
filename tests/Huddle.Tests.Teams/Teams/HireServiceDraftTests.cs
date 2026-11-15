@@ -1,3 +1,4 @@
+using Agency.Huddle.App;
 using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
@@ -125,5 +126,25 @@ public sealed class HireServiceDraftTests : IDisposable
         Assert.Equal("The name 'ada' is already in use.", repeated);
         Assert.Equal("The name 'BEA' is already in use.", used);
         Assert.Null(fine);
+    }
+
+    /// <summary>The per-Team hire limit is checked for the whole batch at once, so drafts that together exceed it are refused and nothing is written.</summary>
+    [Fact]
+    public void CheckDrafts_BatchExceedsTeamLimit_IsRefused()
+    {
+        TeamOptions options = new();
+        options.Acp.MaxAgentsPerTeam = 2;
+        TeamTypeCatalog types = new(this.dir.Options(), NullLogger<TeamTypeCatalog>.Instance, new Dictionary<string, string>(StringComparer.Ordinal));
+        HireLimitHarness harness = new(Microsoft.Extensions.Options.Options.Create(options));
+        HireService limited = new(this.personas, types, new FakeSkillAvailability(), this.avatars, harness.Guard, this.installer, new FakeStartGate(), NullLogger<HireService>.Instance);
+
+        string? tooMany = limited.CheckDrafts("Garden", [Draft("Ada"), Draft("Cy"), Draft("Di")]);
+        string? two = limited.CheckDrafts("Garden", [Draft("Ada"), Draft("Cy")]);
+        string? one = limited.CheckDrafts("Garden", [Draft("Ada")]);
+
+        Assert.Equal("Team 'Garden' is full: 0 of 2 Agents.", tooMany);
+        Assert.Null(two);
+        Assert.Null(one);
+        Assert.Empty(this.personas.Entries);
     }
 }

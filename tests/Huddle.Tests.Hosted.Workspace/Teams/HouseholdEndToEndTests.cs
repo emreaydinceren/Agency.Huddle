@@ -64,8 +64,8 @@ public sealed class HouseholdEndToEndTests
         HireService hiring = services.GetRequiredService<HireService>();
         Assert.Null(hiring.Hire(new HireRequest(TeamName, type.Id, manager.RoleId, manager)).Error);
         _ = folders.UpdateTeamFile(TeamName, current => current with { Manager = manager.Name });
-        StartTeamResult started = await hiring.StartTeamAsync(TeamName, [new HireRequest(TeamName, type.Id, manager.RoleId, manager), new HireRequest(TeamName, type.Id, liaison.RoleId, liaison)], ct);
-        Assert.True(started.Ok, started.Error);
+        Assert.Null(hiring.Hire(new HireRequest(TeamName, type.Id, liaison.RoleId, liaison)).Error);
+        _ = await hiring.OnboardManagerAsync(TeamName, manager.Name, ct);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
         await Eventually.UntilAsync(
