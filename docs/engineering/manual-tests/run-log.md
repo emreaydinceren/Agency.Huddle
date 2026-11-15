@@ -5736,6 +5736,7 @@ File: [`docs/engineering/manual-tests/human-gate.md`](human-gate.md#humangate-11
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass | `b2df3d34` | #533 | By an agent acting as the Human, isolated lane, every Team member on Sonnet. Project Lib at Run inside the Team, global at Ask me. DEVT-0001 (Greeting.Hello + test) went build, review, QA, then Huddle wrote 'proceeded under project level Run inside the Team' and the Developer merged into the local main (563bc32); zero Needs You entries for the merge. Then a file-path remote: the push Task DEVT-0002 waited in Needs You with a push Action, and the Developer's direct `git push origin main` was refused; the remote stayed empty. Two earlier runs failed and were fixed: the manager set a merge Action (Agents now see their scopes' level), then the Needs Human Helper gated the merge (it is now told the level). Spend 3.10 USD over the three runs. |
 
 ### HUMANGATE-12 — A spend cap falls back to Ask me and asks (issue #533)
 
