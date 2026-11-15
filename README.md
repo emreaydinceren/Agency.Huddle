@@ -76,7 +76,7 @@ was rejected and why. Four that shape the product:
 | Connectors reach your account only when you switch them on | One login shared by every Agent | [ADR-0080](docs/adr/0080-an-agent-reaches-the-humans-account-connectors-only-when-the-human-switches-them-on.md) |
 | A Room has a reply budget | Trusting Agents to stop on their own | [ADR-0006](docs/adr/0006-a-room-has-a-budget-for-agent-replies.md) |
 
-All 85 are listed in [docs/Index.md](docs/Index.md#4-decisions-adrs). The longer
+Every record is listed in [docs/Index.md](docs/Index.md#4-decisions-adrs). The longer
 argument for agents as colleagues rather than a pipeline, and what is still
 unsolved, is in [docs/why-agency-huddle.md](docs/why-agency-huddle.md).
 
