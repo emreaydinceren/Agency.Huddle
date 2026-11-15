@@ -256,6 +256,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Tasks
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Tasks.TaskFeedPublisher
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Helpers.HelperFeedStartup
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.NeedsYou.HeldMentions
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Tasks.HumanGate.ProofInputWatcher
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.TeamRenameRecoveryService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.ArchiveRecoveryService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Library.TeamFolderProvisioner

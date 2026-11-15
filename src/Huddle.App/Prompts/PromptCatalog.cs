@@ -1933,7 +1933,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. A Task with a Human gate or an Action goes from Review to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (role coverage, an attached document's History) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
+                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. A Task with a Human gate or an Action goes from Review to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2005,7 +2005,7 @@ internal static class PromptCatalog
                 Needs You, and otherwise say which Proof item is open; add_evidence and get_task
                 name it. You may still move it
                 yourself, which is harmless if it is already there. Some Proof items complete with no
-                write to the Task, such as role coverage or an attached document's History, and
+                write to the Task, such as role coverage, and
                 Huddle does not move the Task then, so move it yourself. Do not ask for an Accept in
                 chat: the Human accepts in Needs You. Only the Human can Accept it, and only the
                 Human can turn human_gate off or clear the Action. After the Accept, the assignee

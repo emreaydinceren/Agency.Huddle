@@ -221,6 +221,43 @@ public sealed class TaskServiceNeedsYouMoveTests
         Assert.Single(changes);
     }
 
+    /// <summary>MoveIfReady moves a gated Task in Review once its Proof became complete without any Task write, and logs the Proof count (#593).</summary>
+    [Fact]
+    public void MoveIfReady_ProofCompleteWithoutTaskWrite_MovesToNeedsYou()
+    {
+        FixedProofSource proof = new(FixedProofSource.ThreeOfFour);
+        using TaskToolHarness harness = Build(proof);
+        TaskItem task = Create(harness);
+        proof.Current = FixedProofSource.Complete;
+
+        harness.Service.MoveIfReady(task.Id);
+
+        TaskItem? after = harness.Store.Get(task.Id);
+        Assert.NotNull(after);
+        Assert.Equal(TaskState.NeedsYou, after.Status);
+        Assert.Equal("status: Review → Needs You (Proof 4/4)", after.ChangeLog[^1].Summary);
+        Assert.Equal("Huddle", after.ChangeLog[^1].Actor);
+    }
+
+    /// <summary>MoveIfReady with the Proof still open writes nothing.</summary>
+    [Fact]
+    public void MoveIfReady_ProofIncomplete_WritesNothing()
+    {
+        FixedProofSource proof = new(FixedProofSource.ThreeOfFour);
+        using TaskToolHarness harness = Build(proof);
+        TaskItem task = Create(harness);
+        List<TaskChange> changes = [];
+        harness.Events.TaskChanged += changes.Add;
+
+        harness.Service.MoveIfReady(task.Id);
+
+        TaskItem? after = harness.Store.Get(task.Id);
+        Assert.NotNull(after);
+        Assert.Equal(task.Version, after.Version);
+        Assert.Equal(TaskState.Review, after.Status);
+        Assert.Empty(changes);
+    }
+
     /// <summary>An Agent asking for Needs You when the Proof is open is still refused, and Huddle does not override that.</summary>
     [Fact]
     public void Update_AgentMovesToNeedsYouWithProofOpen_IsRefused()

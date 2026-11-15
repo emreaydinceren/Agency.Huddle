@@ -51,8 +51,9 @@ Concretely:
 1. **One Task's journey: Draft, Check, Track, Gate, Decide.** The assignee drafts. Other members
    supply the Proof the Team's Definition of Done asks for. The Task's Change log records who did
    what. Once the Proof is complete, Huddle moves a Task in Review to Needs You and wakes no one.
-   Some Proof items complete with no write to the Task (role coverage, an attached document's
-   History); Huddle does not move the Task then, so the assignee may move it. The Human accepts,
+   Some Proof items complete with no write to the Task: an attached document's review and a
+   tagged child reaching Done move it too (#593), but role coverage and a Process edit do not, so
+   the assignee may move it then. The Human accepts,
    requests changes or declines. The assignee does the Action only after the Accept.
 2. **Two rules hold however the Team's process is set up.** Accepting is always on: a process can
    add Proof, never remove the Human's decision. Incomplete Proof locks the gate: the Human sees
@@ -431,7 +432,7 @@ Manual tests go in a new page, `engineering/manual-tests/human-gate.md`, written
 | --- | --- | --- |
 | OD-1 | Should `WorkDirPermissionHandler` refuse an Agent's `git merge` or `git push` until a gated Task is accepted? | **Decided (issue #396).** `ProcessMergeGate` refuses the assignee of an open gated Task that has no valid Accept: a `git merge` of anything but main, and a `git push` naming main or no branch. A merge of main into a feature branch is allowed. A non-assignee, a command outside a Persona's shell and a merge made while already on main by another route stay uncovered ([known limits](engineering/known-limits.md)). `checks-before-merge` is unchanged. **Amended (issue #401, [ADR-0078](adr/0078-a-merge-into-main-waits-for-the-humans-accept-by-team.md)):** in a Team with the `accept-before-merge` gate the same commands are refused for any member until a Task of the Team has a valid Accept; setting an Action on a gated Task in Review moves it to Needs You when its Proof is complete; for one hour after an Accept that took a Task straight to Done another merge by the Team is allowed, because a command names no Task. **Reach (issue #396):** the handler runs only when the Adapter sends a permission request, and in the Adapter's `auto` mode it sends none for Bash. Huddle therefore installs a generated `PreToolUse` hook (`MergeGateHook`, `merge-gate-ask.js`) in each Agent's `.claude/settings.local.json` that answers `ask` for a command naming `git` then `merge` or `push`, so the request reaches the handler; Codex has no equivalent ([known limits](engineering/known-limits.md)) |
 | OD-2 | Should a Task carry its own Accept sentence ("makes the memo the team's current answer", mockup 2)? | A fixed sentence in v1 (§6.8). Add an optional `outcome:` key later if Humans ask for it |
-| OD-3 | Should Huddle move a gated Task to Needs You by itself when the Proof completes? | No in v1: the assignee moves it, as mockup 1 says. Revisit after use |
+| OD-3 | Should Huddle move a gated Task to Needs You by itself when the Proof completes? | No in v1: the assignee moves it, as mockup 1 says. Revisit after use. **Amended (#349, #593):** Huddle moves a gated Task in Review after a write to the Task that completes its Proof, and, through `ProofInputWatcher`, after a `Reviewed` entry on an attached document's History or a tagged child reaching Done. Role coverage, the roster, the gates and the Definition of Done are not watched |
 
 ---
 
