@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Search;
 using Agency.Huddle.Contracts;
@@ -39,6 +40,9 @@ public sealed class SearchToolTests
         /// <summary>The Room scoped to another Team that the caller is not in.</summary>
         public required Room Elsewhere { get; init; }
 
+        /// <summary>The built-in Chief of Staff's Agent id; it is in no Team and no Room.</summary>
+        public required string ChiefId { get; init; }
+
         /// <summary>Builds the tool over the real Rooms provider and any extra providers.</summary>
         /// <param name="extra">Further providers, such as a failing one.</param>
         public SearchTool Tool(params ISearchProvider[] extra)
@@ -51,8 +55,34 @@ public sealed class SearchToolTests
         /// <param name="extra">Further providers, such as a failing one.</param>
         public SearchTool Tool(ILogger<SearchTool> logger, params ISearchProvider[] extra)
         {
-            RoomSearchProvider rooms = new(this.Harness.Directory, this.Harness.Options.CreateChatStore(), NullLogger<RoomSearchProvider>.Instance);
-            return new SearchTool([rooms, .. extra], this.Harness.Directory, this.Harness.Personas, logger, new FakePromptSource(), this.QuinnId);
+            return this.ToolFor(this.QuinnId, logger, extra);
+        }
+
+        /// <summary>Builds the tool for a given caller, over the real Rooms provider, any extra providers and a given logger.</summary>
+        /// <param name="agentId">The caller's Agent id.</param>
+        /// <param name="logger">Receives the tool's log entries.</param>
+        /// <param name="extra">Further providers, such as a failing one.</param>
+        public SearchTool ToolFor(string agentId, ILogger<SearchTool> logger, params ISearchProvider[] extra)
+        {
+            FileChatStore chats = this.Harness.Options.CreateChatStore();
+            RoomSearchProvider rooms = new(this.Harness.Directory, chats, NullLogger<RoomSearchProvider>.Instance);
+            return new SearchTool([rooms, .. extra], this.Harness.Directory, chats, this.Harness.Personas, logger, new FakePromptSource(), agentId);
+        }
+
+        /// <summary>Adds a Room Quinn is a Member of, holding the given Messages.</summary>
+        /// <param name="name">The Room's name.</param>
+        /// <param name="ct">Cancels the setup.</param>
+        /// <param name="messages">The Messages to append, in order.</param>
+        public async Task<Room> AddRoomAsync(string name, CancellationToken ct, params ChatMessage[] messages)
+        {
+            Room room = await this.Harness.Directory.CreateRoomAsync(name, [this.QuinnId], ct);
+            FileChatStore chats = this.Harness.Options.CreateChatStore();
+            foreach (ChatMessage message in messages)
+            {
+                await chats.AppendAsync(room.Id, message, ct);
+            }
+
+            return room;
         }
 
         /// <inheritdoc />
@@ -176,7 +206,7 @@ public sealed class SearchToolTests
         Assert.StartsWith("Rooms searched: every Room.", result, StringComparison.Ordinal);
     }
 
-    /// <summary>A hit gives the Room id, the match count, the newest Message id and a snippet, and no UI link.</summary>
+    /// <summary>A hit gives the Room id and name, the Message id, sender and time, and a snippet, and no UI link.</summary>
     [Fact]
     public async Task RoomHit_CarriesIdsAndSnippet_AndNoUiLink()
     {
@@ -185,7 +215,7 @@ public sealed class SearchToolTests
 
         string result = await scene.Tool().InvokeAsync(Args("secret plan", filter: "rooms"), ct);
 
-        Assert.Contains($"{scene.Own.Id} | Own | 1 match | message own-1 | Quinn | 2026-10-28 09:00 UTC", result, StringComparison.Ordinal);
+        Assert.Contains($"{scene.Own.Id} | Own\n  message own-1 | Quinn | 2026-10-28 09:00 UTC\n    the secret plan is ready", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
         Assert.DoesNotContain("/rooms/", result, StringComparison.Ordinal);
     }
 
@@ -231,7 +261,7 @@ public sealed class SearchToolTests
         string everything = await tool.InvokeAsync(Args("secret plan", filter: "rooms", scope: "all"), ct);
 
         Assert.DoesNotContain(archived.Id, byDefault, StringComparison.Ordinal);
-        Assert.Contains($"Archived Rooms:\n- {archived.Id}", everything, StringComparison.Ordinal);
+        Assert.Contains($"{archived.Id} | Old design (archived)\n  message old-1", everything, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
     }
 
     /// <summary>A search with scope "all" is logged once as a warning with the caller and the phrase; the default scope logs nothing.</summary>
@@ -248,6 +278,327 @@ public sealed class SearchToolTests
 
         _ = await tool.InvokeAsync(Args("secret plan", scope: "all"), ct);
         Assert.Equal(new[] { (LogLevel.Warning, "Agent Quinn searched every Room for 'secret plan'.") }, logger.Entries);
+    }
+
+    /// <summary>The Chief of Staff, with no scope, finds a Room of a Team it is not in; an ordinary Agent with no scope does not.</summary>
+    [Fact]
+    public async Task ChiefOfStaff_NoScope_FindsEveryRoom_AndAnotherAgentDoesNot()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string chief = await scene.ToolFor(scene.ChiefId, NullLogger<SearchTool>.Instance).InvokeAsync(Args("secret plan"), ct);
+        string ordinary = await scene.Tool().InvokeAsync(Args("secret plan"), ct);
+
+        Assert.Contains(scene.Elsewhere.Id, chief, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains(scene.Own.Id, chief, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.StartsWith("Rooms searched: every Room.", chief, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain(scene.Elsewhere.Id, ordinary, StringComparison.Ordinal);
+    }
+
+    /// <summary>The Chief of Staff may narrow itself to its own Rooms with scope "mine".</summary>
+    [Fact]
+    public async Task ChiefOfStaff_ScopeMine_IsHonoured()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.ToolFor(scene.ChiefId, NullLogger<SearchTool>.Instance).InvokeAsync(Args("secret plan", scope: "mine"), ct);
+
+        Assert.DoesNotContain(scene.Elsewhere.Id, result, StringComparison.Ordinal);
+        Assert.Contains("Rooms searched: yours and your Teams' only.", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+    }
+
+    /// <summary>The Chief of Staff's every-Room search is logged once at Information, and scope "mine" logs nothing.</summary>
+    [Fact]
+    public async Task ChiefOfStaff_EveryRoomSearch_IsLoggedAtInformation()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        RecordingLogger<SearchTool> logger = new();
+        SearchTool tool = scene.ToolFor(scene.ChiefId, logger);
+
+        _ = await tool.InvokeAsync(Args("secret plan"), ct);
+        Assert.Equal(new[] { (LogLevel.Information, "Chief of Staff Jarvis searched every Room for 'secret plan'.") }, logger.Entries);
+
+        logger.Entries.Clear();
+        _ = await tool.InvokeAsync(Args("secret plan", scope: "mine"), ct);
+        Assert.Empty(logger.Entries);
+    }
+
+    /// <summary>Two matching Messages in one Room both come back, each with its own id, not only the newest.</summary>
+    [Fact]
+    public async Task TwoMatchesInOneRoom_BothComeBack()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync("Grep", ct, Msg("g-1", 1, "Kai", "we hold the release"), Msg("g-2", 2, "Kai", "nothing here"), Msg("g-3", 3, "Kai", "hold again please"));
+
+        string result = await scene.Tool().InvokeAsync(Args("hold", filter: "rooms"), ct);
+
+        Assert.Contains("message g-1 |", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("message g-3 |", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain("message g-2 |", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>Context 1 shows the Message before and after each match, and overlapping windows are merged so a shared neighbour is shown once.</summary>
+    [Fact]
+    public async Task Context_ShowsNeighbours_AndMergesOverlappingWindows()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync(
+            "Grep",
+            ct,
+            Msg("c-1", 1, "Kai", "alpha one"),
+            Msg("c-2", 2, "Kai", "needle first"),
+            Msg("c-3", 3, "Kai", "bravo shared"),
+            Msg("c-4", 4, "Kai", "needle second"),
+            Msg("c-5", 5, "Kai", "charlie after"),
+            Msg("c-6", 6, "Kai", "delta far away"));
+
+        string result = await scene.Tool().InvokeAsync(Json("needle", ("context", 1)), ct);
+
+        Assert.Contains("  2026-10-28 09:01 Kai: alpha one", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("> 2026-10-28 09:02 Kai: needle first", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("> 2026-10-28 09:04 Kai: needle second", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("charlie after", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Equal(1, result.Split("bravo shared").Length - 1);
+        Assert.DoesNotContain("delta far away", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>A regular expression that backtracks without end is stopped by its timeout and refused, not left to hang.</summary>
+    [Fact]
+    public async Task CatastrophicRegex_ReturnsTheTimeoutRefusal()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync("Grep", ct, Msg("r-1", 1, "Kai", new string('a', 40000) + "!"));
+
+        string result = await scene.Tool().InvokeAsync(Json("(a+)+$", ("regex", true)), ct);
+
+        Assert.Equal("The regular expression took too long to run; simplify it, for example by removing nested repeats.", result);
+    }
+
+    /// <summary>A regex query with alternatives finds both Messages, and an invalid pattern is refused with the parser's reason.</summary>
+    [Fact]
+    public async Task Regex_FindsAlternatives_AndRefusesAnInvalidPattern()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync("Grep", ct, Msg("x-1", 1, "Kai", "please HOLD it"), Msg("x-2", 2, "Kai", "wait for me"), Msg("x-3", 3, "Kai", "go ahead"));
+        SearchTool tool = scene.Tool();
+
+        string found = await tool.InvokeAsync(Json("hold|wait for", ("regex", true)), ct);
+        string invalid = await tool.InvokeAsync(Json("(unclosed", ("regex", true)), ct);
+
+        Assert.Contains("message x-1 |", found, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("message x-2 |", found, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain("message x-3 |", found, StringComparison.Ordinal);
+        Assert.StartsWith("'query' is not a valid regular expression: ", invalid, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+    }
+
+    /// <summary>Count gives one line per Room with its number of matches and a total, and no snippets.</summary>
+    [Fact]
+    public async Task Count_GivesMatchesPerRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        Room room = await scene.AddRoomAsync("Grep", ct, Msg("n-1", 1, "Kai", "needle a"), Msg("n-2", 2, "Kai", "other"), Msg("n-3", 3, "Kai", "needle b"));
+
+        string result = await scene.Tool().InvokeAsync(Json("needle", ("count", true)), ct);
+
+        Assert.Contains($"{room.Id} | Grep | 2 matches", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("Total: 2 matches in 1 Rooms.", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain("message n-1", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Room with no query returns its newest Messages oldest first, and says how many earlier ones there are and how to read them.</summary>
+    [Fact]
+    public async Task RoomWithNoQuery_ReturnsTheTail()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        Room room = await scene.AddRoomAsync("Grep", ct, Msg("t-1", 0, "Kai", "one"), Msg("t-2", 1, "Kai", "two"), Msg("t-3", 2, "Kai", "three"), Msg("t-4", 3, "Kai", "four"), Msg("t-5", 4, "Kai", "five"));
+
+        string result = await scene.Tool().InvokeAsync(Json(null, ("room", room.Id), ("limit", 2)), ct);
+
+        Assert.Contains("3 earlier Messages; pass until 2026-10-28T09:03:00Z to read further back.", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.True(result.IndexOf("Kai: four", StringComparison.Ordinal) < result.IndexOf("Kai: five", StringComparison.Ordinal));
+        Assert.DoesNotContain("Kai: three", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>The sender filter keeps only that sender's Messages.</summary>
+    [Fact]
+    public async Task Sender_FiltersMessages()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync("Grep", ct, Msg("s-1", 1, "Kai", "needle from kai"), Msg("s-2", 2, "Nova", "needle from nova"));
+
+        string result = await scene.Tool().InvokeAsync(Json("needle", ("sender", "nova")), ct);
+
+        Assert.Contains("message s-2 |", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain("message s-1 |", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>Since includes its day and until, given as a date, runs through the end of that day.</summary>
+    [Fact]
+    public async Task SinceAndUntil_BoundTheMessages()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync(
+            "Grep",
+            ct,
+            new ChatMessage("d-1", new DateTimeOffset(2026, 10, 27, 10, 0, 0, TimeSpan.Zero), "kai-id", "Kai", "needle monday"),
+            new ChatMessage("d-2", new DateTimeOffset(2026, 10, 28, 23, 30, 0, TimeSpan.Zero), "kai-id", "Kai", "needle tuesday"),
+            new ChatMessage("d-3", new DateTimeOffset(2026, 10, 29, 0, 30, 0, TimeSpan.Zero), "kai-id", "Kai", "needle wednesday"));
+        SearchTool tool = scene.Tool();
+
+        string since = await tool.InvokeAsync(Json("needle", ("since", "2026-10-28")), ct);
+        string until = await tool.InvokeAsync(Json("needle", ("until", "2026-10-28")), ct);
+
+        Assert.DoesNotContain("message d-1 |", since, StringComparison.Ordinal);
+        Assert.Contains("message d-2 |", since, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("message d-3 |", since, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("message d-1 |", until, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("message d-2 |", until, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain("message d-3 |", until, StringComparison.Ordinal);
+    }
+
+    /// <summary>The team filter keeps Rooms scoped to that Team and drops root Rooms and other Teams' Rooms.</summary>
+    [Fact]
+    public async Task Team_KeepsOnlyThatTeamsRooms()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool().InvokeAsync(Json("secret plan", ("team", "platform"), ("scope", "all")), ct);
+
+        Assert.Contains(scene.TeamScoped.Id, result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain(scene.Own.Id, result, StringComparison.Ordinal);
+        Assert.DoesNotContain(scene.Elsewhere.Id, result, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Room outside the caller's scope is refused for an ordinary Agent, an unknown Room is refused, and the Chief of Staff reads it.</summary>
+    [Fact]
+    public async Task Room_OutsideScopeOrUnknown_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string outside = await scene.Tool().InvokeAsync(Json("secret plan", ("room", scene.Elsewhere.Id)), ct);
+        string unknown = await scene.Tool().InvokeAsync(Json("secret plan", ("room", "nope")), ct);
+        string chief = await scene.ToolFor(scene.ChiefId, NullLogger<SearchTool>.Instance).InvokeAsync(Json("secret plan", ("room", scene.Elsewhere.Id)), ct);
+
+        Assert.Equal($"Room '{scene.Elsewhere.Id}' is outside the Rooms you searched; pass scope \"all\".", outside);
+        Assert.Equal("There is no Room 'nope'.", unknown);
+        Assert.Contains("message else-1 |", chief, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+    }
+
+    /// <summary>When more Messages match than the limit, the newest are kept and the rest are counted honestly.</summary>
+    [Fact]
+    public async Task LimitOverflow_KeepsTheNewest_AndSaysHowManyWereLeftOut()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        _ = await scene.AddRoomAsync("Grep", ct, Msg("o-1", 1, "Kai", "needle 1"), Msg("o-2", 2, "Kai", "needle 2"), Msg("o-3", 3, "Kai", "needle 3"), Msg("o-4", 4, "Kai", "needle 4"));
+
+        string result = await scene.Tool().InvokeAsync(Json("needle", ("limit", 2)), ct);
+
+        Assert.Contains("message o-3 |", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.Contains("message o-4 |", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+        Assert.DoesNotContain("message o-1 |", result, StringComparison.Ordinal);
+        Assert.Contains("2 more matching Messages not shown. Narrow with room, sender, since or until, or raise limit (at most 50).", result, StringComparison.Ordinal); // contains-ok: one line or fragment of plain-text tool output
+    }
+
+    /// <summary>A Room-only argument together with another filter, a bad time, or count with context is refused with its own sentence.</summary>
+    [Fact]
+    public async Task RoomOnlyArguments_AreValidated()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        SearchTool tool = scene.Tool();
+
+        string filter = await tool.InvokeAsync(Json("secret plan", ("sender", "Kai"), ("filter", "tasks")), ct);
+        string since = await tool.InvokeAsync(Json("secret plan", ("since", "yesterday-ish")), ct);
+        string both = await tool.InvokeAsync(Json("secret plan", ("count", true), ("context", 1)), ct);
+        string range = await tool.InvokeAsync(Json("secret plan", ("context", 11)), ct);
+        string missing = await tool.InvokeAsync(Json(null, ("sender", "Kai")), ct);
+
+        Assert.Equal("regex, context, count, room, team, sender, since and until apply to Rooms only; use filter \"rooms\".", filter);
+        Assert.Equal("'since' must be a date like 2026-10-01 or an ISO 8601 time.", since);
+        Assert.Equal("'count' and 'context' cannot be combined.", both);
+        Assert.Equal("'context' must be between 0 and 10.", range);
+        Assert.Equal("'query' is required.", missing);
+    }
+
+    /// <summary>A regular expression query that is only blank is refused with its own sentence.</summary>
+    [Fact]
+    public async Task BlankRegexQuery_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool().InvokeAsync(Json("   ", ("regex", true)), ct);
+
+        Assert.Equal("The query needs at least 1 non-blank character.", result);
+    }
+
+    /// <summary>A Room name shared by two Rooms is refused, listing both ids.</summary>
+    [Fact]
+    public async Task RoomNameSharedByTwoRooms_IsRefusedWithBothIds()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        Room first = await scene.AddRoomAsync("Twin", ct);
+        Room second = await scene.AddRoomAsync("twin", ct);
+
+        string result = await scene.Tool().InvokeAsync(Json(null, ("room", "TWIN")), ct);
+
+        string[] either = [$"More than one Room is named 'TWIN': {first.Id}, {second.Id}. Pass one of these ids as room.", $"More than one Room is named 'TWIN': {second.Id}, {first.Id}. Pass one of these ids as room."];
+        Assert.Contains(result, either);
+    }
+
+    /// <summary>A Room tail whose sender filter matches nothing says so under the Room's heading.</summary>
+    [Fact]
+    public async Task RoomTail_WithNoMatchingMessage_SaysSo()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        Room room = await scene.AddRoomAsync("Grep", ct, Msg("m-1", 1, "Kai", "hello"));
+
+        string result = await scene.Tool().InvokeAsync(Json(null, ("room", room.Id), ("sender", "Nobody")), ct);
+
+        Assert.Equal($"Rooms searched: yours and your Teams' only. Pass scope \"all\" to search every Room.\n\nRooms:\n{room.Id} | Grep\n  No Messages match.", result);
+    }
+
+    /// <summary>A Room whose name matches but whose Messages do not still gets one line.</summary>
+    [Fact]
+    public async Task RoomNameMatch_WithNoMessageMatch_GetsOneLine()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        Room room = await scene.AddRoomAsync("Zebra crossing", ct, Msg("z-1", 1, "Kai", "unrelated"));
+
+        string result = await scene.Tool().InvokeAsync(Json("zebra"), ct);
+
+        Assert.Equal($"Rooms searched: yours and your Teams' only. Pass scope \"all\" to search every Room.\n\nRooms:\n{room.Id} | Zebra crossing | name matches", result);
+    }
+
+    /// <summary>An Archived Room's tail shows its heading marked archived and one Message as a time, sender and text line.</summary>
+    [Fact]
+    public async Task ArchivedRoomTail_ShowsTheHeadingAndTheMessageLine()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        Room room = await scene.AddRoomAsync("Old", ct, Msg("a-1", 1, "Kai", "hello\nthere"));
+        await scene.Harness.Directory.SetRoomArchivedAsync(room.Id, true, ct);
+
+        string result = await scene.Tool().InvokeAsync(Json(null, ("room", room.Id), ("scope", "all")), ct);
+
+        Assert.Equal($"Rooms searched: every Room.\n\nRooms:\n{room.Id} | Old (archived)\n  2026-10-28 09:01 Kai: hello there", result);
     }
 
     /// <summary>A provider that was cancelled without the caller asking is one failed group, not a failed call.</summary>
@@ -382,7 +733,30 @@ public sealed class SearchToolTests
         await chats.AppendAsync(own.Id, new ChatMessage("own-1", T0, nova.Id, "Quinn", "the secret plan is ready"), ct);
         await chats.AppendAsync(teamScoped.Id, new ChatMessage("team-1", T0, "kai-id", "Kai", "secret plan for platform"), ct);
         await chats.AppendAsync(elsewhere.Id, new ChatMessage("else-1", T0, "kai-id", "Kai", "secret plan for design"), ct);
-        return new Scene { Harness = harness, QuinnId = nova.Id, Own = own, TeamScoped = teamScoped, Elsewhere = elsewhere };
+        harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinAgent.ChiefOfStaffMarker), "You are Jarvis.");
+        User jarvis = await harness.Directory.UpsertAgentUserAsync("Jarvis", null, ct) ?? throw new InvalidOperationException("Directory refused a user.");
+        return new Scene { Harness = harness, QuinnId = nova.Id, Own = own, TeamScoped = teamScoped, Elsewhere = elsewhere, ChiefId = jarvis.Id };
+    }
+
+    private static ChatMessage Msg(string id, int minute, string sender, string text)
+    {
+        return new ChatMessage(id, T0.AddMinutes(minute), sender.ToLowerInvariant() + "-id", sender, text);
+    }
+
+    private static JsonObject Json(string? query, params (string Key, JsonNode Value)[] more)
+    {
+        JsonObject arguments = [];
+        if (query is not null)
+        {
+            arguments["query"] = query;
+        }
+
+        foreach ((string key, JsonNode value) in more)
+        {
+            arguments[key] = value;
+        }
+
+        return arguments;
     }
 
     private static JsonObject Args(string query, string? filter = null, string? scope = null, int? limit = null)
@@ -406,3 +780,4 @@ public sealed class SearchToolTests
         return arguments;
     }
 }
+ // contains-ok: one line or fragment of plain-text tool output

@@ -1,10 +1,11 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Search;
@@ -15,10 +16,13 @@ using Agency.Huddle.App.Tasks;
 /// the Human. It calls the same providers and the same ranker, once per pass, with no debounce and no event flow. Rooms are
 /// the sensitive category: by default only the Rooms the caller is a Member of, plus the Rooms scoped to one of the caller's
 /// Teams, are read, and the list is passed to the Rooms provider so no other Transcript is opened. <c>scope: "all"</c>
-/// searches every Room, and every such call is logged. Output is capped at <see cref="MaxCharacters"/> characters.
+/// searches every Room, and every such call is logged at Warning. The Chief of Staff searches every Room by default, logged at
+/// Information. The Rooms group is not the Rooms provider's: <see cref="RoomGrep"/> reads the Transcripts so that every matching
+/// Message is found, with grep-like options. Output is capped at <see cref="MaxCharacters"/> characters.
 /// </summary>
-/// <param name="providers">The five Global Search providers.</param>
+/// <param name="providers">The five Global Search providers; the Rooms one is not used.</param>
 /// <param name="directory">The Rooms, their Members, and the caller's identity.</param>
+/// <param name="chats">Reads each Room's Transcript for <see cref="RoomGrep"/>.</param>
 /// <param name="personas">The caller's Persona, for its Teams.</param>
 /// <param name="logger">Records every search that reaches beyond the caller's own Rooms.</param>
 /// <param name="prompts">The description's text.</param>
@@ -26,6 +30,7 @@ using Agency.Huddle.App.Tasks;
 internal sealed class SearchTool(
     IEnumerable<ISearchProvider> providers,
     ITeamDirectory directory,
+    IChatStore chats,
     PersonaStore personas,
     ILogger<SearchTool> logger,
     IPromptSource prompts,
@@ -46,6 +51,13 @@ internal sealed class SearchTool(
 
     private const string ScopeAll = "all";
 
+    /// <summary>The most Messages <c>context</c> may ask for on each side of a match.</summary>
+    private const int MaxContext = 10;
+
+    private const string RoomOnlyRefusal = "regex, context, count, room, team, sender, since and until apply to Rooms only; use filter \"rooms\".";
+
+    private const string TimeoutRefusal = "The regular expression took too long to run; simplify it, for example by removing nested repeats.";
+
     private static readonly string[] FilterNames = ["all", "teams", "agents", "library", "tasks", "rooms"];
 
     /// <inheritdoc />
@@ -64,8 +76,15 @@ internal sealed class SearchTool(
             ["filter"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray([.. FilterNames.Select(name => JsonValue.Create(name))]) },
             ["scope"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray(ScopeMine, ScopeAll) },
             ["limit"] = new JsonObject { ["type"] = "integer" },
+            ["regex"] = new JsonObject { ["type"] = "boolean" },
+            ["context"] = new JsonObject { ["type"] = "integer" },
+            ["count"] = new JsonObject { ["type"] = "boolean" },
+            ["room"] = new JsonObject { ["type"] = "string" },
+            ["team"] = new JsonObject { ["type"] = "string" },
+            ["sender"] = new JsonObject { ["type"] = "string" },
+            ["since"] = new JsonObject { ["type"] = "string" },
+            ["until"] = new JsonObject { ["type"] = "string" },
         },
-        ["required"] = new JsonArray("query"),
     };
 
     /// <inheritdoc />
@@ -85,21 +104,59 @@ internal sealed class SearchTool(
         }
 
         IReadOnlyList<string> teams = personas.ResolveByNameOrAlias(actor.Name)?.Teams ?? [];
+        bool chief = this.IsChiefOfStaff(actor.Name);
+        bool everyRoom = read.ScopeAll ?? chief;
         bool searchesRooms = read.Parse.Filter is SearchFilter.All or SearchFilter.Rooms;
         IReadOnlySet<string>? roomIds = null;
-        if (searchesRooms && !read.AllRooms)
+        if (searchesRooms && !everyRoom)
         {
             roomIds = await this.RoomsInScopeAsync(teams, cancellationToken).ConfigureAwait(false);
         }
-        else if (searchesRooms && logger.IsEnabled(LogLevel.Warning))
+        else if (searchesRooms)
         {
-            // A Warning, so the usual level filters keep it: this is the record that an Agent read past its own Rooms (ADR-0066).
-            logger.LogWarning("Agent {Agent} searched every Room for '{Query}'.", actor.Name, read.Parse.Phrase);
+            this.LogEveryRoom(chief, actor.Name, read.Parse.Phrase);
         }
 
         string? openTeam = teams.Count == 1 ? teams[0] : null;
-        IReadOnlyList<GroupResult> groups = await this.RunAsync(read, openTeam, roomIds, cancellationToken).ConfigureAwait(false);
-        return Render(read, searchesRooms, groups);
+        IReadOnlyList<GroupResult> groups = await this.RunAsync(read, openTeam, cancellationToken).ConfigureAwait(false);
+        StringBuilder text = RenderGroups(searchesRooms, everyRoom, groups, out bool any);
+        RoomGrepResult? rooms = null;
+        if (searchesRooms)
+        {
+            try
+            {
+                rooms = await new RoomGrep(directory, chats).SearchAsync(read.Grep, roomIds, MaxCharacters - text.Length, cancellationToken).ConfigureAwait(false);
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return TimeoutRefusal;
+            }
+
+            if (rooms.Refusal is not null)
+            {
+                return rooms.Refusal;
+            }
+        }
+
+        return Finish(text, read, any, rooms);
+    }
+
+    /// <summary>Whether the caller is the built-in Chief of Staff, who may read every Room by default.</summary>
+    private bool IsChiefOfStaff(string name) => personas.Entries.Any(entry =>
+        string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal)
+        && string.Equals(entry.Name, name, StringComparison.OrdinalIgnoreCase));
+
+    private void LogEveryRoom(bool chief, string agent, string phrase)
+    {
+        if (chief && logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation("Chief of Staff {Agent} searched every Room for '{Query}'.", agent, phrase);
+        }
+        else if (!chief && logger.IsEnabled(LogLevel.Warning))
+        {
+            // A Warning, so the usual level filters keep it: this is the record that an Agent read past its own Rooms (ADR-0066).
+            logger.LogWarning("Agent {Agent} searched every Room for '{Query}'.", agent, phrase);
+        }
     }
 
     /// <summary>Reads and validates the arguments; a wrong one is refused with a sentence rather than thrown.</summary>
@@ -125,22 +182,9 @@ internal sealed class SearchTool(
             return false;
         }
 
-        if (query is null)
+        if (!TryReadRoomArguments(arguments, out RoomArguments? room, out refusal)
+            || !TryReadQuery(query, filter, room, out SearchParse? parse, out RoomMatcher? matcher, out refusal))
         {
-            refusal = "'query' is required.";
-            return false;
-        }
-
-        SearchParse parse = SearchQueryParser.Parse(query, filter);
-        if (parse.Phrase.StartsWith('>'))
-        {
-            refusal = "A query cannot start with '>'.";
-            return false;
-        }
-
-        if (!parse.IsSearchable)
-        {
-            refusal = $"The query needs at least {SearchLimits.MinChars} characters. Only an empty query for teams or agents browses.";
             return false;
         }
 
@@ -156,8 +200,168 @@ internal sealed class SearchTool(
             return false;
         }
 
-        read = new SearchArguments(parse, string.Equals(scopeText, ScopeAll, StringComparison.OrdinalIgnoreCase), limit);
+        RoomGrepOptions grep = new(matcher, limit)
+        {
+            Context = room.Context,
+            Count = room.Count,
+            Room = room.Room,
+            Team = room.Team,
+            Sender = room.Sender,
+            Since = room.Since,
+            Until = room.Until,
+        };
+        bool? scopeAll = scopeText is null ? null : string.Equals(scopeText, ScopeAll, StringComparison.OrdinalIgnoreCase);
+        read = new SearchArguments(parse, scopeAll, limit, grep);
         refusal = string.Empty;
+        return true;
+    }
+
+    /// <summary>Reads the Room-only arguments; a wrong one is refused with a sentence.</summary>
+    private static bool TryReadRoomArguments(JsonObject arguments, [NotNullWhen(true)] out RoomArguments? room, out string refusal)
+    {
+        room = null;
+        if (!TaskToolText.TryGetBool(arguments, "regex", false, out bool regex, out refusal)
+            || !TaskToolText.TryGetBool(arguments, "count", false, out bool count, out refusal)
+            || !TaskToolText.TryGetString(arguments, "room", out string? roomText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "team", out string? team, out refusal)
+            || !TaskToolText.TryGetString(arguments, "sender", out string? sender, out refusal)
+            || !TaskToolText.TryGetString(arguments, "since", out string? sinceText, out refusal)
+            || !TaskToolText.TryGetString(arguments, "until", out string? untilText, out refusal)
+            || !TryReadContext(arguments, count, out int? context, out refusal)
+            || !TryReadTime(sinceText, "since", false, out DateTimeOffset? since, out refusal)
+            || !TryReadTime(untilText, "until", true, out DateTimeOffset? until, out refusal))
+        {
+            return false;
+        }
+
+        room = new RoomArguments(regex, context, count, Blank(roomText), Blank(team), Blank(sender), since, until);
+        return true;
+    }
+
+    private static bool TryReadContext(JsonObject arguments, bool count, out int? context, out string refusal)
+    {
+        context = null;
+        refusal = string.Empty;
+        if (arguments["context"] is null)
+        {
+            return true;
+        }
+
+        if (!TaskToolText.TryGetInt(arguments, "context", 0, out int value, out refusal))
+        {
+            return false;
+        }
+
+        if (value is < 0 or > MaxContext)
+        {
+            refusal = $"'context' must be between 0 and {MaxContext}.";
+            return false;
+        }
+
+        if (count)
+        {
+            refusal = "'count' and 'context' cannot be combined.";
+            return false;
+        }
+
+        context = value;
+        return true;
+    }
+
+    private static bool TryReadTime(string? text, string name, bool endOfDay, out DateTimeOffset? value, out string refusal)
+    {
+        value = null;
+        refusal = string.Empty;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return true;
+        }
+
+        if (!RoomGrep.TryParseTime(text.Trim(), endOfDay, out DateTimeOffset parsed))
+        {
+            refusal = $"'{name}' must be a date like 2026-10-01 or an ISO 8601 time.";
+            return false;
+        }
+
+        value = parsed;
+        return true;
+    }
+
+    private static string? Blank(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
+
+    /// <summary>
+    /// Reads the query. Without one, a <c>room</c> alone is a tail read; a Room-only argument makes the call a Rooms search; a
+    /// regular expression is used as written and a phrase goes through the prefix parser.
+    /// </summary>
+    private static bool TryReadQuery(string? query, SearchFilter filter, RoomArguments room, [NotNullWhen(true)] out SearchParse? parse, out RoomMatcher? matcher, out string refusal)
+    {
+        parse = null;
+        matcher = null;
+        refusal = string.Empty;
+        if (room.Room is not null && string.IsNullOrWhiteSpace(query))
+        {
+            parse = new SearchParse(SearchFilter.Rooms, string.Empty, true);
+            return true;
+        }
+
+        if (query is null)
+        {
+            refusal = "'query' is required.";
+            return false;
+        }
+
+        if (room.Any && filter is not (SearchFilter.All or SearchFilter.Rooms))
+        {
+            refusal = RoomOnlyRefusal;
+            return false;
+        }
+
+        if (room.IsRegex)
+        {
+            return TryReadRegex(query.Trim(), out parse, out matcher, out refusal);
+        }
+
+        parse = SearchQueryParser.Parse(query, room.Any ? SearchFilter.Rooms : filter);
+        if (room.Any && parse.Filter != SearchFilter.Rooms)
+        {
+            refusal = RoomOnlyRefusal;
+            return false;
+        }
+
+        if (parse.Phrase.StartsWith('>'))
+        {
+            refusal = "A query cannot start with '>'.";
+            return false;
+        }
+
+        if (!parse.IsSearchable)
+        {
+            refusal = $"The query needs at least {SearchLimits.MinChars} characters. Only an empty query for teams or agents browses.";
+            return false;
+        }
+
+        matcher = parse.Filter is SearchFilter.All or SearchFilter.Rooms ? RoomMatcher.ForPhrase(parse.Phrase) : null;
+        return true;
+    }
+
+    private static bool TryReadRegex(string pattern, out SearchParse? parse, out RoomMatcher? matcher, out string refusal)
+    {
+        parse = null;
+        refusal = string.Empty;
+        if (pattern.Length == 0)
+        {
+            matcher = null;
+            refusal = "The query needs at least 1 non-blank character.";
+            return false;
+        }
+
+        if (!RoomMatcher.TryForRegex(pattern, out matcher, out string error))
+        {
+            refusal = $"'query' is not a valid regular expression: {error}";
+            return false;
+        }
+
+        parse = new SearchParse(SearchFilter.Rooms, pattern, true);
         return true;
     }
 
@@ -203,14 +407,14 @@ internal sealed class SearchTool(
     }
 
     /// <summary>Runs every selected provider for both passes at once and ranks each batch.</summary>
-    private async Task<IReadOnlyList<GroupResult>> RunAsync(SearchArguments read, string? openTeam, IReadOnlySet<string>? roomIds, CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<GroupResult>> RunAsync(SearchArguments read, string? openTeam, CancellationToken cancellationToken)
     {
         List<Task<GroupResult>> runs = [];
-        foreach (ISearchProvider provider in providers.Where(provider => read.Parse.Filter == SearchFilter.All || provider.Group == read.Parse.Filter))
+        foreach (ISearchProvider provider in providers.Where(provider => provider.Group != SearchFilter.Rooms && (read.Parse.Filter == SearchFilter.All || provider.Group == read.Parse.Filter)))
         {
             foreach (SearchScope scope in new[] { SearchScope.Active, SearchScope.Archived })
             {
-                SearchQuery query = new(read.Parse.Phrase, read.Parse.Filter, openTeam, scope, read.Limit, SearchPurpose.Box, roomIds);
+                SearchQuery query = new(read.Parse.Phrase, read.Parse.Filter, openTeam, scope, read.Limit, SearchPurpose.Box, null);
                 runs.Add(this.RunProviderAsync(provider, query, cancellationToken));
             }
         }
@@ -241,18 +445,18 @@ internal sealed class SearchTool(
         }
     }
 
-    /// <summary>Renders the groups in the dropdown's fixed order, capped at <see cref="MaxCharacters"/>.</summary>
-    private static string Render(SearchArguments read, bool searchesRooms, IReadOnlyList<GroupResult> groups)
+    /// <summary>Renders the header and the provider groups in the dropdown's fixed order; the Rooms section follows.</summary>
+    private static StringBuilder RenderGroups(bool searchesRooms, bool everyRoom, IReadOnlyList<GroupResult> groups, out bool any)
     {
         StringBuilder text = new();
         if (searchesRooms)
         {
-            text.Append(read.AllRooms
+            text.Append(everyRoom
                 ? "Rooms searched: every Room."
                 : "Rooms searched: yours and your Teams' only. Pass scope \"all\" to search every Room.");
         }
 
-        bool any = false;
+        any = false;
         HashSet<string> failed = new(StringComparer.Ordinal);
         foreach (GroupResult group in groups.OrderBy(group => Order(group.Filter, group.Scope)))
         {
@@ -271,6 +475,23 @@ internal sealed class SearchTool(
                 AppendGroup(text, group);
                 any = true;
             }
+        }
+
+        return text;
+    }
+
+    /// <summary>Adds the Rooms section, or the no-results line, and caps the whole text at <see cref="MaxCharacters"/>.</summary>
+    private static string Finish(StringBuilder text, SearchArguments read, bool any, RoomGrepResult? rooms)
+    {
+        if (rooms is { Unreadable: true })
+        {
+            text.Append("\n\nCouldn't search Rooms.");
+            any = true;
+        }
+        else if (rooms is { Text.Length: > 0 })
+        {
+            text.Append("\n\n").Append(rooms.Text);
+            any = true;
         }
 
         if (!any)
@@ -316,22 +537,8 @@ internal sealed class SearchTool(
             AgentHit agent => $"{agent.Name} | {agent.PersonaTitle} | {(agent.Teams.Count == 0 ? "no team" : string.Join(", ", agent.Teams))}",
             LibraryHit library => $"{library.RootId}:{library.RelativePath}{(library.IsFolder ? " (folder)" : string.Empty)}{SnippetOf(library.Snippet)}",
             TaskHit task => $"{task.Id} | {task.Status.ToWire()} | {task.Assignee ?? "unassigned"} | {task.Team} | {task.TaskTitle}",
-            RoomHit room => RoomLine(room),
             _ => hit.Title,
         };
-    }
-
-    private static string RoomLine(RoomHit room)
-    {
-        string matches = string.Empty;
-        if (room.MatchCount > 0)
-        {
-            string noun = room.MatchCount == 1 ? "match" : "matches";
-            string when = room.Time?.ToUniversalTime().ToString("yyyy-MM-dd HH:mm 'UTC'", CultureInfo.InvariantCulture) ?? string.Empty;
-            matches = string.Create(CultureInfo.InvariantCulture, $" | {room.MatchCount} {noun} | message {room.MessageId} | {room.SenderName} | {when}");
-        }
-
-        return $"{room.RoomId} | {room.RoomName}{matches}{SnippetOf(room.Snippet)}";
     }
 
     private static string SnippetOf(string? snippet)
@@ -356,7 +563,15 @@ internal sealed class SearchTool(
         };
     }
 
-    private sealed record SearchArguments(SearchParse Parse, bool AllRooms, int Limit);
+    /// <summary>The read arguments: the parsed query, the explicit <c>scope</c> (null when absent), the limit and the Rooms search.</summary>
+    private sealed record SearchArguments(SearchParse Parse, bool? ScopeAll, int Limit, RoomGrepOptions Grep);
+
+    /// <summary>The Room-only arguments; <see cref="Any"/> says whether the caller asked for any of them.</summary>
+    private sealed record RoomArguments(bool IsRegex, int? Context, bool Count, string? Room, string? Team, string? Sender, DateTimeOffset? Since, DateTimeOffset? Until)
+    {
+        public bool Any => this.IsRegex || this.Context is not null || this.Count || this.Room is not null || this.Team is not null
+            || this.Sender is not null || this.Since is not null || this.Until is not null;
+    }
 
     private sealed record GroupResult(SearchFilter Filter, SearchScope Scope, SearchResult Result, bool Failed);
 }

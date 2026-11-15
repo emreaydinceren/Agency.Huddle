@@ -33,11 +33,12 @@ public sealed class BuiltinAgentTests
         Assert.Contains("project-", BuiltinAgent.DefaultText, StringComparison.Ordinal); // contains-ok: key term of model-facing text
     }
 
-    /// <summary>RS §6.11: the built-in Chief of Staff says plainly that another Room's own conversation is not visible to it unless reported.</summary>
+    /// <summary>RS §6.11 as amended by #534 (owner decision 2026-11-14): the built-in Chief of Staff no longer says another Room is not visible to it; it is told it can read every Room.</summary>
     [Fact]
-    public void ChiefOfStaff_SaysOtherRoomsAreNotVisible()
+    public void ChiefOfStaff_IsToldItCanReadEveryRoom()
     {
-        Assert.Contains("not visible", BuiltinAgent.DefaultText, StringComparison.Ordinal); // contains-ok: key term of model-facing text
+        Assert.DoesNotContain("not visible", BuiltinAgent.DefaultText, StringComparison.Ordinal);
+        Assert.Contains("you can read every Room", BuiltinAgent.DefaultText, StringComparison.Ordinal); // contains-ok: key term of model-facing text
     }
 
     /// <summary>#343: a thing dropped in passing is sorted by the Teams' <c>owns:</c> lines; a Team fact is proposed, a dated item becomes a Task, and what cannot be placed gets one question in one list.</summary>
@@ -146,5 +147,19 @@ public sealed class BuiltinAgentTests
         Assert.Contains("the manager records the answer with add_evidence, putting it in note, and closes the Task with close_task.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("Once you have passed the answer on to the Human, close the Task with close_task if it is still open.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("If close_task says it is already closed, the manager closed it, and that is fine.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#534: for a question about a Team's work the Chief of Staff reads the Tasks, then searches the Rooms, then asks the manager, names each fact's source, and is never told another Room is not visible to it.</summary>
+    [Fact]
+    public void ChiefOfStaff_LooksInTasksAndRoomsBeforeAskingTheManager()
+    {
+        string text = string.Join(' ', BuiltinAgent.DefaultText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.DoesNotContain("not visible to you", text, StringComparison.Ordinal);
+        Assert.Contains("1. The Team's Tasks: list_tasks for the Team, then get_task for the ones that matter.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("2. The Rooms: use search, which reads every Room's Messages. Pass regex true with several wordings at once", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("3. If the answer is still missing, or only partly there, ask the Team's manager: create a Task in that Team, assigned to the manager, that asks the question and asks them to Mention you when they answer. Tell the Human you have asked, and relay the answer when it comes.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("In your answer, name where each fact came from: a Task (its id), a Room message (the Room's name and the time), or the manager's answer.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Never tell the Human that you cannot see a Room's conversation: you can read every Room.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 }

@@ -81,9 +81,9 @@ public sealed class SkillCatalogTests
         Assert.Contains("Opening `localhost` only is a rule you follow, not something Huddle enforces in this version.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
-    /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c>.</summary>
+    /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c> and <c>read_records</c> (issue #534).</summary>
     [Fact]
-    public void All_ContainsTeamRollup_GrantingListTeamsOnly()
+    public void All_ContainsTeamRollup_GrantingListTeamsAndReadRecords()
     {
         Assert.Contains("team-rollup", SkillCatalog.All.Keys);
         IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-rollup"];
@@ -92,7 +92,7 @@ public sealed class SkillCatalogTests
 
         Assert.Equal(["SKILL.md"], files.Keys.ToList());
         Assert.Empty(validation.Issues);
-        Assert.Equal(["list_teams"], validation.Tools);
+        Assert.Equal(["list_teams", "read_records"], validation.Tools);
     }
 
     /// <summary>The catalog holds <c>retrospective</c> (Task 68): valid, one file, and its tools list is exactly <c>read_records</c>.</summary>
@@ -248,6 +248,21 @@ public sealed class SkillCatalogTests
         Assert.Contains("memory folder", teamPatterns, StringComparison.Ordinal);
         Assert.Contains("Mention you", teamPatterns, StringComparison.Ordinal);
         Assert.Contains("seed", teamPatterns, StringComparison.Ordinal);
+        Assert.DoesNotContain("Rooms you cannot otherwise see into", teamPatterns, StringComparison.Ordinal);
+        Assert.Contains("`search` reads a workstream Room's Messages when you need the detail.", string.Join(' ', teamPatterns.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)), StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#534: the <c>team-rollup</c> Skill has a section for "how is Team X doing": Tasks first, then every Room through search, then a Task to the manager, naming each fact's source.</summary>
+    [Fact]
+    public void TeamRollup_TeachesTasksThenRoomsThenTheManager()
+    {
+        string text = string.Join(' ', SkillCatalog.All["team-rollup"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("## When the Human asks how Team X is doing", text, StringComparison.Ordinal); // contains-ok: exact heading of model-facing text
+        Assert.Contains("1. **Tasks.** `list_tasks` for the Team, then `get_task` for the Tasks that matter.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("2. **Rooms.** `search` reads every Room's Messages and returns every match, not one per Room.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("3. **The manager.** If the answer is still missing, or only partly there, create a Task in that Team, assigned to its manager, that asks the question and asks them to Mention you when they answer.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Never tell the Human that you cannot see a Room's conversation: you can read every Room.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
     /// <summary>

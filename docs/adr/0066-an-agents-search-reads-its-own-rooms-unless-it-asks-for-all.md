@@ -41,3 +41,23 @@ of and every Room scoped to one of the caller's Teams. `all` covers every Room.*
 - Searching `mine` is cheaper than searching every Room, because fewer Transcripts are read.
 - If Rooms ever need a stricter rule, such as an approval for `all`, the argument already marks the call
   to gate.
+
+## Amendment, 2026-11-14
+
+By owner decision on 2026-11-14 (issue #534), **the Chief of Staff is the one Agent with no read
+limits.** The owner's words: "Chief of staff should have access to anything."
+
+- **`search`.** For the built-in Chief of Staff (the Persona marked `_builtin: chief-of-staff`), every
+  Room is in scope by default, with no `scope: "all"`. Its every-Room searches are logged at
+  Information, because they are now routine. It may still narrow itself with `scope: "mine"`. Every
+  other Agent keeps the rule above: its own Rooms and its Teams' Rooms by default, and `scope: "all"`
+  logged at Warning with the caller and the phrase.
+- **`read_records`.** The Chief of Staff passes the manager or Retro, `retrospective` Skill and
+  Room-to-Team checks for any Team, and is offered the tool through its `team-rollup` Skill. The tool
+  is unchanged for managers and the Retro agent.
+- **Rooms are searched like grep.** The same decision makes `search` read Rooms Message by Message
+  for every Agent: every matching Message rather than the newest per Room, with `regex`, `context`,
+  `count` and the `room`, `team`, `sender`, `since` and `until` filters, and a `room` with no query
+  returns that Room's latest Messages. The scope above is still applied before any Transcript is
+  read. The Human's Global Search keeps one row per Room. The arguments are in
+  [Huddle.GlobalSearch-Specifications.md](../Huddle.GlobalSearch-Specifications.md) §18.

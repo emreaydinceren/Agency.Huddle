@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
@@ -121,8 +122,9 @@ public sealed class ReadRecordsToolTests
         harness.Personas.Add(new PersonaIdentity("Sam", "Dev", "sam", [Team], Skills: skill), "You are Sam.");
         harness.Personas.Add(new PersonaIdentity("Zed", "Dev", "zed", [Team], Role: new RoleRef("web", "retro", "1.2.0")), "You are Zed.");
         harness.Personas.Add(new PersonaIdentity("Ola", "Retro", "ola", ["Design"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Ola.");
+        harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinAgent.ChiefOfStaffMarker), "You are Jarvis.");
         Scene scene = new() { Harness = harness, Chat = harness.Options.CreateChatStore() };
-        foreach (string name in new[] { "Mia", "Rae", "Sam", "Zed", "Ola" })
+        foreach (string name in new[] { "Mia", "Rae", "Sam", "Zed", "Ola", "Jarvis" })
         {
             User? user = await harness.Directory.UpsertAgentUserAsync(name, null, ct);
             scene.Ids[name] = user?.Id ?? throw new InvalidOperationException("Directory refused a user.");
@@ -487,6 +489,74 @@ public sealed class ReadRecordsToolTests
     /// <summary>A caller that is not a member of the Team is refused.</summary>
     [Fact]
     public async Task Invoke_NonMember_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool("Ola").InvokeAsync(Args(), ct);
+
+        Assert.Equal("You are not a member of Team Platform.", result);
+    }
+
+    /// <summary>The Chief of Staff, in no Team and without the retrospective Skill, reads a Team's records bundle (issue #534).</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffOutsideTheTeam_ReadsTheBundle()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool("Jarvis").InvokeAsync(Args(), ct);
+
+        Assert.Equal("Records for Platform since 2026-09-08", result.Split('\n')[0]);
+    }
+
+    /// <summary>The Chief of Staff reads a Room tail where an Agent outside the Team posted, which the Team's manager is refused.</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffRoomWithOutsider_IsReadWhileManagerIsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("b", Now.AddHours(-1), "u2", "Ola", "secret"), ct);
+
+        string chief = await scene.Tool("Jarvis").InvokeAsync(Args(room: roomId), ct);
+        string manager = await scene.Tool("Mia").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Rae: hello\n2026-10-08 11:00 Ola: secret", chief);
+        Assert.Equal($"Room {roomId} has participants outside Team Platform.", manager);
+    }
+
+    /// <summary>The Chief of Staff reads a root Room in which no member of the Team posted.</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffRootRoomWithoutTeamMember_IsRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Stranger", "hello"), ct);
+
+        string result = await scene.Tool("Jarvis").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Stranger: hello", result);
+    }
+
+    /// <summary>The Chief of Staff's wider access does not reach a Task of another Team: that is a wrong argument.</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffTaskOfAnotherTeam_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        scene.Seed("DES-0001", Now.AddDays(-1), "status: Review → Done", team: "Design");
+
+        string result = await scene.Tool("Jarvis").InvokeAsync(Args(taskId: "DES-0001"), ct);
+
+        Assert.Equal("Task DES-0001 is not in Team Platform.", result);
+    }
+
+    /// <summary>An Agent outside the Team who is not the Chief of Staff is still refused, even when she holds the Skill and a Retro role.</summary>
+    [Fact]
+    public async Task Invoke_OutsiderWithSkillAndRole_IsStillRefusedMembership()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Scene scene = await CreateSceneAsync(ct);

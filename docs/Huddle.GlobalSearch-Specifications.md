@@ -996,10 +996,20 @@ It is read-only, offered to every Persona, and not Skill-granted. The decision o
 
 | Argument | Meaning |
 | --- | --- |
-| `query` | Required. The exact phrase, ignoring case, at least 3 characters (the parser's rule). A `team:`, `lib:`, `task:` or `room:` prefix is read as a filter. Only an empty `teams` or `agents` search browses. |
+| `query` | Required, except with `room` alone. The exact phrase, ignoring case, at least 3 characters (the parser's rule). A `team:`, `lib:`, `task:` or `room:` prefix is read as a filter. Only an empty `teams` or `agents` search browses. |
 | `filter` | `all` (default), `teams`, `agents`, `library`, `tasks` or `rooms`. |
-| `scope` | `mine` (default) or `all`. Rooms only. |
-| `limit` | Hits per group: 5 under `all`, 20 under one filter, at most 50. |
+| `scope` | `mine` (default) or `all`. Rooms only. The Chief of Staff's default is `all`. |
+| `limit` | Hits per group: 5 under `all`, 20 under one filter or with any Room-only argument, at most 50. For Rooms it counts matching Messages, and the newest are kept. |
+| `regex` | Rooms only. `true` reads the query as a .NET regular expression, ignoring case, culture-invariant, with a 100 ms match timeout; it is used as written, with no prefix parsing. A timeout refuses the whole call. |
+| `context` | Rooms only. 0 to 10 Messages before and after each match, windows merged where they overlap or touch. Cannot be combined with `count`. |
+| `count` | Rooms only. `true` gives the number of matches per Room and a total, no Messages. |
+| `room` | Rooms only. One Room, by id or exact name. With no query it returns that Room's newest `limit` Messages and says how many are earlier and the `until` that reads them. |
+| `team` | Rooms only. Rooms scoped to that Team; root Rooms are left out. |
+| `sender` | Rooms only. Messages whose shown sender is that name. |
+| `since`, `until` | Rooms only. A date such as `2026-10-01` or an ISO 8601 time; a date `until` runs to the end of that day, UTC. |
+
+Giving any Room-only argument makes the call a Rooms search; with `filter` set to another category it is
+refused.
 
 How it differs from the Human's box:
 
@@ -1009,9 +1019,17 @@ How it differs from the Human's box:
 - **Room scope.** `mine` is the Rooms the caller is a Member of plus every Room whose Team is one of the
   caller's Teams. The tool computes that set first and passes it as `SearchQuery.RoomIds`, which the Rooms
   provider applies before it opens any Transcript. `null` means every Room. `scope: "all"` sends `null` and is
-  logged with the caller and the phrase. The other four providers are not scoped.
-- **Output.** Plain text in the dropdown's group order, one line per hit, with ids and no UI link: Room id,
-  match count, newest Message id, sender and time; Library `rootId:path` and snippet; Task id, status,
-  assignee and Team. It is capped at 12,000 characters, then `... truncated`.
+  logged at Warning with the caller and the phrase. The other four providers are not scoped. The built-in
+  Chief of Staff searches every Room by default, logged at Information (ADR-0066 amendment, 2026-11-14).
+- **Rooms are read like grep (issue #534).** The Agent tool does not use the Rooms provider, whose one hit per
+  Room showed only the newest match. `RoomGrep` (`src/Huddle.App/Search/RoomGrep.cs`) reads the in-scope
+  Transcripts itself and returns every matching Message, grouped by Room (newest Room first, Messages oldest
+  first within it), with the arguments above. The Human's dropdown keeps one card per Room (D-13).
+- **Output.** Plain text in the dropdown's group order, with ids and no UI link. Rooms: a `roomId | name`
+  line (`(archived)` when Archived), then per Message `message id | sender | time` and a snippet, or the
+  `context` lines (`>` marks a match); a Room that matches only by name gets `roomId | name | name matches`.
+  Library `rootId:path` and snippet; Task id, status, assignee and Team. When more Messages matched than
+  `limit` or than the output allows, a line says how many were left out and to narrow with `room`, `sender`,
+  `since` or `until`. The whole call is capped at 12,000 characters, then `... truncated`.
 - **Discovery.** The description is the prompt `tool.search.description`; `get_help` lists it with the other
   tools. The system prompt names no search tool of its own.

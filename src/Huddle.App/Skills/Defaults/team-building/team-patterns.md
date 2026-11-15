@@ -348,7 +348,8 @@ each, inviting the right specialists and seeding each Room.
   instead when it has something to report; relay that to the Human yourself
   with `post_message` if needed. If you keep a memory folder, one file per
   workstream - holding that Room's id, its status and its decisions - keeps an
-  overview across Rooms you cannot otherwise see into at once. The `seed` a
+  overview across the Rooms in one place; `search` reads a workstream Room's
+  Messages when you need the detail. The `seed` a
   workstream's Room is created with is that Room's own first Message, so read
   it back as your own working brief whenever you return to that Room.
 - **Example:**
