@@ -5,6 +5,10 @@ date: 2026-10-19
 
 # A Human-gated Task waits in Needs You for the Human's acceptance
 
+> Amended by [ADR-0087](0087-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md) (2026-11-15):
+> the Human may also lower what waits in advance, by scope (the Needs You level), and only the Human may. A Task with an
+> Action or `human_gate: true` is gated as below under every level.
+
 Agents do the work and the Human makes the calls. A Task that names an **Action** (something
 that leaves the Team or cannot easily be undone: sending, paying, signing, publishing, merging,
 deleting), or that the Human marked **Requires your acceptance**, is **Human-gated**. It cannot
