@@ -135,7 +135,10 @@ public sealed partial class ThemeFixSourceTests
         || MudBlazorPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal))
         || InterpolatedPrefixes.Any(prefix => name.StartsWith(prefix, StringComparison.Ordinal));
 
-    /// <summary>Every identifier-shaped word in every emitter source file under <c>src/Huddle.App</c>.</summary>
+    /// <summary>
+    /// Every identifier-shaped word in every emitter source file under <c>src/Huddle.App</c>: Razor, C#, script, and the
+    /// built-in diagrams in <c>Guide/</c>, whose <c>g-*</c> classes <c>guide.css</c> colours (ADR-0087).
+    /// </summary>
     private static HashSet<string> EmittedTokens()
     {
         string root = CssSource.RepoPath("src", "Huddle.App");
@@ -149,7 +152,9 @@ public sealed partial class ThemeFixSourceTests
             string extension = Path.GetExtension(path);
             bool emitter = string.Equals(extension, ".razor", StringComparison.Ordinal)
                 || string.Equals(extension, ".cs", StringComparison.Ordinal)
-                || string.Equals(extension, ".js", StringComparison.Ordinal);
+                || string.Equals(extension, ".js", StringComparison.Ordinal)
+                || (string.Equals(extension, ".svg", StringComparison.Ordinal)
+                    && relative.StartsWith("Guide" + Path.DirectorySeparatorChar, StringComparison.Ordinal));
             if (excluded || !emitter)
             {
                 continue;

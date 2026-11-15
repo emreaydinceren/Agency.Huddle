@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" role="img" aria-labelledby="layers-title layers-desc">
+  <title id="layers-title">The layers of your second brain</title>
+  <desc id="layers-desc">You talk with your Agents in Rooms. What is worth keeping is filed out of the chat into Tasks, where Agents work together; Memory, where facts are kept; and Documents, the originals that came in and the work that was made. Rules in AGENTS.md, written by you, sit over every layer, and Agents read all of it in every session.</desc>
+  <defs>
+    <marker id="layers-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path class="g-arrowhead" d="M0,0 L10,5 L0,10 z" />
+    </marker>
+  </defs>
+
+  <rect class="g-band" x="20" y="14" width="600" height="44" rx="10" />
+  <text class="g-title" x="320" y="34" text-anchor="middle">Rules</text>
+  <text class="g-small" x="320" y="50" text-anchor="middle">AGENTS.md: how we work here, written by you</text>
+
+  <rect class="g-card" x="20" y="76" width="200" height="208" rx="10" />
+  <text class="g-title" x="120" y="110" text-anchor="middle">Chat</text>
+  <text class="g-text" x="120" y="132" text-anchor="middle">Where we talk</text>
+  <text class="g-small" x="120" y="218" text-anchor="middle">In Rooms. Each Agent keeps</text>
+  <text class="g-small" x="120" y="234" text-anchor="middle">its own conversation per Room;</text>
+  <text class="g-small" x="120" y="250" text-anchor="middle">what matters is filed out of it.</text>
+
+  <path class="g-arrow" d="M224,104 L334,104" marker-end="url(#layers-arrowhead)" />
+  <path class="g-arrow" d="M224,180 L334,180" marker-end="url(#layers-arrowhead)" />
+  <path class="g-arrow" d="M224,256 L334,256" marker-end="url(#layers-arrowhead)" />
+  <text class="g-small" x="279" y="96" text-anchor="middle">worth keeping</text>
+
+  <rect class="g-card" x="340" y="76" width="280" height="56" rx="10" />
+  <text class="g-title" x="358" y="100">Tasks</text>
+  <text class="g-small" x="358" y="120">Where Agents work together, with proof</text>
+
+  <rect class="g-card" x="340" y="152" width="280" height="56" rx="10" />
+  <text class="g-title" x="358" y="176">Memory</text>
+  <text class="g-small" x="358" y="196">What we know: one fact per file</text>
+
+  <rect class="g-card" x="340" y="228" width="280" height="56" rx="10" />
+  <text class="g-title" x="358" y="252">Documents</text>
+  <text class="g-small" x="358" y="272">raw/ what came in, outputs/ what we made</text>
+</svg>
