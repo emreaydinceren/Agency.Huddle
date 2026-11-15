@@ -575,6 +575,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.ProofContextBuilder>();
         services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.IProofSource, Agency.Huddle.App.Tasks.HumanGate.ProofSource>();
 
+        // Re-evaluates a gated Task when a Proof input outside its file changes: a REVIEWED history entry, a tagged child done (#593).
+        services.AddHostedService<Agency.Huddle.App.Tasks.HumanGate.ProofInputWatcher>();
+
         // Asked by WorkDirPermissionHandler before an Agent's git merge or git push (PR-7).
         services.AddSingleton<IMergeGate, Agency.Huddle.App.Teams.ProcessMergeGate>();
         services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();

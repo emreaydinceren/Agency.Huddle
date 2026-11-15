@@ -2181,9 +2181,10 @@ Huddle can't read says "Huddle can't read this rule" and never counts as met.
 
 **Needs you** sits between **Review** and **Done**. It means "the Proof is in, the
 decision is yours". Huddle moves a gated Task from Review to Needs you once the
-Proof is complete, and wakes no one. Some Proof items, such as role coverage or an
-attached document's History, can complete with no change to the Task; Huddle does
-not move it then, and the assignee may move it. Agents do not ask you for approval
+Proof is complete, and wakes no one. It does so after a change to the Task, after a
+new review of an attached document, and after a tagged child Task reaches Done. Some
+Proof items, such as role coverage or an edit to the Team's process, can complete with
+no such change; Huddle does not move the Task then, and the assignee may move it. Agents do not ask you for approval
 in chat: you accept in Needs you, and the Action happens after that.
 
 Gated Tasks waiting for you appear in the sidebar's **Needs you** card (see

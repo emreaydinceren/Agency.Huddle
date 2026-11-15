@@ -519,6 +519,28 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
+    /// Re-evaluates one Task after a Proof input outside the Task file changed (#593): the Task moves to Needs You exactly as after a
+    /// Task write when it is gated, in Review and its Proof is now complete. It writes nothing otherwise.
+    /// </summary>
+    /// <param name="id">The Task whose Proof input changed.</param>
+    internal void MoveIfReady(TaskId id)
+    {
+        TaskChange? moved = null;
+        lock (this.mutateGate)
+        {
+            if (this.store.Get(id) is { } current)
+            {
+                moved = this.MoveReadyToNeedsYou(current, TaskActors.Huddle);
+            }
+        }
+
+        if (moved is not null)
+        {
+            this.events.RaiseTaskChanged(moved);
+        }
+    }
+
+    /// <summary>
     /// Moves a gated Task that is in Review with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
     /// <see cref="HumanGateRules.Check"/> with Huddle as the actor. An ungated Task of a Team with <c>accept-before-merge</c> is
     /// brought in too, with the merge named as its Action in the same write (#416): that Team's merge waits for an Accept, and
@@ -526,8 +548,8 @@ internal sealed class TaskService : IDisposable
     /// Human's own change, for any other ungated Task, for a Task not in Review, closed or already accepted, or whose Proof is
     /// open. The caller raises the returned change after it has left the lock, as every other mutation does.
     /// </summary>
-    /// <param name="task">The Task as just written.</param>
-    /// <param name="by">Who made the write that may have made the Task ready.</param>
+    /// <param name="task">The Task as just written (or as stored now, from <see cref="MoveIfReady"/>).</param>
+    /// <param name="by">Who made the write that may have made the Task ready; Huddle when a Proof input outside the Task file changed.</param>
     /// <returns>The change that was written, or <see langword="null"/> when the Task did not move.</returns>
     private TaskChange? MoveReadyToNeedsYou(TaskItem task, TaskActor by)
     {

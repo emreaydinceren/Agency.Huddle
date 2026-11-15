@@ -118,8 +118,9 @@ On the Task, each line shows a tick or an open circle, with who owns the open on
 {name}** posts a Message from you asking for it. A line Huddle can't read says so and never counts as met. On
 an ordinary Task the list is for information and locks nothing.
 
-Some Proof, such as role coverage or a document's History, can complete without any change to the Task. Huddle
-doesn't move the Task then, and the assignee may move it instead.
+A new review of an attached document, or a tagged child Task reaching Done, moves the Task too. Some Proof, such as
+role coverage, can complete without any change to the Task. Huddle doesn't move the Task then, and the assignee may
+move it instead.
 
 ### What each decision does
 
