@@ -1121,6 +1121,41 @@ Needs the Dev Team from ZERO-12 to ZERO-15 and its web UI; every Agent on Sonnet
 **Pass if**: the Evidence records a real browser check that failed on the planted bug, and the worktree is clean.
 **Fail if**: the QA records a pass, checks only over HTTP, installs Playwright inside the repository, or records a browser check it did not run.
 
+### ZERO-30 — The Chief of Staff finds a fact said only in a Team Room, and asks the manager for one on no record
+
+**Paid** 💰 · about 10 min
+
+Needs a Dev Team with a manager on Sonnet. The Chief of Staff is in no Team. It covers #534: the Chief of Staff looks in the Tasks, then every Room with `search`, then asks the manager, and never says a Room is not visible. On 2026-11-14 it passed in an isolated lane with a one-member Dev Team; see the Run log.
+
+1. In the **Dev Team** Team Room, send two Messages, one after the other:
+
+   ```text
+   A decision for the team: DEVT-0002 (the API) stays blocked until DEVT-0001 is Done. Wait for my go-ahead before anyone starts DEVT-0002 - I'd rather keep one Task in progress than start the API on an unreviewed base. No need to reply.
+   ```
+
+   ```text
+   One more: when DEVT-0001 is ready, wait for the review before you merge the branch tip into main. No need to reply.
+   ```
+
+2. In the Chief of Staff's one-to-one Room, send:
+
+   ```text
+   Did anyone tell the Dev Team to hold off on starting something? What exactly, and why?
+   ```
+
+3. Then send a question recorded nowhere:
+
+   ```text
+   After v1 of the Todo website, what does the Dev Team plan to do next, and does its manager think it is safe for the family to use on the home PC?
+   ```
+
+4. Read the Chief of Staff's `mcp__team__search` calls from its Adapter session file (`~\.claude\projects\<its work dir with separators as dashes>\*.jsonl`) and the `searched every Room` line in `{DataDir}\logs\huddle-*.log`.
+
+**Expect**: for step 2 the Chief of Staff reads the Dev Team's Tasks, then calls `search` with no `scope` (often with `regex` and `context`), and quotes the first, older hold with its reason and the Room and time, as well as the newer one. The log line is `INF ... Chief of Staff <name> searched every Room for '...'`. For step 3 it searches, finds nothing, creates a Task in the Dev Team assigned to the manager, tells you it asked, and relays the manager's answer naming the Task.
+
+**Pass if**: both holds are found and the DEVT-0002 one is quoted with its reason, the unrecorded question goes to the manager as a Task and the answer comes back, and no reply says a Room's conversation is not visible.
+**Fail if**: only the newer hold is found, the Chief of Staff passes `scope: "all"` because the default did not reach the Team Room, it guesses an answer to step 3, or any reply says it cannot see a Room.
+
 ## Starting over
 
 Stop the app first. This deletes the whole test, and only the test.
