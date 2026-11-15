@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" role="img" aria-labelledby="layers-title layers-desc">
   <title id="layers-title">The layers of your second brain</title>
-  <desc id="layers-desc">You talk with your Agents in Rooms. What is worth keeping is filed out of the chat into Tasks, where Agents work together; Memory, where facts are kept; and Documents, the originals that came in and the work that was made. Rules in AGENTS.md, written by you, sit over every layer, and Agents read all of it in every session.</desc>
+  <desc id="layers-desc">You talk with your Agents in Rooms. What is worth keeping is filed out of the chat into Tasks, where Agents work together; Memory, one topic per file; and Documents, the originals that came in and the work that was made. Rules in AGENTS.md, written by you, sit over every layer. Agents read the rules in full every session, and short indexes of Memory and outputs, opening a file only when its index line says it matters.</desc>
   <defs>
     <marker id="layers-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path class="g-arrowhead" d="M0,0 L10,5 L0,10 z" />
@@ -29,7 +29,7 @@
 
   <rect class="g-card" x="340" y="152" width="280" height="56" rx="10" />
   <text class="g-title" x="358" y="176">Memory</text>
-  <text class="g-small" x="358" y="196">What we know: one fact per file</text>
+  <text class="g-small" x="358" y="196">What we know: one topic per file</text>
 
   <rect class="g-card" x="340" y="228" width="280" height="56" rx="10" />
   <text class="g-title" x="358" y="252">Documents</text>
