@@ -1,3 +1,5 @@
+using Agency.Huddle.App.Tasks.HumanGate;
+
 namespace Agency.Huddle.App.Tasks.Views;
 
 /// <summary>Pure querying over Tasks: filtering, sorting and grouping, for Spec §12.5.</summary>
@@ -20,13 +22,30 @@ internal static class TaskQuery
         .ToDictionary(pair => pair.state, pair => pair.index);
 
     /// <summary>
-    /// Whether <paramref name="task"/> is waiting on the Human: it is open (not Done, Cancelled, Duplicate or Rejected)
-    /// and assigned to them, matched ignoring case. The Tasks page's "need you" count and the Top bar's pill both use it.
+    /// Whether <paramref name="task"/> is assigned to the Human and open (not Done, Cancelled, Duplicate or Rejected),
+    /// matched ignoring case. The Feed's <c>TaskAssignedToYou</c> rule uses it; the Tasks page's "need you" count and
+    /// the Top bar's pill count with <see cref="NeedsHuman"/>.
     /// </summary>
     /// <param name="task">The Task.</param>
     /// <param name="humanName">The Human's current Name.</param>
     public static bool NeedsYou(TaskItem task, string humanName) =>
         !task.Status.IsTerminal() && string.Equals(task.Assignee, humanName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when the Task is gated, in Needs You and not validly accepted: it still waits on the Human's decision.</summary>
+    /// <param name="task">The Task.</param>
+    public static bool WaitsOnHuman(TaskItem task) =>
+        task.IsGated
+        && task.Status == TaskState.NeedsYou
+        && Acceptance.Of(task).State != AcceptanceState.Valid;
+
+    /// <summary>
+    /// Whether <paramref name="task"/> needs the Human: it is assigned to them and open (<see cref="NeedsYou"/>), or it
+    /// waits on their gate decision (<see cref="WaitsOnHuman"/>). The Tasks page's "need you" count and the Top bar's pill use it.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <param name="humanName">The Human's current Name.</param>
+    public static bool NeedsHuman(TaskItem task, string humanName) =>
+        NeedsYou(task, humanName) || WaitsOnHuman(task);
 
     /// <summary>
     /// Returns the Tasks in <paramref name="scope"/> that match every dimension of <paramref name="filter"/>

@@ -28,6 +28,7 @@ public sealed partial class ToolOfferOrderTests
         "mcp__team__close_task",
         "mcp__team__reopen_task",
         "mcp__team__add_evidence",
+        "mcp__team__add_comment",
         "mcp__team__jobs",
     ];
 

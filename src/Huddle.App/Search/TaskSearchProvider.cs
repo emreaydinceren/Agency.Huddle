@@ -22,7 +22,7 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
     public bool IsExpensive => false;
 
     /// <summary>
-    /// Matches each Task by its title, then its id, and then, as a ContentMatch, by its assignee's Name, its Action or its description.
+    /// Matches each Task by its title, then its id, and then, as a ContentMatch, by its assignee's Name, its Action, its description or a comment or Evidence entry on its timeline.
     /// An exact id gets no special jump behaviour (D-14). A Reference browse with an empty phrase is the Active
     /// Tasks in <see cref="TaskQuery.Suggest"/> order, eight at most.
     /// </summary>
@@ -78,18 +78,46 @@ internal sealed class TaskSearchProvider(TaskStore store, PersonaStore personas,
     }
 
     /// <summary>
-    /// Whether the phrase is in the Task's assignee Name, its Action line, or the first <see cref="BodyScanLimit"/>
-    /// characters of its description. The bound keeps one huge description from costing every keystroke.
+    /// Whether the phrase is in the Task's assignee Name, its Action line, or its description followed by its comments and
+    /// Evidence entries (the timeline, not the events). Together those are scanned for at most <see cref="BodyScanLimit"/>
+    /// characters, so one huge Task cannot cost every keystroke.
     /// </summary>
     /// <param name="task">The Task.</param>
     /// <param name="phrase">The phrase, with any prefix removed.</param>
     /// <returns>True when a field holds the phrase, ignoring case.</returns>
     private static bool IsContentMatch(TaskItem task, string phrase)
     {
-        string description = task.Description.Length > BodyScanLimit ? task.Description[..BodyScanLimit] : task.Description;
-        return task.Assignee?.Contains(phrase, StringComparison.OrdinalIgnoreCase) == true
-            || task.Action?.Contains(phrase, StringComparison.OrdinalIgnoreCase) == true
-            || description.Contains(phrase, StringComparison.OrdinalIgnoreCase);
+        if (task.Assignee?.Contains(phrase, StringComparison.OrdinalIgnoreCase) == true
+            || task.Action?.Contains(phrase, StringComparison.OrdinalIgnoreCase) == true)
+        {
+            return true;
+        }
+
+        int remaining = BodyScanLimit;
+        string description = task.Description.Length > remaining ? task.Description[..remaining] : task.Description;
+        if (description.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        remaining -= description.Length;
+        foreach (TimelineEntry entry in task.Comments)
+        {
+            if (remaining <= 0)
+            {
+                break;
+            }
+
+            string text = entry.Text.Length > remaining ? entry.Text[..remaining] : entry.Text;
+            if (text.Contains(phrase, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            remaining -= text.Length;
+        }
+
+        return false;
     }
 
     /// <summary>Maps one Task to its hit, with the assignee's Persona title when one is found.</summary>

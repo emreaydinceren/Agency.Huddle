@@ -121,6 +121,23 @@ public sealed class ToolCallLogWriterTests
         Assert.Equal(new string('x', 199) + "…", arguments);
     }
 
+    /// <summary>A result longer than 200 characters is cut to 200 and ends with an ellipsis, like arguments.</summary>
+    [Fact]
+    public void Append_LongResult_IsTruncatedWithEllipsis()
+    {
+        using TempDataDir dir = new();
+        ToolCallLogWriter writer = new(dir.Options());
+
+        ToolCallLogRef reference = writer.Append("Maya", Entry(Noon) with { Result = new string('r', 500) });
+
+        string line = File.ReadAllLines(Path.Combine(dir.Path, "logs", "tool-calls", "Maya", "2026-10-08.jsonl"))[reference.Line - 1];
+        using JsonDocument json = JsonDocument.Parse(line);
+        Assert.Equal(new string('r', 199) + "…", json.RootElement.GetProperty("result").GetString());
+        Assert.Equal(
+            ["time", "room", "task", "tool", "arguments", "status", "durationMs", "result"],
+            json.RootElement.EnumerateObject().Select(static property => property.Name));
+    }
+
     /// <summary>Two writer instances over one data folder number their lines from the file, never from a stale cache.</summary>
     [Fact]
     public void Append_TwoWriterInstancesOverOneFile_NumbersLinesFromTheFile()

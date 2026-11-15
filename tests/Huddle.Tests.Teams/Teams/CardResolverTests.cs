@@ -122,6 +122,19 @@ public sealed class CardResolverTests
         Assert.Empty(state.SkillSetup);
     }
 
+    /// <summary><see cref="CardResolver.SkillSetupOf"/> gives the same items a resolved card carries, so the Candidate check and a hire card agree.</summary>
+    [Fact]
+    public void SkillSetupOf_RoleSkillMissing_MatchesResolvedCard()
+    {
+        FakeSkillAvailability skills = new FakeSkillAvailability().WithSkill("tdd", SkillAvailability.Unknown);
+        RoleSpec role = CardResolverTests.Role(skills: [new SkillRef("tdd", "builtin", null)]);
+
+        IReadOnlyList<SkillSetupItem> setup = CardResolver.SkillSetupOf(role, skills);
+
+        Assert.Equal(CardResolverTests.Resolve(role, skills: skills).SkillSetup, setup);
+        Assert.Single(setup);
+    }
+
     /// <summary>A known Pack whose Skills are not downloaded makes the card Needs setup, with one Pack item and the reason
     /// naming the Pack's title (Skill Packs spec §6.10.2).</summary>
     [Fact]

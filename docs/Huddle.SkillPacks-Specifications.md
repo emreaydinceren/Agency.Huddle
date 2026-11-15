@@ -2807,7 +2807,7 @@ checks decide, and `S010` is a warning.
 
 | Caller | Before | After |
 | --- | --- | --- |
-| `HireService.StartTeamAsync` (line 142) | `await installer.EnsureInstalledAsync(skills, ct)`; *"Skills not installed: x."* | `await copier.EnsureAvailableAsync(names, ct)`; on problems, `Stop($"Skills not ready: {names}.", [])` with the first reason appended. `CardResolver` normally blocks this earlier; the call covers a clone removed meanwhile |
+| `HireService.StartTeamAsync` (line 142) | `await installer.EnsureInstalledAsync(skills, ct)`; *"Skills not installed: x."* | Removed (#562): it had no production caller. **Approve & hire** copies the Skills through `EnsureSkillsAsync` (next row) before it writes anything |
 | `HireService.InstallSkillsAsync(IReadOnlyList<SkillRef>, ct)` (line 373) | Delegates to the installer | Renamed `EnsureSkillsAsync(IReadOnlyList<SkillRef>, ct)`; maps names, delegates to `copier.EnsureAvailableAsync`. `BuildTeam` is its caller |
 | `PrepareHiresAsync` | Imports, sets `skillsBlocked` | Below |
 
@@ -2965,8 +2965,8 @@ too many Skills, sub-category, withdrawn, deprecated.
 | `CardResolverTests` (updated) | A known Pack with `NotDownloaded` makes the card `NeedsSetup` with *Pack "MSBuild Authoring" not downloaded* in `Reasons` and a `SkillSetupItem` |
 | `CardResolverTests` | A role Skill with `Unknown`, `Broken`, `Withdrawn`, `NotDownloaded` each gives the matching item and reason; `Present` and `Copyable` give none; A Pack id no row provides is skipped without setup; a stock install still resolves the built-in developer's card with its Pack skipped, and its pooled Skills (not built in, so not on a fresh computer) make it Needs setup until fetched, while with those Skills present it is Ready; `SkillRef.Source` and `Path` are ignored: two refs with different Source and Path and the same name resolve the same |
 | `SkillSetupCheckTests` | One Pack with two missing Skills gives one Pack item, not three |
-| `HireServiceStartTests` (updated) | `StartTeamAsync` stops with *Skills not ready* when `ISkillCopier` reports a problem and writes no Agent |
-| `HireServiceStartTests` | A `Copyable` Skill is copied before the manager is hired |
+| `BuildTeamTests` (moved from `HireServiceStartTests`, #562) | **Approve & hire** stops with *Skills not ready* when `ISkillCopier` reports a problem and creates no Team and writes no Agent (`Approve_SkillNotReady_BlocksBeforeAnythingIsWritten`) |
+| `BuildTeamTests` (moved from `HireServiceStartTests`, #562) | The Skills are copied once, by distinct name, before the Team or any Agent is written (`Approve_TwoDraftsSharingASkill_CopiesItOnceBeforeAnythingIsWritten`) |
 | `SkillCopierEnsureTests` | A built-in name is skipped; a `Present` name is not recopied; a `Copyable` name is copied once; `NotDownloaded`, `Broken`, `Withdrawn` and `Unknown` come back as problems and write nothing |
 | `AgentProfileCardPackTests` | `Available` and `InUse` Packs render toggle chips; `NotDownloaded` renders the not-downloaded line with **Copy prompt** and no chip; `UpdateAvailable` shows the icon and opens `UpdateDialog`; `Withdrawn` held shows the red chip, the warning and **Remove from this Agent**; `Withdrawn` not held is not offered; **Find more Packs for {Role}** opens `AddWithAiDialog` on `find` with the role |
 | `AgentProfileCardSaveTests` | **Save** copies a `Copyable` Skill before `PersonaStore.Update`; a copy failure shows the message and writes no file; **Cancel** copies nothing; `SaveDraftAsync` copies nothing |

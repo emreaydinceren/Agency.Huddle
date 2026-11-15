@@ -101,6 +101,7 @@ public sealed class TeamsPhase4EndToEndTests
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
         await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
+        await ReviewAsync(run, teams.Api, service, request.Id, ct);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
         AcceptNamedMerge(service, store, request.Id, HumanActor(run));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
@@ -116,6 +117,9 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.True(closed.Location.Closed);
         Assert.Equal(webQa.Name, FieldsOf(closed).ConfirmedBy);
         Assert.Equal(1, run.Wakes(apiManager.Name, "Request event: Confirm"));
+        // #539: the hired QA holds the Skill that grants confirm_request, and not the manager's team-management.
+        Assert.Contains("request-confirmation", SkillsOf(run, webQa.Name));
+        Assert.DoesNotContain("team-management", SkillsOf(run, webQa.Name));
     }
 
     /// <summary>
@@ -152,6 +156,7 @@ public sealed class TeamsPhase4EndToEndTests
 
         Assert.Equal($"A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee, {apiDeveloper.Name}, to move it to Done.", early);
 
+        await ReviewAsync(run, teams.Api, service, request.Id, ct);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
         AcceptNamedMerge(service, store, request.Id, HumanActor(run));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
@@ -170,7 +175,8 @@ public sealed class TeamsPhase4EndToEndTests
     }
 
     /// <summary>
-    /// #350 item 6, with an Action: file, triage, work, Review with Evidence carrying an exit code, Huddle moves the Request to
+    /// #350 item 6, with an Action: file, triage, work, Review with Evidence carrying an exit code. QA's Evidence alone leaves the
+    /// Request in Review, because the Definition of Done's Review item is open (#537); with the reviewer's Evidence Huddle moves it to
     /// Needs You, the Human Accepts, the assignee moves it to Done, the Team's QA confirms and it is closed. The Human's only
     /// move on the Request is Accept.
     /// </summary>
@@ -200,6 +206,10 @@ public sealed class TeamsPhase4EndToEndTests
 
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
 
+        Assert.Equal(TaskState.Review, Current(store, request.Id).Status);
+
+        await ReviewAsync(run, teams.Api, service, request.Id, ct);
+
         Assert.Equal(TaskState.NeedsYou, Current(store, request.Id).Status);
         TaskItem waiting = Current(store, request.Id);
         _ = Saved(service.Decide(request.Id, Agency.Huddle.App.Tasks.HumanGate.TaskDecision.Accept, null, waiting.Version, human));
@@ -211,6 +221,19 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.True(closed.Location.Closed);
         ChangeLogEntry humanMove = Assert.Single(closed.ChangeLog, entry => string.Equals(entry.Actor, human.Name, StringComparison.Ordinal));
         Assert.StartsWith("accepted ", humanMove.Summary, StringComparison.Ordinal); // contains-ok: the rest of the entry is a content fingerprint of the Request text
+    }
+
+    /// <summary>The Team's reviewer posts a passing check run, which the development Definition of Done's Review item needs (#537).</summary>
+    /// <param name="run">The running host.</param>
+    /// <param name="team">The Team that holds the Request.</param>
+    /// <param name="service">Adds the Evidence.</param>
+    /// <param name="id">The Request.</param>
+    /// <param name="ct">The test's cancellation token.</param>
+    /// <returns>A task that completes when the Evidence is saved.</returns>
+    private static async Task ReviewAsync(Run run, TeamCast team, TaskService service, TaskId id, CancellationToken ct)
+    {
+        TaskActor reviewer = await team.ActorAsync(run, ReviewerRole, ct);
+        _ = Saved(service.AddEvidence(id, new EvidenceLine(DateTimeOffset.UtcNow, reviewer.Name, CheckCommand, 0, null, null, "Approved."), reviewer));
     }
 
     /// <summary>The Human's Accept on a Request Huddle brought to Needs You with the merge named (#416), checking that it did.</summary>
@@ -251,6 +274,7 @@ public sealed class TeamsPhase4EndToEndTests
         _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
+        await ReviewAsync(run, api, service, request.Id, ct);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
         AcceptNamedMerge(service, store, request.Id, HumanActor(run));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Done }, null, apiQa));
@@ -259,6 +283,8 @@ public sealed class TeamsPhase4EndToEndTests
 
         Assert.Equal($"Confirmed {request.Id}; it is closed.", confirmed);
         Assert.True(Current(store, request.Id).Location.Closed);
+        // #539: a manager whose role covers verify is hired with the Skill that grants confirm_request.
+        Assert.Contains("request-confirmation", SkillsOf(run, bea.Name));
     }
 
     /// <summary>Flow 2 (RQ-3): declining a Request with a reason moves it to Rejected and wakes the requesting manager and the Chief of Staff.</summary>
@@ -578,7 +604,7 @@ public sealed class TeamsPhase4EndToEndTests
         return new Teams(web, api);
     }
 
-    /// <summary>Creates a Development Team with the Small preset plus extra roles, hires the manager the way Team setup does, and starts everyone.</summary>
+    /// <summary>Creates a Development Team with the Small preset plus extra roles, gives it its default process, hires the manager and then the other members the way Build a team does, and onboards the manager.</summary>
     /// <param name="run">The running host.</param>
     /// <param name="teamName">The Team's name.</param>
     /// <param name="workspace">The repository folder.</param>
@@ -597,6 +623,7 @@ public sealed class TeamsPhase4EndToEndTests
         PersonaStore personas = services.GetRequiredService<PersonaStore>();
         TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(teamName, file).Outcome);
+        _ = hiring.ProvisionProcess(teamName, null);
 
         List<string> used = [.. personas.ListNames()];
         List<CardState> cards = [];
@@ -614,8 +641,13 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Null(hired.Error);
         _ = folders.UpdateTeamFile(teamName, current => current with { Manager = manager.Name });
 
-        StartTeamResult started = await hiring.StartTeamAsync(teamName, [.. cards.Select(card => new HireRequest(teamName, type.Id, card.RoleId, card))], ct);
-        Assert.True(started.Ok, started.Error);
+        foreach (CardState card in cards.Where(card => !ReferenceEquals(card, manager)))
+        {
+            HireResult hiredMember = hiring.Hire(new HireRequest(teamName, type.Id, card.RoleId, card));
+            Assert.Null(hiredMember.Error);
+        }
+
+        _ = await hiring.OnboardManagerAsync(teamName, manager.Name, ct);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
         await Eventually.UntilAsync(() => catalog.Find(teamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));

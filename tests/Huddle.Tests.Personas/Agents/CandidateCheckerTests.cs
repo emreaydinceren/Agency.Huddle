@@ -5,6 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -412,10 +413,95 @@ public sealed partial class CandidateCheckerTests
         Assert.Equal(["Vera has a role but no Team; name the Team the role joins."], result.Problems);
     }
 
-    /// <summary>Builds the checker under test wired to the fake team type catalog and a Team list.</summary>
-    private static CandidateChecker RoleChecker(Fixture fixture, TempDataDir typesDir, IReadOnlyList<TeamSummary> teams)
+    /// <summary>A role whose Skill is in no catalog is refused with the Skill named and the ready roles listed.</summary>
+    [Fact]
+    public async Task Check_RoleSkillUnknown_FlaggedNamingSkillAndReadyRoles()
     {
-        return new CandidateChecker(fixture.Personas, fixture.Directory, fixture.Gateway, RoleFixtures.Types(typesDir), new FakeTeamCatalog { Teams = teams });
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        FakeSkillAvailability skills = RoleFixtures.Packs(typesDir).WithSkill("test-driven-development", SkillAvailability.Unknown);
+        CandidateChecker checker = RoleChecker(fixture, typesDir, [], skills);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/dev" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(
+            ["Vera's role 'web/dev' cannot be hired yet: Skill \"test-driven-development\" is not in any catalog. Roles of team type 'web' ready to hire: lead. Propose one of those, leave 'role' out, or ask the Human to set it up first."],
+            result.Problems);
+    }
+
+    /// <summary>A role whose Pack is not downloaded is refused with the Pack named.</summary>
+    [Fact]
+    public async Task Check_RolePackNotDownloaded_FlaggedNamingPack()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        FakeSkillAvailability skills = RoleFixtures.Packs(typesDir).WithPackProblem("msbuild-authoring", SkillAvailability.NotDownloaded, "MSBuild");
+        CandidateChecker checker = RoleChecker(fixture, typesDir, [], skills);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/dev" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(
+            ["Vera's role 'web/dev' cannot be hired yet: Pack \"MSBuild\" not downloaded. Roles of team type 'web' ready to hire: lead. Propose one of those, leave 'role' out, or ask the Human to set it up first."],
+            result.Problems);
+    }
+
+    /// <summary>When every role of the type needs a missing Skill, the refusal says no other role is ready.</summary>
+    [Fact]
+    public async Task Check_NoOtherRoleReady_FlaggedWithNoReadyRoleWording()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        string manifest = Factories.TeamTypeJson.Manifest("solo", "Solo", order: 1, version: "1.0.0", rolesJson: """
+            [
+                { "id": "lead", "title": "Lead", "candidate": "candidates/lead.md", "manager": true, "required": true,
+                  "skills": [{ "name": "planning", "source": "builtin" }] },
+                { "id": "dev", "title": "Developer", "candidate": "candidates/dev.md",
+                  "skills": [{ "name": "planning", "source": "builtin" }] }
+            ]
+            """);
+        Dictionary<string, string> builtins = new(StringComparer.Ordinal)
+        {
+            ["solo/team-type.json"] = manifest,
+            ["solo/candidates/lead.md"] = "---\ntitle: Lead\nconsult_when: planning\n---\nYou lead.",
+            ["solo/candidates/dev.md"] = "---\ntitle: Developer\nconsult_when: code changes\n---\nYou build things.",
+            ["solo/processes/flow.md"] = "# Flow",
+        };
+        TeamTypeCatalog catalog = new(typesDir.Options(), NullLogger<TeamTypeCatalog>.Instance, builtins);
+        FakeSkillAvailability skills = new() { Default = SkillAvailability.Unknown };
+        CandidateChecker checker = new(fixture.Personas, fixture.Directory, fixture.Gateway, catalog, new FakeTeamCatalog { Teams = [] }, null, skills);
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "solo/dev" }], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(
+            ["Vera's role 'solo/dev' cannot be hired yet: Skill \"planning\" is not in any catalog. No other role of team type 'solo' is ready to hire; leave 'role' out, or ask the Human to set it up first."],
+            result.Problems);
+    }
+
+    /// <summary>A role whose Skills and Packs are all ready is accepted.</summary>
+    [Fact]
+    public async Task Check_RoleSkillsAllPresent_Valid()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        using TempDataDir typesDir = new();
+        CandidateChecker checker = RoleChecker(fixture, typesDir, [], RoleFixtures.Packs(typesDir));
+
+        CandidateCheck result = await checker.CheckAsync([MakeCandidate(teams: [RoleFixtures.TeamName]) with { Role = "web/dev" }], ct);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Problems);
+    }
+
+    /// <summary>Builds the checker under test wired to the fake team type catalog and a Team list.</summary>
+    private static CandidateChecker RoleChecker(Fixture fixture, TempDataDir typesDir, IReadOnlyList<TeamSummary> teams, FakeSkillAvailability? skills = null)
+    {
+        return new CandidateChecker(fixture.Personas, fixture.Directory, fixture.Gateway, RoleFixtures.Types(typesDir), new FakeTeamCatalog { Teams = teams }, null, skills);
     }
 
     /// <summary>

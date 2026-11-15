@@ -30,7 +30,7 @@ public sealed class SkillCatalogTests
         Assert.Equal(expectedFiles, teamBuilding.Keys.ToHashSet(StringComparer.Ordinal));
     }
 
-    /// <summary>The catalog holds <c>team-management</c> (Tasks 62, 68): valid, and it lists the four Request tools and <c>propose_sprint</c>.</summary>
+    /// <summary>The catalog holds <c>team-management</c> (Tasks 62, 68): valid, and it lists the manager's three Request tools and <c>propose_sprint</c>, but not <c>confirm_request</c>, which only <c>request-confirmation</c> grants (#539).</summary>
     [Fact]
     public void All_ContainsTeamManagement_GrantingRequestToolsAndProposeSprint()
     {
@@ -40,7 +40,33 @@ public sealed class SkillCatalogTests
 
         Assert.Equal(["SKILL.md"], files.Keys.ToList());
         Assert.Empty(validation.Issues);
-        Assert.Equal(["list_teams", "file_request", "triage_request", "confirm_request", "propose_sprint"], validation.Tools);
+        Assert.Equal(["list_teams", "file_request", "triage_request", "propose_sprint"], validation.Tools);
+        Assert.DoesNotContain("confirm_request", files["SKILL.md"], StringComparison.Ordinal);
+    }
+
+    /// <summary>#539: the catalog holds <c>request-confirmation</c>: valid, one file, and its tools list is exactly <c>confirm_request</c>.</summary>
+    [Fact]
+    public void All_ContainsRequestConfirmation_GrantingOnlyConfirmRequest()
+    {
+        Assert.Contains("request-confirmation", SkillCatalog.All.Keys);
+        IReadOnlyDictionary<string, string> files = SkillCatalog.All["request-confirmation"];
+
+        SkillValidation validation = SkillValidator.Validate("request-confirmation", files);
+
+        Assert.Equal(["SKILL.md"], files.Keys.ToList());
+        Assert.Empty(validation.Issues);
+        Assert.Equal(["confirm_request"], validation.Tools);
+    }
+
+    /// <summary>#539: the <c>request-confirmation</c> Skill tells a verifier to check the delivery itself before confirming, to leave a note, and not to confirm a Request that was not delivered as asked.</summary>
+    [Fact]
+    public void RequestConfirmation_TeachesCheckingBeforeConfirming()
+    {
+        string text = string.Join(' ', SkillCatalog.All["request-confirmation"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("Check the delivery yourself, the way you verify your own Team's work. Do not confirm from the other Team's Evidence alone.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("call `confirm_request` with the `taskId` and a `note` that says what you checked.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If it was not, do not confirm it. Tell your manager what is missing, so they can take it up with the other Team.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
     /// <summary>#535: the <c>team-management</c> Skill tells a manager to answer a question Task with add_evidence and close it with close_task, and that an already-closed Task is fine.</summary>
@@ -81,9 +107,9 @@ public sealed class SkillCatalogTests
         Assert.Contains("Opening `localhost` only is a rule you follow, not something Huddle enforces in this version.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
-    /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c>.</summary>
+    /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c> and <c>read_records</c> (issue #534).</summary>
     [Fact]
-    public void All_ContainsTeamRollup_GrantingListTeamsOnly()
+    public void All_ContainsTeamRollup_GrantingListTeamsAndReadRecords()
     {
         Assert.Contains("team-rollup", SkillCatalog.All.Keys);
         IReadOnlyDictionary<string, string> files = SkillCatalog.All["team-rollup"];
@@ -92,7 +118,7 @@ public sealed class SkillCatalogTests
 
         Assert.Equal(["SKILL.md"], files.Keys.ToList());
         Assert.Empty(validation.Issues);
-        Assert.Equal(["list_teams"], validation.Tools);
+        Assert.Equal(["list_teams", "read_records"], validation.Tools);
     }
 
     /// <summary>The catalog holds <c>retrospective</c> (Task 68): valid, one file, and its tools list is exactly <c>read_records</c>.</summary>
@@ -108,12 +134,13 @@ public sealed class SkillCatalogTests
         Assert.Equal(["read_records", "propose_retro_changes", "mark_retro_row"], validation.Tools);
     }
 
-    /// <summary>The catalog lists both team skills by name next to <c>team-building</c> (Task 68).</summary>
+    /// <summary>The catalog lists the team skills by name next to <c>team-building</c> (Task 68), <c>request-confirmation</c> among them (#539).</summary>
     [Fact]
     public void All_ListsTeamBuildingTeamManagementAndRetrospective()
     {
         Assert.Contains("team-building", SkillCatalog.All.Keys);
         Assert.Contains("team-management", SkillCatalog.All.Keys);
+        Assert.Contains("request-confirmation", SkillCatalog.All.Keys);
         Assert.Contains("retrospective", SkillCatalog.All.Keys);
     }
 
@@ -248,6 +275,21 @@ public sealed class SkillCatalogTests
         Assert.Contains("memory folder", teamPatterns, StringComparison.Ordinal);
         Assert.Contains("Mention you", teamPatterns, StringComparison.Ordinal);
         Assert.Contains("seed", teamPatterns, StringComparison.Ordinal);
+        Assert.DoesNotContain("Rooms you cannot otherwise see into", teamPatterns, StringComparison.Ordinal);
+        Assert.Contains("`search` reads a workstream Room's Messages when you need the detail.", string.Join(' ', teamPatterns.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)), StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>#534: the <c>team-rollup</c> Skill has a section for "how is Team X doing": Tasks first, then every Room through search, then a Task to the manager, naming each fact's source.</summary>
+    [Fact]
+    public void TeamRollup_TeachesTasksThenRoomsThenTheManager()
+    {
+        string text = string.Join(' ', SkillCatalog.All["team-rollup"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("## When the Human asks how Team X is doing", text, StringComparison.Ordinal); // contains-ok: exact heading of model-facing text
+        Assert.Contains("1. **Tasks.** `list_tasks` for the Team, then `get_task` for the Tasks that matter.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("2. **Rooms.** `search` reads every Room's Messages and returns every match, not one per Room.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("3. **The manager.** If the answer is still missing, or only partly there, create a Task in that Team, assigned to its manager, that asks the question and asks them to Mention you when they answer.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Never tell the Human that you cannot see a Room's conversation: you can read every Room.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
     /// <summary>
@@ -264,6 +306,16 @@ public sealed class SkillCatalogTests
         Assert.Contains("role:", skill, StringComparison.Ordinal);
         // contains-ok: shipped Skill prose, not markup
         Assert.Contains("development/", skill, StringComparison.Ordinal);
+    }
+
+    /// <summary>The shipped <c>team-building</c> Skill tells the Agent what to do when <c>propose_agents</c> refuses a role whose Skill or Pack is not ready (#563).</summary>
+    [Fact]
+    public void TeamBuilding_TeachesWhatToDoWhenARoleCannotBeHiredYet()
+    {
+        string skill = SkillCatalog.All["team-building"]["SKILL.md"];
+
+        Assert.Contains("A role cannot be hired yet because a Skill or Pack it needs is not ready", skill, StringComparison.Ordinal); // contains-ok: exact row of model-facing text
+        Assert.Contains("A role whose Skills or Packs are not ready is refused", skill, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
     /// <summary>

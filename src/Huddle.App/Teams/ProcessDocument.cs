@@ -206,7 +206,7 @@ internal sealed record ProcessDocument(
         return joined.Length == 0 ? null : joined;
     }
 
-    /// <summary>The four gates a Team's _team.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
+    /// <summary>The six gates a Team's _team.md may declare; <see cref="GateId.HumanGate"/> and <see cref="GateId.ProofIncomplete"/> are refusal ids only.</summary>
     private static readonly GateId[] ProcessGates =
     [
         GateId.QaEvidenceBeforeDone,
@@ -214,6 +214,7 @@ internal sealed record ProcessDocument(
         GateId.SpecApprovedBeforeBuild,
         GateId.FailingTestBeforeFix,
         GateId.AcceptBeforeMerge,
+        GateId.BlockersDoneBeforeStart,
     ];
 
     /// <summary>Returns the frontmatter id of a gate.</summary>
@@ -226,6 +227,7 @@ internal sealed record ProcessDocument(
         GateId.SpecApprovedBeforeBuild => "spec-approved-before-build",
         GateId.FailingTestBeforeFix => "failing-test-before-fix",
         GateId.AcceptBeforeMerge => "accept-before-merge",
+        GateId.BlockersDoneBeforeStart => "blockers-done-before-start",
         GateId.HumanGate => "human-gate",
         GateId.ProofIncomplete => "proof-incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
@@ -243,6 +245,7 @@ internal sealed record ProcessDocument(
         GateId.SpecApprovedBeforeBuild => "Spec approved before build",
         GateId.FailingTestBeforeFix => "Failing test before fix",
         GateId.AcceptBeforeMerge => "Accept before merge",
+        GateId.BlockersDoneBeforeStart => "Blockers done before start",
         GateId.HumanGate => "Human gate",
         GateId.ProofIncomplete => "Proof incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
@@ -252,7 +255,7 @@ internal sealed record ProcessDocument(
     /// <summary>Parses a frontmatter gate id.</summary>
     /// <param name="id">The id, compared ordinally.</param>
     /// <param name="gate">The gate when the id is known.</param>
-    /// <returns><see langword="true"/> when <paramref name="id"/> names one of the four gates.</returns>
+    /// <returns><see langword="true"/> when <paramref name="id"/> names one of the six gates a Team may declare.</returns>
     public static bool TryParseGate(string id, out GateId gate)
     {
         foreach (GateId candidate in ProcessGates)

@@ -1,7 +1,7 @@
 ---
 name: team-management
-description: Use when you manage a Team and need to see the other Teams, file or triage a Request between Teams, confirm a finished Request, propose a Sprint to the Human, or answer a Task that asks you a question.
-tools: [list_teams, file_request, triage_request, confirm_request, propose_sprint]
+description: Use when you manage a Team and need to see the other Teams, file or triage a Request between Teams, propose a Sprint to the Human, or answer a Task that asks you a question.
+tools: [list_teams, file_request, triage_request, propose_sprint]
 ---
 
 # Team management
@@ -40,8 +40,9 @@ manager to do it.
 - `triage_request` is for the receiving manager. Use `accept`, `decline` or
   `needs_info` on a Request in your backlog. Declining and asking for more
   information both need a `reason`.
-- `confirm_request` is for the requesting Team's QA, after the Request is Done.
-  The receiving Team does not confirm its own work.
+- Confirming a finished Request is not part of this Skill. Whoever verifies on
+  the Team that filed it holds the `request-confirmation` Skill and confirms it
+  once it is Done; the receiving Team does not confirm its own work.
 
 ## Proposing a Sprint
 

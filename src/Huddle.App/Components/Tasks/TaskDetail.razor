@@ -79,7 +79,7 @@ else if (this.archivedView && this.loaded is { } archivedTask)
         </div>
         <MudText Typo="Typo.caption" Class="task-detail-archived-id">@($"{archivedTask.Id} · {archivedTask.Status} · {archivedTask.Location.Team}")</MudText>
         <div class="task-detail-description-box">
-            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(archivedTask.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToTaskHtml(archivedTask.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
         </div>
     </div>
 }
@@ -484,7 +484,7 @@ else if (this.loaded is { } task)
                 {
                     <div class="task-detail-description-box">
                         <div class="task-detail-description-bar">@this.DescriptionToggle</div>
-                        <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                        <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToTaskHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
                     </div>
                 }
             </div>
@@ -570,11 +570,8 @@ else if (this.loaded is { } task)
     RenderFragment logContent = @<text>
             @if (!this.createMode)
             {
-                @* The History closes the left column, drawn by TaskHistory like a document's History panel. *@
-                <section class="task-detail-history">
-                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="group-label task-detail-history-heading">History (@task.ChangeLog.Count)</MudText>
-                    <TaskHistory Entries="@task.ChangeLog" HumanName="@this.Human.Name" />
-                </section>
+                @* The Timeline closes the left column, drawn by TaskTimeline (with its comment box) like a document's History panel. *@
+                <TaskTimeline Task="@task" />
             }
         </text>;
 

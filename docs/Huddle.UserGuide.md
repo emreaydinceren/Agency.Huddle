@@ -822,8 +822,10 @@ Under a Team's title (not a Project's), the header has two more things:
 - **Duplicate** copies the Team's roster into a new Team. A small dialog asks for
   the **New team name** and a **Workspace folder** (left blank, it means none,
   which is refused when the type requires one). The new Team has
-  the same team type, and each member is hired afresh under a new name; no
-  memory, Library file or Task is copied. A member whose role no longer exists
+  the same team type, and each member is hired afresh under a new name, on the
+  same Model, Effort and Adapter as the member it copies (a member left on the
+  default stays on the default); no memory, Library file or Task is copied, and
+  account connectors start off. A member whose role no longer exists
   in the type, or who was added without a role, is listed as skipped before you
   select **Open Team**. A title that is taken, or a workspace folder that does
   not exist, is refused in the dialog.
@@ -1017,7 +1019,7 @@ A Team's **process** says how its work is done, in two files in the Team folder:
   steps, the `## Onboarding` section and the Definition of Done. See
   [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 - **`_team.md`** holds the settings Huddle enforces, as lines in its frontmatter:
-  - `gates:` lists the gates the Team enforces, from [the five gates](#the-five-gates).
+  - `gates:` lists the gates the Team enforces, from [the six gates](#the-six-gates).
   - `checkCommand:` names the command whose passing Evidence the merge gate looks for.
   - `wip:` sets a limit on work in progress.
   - `retro:` and `digest:` set when a retrospective and a digest run, such as
@@ -1048,15 +1050,16 @@ line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab 
 lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 `AGENTS.md` nor a gate says "This Team has no process yet."
 
-### The five gates
+### The six gates
 
 | Gate | Refuses |
 | --- | --- |
 | `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. Development Teams you already had get this gate once, when you first start the new version; switch it off in the **Process** tab if you do not want it. |
-| `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. |
+| `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. When the Team's Definition of Done names no command, a note from that member is enough. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
 | `failing-test-before-fix` | A bug Task moving to **Review** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
+| `blockers-done-before-start` | A Task moving to **In Progress**, **Review**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. The development processes have it, and development Teams you already had get it once, when you first start the new version; switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
 
 A Task in a Team with gates shows a line such as `Gates: qa-evidence-before-done`
 in its panel.
@@ -1081,12 +1084,13 @@ in its panel.
   Huddle puts the status back, keeps the rest of your edit, and adds `outside edit
   refused by gate: <reason>` to the Change log. Evidence-only edits are kept.
 
-**Evidence.** A Task file can have an `## Evidence` section above its Change log.
-Each line is the time, the author, the command, and optionally the exit code and a
-pointer to the tool-call log, separated by ` | `; a plain line of text is a note.
-Agents add lines with the `add_evidence` tool, and lines are only ever appended.
-The Task panel does not have a separate Evidence view; you read it in the Task file
-in the Library.
+**Evidence.** Evidence is a comment tagged `evidence` on the Task's
+[Timeline](#the-timeline-and-comments): the time, the author, the command, and optionally the
+exit code and a pointer to the tool-call log; an entry with no command is a note. Agents add
+it with the `add_evidence` tool, and entries are only ever appended. The gates and the Proof
+read only these entries, so editing the description cannot change them. The Task view shows
+each one on the Timeline with an Evidence chip, its exit code and the log path in full. Older
+Task files with an `## Evidence` section still count: Huddle reads those lines the same way.
 
 **Checking a web page.** When a Task's acceptance names a web page or a UI, a Development Team's QA Engineer verifies it in a headless browser with the built-in `browser-check` Skill. It installs Playwright in a temporary folder outside the repository, so the tree it checks stays clean, and drives the page with the Edge installed on Windows or Chrome elsewhere. The Evidence line names the command, its exit code and the browser, and lists the steps it drove. When no QA Engineer is hired, the manager does the same. Opening `localhost` only is a rule the Skill states, not a guard Huddle enforces; a governed browser is planned (#548). Agents hired before this change keep their copied role text and Skills list: to give an existing QA Engineer the Skill, add `browser-check` on its card and paste this sentence into its role text: "When the acceptance names a web page or a UI, drive it in a browser and record what you did as Evidence: read your browser-check Skill and follow it. If you cannot, say in the Evidence line that the verify is partial."
 
@@ -1094,6 +1098,9 @@ in the Library.
 makes, one JSON line each, in `logs/tool-calls/<Agent>/<date>.jsonl` in your data
 folder. An Evidence line can point to a line of it, such as
 `logs/tool-calls/Joe/2026-10-08.jsonl#L12`, so you can check that the command was run.
+Each line records the call's arguments, its status and, for Huddle's own tools, what
+the tool answered, so a refused call shows its refusal. Arguments are not redacted
+(the 200-character cap is the only limit), so treat the folder like your Transcripts.
 
 **How the merge gate works, and its limits.** When an Agent asks to run a shell
 command, Huddle reads it. If it is a `git merge` or `git push` and the Team has
@@ -1129,7 +1136,7 @@ the count, so nothing fires at once. The last run is remembered across restarts.
 
 Besides the assignee, Huddle wakes the Team's **manager** about a Task change, unless
 the manager made the change, is the assignee, or is you. When the last Task that was
-blocking another is finished, Huddle wakes the blocked Task's assignee (or the
+blocking another is finished (Done, Cancelled, Duplicate or Rejected), Huddle wakes the blocked Task's assignee (or the
 manager when it has none) once, however many blockers finished together. These wake-ups
 use the same per-Task wake budget as any other.
 
@@ -1174,16 +1181,24 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
   confirmed, with `close_task` or `update_task`, is refused. You can still close one
   yourself.
 - Four tools do this, each granted by a Skill the Agent holds. The built-in
-  `team-management` Skill grants all of them, and the manager of a Development Team
-  or a Household carries it, as does the Development QA Engineer, so the QA can
-  confirm a Request without any setup. Holding the Skill does not make the QA a
-  manager: `file_request`, `triage_request` and `list_teams` still refuse a caller
-  who is not the right manager, and so does `propose_sprint`. The tools are
-  `file_request` (a manager files a bug, feature, feedback or question into another
-  Team; the body needs the sections the kind asks for, such as **Steps to
-  reproduce** and **Expected and actual** for a bug), `triage_request` (the
-  receiving manager), `confirm_request` (the requesting Team's QA) and `list_teams`
-  (every Team with its type, manager, what it owns and its open Requests).
+  `team-management` Skill grants `file_request`, `triage_request` and `list_teams`,
+  and the manager of a Development Team or a Household carries it. `confirm_request`
+  comes from the built-in `request-confirmation` Skill, which every role whose
+  coverage includes verify carries when hired: the Development QA Engineer, a
+  Content fact-checker, a manager whose role covers verify, and so on. The
+  requesting Team's verifier can confirm without any setup. Holding a Skill does
+  not make an Agent a manager: `file_request`, `triage_request` and `list_teams`
+  still refuse a caller who is not the right manager, and so does `propose_sprint`.
+  The tools are `file_request` (a manager files a bug, feature, feedback or
+  question into another Team; the body needs the sections the kind asks for, such
+  as **Steps to reproduce** and **Expected and actual** for a bug),
+  `triage_request` (the receiving manager), `confirm_request` (the requesting
+  Team's verifier) and `list_teams` (every Team with its type, manager, what it
+  owns and its open Requests). An Agent hired before `request-confirmation`
+  shipped keeps the Skills it was hired with. A Development QA Engineer still lists
+  `team-management`: its manager tools refuse her, so it is harmless, and you can
+  untick it on her Edit card by hand. Such an Agent, and a Household manager hired
+  then, can no longer confirm until you tick `request-confirmation` on its Edit card.
 - **Who is woken.** Filing a Request wakes the receiving manager. A needs-info,
   accept or decline wakes the requesting manager; a decline also wakes the Chief of
   Staff. Work and the QA's evidence wake the requesting manager; the
@@ -1265,7 +1280,8 @@ The default process, household basics, keeps a few family rules:
 - **A recurring chore is one Task each time.** Huddle has no repeating Tasks, so the
   owner opens the next one a week before it is due.
 - **Every spend and signature waits for you.** Such a Task carries an `action:` line,
-  so it waits in **Needs You** however small the amount.
+  so it waits in Review until its Proof is complete, then in **Needs You** however small
+  the amount.
 - **Notes say where a document is kept, never its number.** "Passports in the blue
   folder", never a passport, policy or account number.
 - **A weekly check-in.** Huddle wakes the Household Manager every 7 days, counted from
@@ -1870,8 +1886,8 @@ see the same Tasks, and a change to an assigned Task wakes the assignee.
 
 Click a Task in the List or on the Board and it opens in a panel on the right. The panel is for reading: it shows
 the Task's status, priority, assignee, Team and Project, Sprint, parent, blockers, tags, dates, origin and its
-description, then the Human gate, Proof and your decision if the Task has them, and the Change log. Nothing in it
-changes the Task, so a stray key cannot leave an unsaved edit behind. You can still **Accept**, **Request changes**
+description, then the Human gate, Proof and your decision if the Task has them, and the **Timeline**. Nothing in it
+changes the Task, so a stray key cannot leave an unsaved edit behind, except the comment box under the Timeline. You can still **Accept**, **Request changes**
 or **Decline** a gated Task there, **Ask** for Proof, copy the id or link, make a copy, and close or reopen the Task.
 
 Choose **Edit** to change the Task. The Task opens in a Tab of its own, "Edit BUSI-0001", next to the Tab you were in.
@@ -1887,6 +1903,24 @@ While an edit Tab is open, the [Right sidebar](#the-right-sidebar) shows what Hu
 **Activity** (the Room it last woke an Agent in, how many of its wakes are used, and who is working on it now),
 **Blocked by**, **Blocks** (the open Tasks waiting on it) and **Linked documents** (the Library files its description
 links to). They show the Task as saved, not your unsaved edits.
+
+### The Timeline and comments
+
+A Task is its description plus a **Timeline**, like an issue in a tracker. The description is the only text anyone
+edits. The Timeline lists, oldest first:
+
+- **Comments**, from you or an Agent, in Markdown.
+- **Evidence**, marked with an Evidence chip: the command an Agent ran, its exit code (green for 0, red otherwise),
+  the full path of its tool-call log line, and any note. A remark with no command shows just the note.
+- **Events**, the Task's history: `created`, `status: To Do → In Progress`, `description edited` and the rest.
+
+Type in **Add a comment** under the Timeline and choose **Comment** to add yours. It is saved at once, on its own: it
+does not save or discard edits you have pending on the edit page. A comment wakes the Task's assignee like any other
+change. Agents comment with the `add_comment` tool and add Evidence with `add_evidence`.
+
+Nothing on the Timeline can be edited or deleted, by an Agent or by you. Editing the description, by the form or by an
+Agent's `update_task`, never touches it, so the Evidence the Proof reads cannot be lost that way. Only an edit to the
+Task file in another program can change a Timeline line; Huddle reads the file as written.
 
 ### What a Task file looks like
 
@@ -1906,9 +1940,10 @@ due_date: 2026-10-15
 ---
 Draft the October invoice run and check it against last month.
 
-## Change log
-- 2026-09-25T08:30:00Z | You | created
-- 2026-09-25T09:12:41Z | You | assignee: — → Nova
+## Timeline
+- 2026-09-25T08:30:00Z | You | event | created
+- 2026-09-25T09:12:41Z | You | event | assignee: — → Nova
+- 2026-09-25T10:02:17Z | Nova | comment | Last month's run is in the Library.\nStarting on the draft now.
 ```
 
 | Field | Meaning |
@@ -1923,8 +1958,11 @@ Draft the October invoice run and check it against last month.
 | `tags`, `start_date`, `due_date` | Dates are `yyyy-MM-dd`. |
 | `request`, `from_team`, `requester`, `triage`, `decline_reason`, `confirmed_by` | Present on a Request from another Team; see [Requests between Teams](#requests-between-teams). |
 | Body | The description, in Markdown. |
-| `## Evidence` | Optional, only where a Team's gates look for it. Lines of evidence an Agent added; append-only. See [The five gates](#the-five-gates). |
-| `## Change log` | An append-only history. Huddle adds lines and never edits old ones. |
+| `## Timeline` | One line per entry: time, author, kind (`comment`, `evidence` or `event`) and text. Huddle adds lines and never edits old ones. A comment's line breaks are written as `\n`. See [The Timeline and comments](#the-timeline-and-comments). |
+
+A Task file written before the Timeline has an `## Evidence` section and a `## Change log` instead. Huddle reads it as
+it is, with the same Proof, and rewrites it in the form above the first time it changes the Task. Its Change log lines
+are copied over unchanged.
 
 The Team and Project are not fields. They come from the folder the file is in.
 
@@ -2005,9 +2043,9 @@ The panel tells you what will happen before you save, for example "Nova is
 offline, so this change won't reach them."
 
 Agents use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
-`close_task`, `reopen_task` and `add_evidence`. Their changes follow the same rules
+`close_task`, `reopen_task`, `add_evidence` and `add_comment`. Their changes follow the same rules
 and write the same files, and they are also subject to a Team's
-[gates](#the-five-gates) and to the [Request](#requests-between-teams) rules, which
+[gates](#the-six-gates) and to the [Request](#requests-between-teams) rules, which
 you can override from the Task panel and they cannot.
 
 ### Chips
@@ -2125,10 +2163,12 @@ and a rule:
 
 | Rule | It is met when |
 | --- | --- |
-| `evidence from <step>` | an Agent whose role covers that step added an Evidence line with a command to the Task |
+| `evidence from <step>` | an Agent whose role covers that step added an Evidence line with a command to the Task; when the Definition of Done names no command, a note from that Agent is enough |
 | ``command `<cmd>` exits 0`` | the latest Evidence line for that command passed |
 | `task tagged <tag>` | a sub-Task with that tag is Done |
 | `document reviewed by <step>` | a document attached to the Task was reviewed by that step after its last edit, and nobody has objected since |
+
+The development templates start their Definition of Done with `- Review: evidence from challenge`, so a Task does not reach you until a reviewer (or a tech lead or security engineer) has run the check command and posted an Evidence line. Because those templates also name a command (`Tests pass`), a note-only line does not count there. In the other built-in templates nothing runs a command, so the manager's note after checking the draft meets `evidence from verify`. Their `document reviewed by verify` item needs the draft as a file: the owner saves it in the Team's `outputs/` folder and attaches it to the Task, and the manager logs the review on it before posting the note. A draft written only in the Task's description leaves that item open with "no document attached". The order, review first and verify after, is written in the process and in the Reviewer and QA Engineer personas; Huddle does not check it.
 
 The **Proof** list on the Task panel shows a tick or an open circle per line, with
 who owns the open ones and what is missing, such as "19 of 23 in #RSH-209". On an
@@ -2141,9 +2181,10 @@ Huddle can't read says "Huddle can't read this rule" and never counts as met.
 
 **Needs you** sits between **Review** and **Done**. It means "the Proof is in, the
 decision is yours". Huddle moves a gated Task from Review to Needs you once the
-Proof is complete, and wakes no one. Some Proof items, such as role coverage or an
-attached document's History, can complete with no change to the Task; Huddle does
-not move it then, and the assignee may move it. Agents do not ask you for approval
+Proof is complete, and wakes no one. It does so after a change to the Task, after a
+new review of an attached document, and after a tagged child Task reaches Done. Some
+Proof items, such as role coverage or an edit to the Team's process, can complete with
+no such change; Huddle does not move the Task then, and the assignee may move it. Agents do not ask you for approval
 in chat: you accept in Needs you, and the Action happens after that.
 
 Gated Tasks waiting for you appear in the sidebar's **Needs you** card (see
@@ -2366,9 +2407,10 @@ invalid Skill is listed under **Problems** with the reason.
 
 ### Changing a built-in Skill
 
-Huddle ships eight Skills: `team-building` and `team-rollup`, used by the Chief of
-Staff, `team-management`, used by Team managers to see other Teams, handle Requests,
-answer and close a Task that only asks a question, and propose Sprints, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
+Huddle ships nine Skills: `team-building` and `team-rollup`, used by the Chief of
+Staff, `team-management`, used by Team managers to see other Teams, file and triage Requests,
+answer and close a Task that only asks a question, and propose Sprints, `request-confirmation`, used by
+whoever verifies on a Team to confirm a Request their Team filed, `retrospective`, used by the Retro agent, and `ingest`, `wrap-up`
 and `brain-check`, which keep a [Second Brain](#keeping-it-tidy) tidy, and `browser-check`, used by a Development Team's QA Engineer (and its manager when no QA is hired) to drive a web page with Playwright when the acceptance names a UI. To change one,
 create `Skills/<name>/` (for example `Skills/team-building/`) and put a file of the
 same name in it, for example `onboarding.md`. Your file replaces that one file; the

@@ -575,6 +575,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.ProofContextBuilder>();
         services.AddSingleton<Agency.Huddle.App.Tasks.HumanGate.IProofSource, Agency.Huddle.App.Tasks.HumanGate.ProofSource>();
 
+        // Re-evaluates a gated Task when a Proof input outside its file changes: a REVIEWED history entry, a tagged child done (#593).
+        services.AddHostedService<Agency.Huddle.App.Tasks.HumanGate.ProofInputWatcher>();
+
         // Asked by WorkDirPermissionHandler before an Agent's git merge or git push (PR-7).
         services.AddSingleton<IMergeGate, Agency.Huddle.App.Teams.ProcessMergeGate>();
         services.AddSingleton<Agency.Huddle.App.Teams.TeamDuplicator>();
@@ -880,6 +883,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService(static sp => sp.GetRequiredService<Agency.Huddle.App.SkillSources.InstallFileWriter>());
         services.AddHostedService<DataInitializer>();
         services.AddHostedService<Agency.Huddle.App.Teams.AcceptBeforeMergeMigration>();
+        services.AddHostedService<Agency.Huddle.App.Teams.BlockersDoneBeforeStartMigration>();
         services.AddHostedService<Agency.Huddle.App.SecondBrain.RetiredFileScanService>();
         services.AddHostedService<Agency.Huddle.App.SecondBrain.DefaultAgentsMdService>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());

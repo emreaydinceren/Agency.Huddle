@@ -10,7 +10,7 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>
 /// Turns a resolved card into an ordinary Agent file, a model row and an avatar (HR-5, HR-6,
 /// Spec §Hiring steps 4-5). Refusals write nothing; a failure after the file is written is logged and
-/// reported, and the Agent stays. <see cref="StartTeamAsync"/> hires a whole Team, manager first.
+/// reported, and the Agent stays.
 /// </summary>
 /// <param name="personas">Where the Agent file is written.</param>
 /// <param name="types">The team types, for the role and its candidate.</param>
@@ -18,9 +18,9 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="avatars">Where the avatar is saved.</param>
 /// <param name="limits">The shared hire-limit check.</param>
 /// <param name="copier">Copies the Team's Skills into <c>Skills/</c> before any member is hired.</param>
-/// <param name="startGate">Tells when the manager is running.</param>
+/// <param name="startGate">Tells when the manager is running, for <see cref="OnboardManagerAsync"/>.</param>
 /// <param name="logger">Receives post-write failures.</param>
-/// <param name="processProvisioner">Gives a started Team the type's default process when it has none; <see langword="null"/> skips that step.</param>
+/// <param name="processProvisioner">Gives a new Team the chosen or default process; <see langword="null"/> skips that step.</param>
 /// <param name="onboarding">Seeds the running manager's first Turn with the process's onboarding steps, once per Team; <see langword="null"/> skips that step.</param>
 internal sealed class HireService(
     PersonaStore personas,
@@ -34,77 +34,11 @@ internal sealed class HireService(
     ProcessProvisioner? processProvisioner = null,
     TeamOnboarding? onboarding = null)
 {
-    /// <summary>How long the manager gets to report running before the start stops.</summary>
+    /// <summary>How long the manager gets to report running before its onboarding is given up.</summary>
     internal static readonly TimeSpan ManagerStartTimeout = TimeSpan.FromSeconds(60);
 
     /// <summary>Serialises check-and-write so concurrent hires cannot both pass the same limit.</summary>
     private readonly Lock gate = new();
-
-    /// <summary>
-    /// Starts a Team: checks every card and required role, installs the skills, hires the manager and
-    /// waits until it runs, then hires the rest in request order. Checks and installation write nothing;
-    /// once hiring begins the first failure stops the start and reports who already started.
-    /// </summary>
-    /// <param name="team">The Team to start.</param>
-    /// <param name="hires">One request per member, all for the same team type.</param>
-    /// <param name="ct">Cancels the start; a cancelled start keeps the members already hired.</param>
-    /// <returns>The outcome with the Agents hired so far.</returns>
-    public async Task<StartTeamResult> StartTeamAsync(string team, IReadOnlyList<HireRequest> hires, CancellationToken ct)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(team);
-        ArgumentNullException.ThrowIfNull(hires);
-
-        StartTeamResult? blocked = this.CheckStart(team, hires, out RoleSpec? managerRole);
-        if (blocked is not null || managerRole is null)
-        {
-            return blocked ?? HireService.Stop("The team needs a manager.", []);
-        }
-
-        // CardResolver normally stops a card that is not ready earlier; this covers a clone removed in the meantime.
-        IReadOnlyList<SkillRef> needed = [.. hires.SelectMany(static h => h.Card.Skills)];
-        IReadOnlyList<SkillSetupItem> notReady = await this.EnsureSkillsAsync(needed, ct).ConfigureAwait(false);
-        if (notReady.Count > 0)
-        {
-            string names = string.Join(", ", notReady.Select(static item => item.Name));
-            return HireService.Stop($"Skills not ready: {names}. {SkillSetupText.Reason(notReady[0])}.", []);
-        }
-
-        _ = processProvisioner?.ProvisionDefault(team);
-        HireRequest manager = hires.First(h => string.Equals(h.RoleId, managerRole.Id, StringComparison.Ordinal));
-        List<string> started = [];
-        string? failure = this.HireOrKeep(manager, started);
-        if (failure is not null)
-        {
-            return HireService.Stop(failure, started);
-        }
-
-        StartTeamResult? notRunning = await this.WaitForManagerAsync(manager, started, ct).ConfigureAwait(false);
-        if (notRunning is not null)
-        {
-            return notRunning;
-        }
-
-        if (onboarding is not null)
-        {
-            _ = await onboarding.PostIfDueAsync(team, manager.Card.Name, ct).ConfigureAwait(false);
-        }
-
-        foreach (HireRequest hire in hires.Where(h => !ReferenceEquals(h, manager)))
-        {
-            if (ct.IsCancellationRequested)
-            {
-                return HireService.Stop("The start was cancelled.", started);
-            }
-
-            failure = this.HireOrKeep(hire, started);
-            if (failure is not null)
-            {
-                return HireService.Stop(failure, started);
-            }
-        }
-
-        return new StartTeamResult(true, null, started);
-    }
 
     /// <summary>Gives a Team just created by Build a team a process: the one chosen, or the type's default when none was.</summary>
     /// <param name="team">The Team.</param>
@@ -156,187 +90,6 @@ internal sealed class HireService(
             logger.LogWarning(ex, "Team {Team} could not be onboarded.", team);
             return false;
         }
-    }
-
-    /// <summary>Waits until the hired manager runs.</summary>
-    /// <param name="manager">The manager's hire request.</param>
-    /// <param name="started">The Agents hired so far.</param>
-    /// <param name="ct">Cancels the wait.</param>
-    /// <returns>The stopping result, or <see langword="null"/> when the manager runs.</returns>
-    private async Task<StartTeamResult?> WaitForManagerAsync(HireRequest manager, List<string> started, CancellationToken ct)
-    {
-        bool running;
-        try
-        {
-            running = await startGate.WaitUntilRunningAsync(manager.Card.Name, HireService.ManagerStartTimeout, ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            return HireService.Stop("The start was cancelled.", started);
-        }
-
-        return running ? null : HireService.Stop($"{manager.Card.Name} did not start in time.", started);
-    }
-
-    /// <summary>Checks the start before anything is written.</summary>
-    /// <returns>The blocking result, or <see langword="null"/> when the start may go ahead.</returns>
-    private StartTeamResult? CheckStart(string team, IReadOnlyList<HireRequest> hires, out RoleSpec? managerRole)
-    {
-        managerRole = null;
-        if (hires.Count == 0)
-        {
-            return HireService.Stop("There is nobody to start.", []);
-        }
-
-        string typeId = hires[0].TypeId;
-        if (hires.Any(h => !string.Equals(h.TypeId, typeId, StringComparison.Ordinal) || !string.Equals(h.Team, team, StringComparison.Ordinal)))
-        {
-            return HireService.Stop("Every member must belong to the same team and team type.", []);
-        }
-
-        TeamTypeManifest? type = types.Find(typeId);
-        if (type is null)
-        {
-            return HireService.Stop($"Unknown team type '{typeId}'.", []);
-        }
-
-        HireRequest? unready = hires.FirstOrDefault(static h => h.Card.Readiness != CardReadiness.Ready);
-        if (unready is not null)
-        {
-            return HireService.Stop($"{unready.Card.Name} still needs setup.", []);
-        }
-
-        foreach (RoleSpec role in type.Roles.Where(static r => r.Required))
-        {
-            if (!hires.Any(h => string.Equals(h.RoleId, role.Id, StringComparison.Ordinal)))
-            {
-                return HireService.Stop($"The team needs a {role.Title}.", []);
-            }
-        }
-
-        StartTeamResult? refused = this.CheckMembers(team, type, hires);
-        if (refused is not null)
-        {
-            return refused;
-        }
-
-        managerRole = type.Roles.FirstOrDefault(r => r.Manager && hires.Any(h => string.Equals(h.RoleId, r.Id, StringComparison.Ordinal)));
-        return null;
-    }
-
-    /// <summary>
-    /// Checks names, role limits and hire limits for every member at once. A member already hired into
-    /// the same Team and role (an earlier, interrupted start) counts as started, not as a collision.
-    /// </summary>
-    private StartTeamResult? CheckMembers(string team, TeamTypeManifest type, IReadOnlyList<HireRequest> hires)
-    {
-        lock (this.gate)
-        {
-            HashSet<string> seen = new(StringComparer.OrdinalIgnoreCase);
-            List<HireRequest> pending = [];
-            foreach (HireRequest hire in hires)
-            {
-                string name = hire.Card.Name;
-                if (this.AlreadyHired(hire))
-                {
-                    _ = seen.Add(name);
-                    continue;
-                }
-
-                if (!seen.Add(name) || this.NameInUse(name))
-                {
-                    return HireService.Stop($"The name '{name}' is already in use.", []);
-                }
-
-                pending.Add(hire);
-            }
-
-            foreach (IGrouping<string, HireRequest> group in pending.GroupBy(static h => h.RoleId, StringComparer.Ordinal))
-            {
-                RoleSpec? role = type.Roles.FirstOrDefault(r => string.Equals(r.Id, group.Key, StringComparison.Ordinal));
-                if (role is null)
-                {
-                    return HireService.Stop($"Team type '{type.Id}' has no role '{group.Key}'.", []);
-                }
-
-                if (role.MaxPerTeam > 0 && (this.CountInRole(team, type.Id, role.Id) + group.Count()) > role.MaxPerTeam)
-                {
-                    return HireService.Stop($"Team '{team}' already has the most {role.Title} Agents it allows ({role.MaxPerTeam}).", []);
-                }
-            }
-
-            List<Candidate> candidates = [];
-            foreach (HireRequest hire in pending)
-            {
-                CandidateTemplate? template = types.ReadCandidate(hire.TypeId, hire.RoleId);
-                if (template is null)
-                {
-                    return HireService.Stop($"Team type '{hire.TypeId}' has no role '{hire.RoleId}'.", []);
-                }
-
-                candidates.Add(this.BuildCandidate(hire, template));
-            }
-
-            HireRefusal? refusal = candidates.Count == 0 ? null : limits.Check(candidates);
-            return refusal is null ? null : HireService.Stop(HireService.Describe(refusal), []);
-        }
-    }
-
-    /// <summary>Builds the Candidate the hire limits are checked for.</summary>
-    private Candidate BuildCandidate(HireRequest request, CandidateTemplate template)
-    {
-        string name = request.Card.Name;
-        return new Candidate(name, name.ToLowerInvariant(), template.Title, template.Stance, [request.Team], this.MergeConsultWhen(template, request.Card));
-    }
-
-    /// <summary>Whether an Agent by this name or alias exists.</summary>
-    private bool NameInUse(string name)
-    {
-        return personas.ResolveByNameOrAlias(name) is not null || personas.ResolveByNameOrAlias(name.ToLowerInvariant()) is not null;
-    }
-
-    /// <summary>Whether the request's Agent already exists in the same Team and role of the same team type.</summary>
-    private bool AlreadyHired(HireRequest request)
-    {
-        PersonaEntry? entry = personas.ResolveByNameOrAlias(request.Card.Name);
-        return entry is not null
-            && entry.Teams.Contains(request.Team, StringComparer.OrdinalIgnoreCase)
-            && PersonaFrontmatter.TryReadIdentity(entry.Text, out PersonaIdentity? identity, out _)
-            && identity.Role is { } hired
-            && string.Equals(hired.TypeId, request.TypeId, StringComparison.Ordinal)
-            && string.Equals(hired.RoleId, request.RoleId, StringComparison.Ordinal);
-    }
-
-    /// <summary>Keeps a member that is already hired, otherwise hires it; either way the name is recorded.</summary>
-    /// <returns>The refusal text, or <see langword="null"/> when the member is in place.</returns>
-    private string? HireOrKeep(HireRequest request, List<string> started)
-    {
-        if (this.AlreadyHired(request))
-        {
-            started.Add(request.Card.Name);
-            return null;
-        }
-
-        return this.HireOne(request, started);
-    }
-
-    /// <summary>Hires one member and records the name.</summary>
-    /// <returns>The refusal text, or <see langword="null"/> when the Agent was written.</returns>
-    private string? HireOne(HireRequest request, List<string> started)
-    {
-        HireResult result = this.Hire(request);
-        if (result.PersonaName is not null)
-        {
-            started.Add(result.PersonaName);
-        }
-
-        return result.Ok ? null : result.Error ?? string.Empty;
-    }
-
-    /// <summary>Builds the result of a stopped start.</summary>
-    private static StartTeamResult Stop(string error, IReadOnlyList<string> started)
-    {
-        return new StartTeamResult(false, error, started);
     }
 
     /// <summary>Hires one Agent.</summary>
@@ -504,7 +257,7 @@ internal sealed class HireService(
 
         try
         {
-            _ = personas.Add(identity, template.Stance, request.Card.Pick?.Model);
+            _ = personas.Add(identity, template.Stance, request.Card.Pick?.Model, request.Effort);
         }
         catch (ChatException ex)
         {

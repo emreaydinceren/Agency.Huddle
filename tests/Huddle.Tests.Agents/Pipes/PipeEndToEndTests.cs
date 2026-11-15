@@ -1,11 +1,15 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.IO.Pipes;
 using System.Text;
+using System.Text.Json;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Waiting;
 
 namespace Agency.Huddle.Tests.Pipes;
@@ -465,7 +469,7 @@ public sealed class PipeEndToEndTests
         Assert.False(gateway.IsOnline(welcome.AgentId));
     }
 
-    /// <summary>An Agent's open Drafts are cleared when its connection drops, so a crashed Agent leaves no frozen Draft on screen.</summary>
+    /// <summary>An Agent's open Drafts are cleared when its connection drops, so a crashed Agent leaves no frozen Draft on screen. The gateway takes the Agent offline before it clears the Drafts, so the test waits for both (issue #596).</summary>
     [Fact]
     public async Task Disconnect_ClearsTheAgentsDrafts()
     {
@@ -493,7 +497,8 @@ public sealed class PipeEndToEndTests
 
         await client.DisposeAsync();
 
-        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId), ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
+        // The gateway takes the Agent offline before it clears its Drafts, so "offline" does not yet mean "cleared".
+        await Eventually.UntilAsync(() => !gateway.IsOnline(welcome.AgentId) && drafts.ForRoom(roomId).Count == 0, ct, timeout: TestBudgets.Short, interval: TimeSpan.FromMilliseconds(50));
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
         Assert.Empty(drafts.ForRoom(roomId));
@@ -919,6 +924,37 @@ public sealed class PipeEndToEndTests
         Assert.Equal(ToolActivityLimits.MaxTitleLength, call.Title?.Length);
     }
 
+    /// <summary>
+    /// The arguments and the result of a finished call reach the lasting tool-call log over the pipe. An over-long value is
+    /// clipped to its wire limit before the writer cuts it again to 200 characters, so the log shows the writer's cut and
+    /// the wire clip itself is pinned only by the limits tests.
+    /// </summary>
+    [Fact]
+    public async Task ToolActivity_ArgumentsAndResult_ReachTheToolCallLog()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(
+            fixture, client, roomId, "mcp__team__add_evidence", null, null, null, ct,
+            ToolActivityStatus.Completed,
+            new string('a', ToolActivityLimits.MaxArgumentsLength + 100),
+            "Nothing was added.");
+
+        Assert.Equal(ToolActivityStatus.Completed, call.Status);
+        string dataDir = Path.GetFullPath(fixture.Services.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir);
+        string file = Assert.Single(Directory.GetFiles(Path.Combine(dataDir, "logs", "tool-calls"), "*.jsonl", SearchOption.AllDirectories));
+        using FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using StreamReader reader = new(stream);
+        using JsonDocument line = JsonDocument.Parse(await reader.ReadLineAsync(ct) ?? string.Empty);
+        Assert.Equal(new string('a', 199) + "…", line.RootElement.GetProperty("arguments").GetString());
+        Assert.Equal("Nothing was added.", line.RootElement.GetProperty("result").GetString());
+    }
+
     /// <summary>A runner's own truncation flag survives, so a preview the runner already cut still says it was shortened.</summary>
     [Fact]
     public async Task ToolActivity_RunnerMarkedTruncated_StaysTruncated()
@@ -969,14 +1005,17 @@ public sealed class PipeEndToEndTests
         string? path,
         int? line,
         EditChange? edit,
-        CancellationToken ct)
+        CancellationToken ct,
+        ToolActivityStatus status = ToolActivityStatus.InProgress,
+        string? arguments = null,
+        string? result = null)
     {
         var events = fixture.Services.GetRequiredService<RoomEvents>();
         var drafts = fixture.Services.GetRequiredService<Drafts>();
         var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
         events.DraftChanged += room => changed.TrySetResult(room);
 
-        await client.WriteAsync(new ToolActivity(roomId, "m-tool-1", "call-1", title, ToolActivityStatus.InProgress, path, line, edit), ct);
+        await client.WriteAsync(new ToolActivity(roomId, "m-tool-1", "call-1", title, status, path, line, edit, arguments, result), ct);
 
         using var registration = ct.Register(() => changed.TrySetCanceled(ct));
         await changed.Task;
@@ -1029,7 +1068,10 @@ public sealed class PipeEndToEndTests
     /// and logs the pre-existing faulted-connection Warning. Dropping the raw <see cref="NamedPipeClientStream"/>
     /// right after sending <c>hello</c>, before reading the reply, leaves no reader on the pipe by the time the
     /// server tries to write the <see cref="Welcome"/> back, so that write fails with "the pipe is broken" instead
-    /// of the clean end-of-stream a graceful close produces.
+    /// of the clean end-of-stream a graceful close produces. The test makes that order certain instead of hoping for it:
+    /// the server's first room lookup while it builds the <see cref="Welcome"/> is held, the client sends <c>hello</c>,
+    /// and once the lookup has been entered (the connection is accepted and the hello read) the client closes and the
+    /// hold is released, so the Welcome write always meets a closed pipe.
     /// </summary>
     [Fact]
     public async Task Disconnect_AbruptClose_StillLogsTheFaultedConnectionWarning()
@@ -1037,16 +1079,51 @@ public sealed class PipeEndToEndTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(60));
         var ct = cts.Token;
 
-        await using var fixture = await PipeHostFixture.StartAsync(cts);
+        TaskTriggerTestSupport.HoldingTeamDirectory? directory = null;
+        await using var fixture = await PipeHostFixture.StartAsync(
+            null,
+            services =>
+            {
+                ServiceDescriptor original = services.Single(static d => d.ServiceType == typeof(ITeamDirectory));
+                services.Remove(original);
+                services.AddSingleton<SqliteTeamDirectory>();
+                services.AddSingleton<ITeamDirectory>(sp => directory = new TaskTriggerTestSupport.HoldingTeamDirectory(sp.GetRequiredService<SqliteTeamDirectory>()));
+            },
+            cts);
+        _ = fixture.Services.GetRequiredService<ITeamDirectory>();
+        Assert.NotNull(directory);
 
-        var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
-        await pipe.ConnectAsync(ct);
-        await using (var client = new JsonLineStream(pipe, leaveOpen: true))
+        // The first room lookup of the Welcome parks until the pipe is closed; later ones pass through.
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int calls = 0;
+        directory.BeforeGetRoomMembers = () =>
         {
-            await client.WriteAsync(new Hello("echo", null), ct);
-        }
+            if (Interlocked.Increment(ref calls) != 1)
+            {
+                return Task.CompletedTask;
+            }
 
-        pipe.Dispose();
+            entered.TrySetResult();
+            return release.Task;
+        };
+
+        try
+        {
+            var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+            await pipe.ConnectAsync(ct);
+            await using (var client = new JsonLineStream(pipe, leaveOpen: true))
+            {
+                await client.WriteAsync(new Hello("echo", null), ct);
+            }
+
+            await entered.Task.WaitAsync(ct);
+            pipe.Dispose();
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
 
         List<CapturedLogEntry> Warnings() => fixture.LogEntries
             .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal) && e.Level == LogLevel.Warning)
@@ -1063,7 +1140,9 @@ public sealed class PipeEndToEndTests
     /// <summary>
     /// A client that connects and leaves before sending anything ends the connection before its Welcome, and the server
     /// logs exactly one Warning naming the handshake step and the reason, so a client-side broken pipe in CI
-    /// (agents/CIPipeline.md, RoomSessionResumeTests) can be matched to why the server let the connection go.
+    /// (agents/CIPipeline.md, RoomSessionResumeTests) can be matched to why the server let the connection go. The client
+    /// leaves only after the server has accepted it: a client that closes before the accept is issued never becomes a
+    /// connection, so there would be no handshake to log.
     /// </summary>
     [Fact]
     public async Task Disconnect_BeforeHello_LogsOneWarningWithTheStepAndReason()
@@ -1074,6 +1153,7 @@ public sealed class PipeEndToEndTests
         await using var fixture = await PipeHostFixture.StartAsync(cts);
 
         var client = await fixture.ConnectClientAsync(ct);
+        await fixture.WaitForConnectionsOpenedAsync(1, ct);
         await client.DisposeAsync();
 
         List<CapturedLogEntry> warnings = await ConnectionWarningsAsync(fixture, ct);

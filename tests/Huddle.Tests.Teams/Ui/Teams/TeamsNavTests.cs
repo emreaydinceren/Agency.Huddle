@@ -1183,7 +1183,7 @@ public sealed class TeamsNavTests
         Assert.Empty(SelectedLabels(cut));
     }
 
-    /// <summary>The Rooms "+" and the Tasks "+" each carry a tooltip saying what they do, and the Tasks "+" opens the New view page.</summary>
+    /// <summary>The Rooms "+" and the Tasks "+" each carry a tooltip saying what they do, and the Tasks "+" creates a New view and opens it under the Team.</summary>
     [Fact]
     public async Task SectionPlusButtons_HaveTooltips_AndTheTasksPlusOpensNewView()
     {
@@ -1200,7 +1200,103 @@ public sealed class TeamsNavTests
 
         await cut.InvokeAsync(() => cut.Find("button.teams-nav-new-view").ClickAsync());
 
-        Assert.Equal("tasks/new", nav.ToBaseRelativePath(nav.Uri));
+        TaskView created = Assert.Single(ctx.Services.GetRequiredService<ViewStore>().Views, static view => string.Equals(view.Name, "New view", StringComparison.Ordinal));
+        Assert.Equal($"teams/Business/tasks/{created.Id}", nav.ToBaseRelativePath(nav.Uri));
+    }
+
+    /// <summary>
+    /// Issue #571: the Tasks "+" opens ONE Tab, however late the browser's location change for the address it navigated to
+    /// arrives. The "+" used to open <c>/tasks/new</c>, whose page made a View and moved the Tab to <c>/tasks/{id}</c>; the late
+    /// location change then opened <c>/tasks/new</c> again, a second Tab and a second View, and neither was on the Team.
+    /// </summary>
+    [Fact]
+    public async Task TasksPlus_OpensOneTabOnTheTeam_WhenTheLocationChangeArrivesLate()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewTasksContext(catalog);
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        TabService tabs = ctx.Services.GetRequiredService<TabService>();
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button.teams-nav-new-view")));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-new-view").ClickAsync());
+        string navigatedTo = "/" + nav.ToBaseRelativePath(nav.Uri);
+        MountTabPages(ctx, tabs);
+        _ = tabs.Open(navigatedTo);
+        MountTabPages(ctx, tabs);
+
+        Tab tab = Assert.Single(tabs.Tabs);
+        TaskView created = Assert.Single(ctx.Services.GetRequiredService<ViewStore>().Views, static view => string.Equals(view.Name, "New view", StringComparison.Ordinal));
+        Assert.Equal($"/teams/Business/tasks/{created.Id}", tab.Url);
+        Assert.False(tab.IsPreview);
+    }
+
+    /// <summary>The Tasks "+" of a selected Project opens the new View under that Project's Tasks route, and No project under its own.</summary>
+    [Fact]
+    public async Task TasksPlus_InAProjectOrNoProject_OpensTheViewUnderThatScope()
+    {
+        FakeTeamCatalog catalog = new() { Teams = [Team("Business", projects: ["Marketing"])] };
+        await using MudBunitContext ctx = NewTasksContext(catalog);
+        NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("button.teams-nav-new-view")));
+        await cut.InvokeAsync(() => ScopeRow(cut, "Marketing").QuerySelectorAll("a").Single().ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(["Marketing"], SelectedLabels(cut)));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-new-view").ClickAsync());
+
+        ViewStore views = ctx.Services.GetRequiredService<ViewStore>();
+        TaskView inProject = Assert.Single(views.Views, static view => string.Equals(view.Name, "New view", StringComparison.Ordinal));
+        Assert.Equal($"teams/Business/projects/Marketing/tasks/{inProject.Id}", nav.ToBaseRelativePath(nav.Uri));
+
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-no-project").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal("true", cut.Find("button.teams-nav-no-project").GetAttribute("aria-pressed")));
+        await cut.InvokeAsync(() => cut.Find("button.teams-nav-new-view").ClickAsync());
+
+        TaskView noProject = Assert.Single(views.Views, view => string.Equals(view.Name, "New view 2", StringComparison.Ordinal));
+        Assert.Equal($"teams/Business/no-project/tasks/{noProject.Id}", nav.ToBaseRelativePath(nav.Uri));
+    }
+
+    /// <summary>A context for <c>TeamsNav</c> that can also render the Tasks page in a Tab: the nav's services plus the page's, and the app's own page routes.</summary>
+    private static MudBunitContext NewTasksContext(FakeTeamCatalog catalog)
+    {
+        MudBunitContext ctx = NewContext(catalog, stored: BusinessOnly);
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ctx.Services.AddSingleton<Agency.Huddle.App.Profile.IHumanIdentity>(new Agency.Huddle.App.Profile.ConfiguredHumanIdentity("Human"));
+        ctx.Services.AddSingleton(sp => new SprintStore(
+            sp.GetRequiredService<IOptions<TeamOptions>>(),
+            sp.GetRequiredService<TaskStore>(),
+            sp.GetRequiredService<TaskEvents>(),
+            NullLogger<SprintStore>.Instance));
+        ctx.Services.AddSingleton(new TurnActivity());
+        ctx.Services.AddSingleton<ISprintCatalog>(sp => sp.GetRequiredService<SprintStore>());
+        ctx.Services.AddSingleton(sp => new TaskActivity(sp.GetRequiredService<IOptions<TeamOptions>>()));
+        ctx.Services.AddSingleton(new TabPageRoutes(typeof(TeamsNav).Assembly));
+        return ctx;
+    }
+
+    /// <summary>Mounts the page of every open Tab, resolved by the app's routes and rendered as the Tab host does, so a page that acts on mount does so.</summary>
+    private static void MountTabPages(MudBunitContext ctx, TabService tabs)
+    {
+        TabPageRoutes routes = ctx.Services.GetRequiredService<TabPageRoutes>();
+        foreach (Tab tab in tabs.Tabs.ToArray())
+        {
+            TabPage page = routes.Resolve(tab.Url) ?? throw new InvalidOperationException($"No page for {tab.Url}.");
+            TabPageContext context = new(tab.Url, tab.Id);
+            _ = ctx.Render(builder =>
+            {
+                builder.OpenComponent<CascadingValue<TabPageContext>>(0);
+                builder.AddAttribute(1, nameof(CascadingValue<TabPageContext>.Value), context);
+                builder.AddAttribute(2, nameof(CascadingValue<TabPageContext>.ChildContent), (RenderFragment)(inner =>
+                {
+                    inner.OpenComponent<DynamicComponent>(0);
+                    inner.AddAttribute(1, nameof(DynamicComponent.Type), page.Component);
+                    inner.AddAttribute(2, nameof(DynamicComponent.Parameters), page.Parameters);
+                    inner.CloseComponent();
+                }));
+                builder.CloseComponent();
+            });
+        }
     }
 
     /// <summary>OK on "Q4 Launch" calls <c>EnsureProjectIn("Business", "Q4 Launch")</c> once and navigates to the escaped Project route.</summary>

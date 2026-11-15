@@ -436,10 +436,54 @@ internal sealed class TaskService : IDisposable
         return result;
     }
 
+    /// <summary>The most characters a comment may have, after trimming (Spec §7.7).</summary>
+    internal const int MaxCommentLength = 4000;
+
     /// <summary>
-    /// Appends <paramref name="line"/> to the Task's "## Evidence" section (creating it before the Change log when
-    /// absent), records "evidence added by {actor}" in the Change log, and never rewrites an earlier line. Like
-    /// <see cref="Close"/>, it has no base version: a concurrent change is reported as a <see cref="TaskResult.Conflict"/>.
+    /// Appends a comment to the Task's timeline (Spec §7.7) and never rewrites an earlier line. The text is trimmed; empty text, or
+    /// more than <see cref="MaxCommentLength"/> characters, is <see cref="TaskResult.Refused"/>. A closed Task can be commented on.
+    /// Like <see cref="AddEvidence"/>, it has no base version: a concurrent change is reported as a <see cref="TaskResult.Conflict"/>.
+    /// The raised change's entry ("comment added by {actor}") is a summary for wakes and feeds; it is not written to the file.
+    /// </summary>
+    /// <param name="id">The Task to comment on.</param>
+    /// <param name="text">The comment, which may span lines.</param>
+    /// <param name="actor">Who comments; becomes the entry's author.</param>
+    public TaskResult AddComment(TaskId id, string text, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        string trimmed = text.Trim();
+        if (trimmed.Length == 0)
+        {
+            return new TaskResult.Refused(["A comment needs some text."]);
+        }
+
+        if (trimmed.Length > MaxCommentLength)
+        {
+            return new TaskResult.Refused([string.Create(CultureInfo.InvariantCulture, $"A comment can be at most {MaxCommentLength} characters; this one has {trimmed.Length}.")]);
+        }
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.AddCommentCore(id, trimmed, actor);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Appends one <c>evidence</c> entry to the Task's timeline (Spec §7.7), timed by the clock rather than by the line, and never
+    /// rewrites an earlier line. Like <see cref="Close"/>, it has no base version: a concurrent change is reported as a
+    /// <see cref="TaskResult.Conflict"/>. The raised change's entry ("evidence added by {actor}") is a summary for wakes and
+    /// feeds; it is not written to the file.
     /// </summary>
     /// <param name="id">The Task to add Evidence to.</param>
     /// <param name="line">The Evidence line to append.</param>
@@ -475,6 +519,28 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
+    /// Re-evaluates one Task after a Proof input outside the Task file changed (#593): the Task moves to Needs You exactly as after a
+    /// Task write when it is gated, in Review and its Proof is now complete. It writes nothing otherwise.
+    /// </summary>
+    /// <param name="id">The Task whose Proof input changed.</param>
+    internal void MoveIfReady(TaskId id)
+    {
+        TaskChange? moved = null;
+        lock (this.mutateGate)
+        {
+            if (this.store.Get(id) is { } current)
+            {
+                moved = this.MoveReadyToNeedsYou(current, TaskActors.Huddle);
+            }
+        }
+
+        if (moved is not null)
+        {
+            this.events.RaiseTaskChanged(moved);
+        }
+    }
+
+    /// <summary>
     /// Moves a gated Task that is in Review with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
     /// <see cref="HumanGateRules.Check"/> with Huddle as the actor. An ungated Task of a Team with <c>accept-before-merge</c> is
     /// brought in too, with the merge named as its Action in the same write (#416): that Team's merge waits for an Accept, and
@@ -482,8 +548,8 @@ internal sealed class TaskService : IDisposable
     /// Human's own change, for any other ungated Task, for a Task not in Review, closed or already accepted, or whose Proof is
     /// open. The caller raises the returned change after it has left the lock, as every other mutation does.
     /// </summary>
-    /// <param name="task">The Task as just written.</param>
-    /// <param name="by">Who made the write that may have made the Task ready.</param>
+    /// <param name="task">The Task as just written (or as stored now, from <see cref="MoveIfReady"/>).</param>
+    /// <param name="by">Who made the write that may have made the Task ready; Huddle when a Proof input outside the Task file changed.</param>
     /// <returns>The change that was written, or <see langword="null"/> when the Task did not move.</returns>
     private TaskChange? MoveReadyToNeedsYou(TaskItem task, TaskActor by)
     {
@@ -544,8 +610,31 @@ internal sealed class TaskService : IDisposable
 
         DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
         ChangeLogEntry entry = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"evidence added by {actor.Name}"));
-        string withEvidence = TaskFileFormat.AddEvidenceLine(currentText, line.Format().ReplaceLineEndings(" "));
-        string finalText = TaskFileFormat.AppendEntry(withEvidence, entry);
+        string finalText = TaskFileFormat.AppendTimelineEntry(currentText, new TimelineEntry(at, actor.Name, TimelineEntryKind.Evidence, line.FormatEntryText()));
+
+        TaskItem? written = this.store.Write(current, current.Version, finalText);
+        if (written is null)
+        {
+            return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
+        }
+
+        TaskChange change = new(current, written, [], actor, entry);
+        return (new TaskResult.Saved(written, change), change);
+    }
+
+    /// <summary>The body of <see cref="AddComment"/>, run under <see cref="mutateGate"/>.</summary>
+    private (TaskResult Result, TaskChange? Change) AddCommentCore(TaskId id, string text, TaskActor actor)
+    {
+        TaskItem? current = this.store.Get(id);
+        string? currentText = current is null ? null : this.store.ReadText(id);
+        if (current is null || currentText is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+        ChangeLogEntry entry = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"comment added by {actor.Name}"));
+        string finalText = TaskFileFormat.AppendTimelineEntry(currentText, new TimelineEntry(at, actor.Name, TimelineEntryKind.Comment, text));
 
         TaskItem? written = this.store.Write(current, current.Version, finalText);
         if (written is null)
@@ -654,7 +743,7 @@ internal sealed class TaskService : IDisposable
             return backlogReverted;
         }
 
-        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
             && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
         {
             ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by gate: {refusal.Message}"));
@@ -951,7 +1040,7 @@ internal sealed class TaskService : IDisposable
         }
 
         // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
-        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.Done
+        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
             ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
             : null;
         if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || candidate.IsGated))
@@ -1080,9 +1169,9 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.NotFound(id), null);
         }
 
-        if (LeavesBacklogWithoutTriage(current, candidate) && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        if (this.RefuseBeforeGates(current, candidate, actor, humanOverridesGates) is { } early)
         {
-            return (new TaskResult.Refused([LeaveBacklogRefusal]), null);
+            return (early, null);
         }
 
         if (this.RefuseUpdate(current, candidate, currentText, actor, humanOverridesGates, out GateRefusal? refusal, out Proof proof) is { } refused)
@@ -1188,7 +1277,7 @@ internal sealed class TaskService : IDisposable
     /// </summary>
     /// <param name="current">The Task before the change.</param>
     /// <param name="candidate">The Task as the patch would leave it.</param>
-    /// <param name="text">The Task's file text, for its Evidence section.</param>
+    /// <param name="text">The Task's file text, for its timeline's Evidence.</param>
     /// <param name="actor">Who makes the change.</param>
     /// <returns>The first refusal, or <see langword="null"/> when no gate refuses or none is configured.</returns>
     private GateRefusal? CheckGates(TaskItem current, TaskItem candidate, string text, TaskActor actor)
@@ -1198,7 +1287,7 @@ internal sealed class TaskService : IDisposable
             return null;
         }
 
-        IReadOnlyList<EvidenceLine> evidence = EvidenceLine.ParseSection(text);
+        IReadOnlyList<EvidenceLine> evidence = TaskFileFormat.ReadEvidence(text);
         Dictionary<string, string> covers = new(StringComparer.Ordinal);
         foreach (string author in evidence.Select(static line => line.Author).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
         {
@@ -1215,9 +1304,14 @@ internal sealed class TaskService : IDisposable
         bool parentApproved = candidate.Parent is not { } parentId
             || (this.store.Get(parentId) is { } parent && IsApproved(parent));
 
+        // The stored blockers decide, never the candidate's: an update that clears blocked_by while it starts the Task must not pass.
+        IReadOnlyList<OpenBlocker> openBlockers = this.OpenBlockersOf(current);
         foreach (string team in new[] { current.Location.Team, candidate.Location.Team }.Distinct(StringComparer.Ordinal))
         {
-            GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name);
+            GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name)
+            {
+                OpenBlockers = openBlockers,
+            };
             if (this.gates.CheckTaskChange(context) is { } refusal)
             {
                 return refusal;
@@ -1226,6 +1320,58 @@ internal sealed class TaskService : IDisposable
 
         return null;
     }
+
+    /// <summary>Lists the Tasks in a Task's stored <c>blocked_by</c> that are not finished; a blocker that no longer exists blocks nothing.</summary>
+    /// <param name="task">The Task as stored.</param>
+    private List<OpenBlocker> OpenBlockersOf(TaskItem task)
+    {
+        List<OpenBlocker> open = [];
+        foreach (TaskId id in task.BlockedBy)
+        {
+            if (this.store.Get(id) is { } blocker && !blocker.Status.IsTerminal())
+            {
+                open.Add(new OpenBlocker(id, blocker.Status));
+            }
+        }
+
+        return open;
+    }
+
+    /// <summary>The refusals that come before the process gates: a Request leaving Backlog without triage, and a blocker removed without authority (#538).</summary>
+    /// <param name="current">The Task as stored.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    /// <param name="actor">Who makes the change.</param>
+    /// <param name="humanOverridesGates">Whether the Human asked to override.</param>
+    /// <returns>The refusal, or <see langword="null"/> when the change may go on to the gates.</returns>
+    private TaskResult.Refused? RefuseBeforeGates(TaskItem current, TaskItem candidate, TaskActor actor, bool humanOverridesGates)
+    {
+        if (LeavesBacklogWithoutTriage(current, candidate) && (actor.Kind != TaskActorKind.Human || !humanOverridesGates))
+        {
+            return new TaskResult.Refused([LeaveBacklogRefusal]);
+        }
+
+        return this.RemovesBlockerWithoutAuthority(current, candidate, actor) ? new TaskResult.Refused([BlockerRemovalRefusal]) : null;
+    }
+
+    /// <summary>Tells whether a patch takes a blocker off a Task whose Team runs the <c>blockers-done-before-start</c> gate and the actor may not (#538).</summary>
+    /// <param name="current">The Task as stored.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    /// <param name="actor">Who makes the change.</param>
+    private bool RemovesBlockerWithoutAuthority(TaskItem current, TaskItem candidate, TaskActor actor)
+    {
+        if (actor.Kind != TaskActorKind.Agent
+            || this.gates is null
+            || !current.BlockedBy.Any(id => !candidate.BlockedBy.Contains(id))
+            || !this.gates.EnabledGates(current.Location.Team).Contains(GateId.BlockersDoneBeforeStart))
+        {
+            return false;
+        }
+
+        return !string.Equals(this.gates.ManagerOf(current.Location.Team), actor.Name, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Refusal for an Agent other than the Team's manager taking a blocker off a Task in a Team with the <c>blockers-done-before-start</c> gate (#538).</summary>
+    private const string BlockerRemovalRefusal = "Only the Team's manager or the Human can remove a blocker from blocked_by.";
 
     /// <summary>Refusal for an agent moving a Request out of Backlog without a triage accept or decline.</summary>
     private const string LeaveBacklogRefusal = "A Request leaves Backlog only when its receiving manager accepts or declines it with triage_request.";
@@ -1558,12 +1704,13 @@ internal sealed class TaskService : IDisposable
         }
     }
 
-    /// <summary>Spec §9.2: the description doesn't contain a reserved Change log heading.</summary>
+    /// <summary>Spec §9.2: the description doesn't contain a heading reserved for the timeline (<c>## Timeline</c>, <c>## Change log</c>, <c>## Evidence</c>).</summary>
     private static void AddDescriptionProblems(string description, List<string> problems)
     {
-        if (TaskFileFormat.ContainsChangeLogHeading(description))
+        if (TaskFileFormat.FindReservedHeading(description) is { } heading)
         {
-            problems.Add("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.");
+            string problem = string.Create(CultureInfo.InvariantCulture, $"The description must not contain a '{heading}' heading; that heading is reserved for the task's timeline.");
+            problems.Add(string.Equals(heading, TaskFileFormat.EvidenceHeading, StringComparison.Ordinal) ? problem + " Record evidence with add_evidence." : problem);
         }
     }
 

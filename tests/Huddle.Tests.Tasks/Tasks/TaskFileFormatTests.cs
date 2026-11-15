@@ -344,7 +344,7 @@ public sealed class TaskFileFormatTests
             "---",
             string.Empty,
             string.Empty,
-            TaskFileFormat.ChangeLogHeading);
+            TaskFileFormat.TimelineHeading);
         Assert.Equal(expected, composed);
     }
 
@@ -508,7 +508,7 @@ public sealed class TaskFileFormatTests
 
         string expectedActor = "A" + Backslash + Backslash + "B";
         string expectedSummary = "x" + Backslash + Pipe + "y" + " " + "z" + Backslash + Backslash;
-        Assert.Equal("- 2026-09-24T14:05:12Z | " + expectedActor + " | " + expectedSummary, formatted);
+        Assert.Equal("- 2026-09-24T14:05:12Z | " + expectedActor + " | event | " + expectedSummary, formatted);
     }
 
     /// <summary>An entry containing a literal backslash immediately followed by a literal pipe round-trips through Format and Parse.</summary>
@@ -522,7 +522,7 @@ public sealed class TaskFileFormatTests
         DateTimeOffset at = new(2026, 9, 24, 14, 5, 12, TimeSpan.Zero);
         ChangeLogEntry original = new(at, actor, summary);
         string logLine = TaskFileFormat.FormatEntry(original);
-        string text = MinimalTextWithChangeLog(logLine);
+        string text = MinimalTextWithTimeline(logLine);
 
         bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out _);
 
@@ -555,7 +555,7 @@ public sealed class TaskFileFormatTests
         string result = TaskFileFormat.AppendEntry(fileText, entry);
 
         Assert.Equal(
-            fileText.TrimEnd('\n') + "\n\n" + TaskFileFormat.ChangeLogHeading + "\n" + TaskFileFormat.FormatEntry(entry) + "\n",
+            fileText.TrimEnd('\n') + "\n\n" + TaskFileFormat.TimelineHeading + "\n" + TaskFileFormat.FormatEntry(entry) + "\n",
             result);
     }
 
@@ -565,7 +565,7 @@ public sealed class TaskFileFormatTests
     public void ClosedAt_LastClosedNotFollowedByReopened_WhenLocationClosed(ChangeLogEntry[] entries, bool locationClosed, DateTimeOffset? expectedClosedAt)
     {
         string[] logLines = [.. entries.Select(TaskFileFormat.FormatEntry)];
-        string text = MinimalTextWithChangeLog(logLines);
+        string text = MinimalTextWithTimeline(logLines);
         TaskLocation location = new("Platform", null, locationClosed);
 
         bool result = TaskFileFormat.TryParse(text, "p.md", location, out TaskItem? task, out _);
@@ -753,7 +753,7 @@ public sealed class TaskFileFormatTests
             "---",
             string.Empty,
             string.Empty,
-            TaskFileFormat.ChangeLogHeading);
+            TaskFileFormat.TimelineHeading);
         Assert.Equal(expected, composed);
     }
 
@@ -805,13 +805,13 @@ public sealed class TaskFileFormatTests
         Assert.True(estimateIndex > ownerIndex);
     }
 
-    /// <summary>ContainsChangeLogHeading detects the heading line only outside a fenced code block.</summary>
+    /// <summary>FindReservedHeading detects the Change log heading line only outside a fenced code block.</summary>
     [Theory]
     [InlineData("Some text.\n\n## Change log\n", true)]
     [InlineData("Some text.\n\n```\n## Change log\n```\n", false)]
-    public void ContainsChangeLogHeading_DetectsOnlyOutsideFences(string description, bool expected)
+    public void FindReservedHeading_ChangeLog_DetectsOnlyOutsideFences(string description, bool expected)
     {
-        bool result = TaskFileFormat.ContainsChangeLogHeading(description);
+        bool result = TaskFileFormat.FindReservedHeading(description) is not null;
 
         Assert.Equal(expected, result);
     }
@@ -886,8 +886,8 @@ public sealed class TaskFileFormatTests
                 "---",
                 "more",
                 "",
-                TaskFileFormat.ChangeLogHeading,
-                "- 2026-09-24T11:20:00Z | Emre | created",
+                TaskFileFormat.TimelineHeading,
+                "- 2026-09-24T11:20:00Z | Emre | event | created",
             ]) + "\n";
 
     /// <summary>The lenient fence rule: a BOM, spaces around a fence line and a <c>...</c> closer all still give a Task, and a <c>---</c> line in the description does not end anything.</summary>
@@ -976,6 +976,10 @@ public sealed class TaskFileFormatTests
         lines.AddRange(logLines);
         return string.Join('\n', lines) + "\n";
     }
+
+    /// <summary>A minimal valid Task file with a Timeline section containing the given raw lines.</summary>
+    private static string MinimalTextWithTimeline(params string[] timelineLines) =>
+        MinimalTextWithChangeLog(timelineLines).Replace(TaskFileFormat.ChangeLogHeading, TaskFileFormat.TimelineHeading, StringComparison.Ordinal);
 
     /// <summary>The Spec §7.1 example text, joined with '\n' line endings.</summary>
     private static string SpecExampleText() => string.Join('\n', SpecExampleLines) + "\n";

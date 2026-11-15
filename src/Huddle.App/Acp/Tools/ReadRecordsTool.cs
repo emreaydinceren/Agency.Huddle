@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Library;
@@ -17,8 +18,9 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// Gives the Retro agent a Team's evidence (RT-3): the compact records bundle, one Task's Change log and Evidence, or the tail of
 /// a Room transcript. The caller must hold the <c>retrospective</c> Skill and be the Team's manager or its Retro agent, and
 /// every read is scoped to the named Team: a Task of another Team, or a Room in which no member of the Team has posted, is
-/// refused. Output is capped at <see cref="MaxCharacters"/> characters per call. Offered only to a Persona holding a Skill that
-/// lists it.
+/// refused. The built-in Chief of Staff reads any Team, and any Room's tail, without those checks (owner decision 2026-11-14,
+/// issue #534); a Task of another Team is still refused as a wrong argument. Output is capped at <see cref="MaxCharacters"/>
+/// characters per call. Offered only to a Persona holding a Skill that lists it.
 /// </summary>
 internal sealed class ReadRecordsTool(
     ITeamCatalog teams,
@@ -102,7 +104,8 @@ internal sealed class ReadRecordsTool(
             return RenamedTeamRefusal.For(renames, teamText) ?? $"There is no Team named {teamText}.";
         }
 
-        string? refusal = this.CheckCaller(team, actor.Name);
+        bool chiefOfStaff = this.IsChiefOfStaff(actor.Name);
+        string? refusal = chiefOfStaff ? null : this.CheckCaller(team, actor.Name);
         if (refusal is not null)
         {
             return refusal;
@@ -115,7 +118,7 @@ internal sealed class ReadRecordsTool(
 
         if (!string.IsNullOrWhiteSpace(roomText))
         {
-            return await this.ReadRoomAsync(team, roomText, cancellationToken).ConfigureAwait(false);
+            return await this.ReadRoomAsync(team, roomText, chiefOfStaff, cancellationToken).ConfigureAwait(false);
         }
 
         return this.ReadBundle(team, sinceText);
@@ -183,6 +186,13 @@ internal sealed class ReadRecordsTool(
     private static string Cap(string text) =>
         text.Length <= MaxCharacters ? text : string.Concat(text.AsSpan(0, MaxCharacters - TruncatedNote.Length), TruncatedNote);
 
+    /// <summary>Whether the caller is the built-in Chief of Staff.</summary>
+    /// <param name="caller">The caller's name.</param>
+    /// <returns><see langword="true"/> for the Chief of Staff.</returns>
+    private bool IsChiefOfStaff(string caller) => personas.Entries.Any(entry =>
+        string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal)
+        && string.Equals(entry.Name, caller, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Checks the caller belongs to the Team, holds the Skill and is its manager or Retro agent.</summary>
     /// <param name="team">The named Team.</param>
     /// <param name="caller">The caller's name.</param>
@@ -226,7 +236,7 @@ internal sealed class ReadRecordsTool(
         return newest ?? latest;
     }
 
-    /// <summary>Renders one Task's Change log and Evidence.</summary>
+    /// <summary>Renders one Task's Change log, Evidence and comments.</summary>
     /// <param name="team">The named Team.</param>
     /// <param name="taskId">The Task id as the caller gave it.</param>
     /// <returns>The text, or a refusal.</returns>
@@ -250,11 +260,21 @@ internal sealed class ReadRecordsTool(
             _ = text.Append(CultureInfo.InvariantCulture, $"\n{entry.At.UtcDateTime.ToString(MinuteFormat, CultureInfo.InvariantCulture)} {entry.Actor} {entry.Summary}");
         }
 
-        IReadOnlyList<EvidenceLine> evidence = EvidenceLine.ParseSection(task.Description);
+        IReadOnlyList<EvidenceLine> evidence = task.Evidence;
         _ = text.Append(evidence.Count == 0 ? "\nevidence: none" : "\nevidence:");
         foreach (EvidenceLine line in evidence)
         {
-            _ = text.Append('\n').Append(line.RawText);
+            // A structured line already carries its time and author; a note carries them only when its entry had an author.
+            _ = text.Append('\n').Append(line.Command.Length == 0 && line.Author.Length > 0
+                ? $"{line.Author} note: {line.RawText}"
+                : line.RawText);
+        }
+
+        List<TimelineEntry> comments = [.. task.Comments.Where(static entry => entry.Kind == TimelineEntryKind.Comment)];
+        _ = text.Append(comments.Count == 0 ? "\ncomments: none" : "\ncomments:");
+        foreach (TimelineEntry comment in comments)
+        {
+            _ = text.Append(CultureInfo.InvariantCulture, $"\n{comment.At.UtcDateTime.ToString(MinuteFormat, CultureInfo.InvariantCulture)} {comment.Author} {TaskToolText.IndentContinuation(comment.Text)}");
         }
 
         return Cap(text.ToString());
@@ -263,9 +283,10 @@ internal sealed class ReadRecordsTool(
     /// <summary>Renders the tail of one Room's transcript, provided a member of the Team has posted in it.</summary>
     /// <param name="team">The named Team.</param>
     /// <param name="room">The Room id.</param>
+    /// <param name="chiefOfStaff">Whether the caller is the Chief of Staff, who reads any Room without the Team scoping.</param>
     /// <param name="cancellationToken">Cancels the read.</param>
     /// <returns>The text, or a refusal.</returns>
-    private async Task<string> ReadRoomAsync(TeamSummary team, string room, CancellationToken cancellationToken)
+    private async Task<string> ReadRoomAsync(TeamSummary team, string room, bool chiefOfStaff, CancellationToken cancellationToken)
     {
         string roomId = room.Trim();
         IReadOnlyList<ChatMessage> messages;
@@ -281,6 +302,11 @@ internal sealed class ReadRecordsTool(
         // The Human's older Messages carry the Name they had then; show the current one (rules.md).
         string human = (await directory.GetUserAsync(KnownIds.Human, cancellationToken).ConfigureAwait(false))?.Name ?? string.Empty;
         messages = [.. messages.Select(message => SenderDisplay.WithCurrentName(message, human.Length == 0 ? null : human))];
+
+        if (chiefOfStaff)
+        {
+            return RenderTail(messages);
+        }
 
         Room? scoped = await directory.GetRoomAsync(roomId, cancellationToken).ConfigureAwait(false);
         if (scoped?.Team is { } scopedTeam)

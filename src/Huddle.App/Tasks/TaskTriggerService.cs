@@ -447,7 +447,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             this.ForgetHeld(change.After.Id);
         }
 
-        if (change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done)
+        if (change.After.Status.IsTerminal() && !(change.Before?.Status.IsTerminal() ?? false))
         {
             this.StartUnblock(change);
         }
@@ -561,7 +561,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
     }
 
-    /// <summary>Starts the unblock pass for a Task that reached Done and tracks it for <see cref="WhenIdleAsync"/>.</summary>
+    /// <summary>Starts the unblock pass for a Task that finished (Done, Cancelled, Duplicate or Rejected) and tracks it for <see cref="WhenIdleAsync"/>.</summary>
     /// <param name="change">The change that finished the Task.</param>
     private void StartUnblock(TaskChange change)
     {
@@ -622,11 +622,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     }
 
     /// <summary>
-    /// RQ-6: for every Task (in any Team) whose <c>blocked_by</c> lists the Task that just reached
-    /// Done, that is neither Done nor Rejected, and whose blockers are now all Done, wakes its
-    /// assignee - or the Team's manager when it has none. Each unblocking is recorded as an entry in
-    /// the blocked Task's own change log, keyed by when the blocker last reached Done, so a duplicate
-    /// event wakes nobody again while a reopen followed by a new Done does.
+    /// RQ-6: for every Task (in any Team) whose <c>blocked_by</c> lists the Task that just finished
+    /// (Done, Cancelled, Duplicate or Rejected), that is not finished itself, and whose blockers are now all
+    /// finished (or gone), wakes its assignee - or the Team's manager when it has none. Each unblocking is
+    /// recorded as an entry in the blocked Task's own change log, keyed by when the blocker last finished, so a
+    /// duplicate event wakes nobody again while a reopen followed by a new finish does.
     /// </summary>
     /// <param name="change">The change that finished the Task.</param>
     /// <param name="ct">The service lifetime.</param>
@@ -642,20 +642,20 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         IReadOnlyList<TaskItem> candidates = this.store.BlockedOn(finished.Id);
         foreach (TaskItem blocked in candidates)
         {
-            bool open = blocked.Status is not (TaskState.Done or TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected);
-            bool allDone = blocked.BlockedBy.All(blocker => blocker == finished.Id || this.store.Get(blocker)?.Status == TaskState.Done);
-            if (!open || !allDone)
+            bool open = !blocked.Status.IsTerminal();
+            bool allFinished = blocked.BlockedBy.All(blocker => blocker == finished.Id || this.store.Get(blocker) is not { } other || other.Status.IsTerminal());
+            if (!open || !allFinished)
             {
                 continue;
             }
 
-            // One marker per blocked Task and blocker set, stamped with the latest Done among the blockers: two
-            // blockers finishing together produce the same marker, a reopen followed by a new Done a new one.
-            DateTimeOffset latestDone = blocked.BlockedBy
-                .Select(blocker => DoneAt(blocker == finished.Id ? finished : this.store.Get(blocker), change.Entry.At))
+            // One marker per blocked Task and blocker set, stamped with the latest finish among the blockers: two
+            // blockers finishing together produce the same marker, a reopen followed by a new finish a new one.
+            DateTimeOffset latestFinish = blocked.BlockedBy
+                .Select(blocker => FinishedAt(blocker == finished.Id ? finished : this.store.Get(blocker), change.Entry.At))
                 .Max();
             string blockers = string.Join(',', blocked.BlockedBy.Select(static blocker => blocker.ToString()).Order(StringComparer.Ordinal));
-            string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {blocked.Id} by {blockers} at {latestDone:O}");
+            string marker = string.Create(CultureInfo.InvariantCulture, $"Unblocked: {blocked.Id} by {blockers} at {latestFinish:O}");
             if (!blocked.ChangeLog.Any(entry => string.Equals(entry.Summary, marker, StringComparison.Ordinal)))
             {
                 await this.WakeUnblockedTaskAsync(blocked, change.Actor, marker, ct).ConfigureAwait(false);
@@ -663,23 +663,31 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
     }
 
-    /// <summary>When the Task last reached Done, read from the <c>status: … → Done</c> summaries <see cref="TaskDiff"/> writes.</summary>
+    /// <summary>When the Task last finished (reached Done, Cancelled, Duplicate or Rejected), read from the <c>status: … → Done</c> style summaries <see cref="TaskDiff"/> writes.</summary>
     /// <param name="task">The blocker, or <see langword="null"/> when it no longer exists.</param>
     /// <param name="fallback">Used when the change log holds no such entry.</param>
-    /// <returns>The time of the last Done entry, or <paramref name="fallback"/>.</returns>
-    private static DateTimeOffset DoneAt(TaskItem? task, DateTimeOffset fallback)
+    /// <returns>The time of the last such entry, or <paramref name="fallback"/>.</returns>
+    private static DateTimeOffset FinishedAt(TaskItem? task, DateTimeOffset fallback)
     {
-        DateTimeOffset doneAt = fallback;
+        DateTimeOffset finishedAt = fallback;
         foreach (ChangeLogEntry entry in task?.ChangeLog ?? [])
         {
-            if (entry.Summary.StartsWith("status:", StringComparison.Ordinal) && entry.Summary.Contains("→ Done", StringComparison.Ordinal))
+            if (entry.Summary.StartsWith("status:", StringComparison.Ordinal) && MovesIntoTerminal(entry.Summary))
             {
-                doneAt = entry.At;
+                finishedAt = entry.At;
             }
         }
 
-        return doneAt;
+        return finishedAt;
     }
+
+    /// <summary>Whether a <c>status:</c> summary moves the Task into Done, Cancelled, Duplicate or Rejected.</summary>
+    /// <param name="summary">The Change log summary.</param>
+    private static bool MovesIntoTerminal(string summary) =>
+        summary.Contains(string.Concat("→ ", TaskState.Done.ToWire()), StringComparison.Ordinal)
+        || summary.Contains(string.Concat("→ ", TaskState.Cancelled.ToWire()), StringComparison.Ordinal)
+        || summary.Contains(string.Concat("→ ", TaskState.Duplicate.ToWire()), StringComparison.Ordinal)
+        || summary.Contains(string.Concat("→ ", TaskState.Rejected.ToWire()), StringComparison.Ordinal);
 
     /// <summary>Picks the recipient for one unblocked Task, records the unblocking in its change log and delivers the wake.</summary>
     /// <param name="blocked">The Task that is no longer blocked.</param>

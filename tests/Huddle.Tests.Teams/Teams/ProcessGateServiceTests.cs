@@ -107,6 +107,45 @@ public sealed class ProcessGateServiceTests
         Assert.Equal(QaDone, refusal?.Message);
     }
 
+    /// <summary>A verify member's note (no command) lets a Task reach Done when the Definition of Done names no command (#550).</summary>
+    [Fact]
+    public void CheckTaskChange_DoneWithVerifierNote_DefinitionNamesNoCommand_IsAllowed()
+    {
+        using TempDataDir dir = new();
+        File.WriteAllText(Path.Combine(dir.Path, "AGENTS.md"), "# Plan\n\n## Definition of Done\n\n- Plan checked: evidence from verify\n");
+        ProcessGateService service = Build(dir, Process("'qa-evidence-before-done'"));
+
+        GateRefusal? refusal = service.CheckTaskChange(Context("Review", "Done", evidence: [Line("Quinn", string.Empty, 0)]));
+
+        Assert.Null(refusal);
+    }
+
+    /// <summary>The same note is refused when the Definition of Done has a <c>command ... exits 0</c> item (#550).</summary>
+    [Fact]
+    public void CheckTaskChange_DoneWithVerifierNote_DefinitionNamesACommand_IsRefused()
+    {
+        using TempDataDir dir = new();
+        File.WriteAllText(Path.Combine(dir.Path, "AGENTS.md"), "# Plan\n\n## Definition of Done\n\n- Tests pass: command `dotnet test` exits 0\n");
+        ProcessGateService service = Build(dir, Process("'qa-evidence-before-done'"));
+
+        GateRefusal? refusal = service.CheckTaskChange(Context("Review", "Done", evidence: [Line("Quinn", string.Empty, 0)]));
+
+        Assert.Equal(QaDone, refusal?.Message);
+    }
+
+    /// <summary>A note from a member who does not verify is refused even when notes count (#550).</summary>
+    [Fact]
+    public void CheckTaskChange_DoneWithNonVerifierNote_DefinitionNamesNoCommand_IsRefused()
+    {
+        using TempDataDir dir = new();
+        File.WriteAllText(Path.Combine(dir.Path, "AGENTS.md"), "# Plan\n\n## Definition of Done\n\n- Plan checked: evidence from verify\n");
+        ProcessGateService service = Build(dir, Process("'qa-evidence-before-done'"));
+
+        GateRefusal? refusal = service.CheckTaskChange(Context("Review", "Done", evidence: [Line("Dev", string.Empty, 0)]));
+
+        Assert.Equal(QaDone, refusal?.Message);
+    }
+
     /// <summary>The Human acting does not bypass the service; the override lives in TaskService (Task 52).</summary>
     [Fact]
     public void CheckTaskChange_HumanActor_IsStillRefused()

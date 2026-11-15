@@ -16,6 +16,7 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 | `team-building` | Assembling a Team |
 | `team-rollup` | Summarising across Teams |
 | `team-management` | Managing a Team |
+| `request-confirmation` | Confirming a Request your Team filed |
 | `retrospective` | Running a retro |
 | `ingest` | Proposing facts, Tasks and documents from new originals |
 | `wrap-up` | Proposing what a session produced |

@@ -109,7 +109,7 @@ ships one. Each line is a label, a colon and a rule:
 
 | Rule | It is met when |
 | --- | --- |
-| `evidence from <step>` | An Agent whose role covers that step added an Evidence line with a command |
+| `evidence from <step>` | An Agent whose role covers that step added an Evidence line with a command, or only a note when the Definition of Done names no command |
 | ``command `<cmd>` exits 0`` | The latest Evidence line for that command passed |
 | `task tagged <tag>` | A sub-Task with that tag is Done |
 | `document reviewed by <step>` | An attached document was reviewed by that step after its last edit, with no objection since |
@@ -118,8 +118,9 @@ On the Task, each line shows a tick or an open circle, with who owns the open on
 {name}** posts a Message from you asking for it. A line Huddle can't read says so and never counts as met. On
 an ordinary Task the list is for information and locks nothing.
 
-Some Proof, such as role coverage or a document's History, can complete without any change to the Task. Huddle
-doesn't move the Task then, and the assignee may move it instead.
+A new review of an attached document, or a tagged child Task reaching Done, moves the Task too. Some Proof, such as
+role coverage, can complete without any change to the Task. Huddle doesn't move the Task then, and the assignee may
+move it instead.
 
 ### What each decision does
 

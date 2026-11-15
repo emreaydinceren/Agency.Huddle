@@ -354,28 +354,51 @@ internal sealed class TeamTypeCatalog
         return manifest with { Roles = roles };
     }
 
-    /// <summary>The Skills a role carries: its job's, plus the three Second Brain Skills (Spec §6.8) when it is the manager.</summary>
+    /// <summary>
+    /// The Skills a role carries: its job's, plus the built-in <c>request-confirmation</c> Skill when the role's coverage includes
+    /// verify (#539), plus the three Second Brain Skills (Spec §6.8) when it is the manager.
+    /// </summary>
     /// <param name="role">The role being composed.</param>
     /// <param name="job">The role's pool job.</param>
-    /// <returns>The job's Skills followed, for a manager, by the Second Brain Skills it does not already list.</returns>
+    /// <returns>
+    /// The job's Skills followed by <c>request-confirmation</c> for a role that covers verify (managers included), then, for a
+    /// manager, by the Second Brain Skills it does not already list.
+    /// </returns>
     private static IReadOnlyList<SkillRef> RoleSkills(RoleSpec role, PoolJob job)
     {
-        if (!role.Manager)
+        bool verifies = role.Covers.Contains("verify", StringComparer.OrdinalIgnoreCase);
+        if (!role.Manager && !verifies)
         {
             return job.SkillRefs ?? [];
         }
 
         List<SkillRef> skills = [.. job.SkillRefs ?? []];
-        foreach (string name in (string[])["ingest", "wrap-up", "brain-check"])
+        if (verifies)
         {
-            SkillRef skill = new(name, "builtin", name);
-            if (!skills.Contains(skill))
+            AddBuiltinSkill(skills, "request-confirmation");
+        }
+
+        if (role.Manager)
+        {
+            foreach (string name in (string[])["ingest", "wrap-up", "brain-check"])
             {
-                skills.Add(skill);
+                AddBuiltinSkill(skills, name);
             }
         }
 
         return skills;
+    }
+
+    /// <summary>Appends the built-in Skill of the given name unless the list already holds it.</summary>
+    /// <param name="skills">The Skills collected so far.</param>
+    /// <param name="name">The built-in Skill's name, which is also its folder.</param>
+    private static void AddBuiltinSkill(List<SkillRef> skills, string name)
+    {
+        SkillRef skill = new(name, "builtin", name);
+        if (!skills.Contains(skill))
+        {
+            skills.Add(skill);
+        }
     }
 
     /// <summary>

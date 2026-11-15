@@ -188,7 +188,10 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         string? modelName = null;
         if (model is not null)
         {
-            modelName = ModelCatalogProbe.NameOfModel(models, model);
+            // With no list cached yet, a Claude alias id reads by its alias name rather than raw; rendering never probes.
+            modelName = models is null
+                ? ClaudeModelAliases.NameOf(profile.Id, model)
+                : ModelCatalogProbe.NameOfModel(models, model);
         }
         else if (defaults?.Model is { } defaultModel)
         {

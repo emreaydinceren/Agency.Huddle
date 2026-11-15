@@ -1,7 +1,7 @@
 ---
 title: 'Maintenance'
 template: 'maintenance@1.0.0'
-gates: ['qa-evidence-before-done', 'checks-before-merge', 'failing-test-before-fix', 'accept-before-merge']
+gates: ['qa-evidence-before-done', 'checks-before-merge', 'failing-test-before-fix', 'accept-before-merge', 'blockers-done-before-start']
 retro: { every: 10, unit: 'done-tasks' }
 wip: 2
 checkCommand: 'dotnet test'
@@ -19,7 +19,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 
 ## Stages
 
-1. **Triage**: the bug Task states the symptom, the affected version and the expected behaviour. Done when the manager assigns it.
+1. **Triage**: the bug Task states the symptom, the affected version and the expected behaviour. Done when the manager assigns it. A Task with blockers waits here until every blocker is finished and the manager gives the go-ahead; do no work on it before then.
 2. **Reproduce**: the developer writes a test that fails on the current code. Done when the failing test is recorded as Evidence.
 3. **Fix**: the developer changes the code until the test passes. Done when the build and the tests pass locally.
 4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded.
@@ -35,7 +35,7 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 
 ## If a role is not hired
 
-- No `reviewer`: the manager reviews the fix before it is merged.
+- No `reviewer`: the manager reviews the fix before it is merged. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`.
 - No `qa-engineer`: the manager confirms the symptom is gone and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line.
 - No `release-engineer`: the developer merges after the checks pass.
 
@@ -45,9 +45,11 @@ This Team fixes bugs and upgrades dependencies in code that already ships, as th
 - `checks-before-merge`: Huddle refuses a merge or push until an Evidence line shows exit code 0 for the Team's check command, `dotnet test`.
 - `accept-before-merge`: Huddle refuses a merge into main, whoever runs it, until a Task of the Team has the Human's Accept. Put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept.
 - `failing-test-before-fix`: Huddle refuses to move a bug Task to Review until an Evidence line shows a failing test written before the fix.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
 
 ## Definition of Done
 
+- Review: evidence from challenge
 - QA evidence: evidence from verify
 - Tests pass: command `dotnet test` exits 0
 

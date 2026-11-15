@@ -22,9 +22,11 @@ Follow the voice principles in `Teams/AGENTS.md`. Write to the audience and angl
 ## Stages
 
 1. **Ready**: the Task has a brief, an acceptance line and a Writer. Done when the editor-in-chief assigns it.
-2. **In progress**: the Writer outlines and drafts the piece in the content folder, with a source beside every fact. Done when the draft is linked on the Task.
+2. **In progress**: the Writer outlines and drafts the piece in the content folder, with a source beside every fact. Done when the draft is attached to the Task.
 3. **Verify**: the Fact-Checker reports on every claim, the Copy Editor proposes line edits, and the Writer resolves both. The editor-in-chief reads the result against the brief and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line, and publishes the piece.
+
+A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

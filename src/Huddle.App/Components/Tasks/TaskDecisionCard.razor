@@ -126,7 +126,7 @@
     }
 
     /// <summary>The Evidence authors other than the assignee, in order of first appearance.</summary>
-    private IReadOnlyList<string> Checkers => EvidenceLine.ParseSection(this.Task.Description)
+    private IReadOnlyList<string> Checkers => this.Task.Evidence
         .Select(static line => line.Author)
         .Where(author => author.Length > 0 && !string.Equals(author, this.Task.Assignee, StringComparison.Ordinal))
         .Distinct(StringComparer.Ordinal)

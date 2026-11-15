@@ -284,7 +284,10 @@ file tools, such as Claude, reads the file itself. PRs: #111, then #338.
 **The `search` tool.** Agents can run Global Search. By default it covers only the Rooms the
 Agent is in or that belong to its Teams; `scope: "all"` searches every Room and is logged. It
 matches the exact phrase, and a multi-word search with no hits says so and suggests one or two
-words. PRs: #260, then #408.
+words. Rooms are searched like grep: every matching Message, with `regex`, `context`, `count`
+and filters on Room, Team, sender and time, and a Room's latest Messages on request. The Chief
+of Staff searches every Room by default and reads any Team's records. PRs: #260, then #408,
+then the #534 PR.
 
 **Agent tools in general.** Agents work through `mcp__team__*` tools: Tasks
 (`create_task`, `update_task`, `close_task` and others), `add_evidence`, `read_skill`,
@@ -348,10 +351,12 @@ and a 28-day retro. A role whose connector (such as `email:read`) is not listed 
 **Process and gates.** A Team's process is its `AGENTS.md` prose (steps, onboarding,
 Definition of Done) plus settings in `_team.md`: gates, `checkCommand`, WIP limit and digest
 and retro cadence. Build a team writes them, or the manager's card does, from the type's
-template or blank, and neither overwrites what is there. Five gates exist:
+template or blank, and neither overwrites what is there. Six gates exist:
 `accept-before-merge`, `qa-evidence-before-done`, `checks-before-merge` (refuses an Agent's
 `git merge` or `git push` until the check command's Evidence passes),
-`spec-approved-before-build` and `failing-test-before-fix`. In a Team without
+`spec-approved-before-build`, `failing-test-before-fix` and `blockers-done-before-start`
+(refuses a move to In Progress, Review, Needs You or Done while a blocker is not Done,
+Cancelled, Duplicate or Rejected; the development processes have it, ADR-0085). In a Team without
 `accept-before-merge`, the assignee of an open gated Task with no valid Accept is refused a
 `git merge` of anything but `main`, and a `git push` to `main`. A generated hook makes the Claude Adapter ask before any `git merge`
 or `git push`, even in its `auto` mode, so the gate is consulted. The **Process** tab shows
@@ -374,7 +379,7 @@ no exit code is refused. Every tool call is logged to
 
 **Digests, retros and manager wake-ups.** Digests run on time and retros run after N Done
 Tasks or N days, posted in the Team Room. The manager is woken about Task changes, and the
-assignee of a blocked Task is woken once when its last blocker finishes. PRs: #136.
+assignee of a blocked Task is woken once when its last blocker finishes (Done, Cancelled, Duplicate or Rejected). PRs: #136.
 
 **Requests between Teams.** One Team files a bug, feature, feedback or question into
 another's Backlog as a Task marked **Needs triage**. The receiving manager accepts it,
@@ -532,8 +537,8 @@ timeline in the Right sidebar. Renames carry the history with them. PRs: #220, t
 ## Skills and Skill Packs
 
 **Skills.** A Skill is a folder of Markdown instructions (`Skills/<name>/SKILL.md`) that an
-Agent reads on demand with `read_skill`. It is assigned on the Agent's card. Eight ship built
-in: `team-building`, `team-rollup`, `team-management`, `retrospective`, `ingest`, `wrap-up`,
+Agent reads on demand with `read_skill`. It is assigned on the Agent's card. Nine ship built
+in: `team-building`, `team-rollup`, `team-management`, `request-confirmation`, `retrospective`, `ingest`, `wrap-up`,
 `brain-check` and `browser-check`. A built-in Skill can be overridden file by file and restored. PRs: #71, then
 #136, #335.
 

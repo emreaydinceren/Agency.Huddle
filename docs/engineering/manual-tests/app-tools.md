@@ -1362,7 +1362,7 @@ Nova never calls `search`; ask again naming the tool. If Nova widens on the firs
 **Pass if — all of these**
 
 - The `tool_use` input has no `scope: "all"`.
-- The reply text starts `Rooms searched: yours and your Teams' only.` and lists the Team chat by id and name with `1 match` and the sender `You`. Nova's own Room may also be listed, because the question contains the phrase.
+- The reply text starts `Rooms searched: yours and your Teams' only.` and lists the Team chat by id and name, with the matching Message's id and the sender `You`. Nova's own Room may also be listed, because the question contains the phrase.
 - Nova names the Team chat and says the line was posted by you.
 - The `searched every Room` line is absent for this call.
 

@@ -6,6 +6,7 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
@@ -499,8 +500,8 @@ public sealed class BuildTeamTests
 
     /// <summary>Registers what the roster card's Adapter, Model and Effort rows read: a model catalog, one Adapter and the real <see cref="AgentProfiles"/> over the fixture's stores.</summary>
     /// <param name="ctx">The context to register into, before anything renders.</param>
-    /// <param name="catalog">The fake model catalog.</param>
-    private static void AddProfiles(MudBunitContext ctx, FakeModelCatalog catalog)
+    /// <param name="catalog">The model catalog: the fake, or a real <see cref="ModelCatalogProbe"/> over a fake runner.</param>
+    private static void AddProfiles(MudBunitContext ctx, IModelCatalog catalog)
     {
         ctx.Services.AddSingleton<IModelCatalog>(catalog);
         ctx.Services.AddSingleton(AgentProfileCardTestSupport.BuildAdapterCatalog(("claude", "Claude Code")));
@@ -583,6 +584,29 @@ public sealed class BuildTeamTests
         Assert.Equal("sonnet", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
         Assert.Equal("Model default", card.QuerySelector(".roster-runtime-effort")?.TextContent.Trim());
         Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
+    }
+
+    /// <summary>Over the real <see cref="ModelCatalogProbe"/> with nothing cached, a fresh draft's card names its tier's Model by its alias ("Sonnet", not "sonnet") and the render spawns no probe.</summary>
+    [Fact]
+    public async Task Roster_FreshDraft_ShowsTheAliasNameBeforeAnyProbe()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        AcpOptions acp = new() { Adapters = [new AdapterProfileOptions { Id = "claude", DisplayName = "Claude Code", Command = "node" }] };
+        IOptions<TeamOptions> options = dir.Options(opts => opts.Acp = acp);
+        using ModelCatalogProbe probe = new(new(options), NullLoggerFactory.Instance, new AdapterProfileResolver(new AdapterCatalog(options)), runner, new WorkModePolicy(options));
+        AddProfiles(ctx, probe);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal("Sonnet", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+        Assert.Empty(runner.Calls);
     }
 
     /// <summary>A member on the Team page's Members tab shows the Model and Effort stored for it, as its avatar popover does.</summary>
@@ -682,6 +706,33 @@ public sealed class BuildTeamTests
         Assert.True(PersonaFrontmatter.TryReadIdentity(hired.Text, out PersonaIdentity? identity, out _));
         Assert.Equal(["ext-skill"], identity.Skills);
         Assert.Equal("claude-agent-acp", identity.Adapter);
+    }
+
+    /// <summary>Two drafts that carry the same Skill ask the copier once with the distinct names, and before the Team or any Agent is written.</summary>
+    [Fact]
+    public async Task Approve_TwoDraftsSharingASkill_CopiesItOnceBeforeAnythingIsWritten()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        bool teamCreatedWhileCopying = true;
+        int teamAgentsWhileCopying = -1;
+        fixture.Installer.OnEnsure = _ =>
+        {
+            teamCreatedWhileCopying = fixture.Folders.Calls.Contains("CreateTeam:Garden");
+            teamAgentsWhileCopying = fixture.Personas.Entries.Count(entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+        };
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Equal(["ext-skill"], Assert.Single(fixture.Installer.Calls));
+        Assert.False(teamCreatedWhileCopying);
+        Assert.Equal(0, teamAgentsWhileCopying);
+        Assert.Equal(2, fixture.Personas.Entries.Count(entry => entry.Teams.Contains("Garden", StringComparer.Ordinal)));
     }
 
     /// <summary>A Skill that is not ready stops the approval before the Team is created, names the Skill and links to Settings.</summary>

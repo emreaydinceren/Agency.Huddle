@@ -100,6 +100,10 @@ internal sealed class AgentConnection
         var lineStream = new JsonLineStream(this.pipe);
         await using var lineStreamScope = lineStream.ConfigureAwait(false);
         this.stream = lineStream;
+        if (this.logger.IsEnabled(LogLevel.Debug))
+        {
+            this.logger.LogDebug("Agent connection {ConnectionId} opened.", this.ConnectionId);
+        }
 
         try
         {
@@ -460,6 +464,8 @@ internal sealed class AgentConnection
         string? path = activity.Path is { Length: > 0 and <= ToolActivityLimits.MaxPathLength } ? activity.Path : null;
         int? line = activity.Line is >= 1 ? activity.Line : null;
         EditChange? edit = SanitiseEdit(activity.Edit);
+        string? arguments = ToolActivityLimits.Clip(activity.Arguments, ToolActivityLimits.MaxArgumentsLength, out _);
+        string? result = ToolActivityLimits.Clip(activity.Result, ToolActivityLimits.MaxResultLength, out _);
         // Unreachable in practice - the membership check above already needed an Agent - but it is what
         // lets the rest of this method read the Agent without a null-forgiving operator.
         if (this.Agent is not { } agent)
@@ -476,7 +482,7 @@ internal sealed class AgentConnection
         }
 
         this.drafts.Activity(
-            activity.MessageId, activity.ToolCallId, activity.RoomId, agent.Id, agent.Name, title, activity.Status, path, line, edit);
+            activity.MessageId, activity.ToolCallId, activity.RoomId, agent.Id, agent.Name, title, activity.Status, path, line, edit, arguments, result);
 
         this.roomEvents.PublishDraftChanged(activity.RoomId);
     }

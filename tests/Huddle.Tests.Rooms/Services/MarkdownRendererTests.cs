@@ -842,6 +842,61 @@ public sealed class MarkdownRendererTests
         Assert.Contains("library-ref", anchor.ClassList, StringComparer.Ordinal);
     }
 
+    private const string EvidenceDescription = "Body.\n\n## Evidence\n- 2026-10-08T12:00Z | Nova | dotnet test | exit 0 | note: E:\\Data\\Teams\\Marketing\\plan.md\n- Checked E:\\Data\\Teams\\Marketing\\plan.md by hand\n\n## Notes\nSee E:\\Data\\Teams\\Marketing\\plan.md";
+
+    /// <summary>In a Task Description, two list-item Evidence lines render as two list items.</summary>
+    [Fact]
+    public void ToTaskHtml_TwoEvidenceListItems_RenderAsTwoListItems()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToTaskHtml(MarkdownRendererTests.EvidenceDescription, null, library);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.Equal(2, document.QuerySelectorAll("li").Length);
+    }
+
+    /// <summary>A bare path in the Evidence section shows in full; the same path in the Description body (above or below) shows only its file name.</summary>
+    [Fact]
+    public void ToTaskHtml_PathInEvidenceSection_ShowsFullPathAndElsewhereShowsFileName()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToTaskHtml(MarkdownRendererTests.EvidenceDescription, null, library);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchors = document.QuerySelectorAll("a.library-ref");
+
+        Assert.Equal(3, anchors.Length);
+        Assert.Equal(MarkdownRendererTests.PlanPath, anchors[0].TextContent);
+        Assert.Equal(MarkdownRendererTests.PlanPath, anchors[1].TextContent);
+        Assert.Equal("plan.md", anchors[2].TextContent);
+        Assert.Equal("?library=teams/Marketing/plan.md", anchors[0].GetAttribute("href"));
+    }
+
+    /// <summary>A path above the Evidence heading keeps showing only its file name in a Task Description.</summary>
+    [Fact]
+    public void ToTaskHtml_PathAboveEvidenceHeading_ShowsFileName()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToTaskHtml("Plan " + MarkdownRendererTests.PlanPath + "\n\n## Evidence\n- fine", null, library);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.Equal("plan.md", document.QuerySelector("a.library-ref")?.TextContent);
+    }
+
+    /// <summary>The plain chat entry point still shows only the file name inside an Evidence section.</summary>
+    [Fact]
+    public void ToHtml_PathInEvidenceSection_StillShowsFileName()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.EvidenceDescription, null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.All(document.QuerySelectorAll("a.library-ref"), anchor => Assert.Equal("plan.md", anchor.TextContent));
+    }
+
     /// <summary>A path with spaces inside a code span is linked, its href URL-encoded (H5's permitted case).</summary>
     [Fact]
     public void ToHtml_PathWithSpacesInCodeSpan_IsLinkedAndEncoded()

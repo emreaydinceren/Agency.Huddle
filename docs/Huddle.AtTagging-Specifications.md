@@ -533,6 +533,7 @@ Default Prompt text (Timing `Live`, all keys new, all in `PromptCatalog`):
 | `turn.referenceGone` | `- {{kind}} {{key}}: no longer exists` | both required |
 | `turn.referencesMore` | `- …and {{count}} more not listed` | `{{count}}` required |
 | `turn.referencesHint` | `To learn more, list Agents and their Teams with {{listAgents}}. You cannot read the Messages of a Room you are not a Member of.` | `{{listAgents}}` required |
+| `turn.referencesHintChiefOfStaff` | `To learn more, list Agents and their Teams with {{listAgents}}. You can read any Room's Messages with {{search}}: give the Room's id as 'room' and no query for its newest Messages.` | `{{listAgents}}` and `{{search}}` required; replaces `turn.referencesHint` when the Turn's Agent is the built-in Chief of Staff (D-18, amended 2026-11-14) |
 | `turn.referencesTaskHint` | `Read a Task in full with {{getTask}}.` | `{{getTask}}` required; appended to the hint line only when a Task line was written and Tasks is enabled |
 
 The tool names arrive prefixed for the session's Adapter (`mcp__team__list_agents` for
@@ -540,6 +541,13 @@ The tool names arrive prefixed for the session's Adapter (`mcp__team__list_agent
 the Room Session's own profile. The hint names only tools every Persona is offered (D-18):
 `list_teams` and `read_records` are Skill-gated, and naming a tool the Agent does not have invites a
 failed call. The `mcp__team__` prefix and the `Team:` root are untouched (CLAUDE.md).
+
+The built-in Chief of Staff gets `turn.referencesHintChiefOfStaff` instead (D-18, amended
+2026-11-14, issue #581): since PR #580 it reads every Room with `search`, which every Agent is
+offered, so the standard hint's last sentence would be false for it. `ReferencedItemsEnricher`
+asks at each Turn whether the Turn's Persona is the one carrying `BuiltinAgent.ChiefOfStaffMarker`,
+by Name ignoring case, the same check `search` and `read_records` make. Every other Agent keeps
+`turn.referencesHint`.
 
 The Room line's Scope follows the shape `turn.roomLabel` already gives the Room the Turn is in
 (`[Room: Nova (id: …, Team: Marketing)]`), but says `root` explicitly: a referenced Room is not the
@@ -698,7 +706,7 @@ the reason.
 | D-15 | **The Room view shows a chip only for a gone or changed target, never throws** | The common case, an unchanged target, adds nothing to the screen. *Owner* (dimmed unavailable chip) |
 | D-16 | **Agents get a fresh header for the trigger Message only; Task, Room, Team lines; Library files, picked or uploaded, left to the Library documents block.** *Owner*, Library mine | Facts, not floods; the Library block already does files, uploads included, with caps, and a second listing would list an attachment twice |
 | D-17 | **Header values are JSON-quoted inside one dynamic fence, under a line saying they are data.** *Owner* (fence/escape) | The same fence the Library block uses; quoting stops a title from posing as a line |
-| D-18 | **The hint names only `list_agents` and, with Tasks, `get_task`, and says no tool reads another Room** | `list_teams` and `read_records` are Skill-gated; a hint must not name a tool the Agent lacks |
+| D-18 | **The hint names only `list_agents` and, with Tasks, `get_task`, and says no tool reads another Room.** *Amended 2026-11-14 (#581):* the built-in Chief of Staff's hint (`turn.referencesHintChiefOfStaff`) names `search` instead and never says a Room is unreadable | `list_teams` and `read_records` are Skill-gated; a hint must not name a tool the Agent lacks. `search` is offered to every Agent, and since PR #580 (ADR-0066, amended) it reads every Room for the Chief of Staff, so the old sentence was false for it and contradicted `chief-of-staff.md` |
 | D-19 | **10 Task, Room and Team references per Message, and Library files at `Library:MaxReferencedDocuments` (10) as a separate family; `MaxPromptChars` 2000; value 120; label 60** (revised for PR #170; the caps count resolved references after lookup, D-36) | Enough for any real Message; a Message can carry ten uploads (`Library:MaxUploadsPerMessage`), which must not crowd out its other references |
 | D-20 | **`Team:References:ExpandInPrompt` and `Team:References:MaxPromptChars`.** *Owner* (a key to switch off and a cap) | Names follow the `Team:Search:*` pattern |
 | D-21 | **The word is reference, never tag** | The glossary avoids *tag* for both Mentions and Task references |

@@ -5,7 +5,7 @@ documents to learn, and prove those documents became lasting memory that later s
 also builds a small working app. This page is for a Human running the whole product end to end. Every chat text is
 ready to paste and nothing is seeded.
 
-**29 tests** · 3 free, 26 paid · budget about 8.3 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
+**30 tests** · 3 free, 27 paid · budget about 8.5 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
 all 27 on 2026-11-05, on Route B, with Route A tested separately: ZERO-01 to ZERO-16 at `50f223af` and ZERO-17 to
 ZERO-27 at `365cd12f`, after #384, which changes only the Chief of Staff's capture text and the Team Memory Helper's
 prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13). On 2026-11-05 ZERO-12, 14, 15 and 26 were rerun on the script's models, ZERO-15 needed three product fixes and ZERO-26 is unresolved (#403), and the rerun cost about 13 USD.
@@ -642,11 +642,11 @@ Select-String -Path "$data\logs\*.log" -Pattern 'checks-before-merge|merge gate'
 ```
 
 **Expect**: Ivy writes the code and tests on a branch and moves the Task to **Review**. Rex reports on the diff without
-editing files. Quinn runs the tests and posts an Evidence line with `dotnet test` and exit code 0. The branch is merged
+editing files, runs `dotnet test` and posts an Evidence line with it. Quinn waits until Rex's review has no open finding, then runs the tests and posts an Evidence line with `dotnet test` and exit code 0. The branch is merged
 into `main` only after that line exists and you have pressed **Accept**. When the Proof is complete Huddle moves the Task to **Needs you** by itself; you do not have to ask, and no Agent asks you for an Accept in chat. Any merge into `main` by any member of the Team waits for your Accept, because the Team's process carries `accept-before-merge`; the Task names the merge in its Action. The Task's Change log tells the story.
 
 **Pass if**: the merge follows the Evidence line and your **Accept**, a Task ends in **Done**, and Rex's commit count is 0.
-**Fail if**: the Task reaches Done with no Evidence, the merge comes before the Evidence, the merge comes before the Accept, you had to tell an Agent to move the Task to **Needs you**, or anyone edits the repository's `main` without a merge.
+**Fail if**: the Task reaches Done with no Evidence, the Task reaches **Needs you** with no Evidence line from Rex, the merge comes before the Evidence, the merge comes before the Accept, you had to tell an Agent to move the Task to **Needs you**, or anyone edits the repository's `main` without a merge.
 
 ### ZERO-16 — Run the app yourself
 
@@ -1120,6 +1120,41 @@ Needs the Dev Team from ZERO-12 to ZERO-15 and its web UI; every Agent on Sonnet
 
 **Pass if**: the Evidence records a real browser check that failed on the planted bug, and the worktree is clean.
 **Fail if**: the QA records a pass, checks only over HTTP, installs Playwright inside the repository, or records a browser check it did not run.
+
+### ZERO-30 — The Chief of Staff finds a fact said only in a Team Room, and asks the manager for one on no record
+
+**Paid** 💰 · about 10 min
+
+Needs a Dev Team with a manager on Sonnet. The Chief of Staff is in no Team. It covers #534: the Chief of Staff looks in the Tasks, then every Room with `search`, then asks the manager, and never says a Room is not visible. On 2026-11-14 it passed in an isolated lane with a one-member Dev Team; see the Run log.
+
+1. In the **Dev Team** Team Room, send two Messages, one after the other:
+
+   ```text
+   A decision for the team: DEVT-0002 (the API) stays blocked until DEVT-0001 is Done. Wait for my go-ahead before anyone starts DEVT-0002 - I'd rather keep one Task in progress than start the API on an unreviewed base. No need to reply.
+   ```
+
+   ```text
+   One more: when DEVT-0001 is ready, wait for the review before you merge the branch tip into main. No need to reply.
+   ```
+
+2. In the Chief of Staff's one-to-one Room, send:
+
+   ```text
+   Did anyone tell the Dev Team to hold off on starting something? What exactly, and why?
+   ```
+
+3. Then send a question recorded nowhere:
+
+   ```text
+   After v1 of the Todo website, what does the Dev Team plan to do next, and does its manager think it is safe for the family to use on the home PC?
+   ```
+
+4. Read the Chief of Staff's `mcp__team__search` calls from its Adapter session file (`~\.claude\projects\<its work dir with separators as dashes>\*.jsonl`) and the `searched every Room` line in `{DataDir}\logs\huddle-*.log`.
+
+**Expect**: for step 2 the Chief of Staff reads the Dev Team's Tasks, then calls `search` with no `scope` (often with `regex` and `context`), and quotes the first, older hold with its reason and the Room and time, as well as the newer one. The log line is `INF ... Chief of Staff <name> searched every Room for '...'`. For step 3 it searches, finds nothing, creates a Task in the Dev Team assigned to the manager, tells you it asked, and relays the manager's answer naming the Task.
+
+**Pass if**: both holds are found and the DEVT-0002 one is quoted with its reason, the unrecorded question goes to the manager as a Task and the answer comes back, and no reply says a Room's conversation is not visible.
+**Fail if**: only the newer hold is found, the Chief of Staff passes `scope: "all"` because the default did not reach the Team Room, it guesses an answer to step 3, or any reply says it cannot see a Room.
 
 ## Starting over
 

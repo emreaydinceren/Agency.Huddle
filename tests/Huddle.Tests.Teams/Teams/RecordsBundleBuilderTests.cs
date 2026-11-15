@@ -69,6 +69,30 @@ public sealed class RecordsBundleBuilderTests
         Assert.Equal(Since, bundle.Since);
     }
 
+    /// <summary>A Task whose only change since the cutoff is a comment is listed, and a comment before the cutoff does not list its Task.</summary>
+    [Fact]
+    public void Build_OnlyACommentSince_ListsTheTask()
+    {
+        using TempDataDir dir = new();
+        using Fixture fixture = new(dir);
+        fixture.Write(
+            "PLAT-0001",
+            "Commented",
+            TaskState.InProgress,
+            [TestTasks.Entry("2026-09-01T10:00:00Z", "Ada", "created")],
+            comments: [new TimelineEntry(new DateTimeOffset(2026, 10, 2, 10, 0, 0, TimeSpan.Zero), "Bo", TimelineEntryKind.Comment, "Any news?")]);
+        fixture.Write(
+            "PLAT-0002",
+            "Old comment",
+            TaskState.InProgress,
+            [TestTasks.Entry("2026-09-01T10:00:00Z", "Ada", "created")],
+            comments: [new TimelineEntry(new DateTimeOffset(2026, 9, 2, 10, 0, 0, TimeSpan.Zero), "Bo", TimelineEntryKind.Comment, "Old.")]);
+
+        RecordsBundle bundle = fixture.Builder.Build("Platform", Since);
+
+        Assert.Equal("PLAT-0001", Assert.Single(bundle.Tasks).Id);
+    }
+
     /// <summary>A Request Task since the cutoff is listed with its kind, requesting Team and triage.</summary>
     [Fact]
     public void Build_RequestTask_ListedAsRequest()
@@ -258,9 +282,10 @@ public sealed class RecordsBundleBuilderTests
             IReadOnlyList<ChangeLogEntry> log,
             string team = "Platform",
             string? assignee = null,
-            IReadOnlyList<KeyValuePair<string, string>>? unknownFields = null)
+            IReadOnlyList<KeyValuePair<string, string>>? unknownFields = null,
+            IReadOnlyList<TimelineEntry>? comments = null)
         {
-            TaskItem task = TestTasks.Make(id, title, status, assignee: assignee, changeLog: log, location: new(team, null, false), unknownFields: unknownFields);
+            TaskItem task = TestTasks.Make(id, title, status, assignee: assignee, changeLog: log, location: new(team, null, false), unknownFields: unknownFields) with { Comments = comments ?? [] };
             _ = TestTaskStore.WriteTask(TestTaskStore.Root(this.dir), TestTaskStore.RelativePath(team, null, false, id + ".md"), task);
         }
 

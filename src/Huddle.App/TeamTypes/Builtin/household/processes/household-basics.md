@@ -20,11 +20,13 @@ This Team runs the everyday life of one family's home: school mail, meals and gr
 ## Stages
 
 1. **Ready**: the Task has a title, an acceptance line and one owner. Done when the household manager assigns it.
-2. **In progress**: the owner gathers the facts from the source (a school email, the pantry list, a quote, a bill, the upkeep calendar) and drafts the to-dos, menu, list, form or reply. Done when the draft is in the Task.
+2. **In progress**: the owner gathers the facts from the source (a school email, the pantry list, a quote, a bill, the upkeep calendar) and drafts the to-dos, menu, list, form or reply. Done when the draft is attached to the Task.
 3. **Verify**: the household manager compares the draft with its source and posts an Evidence line. Done when that line exists.
 4. **Done**: a parent orders, pays, books, signs or sends what is needed, and the Human marks the Task Done after reading the Evidence line.
 
 A recurring job is one Task per occurrence. Huddle has no repeating Tasks, so the owner opens the next Task a week before it is due, from the dates in Team Memory, and writes the date after that when the Task is Done.
+
+A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 
@@ -49,7 +51,7 @@ Each job has one owner from noticing that it needs doing to getting it done, nev
 ## Gates
 
 - This process declares no hard gate. The household manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
-- Every Task that spends money or needs a signature carries an `action:` line naming the amount and who is paid, or what is signed. That Task waits in Needs You until a parent accepts it, however small the amount.
+- Every Task that spends money or needs a signature carries an `action:` line naming the amount and who is paid, or what is signed. That Task waits in Review until its Proof is complete, then in Needs You until a parent accepts it, however small the amount.
 
 ## Definition of Done
 

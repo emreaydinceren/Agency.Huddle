@@ -4220,6 +4220,30 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-22--a-request-he
 | --- | --- | --- | --- | --- |
 | 2026-11-06 | Pass *(run by an agent, mock lane)* | `ca083f0f` + uncommitted #428 fix | #428 | Mock lane, free, `Team__AgentMessageBudget=1`. A wrapper around `mock-acp` counted `session/prompt` lines, and Ada's Message was posted through her `post_message` tool. Case 1 (no restart): Continue gave Bo one Turn and the Notification closed. Case 2 (restart): the Notification stayed with the Room no longer paused and no Budget card, zero Turns at startup, one click on Wake Ada gave one Turn and one Message from You, the Notification closed and the button went. Case 3 (restart, then "@Bo go ahead and merge it" typed): one Turn, the Notification closed. Finding fixed in the same run: the card said "the Room is paused, press Continue" after a restart when neither was true; it now says the Budget ran out and names Continue and Wake. A mock echoes the Room's history, so its replies mention people; that made extra held requests, not a defect. |
 
+### TASKS-23 — A Developer asked to start a Task blocked by an open Task is refused, and can start it once the blocker is Done
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-23--a-developer-asked-to-start-a-task-blocked-by-an-open-task-is-refused-and-can-start-it-once-the-blocker-is-done)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-14 | Pass *(run by an agent, paid lane)* | `fix/issue-538-enforce-blocked-by`, uncommitted | #538 | Fresh lane, Dev Team from lightweight-flow (its `_team.md` carried `blockers-done-before-start`; the migration marker was written), Omar and Leo on Sonnet 5.5. DEVT-0001 created In Progress; DEVT-0002 created To Do for Leo, blocked by it. Woken by the assignment, Leo read the blocker and posted that he would wait and had written no code. Asked to call `update_task` to In Progress anyway, he got `Gate blockers-done-before-start: this Task is blocked by DEVT-0001 (Review). …` and the Task stayed in To Do; asked to clear `blocked_by`, he got `Only the Team's manager or the Human can remove a blocker from blocked_by.` After the Human moved DEVT-0001 to Done, DEVT-0002 logged `Unblocked: DEVT-0002 by DEVT-0001`, Leo was woken and moved it To Do → In Progress → Review. Spend 0.79 USD (Chief of Staff 0.24, Omar 0.28, Leo 0.26). |
+
+### TASKS-24 — Evidence survives description edits by an Agent and by the form, and comments show on the Timeline
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-24--evidence-survives-description-edits-by-an-agent-and-by-the-form-and-comments-show-on-the-timeline)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass *(run by an agent, paid lane)* | `feat/issue-586-task-timeline` `ec9c0956` | #586 | Fresh lane, Calc Team from lightweight-flow (Joe manager, Otto QA, both Sonnet 5.5 in `persona_models`; the repo's check was `pwsh -File test.ps1`). Joe created gated CALC-0001; Joe and Otto each ran the check and called `add_evidence` (exit 0); Otto moved it to Review: Proof 2/3 (Review open: no role covers challenge). Joe's `update_task` with only `description` (tool-call log `Joe/2026-11-15.jsonl`) and the Human's edit-page Save, made after a comment from the same page while the description edit was pending, each logged `description edited`; both Evidence entries stayed and Proof stayed 2/3. Otto's `add_comment` and the Human's two-line comment (a pipe and a backslash) show on the Timeline with no edit or delete control; the file holds one `## Timeline` section. The comment's line break renders as a space (Markdown soft break). |
+
+### TASKS-25 — A Task file written before the Timeline shows the same Timeline and Proof, before and after its first write
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass *(run by an agent, paid lane)* | `feat/issue-586-task-timeline` `ec9c0956` | #586 | CALC-0002 written in the old form while the app was stopped (last Change log entry dated ahead so startup reconciliation did not write). After start the file was byte-identical; the panel showed the description without Evidence, Proof 2/3 and 7 Timeline entries (two Evidence, one undated note with no author, four events). A priority change on the edit page converted it: `## Timeline` with the Change log lines copied verbatim, Evidence as `evidence` lines (the note dated with the line before it), Proof still 2/3, 8 entries. Lane spend for TASKS-24 and -25 together: 0.78 USD (Calc 0.53, Chief of Staff 0.25 on its own first-run Turns). |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell
@@ -6121,6 +6145,14 @@ File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.m
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-14 | Pass | `d2badef9` + #536 branch | #536 | By an agent acting as the Human, in an isolated lane with a fresh Development Team (manager, Developer, QA Engineer, all on Sonnet) instead of the ZERO-12 Dev Team, on a two-file node to-do page whose Add button was made a no-op on a branch. The QA read `browser-check`, installed Playwright in `%TEMP%\huddle-browser-check\DEVE-0001`, drove msedge headless and recorded `node check.mjs` exit 1 naming the failing step; the repository stayed clean and the manager filed a fix Task. The same script on `main` exits 0. Spend 0.44 USD. |
+
+### ZERO-30 — The Chief of Staff finds a fact said only in a Team Room, and asks the manager for one on no record
+
+File: [`docs/engineering/manual-tests/second-brain-zero.md`](second-brain-zero.md#zero-30--the-chief-of-staff-finds-a-fact-said-only-in-a-team-room-and-asks-the-manager-for-one-on-no-record)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-14 | Pass | `e089af5b` | #534 | By an agent acting as the Human, in an isolated lane (`C:\HuddleLane534`) with a one-member Dev Team (Rhea, manager, Sonnet/low) and the seeded Chief of Staff on Opus/medium. Hold question: `list_tasks`, then one `search` with `regex: true`, `context: 2`, no `scope` (logged at INF); it quoted both holds with Room and time, the older DEVT-0002 one with its reason. Unrecorded question: `search` with `team: "Dev Team"` and a `room` tail, then `create_task` for Rhea; Rhea answered on the Task and the Chief of Staff relayed it, naming the Task. Status question: Tasks, then the Room tail. No reply said a Room was not visible. Spend 0.96 USD. |
 
 ## Feed: the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart
 

@@ -21,6 +21,9 @@ public static partial class MarkdownRenderer
 {
     private static readonly MarkdownPipeline Pipeline = MarkdownRenderer.CreateBuilder().Build();
 
+    /// <summary>Marks the <c>library-ref</c> link built for a bare path with the path as written.</summary>
+    private static readonly object AsWrittenKey = new();
+
     /// <summary>
     /// Builds the pipeline shared by <see cref="MarkdownRenderer"/> and
     /// <see cref="Agency.Huddle.App.Library.WikiLinkParser"/>, so both parse Markdown the same way.
@@ -93,6 +96,18 @@ public static partial class MarkdownRenderer
     internal static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryNoteResolver? library, LibraryPath? from) =>
         MarkdownRenderer.Render(markdown, tasks, library: null, noteLibrary: library, from: from, mentions: null);
 
+    /// <summary>
+    /// Renders a Task's Description as the three-argument <see cref="ToHtml(string, ITaskReferenceResolver?, ILibraryReferenceResolver?)"/>
+    /// does, except that inside its <c>## Evidence</c> section a bare path linked to the Library shows the path exactly as
+    /// written instead of its file name, so a proof reads as the place it points at. Chat and the attachment lines of a
+    /// Description keep the file name.
+    /// </summary>
+    /// <param name="markdown">The Task's Description Markdown.</param>
+    /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
+    /// <param name="library">The resolver for paths, or <see langword="null"/> to link none.</param>
+    public static string ToTaskHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library) =>
+        MarkdownRenderer.Render(markdown, tasks, library, noteLibrary: null, from: null, mentions: null, fullPathsInEvidence: true);
+
     /// <summary>The single render path shared by every public and internal <see cref="ToHtml(string)"/> overload.</summary>
     /// <param name="markdown">The Markdown text to render.</param>
     /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
@@ -100,7 +115,8 @@ public static partial class MarkdownRenderer
     /// <param name="noteLibrary">The resolver for wikilinks and relative links, or <see langword="null"/> outside a note.</param>
     /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
     /// <param name="mentions">The handles to draw as Mention pills, or <see langword="null"/> to mark none.</param>
-    private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from, MentionMarks? mentions)
+    /// <param name="fullPathsInEvidence">Whether a bare path in a <c>## Evidence</c> section shows in full (a Task's Description).</param>
+    private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from, MentionMarks? mentions, bool fullPathsInEvidence = false)
     {
         // An unguessable per-render marker, not something a note's own authored text could ever contain: only
         // an image href this call itself resolved through RewriteRelativeLinks carries it, so IsSafe can trust
@@ -139,6 +155,10 @@ public static partial class MarkdownRenderer
         if (library is not null)
         {
             MarkdownRenderer.LinkLibraryPaths(document, library, markdown);
+            if (fullPathsInEvidence)
+            {
+                MarkdownRenderer.ShowFullPathsInEvidence(document);
+            }
         }
 
         // Last, so a Task, Library or Room link written over the same characters wins and the Mention inside it
@@ -833,6 +853,7 @@ public static partial class MarkdownRenderer
 
         LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), reference.RelativePath);
         link.AppendChild(new LiteralInline(MarkdownRenderer.FileNameOf(path)));
+        link.SetData(MarkdownRenderer.AsWrittenKey, path);
         link.GetAttributes().AddClass("library-ref");
         if (!reference.Exists)
         {
@@ -841,6 +862,43 @@ public static partial class MarkdownRenderer
 
         return link;
     }
+
+    /// <summary>
+    /// In each level-2 "Evidence" section of <paramref name="document"/> (up to the next heading of any level), replaces the
+    /// file name shown by every bare-path <c>library-ref</c> link with the path as written. Href, class and tooltip are kept.
+    /// </summary>
+    /// <param name="document">The parsed Markdown document, mutated in place.</param>
+    private static void ShowFullPathsInEvidence(MarkdownDocument document)
+    {
+        bool inEvidence = false;
+        foreach (Block block in document)
+        {
+            if (block is HeadingBlock heading)
+            {
+                inEvidence = heading.Level == 2 && string.Equals(MarkdownRenderer.HeadingText(heading), "Evidence", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+
+            if (!inEvidence)
+            {
+                continue;
+            }
+
+            foreach (LinkInline link in block.Descendants<LinkInline>().ToList())
+            {
+                if (link.GetData(MarkdownRenderer.AsWrittenKey) is string path)
+                {
+                    link.Clear();
+                    link.AppendChild(new LiteralInline(path));
+                }
+            }
+        }
+    }
+
+    /// <summary>The plain text of <paramref name="heading"/>, trimmed.</summary>
+    /// <param name="heading">The heading block.</param>
+    private static string HeadingText(HeadingBlock heading) =>
+        heading.Inline is null ? string.Empty : string.Concat(heading.Inline.Descendants<LiteralInline>().Select(static literal => literal.Content.ToString())).Trim();
 
     /// <summary>
     /// Appends the kept (non-wikilink) inlines covering <c>[fromInclusive, toExclusive)</c> in raw-source

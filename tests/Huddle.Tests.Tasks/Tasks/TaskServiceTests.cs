@@ -102,7 +102,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Equal(["The description must not contain a '## Change log' heading; that heading is reserved for the task's history."], refused.Problems);
+        Assert.Equal(["The description must not contain a '## Change log' heading; that heading is reserved for the task's timeline."], refused.Problems);
     }
 
     /// <summary>Updating a Task's Description to one that contains the reserved Change log heading is refused with the same exact text as Create (shared rule, second entry point).</summary>
@@ -118,7 +118,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Description = "Body\n## Change log\nmore" }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Equal(["The description must not contain a '## Change log' heading; that heading is reserved for the task's history."], refused.Problems);
+        Assert.Equal(["The description must not contain a '## Change log' heading; that heading is reserved for the task's timeline."], refused.Problems);
     }
 
     /// <summary>An empty (or whitespace-only) title is refused with the exact Spec §9.2 text.</summary>

@@ -49,9 +49,9 @@ public sealed class TeamsPhase3EndToEndTests
 
     private const string CheckCommand = "dotnet test";
 
-    /// <summary>Flow 1: Create and Start a Small Development Team: the manager's host runs first, the Team files and role files exist, and the onboarding turn is posted once.</summary>
+    /// <summary>Flow 1: Create and Start a Small Development Team: onboarding waits for the manager's host only, the Team files and role files exist, and the onboarding turn is posted once.</summary>
     [Fact]
-    public async Task CreateAndStart_ManagerRunsFirst_FilesExist_OnboardingPostedOnce()
+    public async Task CreateAndStart_FilesExist_OnboardingPostedOnceToTheManager()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir workspace = NewWorkspace();
@@ -61,8 +61,6 @@ public sealed class TeamsPhase3EndToEndTests
         TeamCast cast = await CreateAndStartAsync(run, workspace.Path, ct);
 
         Assert.Equal([cast.Manager.Name], run.Gate.Waited);
-        string[] presentAtWait = [.. Assert.Single(run.Gate.PersonasAtWait).Where(static name => !string.Equals(name, "Chief of Staff", StringComparison.Ordinal))];
-        Assert.Equal([cast.Manager.Name], presentAtWait);
         Assert.Equal([true], run.Gate.Results);
         string teamFolder = Path.Combine(root.TasksDirPath, TeamName);
         Assert.True(File.Exists(Path.Combine(teamFolder, TeamPaths.TeamFileName)));
@@ -273,7 +271,7 @@ public sealed class TeamsPhase3EndToEndTests
         return workspace;
     }
 
-    /// <summary>Creates the Development Team with its four starting roles, hires the manager the way Team setup does, and starts everyone.</summary>
+    /// <summary>Creates the Development Team with its four starting roles, gives it its default process, hires the manager and then the other members the way Build a team does, and onboards the manager.</summary>
     /// <param name="run">The running host.</param>
     /// <param name="workspace">The repository folder.</param>
     /// <param name="ct">Cancels the work.</param>
@@ -288,6 +286,7 @@ public sealed class TeamsPhase3EndToEndTests
         PersonaStore personas = services.GetRequiredService<PersonaStore>();
         TeamFile file = new(new VersionedRef(type.Id, type.Version), null, workspace, null, string.Empty);
         Assert.Equal(TeamCreateOutcome.Created, folders.CreateTeam(TeamName, file).Outcome);
+        _ = hiring.ProvisionProcess(TeamName, null);
 
         List<string> used = [.. personas.ListNames()];
         List<CardState> cards = [];
@@ -305,8 +304,13 @@ public sealed class TeamsPhase3EndToEndTests
         Assert.Null(hired.Error);
         _ = folders.UpdateTeamFile(TeamName, current => current with { Manager = manager.Name });
 
-        StartTeamResult started = await hiring.StartTeamAsync(TeamName, [.. cards.Select(card => new HireRequest(TeamName, type.Id, card.RoleId, card))], ct);
-        Assert.True(started.Ok, started.Error);
+        foreach (CardState card in cards.Where(card => !ReferenceEquals(card, manager)))
+        {
+            HireResult hiredMember = hiring.Hire(new HireRequest(TeamName, type.Id, card.RoleId, card));
+            Assert.Null(hiredMember.Error);
+        }
+
+        _ = await hiring.OnboardManagerAsync(TeamName, manager.Name, ct);
 
         ITeamCatalog catalog = services.GetRequiredService<ITeamCatalog>();
         await Eventually.UntilAsync(() => catalog.Find(TeamName) is { Manager: not null } team && team.Members.Count == cards.Count, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));

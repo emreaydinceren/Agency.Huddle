@@ -183,6 +183,43 @@ public sealed class TaskSearchProviderTests
         Assert.Equal(MatchTier.ContentMatch, hit.Tier);
     }
 
+    /// <summary>A phrase held only in a comment or an Evidence entry finds the Task, as a ContentMatch; an event's text does not.</summary>
+    [Fact]
+    public async Task CommentAndEvidence_MatchAsContentMatch()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        DateTimeOffset at = new(2026, 9, 1, 10, 0, 0, TimeSpan.Zero);
+        harness.SeedOnDisk(MakeTask("PLAT-0001", "Write the spec") with { Comments = [new TimelineEntry(at, "Kai", TimelineEntryKind.Comment, "Ask about the Allergy review")] });
+        harness.SeedOnDisk(MakeTask("PLAT-0002", "Ship it") with { Comments = [new TimelineEntry(at, "Kai", TimelineEntryKind.Evidence, "note: tested on staging")] });
+        harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0003", title: "Plan", changeLog: [new ChangeLogEntry(at, "Kai", "allergy flagged")], location: new TaskLocation("Platform", null, false)));
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
+
+        SearchResult byComment = await provider.SearchAsync(Query("allergy"), ct);
+        SearchResult byEvidence = await provider.SearchAsync(Query("staging"), ct);
+
+        TaskHit comment = Assert.IsType<TaskHit>(Assert.Single(byComment.Hits));
+        Assert.Equal("PLAT-0001", comment.Id.ToString());
+        Assert.Equal(MatchTier.ContentMatch, comment.Tier);
+        Assert.Equal("PLAT-0002", Assert.IsType<TaskHit>(Assert.Single(byEvidence.Hits)).Id.ToString());
+    }
+
+    /// <summary>The scan is bounded across the description and the entries together: a phrase in a comment past 4000 characters of description is not found.</summary>
+    [Fact]
+    public async Task CommentPastTheScanLimit_IsNotFound()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        DateTimeOffset at = new(2026, 9, 1, 10, 0, 0, TimeSpan.Zero);
+        harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0001", title: "Write the spec", description: new string('x', 4000), location: new TaskLocation("Platform", null, false))
+            with { Comments = [new TimelineEntry(at, "Kai", TimelineEntryKind.Comment, "allergy")] });
+        TaskSearchProvider provider = new(harness.Store, harness.Personas, harness.Options);
+
+        SearchResult result = await provider.SearchAsync(Query("allergy"), ct);
+
+        Assert.Empty(result.Hits);
+    }
+
     /// <summary>A Task whose title holds the word ranks above one that holds it only in the body.</summary>
     [Fact]
     public async Task TitleHit_RanksBeforeBodyHit()

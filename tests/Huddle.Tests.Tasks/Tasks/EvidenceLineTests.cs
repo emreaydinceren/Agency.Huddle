@@ -155,6 +155,36 @@ public sealed class EvidenceLineTests
         Assert.Equal(0, lines[3].ExitCode);
     }
 
+    /// <summary>A list-item structured line and a list-item note parse like their plain forms, and the marker is not part of RawText.</summary>
+    [Theory]
+    [InlineData("- ")]
+    [InlineData("* ")]
+    [InlineData("+ ")]
+    public void ParseSection_ListItemLines_ParseLikePlainLines(string marker)
+    {
+        string markdown = "## Evidence\n" + marker + SpecExample + "\n" + marker + "Ana checked the diff\n";
+
+        IReadOnlyList<EvidenceLine> lines = EvidenceLine.ParseSection(markdown);
+
+        Assert.Equal(2, lines.Count);
+        Assert.Equal(Parsed(SpecExample), lines[0]);
+        Assert.Equal("Ana checked the diff", lines[1].RawText);
+        Assert.Equal(string.Empty, lines[1].Command);
+    }
+
+    /// <summary>A section with old plain lines followed by new list items parses every line, in order.</summary>
+    [Fact]
+    public void ParseSection_MixedPlainAndListItems_ParsesAllInOrder()
+    {
+        const string markdown = "## Evidence\n2026-10-08T17:04Z | Maya | dotnet build | exit 0\n- 2026-10-08T17:05Z | Maya | dotnet test | exit 1\n- a note\n";
+
+        IReadOnlyList<EvidenceLine> lines = EvidenceLine.ParseSection(markdown);
+
+        Assert.Equal(["dotnet build", "dotnet test", string.Empty], lines.Select(static line => line.Command));
+        Assert.Equal(1, lines[1].ExitCode);
+        Assert.Equal("a note", lines[2].RawText);
+    }
+
     /// <summary>ParseSection returns an empty list when the document has no Evidence section.</summary>
     [Fact]
     public void ParseSection_NoEvidenceSection_ReturnsEmpty()

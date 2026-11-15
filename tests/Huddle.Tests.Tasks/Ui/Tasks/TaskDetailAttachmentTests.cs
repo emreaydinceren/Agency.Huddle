@@ -311,6 +311,30 @@ public sealed class TaskDetailAttachmentTests
         Assert.NotEmpty(cut.FindAll(".task-detail-description-preview code"));
     }
 
+    /// <summary>In the Preview, two Evidence list items show as two items and a bare path in them shows in full, while the same path above the Evidence heading shows its file name.</summary>
+    [Fact]
+    public async Task Preview_EvidenceSection_ShowsTwoItemsAndTheFullPath()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        const string path = @"E:\Data\Teams\Marketing\notes.txt";
+        ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver(resolvePath: p => string.Equals(p, path, StringComparison.Ordinal)
+            ? new LibraryReference("raw", "Marketing/notes.txt", true)
+            : null));
+        IRenderedComponent<ContainerFragment> cut = RenderPanel(ctx, task.Id);
+        IRenderedComponent<MudTextField<string>> field = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Contains("task-detail-description-field", StringComparison.Ordinal) is true);
+
+        await cut.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync($"See {path}\n\n## Evidence\n- ran in {path}\n- second entry"));
+        await cut.InvokeAsync(() => cut.FindButton("Preview").ClickAsync());
+
+        Assert.Equal(2, cut.FindAll(".task-detail-description-preview li").Count);
+        var links = cut.FindAll(".task-detail-description-preview a.library-ref");
+        Assert.Equal(2, links.Count);
+        Assert.Equal("notes.txt", links[0].TextContent);
+        Assert.Equal(path, links[1].TextContent);
+    }
+
     /// <summary>Renders the panel, puts a path line in the description and switches to Preview.</summary>
     private static async Task<IRenderedComponent<ContainerFragment>> PreviewAsync(MudBunitContext ctx, TaskItem task, string path, bool exists)
     {

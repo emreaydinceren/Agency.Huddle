@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
@@ -86,11 +87,24 @@ public sealed class ReadRecordsToolTests
         /// <param name="summary">The Change log summary.</param>
         /// <param name="description">The Task body.</param>
         /// <param name="team">The Task's Team.</param>
-        public void Seed(string id, DateTimeOffset at, string summary, string description = "Body", string team = Team)
+        /// <param name="comments">The Task's comment and Evidence timeline entries, if any.</param>
+        public void Seed(string id, DateTimeOffset at, string summary, string description = "Body", string team = Team, IReadOnlyList<TimelineEntry>? comments = null)
         {
-            TaskItem task = TestTasks.Make(id: id, status: TaskState.Review, description: description, location: new TaskLocation(team, null, false), changeLog: [new ChangeLogEntry(at, "Kai", summary)]);
+            TaskItem task = TestTasks.Make(id: id, status: TaskState.Review, description: description, location: new TaskLocation(team, null, false), changeLog: [new ChangeLogEntry(at, "Kai", summary)]) with { Comments = comments ?? [] };
             TaskItem toWrite = task with { Path = TaskLayout.PathFor(this.Harness.Store.RootDirectory, task.Location, task.Id) };
             _ = this.Harness.Store.Create(toWrite, TaskFileFormat.Compose(toWrite)) ?? throw new InvalidOperationException("Fixture collided with an existing file.");
+        }
+
+        /// <summary>Writes a Platform Task from file text as it was written before the timeline (a "## Evidence" section in the description and a "## Change log" block).</summary>
+        /// <param name="id">The Task id.</param>
+        /// <param name="fileText">The whole older-format file.</param>
+        public void SeedLegacy(string id, string fileText)
+        {
+            TaskLocation location = new(Team, null, false);
+            Assert.True(TaskFileFormat.TryParse(fileText, "p.md", location, out TaskItem? parsed, out string error), error);
+            Assert.NotNull(parsed);
+            TaskItem toWrite = parsed with { Path = TaskLayout.PathFor(this.Harness.Store.RootDirectory, location, parsed.Id) };
+            _ = this.Harness.Store.Create(toWrite, fileText) ?? throw new InvalidOperationException($"Fixture collided with an existing file for {id}.");
         }
 
         /// <summary>Writes an empty report file for a date into the Team's <c>_retros</c> folder.</summary>
@@ -121,8 +135,9 @@ public sealed class ReadRecordsToolTests
         harness.Personas.Add(new PersonaIdentity("Sam", "Dev", "sam", [Team], Skills: skill), "You are Sam.");
         harness.Personas.Add(new PersonaIdentity("Zed", "Dev", "zed", [Team], Role: new RoleRef("web", "retro", "1.2.0")), "You are Zed.");
         harness.Personas.Add(new PersonaIdentity("Ola", "Retro", "ola", ["Design"], Skills: skill, Role: new RoleRef("web", "retro", "1.2.0")), "You are Ola.");
+        harness.Personas.Add(new PersonaIdentity("Jarvis", "Chief of Staff", "jar", [], Builtin: BuiltinAgent.ChiefOfStaffMarker), "You are Jarvis.");
         Scene scene = new() { Harness = harness, Chat = harness.Options.CreateChatStore() };
-        foreach (string name in new[] { "Mia", "Rae", "Sam", "Zed", "Ola" })
+        foreach (string name in new[] { "Mia", "Rae", "Sam", "Zed", "Ola", "Jarvis" })
         {
             User? user = await harness.Directory.UpsertAgentUserAsync(name, null, ct);
             scene.Ids[name] = user?.Id ?? throw new InvalidOperationException("Directory refused a user.");
@@ -260,17 +275,45 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("Records for Platform since 2026-09-08", result.Split('\n')[0]);
     }
 
-    /// <summary>The <c>taskId</c> form returns the Task's Change log and Evidence.</summary>
+    /// <summary>The <c>taskId</c> form returns the Change log, Evidence and comments of a Task still in the older file format (Evidence in a description section).</summary>
     [Fact]
     public async Task Invoke_TaskId_ReturnsChangeLogAndEvidence()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Scene scene = await CreateSceneAsync(ct);
-        scene.Seed("PLAT-0001", Now.AddDays(-1), "status: Review → Done", "Body\n\n## Evidence\nChecked by hand");
+        scene.SeedLegacy(
+            "PLAT-0001",
+            "---\nid: PLAT-0001\ntitle: T\nstatus: Review\npriority: Medium\ncreator: Human\n---\nBody\n\n## Evidence\nChecked by hand\n\n## Change log\n- 2026-10-07T12:00:00Z | Kai | status: Review → Done\n");
 
         string result = await scene.Tool("Rae").InvokeAsync(Args(taskId: "PLAT-0001"), ct);
 
-        Assert.Equal("PLAT-0001 T (Review)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\nChecked by hand", result);
+        Assert.Equal("PLAT-0001 T (Review)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\nChecked by hand\ncomments: none", result);
+    }
+
+    /// <summary>A Task with timeline entries lists its Evidence from the timeline and its comments, a multi-line one indented.</summary>
+    [Fact]
+    public async Task Invoke_TaskId_ListsTimelineEvidenceAndComments()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        scene.Seed(
+            "PLAT-0001",
+            Now.AddDays(-1),
+            "status: Review → Done",
+            comments:
+            [
+                new TimelineEntry(new DateTimeOffset(2026, 10, 7, 9, 5, 0, TimeSpan.Zero), "Kai", TimelineEntryKind.Evidence, "dotnet test | exit 0"),
+                new TimelineEntry(new DateTimeOffset(2026, 10, 7, 9, 6, 0, TimeSpan.Zero), "Kai", TimelineEntryKind.Evidence, "note: Checked on staging."),
+                new TimelineEntry(new DateTimeOffset(2026, 10, 7, 10, 30, 0, TimeSpan.Zero), "Mia", TimelineEntryKind.Comment, "Looks good.\nShip it."),
+            ]);
+
+        string result = await scene.Tool("Rae").InvokeAsync(Args(taskId: "PLAT-0001"), ct);
+
+        Assert.Equal(
+            "PLAT-0001 T (Review)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\n" +
+            "2026-10-07T09:05Z | Kai | dotnet test | exit 0\nKai note: Checked on staging.\n" +
+            "comments:\n2026-10-07 10:30 Mia Looks good.\n  Ship it.",
+            result);
     }
 
     /// <summary>A Task of another Team is not readable through this Team's call.</summary>
@@ -496,6 +539,74 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("You are not a member of Team Platform.", result);
     }
 
+    /// <summary>The Chief of Staff, in no Team and without the retrospective Skill, reads a Team's records bundle (issue #534).</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffOutsideTheTeam_ReadsTheBundle()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool("Jarvis").InvokeAsync(Args(), ct);
+
+        Assert.Equal("Records for Platform since 2026-09-08", result.Split('\n')[0]);
+    }
+
+    /// <summary>The Chief of Staff reads a Room tail where an Agent outside the Team posted, which the Team's manager is refused.</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffRoomWithOutsider_IsReadWhileManagerIsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Rae", "hello"), ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("b", Now.AddHours(-1), "u2", "Ola", "secret"), ct);
+
+        string chief = await scene.Tool("Jarvis").InvokeAsync(Args(room: roomId), ct);
+        string manager = await scene.Tool("Mia").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Rae: hello\n2026-10-08 11:00 Ola: secret", chief);
+        Assert.Equal($"Room {roomId} has participants outside Team Platform.", manager);
+    }
+
+    /// <summary>The Chief of Staff reads a root Room in which no member of the Team posted.</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffRootRoomWithoutTeamMember_IsRead()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        string roomId = await CreateRoomAsync(scene, null, ct);
+        await scene.Chat.AppendAsync(roomId, new ChatMessage("a", Now.AddHours(-2), "u1", "Stranger", "hello"), ct);
+
+        string result = await scene.Tool("Jarvis").InvokeAsync(Args(room: roomId), ct);
+
+        Assert.Equal("2026-10-08 10:00 Stranger: hello", result);
+    }
+
+    /// <summary>The Chief of Staff's wider access does not reach a Task of another Team: that is a wrong argument.</summary>
+    [Fact]
+    public async Task Invoke_ChiefOfStaffTaskOfAnotherTeam_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+        scene.Seed("DES-0001", Now.AddDays(-1), "status: Review → Done", team: "Design");
+
+        string result = await scene.Tool("Jarvis").InvokeAsync(Args(taskId: "DES-0001"), ct);
+
+        Assert.Equal("Task DES-0001 is not in Team Platform.", result);
+    }
+
+    /// <summary>An Agent outside the Team who is not the Chief of Staff is still refused, even when she holds the Skill and a Retro role.</summary>
+    [Fact]
+    public async Task Invoke_OutsiderWithSkillAndRole_IsStillRefusedMembership()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Scene scene = await CreateSceneAsync(ct);
+
+        string result = await scene.Tool("Ola").InvokeAsync(Args(), ct);
+
+        Assert.Equal("You are not a member of Team Platform.", result);
+    }
+
     /// <summary>A member who is neither the manager nor the Retro agent is refused.</summary>
     [Fact]
     public async Task Invoke_MemberWithoutRetroRole_IsRefused()
@@ -557,7 +668,7 @@ public sealed class ReadRecordsToolTests
         Assert.Equal("read_records", tool.Name);
         Assert.Equal(
             "Reads a Team's evidence for a retro. With only 'team' (and optionally 'since', a date like 2026-10-01) it returns the " +
-            "compact records bundle. With 'taskId' it returns that Task's Change log and Evidence. With 'room' it returns the last " +
+            "compact records bundle. With 'taskId' it returns that Task's Change log, Evidence and comments. With 'room' it returns the last " +
             "200 messages of that Room's transcript, each cut to 300 characters. Output is capped at 12000 characters.",
             tool.Description);
     }

@@ -844,6 +844,9 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-20](tasks.md#tasks-20--the-task-opens-in-the-right-sidebar-edit-opens-the-edit-page-in-its-own-tab-and-a-new-task-opens-at-the-top) |  | Active |  |  |
 | [TASKS-21](tasks.md#tasks-21--a-hand-off-held-by-a-spent-wake-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Pass |  | run 2026-11-06 at `eb1b8c78`, mock lane, see the Run log |
 | [TASKS-22](tasks.md#tasks-22--a-request-held-by-a-spent-room-budget-survives-a-restart-and-wake-starts-the-agent-once) | | Pass |  | run by an agent 2026-11-06, mock lane, see the Run log |
+| [TASKS-23](tasks.md#tasks-23--a-developer-asked-to-start-a-task-blocked-by-an-open-task-is-refused-and-can-start-it-once-the-blocker-is-done) | 💰 | Pass |  | run by an agent 2026-11-14, paid lane, see the Run log |
+| [TASKS-24](tasks.md#tasks-24--evidence-survives-description-edits-by-an-agent-and-by-the-form-and-comments-show-on-the-timeline) | 💰 | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
+| [TASKS-25](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write) |  | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
 
 ## adapters
 
@@ -1175,6 +1178,7 @@ Second Brain from zero: three Teams hired by hand, documents ingested into memor
 | [ZERO-27](second-brain-zero.md#zero-27--find-it-all-and-add-up-the-cost) |  | Fail |  | run 2026-11-05, Task search matches titles only, see the Run log |
 | [ZERO-28](second-brain-zero.md#zero-28--the-chief-of-staff-asks-a-manager-and-the-question-task-ends-closed) | 💰 |  | #535 | not run yet |
 | [ZERO-29](second-brain-zero.md#zero-29--qa-drives-the-ui-in-a-browser-and-reports-a-planted-bug) | 💰 | Pass | #536 | run 2026-11-14 in an isolated lane with a fresh Dev Team on Sonnet, not the ZERO-12 Team, see the Run log |
+| [ZERO-30](second-brain-zero.md#zero-30--the-chief-of-staff-finds-a-fact-said-only-in-a-team-room-and-asks-the-manager-for-one-on-no-record) | 💰 | Pass | #534 | run 2026-11-14 in an isolated lane with a one-member Dev Team on Sonnet, see the Run log |
 
 ## doc-history
 

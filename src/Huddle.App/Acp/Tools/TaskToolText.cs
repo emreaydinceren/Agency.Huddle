@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -16,6 +18,27 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// </summary>
 internal static class TaskToolText
 {
+    /// <summary>
+    /// Indents every non-blank line after the first by two spaces, so a multi-line comment stays one readable block under its
+    /// heading line. A blank line stays empty rather than carrying trailing spaces.
+    /// </summary>
+    /// <param name="text">The text, with any line ending.</param>
+    public static string IndentContinuation(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        string[] lines = text.ReplaceLineEndings("\n").Split('\n');
+        for (int index = 1; index < lines.Length; index++)
+        {
+            if (lines[index].Length > 0)
+            {
+                lines[index] = "  " + lines[index];
+            }
+        }
+
+        return string.Join('\n', lines);
+    }
+
     /// <summary>
     /// Renders <paramref name="task"/> as the one-line summary every listing tool shows (Spec
     /// §11.1): id, status, priority, assignee (or "unassigned"), <c>Team[/Project]</c> (with
@@ -36,6 +59,20 @@ internal static class TaskToolText
         }
 
         return $"{task.Id} | {task.Status.ToWire()} | {task.Priority.ToWire()} | {assignee} | {location} | {task.Title}";
+    }
+
+    /// <summary>
+    /// Renders one open Proof item as <c>label (owner): detail</c>, the owner and the detail only when it has them: the one format
+    /// <c>get_task</c> and <c>add_evidence</c> both print.
+    /// </summary>
+    /// <param name="item">The open Proof item.</param>
+    public static string OpenProofItem(ProofItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        string owner = item.Owner is null ? string.Empty : $" ({item.Owner})";
+        string detail = item.Detail is null ? string.Empty : $": {item.Detail}";
+        return string.Create(CultureInfo.InvariantCulture, $"{item.Label}{owner}{detail}");
     }
 
     /// <summary>

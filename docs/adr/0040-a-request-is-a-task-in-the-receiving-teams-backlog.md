@@ -57,8 +57,11 @@ Any other event is refused with a message that names the status, the triage and 
 
 **Only the right people move a Request, and the tools enforce it.** The four tools are
 `file_request`, `triage_request`, `confirm_request` and `list_teams`. The built-in
-`team-management` Skill lists them, and a Persona gets a tool only through a Skill that lists
-it, so a specialist does not hold them.
+`team-management` Skill lists `file_request`, `triage_request` and `list_teams`, and the built-in
+`request-confirmation` Skill lists `confirm_request` (amended 2026-11-14, #539). The team-type
+catalog grants `request-confirmation` to every role whose coverage includes `verify`, managers
+included. A Persona gets a tool only through a Skill that lists it, so a specialist does not
+hold the manager's tools.
 
 - `file_request` works only for a Persona who manages a Team, and it writes the Task in the
   receiving Team with the six keys set.
@@ -87,7 +90,11 @@ ordinary status-change wake for the same Task and recipient in the same change b
 
 **`read_records` is scoped to the caller's Team.** A Task id must belong to the named Team. A
 Room is shown only when a member of the Team posted in it and every sender is a member of the
-Team or the Human, so a Room shared with another Team's Persona is refused.
+Team or the Human, so a Room shared with another Team's Persona is refused. *Amended
+2026-11-14 (issue #534, owner decision):* the built-in Chief of Staff is exempt. It reads any
+Team's records and any Room's tail, and holds `read_records` through its `team-rollup` Skill; a
+Task id of another Team is still refused. See the
+[ADR-0066 amendment](0066-an-agents-search-reads-its-own-rooms-unless-it-asks-for-all.md#amendment-2026-11-14).
 
 ## Rejected
 
@@ -103,7 +110,8 @@ Team or the Human, so a Room shared with another Team's Persona is refused.
 - **A Request is visible in the receiving Team's Tasks.** It sits in the Backlog until triaged,
   and the Human can filter for it like any Task.
 - **Specialists cannot file or triage.** A Persona without the `team-management` Skill has no
-  Request tools, so the rule does not depend on a prompt.
+  `file_request` or `triage_request`, so the rule does not depend on a prompt. Confirming comes
+  from `request-confirmation` (amended 2026-11-14, #539), so a QA needs no manager Skill.
 - **A Human can move a Request past triage** through the confirmed override, and the Change log
   records it.
 - **An outside edit meets the same two rules** (added 2026-11-07). An Agent's `Bash` and `Write`

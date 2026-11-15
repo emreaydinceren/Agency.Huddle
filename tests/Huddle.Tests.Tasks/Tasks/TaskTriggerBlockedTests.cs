@@ -231,4 +231,58 @@ public sealed class TaskTriggerBlockedTests
 
         Assert.Empty(harness.Posts);
     }
+
+    /// <summary>The last blocker is Cancelled, which finishes it like Done (#538): the blocked Task's assignee is woken once.</summary>
+    [Fact]
+    public async Task LastBlockerCancelled_WakesAssignee()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem blocker = SeedBlocker(harness, "OPS-0001", TaskState.Cancelled);
+        _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [blocker.Id]));
+
+        await RaiseAndFireAsync(harness, blocker, cast.KaiActor, "status: In Progress → Cancelled");
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal("Nova", post.Message.Text);
+    }
+
+    /// <summary>One blocker was Rejected earlier and the other reaches Done: every blocker is terminal, so the assignee is woken.</summary>
+    [Fact]
+    public async Task EarlierBlockerRejected_LastDone_WakesAssignee()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem rejected = SeedBlocker(harness, "OPS-0001", TaskState.Rejected);
+        TaskItem last = SeedBlocker(harness, "OPS-0002", TaskState.Done);
+        _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [rejected.Id, last.Id]));
+
+        await RaiseAndFireAsync(harness, last, cast.KaiActor, "status: In Progress → Done");
+
+        Assert.Single(harness.Posts);
+    }
+
+    /// <summary>A blocker in Needs You (built, awaiting the Accept) is not finished, so the other blocker's Done wakes nobody.</summary>
+    [Fact]
+    public async Task OtherBlockerInNeedsYou_WakesNobody()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{assignee}}");
+        TaskItem waiting = SeedBlocker(harness, "OPS-0001", TaskState.NeedsYou);
+        TaskItem last = SeedBlocker(harness, "OPS-0002", TaskState.Done);
+        _ = harness.Seed(TestTasks.Make(id: "PLAT-0007", assignee: "Nova", originRoomId: cast.Room.Id, blockedBy: [waiting.Id, last.Id]));
+
+        await RaiseAndFireAsync(harness, last, cast.KaiActor, "status: In Progress → Done");
+
+        Assert.Empty(harness.Posts);
+    }
 }

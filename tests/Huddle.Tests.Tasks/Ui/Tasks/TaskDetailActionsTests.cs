@@ -21,8 +21,8 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// a new dialog in create mode from the Panel's own <em>effective</em> (pending-included) fields and
 /// writes nothing until that copy is itself saved (Spec §13.6); Close task saves any pending edit and
 /// closes as one <c>Update</c> then <c>Close</c>, stopping instead of closing on a <c>Conflict</c> or
-/// <c>Refused</c> (corrections-B5 D14 item 9); a Closed Task shows Reopen; the History is a
-/// <c>MudTimeline</c>, newest first (corrections-B5 D14 item 10); <c>MudExitPrompt</c> is enabled only
+/// <c>Refused</c> (corrections-B5 D14 item 9); a Closed Task shows Reopen; the Timeline (once the History) is a
+/// <c>MudTimeline</c>, oldest first (#586); <c>MudExitPrompt</c> is enabled only
 /// while edits are pending; create mode's Save calls <see cref="TaskService.Create"/> and shows refusals
 /// exactly (corrections-B7 "14.4" item 2); the Budget banner carries <c>role="status"</c> (corrections-B7
 /// "14.4" item 4); and the Description Preview resolves Task ids to links through
@@ -185,8 +185,8 @@ public sealed class TaskDetailActionsTests
     }
 
     /// <summary>
-    /// The History's header names the entry count (Spec §13.6) and the History is always open: one entry per
-    /// Change log record, each a <c>Size.Small</c> <see cref="MudTimelineItem"/>, with nothing to expand first.
+    /// The Timeline's header names the entry count (Spec §13.6, §7.7) and the Timeline is always open: one entry per
+    /// timeline record, each a <c>Size.Small</c> <see cref="MudTimelineItem"/>, with nothing to expand first.
     /// </summary>
     [Fact]
     public async Task History_HeaderNamesTheCount_ListsEntriesWithoutExpanding()
@@ -196,7 +196,7 @@ public sealed class TaskDetailActionsTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        Assert.Equal("History (1)", cut.Find(".task-detail-history-heading").TextContent.Trim());
+        Assert.Equal("Timeline (1)", cut.Find(".task-detail-history-heading").TextContent.Trim());
 
 
         Assert.Single(cut.FindAll(".task-detail-history-entry"));
@@ -205,9 +205,9 @@ public sealed class TaskDetailActionsTests
         Assert.All(cut.FindComponents<MudTimelineItem>(), item => Assert.Equal(Size.Small, item.Instance.Size));
     }
 
-    /// <summary>The History lists every entry newest first, as a whole ordered list (R6: never by membership) - one save adds a second, newer entry ahead of "created".</summary>
+    /// <summary>The Timeline lists every entry oldest first, as a whole ordered list (R6: never by membership) - one save adds a second, newer entry after "created".</summary>
     [Fact]
-    public async Task History_ListsEveryEntry_NewestFirst()
+    public async Task History_ListsEveryEntry_OldestFirst()
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness, title: "Original", priority: TaskPriority.Medium);
@@ -220,7 +220,7 @@ public sealed class TaskDetailActionsTests
 
         string human = harness.Options.Value.HumanName;
         Assert.Equal(
-            [$"{human}: priority: Medium → Urgent", $"{human}: created"],
+            [$"{human}: created", $"{human}: priority: Medium → Urgent"],
             cut.FindAll(".task-detail-history-row").Select(row => $"{row.QuerySelector(".task-detail-history-actor")?.TextContent.Trim()}: {row.QuerySelector(".task-detail-history-summary")?.TextContent.Trim()}").ToList());
     }
 

@@ -110,6 +110,99 @@ public sealed class DraftsToolCallLogTests
         Assert.Equal(Drafts.MaxToolCalls, Assert.Single(drafts.ForRoom("room1")).ToolCalls.Count);
     }
 
+    /// <summary>Arguments given on an in-progress update and not repeated on the completed update are logged on the completed line.</summary>
+    [Fact]
+    public void Activity_ArgumentsOnEarlierUpdate_LoggedOnCompletion()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", "Bash", ToolActivityStatus.InProgress, arguments: """{"command":"dotnet test"}""");
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", null, ToolActivityStatus.Completed);
+
+        JsonElement entry = Assert.Single(ReadLog(dir));
+        Assert.Equal("""{"command":"dotnet test"}""", entry.GetProperty("arguments").GetString());
+    }
+
+    /// <summary>A later non-null arguments value replaces an earlier one, and a null leaves it alone.</summary>
+    [Fact]
+    public void Activity_ArgumentsReplacedByNonNullKeptByNull()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", "Bash", ToolActivityStatus.InProgress, arguments: """{"command":"d"}""");
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", null, ToolActivityStatus.InProgress, arguments: """{"command":"dotnet"}""");
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", null, ToolActivityStatus.InProgress, arguments: null);
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", null, ToolActivityStatus.Completed);
+
+        JsonElement entry = Assert.Single(ReadLog(dir));
+        Assert.Equal("""{"command":"dotnet"}""", entry.GetProperty("arguments").GetString());
+    }
+
+    /// <summary>With no arguments, the path and path:line fallback still applies.</summary>
+    [Fact]
+    public void Activity_NoArguments_FallsBackToPathAndLine()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", "Read", ToolActivityStatus.Completed, path: "src/a.cs");
+        drafts.Activity("m1", "t2", "room1", "agentA", "Ada", "Read", ToolActivityStatus.Completed, path: "src/b.cs", line: 7);
+
+        List<JsonElement> lines = ReadLog(dir);
+        Assert.Equal(["src/a.cs", "src/b.cs:7"], lines.Select(static line => line.GetProperty("arguments").GetString()));
+    }
+
+    /// <summary>A call with both a file and an input logs the file first and the input after it, so the file survives the cut.</summary>
+    [Fact]
+    public void Activity_PathAndArguments_LogsPathThenInput()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", "mcp__team__memory", ToolActivityStatus.InProgress, arguments: """{"command":"read","file":"notes.md"}""");
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", null, ToolActivityStatus.Completed, path: "C:/data/notes.md", line: 3);
+
+        JsonElement entry = Assert.Single(ReadLog(dir));
+        Assert.Equal("""C:/data/notes.md:3 {"command":"read","file":"notes.md"}""", entry.GetProperty("arguments").GetString());
+    }
+
+    /// <summary>A result given on the completed update is logged, and a call without one logs result as JSON null.</summary>
+    [Fact]
+    public void Activity_Result_LoggedOrNull()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", "mcp__team__add_evidence", ToolActivityStatus.InProgress);
+        drafts.Activity("m1", "t1", "room1", "agentA", "Ada", null, ToolActivityStatus.Completed, result: "Nothing was added.");
+        drafts.Activity("m1", "t2", "room1", "agentA", "Ada", "Bash", ToolActivityStatus.Completed);
+
+        List<JsonElement> lines = ReadLog(dir);
+        Assert.Equal("Nothing was added.", lines[0].GetProperty("result").GetString());
+        Assert.Equal(JsonValueKind.Null, lines[1].GetProperty("result").ValueKind);
+    }
+
+    /// <summary>Arguments survive the six-row trim: a call whose row was trimmed still logs them when it completes.</summary>
+    [Fact]
+    public void Activity_ArgumentsOfTrimmedCall_StillLogged()
+    {
+        using TempDataDir dir = new();
+        Drafts drafts = new(new ToolCallLogWriter(dir.Options()), new ManualTimeProvider(Start));
+
+        drafts.Activity("m1", "t0", "room1", "agentA", "Ada", "Bash", ToolActivityStatus.InProgress, arguments: """{"command":"first"}""");
+        for (int i = 1; i <= Drafts.MaxToolCalls; i++)
+        {
+            drafts.Activity("m1", $"t{i}", "room1", "agentA", "Ada", $"Tool{i}", ToolActivityStatus.InProgress);
+        }
+
+        drafts.Activity("m1", "t0", "room1", "agentA", "Ada", null, ToolActivityStatus.Completed);
+
+        JsonElement entry = Assert.Single(ReadLog(dir));
+        Assert.Equal("""{"command":"first"}""", entry.GetProperty("arguments").GetString());
+    }
+
     /// <summary>A log that cannot be written never throws into the Turn path.</summary>
     [Fact]
     public void Activity_LogUnwritable_DoesNotThrow()

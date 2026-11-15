@@ -177,6 +177,7 @@ itself.
 | --- | --- |
 | **Approve & hire** is off | The details aren't complete or the roster is empty. The hint says which |
 | A hire says the Team is full | A [hire limit](#hire-limits) was reached |
+| The Chief of Staff says a role cannot be hired yet | A Skill or Pack the role needs isn't ready. Set it up, or ask for a role it lists as ready |
 | A Team still appears after you removed everyone | Removing members never deletes the folder. It shows **No members** |
 | A membership change was undone | An Edit card open during the change saved its old text. Add the member again |
 | Your Team type is missing | See **Settings > Team types > Problems**, fix the file, then select **Reload** |

@@ -409,7 +409,7 @@ public sealed class RequestTriageToolsTests
         Assert.Empty(scene.Notifier.Calls);
     }
 
-    /// <summary>A QA holding the team-management Skill can confirm, but file_request, triage_request, propose_sprint and list_teams still refuse her because she manages no Team.</summary>
+    /// <summary>A QA confirms through the request-confirmation Skill (#539), which offers her none of the manager's tools; an installed QA who still holds team-management is refused by file_request, triage_request, propose_sprint and list_teams, because she manages no Team.</summary>
     [Fact]
     public async Task Confirm_QaWithSkill_OtherRequestToolsRefuseNonManager()
     {

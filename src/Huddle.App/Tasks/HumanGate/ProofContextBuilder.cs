@@ -31,7 +31,7 @@ internal sealed class ProofContextBuilder(
 
         string team = task.Location.Team;
         ProcessDocument? process = gates.ProcessOf(team);
-        IReadOnlyList<EvidenceLine> evidence = EvidenceLine.ParseSection(task.Description);
+        IReadOnlyList<EvidenceLine> evidence = task.Evidence;
         List<string> roster = [.. teams.Find(team)?.Members ?? []];
         List<TaskItem> children = [.. tasks.All.Where(candidate => candidate.Parent == task.Id)];
         List<ProofDocument> documents = [.. this.AttachedDocuments(task)];

@@ -24,10 +24,11 @@ A Team's process has two parts:
 | Gate | What it requires |
 | --- | --- |
 | `accept-before-merge` | Your Accept on one of the Team's Tasks before an Agent merges or pushes into `main` |
-| `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done |
+| `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done; only a note when the Definition of Done names no command |
 | `checks-before-merge` | Evidence that the Team's check command passed, before an Agent's `git merge` or `git push` |
 | `spec-approved-before-build` | An approved parent spec Task before a Task moves to In Progress |
 | `failing-test-before-fix` | Evidence of a failing run and then a passing one, before a bug Task moves to Review |
+| `blockers-done-before-start` | Every Task it is blocked by Done, Cancelled, Duplicate or Rejected, before a Task moves to In Progress, Review, Needs You or Done |
 
 Only you can override a gate, with **Move anyway** on the Task, and the override is logged.
 
@@ -97,7 +98,8 @@ naming the risk.
 
 A Task's `## Evidence` section holds lines with the time, author, command, and optionally an exit code and a
 pointer to the log. A plain line of text is a note. A command with no exit code is refused, and lines are only
-ever added. There is no separate Evidence view, so read it in the Task file in the Library.
+ever added. Each entry is a list item (older plain lines still count), and a file path in it shows in full in the
+Task view. There is no separate Evidence view, so read it in the Task file in the Library.
 
 Every tool call is written to `logs/tool-calls/<Agent>/<date>.jsonl` in your data folder. An Evidence line can
 point to one line of it, such as `logs/tool-calls/Joe/2026-10-08.jsonl#L12`.
@@ -160,8 +162,9 @@ use the Task's normal wake budget.
 - **Leaving Backlog.** Only triage moves a Request out, and an Agent that tries otherwise is refused. You can
   override from the Task panel.
 - **Bug Requests** need sections such as **Steps to reproduce** and **Expected and actual**.
-- **Permissions.** The built-in `team-management` Skill grants the Request tools. Holding it doesn't make an Agent a
-  manager, and the manager-only tools still refuse anyone else.
+- **Permissions.** The built-in `team-management` Skill grants `file_request`, `triage_request` and `list_teams`. The
+  built-in `request-confirmation` Skill grants `confirm_request`, and every role whose coverage includes verify carries
+  it. Holding a Skill doesn't make an Agent a manager, and the manager-only tools still refuse anyone else.
 - **Finding them.** The **Requests** chip filters a View, and a Task shows a chip such as **Request · bug · from Web
   Team**.
 

@@ -64,6 +64,13 @@ public sealed class ToolActivityLimitsTests
         Assert.True(clipped);
     }
 
+    /// <summary>The arguments and result limits are 512 characters each.</summary>
+    [Fact]
+    public void ArgumentsAndResultLimits_HaveTheSpecifiedValues()
+    {
+        Assert.Equal([512, 512], [ToolActivityLimits.MaxArgumentsLength, ToolActivityLimits.MaxResultLength]);
+    }
+
     /// <summary>The three limits are the values the spec fixes, so a change is deliberate.</summary>
     [Fact]
     public void Limits_HaveTheSpecifiedValues()

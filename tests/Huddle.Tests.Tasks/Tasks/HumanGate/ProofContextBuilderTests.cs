@@ -235,10 +235,12 @@ public sealed class ProofContextBuilderTests
         /// <param name="attachment">A path line, or empty.</param>
         public TaskItem Parent(string attachment)
         {
-            TaskResult result = this.harness.Service.Create(new TaskDraft("Parent", Team, null), Nova);
+            TaskResult result = this.harness.Service.Create(new TaskDraft("Parent", Team, null, Description: attachment), Nova);
             TaskItem saved = Assert.IsType<TaskResult.Saved>(result).Task;
             EvidenceLine line = new(Noon, "Quinn", "dotnet test", 0, null, null, "raw");
-            return saved with { Description = $"{attachment}\n\n## Evidence\n\n{line.Format()}\n" };
+            TaskActor quinn = new(TaskActorKind.Agent, "Quinn", "quinn-id");
+            _ = Assert.IsType<TaskResult.Saved>(this.harness.Service.AddEvidence(saved.Id, line, quinn));
+            return this.harness.Store.Get(saved.Id) ?? throw new InvalidOperationException("The Task just written is missing.");
         }
 
         /// <summary>Creates a child Task of <paramref name="parent"/> in the store.</summary>
