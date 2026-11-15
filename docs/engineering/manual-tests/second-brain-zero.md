@@ -5,7 +5,7 @@ documents to learn, and prove those documents became lasting memory that later s
 also builds a small working app. This page is for a Human running the whole product end to end. Every chat text is
 ready to paste and nothing is seeded.
 
-**29 tests** · 3 free, 26 paid · budget about 8.3 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
+**30 tests** · 3 free, 27 paid · budget about 8.5 hours. Written 2026-11-03 against `main` at `8f6c43dc`. An agent ran
 all 27 on 2026-11-05, on Route B, with Route A tested separately: ZERO-01 to ZERO-16 at `50f223af` and ZERO-17 to
 ZERO-27 at `365cd12f`, after #384, which changes only the Chief of Staff's capture text and the Team Memory Helper's
 prompt. Result: 16 Pass, 8 Pass with a finding, 2 Fail (ZERO-11, ZERO-27) and 1 with no verdict on one clause (ZERO-13). On 2026-11-05 ZERO-12, 14, 15 and 26 were rerun on the script's models, ZERO-15 needed three product fixes and ZERO-26 is unresolved (#403), and the rerun cost about 13 USD.
