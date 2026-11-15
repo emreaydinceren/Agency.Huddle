@@ -33,7 +33,8 @@ internal sealed partial class CandidateChecker(
     IAgentGateway gateway,
     TeamTypeCatalog? types = null,
     ITeamCatalog? teams = null,
-    IHumanIdentity? humanIdentity = null)
+    IHumanIdentity? humanIdentity = null,
+    ISkillAvailability? skills = null)
 {
     /// <summary>
     /// Checks every Candidate in <paramref name="candidates"/> and returns every problem found,
@@ -213,8 +214,8 @@ internal sealed partial class CandidateChecker(
 
     /// <summary>
     /// Adds a problem if <paramref name="candidate"/>'s role is not <c>typeId/roleId</c>, names an
-    /// unknown type or role, names no Team to join, or is the manager role of a Team that already
-    /// has a manager (HR-13). A Candidate without a role has nothing to check here.
+    /// unknown type or role, needs a Skill or Pack that is not ready to hire, names no Team to join,
+    /// or is the manager role of a Team that already has a manager (HR-13). A Candidate without a role has nothing to check here.
     /// </summary>
     private void AddRoleProblems(Candidate candidate, List<string> problems)
     {
@@ -244,6 +245,8 @@ internal sealed partial class CandidateChecker(
             return;
         }
 
+        this.AddSkillSetupProblem(candidate, type, role, problems);
+
         if (candidate.Teams.Count == 0)
         {
             problems.Add($"{candidate.Name} has a role but no Team; name the Team the role joins.");
@@ -262,6 +265,33 @@ internal sealed partial class CandidateChecker(
                 problems.Add($"{candidate.Name}'s role '{candidate.Role}' is the manager role, and Team '{team}' already has a manager.");
             }
         }
+    }
+
+    /// <summary>
+    /// Adds one problem when the Skills or Packs of <paramref name="role"/> are not ready to hire, by the same rule a hire card
+    /// uses (<see cref="CardResolver.SkillSetupOf"/>), and names the roles of the type that are ready.
+    /// </summary>
+    private void AddSkillSetupProblem(Candidate candidate, TeamTypeManifest type, RoleSpec role, List<string> problems)
+    {
+        if (skills is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<SkillSetupItem> setup = CardResolver.SkillSetupOf(role, skills);
+        if (setup.Count == 0)
+        {
+            return;
+        }
+
+        string reasons = string.Join("; ", setup.Select(SkillSetupText.Reason));
+        List<string> ready = [.. type.Roles
+            .Where(other => !other.Pooled && !string.Equals(other.Id, role.Id, StringComparison.Ordinal) && CardResolver.SkillSetupOf(other, skills).Count == 0)
+            .Select(static other => other.Id)];
+        string prefix = $"{candidate.Name}'s role '{candidate.Role}' cannot be hired yet: {reasons}.";
+        problems.Add(ready.Count > 0
+            ? $"{prefix} Roles of team type '{type.Id}' ready to hire: {string.Join(", ", ready)}. Propose one of those, leave 'role' out, or ask the Human to set it up first."
+            : $"{prefix} No other role of team type '{type.Id}' is ready to hire; leave 'role' out, or ask the Human to set it up first.");
     }
 
     /// <summary>Composes the text <paramref name="candidate"/> would be written as, adding <c>consult_when</c> when set (Spec §7.2).</summary>

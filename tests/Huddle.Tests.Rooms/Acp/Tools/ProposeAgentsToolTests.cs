@@ -12,6 +12,8 @@ using Agency.Huddle.App.Agents;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Agents;
+using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Pins <see cref="ProposeAgentsTool"/> against Spec §6.9's internal flow, Spec §5.3
@@ -278,6 +280,51 @@ public sealed class ProposeAgentsToolTests
         Assert.Equal(["Vera", "Quill"], stored.Candidates.Select(c => c.Name));
     }
 
+    /// <summary>A Candidate whose role needs a Skill that is in no catalog is refused naming the Skill and the ready roles, and nothing is stored.</summary>
+    [Fact]
+    public async Task InvokeAsync_RoleNeedsUnknownSkill_RefusesNamingTheSkillAndStoresNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeSkillAvailability skills = new FakeSkillAvailability().WithSkill("test-driven-development", SkillAvailability.Unknown);
+        using Fixture fixture = await Fixture.CreateAsync(ct, skills: skills);
+        var caller = await fixture.Directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(caller);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, caller.Id], ct);
+        var tool = fixture.CreateTool(caller.Id);
+        JsonObject candidate = MakeCandidateJson("Vera", "vee", RoleFixtures.TeamName);
+        candidate["role"] = "web/dev";
+
+        var result = await tool.InvokeAsync(MakeArguments(room.Id, new JsonArray(candidate)), ct);
+
+        Assert.Equal(
+            "Vera's role 'web/dev' cannot be hired yet: Skill \"test-driven-development\" is not in any catalog. Roles of team type 'web' ready to hire: lead. Propose one of those, leave 'role' out, or ask the Human to set it up first.",
+            result);
+        Assert.Null(fixture.Proposals.Get(room.Id));
+    }
+
+    /// <summary>A Candidate whose role has every Skill ready is stored as proposed.</summary>
+    [Fact]
+    public async Task InvokeAsync_RoleWithReadySkills_StoresTheProposal()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await Fixture.CreateAsync(ct, skills: new FakeSkillAvailability());
+        var caller = await fixture.Directory.UpsertAgentUserAsync("Nova", null, ct);
+        Assert.NotNull(caller);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, caller.Id], ct);
+        var tool = fixture.CreateTool(caller.Id);
+        JsonObject candidate = MakeCandidateJson("Vera", "vee", RoleFixtures.TeamName);
+        candidate["role"] = "web/dev";
+
+        var result = await tool.InvokeAsync(MakeArguments(room.Id, new JsonArray(candidate)), ct);
+
+        Assert.Equal(
+            $"Proposed 1 Agents (Vera) in Room 'Launch' (id {room.Id}). The Human has been asked to approve. Do not create Rooms for them or mention them yet; you will be told the outcome in this Room.",
+            result);
+        var stored = fixture.Proposals.Get(room.Id);
+        Assert.NotNull(stored);
+        Assert.Equal("web/dev", Assert.Single(stored.Candidates).Role);
+    }
+
     /// <summary>Builds one valid Candidate JSON object with the given Name and Alias.</summary>
     /// <param name="name">The Candidate's Name.</param>
     /// <param name="alias">The Candidate's Alias.</param>
@@ -380,7 +427,8 @@ public sealed class ProposeAgentsToolTests
         /// <param name="ct">Cancels Team Directory initialisation.</param>
         /// <param name="maxPerTeam"><see cref="AcpOptions.MaxAgentsPerTeam"/> for this fixture.</param>
         /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16)
+        /// <param name="skills">When set, the checker also knows the fake <c>web</c> team type and this Skill registry.</param>
+        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16, FakeSkillAvailability? skills = null)
         {
             var dataDir = new TempDataDir();
 
@@ -389,7 +437,9 @@ public sealed class ProposeAgentsToolTests
             var directory = options.CreateDirectory();
             var personas = options.CreatePersonaStore();
             var gateway = new FakeAgentGateway();
-            var checker = new CandidateChecker(personas, directory, gateway);
+            var checker = skills is null
+                ? new CandidateChecker(personas, directory, gateway)
+                : new CandidateChecker(personas, directory, gateway, RoleFixtures.Types(dataDir), null, null, skills);
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
 

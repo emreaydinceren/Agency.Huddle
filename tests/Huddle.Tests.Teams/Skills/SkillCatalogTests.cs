@@ -266,6 +266,16 @@ public sealed class SkillCatalogTests
         Assert.Contains("development/", skill, StringComparison.Ordinal);
     }
 
+    /// <summary>The shipped <c>team-building</c> Skill tells the Agent what to do when <c>propose_agents</c> refuses a role whose Skill or Pack is not ready (#563).</summary>
+    [Fact]
+    public void TeamBuilding_TeachesWhatToDoWhenARoleCannotBeHiredYet()
+    {
+        string skill = SkillCatalog.All["team-building"]["SKILL.md"];
+
+        Assert.Contains("A role cannot be hired yet because a Skill or Pack it needs is not ready", skill, StringComparison.Ordinal); // contains-ok: exact row of model-facing text
+        Assert.Contains("A role whose Skills or Packs are not ready is refused", skill, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
     /// <summary>
     /// The content contract checks can fail when a Skill violates it. This test builds an in-memory
     /// copy of the shipped <c>team-building</c> files, mutates its <c>SKILL.md</c> frontmatter and
