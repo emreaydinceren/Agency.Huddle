@@ -1055,7 +1055,7 @@ lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 | Gate | Refuses |
 | --- | --- |
 | `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. Development Teams you already had get this gate once, when you first start the new version; switch it off in the **Process** tab if you do not want it. |
-| `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. |
+| `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. When the Team's Definition of Done names no command, a note from that member is enough. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
 | `failing-test-before-fix` | A bug Task moving to **Review** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
@@ -2162,12 +2162,12 @@ and a rule:
 
 | Rule | It is met when |
 | --- | --- |
-| `evidence from <step>` | an Agent whose role covers that step added an Evidence line with a command to the Task |
+| `evidence from <step>` | an Agent whose role covers that step added an Evidence line with a command to the Task; when the Definition of Done names no command, a note from that Agent is enough |
 | ``command `<cmd>` exits 0`` | the latest Evidence line for that command passed |
 | `task tagged <tag>` | a sub-Task with that tag is Done |
 | `document reviewed by <step>` | a document attached to the Task was reviewed by that step after its last edit, and nobody has objected since |
 
-The development templates start their Definition of Done with `- Review: evidence from challenge`, so a Task does not reach you until a reviewer (or a tech lead or security engineer) has run the check command and posted an Evidence line. A note-only line does not count. The order, review first and verify after, is written in the process and in the Reviewer and QA Engineer personas; Huddle does not check it.
+The development templates start their Definition of Done with `- Review: evidence from challenge`, so a Task does not reach you until a reviewer (or a tech lead or security engineer) has run the check command and posted an Evidence line. Because those templates also name a command (`Tests pass`), a note-only line does not count there. In the other built-in templates nothing runs a command, so the manager's note after checking the draft meets `evidence from verify`. Their `document reviewed by verify` item needs the draft as a file: the owner saves it in the Team's `outputs/` folder and attaches it to the Task, and the manager logs the review on it before posting the note. A draft written only in the Task's description leaves that item open with "no document attached". The order, review first and verify after, is written in the process and in the Reviewer and QA Engineer personas; Huddle does not check it.
 
 The **Proof** list on the Task panel shows a tick or an open circle per line, with
 who owns the open ones and what is missing, such as "19 of 23 in #RSH-209". On an

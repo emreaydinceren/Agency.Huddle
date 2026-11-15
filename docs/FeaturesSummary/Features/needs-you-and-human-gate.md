@@ -109,7 +109,7 @@ ships one. Each line is a label, a colon and a rule:
 
 | Rule | It is met when |
 | --- | --- |
-| `evidence from <step>` | An Agent whose role covers that step added an Evidence line with a command |
+| `evidence from <step>` | An Agent whose role covers that step added an Evidence line with a command, or only a note when the Definition of Done names no command |
 | ``command `<cmd>` exits 0`` | The latest Evidence line for that command passed |
 | `task tagged <tag>` | A sub-Task with that tag is Done |
 | `document reviewed by <step>` | An attached document was reviewed by that step after its last edit, with no objection since |

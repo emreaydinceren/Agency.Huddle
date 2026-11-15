@@ -87,3 +87,28 @@ Evidence, a check, a sub-Task or a reviewed document. The glossary in `language.
   template has none until its Human or a Retro adds one.
 - **A Retro may propose a Definition of Done change** as an exact-text edit to `Process.md`, the
   same way it changes the rest of the file.
+
+## Amendment, 2026-11-15 (issue #550)
+
+**A note can meet `evidence from <step>`.** Outside software, nothing runs a command: a household
+manager checks a draft against the school's email and says so. Requiring a command left every
+Human-gated Task of the 25 non-development built-in types short of Needs You. Now an Evidence
+entry with no command meets `evidence from <step>` when its author's role covers `<step>` and the
+Team's Definition of Done names no command, that is, has no `command … exits 0` item. When the
+Definition does name one, as every development template does, the rule is unchanged and still
+needs an entry with a command. The note's author is its timeline entry's author
+([ADR-0086](0086-a-task-is-a-description-plus-an-immutable-timeline.md)). An old undated note
+carried over from the `## Evidence` section has no author, so it never counts. The
+`qa-evidence-before-done` gate uses the same test, so Proof and the Done gate still agree. No
+process file was rewritten for this.
+
+**An open `evidence from` item now says why.** Its detail is "no Evidence from a member covering
+\<step>", or "no Evidence with a command from a member covering \<step>" when a command is needed.
+`get_task` prints each open item's detail after its owner, so an Agent can see what is missing.
+
+**`document reviewed by` is unchanged.** It still needs an attached Markdown document with a
+later `Reviewed` entry. The built-in process templates now say how to get one: the draft's author
+saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task, and the
+member who verifies logs the review with `log_change` before posting the Evidence. A draft
+written only in the description does not count. Letting an inline draft count was rejected
+because a description has no history, so an edit after the review could not void it.
