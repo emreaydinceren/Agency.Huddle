@@ -10,7 +10,9 @@ using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Tasks;
 
 /// <summary>
 /// Pins the Task edit page (<see cref="TaskEditPage"/>, K of <c>docs/Huddle.TaskReadView-Specifications.md</c>): its header holds
@@ -67,6 +69,25 @@ public sealed class TaskEditPageTests
         Assert.False(cut.Find(".task-edit-page-header .task-detail-save").HasAttribute("disabled"));
         TaskDraft draft = cut.FindComponent<TaskDetail>().Instance.Draft ?? throw new InvalidOperationException("Draft missing.");
         Assert.Equal("Platform", draft.Team);
+    }
+
+    /// <summary>
+    /// Issue #571: a new Task opened with no Team (New task from a View with no Team scope) renders its form. The page read the
+    /// Team's gates with a blank name and the rename lookup refused it, so the page crashed with <see cref="ArgumentException"/>.
+    /// </summary>
+    [Fact]
+    public async Task New_WithNoTeam_RendersTheForm_WithNoGatesLine()
+    {
+        using TempDataDir dir = new();
+        ProcessGateService gates = TaskGateText.BuildGates(dir, TaskGateText.Process(TaskGateText.QaGate), new TeamRenameStore(dir.Options()));
+        using TaskToolHarness harness = new(gates: gates);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, "new", out _, team: null);
+
+        Assert.NotEmpty(cut.FindAll(".task-detail-team"));
+        Assert.NotEmpty(cut.FindAll(".task-edit-page-header .task-detail-save"));
+        Assert.Empty(cut.FindAll(".task-detail-gates"));
     }
 
     /// <summary>Saving a new Task creates it, and the same Tab becomes that Task's edit page.</summary>

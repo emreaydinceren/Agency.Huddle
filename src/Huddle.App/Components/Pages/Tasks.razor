@@ -447,8 +447,7 @@
     /// <summary>/tasks/new: creates a List View under the first free default name ("New view", "New view 2", …), saves it, and replaces the URL with its own.</summary>
     private void CreateViewAndOpen()
     {
-        TaskView created = new() { Id = Guid.NewGuid().ToString("N"), Name = ViewActions.NewViewName(this.Views), Kind = ViewKind.List };
-        if (this.Views.Save(created).Saved)
+        if (ViewActions.CreateNew(this.Views) is { } created)
         {
             // The Tab showing /tasks/new moves to the new View's address too: a Tab left on /tasks/new would make another View each time it is restored or shown again.
             string url = $"/tasks/{created.Id}";
