@@ -594,7 +594,9 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         using TempDataDir dir = new();
         FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => throw new IOException("probe failed") };
-        AcpOptions acp = new() { Adapters = [new AdapterProfileOptions { Id = "claude", DisplayName = "Claude Code", Command = "node" }] };
+
+        // An explicit AdapterPath, so the probe reaches the fake runner on any machine rather than only where AdapterLocator finds an installed adapter.
+        AcpOptions acp = new() { Adapters = [new AdapterProfileOptions { Id = "claude", DisplayName = "Claude Code", Command = "node", AdapterPath = "adapter.js" }] };
         IOptions<TeamOptions> options = dir.Options(opts => opts.Acp = acp);
         using ModelCatalogProbe probe = new(new(options), NullLoggerFactory.Instance, new AdapterProfileResolver(new AdapterCatalog(options)), runner, new WorkModePolicy(options));
         AddProfiles(ctx, probe);
