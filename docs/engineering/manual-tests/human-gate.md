@@ -265,7 +265,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 ### HUMANGATE-11 — Run inside the Team: local merges need no Accept, a push still waits (issue #533)
 
-**Paid** · about 40 min · Sonnet at low Effort, never Opus · Not run since the rewrite for issue #602
+**Paid** · about 40 min · Sonnet at low Effort, never Opus
 
 *Proves [ADR-0088](../../adr/0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md): under Run inside the Team a Development Team merges a branch named after its Task's id into the local `main` with no Needs You entry, and every `git push` still waits for an Accept on a Task whose Action names the push.*
 
@@ -293,7 +293,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 ### HUMANGATE-12 — A spend cap falls back to Ask me and asks (issue #533)
 
-**Paid** · about 25 min · Sonnet at low Effort, never Opus · Not run since the rewrite for issue #602
+**Paid** · about 25 min · Sonnet at low Effort, never Opus
 
 *Proves the cap: the scope falls back to Ask me at the cap, Yes grants exactly one more cap, No keeps Ask me until the Human changes the level or the cap, and a Save that changes nothing restarts nothing.*
 
@@ -320,7 +320,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 ### HUMANGATE-13 — An Agent cannot change the Needs You level (issue #533)
 
-**Paid** · about 20 min · Sonnet at low Effort, never Opus · Not run since the rewrite for issue #602
+**Paid** · about 20 min · Sonnet at low Effort, never Opus
 
 *Proves the level is out of an Agent's reach: the level lives in `team.db`, so no file edit, shell write, retro proposal, Task move or file move changes it.*
 
