@@ -219,6 +219,13 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         return new RuntimeNames(modelName, effortName);
     }
 
+    /// <inheritdoc/>
+    public string? PeekDefaultModel(string? adapterId)
+    {
+        (AdapterProfile profile, _) = this.resolver.Resolve(adapterId);
+        return this.defaultsCache.TryGetValue(profile.Id, out AdapterDefaults? defaults) ? defaults.Model : null;
+    }
+
     /// <summary>The display name of the model with id <paramref name="id"/> in <paramref name="models"/>, or null when absent.</summary>
     private static string? NameOfModel(IReadOnlyList<AgentModelOption>? models, string id) =>
         models?.FirstOrDefault(option => string.Equals(option.Id, id, StringComparison.Ordinal))?.Name;

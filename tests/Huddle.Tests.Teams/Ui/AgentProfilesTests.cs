@@ -56,6 +56,78 @@ public sealed class AgentProfilesTests
         Assert.Equal(0, fixture.ModelCatalog.ProbeCount);
     }
 
+    /// <summary>A draft stores exactly what it carries: with nothing chosen it reads "Agent default" and "Model default" although the cache names defaults, a chosen id reads its cached name, and nothing probes.</summary>
+    [Fact]
+    public void DescribeDraftRuntime_NothingChosen_NeverNamesTheCachedDefault()
+    {
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.Runtime = new RuntimeNames("Sonnet", "Medium");
+
+        ProfileRuntime unchosen = fixture.Profiles.DescribeDraftRuntime(null, null, null);
+        ProfileRuntime chosen = fixture.Profiles.DescribeDraftRuntime("codex", "sonnet", "medium");
+
+        Assert.Equal(new ProfileRuntime("Claude Code", "Agent default", "Model default"), unchosen);
+        Assert.Equal(new ProfileRuntime("Codex", "Sonnet", "Medium"), chosen);
+        Assert.Equal(0, fixture.ModelCatalog.ProbeCount);
+    }
+
+    /// <summary>A chosen id the cache has no name for reads as the raw id on a draft.</summary>
+    [Fact]
+    public void DescribeDraftRuntime_ChosenIdsNotCached_ReadAsTheRawIds()
+    {
+        using ProfileFixture fixture = new();
+
+        ProfileRuntime chosen = fixture.Profiles.DescribeDraftRuntime(null, "haiku", "low");
+
+        Assert.Equal(new ProfileRuntime("Claude Code", "haiku", "low"), chosen);
+    }
+
+    /// <summary>The Adapter's default model is learned by probing once and then peeking what the probe reported.</summary>
+    [Fact]
+    public async Task DefaultModelAsync_AfterProbe_ReturnsTheReportedDefault()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.DefaultModel = "sonnet";
+
+        string? model = await fixture.Profiles.DefaultModelAsync("codex", ct);
+
+        Assert.Equal("sonnet", model);
+        Assert.Equal(1, fixture.ModelCatalog.ProbeCount);
+    }
+
+    /// <summary>A probe that fails yields no default instead of an exception, so adding a draft never breaks on an Adapter that cannot start.</summary>
+    [Fact]
+    public async Task DefaultModelAsync_ProbeFails_ReturnsNull()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.ThrowOnProbe = true;
+        fixture.ModelCatalog.DefaultModel = "sonnet";
+
+        string? model = await fixture.Profiles.DefaultModelAsync("codex", ct);
+
+        Assert.Null(model);
+    }
+
+    /// <summary>An Agent hired on the Adapter's default model keeps its role's tier chip when the Adapter still reports that default (no tier map names a model); a different stored model shows none.</summary>
+    [Theory]
+    [InlineData("sonnet", ModelTier.Balanced)]
+    [InlineData("opus", null)]
+    public async Task BuildAsync_StoredModelIsTheAdapterDefault_KeepsTheTier(string adapterDefault, ModelTier? expected)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        await fixture.InitializeAsync(ct);
+        fixture.AddAgent("Ada", "Lead", withRole: true, model: "sonnet");
+        fixture.ModelCatalog.DefaultModel = adapterDefault;
+
+        AgentProfileView? view = await fixture.Profiles.BuildAsync("Ada", null, ct);
+
+        Assert.NotNull(view);
+        Assert.Equal(expected, view.Profile.Tier);
+    }
+
     /// <summary>An Agent that chose nothing reads as the default Adapter, with the Agent card's own default wording.</summary>
     [Fact]
     public async Task BuildAsync_NoChoices_ReadsDefaults()

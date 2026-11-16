@@ -103,7 +103,7 @@ internal sealed class AgentProfiles(
         {
             State = state,
             Runtime = runtime,
-            Tier = TierOfModel.Of(job?.Model.Tier ?? role?.Model?.Tier, persona.Model, hire?.TierMap ?? new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>()),
+            Tier = this.TierOf(job?.Model.Tier ?? role?.Model?.Tier, persona.Adapter, persona.Model, hire?.TierMap ?? new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>()),
             SkillNames = identity?.Skills ?? [],
         };
         return new AgentProfileView(profile, manager, member ? ProfileMembership.Member : ProfileMembership.None, agent, team) { RuntimeWarmUp = warm };
@@ -161,6 +161,70 @@ internal sealed class AgentProfiles(
     /// <returns>The three display strings.</returns>
     public ProfileRuntime DescribeRuntime(string? adapter, string? model, string? effort) =>
         this.Compose(adapter, model, effort, modelCatalog.PeekRuntime(adapter, model, effort));
+
+    /// <summary>
+    /// Reads out what a new draft stores, from the cache only: it never probes and never starts a warm-up.
+    /// Unlike <see cref="DescribeRuntime"/> it never names a default the draft did not choose, because a
+    /// draft stores exactly what it carries: no Model reads "Agent default" and no Effort "Model default"
+    /// even when the cache knows the default's name. A chosen id reads its cached name, else the raw id.
+    /// </summary>
+    /// <param name="adapter">The chosen Adapter id, or null for the default.</param>
+    /// <param name="model">The chosen model id, or null.</param>
+    /// <param name="effort">The chosen effort id, or null.</param>
+    /// <returns>The three display strings.</returns>
+    public ProfileRuntime DescribeDraftRuntime(string? adapter, string? model, string? effort)
+    {
+        RuntimeNames names = modelCatalog.PeekRuntime(adapter, model, effort);
+        return new ProfileRuntime(
+            (adapters.Find(adapter) ?? adapters.Default).DisplayName,
+            model is null ? DefaultModelText : names.Model ?? model,
+            effort is null ? DefaultEffortText : names.Effort ?? effort);
+    }
+
+    /// <summary>
+    /// Learns the id of the model the Adapter runs on when none is chosen, so Build a team can store it for a
+    /// new draft whose tier names no model. It reads the catalog, which probes the Adapter once and then answers
+    /// from its cache, and then peeks the default the probe reported.
+    /// </summary>
+    /// <param name="adapter">The Adapter id, or null for the default.</param>
+    /// <param name="ct">Cancels the probe.</param>
+    /// <returns>The default model id, or <see langword="null"/> when the Adapter reported none or could not be probed.</returns>
+    public async Task<string?> DefaultModelAsync(string? adapter, CancellationToken ct)
+    {
+        try
+        {
+            _ = await modelCatalog.GetAsync(adapter, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Safe to swallow: the draft simply keeps no Model and its card says "Agent default", which is
+            // exactly what the hire stores; the catalog caches nothing on failure, so the next Add tries again.
+            logger.LogWarning(ex, "Reading the Adapter's default model for a new draft failed.");
+            return null;
+        }
+
+        return modelCatalog.PeekDefaultModel(adapter);
+    }
+
+    /// <summary>
+    /// The tier chip for an Agent. A Model equal to the Adapter's cached default is treated as no Model chosen:
+    /// Build a team stores that default on a hire whose tier names no model, and the chip must not vanish for it.
+    /// It reads the cache only and never probes.
+    /// </summary>
+    /// <param name="roleTier">The tier its role asks for, or <see langword="null"/> when it has no role.</param>
+    /// <param name="adapter">The Agent's Adapter id, or null for the default.</param>
+    /// <param name="model">The Model it runs on, or null for its Adapter's default.</param>
+    /// <param name="tierMap">The models each Adapter's tiers name.</param>
+    /// <returns>The tier to show, as <see cref="TierOfModel.Of"/> decides it.</returns>
+    public ModelTier? TierOf(ModelTier? roleTier, string? adapter, string? model, IReadOnlyDictionary<string, IReadOnlyDictionary<ModelTier, string>> tierMap)
+    {
+        bool isAdapterDefault = model is not null && string.Equals(model, modelCatalog.PeekDefaultModel(adapter), StringComparison.Ordinal);
+        return TierOfModel.Of(roleTier, isAdapterDefault ? null : model, tierMap);
+    }
 
     /// <summary>Builds the three display strings from already-peeked names.</summary>
     /// <param name="adapter">The chosen Adapter id, or null for the default.</param>
