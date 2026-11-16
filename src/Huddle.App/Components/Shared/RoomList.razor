@@ -250,13 +250,15 @@
     /// <summary>
     /// Reads every Room and keeps the unarchived root ones (<c>Team is null</c>) plus the unarchived Rooms whose Team is
     /// no longer in the catalog (shown with the Team after the name) - archiving is a display filter, and this is the one
-    /// place that filter is applied. A Room of a live Team is listed under that Team by <c>TeamsNav</c> instead.
+    /// place that filter is applied. A live Team's one-to-ones are listed too, with their scope label; its other Rooms
+    /// (group Rooms and the Team Room) are listed under that Team by <c>TeamsNav</c> instead.
     /// </summary>
     private async Task LoadAsync()
     {
         var all = await this.TeamDirectory.GetRoomsAsync();
         this.membersByRoom = await this.TeamDirectory.GetMembersByRoomAsync();
-        this.rooms = [.. all.Where(room => !room.Archived && (room.Team is null || this.Catalog.Find(room.Team) is null))];
+        this.rooms = [.. all.Where(room => !room.Archived
+            && (room.Team is null || this.Catalog.Find(room.Team) is null || RoomScopeLabel.IsScopedOneToOne(room, this.MembersOf(room))))];
         this.groups = RoomGroups.ByTeam([.. all.Where(static room => !room.Archived)]);
         this.waitingIds = new HashSet<string>(this.Tracker.Snapshot().Select(static entry => entry.RoomId), StringComparer.Ordinal);
     }

@@ -40,9 +40,9 @@ else
         @* The Room's header is the page model's PageHeader with a Chrome line (audit B1), so the title sits at the
            same y as every other page's. The wrapper's top padding is the 16px under the tab strip. *@
         <div class="room-header px-4">
-            <PageHeader Title="@this.room.Name" Chrome="true" TitleEditor="@(this.isRenaming ? this.RenameEditor : null)">
+            <PageHeader Title="@RoomScopeLabel.Display(this.room, this.members, this.TeamCatalog)" Chrome="true" TitleEditor="@(this.isRenaming ? this.RenameEditor : null)">
                 <TitleTrailing>
-                    @if (this.isTeamRoom && this.room.Team is { Length: > 0 } roomTeam)
+                    @if ((this.isTeamRoom || RoomScopeLabel.ScopeFor(this.room, this.members, this.TeamCatalog) is not null) && this.room.Team is { Length: > 0 } roomTeam)
                     {
                         <TeamAvatar Team="@roomTeam" Avatar="this.TeamCatalog.Find(roomTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="avatar-transcript room-team-avatar" />
                     }

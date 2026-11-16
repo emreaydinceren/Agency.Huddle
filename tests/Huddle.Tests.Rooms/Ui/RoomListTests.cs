@@ -327,7 +327,11 @@ public sealed class RoomListTests
         var directory = await dir.CreateDirectoryAsync(ct);
         var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
         Assert.NotNull(agent);
-        _ = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct: ct);
+        var second = await directory.UpsertAgentUserAsync("cmo", null, ct);
+        Assert.NotNull(second);
+
+        // A group Room: a live Team's one-to-one stays in the All view (#635), so the orphan rule is pinned on a group Room.
+        _ = await directory.CreateRoomAsync("Launch plan", [KnownIds.Human, agent.Id, second.Id], "Marketing", teamRoom: false, ct: ct);
         var catalog = KnownTeam("Sales");
         var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: catalog).Chat;
         await using var ctx = NewContext(directory, chat, events);
@@ -595,6 +599,141 @@ public sealed class RoomListTests
 
         var link = cut.Find(".mud-nav-group .nav-action-link");
         Assert.Equal("New room", link.TextContent.Trim());
+    }
+
+    /// <summary>#635: the All view lists a live Team's one-to-one next to the root one-to-one with the same Agent, and only the Team's carries the Team icon and "· Team".</summary>
+    [Fact]
+    public async Task Render_TeamOneToOne_InAllView_IsListedWithTeamIconAndName()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Development Team")).Chat;
+        var root = await chat.EnsureRoomForAsync(agent, ct);
+        var scoped = await chat.EnsureTeamOneToOneAsync("Development Team", agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        Assert.NotEqual(root.Id, scoped.Id);
+        var rows = cut.FindAll(".hover-reveal-link a");
+        Assert.Equal(2, rows.Count);
+        var rootRow = rows.Single(row => row.GetAttribute("href") == $"/rooms/{root.Id}");
+        var teamRow = rows.Single(row => row.GetAttribute("href") == $"/rooms/{scoped.Id}");
+        Assert.Empty(rootRow.QuerySelectorAll(".room-row-scope"));
+        Assert.Equal(root.Name, NameText(rootRow));
+        IElement scope = Assert.Single(teamRow.QuerySelectorAll(".room-row-scope"));
+        Assert.NotNull(scope.QuerySelector(".avatar-square"));
+        Assert.Equal($"{scoped.Name} · Development Team", teamRow.QuerySelector(".sidebar-row-label")?.GetAttribute("title"));
+        Assert.Equal("·", scope.QuerySelector(".room-row-scope-dot")?.TextContent);
+        Assert.Equal("Development Team", scope.QuerySelector(".room-row-scope-text")?.TextContent.Trim());
+    }
+
+    /// <summary>#635: a Project's one-to-one reads "Team / Project" after the name.</summary>
+    [Fact]
+    public async Task Render_ProjectOneToOne_ShowsTeamSlashProject()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var catalog = new Agency.Huddle.Tests.Teams.FakeTeamCatalog { Teams = [new Agency.Huddle.App.Teams.TeamSummary("Development Team", ["Website"], ["coo"], true)] };
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: catalog).Chat;
+        _ = await directory.CreateRoomAsync("coo", [KnownIds.Human, agent.Id], "Development Team", false, "Website", ct);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        Assert.Equal("Development Team / Website", cut.Find(".room-row-scope-text").TextContent.Trim());
+        Assert.NotNull(cut.Find(".room-row-scope .avatar-square"));
+    }
+
+    /// <summary>#635: a Team one-to-one's tab is titled with the display text, so it reads differently from the root one-to-one's tab.</summary>
+    [Fact]
+    public async Task Click_TeamOneToOne_OpensATabTitledWithTheScope()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Development Team")).Chat;
+        var scoped = await chat.EnsureTeamOneToOneAsync("Development Team", agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+        await cut.InvokeAsync(() => cut.Find(".hover-reveal-link a").ClickAsync());
+
+        Assert.Equal($"{scoped.Name} · Development Team", ctx.Services.GetRequiredService<Agency.Huddle.App.Tabs.TabService>().Active?.Title);
+    }
+
+    /// <summary>#635: a one-to-one of a Team that has left the catalog has no scope label: its row tooltip is the plain name and the muted bracket stays.</summary>
+    [Fact]
+    public async Task Render_VanishedTeamOneToOne_HasNoScopeLabel()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var orphan = await directory.CreateRoomAsync("coo", [KnownIds.Human, agent.Id], "Marketing", teamRoom: false, ct: ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Sales")).Chat;
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        Assert.Empty(cut.FindAll(".room-row-scope"));
+        Assert.Equal(orphan.Name, cut.Find(".sidebar-row-label").GetAttribute("title"));
+        Assert.Equal("(Marketing)", cut.Find(".room-team-label").TextContent.Trim());
+    }
+
+    /// <summary>#635: in the Team grouping the Team one-to-one carries the scope label too.</summary>
+    [Fact]
+    public async Task GroupBy_Team_TeamOneToOne_CarriesTheScopeLabel()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Development Team")).Chat;
+        _ = await chat.EnsureTeamOneToOneAsync("Development Team", agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+        await cut.InvokeAsync(() => cut.FindAll(".room-list-grouping-control .mud-toggle-item").First(item => item.TextContent.Trim() == "Team").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal("Development Team", cut.Find(".hover-reveal-link .room-row-scope-text").TextContent.Trim()));
+        Assert.NotNull(cut.Find(".hover-reveal-link .room-row-scope .avatar-square"));
+    }
+
+    /// <summary>#635: a scoped group Room (two Agents) of a live Team stays out of the All view.</summary>
+    [Fact]
+    public async Task Render_ScopedGroupRoomOfALiveTeam_IsNotInTheAllView()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var coo = await directory.UpsertAgentUserAsync("coo", null, ct);
+        var cto = await directory.UpsertAgentUserAsync("cto", null, ct);
+        Assert.NotNull(coo);
+        Assert.NotNull(cto);
+        _ = await directory.CreateRoomAsync("Standup", [KnownIds.Human, coo.Id, cto.Id], "Development Team", teamRoom: false, ct: ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Development Team")).Chat;
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        Assert.Empty(cut.FindAll(".hover-reveal-link a"));
     }
 
     /// <summary>The link's text without the 1:1 avatar's monogram (UX-016), trimmed.</summary>

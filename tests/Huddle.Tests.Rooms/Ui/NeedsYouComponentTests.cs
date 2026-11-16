@@ -34,6 +34,42 @@ public sealed class NeedsYouComponentTests
         Assert.NotNull(cut.Find($"a[href='/rooms/{room.Id}']"));
     }
 
+    /// <summary>#635: a waiting Team one-to-one is named with its Team and the Team icon, while the stored Room name is untouched.</summary>
+    [Fact]
+    public async Task List_TeamOneToOne_ShowsTheNameWithTheTeamScope()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct);
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        Room room = await fixture.Team.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Development Team", false, null, ct);
+        _ = await fixture.Service.PostAsync(room.Id, nova.Id, "@You?", ct: ct);
+        Agency.Huddle.Tests.Teams.FakeTeamCatalog catalog = new() { Teams = [new Agency.Huddle.App.Teams.TeamSummary("Development Team", [], ["Nova"], true)] };
+        await using MudBunitContext ctx = NewContext(fixture, catalog);
+
+        IRenderedComponent<NeedsYouList> cut = ctx.Render<NeedsYouList>();
+
+        Assert.Equal("Nova · Development Team", cut.Find(".needs-you-name").GetAttribute("title"));
+        Assert.Equal("Development Team", cut.Find(".needs-you-name .room-row-scope-text").TextContent.Trim());
+        Assert.NotNull(cut.Find(".needs-you-name .room-row-scope .avatar-square"));
+    }
+
+    /// <summary>#635: a one-to-one of a Team that has left the catalog is named plainly, with no Team icon.</summary>
+    [Fact]
+    public async Task List_VanishedTeamOneToOne_ShowsThePlainName()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct);
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        Room room = await fixture.Team.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], "Gone Team", false, null, ct);
+        _ = await fixture.Service.PostAsync(room.Id, nova.Id, "@You?", ct: ct);
+        await using MudBunitContext ctx = NewContext(fixture);
+
+        IRenderedComponent<NeedsYouList> cut = ctx.Render<NeedsYouList>();
+
+        Assert.Equal("Nova", cut.Find(".needs-you-name").GetAttribute("title"));
+        Assert.Empty(cut.FindAll(".room-row-scope"));
+    }
+
     /// <summary>Pressing the dismiss button hides the row, and the Room stays dismissed in the tracker.</summary>
     [Fact]
     public async Task List_Dismiss_RemovesTheRow()
@@ -159,7 +195,8 @@ public sealed class NeedsYouComponentTests
     /// <summary>Builds a bUnit context holding the services both components inject.</summary>
     /// <param name="fixture">The fixture whose tracker, directory and events the components use.</param>
     /// <returns>The context; the caller disposes it.</returns>
-    private static MudBunitContext NewContext(NeedsYouFixture fixture)
+    /// <param name="catalog">The Team catalog the list reads, or <see langword="null"/> for one with no Teams.</param>
+    private static MudBunitContext NewContext(NeedsYouFixture fixture, Agency.Huddle.Tests.Teams.FakeTeamCatalog? catalog = null)
     {
         MudBunitContext ctx = new();
 
@@ -169,6 +206,7 @@ public sealed class NeedsYouComponentTests
         ctx.Services.AddSingleton(_ => harness);
         ctx.Services.AddSingleton(sp => new NeedsYouTaskSource(
             sp.GetRequiredService<Agency.Huddle.Tests.Acp.Tools.TaskToolHarness>().Store, new NeedsYouTaskTestHost.ThreeOfFourProofSource(), harness.Events));
+        ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(catalog ?? new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(fixture.Tracker);
         ctx.Services.AddSingleton<ITeamDirectory>(fixture.Team);
         ctx.Services.AddSingleton(fixture.Events);

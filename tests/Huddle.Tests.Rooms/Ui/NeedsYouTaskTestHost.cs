@@ -48,6 +48,7 @@ internal static class NeedsYouTaskTestHost
         harness.AddTo(ctx.Services);
         ctx.Services.AddSingleton(fixture.Tracker);
         ctx.Services.AddSingleton<ITeamDirectory>(fixture.Team);
+        ctx.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamCatalog>(new Agency.Huddle.Tests.Teams.FakeTeamCatalog());
         ctx.Services.AddSingleton(fixture.Events);
         ctx.Services.AddSingleton<TimeProvider>(fixture.Clock);
         ctx.Services.AddSingleton(source);
