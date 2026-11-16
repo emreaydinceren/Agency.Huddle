@@ -46,7 +46,7 @@ The rules are **repo secrets, never tracked files**, because they contain the re
 | --- | --- |
 | `SYNC_REPLACEMENTS` | `git-filter-repo --replace-text` lines (`needle==>placeholder`): internal Gitea and model-host names, the maintainer's local Windows user path, the maintainer's personal email |
 | `SYNC_MAILMAP` | One mailmap line folding the personal author email into the GitHub noreply identity |
-| `SYNC_GITHUB_TOKEN` | Fine-grained PAT, this one repo only, `Contents: Read and write` |
+| `SYNC_GITHUB_TOKEN` | Fine-grained PAT, this one repo only, `Contents` and `Workflows`: Read and write. GitHub rejects a push that changes `.github/workflows/` without `Workflows`. Fine-grained tokens expire (at most a year); the secret's description in Gitea records the date |
 
 Placeholders use reserved `.example` hosts, which `.gitleaks.toml` already allowlists. The
 working tree is written to be redaction-safe on its own (docs say `gitea-host.example`), so
@@ -67,6 +67,11 @@ messages, and old revisions of docs.
   a fake, allowlist that exact value in `.gitleaks.toml`, or the whole line with
   `regexTarget = "line"`. Never a file or a whole domain. Reproduce first with
   `gitleaks git . --config .gitleaks.toml --log-opts="--all -- <files>"`.
+- **An expired token fails only at the very end.** Clone, scrub, verify and both scans all pass,
+  then the push says `Invalid username or token. Password authentication is not supported`. That
+  is `SYNC_GITHUB_TOKEN` expired or revoked, not a scrub problem. Run 1653 failed this way on
+  2026-11-16: the token from 2026-10-03 had lapsed, and its replacement expires on 2027-11-15.
+  Create a new one as in the table above and update the secret on the repo page.
 - **The verify step reads its needles from the runtime copy of the secret**, so this repo
   never contains them. Add a new needle to the secret and the verify step checks it
   automatically.
