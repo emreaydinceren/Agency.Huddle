@@ -7,7 +7,7 @@ date: 2026-11-05
 
 > Amended by [ADR-0088](0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md) (2026-11-15):
 > the Process tab's switch is gone and the Needs You level replaces it. Under Run inside the Team a local merge into main
-> passes once a Task is released; a push waits for an Accept under every level. `AcceptBeforeMergeMigration` is removed.
+> passes once a Task is released; a push the gate sees in an Agent's command waits for an Accept under every level. `AcceptBeforeMergeMigration` is removed.
 
 In the first run of the Second Brain from-zero test, an Agent merged to main with no Accept from the Human. Issue #396
 made the merge gate run in the Adapter's `auto` mode, but the gate only held the **assignee of an open gated Task**. An
@@ -39,8 +39,8 @@ in Review, and the merge stayed refused: a dead end.
 An Accept on a Task with no Action takes it straight to Done, so no open Accept is left to hold the merge. The gate
 therefore also allows a merge for **one hour** after such an Accept (`ProcessMergeGate.AcceptedDoneWindow`, read from the
 Task's Change log, with the clock injected). The first idea was 24 hours; that left a whole day open. One hour is long
-enough for the Agent to wake and merge, short enough that the Human's rule "always waits for my Accept" holds for
-practical purposes.
+enough for the Agent to wake and merge, short enough that the Human's rule "a merge waits for my Accept" holds for
+practical purposes, within the limits below.
 
 The remaining gap, stated plainly: **within that hour another merge by the Team is allowed too**, because the command
 names no Task. A Team that wants no gap sets an Action on every Task whose work ends in a merge, so the Accept leads to
@@ -116,6 +116,15 @@ final. Nothing rests on an Agent's wording.
 
 See [ADR-0039](0039-process-gates-live-in-process-md-and-are-enforced-in-taskservice-and-the-permission-handler.md) for the gate mechanism and the
 [HumanGate specification](../Huddle.HumanGate-Specifications.md) OD-1.
+
+## Limits
+
+The gate reads the command line an Agent runs, so it is an early warning and not enforcement. The list of what gets past
+it (a script or command substitution that merges or pushes, a git alias saved earlier in a git config file, a Task an
+Agent creates straight into a project set to Run inside the Team, the 24-hour push release window, the Needs Human Helper
+being a model, and the Codex Adapter having no hook) is in the [Limits section of ADR-0088](0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md#limits)
+and in [known limits](../engineering/known-limits.md). For a guarantee, the Human protects the branch on their git server
+(branch protection). Real enforcement is parked as the design of a permission framework in issue #608.
 
 ## Amendment, 2026-11-06 (issue #432)
 

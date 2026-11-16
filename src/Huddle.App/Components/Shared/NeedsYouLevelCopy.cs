@@ -12,7 +12,13 @@ internal static class NeedsYouLevelCopy
     /// <summary>What Run inside the Team means, under the choice. It names what still waits, so it promises no more than the code does.</summary>
     public const string RunInsideNote =
         "Run inside the Team: a local merge into main of a Task's own branch once its Proof is complete, a Sprint and new Backlog Tasks go ahead without you. "
-        + "Every push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.";
+        + "Every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you, and Huddle still asks you before every push it sees in an Agent's command.";
+
+    /// <summary>What the gate cannot catch (ADR-0088, issue #608), shown beside the level control whatever the choice.</summary>
+    public const string LimitsNote =
+        "What this cannot catch: Huddle asks before a merge or push it can see in an Agent's command, so a script or a git alias saved earlier in a git config file can still merge or push without asking. "
+        + "An Agent can also create a Task straight into a project set to Run inside the Team, and one Accept on a push Task lets the Team push anything for up to 24 hours. "
+        + "For a guarantee, protect the branch on your git server.";
 
     /// <summary>The cap field's explanation.</summary>
     public const string CapNote = "When the Team has spent this much running inside the Team, it asks you before going on.";

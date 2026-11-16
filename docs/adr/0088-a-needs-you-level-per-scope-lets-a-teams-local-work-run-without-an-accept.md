@@ -20,8 +20,9 @@ around from inside the Team. The sections below state the decision as it now sta
 
 - The level and spend cap per scope live in `team.db`, keyed by an id that survives a rename. `_team.md` and
   `_project.md` hold no level, so the file guard and the retro refusal are gone.
-- Every `git push` waits at every level, in every Team, whatever its form. Only an Accept on a Task whose Action names a
-  push releases it.
+- Every `git push` the gate sees in an Agent's command waits at every level, in every Team, whatever its form. Only an
+  Accept on a Task whose Action names a push releases it. The gate reads the command line, so it is an early warning and
+  not enforcement (see [Limits](#limits)).
 - The `gates:` line no longer switches the merge gate on or off.
 - A Task's level is fixed where Huddle placed it, and can only get stricter.
 - A release passes only a local merge of a branch named after the released Task's id.
@@ -47,13 +48,13 @@ Under Run inside the Team, three steps proceed without the Human:
 3. **New Backlog Tasks.** Creating a Task needs no Human step under either level, and the role text says so. The level
    writes this down so an Agent does not ask.
 
-Under both levels, these always wait for the Human's Accept:
+Under both levels, these wait for the Human's Accept, within the [Limits](#limits) below:
 
-- **every `git push`**, whatever the remote and whatever its form: a named branch, a refspec, a network URL, a file path,
+- **every `git push` the gate sees in an Agent's command**, whatever the remote and whatever its form: a named branch, a refspec, a network URL, a file path,
   a bare `push`, `--all`, `--mirror`, `-C <path>`, or an alias set with `-c alias.x=push` or `git config alias.x push`. It
   is released only by a fresh Accept on a Task of the Persona's Team whose Action names a push (the word `push`, ignoring
   case). Huddle's own merge Action does not release it, and neither does a released Task. A Persona who belongs to no Team
-  cannot push at all. Like a merge, the Accept names no push: for 24 hours (one hour after it took the Task to Done) any
+  is refused every push it is seen making. Like a merge, the Accept names no push: for 24 hours (one hour after it took the Task to Done) any
   push by a member of that Team passes, whatever it sends;
 - every Task that carries an Action (send, pay, publish, sign, delete, or any other) or has `human_gate: true`;
 - every connector call (ADR-0080: every call asks).
@@ -191,8 +192,8 @@ that supplied a Task's level (for example "Team and project"), not only the firs
   Team's process cannot turn the gate off still holds, because the level is not process data. A Task with an Action or
   `human_gate: true` is gated as before under every level.
 - **ADR-0078.** The Process tab's switch for `accept-before-merge` is replaced by the level. "How a Human turns it off"
-  now reads "set the Team's or project's Needs You level to Run inside the Team". Every push still waits for an Accept
-  under every level. The migration section no longer applies, and the Team's `gates:` line no longer decides whether the
+  now reads "set the Team's or project's Needs You level to Run inside the Team". Huddle still asks for an Accept before
+  every push it sees in an Agent's command, under every level. The migration section no longer applies, and the Team's `gates:` line no longer decides whether the
   merge gate applies.
 
 ## Rejected
@@ -208,6 +209,28 @@ that supplied a Task's level (for example "Team and project"), not only the firs
 | Fold the Room Budget into the level | A runaway-loop guard and a plan approval are different stops (readiness review). The owner kept them apart |
 | Refuse a laxer move in `update_task` | It covers one tool. A Task created in a project, or a file moved by a shell, never passes through it. Fixing the governing scope where Huddle placed the Task covers every path |
 | Keep the level in `_team.md` with a write guard | A shell write got past the guard, and so did a Task file moved between folders. Keeping the level where no Agent can write closes both without a guard |
+
+## Limits
+
+The merge and push gate reads the command line an Agent runs, through `ProcessMergeGate` and `GitCommandLine`, in the
+Claude Code `PreToolUse` hook (`merge-gate-ask.js`) and the ACP permission request. It is an early warning and not
+enforcement. What gets past it:
+
+- a script or a command substitution that merges or pushes (`./deploy.sh`, `bash -c "$(…)"`);
+- a git alias saved earlier in `.git/config` or `~/.gitconfig`. A push alias set on the same line (`-c alias.x=push` or
+  `git config alias.x push`) is caught; a merge alias is not;
+- a Task an Agent creates straight into a project (or a Team root) set to Run inside the Team;
+- the push release window: one Accept on a Task whose Action names a push lets any push by that Team through for 24 hours
+  (one hour after the Accept took the Task to Done);
+- the Needs Human Helper is a model, so it may still gate a merge it should not;
+- the Codex Adapter has no hook;
+- a Task with an Action waits in Needs You for the Human's Accept, but the Action is only text on the Task, so Huddle
+  cannot stop an Agent doing that step another way.
+
+A connector call asks the Human first, with the soft edges listed in [known limits](../engineering/known-limits.md). For a guarantee, the Human protects the branch on
+their git server (branch protection). The owner decided on 2026-11-16 to keep the gate as an early warning and to make
+every claim about it say so; the UI shows the same list as the "What this cannot catch" caption under the level control.
+Nothing in behaviour changed. Real enforcement is parked as the design of a permission framework in issue #608.
 
 ## Consequences
 

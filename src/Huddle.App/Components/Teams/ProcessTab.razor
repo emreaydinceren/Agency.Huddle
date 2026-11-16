@@ -17,7 +17,7 @@
     <section class="process-tab-level" aria-label="Needs You level">
         <div class="group-label">Needs You level</div>
         <NeedsYouLevelControl Team="@this.Team" />
-        <MudText Typo="Typo.caption" Class="process-tab-gate-note">A merge into main and every push wait for your Accept. The level above decides which merges wait.</MudText>
+        <MudText Typo="Typo.caption" Class="process-tab-gate-note">A merge into main and every push that Huddle sees in an Agent's command wait for your Accept. The level above decides which merges wait.</MudText>
     </section>
     @if (this.text is null && this.gates.Count == 0)
     {

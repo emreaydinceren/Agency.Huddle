@@ -50,6 +50,8 @@
         </MudText>
     }
 
+    <MudText Typo="Typo.caption" Class="needs-you-level-limits">@NeedsYouLevelCopy.LimitsNote</MudText>
+
     @if (this.saveError is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="needs-you-level-error">@this.saveError</MudAlert>

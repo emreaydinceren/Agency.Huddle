@@ -368,13 +368,16 @@ Agent of the Team is refused until an open Task of that Team has the Human's Acc
 `main` into a feature branch still runs. The Team's process tells the Agent to name the merge as the
 Task's Action, and a refused Agent sees only a plain denial. An Accept counts for 24 hours, or one hour when it took the Task straight to
 Done, and another merge by the Team also passes in that time. It guards against an Agent's
-ordinary mistake and is not a security boundary. PRs: #402.
+ordinary mistake and is an early warning, not enforcement or a security boundary. PRs: #402.
 
 **Needs You level.** A level per scope (Settings, a Team, a project; the most specific wins)
 says how much waits for the Human. Under Ask me (the default) nothing changes. Under Run inside
 the Team a local merge into `main` of a branch named after the Task's id, a Sprint proposal and
 new Backlog Tasks go ahead without an Accept, each recorded on the Task and in the Feed; every
-push, an Action and a connector call still wait. The level is kept in `team.db` by scope id, and
+push Huddle sees in an Agent's command, an Action and a connector call still wait. The gate reads the
+command line, so a script, a git alias saved earlier, a Task created straight into a project set to Run inside the
+Team and the 24-hour push window get past it; the level control says so in a "What this cannot catch" caption, and
+branch protection on the git server is the guarantee (issue #608 is the parked design for enforcement). The level is kept in `team.db` by scope id, and
 a Task's level is fixed where Huddle placed it and can only get stricter. An optional spend cap per scope falls back to Ask me and asks Yes or No for one more cap.
 The level replaces the Process tab's `accept-before-merge` switch and its start-up migration,
 and only the Human can set it or the cap. PRs: pending (#533).
