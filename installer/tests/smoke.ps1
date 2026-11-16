@@ -562,6 +562,23 @@ try {
         Stop-Smoke ('instance.json names pid ' + $instance1.Pid + ' but no such process is alive')
     }
 
+    # /health passes even when the app cannot find its wwwroot: every asset then answers 200 with an empty
+    # body and the page renders unstyled. The launcher above runs from the sandbox, not the app folder.
+    $cssUrl = $instance1.Url.TrimEnd('/') + '/_content/MudBlazor/MudBlazor.min.css'
+    $cssBytes = 0
+    try {
+        $cssBytes = [int](Invoke-WebRequest -Uri $cssUrl -UseBasicParsing -TimeoutSec 15).RawContentLength
+    }
+    catch {
+        $cssBytes = -1
+    }
+
+    if ($cssBytes -lt 1024) {
+        Stop-Smoke ('GET ' + $cssUrl + ' returned ' + $cssBytes + ' bytes: the app is not serving its static files')
+    }
+
+    Write-Info ('static files served (MudBlazor.min.css ' + $cssBytes + ' bytes)')
+
     # STEP 5: second start hands off.
     Start-SmokeStep 5 'start huddle.cmd a second time: exits 0 within 20 s, exactly one Huddle.App'
     $launcher2 = Start-Launcher

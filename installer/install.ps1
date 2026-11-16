@@ -494,8 +494,12 @@ function Get-LauncherContent {
     $nodeExe = ConvertTo-LauncherPath -Path $Paths.NodeExe -InstallRoot $Paths.InstallRoot
     $dataDir = ConvertTo-LauncherPath -Path ($Paths.DataRoot.TrimEnd('\', '/') + '\data') -InstallRoot $Paths.InstallRoot
     $exePath = ConvertTo-LauncherPath -Path $Paths.ExePath -InstallRoot $Paths.InstallRoot
+    $appDir = ConvertTo-LauncherPath -Path (Split-Path -Parent $Paths.ExePath) -InstallRoot $Paths.InstallRoot
 
-    # The outer quotes in set "VAR=value" protect spaces in the value
+    # The outer quotes in set "VAR=value" protect spaces in the value.
+    # The app takes its content root, and so its wwwroot, from the current directory: started from anywhere
+    # else (the Start menu shortcut starts it in InstallRoot) every stylesheet and script answers 200 with an
+    # empty body. cd /d sets that folder; setlocal gives the caller's own folder back when the launcher ends.
     $lines = @(
         '@echo off'
         'setlocal'
@@ -508,6 +512,7 @@ function Get-LauncherContent {
         'set "ASPNETCORE_ENVIRONMENT=Production"'
         'set "AllowedHosts=localhost;127.0.0.1"'
         'set "PATH=' + $nodeDir + ';%PATH%"'
+        'cd /d "' + $appDir + '"'
         '"' + $exePath + '" %*'
     )
 

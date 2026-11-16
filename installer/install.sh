@@ -119,7 +119,7 @@ parse_args() {
 resolve_paths() {
     DATA_ROOT="${OPT_DATA_ROOT:-$HOME/Library/Application Support/Agency.Huddle}"
     INSTALL_ROOT="${OPT_INSTALL_ROOT:-$HOME/Library/Application Support/Agency.Huddle/install}"
-    APP_EXE="$INSTALL_ROOT/app/Huddle.App"
+    APP_EXE="$INSTALL_ROOT/app/HuddleApp"
     NODE_BIN="$INSTALL_ROOT/node/bin/node"
     ADAPTER_ENTRY="$INSTALL_ROOT/tools/acp/node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js"
     STATE_FILE="$INSTALL_ROOT/install-state"
@@ -791,7 +791,7 @@ install_app_restore() {
 
 # Succeeds when the folder $1 is safe to replace: it is an empty folder or holds one of the
 # files an Agency Huddle install always has (install-state, or release-info.json together with
-# app/Huddle.App: a lone release-info.json could belong to any project).
+# app/HuddleApp: a lone release-info.json could belong to any project).
 folder_is_replaceable() {
     if [ ! -d "$1" ] || [ -L "$1" ]; then
         return 1
@@ -799,7 +799,7 @@ folder_is_replaceable() {
     if [ -e "$1/install-state" ]; then
         return 0
     fi
-    if [ -e "$1/release-info.json" ] && [ -e "$1/app/Huddle.App" ]; then
+    if [ -e "$1/release-info.json" ] && [ -e "$1/app/HuddleApp" ]; then
         return 0
     fi
     [ -z "$(ls -A "$1" 2>/dev/null)" ]
@@ -922,12 +922,12 @@ install_app() {
         log_step fail app "cannot extract $archive" "Delete the file and run the installer again."
         return 1
     fi
-    if [ ! -f "$staging/app/Huddle.App" ] || [ ! -f "$staging/release-info.json" ]; then
+    if [ ! -f "$staging/app/HuddleApp" ] || [ ! -f "$staging/release-info.json" ]; then
         rm -rf "$staging"
-        log_step fail app "the release archive does not contain app/Huddle.App and release-info.json; the previous install was left untouched" "Download the release again."
+        log_step fail app "the release archive does not contain app/HuddleApp and release-info.json; the previous install was left untouched" "Download the release again."
         return 1
     fi
-    if ! chmod +x "$staging/app/Huddle.App" || ! ensure_signed "$staging/app"; then
+    if ! chmod +x "$staging/app/HuddleApp" || ! ensure_signed "$staging/app"; then
         rm -rf "$staging"
         log_step fail app "cannot make the app runnable; the previous install was left untouched" "Run the installer again."
         return 1
@@ -1256,6 +1256,9 @@ launcher_content() {
     printf '%s\n' "export ASPNETCORE_ENVIRONMENT=Production"
     printf '%s\n' "export AllowedHosts='localhost;127.0.0.1'"
     printf "export PATH=%s:\"\$PATH\"\n" "$(shell_quote "$node_dir")"
+    # The app takes its content root, and so its wwwroot, from the current directory: started from anywhere
+    # else every stylesheet and script answers 200 with an empty body.
+    printf "cd %s\n" "$(shell_quote "$(dirname "$APP_EXE")")"
     printf "exec %s \"\$@\"\n" "$(shell_quote "$APP_EXE")"
 }
 

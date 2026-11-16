@@ -111,10 +111,14 @@ sh "$SCRIPT" --version 1.2.3 --rid osx-arm64 --publish-dir "$TMP/fake-mac" --out
 TGZ="$OUT/huddle-osx-arm64.tar.gz"
 [ -f "$TGZ" ] || fail "missing $TGZ"
 LISTING=$(list_targz "$TGZ")
-for entry in app/Huddle.App app/wwwroot/x.txt \
+for entry in app/HuddleApp app/Huddle.App.dll app/wwwroot/x.txt \
     tools/acp/package.json tools/acp/package-lock.json release-info.json; do
     has_entry "$LISTING" "$entry" || fail "tar.gz does not list $entry"
 done
+# macOS kills an executable whose name ends in .app, so the host must not ship as app/Huddle.App.
+if has_entry "$LISTING" app/Huddle.App; then
+    fail "tar.gz still ships the host as app/Huddle.App, which macOS kills on launch"
+fi
 mkdir -p "$TMP/osx-x"
 tar -xzf "$TGZ" -C "$TMP/osx-x"
 INFO=$(cat "$TMP/osx-x/release-info.json")

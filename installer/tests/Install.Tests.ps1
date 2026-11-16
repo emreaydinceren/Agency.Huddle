@@ -1688,7 +1688,8 @@ Describe 'Get-LauncherContent' {
         $lines[8] | Should -Be 'set "ASPNETCORE_ENVIRONMENT=Production"'
         $lines[9] | Should -Be 'set "AllowedHosts=localhost;127.0.0.1"'
         $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
-        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+        $lines[11] | Should -Be 'cd /d "%~dp0app"'
+        $lines[12] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
     }
 
     It 'compares the data folder with LOCALAPPDATA case-insensitively and on a folder boundary' {
@@ -1712,7 +1713,8 @@ Describe 'Get-LauncherContent' {
         $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
         $lines[5] | Should -Be 'set "Team__DataDir=D:\My Data\Agency.Huddle\data"'
         $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
-        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+        $lines[11] | Should -Be 'cd /d "%~dp0app"'
+        $lines[12] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
     }
 
     It 'writes a user name with a non-ASCII character as the launcher-relative and LOCALAPPDATA forms, so the text stays ASCII' {
@@ -1729,7 +1731,8 @@ Describe 'Get-LauncherContent' {
         $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
         $lines[5] | Should -Be 'set "Team__DataDir=%LOCALAPPDATA%\Agency.Huddle\data"'
         $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
-        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+        $lines[11] | Should -Be 'cd /d "%~dp0app"'
+        $lines[12] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
         @($content.ToCharArray() | Where-Object { [int]$_ -gt 127 }).Count | Should -Be 0
     }
 
@@ -1741,7 +1744,8 @@ Describe 'Get-LauncherContent' {
         $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
         $lines[5] | Should -Be 'set "Team__DataDir=C:\Users\test user\AppData\Local\Agency.Huddle\data"'
         $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
-        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+        $lines[11] | Should -Be 'cd /d "%~dp0app"'
+        $lines[12] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
 
         # Verify no set lines contain =" (which would indicate nested quotes)
         foreach ($line in $lines) {
@@ -1862,7 +1866,8 @@ Describe 'Install-Launcher' {
         $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
         $lines[5] | Should -Be ('set "Team__DataDir=' + $script:LPaths.DataRoot + '\data"')
         $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
-        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+        $lines[11] | Should -Be 'cd /d "%~dp0app"'
+        $lines[12] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
         $script:LPaths.InstallRoot | Should -BeLike '* *'
         $script:LPaths.DataRoot | Should -BeLike '* *'
     }
