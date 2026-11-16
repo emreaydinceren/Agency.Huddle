@@ -1,6 +1,6 @@
 # Huddle.AgentBrowser - Specification
 
-**Date:** 2026-11-16 - **Status:** Built, slices 1 to 7 of issue #551; the paid manual run is not done yet. -
+**Date:** 2026-11-16 - **Status:** Built 2026-11-16 (issue #551); the paid manual run is done (10 Pass, BROWSER-04 Partial). One is owed: a Human typing a sign-in into the Agent's visible window by hand. -
 **Issue:** #551 - **Decision record:** [ADR-0090](adr/0090-an-agent-has-its-own-browser-through-playwright-mcp.md) -
 **Manual tests:** [agent-browser.md](engineering/manual-tests/agent-browser.md) - **Vocabulary:**
 [language.md](engineering/language.md) (**Agent**, **Adapter**, **Human**, **Turn**)
