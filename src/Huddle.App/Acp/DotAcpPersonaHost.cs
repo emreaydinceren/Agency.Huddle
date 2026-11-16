@@ -46,6 +46,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly WorkModePolicy workModePolicy;
     private readonly Func<RoleBlockInput?> roleBlock;
     private readonly SessionPromptSources sources;
+    private readonly bool browser;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpPersonaHost"/> class.</summary>
     /// <param name="inner">The started ACP host, ready for <c>session/new</c> or <c>session/resume</c>.</param>
@@ -73,6 +74,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     /// <param name="roleBlock">Builds the Persona's role block at each session start, so a changed Team reaches the next session; returns <see langword="null"/> for a Persona with no role.</param>
     /// <param name="sources">Reads the Human's AGENTS.md files, decides who writes a Team's Memory and warns about malformed memory files.</param>
+    /// <param name="browser">Whether the session <c>_meta</c> carries the browser server; the system prompt then adds the browser rules.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
         AppToolServer toolServer,
@@ -98,10 +100,12 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ILoggerFactory loggerFactory,
         WorkModePolicy workModePolicy,
         Func<RoleBlockInput?> roleBlock,
-        SessionPromptSources sources)
+        SessionPromptSources sources,
+        bool browser)
     {
         ValidateSessionPromptSources(roleBlock, sources, guards);
         this.sources = sources;
+        this.browser = browser;
         this.roleBlock = roleBlock;
         ValidateCollaborators(inner, toolServer, profile, persona, prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
@@ -296,7 +300,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             huddleMemory: inputs.HuddleMemory,
             outputs: inputs.Outputs,
             workspaces: inputs.Workspaces,
-            needsYou: inputs.NeedsYou);
+            needsYou: inputs.NeedsYou,
+            browser: this.browser);
     }
 
     /// <summary>

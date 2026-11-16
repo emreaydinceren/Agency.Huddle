@@ -268,6 +268,37 @@ public sealed class GetHelpToolTests
         Assert.DoesNotContain(tasksText, help, StringComparison.Ordinal);
     }
 
+    /// <summary>#551: a session that passes the browser gets the <c>getHelp.browser</c> topic, right after the Tasks section's place and before the tools list.</summary>
+    [Fact]
+    public async Task GetHelp_WithBrowser_ListsTheBrowserTopicBeforeTheTools()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tool = new GetHelpTool([new StubTool("list_agents")], new FakePromptSource(), "mcp__team__", browser: true);
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        var browserText = PromptCatalog.Get("getHelp.browser").Default;
+        var toolsHeader = PromptCatalog.Get("getHelp.toolsHeader").Default;
+        // contains-ok: help is the whole composed help text with every other section too; this test's intent is only that the browser topic is included, and where.
+        Assert.Contains(browserText, help, StringComparison.Ordinal);
+        Assert.True(
+            help.IndexOf(browserText, StringComparison.Ordinal) < help.IndexOf(toolsHeader, StringComparison.Ordinal),
+            "The getHelp.browser topic must appear before the tools list.");
+    }
+
+    /// <summary>#551: a session without the browser is never told about one: no <c>getHelp.browser</c> topic, and no mention of its tools.</summary>
+    [Fact]
+    public async Task GetHelp_WithoutBrowser_OmitsTheBrowserTopic()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tool = new GetHelpTool([new StubTool("list_agents")], new FakePromptSource(), "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        Assert.DoesNotContain(PromptCatalog.Get("getHelp.browser").Default, help, StringComparison.Ordinal);
+        Assert.DoesNotContain("mcp__playwright__", help, StringComparison.Ordinal);
+    }
+
     /// <summary>A minimal <see cref="IAppTool"/> stand-in identified only by its <see cref="Name"/>, mirroring <c>SkillGrantsTests.StubTool</c> for the same purpose here.</summary>
     /// <param name="name">The tool's name, and its whole behaviour for this stub.</param>
     private sealed class StubTool(string name) : IAppTool

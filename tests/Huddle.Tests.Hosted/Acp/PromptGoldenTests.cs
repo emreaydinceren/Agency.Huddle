@@ -359,6 +359,21 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// Issue 551: a session that passes the browser gets the <c>systemPrompt.browser</c> paragraph after the tools paragraphs, written with the
+    /// browser server's own <c>mcp__playwright__</c> prefix. Pins the whole text, so rewording the rules is a visible, reviewed change.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_WithBrowser_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human", browser: true);
+
+        AssertMatchesGolden("systemPrompt.browser.txt", actual);
+    }
+
+    /// <summary>
     /// Task 87 (SB-R14, Spec 8.1 slot 6): a session offering every tool the summary names carries the
     /// <c>systemPrompt.secondBrain</c> paragraph after the tool paragraphs, each placeholder filled with
     /// the prefixed tool name. Pins the whole text.
@@ -549,6 +564,18 @@ public sealed class PromptGoldenTests
         var actual = await tool.InvokeAsync(new JsonObject(), ct);
 
         AssertMatchesGolden("getHelp.txt", actual);
+    }
+
+    /// <summary>Issue 551: pins <see cref="GetHelpTool"/>'s rendered body for a session that passes the browser, so the BROWSER topic and its place are visible in review.</summary>
+    [Fact]
+    public async Task GetHelp_WithBrowser_MatchesGolden()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var (tool, _) = await BuildToolsAsync(ct, browser: true);
+
+        var actual = await tool.InvokeAsync(new JsonObject(), ct);
+
+        AssertMatchesGolden("getHelp.browser.txt", actual);
     }
 
     /// <summary>Pins every <see cref="IAppTool.Description"/> across get_help and the six chat tools.</summary>
@@ -963,12 +990,14 @@ public sealed class PromptGoldenTests
     /// <param name="teamNames">The Agent's Team names for the Second Brain map; <see langword="null"/> leaves the section out.</param>
     /// <param name="baselines">The raw baselines behind the changed-raw list, or <see langword="null"/>.</param>
     /// <param name="teamOptions">Locates the Teams folder for the changed-raw scan, or <see langword="null"/>.</param>
+    /// <param name="browser">Whether the session passes the browser, so get_help lists its topic.</param>
     /// <returns>The get_help tool, and the six tools it was built from, in the order it reports them.</returns>
     private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(
         CancellationToken ct,
         IReadOnlyList<string>? teamNames = null,
         Agency.Huddle.App.Data.RawBaselineStore? baselines = null,
-        Agency.Huddle.App.TeamOptions? teamOptions = null)
+        Agency.Huddle.App.TeamOptions? teamOptions = null,
+        bool browser = false)
     {
         using var dir = new TempDataDir();
         var directory = await dir.CreateDirectoryAsync(ct);
@@ -1018,7 +1047,7 @@ public sealed class PromptGoldenTests
         // Skill-gated tools (validate_agent, propose_agents) are only offered to a Persona holding a Skill that lists them.
         // A Persona with no Skills should not see them in get_help.
         var ungatedTools = others.Where(tool => !SkillGrants.Grantable.Contains(tool.Name, StringComparer.Ordinal)).ToList();
-        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__", teamNames, baselines, teamOptions);
+        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__", teamNames, baselines, teamOptions, browser);
 
         return (getHelp, others);
     }

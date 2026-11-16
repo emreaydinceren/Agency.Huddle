@@ -107,6 +107,17 @@ public sealed class SkillCatalogTests
         Assert.Contains("Opening `localhost` only is a rule you follow, not something Huddle enforces in this version.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
+    /// <summary>#551: the <c>browser-check</c> Skill tells an Agent with the browser tools when to use them and keeps a many-click localhost check on the headless script, which does not ask.</summary>
+    [Fact]
+    public void BrowserCheck_ExplainsTheBrowserToolsAndKeepsTheLocalhostScript()
+    {
+        string text = string.Join(' ', SkillCatalog.All["browser-check"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("## If you have the browser tools", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Use them for a page you only read, and for a page where a person signed in for you.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("A check on `localhost` with many clicks stays on the `Bash` script above, which does not ask.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
     /// <summary>The catalog holds <c>team-rollup</c> (Task 79): valid, one file, and its tools list is exactly <c>list_teams</c> and <c>read_records</c> (issue #534).</summary>
     [Fact]
     public void All_ContainsTeamRollup_GrantingListTeamsAndReadRecords()

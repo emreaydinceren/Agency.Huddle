@@ -133,7 +133,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
-        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
+        AgentMeta agentMeta = this.BuildAgentMeta(persona, profile, workDir);
+        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels, agentMeta.BrowserPassed);
 
         var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -145,7 +146,6 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
-        AgentMeta agentMeta = this.BuildAgentMeta(persona, profile, workDir);
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -174,7 +174,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.loggerFactory,
             this.workModePolicy,
             roleBlock,
-            sources);
+            sources,
+            agentMeta.BrowserPassed);
     }
 
     /// <summary>What <see cref="BuildAgentMeta"/> decided for one session start.</summary>
@@ -190,7 +191,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private AgentMeta BuildAgentMeta(Persona persona, AdapterProfile profile, string workDir)
     {
         BrowserLaunchFacts facts = this.browserFacts.Current;
-        bool browserPassed = BrowserPassed(profile, EffectiveBrowser(persona, this.workModePolicy), facts);
+        bool browserPassed = this.OffersBrowser(persona, profile);
         Dictionary<string, object>? browserServer = browserPassed
             ? BrowserServerConfig.Build(facts, profile.Command, this.agentPaths.BrowserProfile(persona.Name), Path.Combine(workDir, "browser-output"))
             : null;
@@ -200,6 +201,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             browserServer: browserServer);
         return new AgentMeta(meta, browserServer is not null);
     }
+
+    /// <summary>Whether this Persona's sessions get the browser server, by the stored switch, its Work Mode, its profile and what this computer has.</summary>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns>The result of <see cref="BrowserPassed"/> for the current launch facts.</returns>
+    private bool OffersBrowser(Persona persona, AdapterProfile profile) =>
+        BrowserPassed(profile, EffectiveBrowser(persona, this.workModePolicy), this.browserFacts.Current);
 
     /// <summary>
     /// Whether the account connectors are passed to this Persona's sessions: the stored switch, unless its Work Mode never asks before
@@ -321,8 +329,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="skillResolution">The Persona's resolved Skills.</param>
     /// <param name="proposesTeamMemory">Whether to offer <c>propose_team_memory</c>.</param>
     /// <param name="teamLabels">The Persona's Team labels; those with a Team folder become <c>get_help</c>'s Second Brain map.</param>
+    /// <param name="browser">Whether the session passes the browser; <c>get_help</c> then lists its topic.</param>
     /// <returns>The tool set.</returns>
-    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory, IReadOnlyList<string> teamLabels)
+    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory, IReadOnlyList<string> teamLabels, bool browser)
     {
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
         // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
@@ -364,7 +373,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             toolNamePrefix,
             teamNames,
             this.serviceProvider.GetRequiredService<Agency.Huddle.App.Data.RawBaselineStore>(),
-            this.options);
+            this.options,
+            browser);
         IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
         return new ToolSet(
@@ -814,7 +824,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         PersonaIdentity? parsed = ParseIdentity(persona);
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(parsed?.Skills ?? []);
-        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
+        bool browser = this.OffersBrowser(persona, profile);
+        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels, browser);
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -850,7 +861,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             huddleMemory: inputs.HuddleMemory,
             outputs: inputs.Outputs,
             workspaces: inputs.Workspaces,
-            needsYou: inputs.NeedsYou);
+            needsYou: inputs.NeedsYou,
+            browser: browser);
         return (parts, profile.Id);
     }
 }

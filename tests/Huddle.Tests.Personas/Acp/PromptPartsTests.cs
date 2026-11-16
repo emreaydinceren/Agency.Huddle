@@ -329,6 +329,43 @@ public sealed class PromptPartsTests
         Assert.DoesNotContain("Needs You level", without, StringComparison.Ordinal);
     }
 
+    /// <summary>#551: with the browser passed, the prompt carries one <c>systemPrompt.browser</c> part, in both the prefixed and the unprefixed form, and the joined parts equal <c>Compose</c>.</summary>
+    [Theory]
+    [InlineData("mcp__team__get_help", "mcp__team__ask_human")]
+    [InlineData("get_help", "ask_human")]
+    public void ComposeParts_BrowserPassed_AddsTheBrowserPart(string helpTool, string askHumanTool)
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+        IReadOnlyList<string> toolNames = [helpTool, askHumanTool];
+
+        var parts = SystemPromptComposer.ComposeParts(persona, prompts, helpTool, toolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: askHumanTool, browser: true);
+        var composed = SystemPromptComposer.Compose(persona, prompts, helpTool, toolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: askHumanTool, browser: true);
+
+        PromptPart part = Assert.Single(parts, static p => p.Source is PromptPartSource.Prompt { Key: "systemPrompt.browser" });
+        Assert.Equal(prompts.Render("systemPrompt.browser", new Dictionary<string, string>()), part.Text);
+        AssertJoinsAndNonEmpty(parts, composed);
+    }
+
+    /// <summary>#551: without the browser there is no <c>systemPrompt.browser</c> part, and the prompt equals the one composed without the argument, prefixed or not.</summary>
+    [Theory]
+    [InlineData("mcp__team__get_help", "mcp__team__ask_human")]
+    [InlineData("get_help", "ask_human")]
+    public void ComposeParts_BrowserNotPassed_AddsNoPartAndLeavesOutputUnchanged(string helpTool, string askHumanTool)
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        FakePromptSource prompts = new();
+        IReadOnlyList<string> toolNames = [helpTool, askHumanTool];
+
+        string without = SystemPromptComposer.Compose(persona, prompts, helpTool, toolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: askHumanTool);
+        string off = SystemPromptComposer.Compose(persona, prompts, helpTool, toolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: askHumanTool, browser: false);
+        var parts = SystemPromptComposer.ComposeParts(persona, prompts, helpTool, toolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: askHumanTool, browser: false);
+
+        Assert.Equal(without, off);
+        Assert.DoesNotContain(parts, static p => p.Source is PromptPartSource.Prompt { Key: "systemPrompt.browser" });
+        Assert.DoesNotContain("mcp__playwright__", without, StringComparison.Ordinal);
+    }
+
     /// <summary>Task 130: an override of the Prompt flips <c>Overridden</c> and the override text is filled in.</summary>
     [Fact]
     public void ComposeParts_WorkspaceOverridden_SourceIsOverriddenAndTextIsOverride()
