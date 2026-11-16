@@ -38,15 +38,17 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
         };
         this.Spend = new PersonaSpendStore(this.dir.Options());
         this.Feed = new RecordingFeedPublisher();
-        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Spend, this.Catalog, this.Feed);
+        this.Ids = new ScopeIdStore(this.dir.Options());
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Spend, this.Catalog, this.Feed);
         this.Store = new NeedsYouLevelStore(this.dir.Options());
         var options = this.dir.Options(configured => configured.NeedsYouLevel.Level = globalLevel ?? string.Empty);
-        this.Levels = new NeedsYouLevels(this.Catalog, this.Folders, this.Store, options, caps: this.Caps);
+        this.Levels = new NeedsYouLevels(this.Catalog, this.Store, this.Ids, options, caps: this.Caps);
 
         ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
         ctx.Services.AddSingleton<ITeamCatalog>(this.Catalog);
         ctx.Services.AddSingleton(options);
         ctx.Services.AddSingleton(this.Store);
+        ctx.Services.AddSingleton(this.Ids);
         ctx.Services.AddSingleton(this.Caps);
         ctx.Services.AddSingleton(this.Levels);
     }
@@ -56,18 +58,19 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
     /// and does not care about levels (the Process tab's gate tests): the stores live under <paramref name="dir"/>.
     /// </summary>
     /// <param name="ctx">The bUnit context to register on, before anything is rendered.</param>
-    /// <param name="folders">The folders the control reads the Team file from.</param>
     /// <param name="dir">The data folder the stores keep their database in.</param>
-    public static void AddTo(MudBunitContext ctx, ITeamFolders folders, TempDataDir dir)
+    public static void AddTo(MudBunitContext ctx, TempDataDir dir)
     {
         FakeTeamCatalog catalog = new();
         var options = dir.Options();
         NeedsYouLevelStore store = new(options);
-        NeedsYouCaps caps = new(new NeedsYouCapStore(options), new PersonaSpendStore(options), catalog, new RecordingFeedPublisher());
+        ScopeIdStore ids = new(options);
+        NeedsYouCaps caps = new(new NeedsYouCapStore(options), ids, new PersonaSpendStore(options), catalog, new RecordingFeedPublisher());
         ctx.Services.TryAddSingleton(options);
         ctx.Services.AddSingleton(store);
+        ctx.Services.AddSingleton(ids);
         ctx.Services.AddSingleton(caps);
-        ctx.Services.AddSingleton(new NeedsYouLevels(catalog, folders, store, options, caps: caps));
+        ctx.Services.AddSingleton(new NeedsYouLevels(catalog, store, ids, options, caps: caps));
     }
 
     /// <summary>The Team catalog.</summary>
@@ -82,7 +85,10 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
     /// <summary>What the Feed was told.</summary>
     public RecordingFeedPublisher Feed { get; }
 
-    /// <summary>The global level Settings saved.</summary>
+    /// <summary>The ids the levels and caps are stored under.</summary>
+    public ScopeIdStore Ids { get; }
+
+    /// <summary>The levels the scopes set.</summary>
     public NeedsYouLevelStore Store { get; }
 
     /// <summary>The spend cap's counting and question.</summary>

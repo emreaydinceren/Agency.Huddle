@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>The wire names, display names and spend-cap text of the Needs You level (ADR-0088), shared by <c>_team.md</c>, <c>_project.md</c>, <c>team.db</c> and the configuration.</summary>
+/// <summary>The wire names, display names and spend-cap text of the Needs You level (ADR-0088), shared by <c>team.db</c> and the configuration.</summary>
 internal static class NeedsYouLevelText
 {
     /// <summary>The wire name of <see cref="NeedsYouLevel.AskMe"/>.</summary>
@@ -10,24 +10,6 @@ internal static class NeedsYouLevelText
 
     /// <summary>The wire name of <see cref="NeedsYouLevel.RunInsideTheTeam"/>.</summary>
     public const string RunInsideTheTeamWire = "run-inside-team";
-
-    /// <summary>The frontmatter key that holds a scope's level in <c>_team.md</c> and <c>_project.md</c>.</summary>
-    public const string LevelKey = "needsYouLevel";
-
-    /// <summary>The frontmatter key that holds a scope's spend cap in <c>_team.md</c> and <c>_project.md</c>.</summary>
-    public const string SpendCapKey = "spendCap";
-
-    /// <summary>What <c>propose_retro_changes</c> answers, and what an Accept logs, when a retro change would touch the level or the cap.</summary>
-    public const string RetroRefusal = "Only the Human sets the Needs You level and its spend cap; propose_retro_changes cannot change them.";
-
-    /// <summary>Whether the text names either frontmatter key, ignoring case.</summary>
-    /// <param name="text">Text a tool call or a retro change carries.</param>
-    /// <returns><see langword="true"/> when it names <c>needsYouLevel</c> or <c>spendCap</c>.</returns>
-    public static bool MentionsKey(string text)
-    {
-        ArgumentNullException.ThrowIfNull(text);
-        return text.Contains(LevelKey, StringComparison.OrdinalIgnoreCase) || text.Contains(SpendCapKey, StringComparison.OrdinalIgnoreCase);
-    }
 
     /// <summary>The name a level is stored under.</summary>
     /// <param name="level">The level.</param>

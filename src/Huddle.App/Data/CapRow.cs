@@ -1,7 +1,7 @@
 namespace Agency.Huddle.App.Data;
 
 /// <summary>How far one scope's spend has come against its cap (ADR-0088).</summary>
-/// <param name="Scope">The scope key: <c>global</c>, <c>team:Team</c> or <c>project:Team/Project</c>.</param>
+/// <param name="Scope">The scope key: <c>global</c>, <c>team:&lt;teamId&gt;</c> or <c>project:&lt;projectId&gt;</c>.</param>
 /// <param name="Cap">The cap, in USD, the row was started for.</param>
 /// <param name="Baseline">What the counted Personas had spent, in USD, when counting started.</param>
 /// <param name="Allowance">What the scope may spend since the baseline before Huddle asks; it starts at the cap and grows by one cap per Yes.</param>

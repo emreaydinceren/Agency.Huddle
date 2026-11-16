@@ -22,8 +22,7 @@ internal sealed class ProposeRetroChangesTool(
     ITeamDirectory directory,
     string callerAgentId,
     IPromptSource prompts,
-    ITeamRenames? renames = null,
-    ILogger<ProposeRetroChangesTool>? logger = null) : IAppTool
+    ITeamRenames? renames = null) : IAppTool
 {
     /// <summary>The most changes one proposal carries.</summary>
     private const int MaxChanges = 3;
@@ -95,7 +94,7 @@ internal sealed class ProposeRetroChangesTool(
             return refusal;
         }
 
-        if (!this.TryParseChanges(arguments, team, out List<RetroChange> changes, out string changesRefusal))
+        if (!TryParseChanges(arguments, team, out List<RetroChange> changes, out string changesRefusal))
         {
             return changesRefusal;
         }
@@ -116,7 +115,7 @@ internal sealed class ProposeRetroChangesTool(
     /// <param name="team">The Team the proposal is for.</param>
     /// <param name="changes">The parsed changes when this returns <see langword="true"/>.</param>
     /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
-    private bool TryParseChanges(JsonObject arguments, TeamSummary team, out List<RetroChange> changes, out string refusal)
+    private static bool TryParseChanges(JsonObject arguments, TeamSummary team, out List<RetroChange> changes, out string refusal)
     {
         changes = [];
         JsonArray items = arguments["proposals"] as JsonArray ?? [];
@@ -150,17 +149,6 @@ internal sealed class ProposeRetroChangesTool(
             }
 
             string replace = Text(item, "replace");
-            if (RetroChangeGuard.TouchesNeedsYouLevel(file, find, replace))
-            {
-                logger?.LogWarning(
-                    "Refused a retro proposal from caller {CallerAgentId} for Team {Team}: it changes the Needs You level or spend cap of {TargetFile}.",
-                    callerAgentId,
-                    team.Name,
-                    file);
-                refusal = NeedsYouLevelText.RetroRefusal;
-                return false;
-            }
-
             changes.Add(new RetroChange((changes.Count + 1).ToString(CultureInfo.InvariantCulture), title, file, find, replace));
         }
 

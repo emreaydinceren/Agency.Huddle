@@ -68,6 +68,7 @@ Singleton Agency.Huddle.App.Data.PersonaModelStore -> Agency.Huddle.App.Data.Per
 Singleton Agency.Huddle.App.Data.PersonaSpendStore -> Agency.Huddle.App.Data.PersonaSpendStore
 Singleton Agency.Huddle.App.Data.PersonaWorkModeStore -> Agency.Huddle.App.Data.PersonaWorkModeStore
 Singleton Agency.Huddle.App.Data.RawBaselineStore -> Agency.Huddle.App.Data.RawBaselineStore
+Singleton Agency.Huddle.App.Data.ScopeIdStore -> Agency.Huddle.App.Data.ScopeIdStore
 Singleton Agency.Huddle.App.DocHistory.DocHistoryLibraryListener -> Agency.Huddle.App.DocHistory.DocHistoryLibraryListener
 Singleton Agency.Huddle.App.DocHistory.DocHistoryRecorder -> Agency.Huddle.App.DocHistory.DocHistoryRecorder
 Singleton Agency.Huddle.App.DocHistory.DocHistoryStore -> Agency.Huddle.App.DocHistory.DocHistoryStore
@@ -232,6 +233,7 @@ Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.WorkspaceRenameRewrite
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.DocHistoryRenameRewrite
 Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.LedgerRenameRewrite
+Singleton Agency.Huddle.App.Teams.ITeamRenameRewrite -> Agency.Huddle.App.Teams.NeedsYouRenameRewrite
 Singleton Agency.Huddle.App.Teams.ITeamRenamer -> factory Agency.Huddle.App.Teams.ITeamRenamer
 Singleton Agency.Huddle.App.Teams.ITeamRenames -> factory Agency.Huddle.App.Teams.ITeamRenames
 Singleton Agency.Huddle.App.Teams.NeedsYouCaps -> Agency.Huddle.App.Teams.NeedsYouCaps

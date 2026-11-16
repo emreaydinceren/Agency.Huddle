@@ -40,28 +40,24 @@ internal sealed class NeedsYouLevelRig : IDisposable
         this.Clock = new ManualTimeProvider(Noon);
         this.Feed = new RecordingFeedPublisher();
         this.Harness = new TaskToolHarness(clock: this.Clock, proof: new FixedProofSource(FixedProofSource.Complete), feed: this.Feed);
-        string levelLine = teamLevel is { } level ? $"needsYouLevel: {level.ToWire()}\n" : string.Empty;
         FakeTeamFolders folders = new();
-        string teamText = TaskGateText.Process(gates).Replace("checkCommand:", levelLine + "checkCommand:", StringComparison.Ordinal);
-        ProcessGateService gateService = this.Gates = TaskGateText.BuildGates(this.gateDir, teamText, sharedFolders: folders);
-        if (projectLevel is { } projectValue)
-        {
-            folders.ProjectFiles[Project] = ProjectFile.Empty with { NeedsYouLevel = projectValue };
-        }
-
+        ProcessGateService gateService = this.Gates = TaskGateText.BuildGates(this.gateDir, TaskGateText.Process(gates), sharedFolders: folders);
         this.Catalog = new FakeTeamCatalog { Teams = [new TeamSummary(Team, [Project], [], true) { TeamType = new VersionedRef("web", "1.2.0") }] };
         this.Spend = new PersonaSpendStore(this.levelDir.Options());
-        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), this.Spend, this.Catalog, this.Feed);
+        ScopeIdStore ids = new(this.levelDir.Options());
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), ids, this.Spend, this.Catalog, this.Feed);
         this.Levels = new NeedsYouLevels(
             this.Catalog,
-            folders,
             new NeedsYouLevelStore(this.levelDir.Options()),
+            ids,
             this.levelDir.Options(options =>
             {
                 options.NeedsYouLevel.Level = globalLevel ?? string.Empty;
                 options.NeedsYouLevel.SpendCap = globalCap;
             }),
             caps: this.Caps);
+        _ = this.Levels.SetTeam(Team, teamLevel, null);
+        _ = this.Levels.SetProject(Team, Project, projectLevel, null);
         this.Service = new TaskService(
             this.Harness.Store,
             this.Harness.Ids,

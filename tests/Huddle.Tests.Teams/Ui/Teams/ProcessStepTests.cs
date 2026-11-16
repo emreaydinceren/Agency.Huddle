@@ -310,7 +310,7 @@ public sealed class ProcessStepTests
     {
         folders = new DiskTeamFolders(dir.Path);
         ctx.Services.AddSingleton<ITeamFolders>(folders);
-        NeedsYouLevelUiRig.AddTo(ctx, folders, dir);
+        NeedsYouLevelUiRig.AddTo(ctx, dir);
         ctx.Services.AddSingleton(ProcessProvisionerFixtures.Types(dir));
         ctx.Services.AddSingleton(ProcessProvisionerFixtures.Build(dir, folders));
     }

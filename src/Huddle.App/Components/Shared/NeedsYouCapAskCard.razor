@@ -24,7 +24,7 @@
 @code {
     private bool answered;
 
-    /// <summary>The scope key of the open question: <c>global</c>, <c>team:Name</c> or <c>project:Team/Name</c>.</summary>
+    /// <summary>The scope key of the open question: <c>global</c>, <c>team:&lt;teamId&gt;</c> or <c>project:&lt;projectId&gt;</c>.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = string.Empty;
 

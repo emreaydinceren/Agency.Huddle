@@ -8,7 +8,6 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Feed;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
-using Agency.Huddle.Tests.Ui.Teams;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -169,20 +168,13 @@ public sealed class ProposeSprintNeedsYouLevelTests
             this.Harness = harness;
             this.Feed = new RecordingFeedPublisher();
             this.Proposals = new SprintProposalStore(new DiskTeamFolders(Path.Combine(harness.Options.Value.DataDir, "platform-folder")));
-            FakeTeamFolders folders = new()
-            {
-                ReadResult = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty) with { NeedsYouLevel = teamLevel },
-            };
-            if (siteLevel is { } level)
-            {
-                folders.ProjectFiles[Site] = ProjectFile.Empty with { NeedsYouLevel = level };
-            }
-
             FakeTeamCatalog catalog = new()
             {
                 Teams = [new TeamSummary("Platform", [Site], ["Nova", "Kai"], true) { Manager = "Nova" }],
             };
-            NeedsYouLevels levels = new(catalog, folders, new NeedsYouLevelStore(this.levelDir.Options()), this.levelDir.Options());
+            NeedsYouLevels levels = new(catalog, new NeedsYouLevelStore(this.levelDir.Options()), new ScopeIdStore(this.levelDir.Options()), this.levelDir.Options());
+            _ = levels.SetTeam("Platform", teamLevel, null);
+            _ = levels.SetProject("Platform", Site, siteLevel, null);
             this.Approver = new SprintApprover((SprintStore)harness.Sprints, harness.Service, harness.Store, levels, this.Feed);
             this.Tool = new ProposeSprintTool(
                 harness.Store,

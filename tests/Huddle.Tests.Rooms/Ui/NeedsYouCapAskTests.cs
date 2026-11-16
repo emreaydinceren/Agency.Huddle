@@ -91,7 +91,7 @@ public sealed class NeedsYouCapAskTests
         Assert.Equal("Spend cap reached", cut.Find(".needs-you-cap-row .needs-you-detail").TextContent.Trim());
         Assert.Equal("1", cut.Find(".needs-you-count").TextContent.Trim());
 
-        Assert.True(rig.Caps.Decline("team:Dev"));
+        Assert.True(rig.Caps.Decline(Agency.Huddle.App.Teams.NeedsYouCaps.TeamKey(rig.Ids.TeamId(NeedsYouLevelUiRig.Team))));
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".needs-you-cap-row")));
     }
