@@ -183,6 +183,7 @@ before you create a component, a helper or a CSS class.
 | `EditPreview` | `Components/Shared/EditPreview.razor` | `C7b` | `Edit`, `Path` | A file edit's before and after |
 | `MessageReferences` | `Components/References/MessageReferences.razor` | Under `C5c` | `Message` | The reference chips a Message carries |
 | `TeamSpend` | `Components/Teams/TeamSpend.razor` | `M3` | `Members` | Spend per currency for a set of Agents |
+| `ProjectSpend` | `Components/Teams/ProjectSpend.razor` | `M3` (Project page) | `Team`, `Project` | Spend per currency of a Project's Rooms, with its note; refreshes on `PersonaSpend.SpendChanged` |
 | `AiReactingChip` | `Components/Tasks/AiReactingChip.razor` | `T2c` | `Watched` | Tasks an Agent is acting on |
 | `TaskHumanGate` | `Components/Tasks/TaskHumanGate.razor` | `T10` | `Task`, `AssigneeName` | The Human gate section of the Task panel: the acceptance switch, the Action field and the Done rule. Lives in `TaskDetail` |
 | `TaskProofList` | `Components/Tasks/TaskProofList.razor` | `T11` | the Task, its `Proof` | The Definition of Done as a tick list with an Ask button on each open line. Lives in `TaskDetail` and on the decision card |

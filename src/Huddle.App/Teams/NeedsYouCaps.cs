@@ -8,7 +8,8 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>
 /// Counts what a scope that runs inside the Team has spent against its cap, and asks the Human once the cap is reached (ADR-0088). Spend
 /// is recorded per Agent and charged, as it happens, to the global scope and to every Team the Agent was in at that moment (the ledger,
-/// <see cref="NeedsYouSpendStore"/>); a Project scope counts its Team's ledger row. A member who leaves, or a Team that is renamed, moves no
+/// <see cref="NeedsYouSpendStore"/>); a Project scope counts what its own Rooms have spent (<see cref="RoomSpendStore"/>), not the Team's
+/// ledger row, so a Turn in a Room outside the Project never counts toward it. A member who leaves, or a Team that is renamed, moves no
 /// count. The count starts when the Human sets the level or cap, or when the scope is first evaluated with a cap, and it starts again
 /// when the cap in the file differs from the one counted for.
 /// </summary>
@@ -19,12 +20,14 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="store">Holds each scope's counting row.</param>
 /// <param name="ids">Maps a scope key's Team or Project id back to the names, and a name to its id.</param>
 /// <param name="ledger">Reads what each scope has been charged.</param>
+/// <param name="roomSpend">Reads what the Rooms of a Project have spent.</param>
 /// <param name="feed">Receives the Notification and its resolution.</param>
 /// <param name="logger">Logs a subscriber that threw; optional.</param>
 internal sealed class NeedsYouCaps(
     NeedsYouCapStore store,
     ScopeIdStore ids,
     NeedsYouSpendStore ledger,
+    RoomSpendStore roomSpend,
     IFeedPublisher feed,
     ILogger<NeedsYouCaps>? logger = null)
 {
@@ -235,7 +238,7 @@ internal sealed class NeedsYouCaps(
             new SpendCapReachedPayload(row.Scope, this.Split(row.Scope).Team, row.Cap, message));
     }
 
-    /// <summary>What a scope has been charged in USD: the global row, the Team's row, or for a Project its Team's row; zero when it has none.</summary>
+    /// <summary>What a scope has been charged in USD: the global row, the Team's row, or for a Project the USD its own Rooms have spent; zero when it has none.</summary>
     private decimal Total(string key)
     {
         if (string.Equals(key, GlobalKey, StringComparison.OrdinalIgnoreCase))
@@ -245,11 +248,14 @@ internal sealed class NeedsYouCaps(
 
         if (key.StartsWith(ProjectPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            return ids.ProjectNamesOf(key[ProjectPrefix.Length..]) is { } names ? ledger.Get(TeamKey(ids.TeamId(names.Team))) : 0m;
+            return ids.ProjectNamesOf(key[ProjectPrefix.Length..]) is { } names ? this.ProjectUsd(names.Team, names.Project) : 0m;
         }
 
         return ledger.Get(key);
     }
+
+    private decimal ProjectUsd(string team, string project) =>
+        roomSpend.ForProject(team, project).Where(static spend => string.Equals(spend.Currency, "USD", StringComparison.OrdinalIgnoreCase)).Sum(static spend => spend.Amount);
 
     private void RaiseChanged() =>
         EventRaise.Isolated(this.Changed, ex => logger?.LogWarning(ex, "A subscriber to the spend cap question threw."));

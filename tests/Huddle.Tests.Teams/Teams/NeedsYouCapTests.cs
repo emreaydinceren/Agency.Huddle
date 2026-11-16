@@ -40,7 +40,8 @@ public sealed class NeedsYouCapTests
             this.Ledger = new NeedsYouSpendStore(this.dir.Options());
             this.Feed = new RecordingFeedPublisher();
             this.Ids = new ScopeIdStore(this.dir.Options());
-            this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Ledger, this.Feed);
+            this.RoomSpend = new RoomSpendStore(this.dir.Options());
+            this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Ledger, this.RoomSpend, this.Feed);
             this.Levels = new NeedsYouLevels(
                 this.Catalog,
                 new NeedsYouLevelStore(this.dir.Options()),
@@ -52,7 +53,7 @@ public sealed class NeedsYouCapTests
                     options.NeedsYouLevel.SpendCap = globalCap;
                 }),
                 caps: this.Caps);
-            this.Spend = NeedsYouSpendWiring.Attach(this.SpendStore, this.Ledger, this.Ids, this.Catalog, this.Levels);
+            this.Spend = NeedsYouSpendWiring.Attach(this.SpendStore, this.RoomSpend, this.Ledger, this.Ids, this.Catalog, this.Levels);
         }
 
         public FakeTeamCatalog Catalog { get; }
@@ -64,6 +65,19 @@ public sealed class NeedsYouCapTests
         public string ProjectKey => NeedsYouCaps.ProjectKey(this.Ids.ProjectId(NeedsYouCapTests.Dev, "Site"));
 
         public PersonaSpendStore SpendStore { get; }
+
+        public RoomSpendStore RoomSpend { get; }
+
+        /// <summary>Places a Room in a Team's Project (or in none) so Project spend can be read from it.</summary>
+        public void PlaceRoom(string roomId, string team, string? project) => RoomScopeSeed.Place(this.dir, roomId, team, project);
+
+        /// <summary>Opens the real directory over the rig's <c>team.db</c>, so a Room can be created and deleted through its own API.</summary>
+        public async Task<SqliteTeamDirectory> OpenDirectoryAsync(CancellationToken ct)
+        {
+            SqliteTeamDirectory directory = new(this.dir.Options());
+            await directory.InitializeAsync("You", ct);
+            return directory;
+        }
 
         public NeedsYouSpendStore Ledger { get; }
 
@@ -77,7 +91,7 @@ public sealed class NeedsYouCapTests
 
         public EffectiveLevel Current => this.Levels.For(NeedsYouCapTests.Dev, null);
 
-        public void Spent(string persona, decimal amount, string currency = Usd) => this.Spend.Spent(persona, amount, currency);
+        public void Spent(string persona, decimal amount, string currency = Usd, string? roomId = null) => this.Spend.Spent(persona, amount, currency, roomId);
 
         public void Dispose() => this.dir.Dispose();
     }
@@ -419,14 +433,15 @@ public sealed class NeedsYouCapTests
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
     }
 
-    /// <summary>A Project that sets its own level and cap counts its Team's members and is named with its Team.</summary>
+    /// <summary>A Project that sets its own level and cap counts what its Rooms spend and is named with its Team.</summary>
     [Fact]
     public void For_ProjectAtItsCap_AsksNamingTheProject()
     {
         using Rig rig = new();
+        rig.PlaceRoom("room-site", Dev, "Site");
         Assert.True(rig.Levels.SetProject(Dev, "Site", NeedsYouLevel.RunInsideTheTeam, 2m));
 
-        rig.Spent("Leo", 2m);
+        rig.Spent("Leo", 2m, roomId: "room-site");
         EffectiveLevel project = rig.Levels.For(Dev, "Site");
 
         Assert.True(project.CapReached);
@@ -437,6 +452,33 @@ public sealed class NeedsYouCapTests
         Assert.Equal(NeedsYouLevel.AskMe, rig.Levels.For(Dev, "Site").Level);
     }
 
+    /// <summary>A Project's count is its own Rooms' spend: spend in the Team's other Rooms, in another Project's Room, in a Room with no Project, outside any Room, or in another Team's Project of the same name does not raise it, and spend in the Project's Room does.</summary>
+    [Fact]
+    public void For_ProjectCap_CountsOnlyTheProjectsOwnRooms()
+    {
+        using Rig rig = new();
+        rig.PlaceRoom("room-site", Dev, "Site");
+        rig.PlaceRoom("room-other", Dev, "Other");
+        rig.PlaceRoom("room-loose", Dev, null);
+        rig.PlaceRoom("room-ops-site", "Ops", "Site");
+        Assert.True(rig.Levels.SetProject(Dev, "Site", NeedsYouLevel.RunInsideTheTeam, 2m));
+
+        rig.Spent("Leo", 1.5m, roomId: "room-other");
+        rig.Spent("Leo", 1.5m, roomId: "room-loose");
+        rig.Spent("Leo", 1.5m, roomId: "room-ops-site");
+        rig.Spent("Leo", 1.5m);
+        EffectiveLevel before = rig.Levels.For(Dev, "Site");
+        rig.Spent("Leo", 1.5m, roomId: "room-site");
+        EffectiveLevel under = rig.Levels.For(Dev, "Site");
+        rig.Spent("Leo", 0.5m, roomId: "room-site");
+        EffectiveLevel atCap = rig.Levels.For(Dev, "Site");
+
+        Assert.False(before.CapReached);
+        Assert.False(under.CapReached);
+        Assert.True(atCap.CapReached);
+        Assert.Equal(rig.ProjectKey, Assert.Single(rig.Caps.Pending).Scope);
+    }
+
     /// <summary>The watcher opens the question as the spend arrives, without anything reading the level, and stops listening when stopped.</summary>
     [Fact]
     public async Task Watcher_SpendReachesTheCap_OpensTheQuestion()
@@ -444,8 +486,8 @@ public sealed class NeedsYouCapTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Rig rig = new();
         _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
-        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.SpendStore);
-        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog, rig.Ledger, rig.Ids);
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.SpendStore, rig.RoomSpend);
+        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog, rig.Ledger, rig.Ids, rig.RoomSpend);
         await watcher.StartAsync(ct);
 
         spend.Add("Nova", "session-1", 5m, Usd);
@@ -454,6 +496,45 @@ public sealed class NeedsYouCapTests
         _ = Assert.Single(rig.Caps.Pending);
         await watcher.StopAsync(ct);
         Assert.Equal(0, spend.SubscriberCount);
+    }
+
+    /// <summary>An Agent that is not in the Project's Team spends in the Project's Room: the watcher opens the Project's question at spend time, because a Project counts whoever ran the Turn.</summary>
+    [Fact]
+    public async Task Watcher_NonMemberSpendsInProjectRoom_OpensTheProjectQuestion()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = new();
+        SqliteTeamDirectory directory = await rig.OpenDirectoryAsync(ct);
+        Room room = await directory.CreateRoomAsync("Site chat", [KnownIds.Human], Dev, false, "Site", ct);
+        Assert.True(rig.Levels.SetProject(Dev, "Site", NeedsYouLevel.RunInsideTheTeam, 2m));
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.SpendStore, rig.RoomSpend);
+        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog, rig.Ledger, rig.Ids, rig.RoomSpend);
+        await watcher.StartAsync(ct);
+
+        spend.Add("Ivy", "session-1", 2m, Usd, roomId: room.Id);
+
+        Assert.Equal(rig.ProjectKey, Assert.Single(rig.Caps.Pending).Scope);
+        await watcher.StopAsync(ct);
+    }
+
+    /// <summary>A Project cap reached through a Room's spend stays reached after that Room is deleted, and the question is not asked again.</summary>
+    [Fact]
+    public async Task For_ProjectCapReached_StaysReachedAfterTheRoomIsDeleted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = new();
+        SqliteTeamDirectory directory = await rig.OpenDirectoryAsync(ct);
+        Room room = await directory.CreateRoomAsync("Site chat", [KnownIds.Human], Dev, false, "Site", ct);
+        Assert.True(rig.Levels.SetProject(Dev, "Site", NeedsYouLevel.RunInsideTheTeam, 2m));
+        rig.Spent("Leo", 2m, roomId: room.Id);
+        Assert.True(rig.Levels.For(Dev, "Site").CapReached);
+
+        await directory.DeleteRoomAsync(room.Id, ct);
+        EffectiveLevel after = rig.Levels.For(Dev, "Site");
+
+        Assert.True(after.CapReached);
+        Assert.Single(rig.Caps.Pending);
+        Assert.Single(rig.Feed.Posts);
     }
 
     /// <summary>Through the Task service and the merge gate: at the cap a ready Task goes to Needs You instead of being released, and a release already written stops carrying a merge.</summary>

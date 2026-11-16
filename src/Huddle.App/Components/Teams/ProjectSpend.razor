@@ -1,0 +1,73 @@
+@implements IDisposable
+@using System.Globalization
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Data
+@inject RoomSpendStore Store
+@inject PersonaSpend Spend
+
+@*
+    #557: the Project's spend, the sum over the Rooms that belong to it, one amount per currency, drawn in the look of
+    TeamSpend. Nothing is drawn when nothing was spent, so a Project from before Rooms were recorded shows nothing
+    misleading. It re-reads on PersonaSpend.SpendChanged, a singleton that outlives this component, so Dispose releases it.
+*@
+
+@if (this.totals.Count > 0)
+{
+    <MudStack Spacing="0" Class="project-spend">
+        <MudStack Row="true" Spacing="1" Class="team-spend">
+            <MudText Typo="Typo.caption">Spent</MudText>
+            @foreach (StoredSpend amount in this.totals)
+            {
+                <MudText Typo="Typo.caption" Class="team-spend-amount">@($"{amount.Amount.ToString("N3", CultureInfo.InvariantCulture)} {amount.Currency}")</MudText>
+            }
+        </MudStack>
+        <MudText Typo="Typo.caption" Class="project-spend-note">Counts Turns run in this Project's Rooms.</MudText>
+    </MudStack>
+}
+
+@code {
+    private IReadOnlyList<StoredSpend> totals = [];
+
+    /// <summary>The Team the Project belongs to.</summary>
+    [Parameter]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project's name.</summary>
+    [Parameter]
+    public string Project { get; set; } = string.Empty;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Spend.SpendChanged += this.OnSpendChanged;
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.Load();
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.Spend.SpendChanged -= this.OnSpendChanged;
+    }
+
+    private void OnSpendChanged(string personaName)
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.Load();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private void Load()
+    {
+        this.totals = string.IsNullOrWhiteSpace(this.Team) || string.IsNullOrWhiteSpace(this.Project)
+            ? []
+            : this.Store.ForProject(this.Team, this.Project);
+    }
+}

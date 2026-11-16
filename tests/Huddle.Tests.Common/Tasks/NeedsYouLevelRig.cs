@@ -46,7 +46,8 @@ internal sealed class NeedsYouLevelRig : IDisposable
         this.Catalog = new FakeTeamCatalog { Teams = [new TeamSummary(Team, [Project], [], true) { TeamType = new VersionedRef("web", "1.2.0") }] };
         NeedsYouSpendStore ledger = new(this.levelDir.Options());
         ScopeIdStore ids = new(this.levelDir.Options());
-        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), ids, ledger, this.Feed);
+        RoomSpendStore roomSpend = new(this.levelDir.Options());
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), ids, ledger, roomSpend, this.Feed);
         this.Levels = new NeedsYouLevels(
             this.Catalog,
             new NeedsYouLevelStore(this.levelDir.Options()),
@@ -58,7 +59,7 @@ internal sealed class NeedsYouLevelRig : IDisposable
                 options.NeedsYouLevel.SpendCap = globalCap;
             }),
             caps: this.Caps);
-        this.Spend = NeedsYouSpendWiring.Attach(new PersonaSpendStore(this.levelDir.Options()), ledger, ids, this.Catalog, this.Levels);
+        this.Spend = NeedsYouSpendWiring.Attach(new PersonaSpendStore(this.levelDir.Options()), roomSpend, ledger, ids, this.Catalog, this.Levels);
         _ = this.Levels.SetTeam(Team, teamLevel, null);
         _ = this.Levels.SetProject(Team, Project, projectLevel, null);
         this.Service = new TaskService(

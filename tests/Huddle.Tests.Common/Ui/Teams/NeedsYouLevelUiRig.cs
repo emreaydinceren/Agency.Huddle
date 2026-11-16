@@ -41,11 +41,12 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
         this.Feed = new RecordingFeedPublisher();
         this.Ids = new ScopeIdStore(this.dir.Options());
         NeedsYouSpendStore ledger = new(this.dir.Options());
-        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, ledger, this.Feed);
+        RoomSpendStore roomSpend = new(this.dir.Options());
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, ledger, roomSpend, this.Feed);
         this.Store = new NeedsYouLevelStore(this.dir.Options());
         var options = this.dir.Options(configured => configured.NeedsYouLevel.Level = globalLevel ?? string.Empty);
         this.Levels = new NeedsYouLevels(this.Catalog, this.Store, this.Ids, new TaskScopeStore(this.dir.Options()), options, caps: this.Caps);
-        this.Spend = NeedsYouSpendWiring.Attach(new PersonaSpendStore(this.dir.Options()), ledger, this.Ids, this.Catalog, this.Levels);
+        this.Spend = NeedsYouSpendWiring.Attach(new PersonaSpendStore(this.dir.Options()), roomSpend, ledger, this.Ids, this.Catalog, this.Levels);
 
         ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
         ctx.Services.AddSingleton<ITeamCatalog>(this.Catalog);
@@ -68,7 +69,7 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
         var options = dir.Options();
         NeedsYouLevelStore store = new(options);
         ScopeIdStore ids = new(options);
-        NeedsYouCaps caps = new(new NeedsYouCapStore(options), ids, new NeedsYouSpendStore(options), new RecordingFeedPublisher());
+        NeedsYouCaps caps = new(new NeedsYouCapStore(options), ids, new NeedsYouSpendStore(options), new RoomSpendStore(options), new RecordingFeedPublisher());
         ctx.Services.TryAddSingleton(options);
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(ids);

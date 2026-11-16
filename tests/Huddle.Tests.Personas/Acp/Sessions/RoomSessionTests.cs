@@ -212,6 +212,40 @@ public sealed class RoomSessionTests
         Assert.Equal([(session.SessionId, 0.0548m, "USD")], owner.SpendAdded);
     }
 
+    /// <summary>A per-Room session reports its own RoomId with a cost, so the Spend is recorded against that Room.</summary>
+    [Fact]
+    public async Task UsageWithCost_PerRoomSession_ReportsTheRoomId()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.0548m, "USD")], "done");
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = "room-7" });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+
+        Assert.Equal(["room-7"], owner.SpendRoomIds);
+    }
+
+    /// <summary>The shared session has no Room, so it reports a null RoomId and its Spend is recorded against no Room.</summary>
+    [Fact]
+    public async Task UsageWithCost_SharedSession_ReportsNoRoomId()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.0548m, "USD")], "done");
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { RoomId = null });
+        RoomSession room = harness.Room;
+        room.Enqueue(new QueuedWork(1, RoomAItem));
+
+        await Eventually.UntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct, timeout: TestBudgets.Standard);
+
+        Assert.Equal([(string?)null], owner.SpendRoomIds);
+    }
+
     /// <summary>An advertised command list reaches the owner with the Adapter session's id, whole, as the Adapter sent it.</summary>
     [Fact]
     public async Task AvailableCommandsUpdate_CallsSetCommandsWithTheAdvertisedList()

@@ -13,15 +13,16 @@ internal static class NeedsYouSpendWiring
 {
     /// <summary>Builds the spend recorder and starts the watcher that charges it to the ledger.</summary>
     /// <param name="spendStore">The store the recorder writes through.</param>
+    /// <param name="roomSpend">The store the recorder writes a Room's increases to, which a Project cap counts.</param>
     /// <param name="ledger">The ledger the caps read.</param>
     /// <param name="ids">The ids the ledger's Team rows are keyed by.</param>
     /// <param name="catalog">Says which Teams a Persona is in.</param>
     /// <param name="levels">What the watcher re-evaluates after each increase.</param>
     /// <returns>The recorder to spend through.</returns>
-    public static PersonaSpend Attach(PersonaSpendStore spendStore, NeedsYouSpendStore ledger, ScopeIdStore ids, ITeamCatalog catalog, NeedsYouLevels levels)
+    public static PersonaSpend Attach(PersonaSpendStore spendStore, RoomSpendStore roomSpend, NeedsYouSpendStore ledger, ScopeIdStore ids, ITeamCatalog catalog, NeedsYouLevels levels)
     {
-        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, spendStore);
-        NeedsYouCapWatcher watcher = new(spend, levels, catalog, ledger, ids);
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, spendStore, roomSpend);
+        NeedsYouCapWatcher watcher = new(spend, levels, catalog, ledger, ids, roomSpend);
         _ = watcher.StartAsync(CancellationToken.None);
         return spend;
     }
@@ -31,6 +32,7 @@ internal static class NeedsYouSpendWiring
     /// <param name="persona">The Persona that spent.</param>
     /// <param name="amount">The amount.</param>
     /// <param name="currency">The currency.</param>
-    public static void Spent(this PersonaSpend spend, string persona, decimal amount, string currency = "USD") =>
-        spend.Add(persona, Guid.NewGuid().ToString("N"), amount, currency);
+    /// <param name="roomId">The Room the Turn ran in, or <see langword="null"/> for none.</param>
+    public static void Spent(this PersonaSpend spend, string persona, decimal amount, string currency = "USD", string? roomId = null) =>
+        spend.Add(persona, Guid.NewGuid().ToString("N"), amount, currency, roomId: roomId);
 }

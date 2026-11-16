@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Microsoft.Data.Sqlite;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -13,15 +14,69 @@ public sealed class PersonaSpendTests : IDisposable
 {
     private readonly TempDataDir dir = new();
     private readonly PersonaSpendStore store;
+    private readonly RoomSpendStore roomStore;
 
-    /// <summary>Creates the temp data folder and the <see cref="PersonaSpendStore"/> every test's <see cref="PersonaSpend"/> writes through to.</summary>
-    public PersonaSpendTests() => this.store = new PersonaSpendStore(this.dir.Options());
+    /// <summary>Creates the temp data folder and the stores every test's <see cref="PersonaSpend"/> writes through to.</summary>
+    public PersonaSpendTests()
+    {
+        this.store = new PersonaSpendStore(this.dir.Options());
+        this.roomStore = new RoomSpendStore(this.dir.Options());
+    }
 
     /// <summary>Deletes the temp data folder.</summary>
     public void Dispose() => this.dir.Dispose();
 
     /// <summary>Builds an empty <see cref="PersonaSpend"/> over this test's store that logs nowhere.</summary>
-    private PersonaSpend NewSpend() => new(NullLogger<PersonaSpend>.Instance, this.store);
+    private PersonaSpend NewSpend() => new(NullLogger<PersonaSpend>.Instance, this.store, this.roomStore);
+
+    /// <summary>A report that names a Room writes only the increase to that Room, so three rising totals sum to the last total and not to the sum of the totals.</summary>
+    [Fact]
+    public void Add_WithRoomId_WritesTheDeltaToRoomSpend()
+    {
+        PersonaSpend spend = NewSpend();
+
+        spend.Add("nova", "s1", 0.05m, "USD", roomId: "room-1");
+        spend.Add("nova", "s1", 0.08m, "USD", roomId: "room-1");
+        spend.Add("nova", "s1", 0.08m, "USD", roomId: "room-1");
+
+        Assert.Equal([new StoredSpend("USD", 0.08m)], this.roomStore.ForRoom("room-1"));
+    }
+
+    /// <summary>A report with no Room (the shared session) writes nothing to room_spend, and the Persona's own Spend is recorded as before.</summary>
+    [Fact]
+    public void Add_WithoutRoomId_WritesNothingToRoomSpend()
+    {
+        PersonaSpend spend = NewSpend();
+
+        spend.Add("nova", "s1", 0.05m, "USD");
+        spend.Add("nova", "s2", 0.07m, "USD", roomId: " ");
+
+        Assert.Equal([new StoredSpend("USD", 0.12m)], this.store.ForPersona("nova"));
+        Assert.Equal(0L, this.RoomSpendRowCount());
+    }
+
+    /// <summary>Counts every row of <c>room_spend</c>, whichever Room it belongs to.</summary>
+    private long RoomSpendRowCount()
+    {
+        using SqliteConnection connection = new($"Data Source={System.IO.Path.Combine(this.dir.Path, "team.db")};Pooling=False");
+        connection.Open();
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM room_spend;";
+        return (long)(command.ExecuteScalar() ?? 0L);
+    }
+
+    /// <summary>The Room's row is written before <see cref="PersonaSpend.SpendChanged"/> is raised, because the Needs You cap reads it in that handler.</summary>
+    [Fact]
+    public void Add_WithRoomId_WritesRoomSpendBeforeSpendChanged()
+    {
+        PersonaSpend spend = NewSpend();
+        IReadOnlyList<StoredSpend>? seen = null;
+        spend.SpendChanged += _ => seen = this.roomStore.ForRoom("room-1");
+
+        spend.Add("nova", "s1", 0.05m, "USD", roomId: "room-1");
+
+        Assert.Equal([new StoredSpend("USD", 0.05m)], seen);
+    }
 
     /// <summary>The first running total a session reports is all new spend.</summary>
     [Fact]

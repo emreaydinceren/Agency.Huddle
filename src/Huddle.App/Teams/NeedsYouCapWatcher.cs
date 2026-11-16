@@ -12,7 +12,8 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="ids">Gives each Team the id its ledger row is keyed by.</param>
 /// <param name="levels">Evaluating a level is what opens the question, so the watcher asks for the levels of the scopes the Persona counts in.</param>
 /// <param name="teams">Names the Teams a Persona belongs to, and their Projects.</param>
-internal sealed class NeedsYouCapWatcher(PersonaSpend spend, NeedsYouLevels levels, ITeamCatalog teams, NeedsYouSpendStore ledger, ScopeIdStore ids) : IHostedService
+/// <param name="roomSpend">Says which Project a Room belongs to, because a Project counts whoever ran the Turn, a member of its Team or not.</param>
+internal sealed class NeedsYouCapWatcher(PersonaSpend spend, NeedsYouLevels levels, ITeamCatalog teams, NeedsYouSpendStore ledger, ScopeIdStore ids, RoomSpendStore roomSpend) : IHostedService
 {
     /// <summary>Starts listening.</summary>
     /// <param name="cancellationToken">Unused; subscribing is immediate.</param>
@@ -49,6 +50,12 @@ internal sealed class NeedsYouCapWatcher(PersonaSpend spend, NeedsYouLevels leve
             .Where(t => t.Members.Contains(increase.PersonaName, StringComparer.OrdinalIgnoreCase))
             .Select(t => NeedsYouCaps.TeamKey(ids.TeamId(t.Name))));
         ledger.Add(scopes, increase.Amount);
+
+        // A Project counts the Room's spend whoever ran the Turn, so its level is evaluated even when the spender is no member of its Team.
+        if (increase.RoomId is not null && roomSpend.ProjectOf(increase.RoomId) is { } scope)
+        {
+            _ = levels.For(scope.Team, scope.Project);
+        }
     }
 
     /// <summary>Evaluates the global scope, and each Team and Project the Persona counts in.</summary>

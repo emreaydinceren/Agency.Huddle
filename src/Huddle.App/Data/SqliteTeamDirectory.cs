@@ -50,7 +50,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     // Same reasoning as archived_rooms above: a sibling table so an existing team.db gains Scope by a
     // plain CREATE TABLE IF NOT EXISTS. No row means a root Room (ADR-0052). team_room = 1 marks a
     // Team's Team Room, and the unique partial index allows at most one per Team.
-    private const string DdlCreateRoomTeams = """
+    internal const string DdlCreateRoomTeams = """
         CREATE TABLE IF NOT EXISTS room_teams (
             room_id   TEXT PRIMARY KEY REFERENCES rooms(id),
             team      TEXT NOT NULL COLLATE NOCASE,
@@ -66,10 +66,37 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
 
     // Same reasoning as room_teams above: a sibling table so an existing team.db gains Project by a plain
     // CREATE TABLE IF NOT EXISTS. No row means a Room with no Project; a row is only ever written for a Team Room.
-    private const string DdlCreateRoomProjects = """
+    internal const string DdlCreateRoomProjects = """
         CREATE TABLE IF NOT EXISTS room_projects (
             room_id TEXT PRIMARY KEY REFERENCES rooms(id),
             project TEXT NOT NULL COLLATE NOCASE
+        );
+        """;
+
+    /// <summary>
+    /// What each Room has spent, per currency (a sibling table, for the reason above). Owned by <see cref="RoomSpendStore"/>, created
+    /// here as well because <see cref="DeleteRoomAsync"/> folds a deleted Room's rows into <see cref="DdlCreateProjectSpendRetained"/>.
+    /// </summary>
+    internal const string DdlCreateRoomSpend = """
+        CREATE TABLE IF NOT EXISTS room_spend (
+            room_id  TEXT NOT NULL,
+            currency TEXT NOT NULL,
+            amount   TEXT NOT NULL,
+            PRIMARY KEY (room_id, currency)
+        );
+        """;
+
+    /// <summary>
+    /// What deleted Rooms spent inside a Project, per currency, so deleting a Room does not lower its Project's total. Keyed by
+    /// Team and Project name, so a rename of either moves the rows (see <see cref="RetainedProjectSpend"/>).
+    /// </summary>
+    internal const string DdlCreateProjectSpendRetained = """
+        CREATE TABLE IF NOT EXISTS project_spend_retained (
+            team     TEXT NOT NULL COLLATE NOCASE,
+            project  TEXT NOT NULL COLLATE NOCASE,
+            currency TEXT NOT NULL,
+            amount   TEXT NOT NULL,
+            PRIMARY KEY (team, project, currency)
         );
         """;
 
@@ -138,6 +165,8 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsTeamRoomIndex, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomProjects, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomJobs, ct).ConfigureAwait(false);
+        await ExecuteNonQueryAsync(connection, DdlCreateRoomSpend, ct).ConfigureAwait(false);
+        await ExecuteNonQueryAsync(connection, DdlCreateProjectSpendRetained, ct).ConfigureAwait(false);
 
         // A Name already held by an Agent row is skipped rather than allowed to throw on the unique
         // index: the Human keeps the Name they had, and startup goes on. On a fresh database there
@@ -529,6 +558,8 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         moveRooms.Parameters.AddWithValue("$new", newName);
         var moved = await moveRooms.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
+        await RetainedProjectSpend.MoveTeamAsync(connection, transaction, oldName, newName, ct).ConfigureAwait(false);
+
         await transaction.CommitAsync(ct).ConfigureAwait(false);
         return moved;
     }
@@ -540,19 +571,28 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         ArgumentException.ThrowIfNullOrWhiteSpace(oldProject);
         ArgumentException.ThrowIfNullOrWhiteSpace(newProject);
 
-        return await this.ExecuteAsync(
-            """
+        var connection = await this.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var connectionScope = connection.ConfigureAwait(false);
+        var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(ct).ConfigureAwait(false);
+        await using var transactionScope = transaction.ConfigureAwait(false);
+
+        var command = connection.CreateCommand();
+        await using var commandScope = command.ConfigureAwait(false);
+        command.Transaction = transaction;
+        command.CommandText = """
             UPDATE room_projects SET project = $new
             WHERE project = $old AND project COLLATE BINARY <> $new
               AND room_id IN (SELECT room_id FROM room_teams WHERE team = $team);
-            """,
-            command =>
-            {
-                command.Parameters.AddWithValue("$team", team);
-                command.Parameters.AddWithValue("$old", oldProject);
-                command.Parameters.AddWithValue("$new", newProject);
-            },
-            ct).ConfigureAwait(false);
+            """;
+        command.Parameters.AddWithValue("$team", team);
+        command.Parameters.AddWithValue("$old", oldProject);
+        command.Parameters.AddWithValue("$new", newProject);
+        var moved = await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+
+        await RetainedProjectSpend.MoveProjectAsync(connection, transaction, team, oldProject, newProject, ct).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return moved;
     }
 
     public async Task<bool> AddMemberAsync(string roomId, string userId, CancellationToken ct = default)
@@ -715,6 +755,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             await deleteMembers.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         }
 
+        await RetainedProjectSpend.RetainAndDeleteRoomAsync(connection, transaction, roomId, ct).ConfigureAwait(false);
         await DeleteRoomProjectAsync(connection, transaction, roomId, ct).ConfigureAwait(false);
 
         var deleteScope = connection.CreateCommand();

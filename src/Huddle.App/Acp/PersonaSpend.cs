@@ -20,7 +20,8 @@ namespace Agency.Huddle.App.Acp;
 /// </remarks>
 /// <param name="logger">Records an ignored report and a <see cref="SpendChanged"/> subscriber that threw.</param>
 /// <param name="store">Receives every increase, so Spend survives a restart.</param>
-internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendStore store)
+/// <param name="roomStore">Receives every increase that a Room Session reported, against that Room, so a Project's Spend can be read from its Rooms.</param>
+internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendStore store, RoomSpendStore roomStore)
 {
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaSpendState> personas = new(StringComparer.OrdinalIgnoreCase);
@@ -50,7 +51,11 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
     /// <param name="runningTotal">The session's running total so far.</param>
     /// <param name="currency">The currency of <paramref name="runningTotal"/>.</param>
     /// <param name="taskId">The Task the Spend belongs to, or <see langword="null"/> when it belongs to none.</param>
-    internal void Add(string personaName, string sessionId, decimal runningTotal, string currency, string? taskId = null)
+    /// <param name="roomId">
+    /// The Room the reporting session belongs to, or <see langword="null"/> for the shared session. The increase is also recorded against the Room, in
+    /// the same lock and before either event is raised, because the Needs You cap reads Project Spend when <see cref="SpendChanged"/> fires.
+    /// </param>
+    internal void Add(string personaName, string sessionId, decimal runningTotal, string currency, string? taskId = null, string? roomId = null)
     {
         if (runningTotal < 0 || string.IsNullOrWhiteSpace(currency))
         {
@@ -90,12 +95,16 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
             if (raise)
             {
                 store.Add(personaName, taskId, currency, delta);
+                if (!string.IsNullOrWhiteSpace(roomId))
+                {
+                    roomStore.Add(roomId, currency, delta);
+                }
             }
         }
 
         if (raise)
         {
-            EventRaise.Isolated(this.SpendAdded, new SpendIncrease(personaName, currency, added), ex => logger.LogWarning(ex, "A spend-added subscriber threw for persona '{PersonaName}'.", personaName));
+            EventRaise.Isolated(this.SpendAdded, new SpendIncrease(personaName, currency, added, roomId), ex => logger.LogWarning(ex, "A spend-added subscriber threw for persona '{PersonaName}'.", personaName));
             this.RaiseSpendChanged(personaName);
         }
     }
@@ -163,7 +172,8 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
     /// <param name="PersonaName">The Persona's Name as it was reported.</param>
     /// <param name="Currency">The currency of the report.</param>
     /// <param name="Amount">The amount this report added, positive.</param>
-    internal readonly record struct SpendIncrease(string PersonaName, string Currency, decimal Amount);
+    /// <param name="RoomId">The Room the Turn ran in, or <see langword="null"/> when none was given; it is already recorded when this is raised.</param>
+    internal readonly record struct SpendIncrease(string PersonaName, string Currency, decimal Amount, string? RoomId = null);
 
     /// <summary>The mutable state one Persona accumulates behind <see cref="gate"/>; never handed out.</summary>
     private sealed class PersonaSpendState

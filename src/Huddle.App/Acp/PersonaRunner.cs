@@ -230,8 +230,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     void IRoomSessionOwner.AddTokens(long delta) => Interlocked.Add(ref this.tokensConsumed, delta);
 
     /// <inheritdoc />
-    void IRoomSessionOwner.AddSpend(string sessionId, decimal runningTotal, string currency) =>
-        this.spend?.Add(this.persona.Name, sessionId, runningTotal, currency);
+    void IRoomSessionOwner.AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId) =>
+        this.spend?.Add(this.persona.Name, sessionId, runningTotal, currency, roomId: roomId);
 
     /// <inheritdoc />
     void IRoomSessionOwner.SetCommands(string sessionId, IReadOnlyList<AvailableCommandInfo> advertised)

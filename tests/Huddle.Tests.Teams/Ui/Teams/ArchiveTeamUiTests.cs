@@ -451,6 +451,7 @@ public sealed class ArchiveTeamUiTests
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
+        ctx.ComponentFactories.AddStub<ProjectSpend>();
         return ctx;
     }
 
