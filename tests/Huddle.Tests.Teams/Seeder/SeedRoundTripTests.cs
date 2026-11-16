@@ -52,7 +52,7 @@ public sealed class SeedRoundTripTests
         });
     }
 
-    /// <summary>SEED-RT-2: Every Task loads, none is rejected, the Change log dates round-trip, and start-up reconciliation adds nothing.</summary>
+    /// <summary>SEED-RT-2: Every Task loads, none is rejected, the timeline dates round-trip, and start-up reconciliation adds nothing.</summary>
     [Fact]
     public async Task Tasks_AllLoadAndKeepTheirBackdatedDates()
     {
@@ -70,7 +70,7 @@ public sealed class SeedRoundTripTests
         Assert.All(plan.Tasks, seeded =>
         {
             TaskItem loaded = Assert.Single(store.All, t => t.Id.ToString() == seeded.Id);
-            IReadOnlyList<TaskLogLine> expected = TaskFileWriter.BuildLog(seeded, plan.Today);
+            IReadOnlyList<TimelineEntry> expected = TaskFileWriter.BuildTimeline(seeded, plan.Today);
             Assert.Equal(expected[0].At, loaded.Created);
             Assert.Equal(expected[^1].At, loaded.Updated);
             Assert.Equal(seeded.Location.Team, loaded.Location.Team);
@@ -81,6 +81,39 @@ public sealed class SeedRoundTripTests
             Assert.Equal(seeded.BlockedBy, loaded.BlockedBy.Select(b => b.ToString()));
             Assert.Equal(seeded.Parent, loaded.Parent?.ToString());
             Assert.Equal(seeded.DueOffset is { } due ? plan.Today.AddDays(due) : (DateOnly?)null, loaded.DueDate);
+        });
+    }
+
+    /// <summary>SEED-RT-2b: Every Task file is written in the timeline format (ADR-0086): the heading, no Change log, nothing for the upgrade to convert, and the entries the writer built.</summary>
+    [Fact]
+    public async Task Tasks_FilesAreInTheTimelineFormat()
+    {
+        using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
+        SeedPlan plan = seed.Summary.Plan;
+        var options = seed.Options();
+        using PersonaStore personas = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
+
+        Assert.NotEmpty(plan.Tasks);
+        Assert.All(plan.Tasks, seeded =>
+        {
+            string path = SeedIo.Resolve(seed.Summary.DataDir, TaskFileWriter.RelativePath(seeded));
+            string text = File.ReadAllText(path);
+            TaskItem loaded = Assert.Single(store.All, t => t.Id.ToString() == seeded.Id);
+
+            Assert.Contains(TaskFileFormat.TimelineHeading, text, StringComparison.Ordinal); // contains-ok: a file format heading, not markup; the entries are pinned in full below
+            Assert.DoesNotContain(TaskFileFormat.ChangeLogHeading, text, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(text.ReplaceLineEndings("\n"), TaskFileFormat.Upgrade(text));
+            Assert.True(TaskFileFormat.TryParse(text, path, loaded.Location, out TaskItem? parsed, out string error), error);
+            IReadOnlyList<TimelineEntry> expected = TaskFileWriter.BuildTimeline(seeded, plan.Today);
+            Assert.Equal(expected.Count, parsed.Timeline.Count);
+            for (int i = 0; i < expected.Count; i++)
+            {
+                Assert.Equal(expected[i].At, parsed.Timeline[i].At);
+                Assert.Equal(expected[i].Author, parsed.Timeline[i].Author);
+                Assert.Equal(TimelineEntryKind.Event, parsed.Timeline[i].Kind);
+                Assert.Equal(expected[i].Text, parsed.Timeline[i].Text);
+            }
         });
     }
 

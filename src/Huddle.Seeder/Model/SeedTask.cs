@@ -63,11 +63,11 @@ internal sealed record SeedTask
     /// <summary>How many days before the run date the Task was created.</summary>
     public int CreatedDaysAgo { get; init; } = 14;
 
-    /// <summary>How many days before the run date the last Change log entry was written; at least 1.</summary>
+    /// <summary>How many days before the run date the last timeline entry was written; at least 1.</summary>
     public int LastTouchedDaysAgo { get; init; } = 1;
 
-    /// <summary>Extra Change log lines, written between the status changes and the closing entry.</summary>
-    public IReadOnlyList<SeedLogNote> ExtraLog { get; init; } = [];
+    /// <summary>Extra timeline events, written between the status changes and the closing entry.</summary>
+    public IReadOnlyList<SeedTimelineEvent> ExtraEvents { get; init; } = [];
 
     /// <summary>Whether the Task requires the Human's acceptance (<c>human_gate: true</c>).</summary>
     public bool HumanGate { get; init; }

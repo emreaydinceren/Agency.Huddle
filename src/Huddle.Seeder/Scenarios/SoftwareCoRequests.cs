@@ -48,7 +48,7 @@ internal static class SoftwareCoRequests
 
                 A webhook or notification when an export is ready. Which formats must it cover? Platform asked for more detail.
                 """,
-            ExtraLog = [new("Grace", "triage edited")],
+            ExtraEvents = [new("Grace", "triage edited")],
         },
         new()
         {
@@ -61,7 +61,7 @@ internal static class SoftwareCoRequests
 
                 Platform wants to know how long Support keeps incident call recordings, so the postmortem template can say so.
                 """,
-            ExtraLog = [new("Dana", "triage edited")],
+            ExtraEvents = [new("Dana", "triage edited")],
         },
         new()
         {
@@ -74,7 +74,7 @@ internal static class SoftwareCoRequests
 
                 The onboarding emails read differently from the help centre articles. Customers have mentioned it twice.
                 """,
-            ExtraLog = [new("Owen", "triage edited")],
+            ExtraEvents = [new("Owen", "triage edited")],
         },
         new()
         {
@@ -91,7 +91,7 @@ internal static class SoftwareCoRequests
 
                 Every response carries a request id header. Done by Platform; Growth QA has not confirmed it yet, so the Request stays open.
                 """,
-            ExtraLog = [new("Grace", "triage edited")],
+            ExtraEvents = [new("Grace", "triage edited")],
         },
     ];
 }

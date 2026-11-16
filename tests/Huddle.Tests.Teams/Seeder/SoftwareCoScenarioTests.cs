@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Seeder.Model;
 using Agency.Huddle.Seeder.Scenarios;
 using Agency.Huddle.Seeder.Writing;
@@ -139,9 +140,9 @@ public sealed partial class SoftwareCoScenarioTests
         });
     }
 
-    /// <summary>SEED-INV-5: Change log times must run forward, and the last entry must be in the past so Huddle does not see the file as newer.</summary>
+    /// <summary>SEED-INV-5: Timeline times must run forward, and the last entry must be in the past so Huddle does not see the file as newer.</summary>
     [Fact]
-    public void Plan_ChangeLogsRunForwardAndEndInThePast()
+    public void Plan_TimelinesRunForwardAndEndInThePast()
     {
         SeedPlan plan = Plan();
 
@@ -149,12 +150,12 @@ public sealed partial class SoftwareCoScenarioTests
         {
             Assert.True(task.CreatedDaysAgo >= task.LastTouchedDaysAgo, task.Id);
             Assert.True(task.LastTouchedDaysAgo >= 1, task.Id);
-            IReadOnlyList<TaskLogLine> log = TaskFileWriter.BuildLog(task, plan.Today);
-            Assert.Equal("created", log[0].Summary);
+            IReadOnlyList<TimelineEntry> log = TaskFileWriter.BuildTimeline(task, plan.Today);
+            Assert.Equal("created", log[0].Text);
             Assert.Equal(log.OrderBy(l => l.At).ToList(), log);
             Assert.Equal(log.Count, log.Select(l => l.At).Distinct().Count());
             Assert.True(log[^1].At < new DateTimeOffset(plan.Today.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero), task.Id);
-            Assert.Equal(task.Closed, log[^1].Summary == "closed");
+            Assert.Equal(task.Closed, log[^1].Text == "closed");
         });
     }
 
@@ -175,7 +176,7 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(plan.Tasks, t => t.Location.Project is not null);
         Assert.Contains(plan.Tasks, t => t.Tags.Count > 0);
         Assert.Contains(plan.Tasks, t => t.Body.Length > 600);
-        Assert.Contains(plan.Tasks, t => t.ExtraLog.Any(e => e.Summary.StartsWith("moved:", StringComparison.Ordinal)));
+        Assert.Contains(plan.Tasks, t => t.ExtraEvents.Any(e => e.Summary.StartsWith("moved:", StringComparison.Ordinal))); // contains-ok: an event summary's kind prefix, not markup
         Assert.Contains(plan.Tasks, t => t.Creator == plan.HumanName);
         Assert.Contains(plan.Tasks, t => t.Creator != plan.HumanName);
     }

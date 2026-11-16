@@ -81,9 +81,9 @@ internal static class SeedRunner
             string path = SeedIo.Resolve(dataDir, TaskFileWriter.RelativePath(task));
             SeedIo.WriteText(path, TaskFileWriter.Render(task, plan.Today, origin, dataDir));
 
-            // Huddle compares the file's modified time with the last Change log entry at start-up; a newer file is
-            // recorded as "edited outside Huddle" and loses the backdated Updated date.
-            File.SetLastWriteTimeUtc(path, TaskFileWriter.BuildLog(task, plan.Today)[^1].At.UtcDateTime);
+            // Huddle compares the file's modified time with the last timeline entry (of any kind) at start-up; a
+            // newer file is recorded as "edited outside Huddle" and loses the backdated Updated date.
+            File.SetLastWriteTimeUtc(path, TaskFileWriter.BuildTimeline(task, plan.Today)[^1].At.UtcDateTime);
         }
     }
 

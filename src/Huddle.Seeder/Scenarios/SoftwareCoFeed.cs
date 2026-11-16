@@ -15,7 +15,7 @@ internal static class SoftwareCoFeed
     /// <summary>The Helper the Helper items are about.</summary>
     internal const string HelperId = "NeedsHuman";
 
-    /// <summary>The Helper's name as it appears on a Task's Change log.</summary>
+    /// <summary>The Helper's name as it appears on a Task's timeline.</summary>
     internal const string HelperActor = "Needs Human (Helper)";
 
     /// <summary>The Feed items, in no particular order: each says how long ago it happened.</summary>
