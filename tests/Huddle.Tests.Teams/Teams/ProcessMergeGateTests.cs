@@ -19,6 +19,8 @@ public sealed class ProcessMergeGateTests
     private const string Team = "Platform";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
 
+    private const string NoTeamPush = "Cannot push: a push waits for the Human's Accept on a Task, and you belong to no Team, so no Task of yours can carry one. Ask the Human to push.";
+
     private const string OldTest = "dotnet test (repo root C:\\HuddleZero\\repos\\bakery-quote)";
 
     private static readonly DateTimeOffset Noon = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
@@ -58,26 +60,27 @@ public sealed class ProcessMergeGateTests
         Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git push"));
     }
 
-    /// <summary>A Team whose process does not enable the gate is never refused.</summary>
+    /// <summary>A Team whose process does not enable <c>checks-before-merge</c> is not held by it; a line that puts nothing on main and pushes nothing passes.</summary>
     [Fact]
-    public void RefusalFor_GateNotEnabled_IsAllowed()
+    public void RefusalFor_ChecksGateNotEnabled_IsAllowed()
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
-        Assert.Null(gate.RefusalFor("Nova", "git push"));
+        Assert.Null(gate.RefusalFor("Nova", "git merge main"));
     }
 
-    /// <summary>A Persona in no Team is not refused; a Persona that cannot be resolved fails closed (review fix item 5).</summary>
+    /// <summary>A Persona in no Team has every push refused and no merge held; a Persona that cannot be resolved fails closed (review fix item 5).</summary>
     [Fact]
-    public void RefusalFor_PersonaInNoTeamAllowedUnknownRefused()
+    public void RefusalFor_PersonaInNoTeamPushRefusedUnknownRefused()
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
         ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
 
-        Assert.Null(gate.RefusalFor("Kai", "git push"));
+        Assert.Equal(NoTeamPush, gate.RefusalFor("Kai", "git push origin feat/x"));
+        Assert.Null(gate.RefusalFor("Kai", "git merge main"));
         Assert.Equal("Cannot check the merge gate: the Persona 'Ghost' could not be resolved.", gate.RefusalFor("Ghost", "git push"));
     }
 
@@ -133,7 +136,7 @@ public sealed class ProcessMergeGateTests
         Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git push"));
     }
 
-    /// <summary>The assignee's merge of a feature branch is refused while its gated Task has no Accept, and the refusal names the Task.</summary>
+    /// <summary>In a Team whose gates line lacks <c>accept-before-merge</c> the assignee's merge is refused with no Accept, and the refusal names the Task.</summary>
     [Fact]
     public void RefusalFor_GatedUnacceptedTaskOfAssignee_RefusesMerge()
     {
@@ -145,13 +148,13 @@ public sealed class ProcessMergeGateTests
         string? refusal = gate.RefusalFor("Nova", "git merge --no-ff feat/quote-calculator");
 
         Assert.Equal(
-            $"Cannot merge: Task {task.Id} waits for the Human's Accept in Needs You, and this merge waits for it. Huddle moves the Task there when its Proof is complete. Do not ask for the Accept in chat.",
+            $"Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in Task {task.Id}'s Action with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.",
             refusal);
     }
 
-    /// <summary>A push naming main, or naming no branch, is refused under the same rule; a push of a feature branch is not.</summary>
+    /// <summary>Every push is refused with no Accept that names a push, a feature branch included; the gates line makes no difference.</summary>
     [Fact]
-    public void RefusalFor_GatedUnacceptedTask_PushRefusedOnlyForMainOrNoBranch()
+    public void RefusalFor_GatedUnacceptedTask_EveryPushIsRefused()
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
@@ -161,7 +164,7 @@ public sealed class ProcessMergeGateTests
         Assert.NotNull(gate.RefusalFor("Nova", "git push origin main"));
         Assert.NotNull(gate.RefusalFor("Nova", "git push"));
         Assert.NotNull(gate.RefusalFor("Nova", "git push origin HEAD:refs/heads/master"));
-        Assert.Null(gate.RefusalFor("Nova", "git push -u origin feat/quote-calculator"));
+        Assert.NotNull(gate.RefusalFor("Nova", "git push -u origin feat/quote-calculator"));
     }
 
     /// <summary>A valid Accept lets the assignee merge.</summary>
@@ -176,9 +179,9 @@ public sealed class ProcessMergeGateTests
         Assert.Null(gate.RefusalFor("Nova", "git merge --no-ff feat/quote-calculator"));
     }
 
-    /// <summary>Another Persona's Task, or an ungated Task, does not hold the assignee's merge.</summary>
+    /// <summary>With no Accept on any Task of the Team, the merge is refused whoever's Tasks are unaccepted or ungated: the gate no longer depends on an open gated Task.</summary>
     [Fact]
-    public void RefusalFor_NotAssigneeOrNotGated_AllowsMerge()
+    public void RefusalFor_NotAssigneeOrNotGated_StillRefusesMerge()
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
@@ -186,19 +189,19 @@ public sealed class ProcessMergeGateTests
         AddGatedTask(harness, "Nova", gated: false, accepted: false, TaskState.Review);
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
-        Assert.Null(gate.RefusalFor("Nova", "git merge feat/quote-calculator"));
+        Assert.NotNull(gate.RefusalFor("Nova", "git merge feat/quote-calculator"));
     }
 
-    /// <summary>A Cancelled gated Task no longer holds the merge.</summary>
+    /// <summary>A Cancelled gated Task carries no Accept, so the merge stays refused.</summary>
     [Fact]
-    public void RefusalFor_ClosedGatedTask_AllowsMerge()
+    public void RefusalFor_ClosedGatedTask_StillRefusesMerge()
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
         AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.Cancelled);
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
-        Assert.Null(gate.RefusalFor("Nova", "git merge feat/quote-calculator"));
+        Assert.NotNull(gate.RefusalFor("Nova", "git merge feat/quote-calculator"));
     }
 
     /// <summary>Merging main into a feature branch is routine work and stays allowed, however main is spelled.</summary>
@@ -231,7 +234,7 @@ public sealed class ProcessMergeGateTests
         AddEvidence(harness, "dotnet test", 0);
 
         string? refusal = gate.RefusalFor("Nova", "git merge feat/quote-calculator");
-        Assert.StartsWith("Cannot merge: Task ", refusal, StringComparison.Ordinal); // contains-ok: the full wording is pinned in RefusalFor_GatedUnacceptedTaskOfAssignee_RefusesMerge.
+        Assert.StartsWith("Cannot merge: a merge into main waits for the Human's Accept", refusal, StringComparison.Ordinal); // contains-ok: the full wording is pinned in RefusalFor_GatedUnacceptedTaskOfAssignee_RefusesMerge.
     }
 
     private const string AcceptGate = "'accept-before-merge'";
@@ -275,16 +278,16 @@ public sealed class ProcessMergeGateTests
         Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
     }
 
-    /// <summary>A feature branch taking main still runs under the gate.</summary>
+    /// <summary>A feature branch taking main still runs under the gate; a push of the feature branch does not (issue #602).</summary>
     [Fact]
-    public void RefusalFor_AcceptGateMergeOfMain_IsAllowed()
+    public void RefusalFor_AcceptGateMergeOfMain_IsAllowedButAFeaturePushIsNot()
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
         ProcessMergeGate gate = Build(harness, dir, AcceptGate);
 
         Assert.Null(gate.RefusalFor("Nova", "git merge origin/main"));
-        Assert.Null(gate.RefusalFor("Nova", "git push -u origin feat/x"));
+        Assert.NotNull(gate.RefusalFor("Nova", "git push -u origin feat/x"));
     }
 
     /// <summary>An Accept that took a Task with no Action straight to Done lets the merge run up to the last instant of the one-hour window.</summary>
@@ -379,15 +382,13 @@ public sealed class ProcessMergeGateTests
         Assert.NotNull(gate.RefusalFor("Nova", command));
     }
 
-    /// <summary>Taking main into a feature branch, pushing a feature branch and pulling main are not held, whatever redirection or option surrounds them.</summary>
+    /// <summary>Taking main into a feature branch and pulling main are not held, whatever redirection or option surrounds them.</summary>
     /// <param name="command">The shell line.</param>
     [Theory]
     [InlineData("git merge origin/main 2>&1")]
     [InlineData("git merge -m \"sync\" main")]
     [InlineData("git merge -X theirs main")]
     [InlineData("git merge --no-ff -m sync origin/main")]
-    [InlineData("git push origin feat/x")]
-    [InlineData("git push -u origin HEAD:refs/heads/feat/x")]
     [InlineData("git pull")]
     [InlineData("git pull origin main")]
     [InlineData("git pull --rebase origin main")]
@@ -498,19 +499,80 @@ public sealed class ProcessMergeGateTests
         Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
     }
 
-    /// <summary>A Team without the gate keeps the assignee rule for real: the assignee's own unaccepted gated Task holds the merge, another member's does not.</summary>
-    [Fact]
-    public void RefusalFor_NoAcceptGateWithTasks_HoldsOnlyTheAssignee()
+    /// <summary>A Team without <c>accept-before-merge</c> on its gates line holds a merge into main for an Accept all the same: with no Accept it is refused, and an Accept on a Task of the Team lets it through.</summary>
+    [Theory]
+    [InlineData("'qa-evidence-before-done'")]
+    [InlineData("")]
+    public void RefusalFor_NoAcceptGateEntry_StillHoldsMergeAndPushToMain(string gates)
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        _ = AddGatedTask(harness, "Kai", gated: true, accepted: false, TaskState.ToDo);
-        ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
-        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
-
-        _ = AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.ToDo);
+        ProcessMergeGate gate = Build(harness, dir, gates);
 
         Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
+        Assert.NotNull(gate.RefusalFor("Nova", "git merge feat/x"));
+        Assert.NotNull(gate.RefusalFor("Nova", "git push origin main"));
+
+        _ = AddGatedTask(harness, "Kai", gated: true, accepted: true, TaskState.NeedsYou);
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>A fresh Accept on a Task whose Action names a push passes a push of a feature branch, and the same Accept passes a merge too.</summary>
+    [Fact]
+    public void RefusalFor_FreshAcceptNamingAPush_PassesThePush()
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+        Assert.NotNull(gate.RefusalFor("Nova", "git push origin feat/x"));
+
+        _ = AddAcceptedTask(harness, "Push feat/x to origin");
+
+        Assert.Null(gate.RefusalFor("Nova", "git push origin feat/x"));
+        Assert.Null(gate.RefusalFor("Nova", "git push https://host/r.git feat/x"));
+    }
+
+    /// <summary>An Accept on a Task whose Action is Huddle's own merge Action, or any Action that does not name a push, does not pass a push.</summary>
+    [Theory]
+    [InlineData("Merge this Task's work into main")]
+    [InlineData("Merge feat/x into main")]
+    [InlineData("Pushing is not here, only a pushover")]
+    public void RefusalFor_FreshAcceptNotNamingAPush_RefusesThePush(string action)
+    {
+        using TaskToolHarness harness = NewHarness();
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate);
+        _ = AddAcceptedTask(harness, action);
+
+        Assert.Null(gate.RefusalFor("Nova", FeatureMerge));
+        Assert.StartsWith("Cannot push: a push leaves the Team's repository", gate.RefusalFor("Nova", "git push origin feat/x"), StringComparison.Ordinal); // contains-ok: the full wording is pinned in NeedsYouLevelMergeGateTests.
+    }
+
+    /// <summary>An Accept naming a push that is more than 24 hours old no longer passes it, and the refusal says so.</summary>
+    [Fact]
+    public void RefusalFor_AcceptNamingAPushOlderThanADay_IsRefusedAsOld()
+    {
+        ManualTimeProvider clock = new(Noon);
+        using TaskToolHarness harness = new(clock: clock, proof: new FixedProofSource(FixedProofSource.Complete));
+        using TempDataDir dir = new();
+        ProcessMergeGate gate = Build(harness, dir, AcceptGate, clock);
+        TaskItem task = AddAcceptedTask(harness, "Push feat/x to origin");
+        clock.Advance(TimeSpan.FromHours(24));
+        Assert.Null(gate.RefusalFor("Nova", "git push origin feat/x"));
+
+        clock.Advance(TimeSpan.FromTicks(1));
+
+        Assert.StartsWith($"Cannot push: the Human's Accept on Task {task.Id} is more than 24 hours old.", gate.RefusalFor("Nova", "git push origin feat/x"), StringComparison.Ordinal); // contains-ok: the tail repeats the merge wording.
+    }
+
+    private static TaskItem AddAcceptedTask(TaskToolHarness harness, string action)
+    {
+        TaskActor human = TaskActors.Human(harness.Options.Value);
+        TaskDraft draft = new("Quote calculator", Team, null, Assignee: "Kai", Description: "Body") { HumanGate = true, Action = action };
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, human)).Task;
+        task = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, new TaskActor(TaskActorKind.Agent, "Kai", "id"))).Task;
+        return Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, human)).Task;
     }
 
     private static TaskItem AddGatedTask(TaskToolHarness harness, string assignee, bool gated, bool accepted, TaskState status)

@@ -178,11 +178,6 @@ internal sealed class RetroProposalService(
     {
         string file = change.TargetFile;
         string failed = $"The change could not be applied to {file}.";
-        if (RetroChangeGuard.TouchesNeedsYouLevel(file, change.Find, change.Replace))
-        {
-            return this.RefusedNeedsYouLevel(set, change);
-        }
-
         if (string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
         {
             return this.ApplyTeamFile(set, change, failed);
@@ -223,17 +218,6 @@ internal sealed class RetroProposalService(
         return this.Applied(set, change);
     }
 
-    /// <summary>Refuses a change that would set the Needs You level or its cap, and logs it. Only the Human sets them, so not even an Accept applies such a change.</summary>
-    private RetroChangeOutcome RefusedNeedsYouLevel(RetroProposalSet set, RetroChange change)
-    {
-        logger.LogWarning(
-            "Refused to apply retro change {ChangeId} of {Team} to {TargetFile}: it changes the Needs You level or spend cap.",
-            change.Id,
-            set.Team,
-            change.TargetFile);
-        return Refused(NeedsYouLevelText.RetroRefusal);
-    }
-
     private RetroChangeOutcome Applied(RetroProposalSet set, RetroChange change)
     {
         this.Record(set, change);
@@ -262,15 +246,9 @@ internal sealed class RetroProposalService(
                 }
 
                 string edited = text.Replace(find, RetroDiff.FitLineEndings(text, change.Replace), StringComparison.Ordinal);
-                if (!TeamFile.TryParse(edited, out TeamFile? parsed))
-                {
-                    throw new InvalidOperationException($"The edit would leave {File} unreadable; nothing changed.");
-                }
-
-                // Defence in depth: a replacement that never names the keys can still change the level, by replacing only its value.
-                return parsed.NeedsYouLevel == current.NeedsYouLevel && parsed.SpendCap == current.SpendCap
+                return TeamFile.TryParse(edited, out TeamFile? parsed)
                     ? parsed
-                    : throw new InvalidOperationException(NeedsYouLevelText.RetroRefusal);
+                    : throw new InvalidOperationException($"The edit would leave {File} unreadable; nothing changed.");
             });
         }
         catch (InvalidOperationException ex)
@@ -290,11 +268,6 @@ internal sealed class RetroProposalService(
 
         if (refusal is not null)
         {
-            if (string.Equals(refusal, NeedsYouLevelText.RetroRefusal, StringComparison.Ordinal))
-            {
-                return this.RefusedNeedsYouLevel(set, change);
-            }
-
             return Refused(refusal);
         }
 

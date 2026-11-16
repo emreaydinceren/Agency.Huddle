@@ -1,7 +1,9 @@
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Feed;
+using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -36,17 +38,20 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
             ReadResult = new TeamFile(Type, null, null, null, string.Empty),
             TeamResult = LibraryResult<LibraryPath>.Ok(new LibraryPath(new LibraryRoot("teams", "Teams", this.dir.Path, LibraryRootKind.Teams), Team, this.dir.Path, LibraryNodeRole.TeamFolder)),
         };
-        this.Spend = new PersonaSpendStore(this.dir.Options());
         this.Feed = new RecordingFeedPublisher();
-        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Spend, this.Catalog, this.Feed);
+        this.Ids = new ScopeIdStore(this.dir.Options());
+        NeedsYouSpendStore ledger = new(this.dir.Options());
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, ledger, this.Feed);
         this.Store = new NeedsYouLevelStore(this.dir.Options());
         var options = this.dir.Options(configured => configured.NeedsYouLevel.Level = globalLevel ?? string.Empty);
-        this.Levels = new NeedsYouLevels(this.Catalog, this.Folders, this.Store, options, caps: this.Caps);
+        this.Levels = new NeedsYouLevels(this.Catalog, this.Store, this.Ids, new TaskScopeStore(this.dir.Options()), options, caps: this.Caps);
+        this.Spend = NeedsYouSpendWiring.Attach(new PersonaSpendStore(this.dir.Options()), ledger, this.Ids, this.Catalog, this.Levels);
 
         ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
         ctx.Services.AddSingleton<ITeamCatalog>(this.Catalog);
         ctx.Services.AddSingleton(options);
         ctx.Services.AddSingleton(this.Store);
+        ctx.Services.AddSingleton(this.Ids);
         ctx.Services.AddSingleton(this.Caps);
         ctx.Services.AddSingleton(this.Levels);
     }
@@ -56,18 +61,19 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
     /// and does not care about levels (the Process tab's gate tests): the stores live under <paramref name="dir"/>.
     /// </summary>
     /// <param name="ctx">The bUnit context to register on, before anything is rendered.</param>
-    /// <param name="folders">The folders the control reads the Team file from.</param>
     /// <param name="dir">The data folder the stores keep their database in.</param>
-    public static void AddTo(MudBunitContext ctx, ITeamFolders folders, TempDataDir dir)
+    public static void AddTo(MudBunitContext ctx, TempDataDir dir)
     {
         FakeTeamCatalog catalog = new();
         var options = dir.Options();
         NeedsYouLevelStore store = new(options);
-        NeedsYouCaps caps = new(new NeedsYouCapStore(options), new PersonaSpendStore(options), catalog, new RecordingFeedPublisher());
+        ScopeIdStore ids = new(options);
+        NeedsYouCaps caps = new(new NeedsYouCapStore(options), ids, new NeedsYouSpendStore(options), new RecordingFeedPublisher());
         ctx.Services.TryAddSingleton(options);
         ctx.Services.AddSingleton(store);
+        ctx.Services.AddSingleton(ids);
         ctx.Services.AddSingleton(caps);
-        ctx.Services.AddSingleton(new NeedsYouLevels(catalog, folders, store, options, caps: caps));
+        ctx.Services.AddSingleton(new NeedsYouLevels(catalog, store, ids, new TaskScopeStore(options), options, caps: caps));
     }
 
     /// <summary>The Team catalog.</summary>
@@ -76,13 +82,16 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
     /// <summary>The in-memory Team and Project files.</summary>
     public FakeTeamFolders Folders { get; }
 
-    /// <summary>The persisted spend the cap counts.</summary>
-    public PersonaSpendStore Spend { get; }
+    /// <summary>Where spend is recorded; the ledger the cap counts is charged from it.</summary>
+    public PersonaSpend Spend { get; }
 
     /// <summary>What the Feed was told.</summary>
     public RecordingFeedPublisher Feed { get; }
 
-    /// <summary>The global level Settings saved.</summary>
+    /// <summary>The ids the levels and caps are stored under.</summary>
+    public ScopeIdStore Ids { get; }
+
+    /// <summary>The levels the scopes set.</summary>
     public NeedsYouLevelStore Store { get; }
 
     /// <summary>The spend cap's counting and question.</summary>
@@ -99,7 +108,7 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
             throw new InvalidOperationException("The Team file could not be written.");
         }
 
-        this.Spend.Add("Nova", null, "USD", 5m);
+        this.Spend.Spent("Nova", 5m);
         if (!this.Levels.For(Team, null).CapReached)
         {
             throw new InvalidOperationException("The cap was not reached.");

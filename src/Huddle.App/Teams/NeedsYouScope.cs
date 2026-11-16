@@ -6,9 +6,9 @@ internal enum NeedsYouScope
     /// <summary>Settings: the <c>Team:NeedsYouLevel</c> configuration key, overridden by the value Settings saves.</summary>
     Global,
 
-    /// <summary>The <c>needsYouLevel</c> key of a Team's <c>_team.md</c>.</summary>
+    /// <summary>The level the Human set for a Team, kept in <c>team.db</c>.</summary>
     Team,
 
-    /// <summary>The <c>needsYouLevel</c> key of a Project's <c>_project.md</c>.</summary>
+    /// <summary>The level the Human set for a Project, kept in <c>team.db</c>.</summary>
     Project,
 }

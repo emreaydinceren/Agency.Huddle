@@ -1,7 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Feed;
@@ -22,9 +21,7 @@ public sealed class NeedsYouCapTests
 
     private const string AskMeText = "Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in the Action of the Task this merge belongs to with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.";
 
-    private static readonly VersionedRef Type = new("development", "1.0.0");
-
-    /// <summary>A catalog of Dev (Nova, Leo; Project Site) and Ops (Ivy), levels over an in-memory Team file, and the stores they count with.</summary>
+        /// <summary>A catalog of Dev (Nova, Leo; Project Site) and Ops (Ivy), levels over an in-memory Team file, and the stores they count with.</summary>
     private sealed class Rig : IDisposable
     {
         private readonly TempDataDir dir = new();
@@ -39,28 +36,38 @@ public sealed class NeedsYouCapTests
                     new TeamSummary("Ops", [], ["Ivy"], true),
                 ],
             };
-            this.Folders = new MemoryFolders { Team = new TeamFile(Type, null, null, null, string.Empty) };
-            this.Folders.Projects["Site"] = ProjectFile.Empty;
-            this.Spend = new PersonaSpendStore(this.dir.Options());
+            this.SpendStore = new PersonaSpendStore(this.dir.Options());
+            this.Ledger = new NeedsYouSpendStore(this.dir.Options());
             this.Feed = new RecordingFeedPublisher();
-            this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Spend, this.Catalog, this.Feed);
+            this.Ids = new ScopeIdStore(this.dir.Options());
+            this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Ledger, this.Feed);
             this.Levels = new NeedsYouLevels(
                 this.Catalog,
-                this.Folders,
                 new NeedsYouLevelStore(this.dir.Options()),
+                this.Ids,
+                new TaskScopeStore(this.dir.Options()),
                 this.dir.Options(options =>
                 {
                     options.NeedsYouLevel.Level = globalLevel ?? string.Empty;
                     options.NeedsYouLevel.SpendCap = globalCap;
                 }),
                 caps: this.Caps);
+            this.Spend = NeedsYouSpendWiring.Attach(this.SpendStore, this.Ledger, this.Ids, this.Catalog, this.Levels);
         }
 
         public FakeTeamCatalog Catalog { get; }
 
-        public MemoryFolders Folders { get; }
+        public ScopeIdStore Ids { get; }
 
-        public PersonaSpendStore Spend { get; }
+        public string TeamKey => NeedsYouCaps.TeamKey(this.Ids.TeamId(NeedsYouCapTests.Dev));
+
+        public string ProjectKey => NeedsYouCaps.ProjectKey(this.Ids.ProjectId(NeedsYouCapTests.Dev, "Site"));
+
+        public PersonaSpendStore SpendStore { get; }
+
+        public NeedsYouSpendStore Ledger { get; }
+
+        public PersonaSpend Spend { get; }
 
         public RecordingFeedPublisher Feed { get; }
 
@@ -70,7 +77,7 @@ public sealed class NeedsYouCapTests
 
         public EffectiveLevel Current => this.Levels.For(NeedsYouCapTests.Dev, null);
 
-        public void Spent(string persona, decimal amount, string currency = Usd) => this.Spend.Add(persona, null, currency, amount);
+        public void Spent(string persona, decimal amount, string currency = Usd) => this.Spend.Spent(persona, amount, currency);
 
         public void Dispose() => this.dir.Dispose();
     }
@@ -120,10 +127,10 @@ public sealed class NeedsYouCapTests
         FeedMessage post = Assert.Single(rig.Feed.Posts);
         Assert.Equal(FeedSourceType.SpendCapReached, post.SourceType);
         Assert.True(post.Notify);
-        Assert.Equal("team:Dev", post.TargetKey);
-        Assert.Equal(new SpendCapReachedPayload("team:Dev", Dev, 5m, AskText), post.Payload);
+        Assert.Equal(rig.TeamKey, post.TargetKey);
+        Assert.Equal(new SpendCapReachedPayload(rig.TeamKey, Dev, 5m, AskText), post.Payload);
         CapAsk ask = Assert.Single(rig.Caps.Pending);
-        Assert.Equal(new CapAsk("team:Dev", Dev, Dev, null, 5m, 5m), ask);
+        Assert.Equal(new CapAsk(rig.TeamKey, Dev, Dev, null, 5m, 5m), ask);
     }
 
     /// <summary>Yes grants exactly one more cap: Run inside the Team returns, the Notification resolves and the question comes back after another cap.</summary>
@@ -137,11 +144,11 @@ public sealed class NeedsYouCapTests
         int changed = 0;
         rig.Caps.Changed += () => changed++;
 
-        Assert.True(rig.Caps.Grant("team:Dev"));
+        Assert.True(rig.Caps.Grant(rig.TeamKey));
 
         Assert.Equal(1, changed);
         Assert.Empty(rig.Caps.Pending);
-        Assert.Equal(new FeedResolution("team:Dev", FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
+        Assert.Equal(new FeedResolution(rig.TeamKey, FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
         rig.Spent("Leo", 4.99m);
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
@@ -161,16 +168,16 @@ public sealed class NeedsYouCapTests
         rig.Spent("Nova", 5m);
         _ = rig.Current;
 
-        Assert.True(rig.Caps.Grant("team:Dev"));
-        Assert.False(rig.Caps.Grant("team:Dev"));
-        Assert.False(rig.Caps.Decline("team:Dev"));
+        Assert.True(rig.Caps.Grant(rig.TeamKey));
+        Assert.False(rig.Caps.Grant(rig.TeamKey));
+        Assert.False(rig.Caps.Decline(rig.TeamKey));
         Assert.False(rig.Caps.Grant("global"));
 
         rig.Spent("Nova", 5m);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
     }
 
-    /// <summary>No keeps the scope at Ask me, closes the question and does not ask again, until the Human sets the level again.</summary>
+    /// <summary>No keeps the scope at Ask me, closes the question and does not ask again, until the Human changes the level or the cap.</summary>
     [Fact]
     public void Decline_KeepsAskMeUntilTheHumanSetsTheLevelAgain()
     {
@@ -179,19 +186,19 @@ public sealed class NeedsYouCapTests
         rig.Spent("Nova", 5m);
         _ = rig.Current;
 
-        Assert.True(rig.Caps.Decline("team:Dev"));
+        Assert.True(rig.Caps.Decline(rig.TeamKey));
 
         Assert.Empty(rig.Caps.Pending);
-        Assert.Equal(new FeedResolution("team:Dev", FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
+        Assert.Equal(new FeedResolution(rig.TeamKey, FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
         rig.Spent("Nova", 20m);
         Assert.True(rig.Current.CapReached);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
         Assert.Single(rig.Feed.Posts);
 
-        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 6m);
 
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
-        rig.Spent("Nova", 5m);
+        rig.Spent("Nova", 6m);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
         Assert.Equal(2, rig.Feed.Posts.Count);
     }
@@ -212,6 +219,69 @@ public sealed class NeedsYouCapTests
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
         rig.Spent("Nova", 0.5m);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
+    }
+
+    /// <summary>A member who leaves the Team does not lower what the Team has spent: the cap is reached at the same total as if they had stayed.</summary>
+    [Fact]
+    public void Counting_MemberLeavesTheTeam_SpendStaysCounted()
+    {
+        using Rig rig = new();
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        rig.Spent("Nova", 4m);
+        rig.Catalog.Teams = [new TeamSummary(Dev, ["Site"], ["Leo"], true), new TeamSummary("Ops", [], ["Ivy"], true)];
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
+
+        rig.Spent("Leo", 1m);
+
+        Assert.True(rig.Current.CapReached);
+        Assert.Equal(5m, rig.Ledger.Get(rig.TeamKey));
+    }
+
+    /// <summary>Spend a Persona recorded before it joined the Team is not counted for that Team, and what it spends after joining is.</summary>
+    [Fact]
+    public void Counting_MemberJoinsTheTeam_EarlierSpendIsNotCounted()
+    {
+        using Rig rig = new();
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        rig.Spent("Ivy", 50m);
+        rig.Catalog.Teams = [new TeamSummary(Dev, ["Site"], ["Nova", "Leo", "Ivy"], true), new TeamSummary("Ops", [], ["Ivy"], true)];
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
+        Assert.Equal(0m, rig.Ledger.Get(rig.TeamKey));
+
+        rig.Spent("Ivy", 5m);
+
+        Assert.True(rig.Current.CapReached);
+    }
+
+    /// <summary>Renaming the Team keeps what it has spent, so the cap is reached at the same total.</summary>
+    [Fact]
+    public void Counting_TeamRenamed_KeepsTheCount()
+    {
+        using Rig rig = new();
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        string teamKey = rig.TeamKey;
+        rig.Spent("Nova", 3m);
+        rig.Ids.RenameTeam(Dev, "Build");
+        rig.Catalog.Teams = [new TeamSummary("Build", ["Site"], ["Nova", "Leo"], true), new TeamSummary("Ops", [], ["Ivy"], true)];
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Levels.For("Build", null).Level);
+
+        rig.Spent("Leo", 2m);
+
+        Assert.True(rig.Levels.For("Build", null).CapReached);
+        Assert.Equal(5m, rig.Ledger.Get(teamKey));
+    }
+
+    /// <summary>A report in another currency adds nothing to any scope, and the currency compares ignoring case.</summary>
+    [Fact]
+    public void Counting_OtherCurrency_IsNotCounted()
+    {
+        using Rig rig = new();
+
+        rig.Spent("Nova", 500m, "EUR");
+        rig.Spent("Nova", 2m, "usd");
+
+        Assert.Equal(2m, rig.Ledger.Get(rig.TeamKey));
+        Assert.Equal(2m, rig.Ledger.Get(NeedsYouCaps.GlobalKey));
     }
 
     /// <summary>The global scope counts every Persona, whichever Team it is in.</summary>
@@ -249,23 +319,74 @@ public sealed class NeedsYouCapTests
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
     }
 
-    /// <summary>A cap edited by hand in the file starts a fresh count at the spend of that moment.</summary>
+    /// <summary>Saving a different cap starts a fresh count at the spend of that moment and cancels the open question.</summary>
     [Fact]
-    public void For_CapEditedByHand_RestartsTheCount()
+    public void SetTeam_ChangedCap_RestartsTheCountAndCancelsTheQuestion()
     {
         using Rig rig = new();
         _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
         rig.Spent("Nova", 5m);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
 
-        rig.Folders.Team = rig.Folders.Team! with { SpendCap = 8m };
+        Assert.True(rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 8m));
 
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
         Assert.Empty(rig.Caps.Pending);
-        Assert.Equal(new FeedResolution("team:Dev", FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
+        Assert.Equal(new FeedResolution(rig.TeamKey, FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
         rig.Spent("Nova", 8m);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
     }
+
+    /// <summary>
+    /// Saving the same level and cap again starts nothing over: spend added between the two saves still counts toward the cap, so the cap is
+    /// reached at the same total, and an open question stays open.
+    /// </summary>
+    [Fact]
+    public void SetTeam_SameLevelAndCapTwice_DoesNotRestartTheCount()
+    {
+        using Rig rig = new();
+        Assert.True(rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m));
+        rig.Spent("Nova", 3m);
+
+        Assert.True(rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m));
+
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
+        rig.Spent("Nova", 2m);
+        Assert.Equal(new EffectiveLevel(NeedsYouLevel.AskMe, NeedsYouScope.Team, Dev, 5m, CapReached: true), rig.Current);
+    }
+
+    /// <summary>Saving the same level and cap while the cap question is open leaves the question open and resolves nothing in the Feed.</summary>
+    [Fact]
+    public void SetTeam_SameLevelAndCapWhileAsking_KeepsTheQuestionOpen()
+    {
+        using Rig rig = new();
+        Assert.True(rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m));
+        rig.Spent("Nova", 5m);
+        _ = rig.Current;
+        Assert.Single(rig.Caps.Pending);
+
+        Assert.True(rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m));
+        Assert.True(rig.Levels.SetProject(Dev, "Site", null, null));
+
+        Assert.Single(rig.Caps.Pending);
+        Assert.Empty(rig.Feed.Resolutions);
+        Assert.True(rig.Current.CapReached);
+    }
+
+    /// <summary>The same holds for the global scope: saving it unchanged does not restart its count.</summary>
+    [Fact]
+    public void SetGlobal_SameLevelAndCapTwice_DoesNotRestartTheCount()
+    {
+        using Rig rig = new();
+        rig.Levels.SetGlobal(NeedsYouLevel.RunInsideTheTeam, 5m);
+        rig.Spent("Ivy", 4m);
+
+        rig.Levels.SetGlobal(NeedsYouLevel.RunInsideTheTeam, 5m);
+        rig.Spent("Ivy", 1m);
+
+        Assert.True(rig.Current.CapReached);
+    }
+
 
     /// <summary>A scope read for the first time with a cap and no row starts counting then, not from zero.</summary>
     [Fact]
@@ -293,7 +414,7 @@ public sealed class NeedsYouCapTests
         _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.AskMe, 5m);
 
         Assert.Empty(rig.Caps.Pending);
-        Assert.Equal(new FeedResolution("team:Dev", FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
+        Assert.Equal(new FeedResolution(rig.TeamKey, FeedSourceType.SpendCapReached), Assert.Single(rig.Feed.Resolutions));
         Assert.False(rig.Current.CapReached);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
     }
@@ -312,7 +433,7 @@ public sealed class NeedsYouCapTests
         Assert.Equal(NeedsYouScope.Project, project.Scope);
         Assert.Equal("Dev / Site has spent 2.00 USD running inside the Team, its cap. Let it spend another 2.00 USD?", Assert.IsType<SpendCapReachedPayload>(Assert.Single(rig.Feed.Posts).Payload).Message);
         CapAsk ask = Assert.Single(rig.Caps.Pending);
-        Assert.Equal(("project:Dev/Site", Dev, "Site"), (ask.Scope, ask.Team, ask.Project));
+        Assert.Equal((rig.ProjectKey, Dev, "Site"), (ask.Scope, ask.Team, ask.Project));
         Assert.Equal(NeedsYouLevel.AskMe, rig.Levels.For(Dev, "Site").Level);
     }
 
@@ -323,8 +444,8 @@ public sealed class NeedsYouCapTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Rig rig = new();
         _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
-        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.Spend);
-        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog);
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.SpendStore);
+        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog, rig.Ledger, rig.Ids);
         await watcher.StartAsync(ct);
 
         spend.Add("Nova", "session-1", 5m, Usd);
@@ -343,57 +464,15 @@ public sealed class NeedsYouCapTests
         TaskItem first = rig.CreateInReview();
         _ = rig.AddEvidence(first);
         Assert.Single(rig.Releases(first));
-        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/x"));
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-x"));
 
-        rig.Spend.Add("Nova", null, Usd, 5m);
+        rig.Spend.Spent("Nova", 5m);
         TaskItem second = rig.CreateInReview();
         _ = rig.AddEvidence(second);
 
         Assert.Equal(TaskState.NeedsYou, rig.Read(second).Status);
         Assert.Empty(rig.Releases(second));
-        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", "git merge feat/x"));
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-x"));
         Assert.Single(rig.Feed.Posts, static post => post.SourceType == FeedSourceType.SpendCapReached);
-    }
-
-    /// <summary>An in-memory <see cref="ITeamFolders"/> holding one Team file and Project files by name.</summary>
-    private sealed class MemoryFolders : ITeamFolders
-    {
-        public TeamFile? Team { get; set; }
-
-        public Dictionary<string, ProjectFile> Projects { get; } = new(StringComparer.OrdinalIgnoreCase);
-
-        public LibraryResult<LibraryPath> EnsureTeam(string name) => throw new NotSupportedException();
-
-        public LibraryResult<LibraryPath> FindTeam(string name) => throw new NotSupportedException();
-
-        public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project) => throw new NotSupportedException();
-
-        public TeamCreateResult CreateTeam(string team, TeamFile file, bool leaveExistingAlone = false) => throw new NotSupportedException();
-
-        public bool UpdateTeamFile(string team, Func<TeamFile, TeamFile> change)
-        {
-            if (this.Team is null)
-            {
-                return false;
-            }
-
-            this.Team = change(this.Team);
-            return true;
-        }
-
-        public TeamFile? ReadTeamFile(string team) => this.Team;
-
-        public ProjectFile? ReadProjectFile(string team, string project) => this.Projects.GetValueOrDefault(project);
-
-        public bool UpdateProjectFile(string team, string project, Func<ProjectFile, ProjectFile> change)
-        {
-            if (!this.Projects.TryGetValue(project, out ProjectFile? current))
-            {
-                return false;
-            }
-
-            this.Projects[project] = change(current);
-            return true;
-        }
     }
 }

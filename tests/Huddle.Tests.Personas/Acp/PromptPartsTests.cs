@@ -297,7 +297,7 @@ public sealed class PromptPartsTests
         Assert.DoesNotContain(parts, IsWorkspacePart);
     }
 
-    /// <summary>The Needs You scopes given are listed one line each under the prompt's heading, with the guidance sentence, and no placeholder is left open.</summary>
+    /// <summary>The Needs You scopes given are listed one line each under the prompt's heading, with the guidance sentences (including that a level may change while the Agent works and the gate checks it at every merge), and no placeholder is left open.</summary>
     [Fact]
     public void ComposeParts_NeedsYouScopes_ListsEachScopeWithItsLevel()
     {
@@ -311,7 +311,7 @@ public sealed class PromptPartsTests
             "Needs You level (what waits for the Human):",
             "- Dev Team: Ask me",
             "- Dev Team › Lib: Run inside the Team",
-            "Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review and its assignee merges it into the local main. A push, and any step that leaves the Team, still goes in the Task's Action.");
+            "Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still waits for the Human. Every push waits for the Human at every level, so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.");
         Assert.Equal(expected, part.Text);
     }
 

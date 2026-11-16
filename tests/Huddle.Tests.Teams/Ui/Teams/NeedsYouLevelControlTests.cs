@@ -61,9 +61,9 @@ public sealed class NeedsYouLevelControlTests
         Assert.Equal("Inherit", cut.Find(".needs-you-level-choice .mud-toggle-item.huddle-segmented-active-item").TextContent.Trim());
     }
 
-    /// <summary>Choosing Run inside the Team with a cap and pressing Save writes both to the Team file and shows the level in force.</summary>
+    /// <summary>Choosing Run inside the Team with a cap and pressing Save saves both in team.db and shows the level in force.</summary>
     [Fact]
-    public async Task Team_ChooseRunWithCap_SaveWritesTheTeamFile()
+    public async Task Team_ChooseRunWithCap_SaveStoresLevelAndCap()
     {
         await using MudBunitContext ctx = new();
         using NeedsYouLevelUiRig rig = new(ctx);
@@ -73,9 +73,11 @@ public sealed class NeedsYouLevelControlTests
         await TypeCapAsync(cut, "5");
         await SaveAsync(cut);
 
-        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Folders.ReadResult?.NeedsYouLevel);
-        Assert.Equal(5m, rig.Folders.ReadResult?.SpendCap);
+        Assert.Equal((NeedsYouLevel.RunInsideTheTeam, 5m), rig.Levels.Own(NeedsYouLevelUiRig.Team, null));
+        Assert.Equal(new SavedNeedsYouLevel(NeedsYouLevel.RunInsideTheTeam, 5m), rig.Store.Get(NeedsYouCaps.TeamKey(rig.Ids.TeamId(NeedsYouLevelUiRig.Team))));
         cut.WaitForAssertion(() => Assert.Equal("In force: Run inside the Team.", Effective(cut)));
+        Assert.Equal("Run inside the Team", cut.Find(".needs-you-level-choice .mud-toggle-item.huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("5", cut.Find(".needs-you-level-cap input").GetAttribute("value"));
     }
 
     /// <summary>A cap that is not a number above zero is refused under the field and nothing is written.</summary>
@@ -94,8 +96,8 @@ public sealed class NeedsYouLevelControlTests
         await SaveAsync(cut);
 
         Assert.Equal("Enter an amount above 0, such as 5 or 2.50, or leave it empty for no cap.", cut.Find(".needs-you-level-cap .mud-input-helper-text").TextContent.Trim());
-        Assert.DoesNotContain("UpdateTeamFile:Dev", rig.Folders.Calls);
-        Assert.Null(rig.Folders.ReadResult?.NeedsYouLevel);
+        Assert.Equal((null, null), rig.Levels.Own(NeedsYouLevelUiRig.Team, null));
+        Assert.Null(rig.Ids.FindTeamId(NeedsYouLevelUiRig.Team));
     }
 
     /// <summary>Choosing Inherit again clears the Team's own level and cap.</summary>
@@ -110,14 +112,13 @@ public sealed class NeedsYouLevelControlTests
         await cut.InvokeAsync(() => ChooseAsync(cut, "Inherit"));
         await SaveAsync(cut);
 
-        Assert.Null(rig.Folders.ReadResult?.NeedsYouLevel);
-        Assert.Null(rig.Folders.ReadResult?.SpendCap);
+        Assert.Equal((null, null), rig.Levels.Own(NeedsYouLevelUiRig.Team, null));
         cut.WaitForAssertion(() => Assert.Equal("Inherits Ask me from Settings.", Effective(cut)));
     }
 
-    /// <summary>A Project that sets nothing shows the level it inherits from its Team, and saving writes the Project file.</summary>
+    /// <summary>A Project that sets nothing shows the level it inherits from its Team, and saving stores the Project's own level.</summary>
     [Fact]
-    public async Task Project_InheritsTheTeamLevel_AndSavesToTheProjectFile()
+    public async Task Project_InheritsTheTeamLevel_AndSavesItsOwn()
     {
         await using MudBunitContext ctx = new();
         using NeedsYouLevelUiRig rig = new(ctx);
@@ -128,7 +129,7 @@ public sealed class NeedsYouLevelControlTests
         await cut.InvokeAsync(() => ChooseAsync(cut, "Ask me"));
         await SaveAsync(cut);
 
-        Assert.Equal(NeedsYouLevel.AskMe, rig.Folders.ProjectFiles[NeedsYouLevelUiRig.Project].NeedsYouLevel);
+        Assert.Equal((NeedsYouLevel.AskMe, (decimal?)null), rig.Levels.Own(NeedsYouLevelUiRig.Team, NeedsYouLevelUiRig.Project));
         cut.WaitForAssertion(() => Assert.Equal("In force: Ask me.", Effective(cut)));
     }
 
@@ -144,7 +145,7 @@ public sealed class NeedsYouLevelControlTests
         await TypeCapAsync(cut, "2.5");
         await SaveAsync(cut);
 
-        SavedNeedsYouLevel? saved = rig.Store.Get();
+        SavedNeedsYouLevel? saved = rig.Store.Get(NeedsYouCaps.GlobalKey);
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, saved?.Level);
         Assert.Equal(2.5m, saved?.SpendCap);
     }
@@ -160,7 +161,7 @@ public sealed class NeedsYouLevelControlTests
         await cut.InvokeAsync(() => ChooseAsync(cut, Run));
 
         Assert.Equal(
-            "Run inside the Team: a local merge into main, a Sprint and new Backlog Tasks go ahead without you. Any push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.",
+            "Run inside the Team: a local merge into main of a Task's own branch once its Proof is complete, a Sprint and new Backlog Tasks go ahead without you. Every push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.",
             cut.Find(".needs-you-level-note").TextContent.Trim());
         Assert.Equal("When the Team has spent this much running inside the Team, it asks you before going on.", cut.Find(".needs-you-level-cap .mud-input-helper-text").TextContent.Trim());
     }

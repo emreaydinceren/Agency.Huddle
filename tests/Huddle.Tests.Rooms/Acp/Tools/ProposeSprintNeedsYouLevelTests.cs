@@ -8,7 +8,6 @@ using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Feed;
 using Agency.Huddle.Tests.Tasks;
 using Agency.Huddle.Tests.Teams;
-using Agency.Huddle.Tests.Ui.Teams;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -56,8 +55,23 @@ public sealed class ProposeSprintNeedsYouLevelTests
         Assert.Equal("proceeded under project level Run inside the Team: Sprint 'Launch' approved without the Human", Assert.Single(projectTask.ChangeLog, static entry => NeedsYouRelease.IsSprintApproval(entry.Summary)).Summary);
         FeedMessage post = Assert.Single(rig.Feed.Posts, static message => message.SourceType == FeedSourceType.SprintProceeded);
         Assert.False(post.Notify);
-        Assert.Equal(new SprintProceededPayload("Launch", "Platform", "Team", 2), post.Payload);
+        Assert.Equal(new SprintProceededPayload("Launch", "Platform", "Team and project", 2), post.Payload);
         Assert.DoesNotContain(rig.Feed.Posts, static message => message.SourceType == FeedSourceType.TaskProceeded);
+    }
+
+    /// <summary>Tasks that all take their level from the same scope: the Feed item names that one scope, as before.</summary>
+    [Fact]
+    public async Task InvokeAsync_EveryTaskSharesOneScope_FeedNamesThatScope()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct, teamLevel: NeedsYouLevel.RunInsideTheTeam);
+        rig.Put("PLAT-0001", null);
+        rig.Put("PLAT-0002", null);
+
+        _ = await rig.Tool.InvokeAsync(Arguments("Launch", "PLAT-0001", "PLAT-0002"), ct);
+
+        FeedMessage post = Assert.Single(rig.Feed.Posts, static message => message.SourceType == FeedSourceType.SprintProceeded);
+        Assert.Equal(new SprintProceededPayload("Launch", "Platform", "Team", 2), post.Payload);
     }
 
     /// <summary>One Task under Ask me: exactly today's behaviour, the proposal waits, nothing is created or written and nothing is posted.</summary>
@@ -163,27 +177,21 @@ public sealed class ProposeSprintNeedsYouLevelTests
     private sealed class Rig : IDisposable
     {
         private readonly TempDataDir levelDir = new();
+        private readonly NeedsYouLevels levels;
 
         private Rig(TaskToolHarness harness, NeedsYouLevel? teamLevel, NeedsYouLevel? siteLevel, bool wireApprover)
         {
             this.Harness = harness;
             this.Feed = new RecordingFeedPublisher();
             this.Proposals = new SprintProposalStore(new DiskTeamFolders(Path.Combine(harness.Options.Value.DataDir, "platform-folder")));
-            FakeTeamFolders folders = new()
-            {
-                ReadResult = new TeamFile(new VersionedRef("web", "1.2.0"), null, null, null, string.Empty) with { NeedsYouLevel = teamLevel },
-            };
-            if (siteLevel is { } level)
-            {
-                folders.ProjectFiles[Site] = ProjectFile.Empty with { NeedsYouLevel = level };
-            }
-
             FakeTeamCatalog catalog = new()
             {
                 Teams = [new TeamSummary("Platform", [Site], ["Nova", "Kai"], true) { Manager = "Nova" }],
             };
-            NeedsYouLevels levels = new(catalog, folders, new NeedsYouLevelStore(this.levelDir.Options()), this.levelDir.Options());
-            this.Approver = new SprintApprover((SprintStore)harness.Sprints, harness.Service, harness.Store, levels, this.Feed);
+            this.levels = new(catalog, new NeedsYouLevelStore(this.levelDir.Options()), new ScopeIdStore(this.levelDir.Options()), new TaskScopeStore(this.levelDir.Options()), this.levelDir.Options());
+            _ = this.levels.SetTeam("Platform", teamLevel, null);
+            _ = this.levels.SetProject("Platform", Site, siteLevel, null);
+            this.Approver = new SprintApprover((SprintStore)harness.Sprints, harness.Service, harness.Store, this.levels, this.Feed);
             this.Tool = new ProposeSprintTool(
                 harness.Store,
                 harness.Sprints,
@@ -214,6 +222,7 @@ public sealed class ProposeSprintNeedsYouLevelTests
             TaskItem toWrite = task with { Path = TaskLayout.PathFor(this.Harness.Store.RootDirectory, task.Location, task.Id) };
             _ = this.Harness.Store.Create(toWrite, TaskFileFormat.Compose(toWrite))
                 ?? throw new InvalidOperationException("Fixture collided with an existing file.");
+            this.levels.Place(toWrite);
         }
 
         public TaskItem Read(string id) =>

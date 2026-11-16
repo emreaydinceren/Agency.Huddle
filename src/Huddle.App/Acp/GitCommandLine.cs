@@ -8,7 +8,8 @@ namespace Agency.Huddle.App.Acp;
 /// sends to the gate and what <see cref="Teams.ProcessMergeGate"/> holds for the Human's Accept. It skips leading
 /// <c>NAME=value</c> words, unwraps <c>bash -c</c>, <c>sh -c</c>, <c>pwsh -Command</c> and <c>cmd /c</c>, and drops
 /// redirections (<c>2&gt;&amp;1</c>), so a spelling around the command does not hide it. It is a guard against an Agent's
-/// ordinary mistake, not a sandbox: aliases, scripts, <c>$(…)</c> and backslash escapes still pass.
+/// ordinary mistake, not a sandbox: an alias given with <c>-c alias.x=push</c> or set with <c>git config alias.x push</c> counts as a
+/// push, but aliases already in a git config, scripts, <c>$(…)</c> and backslash escapes still pass.
 /// </summary>
 internal static partial class GitCommandLine
 {
@@ -58,6 +59,17 @@ internal static partial class GitCommandLine
         /// <summary>Whether the command is a <c>git merge</c> or <c>git pull</c> that puts work on main (see <see cref="WouldPutWorkOnMain"/>), which stays in the local repository.</summary>
         internal bool MergesLocallyIntoMain => this.Subcommand is "merge" or "pull" && this.WouldPutWorkOnMain;
 
+        /// <summary>
+        /// The words a local merge or pull puts on main: for a merge the positional words that are not main (a <c>-</c> or a SHA included), for a
+        /// pull those after the remote. Empty for any other command.
+        /// </summary>
+        internal IReadOnlyList<string> BranchesIntoMain => this.Subcommand switch
+        {
+            "merge" => [.. this.Args.Where(static arg => !IsMainBranch(arg))],
+            "pull" => [.. this.Args.Skip(1).Select(static arg => arg.TrimStart('+')).Where(static arg => !IsMainBranch(arg))],
+            _ => [],
+        };
+
         private bool PushesToMain() =>
             this.Args.Contains("--all", StringComparer.Ordinal)
             || this.Args.Contains("--mirror", StringComparer.Ordinal)
@@ -94,6 +106,14 @@ internal static partial class GitCommandLine
         List<Call> calls = Parse(command);
         return calls.Exists(static call => call.MergesLocallyIntoMain) && !calls.Exists(static call => call.PushesWork);
     }
+
+    /// <summary>
+    /// Every branch the line's local merges and pulls put on main, in order. A line that has no such command, or that also pushes, has none
+    /// that matter: the caller checks <see cref="OnlyLocalMergesIntoMain"/> first.
+    /// </summary>
+    /// <param name="command">The shell line.</param>
+    internal static List<string> BranchesMergedIntoMain(string command) =>
+        [.. Parse(command).Where(static call => call.MergesLocallyIntoMain).SelectMany(static call => call.BranchesIntoMain)];
 
     /// <summary>Whether the name is main or master, local or on origin.</summary>
     /// <param name="name">The branch name as typed.</param>
@@ -260,8 +280,14 @@ internal static partial class GitCommandLine
         }
 
         int index = 1;
+        Dictionary<string, string> aliases = new(StringComparer.OrdinalIgnoreCase);
         while (index < words.Count && words[index].StartsWith('-') && words[index] != "-")
         {
+            if (words[index] == "-c" && index + 1 < words.Count && AliasDefinition().Match(words[index + 1]) is { Success: true } definition)
+            {
+                aliases[definition.Groups["name"].Value] = definition.Groups["value"].Value;
+            }
+
             index += GitOptionsWithValue.Contains(words[index], StringComparer.Ordinal) ? 2 : 1;
         }
 
@@ -271,7 +297,33 @@ internal static partial class GitCommandLine
         }
 
         string subcommand = words[index].ToLowerInvariant();
-        return new Call(subcommand, Positional(words, index + 1, subcommand));
+        if (aliases.TryGetValue(words[index], out string? aliasValue) && AliasRunsPush(aliasValue))
+        {
+            subcommand = "push";
+        }
+
+        List<string> args = Positional(words, index + 1, subcommand);
+        return subcommand == "config" && SetsPushAlias(args) ? new Call("push", []) : new Call(subcommand, args);
+    }
+
+    /// <summary>Whether a <c>git -c alias.x=…</c> value runs a push: its first word is <c>push</c>, or it is a shell alias (<c>!</c>) that has the word <c>push</c>.</summary>
+    private static bool AliasRunsPush(string value)
+    {
+        string text = value.Trim();
+        if (text.StartsWith('!'))
+        {
+            return PushWord().IsMatch(text);
+        }
+
+        int end = text.IndexOf(' ', StringComparison.Ordinal);
+        return string.Equals(end < 0 ? text : text[..end], "push", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>Whether the positional words of <c>git config</c> set an alias whose value has the word <c>push</c> (<c>alias.p push</c>).</summary>
+    private static bool SetsPushAlias(List<string> args)
+    {
+        int name = args.FindIndex(static arg => arg.StartsWith("alias.", StringComparison.OrdinalIgnoreCase));
+        return name >= 0 && name + 1 < args.Count && PushWord().IsMatch(args[name + 1]);
     }
 
     private static List<string> Positional(List<string> words, int from, string subcommand)
@@ -298,6 +350,12 @@ internal static partial class GitCommandLine
 
         return args;
     }
+
+    [GeneratedRegex(@"^alias\.(?<name>[^=]+)=(?<value>.*)$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+    private static partial Regex AliasDefinition();
+
+    [GeneratedRegex(@"(?<![\w-])push(?![\w-])", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex PushWord();
 
     [GeneratedRegex(@"^\d*[<>]+$", RegexOptions.CultureInvariant)]
     private static partial Regex RedirectionOnly();

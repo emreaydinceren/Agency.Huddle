@@ -97,7 +97,7 @@ public sealed class NeedsHumanPromptTests
         string rendered = new FakePromptSource().Render("helper.needsHuman.task", values);
 
         Assert.EndsWith(
-            "</description>\n\nThe human set this task's project to run inside the team: a merge into the team's local main stays inside the team and does not need the human. A push to any remote still does, and so does everything else listed.",
+            "</description>\n\nThe human set this task's project to run inside the team: a merge into the team's local main of a branch named after this task's id stays inside the team and does not need the human. Every push to any remote still does, and so does everything else listed.",
             rendered);
     }
 

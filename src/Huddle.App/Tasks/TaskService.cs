@@ -1197,6 +1197,7 @@ internal sealed class TaskService : IDisposable
             throw new InvalidOperationException(string.Create(CultureInfo.InvariantCulture, $"Task '{id}' already exists."));
         }
 
+        this.levels?.Place(written);
         TaskChange change = new(null, written, [], actor, entry);
         return (new TaskResult.Saved(written, change), change);
     }
@@ -1343,6 +1344,12 @@ internal sealed class TaskService : IDisposable
         if (written is null)
         {
             return (new TaskResult.Conflict(this.store.Get(current.Id) ?? current, []), null);
+        }
+
+        if (moved && actor.Kind == TaskActorKind.Human)
+        {
+            // Only the Human's move changes the scope that governs the Task's Needs You level; an Agent's never does (issue #602).
+            this.levels?.Place(written);
         }
 
         TaskChange change = new(current, written, diff, actor, entry, Reason: resolvedPatch.Reason);

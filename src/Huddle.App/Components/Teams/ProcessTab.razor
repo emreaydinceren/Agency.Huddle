@@ -17,10 +17,7 @@
     <section class="process-tab-level" aria-label="Needs You level">
         <div class="group-label">Needs You level</div>
         <NeedsYouLevelControl Team="@this.Team" />
-        @if (this.gates.Contains(GateId.AcceptBeforeMerge))
-        {
-            <MudText Typo="Typo.caption" Class="process-tab-gate-note">This Team asks before a merge into main. The level above decides what that waits for.</MudText>
-        }
+        <MudText Typo="Typo.caption" Class="process-tab-gate-note">A merge into main and every push wait for your Accept. The level above decides which merges wait.</MudText>
     </section>
     @if (this.text is null && this.gates.Count == 0)
     {

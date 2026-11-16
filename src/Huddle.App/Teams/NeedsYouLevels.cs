@@ -1,5 +1,4 @@
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Microsoft.Data.Sqlite;
@@ -9,24 +8,24 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Resolves the Needs You level that applies to a Team, a Project or a Task, and lets the Human set it (ADR-0088). The most specific scope
-/// that sets a level wins: the Project's <c>_project.md</c>, else the Team's <c>_team.md</c>, else the global value (the one Settings saved
-/// in <c>team.db</c>, else <c>Team:NeedsYouLevel</c>). The spend cap of the scope that supplied the level comes with it.
+/// that sets a level wins: the Project's, else the Team's, else the global value (the one Settings saved, else <c>Team:NeedsYouLevel</c>).
+/// The spend cap of the scope that supplied the level comes with it. Every scope's level and cap live in <c>team.db</c> under the scope's id
+/// (<see cref="ScopeIdStore"/>), so a rename keeps them and no file an Agent can write holds them.
 /// </summary>
-/// <remarks>
-/// Only the Human sets a level: the setters here are for the Settings, Team and Project pages, and no Agent tool calls them. An Agent's
-/// write of the files is refused by <c>NeedsYouLevelGuard</c>. A read is a plain file read on every call, as <see cref="ProcessGateService"/>'s is.
-/// </remarks>
+/// <remarks>Only the Human sets a level: the setters here are for the Settings, Team and Project pages, and no Agent tool calls them.</remarks>
 /// <param name="teams">Finds a Team by name, ignoring case.</param>
-/// <param name="folders">Reads and rewrites <c>_team.md</c> and <c>_project.md</c>.</param>
-/// <param name="store">Holds the global level Settings saved.</param>
+/// <param name="store">Holds each scope's level and cap.</param>
+/// <param name="ids">Maps a Team or Project name to the id its scope is stored under.</param>
+/// <param name="taskScopes">Holds the scope Huddle placed each Task in, which a Task's level is also read from.</param>
 /// <param name="options">Holds the configured global level.</param>
 /// <param name="logger">Logs a store that could not be read; optional.</param>
 /// <param name="renames">Resolves a Team's or Project's old name to today's; optional.</param>
 /// <param name="caps">Counts spend against a cap; without it a cap bounds nothing. Optional.</param>
 internal sealed class NeedsYouLevels(
     ITeamCatalog teams,
-    ITeamFolders folders,
     NeedsYouLevelStore store,
+    ScopeIdStore ids,
+    TaskScopeStore taskScopes,
     IOptions<TeamOptions> options,
     ILogger<NeedsYouLevels>? logger = null,
     ITeamRenames? renames = null,
@@ -35,14 +34,76 @@ internal sealed class NeedsYouLevels(
     /// <summary>Raised after the Human changed a level or cap, so a page can repaint. A subscriber that throws is logged and does not stop the others.</summary>
     public event Action? Changed;
 
-    /// <summary>The level that applies to a Task: its Project's, else its Team's, else the global one.</summary>
-    /// <param name="task">The Task; its folder is its scope.</param>
-    /// <returns>The level, the scope that supplied it and that scope's cap.</returns>
+    /// <summary>
+    /// The level that applies to a Task: the stricter of the level of the scope Huddle placed it in (where it was created or the Human last
+    /// moved it, issue #602) and the level of the folder it sits in now. Ask me is stricter than Run inside the Team. A Task Huddle never
+    /// placed, such as a file written by a shell, is under Ask me, and so is one whose recorded Team or Project no longer exists.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <returns>The level, the scope that supplied it and that scope's cap; the folder's when both are Run inside the Team.</returns>
     public EffectiveLevel ForTask(TaskItem task)
     {
         ArgumentNullException.ThrowIfNull(task);
-        return this.For(task.Location.Team, task.Location.Project);
+        EffectiveLevel folder = this.For(task.Location.Team, task.Location.Project);
+        if (folder.Level == NeedsYouLevel.AskMe)
+        {
+            return folder;
+        }
+
+        EffectiveLevel? placed = this.Placed(task);
+        if (placed is null)
+        {
+            return folder with { Level = NeedsYouLevel.AskMe };
+        }
+
+        return placed.Level == NeedsYouLevel.AskMe ? placed : folder;
     }
+
+    /// <summary>Records the scope a Task sits in now as the one that governs its level: called when Huddle creates the Task and when the Human moves it.</summary>
+    /// <param name="task">The Task as just written.</param>
+    public void Place(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        try
+        {
+            string team = this.TeamNameOf(task.Location.Team);
+            string teamId = ids.TeamId(team);
+            string? projectId = string.IsNullOrWhiteSpace(task.Location.Project) ? null : ids.ProjectId(team, task.Location.Project);
+            taskScopes.Set(task.Id.ToString(), teamId, projectId);
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The scope of Task {TaskId} could not be recorded; it stays under Ask me.", task.Id.ToString());
+        }
+    }
+
+    /// <summary>The level of the scope a Task was placed in, or <see langword="null"/> when Huddle never placed it. A scope that no longer resolves is Ask me.</summary>
+    private EffectiveLevel? Placed(TaskItem task)
+    {
+        try
+        {
+            if (taskScopes.Get(task.Id.ToString()) is not { } placement)
+            {
+                return null;
+            }
+
+            string? team = ids.TeamNameOf(placement.TeamId);
+            if (placement.ProjectId is null)
+            {
+                return team is null ? AskMeAnywhere : this.For(team, null);
+            }
+
+            return ids.ProjectNamesOf(placement.ProjectId) is { } names ? this.For(names.Team, names.Project) : AskMeAnywhere;
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The scope of Task {TaskId} could not be read; it falls back to Ask me.", task.Id.ToString());
+            return AskMeAnywhere;
+        }
+    }
+
+    private static EffectiveLevel AskMeAnywhere { get; } = new(NeedsYouLevel.AskMe, NeedsYouScope.Global, null, null);
 
     /// <summary>The level that applies to a Team, or to one of its Projects.</summary>
     /// <param name="team">The Team's name; an old name still works.</param>
@@ -54,25 +115,58 @@ internal sealed class NeedsYouLevels(
         return this.WithinCap(this.Resolve(team, project), this.TeamNameOf(team));
     }
 
+    /// <summary>The level and cap a scope itself sets, not what it inherits.</summary>
+    /// <param name="team">The Team's name, or <see langword="null"/> or blank for the global scope.</param>
+    /// <param name="project">The Project's name, or <see langword="null"/> or blank for the Team's own scope.</param>
+    /// <returns>The pair; the level is <see langword="null"/> when the Team or Project sets none. The global scope always has one.</returns>
+    public (NeedsYouLevel? Level, decimal? Cap) Own(string? team, string? project)
+    {
+        if (string.IsNullOrWhiteSpace(team))
+        {
+            EffectiveLevel global = this.Global();
+            return (global.Level, global.SpendCap);
+        }
+
+        try
+        {
+            return this.FindKey(team, project) is { } key && store.Get(key) is { } saved ? (saved.Level, saved.SpendCap) : (null, null);
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The Needs You level of a scope could not be read; it shows as unset.");
+            return (null, null);
+        }
+    }
+
+    /// <summary>The key the scope's spend count and open question are stored under, without creating an id.</summary>
+    /// <param name="team">The Team's name, or <see langword="null"/> or blank for the global scope.</param>
+    /// <param name="project">The Project's name, or <see langword="null"/> or blank for the Team's own scope.</param>
+    /// <returns>The key, or <see langword="null"/> when nothing has been saved for the scope yet, so it has nothing to count.</returns>
+    public string? KeyOf(string? team, string? project) =>
+        string.IsNullOrWhiteSpace(team) ? NeedsYouCaps.GlobalKey : this.FindKey(team, project);
+
+    /// <summary>Whether a Team, or one of its Projects, exists, so the Human can set a level for it.</summary>
+    /// <param name="team">The Team's name.</param>
+    /// <param name="project">The Project's name, or <see langword="null"/> or blank for the Team itself.</param>
+    /// <returns><see langword="true"/> when the Team, and the Project when one is named, exists.</returns>
+    public bool CanSet(string team, string? project) => this.Known(team, project) is not null;
+
     /// <summary>Sets or clears a Team's level and cap. A cap travels with a level, so clearing the level clears the cap too.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="level">The level, or <see langword="null"/> to inherit the global one.</param>
     /// <param name="spendCap">The cap in USD, or <see langword="null"/> for none; zero or less is none.</param>
-    /// <returns><see langword="false"/> when the Team has no readable <c>_team.md</c>.</returns>
+    /// <returns><see langword="false"/> when there is no such Team; nothing is stored then. Saving what the scope already has is a success and changes nothing.</returns>
     public bool SetTeam(string team, NeedsYouLevel? level, decimal? spendCap)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(team);
 
-        decimal? cap = level is null ? null : NeedsYouLevelText.Usable(spendCap);
-        string teamName = this.TeamNameOf(team);
-        bool written = folders.UpdateTeamFile(teamName, file => file with { NeedsYouLevel = level, SpendCap = cap });
-        if (written)
+        if (this.Known(team, null) is not { } known)
         {
-            this.RestartCount(NeedsYouCaps.TeamKey(teamName), level, cap);
-            this.RaiseChanged();
+            return false;
         }
 
-        return written;
+        this.Save(NeedsYouCaps.TeamKey(ids.TeamId(known.Team)), level, spendCap);
+        return true;
     }
 
     /// <summary>Sets or clears a Project's level and cap. A cap travels with a level, so clearing the level clears the cap too.</summary>
@@ -80,35 +174,25 @@ internal sealed class NeedsYouLevels(
     /// <param name="project">The Project's name.</param>
     /// <param name="level">The level, or <see langword="null"/> to inherit the Team's.</param>
     /// <param name="spendCap">The cap in USD, or <see langword="null"/> for none; zero or less is none.</param>
-    /// <returns><see langword="false"/> when the Project folder does not exist or cannot be written.</returns>
+    /// <returns><see langword="false"/> when the Team has no such Project; nothing is stored then. Saving what the scope already has is a success and changes nothing.</returns>
     public bool SetProject(string team, string project, NeedsYouLevel? level, decimal? spendCap)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(team);
         ArgumentException.ThrowIfNullOrWhiteSpace(project);
 
-        string teamName = this.TeamNameOf(team);
-        string projectName = renames?.ResolveProject(teamName, project) ?? project;
-        decimal? cap = level is null ? null : NeedsYouLevelText.Usable(spendCap);
-        bool written = folders.UpdateProjectFile(teamName, projectName, file => file with { NeedsYouLevel = level, SpendCap = cap });
-        if (written)
+        if (this.Known(team, project) is not { Project: { } projectName } known)
         {
-            this.RestartCount(NeedsYouCaps.ProjectKey(teamName, projectName), level, cap);
-            this.RaiseChanged();
+            return false;
         }
 
-        return written;
+        this.Save(NeedsYouCaps.ProjectKey(ids.ProjectId(known.Team, projectName)), level, spendCap);
+        return true;
     }
 
     /// <summary>Saves the global level and cap in <c>team.db</c>; from then on they win over <c>Team:NeedsYouLevel</c>.</summary>
     /// <param name="level">The level.</param>
     /// <param name="spendCap">The cap in USD, or <see langword="null"/> for none; zero or less is none.</param>
-    public void SetGlobal(NeedsYouLevel level, decimal? spendCap)
-    {
-        decimal? cap = NeedsYouLevelText.Usable(spendCap);
-        store.Set(level, cap);
-        this.RestartCount(NeedsYouCaps.GlobalKey, level, cap);
-        this.RaiseChanged();
-    }
+    public void SetGlobal(NeedsYouLevel level, decimal? spendCap) => this.Save(NeedsYouCaps.GlobalKey, level, spendCap);
 
     /// <summary>
     /// Applies the spend cap to a resolved level: a scope that runs inside the Team and has spent its allowance falls back to Ask me, and
@@ -135,6 +219,37 @@ internal sealed class NeedsYouLevels(
         }
     }
 
+    /// <summary>
+    /// Writes a scope's level and cap, and starts its spend count over, only when either differs from what the scope already has: saving the
+    /// same values again neither restarts the count nor cancels an open question.
+    /// </summary>
+    private void Save(string key, NeedsYouLevel? level, decimal? spendCap)
+    {
+        decimal? cap = level is null ? null : NeedsYouLevelText.Usable(spendCap);
+        SavedNeedsYouLevel? existing = store.Get(key);
+        if (level is { } set)
+        {
+            if (existing is not null && existing.Level == set && existing.SpendCap == cap)
+            {
+                return;
+            }
+
+            store.Set(key, set, cap);
+        }
+        else
+        {
+            if (existing is null)
+            {
+                return;
+            }
+
+            store.Delete(key);
+        }
+
+        this.RestartCount(key, level, cap);
+        this.RaiseChanged();
+    }
+
     /// <summary>Starts a scope's count over after the Human set its level or cap; only a scope that runs inside the Team with a cap is counted.</summary>
     private void RestartCount(string key, NeedsYouLevel? level, decimal? cap)
     {
@@ -148,25 +263,66 @@ internal sealed class NeedsYouLevels(
         }
     }
 
+    /// <summary>The Team as the catalog names it today and, when a Project is asked for, the Project as the Team lists it; <see langword="null"/> when either is missing.</summary>
+    private (string Team, string? Project)? Known(string team, string? project)
+    {
+        if (teams.Find(this.TeamNameOf(team)) is not { } summary)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(project))
+        {
+            return (summary.Name, null);
+        }
+
+        string projectName = renames?.ResolveProject(summary.Name, project) ?? project;
+        string? listed = summary.Projects.FirstOrDefault(name => string.Equals(name, projectName, StringComparison.OrdinalIgnoreCase));
+        return listed is null ? null : (summary.Name, listed);
+    }
+
+    /// <summary>The key of the Project's or the Team's scope when it has an id, so a read never mints one.</summary>
+    private string? FindKey(string team, string? project)
+    {
+        string teamName = this.TeamNameOf(team);
+        if (!string.IsNullOrWhiteSpace(project))
+        {
+            string projectName = renames?.ResolveProject(teamName, project) ?? project;
+            return ids.FindProjectId(teamName, projectName) is { } projectId ? NeedsYouCaps.ProjectKey(projectId) : null;
+        }
+
+        return ids.FindTeamId(teamName) is { } teamId ? NeedsYouCaps.TeamKey(teamId) : null;
+    }
+
     private EffectiveLevel Resolve(string team, string? project)
     {
         string teamName = this.TeamNameOf(team);
-        if (!string.IsNullOrWhiteSpace(teamName))
+        if (string.IsNullOrWhiteSpace(teamName))
         {
-            if (!string.IsNullOrWhiteSpace(project))
+            return this.Global();
+        }
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(project)
+                && this.FindKey(teamName, project) is { } projectKey
+                && store.Get(projectKey) is { } projectSaved)
             {
                 string projectName = renames?.ResolveProject(teamName, project) ?? project;
-                if (folders.ReadProjectFile(teamName, projectName) is { NeedsYouLevel: { } projectLevel } projectFile)
-                {
-                    return new EffectiveLevel(projectLevel, NeedsYouScope.Project, projectName, projectFile.SpendCap);
-                }
+                return new EffectiveLevel(projectSaved.Level, NeedsYouScope.Project, projectName, projectSaved.SpendCap);
             }
 
             if (teams.Find(teamName) is { } summary
-                && folders.ReadTeamFile(summary.Name) is { NeedsYouLevel: { } teamLevel } teamFile)
+                && this.FindKey(summary.Name, null) is { } teamKey
+                && store.Get(teamKey) is { } teamSaved)
             {
-                return new EffectiveLevel(teamLevel, NeedsYouScope.Team, summary.Name, teamFile.SpendCap);
+                return new EffectiveLevel(teamSaved.Level, NeedsYouScope.Team, summary.Name, teamSaved.SpendCap);
             }
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The Needs You level of a scope could not be read; it falls back to Ask me.");
+            return new EffectiveLevel(NeedsYouLevel.AskMe, NeedsYouScope.Global, null, null);
         }
 
         return this.Global();
@@ -177,7 +333,7 @@ internal sealed class NeedsYouLevels(
     {
         try
         {
-            if (store.Get() is { } saved)
+            if (store.Get(NeedsYouCaps.GlobalKey) is { } saved)
             {
                 return new EffectiveLevel(saved.Level, NeedsYouScope.Global, null, saved.SpendCap);
             }

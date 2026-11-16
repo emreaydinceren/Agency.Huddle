@@ -399,7 +399,7 @@ internal static class PromptCatalog
                 """
                 Needs You level (what waits for the Human):
                 {{levels}}
-                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review and its assignee merges it into the local main. A push, and any step that leaves the Team, still goes in the Task's Action.
+                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still waits for the Human. Every push waits for the Human at every level, so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.
                 """,
             Placeholders: ["{{levels}}"],
             RequiredPlaceholders: ["{{levels}}"],
@@ -413,7 +413,7 @@ internal static class PromptCatalog
                 "runs inside the Team. Must keep {{taskId}} and {{scope}}.",
             Default:
                 """
-                Note: {{taskId}}'s {{scope}} runs inside the Team, so a local merge into main needs no Action; this Action sends the Task to the Human. Use an Action only for a step that leaves the Team, such as a push.
+                Note: {{taskId}}'s {{scope}} runs inside the Team, so a local merge into main needs no Action; this Action sends the Task to the Human. Use an Action only for a step that leaves the Team, such as a push: every push waits for the Human's Accept and needs a push in the Task's Action. Only a branch named after the Task id, for example feat/DEV-0012-login, merges without an Accept.
                 """,
             Placeholders: ["{{taskId}}", "{{scope}}"],
             RequiredPlaceholders: ["{{taskId}}", "{{scope}}"],
@@ -2046,12 +2046,13 @@ internal static class PromptCatalog
                 Huddle does not move the Task then, so move it yourself. Do not ask for an Accept in
                 chat: the Human accepts in Needs You. Only the Human can Accept it, and only the
                 Human can turn human_gate off or clear the Action. After the Accept, the assignee
-                carries out the Action and then moves the Task to Done. In a Team with the
-                accept-before-merge gate, a merge into main is refused until a Task of the Team has
-                the Human's Accept, whoever runs it: put the merge in the Task's Action, wait in
-                Needs You, and merge after the Accept. If the Team's Needs You level is Run inside
-                the Team, do not set a merge Action: a local merge proceeds when the Proof is
-                complete, and any push still waits for the Accept. Use list_tasks with the
+                carries out the Action and then moves the Task to Done. A merge into main is
+                refused until a Task of the Team has the Human's Accept, whoever runs it: put the
+                merge in the Task's Action, wait in Needs You, and merge after the Accept. If the
+                Team's Needs You level is Run inside the Team, do not set a merge Action: a local
+                merge of a branch named after the Task's id, for example feat/DEV-0012-login,
+                proceeds when the Proof is complete. Every push waits for the Accept at every
+                level and goes in the Task's Action. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.
                 """,
             Placeholders: [],
@@ -2302,17 +2303,6 @@ internal static class PromptCatalog
                 "The reason logged when an Agent's tool call that edits, deletes or moves an AGENTS.md " +
                 "file is refused (Second Brain §6.6).",
             Default: "AGENTS.md is the Human's file. Propose a change in a retrospective instead.",
-            Placeholders: [],
-            RequiredPlaceholders: [],
-            Timing: PromptTiming.NextSession),
-
-        new PromptDefinition(
-            Key: "systemPrompt.needsYouLevelRefusal",
-            Label: "Needs You level change refused",
-            HelperText:
-                "The reason logged when an Agent's tool call that would change the needsYouLevel or spendCap line of a " +
-                "_team.md or _project.md is refused (ADR-0088).",
-            Default: "Only the Human sets the Needs You level and its spend cap, in the app. Do not edit the needsYouLevel or spendCap lines.",
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),

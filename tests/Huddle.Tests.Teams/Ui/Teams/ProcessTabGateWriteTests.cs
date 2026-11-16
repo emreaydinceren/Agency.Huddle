@@ -76,7 +76,7 @@ public sealed class ProcessTabGateWriteTests
             },
         };
         ctx.Services.AddSingleton<ITeamFolders>(folders);
-        NeedsYouLevelUiRig.AddTo(ctx, folders, dir);
+        NeedsYouLevelUiRig.AddTo(ctx, dir);
         return folders;
     }
 

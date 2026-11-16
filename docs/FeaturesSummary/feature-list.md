@@ -372,9 +372,10 @@ ordinary mistake and is not a security boundary. PRs: #402.
 
 **Needs You level.** A level per scope (Settings, a Team, a project; the most specific wins)
 says how much waits for the Human. Under Ask me (the default) nothing changes. Under Run inside
-the Team a local merge into `main`, a Sprint proposal and new Backlog Tasks go ahead without an
-Accept, each recorded on the Task and in the Feed; a push, an Action and a connector call still
-wait. An optional spend cap per scope falls back to Ask me and asks Yes or No for one more cap.
+the Team a local merge into `main` of a branch named after the Task's id, a Sprint proposal and
+new Backlog Tasks go ahead without an Accept, each recorded on the Task and in the Feed; every
+push, an Action and a connector call still wait. The level is kept in `team.db` by scope id, and
+a Task's level is fixed where Huddle placed it and can only get stricter. An optional spend cap per scope falls back to Ask me and asks Yes or No for one more cap.
 The level replaces the Process tab's `accept-before-merge` switch and its start-up migration,
 and only the Human can set it or the cap. PRs: pending (#533).
 

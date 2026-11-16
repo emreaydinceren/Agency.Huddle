@@ -7,8 +7,9 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Counts what a scope that runs inside the Team has spent against its cap, and asks the Human once the cap is reached (ADR-0088). Spend
-/// is recorded per Agent, so the global scope counts every Agent's persisted USD spend and a Team or Project scope counts its Team's
-/// members. The count starts when the Human sets the level or cap, or when the scope is first evaluated with a cap, and it starts again
+/// is recorded per Agent and charged, as it happens, to the global scope and to every Team the Agent was in at that moment (the ledger,
+/// <see cref="NeedsYouSpendStore"/>); a Project scope counts its Team's ledger row. A member who leaves, or a Team that is renamed, moves no
+/// count. The count starts when the Human sets the level or cap, or when the scope is first evaluated with a cap, and it starts again
 /// when the cap in the file differs from the one counted for.
 /// </summary>
 /// <remarks>
@@ -16,21 +17,20 @@ namespace Agency.Huddle.App.Teams;
 /// tool calls them. A Yes adds exactly one more cap to the allowance. Nothing here stops an Agent's Turn.
 /// </remarks>
 /// <param name="store">Holds each scope's counting row.</param>
-/// <param name="spend">Reads what the Personas spent.</param>
-/// <param name="teams">Names a Team's members.</param>
+/// <param name="ids">Maps a scope key's Team or Project id back to the names, and a name to its id.</param>
+/// <param name="ledger">Reads what each scope has been charged.</param>
 /// <param name="feed">Receives the Notification and its resolution.</param>
 /// <param name="logger">Logs a subscriber that threw; optional.</param>
 internal sealed class NeedsYouCaps(
     NeedsYouCapStore store,
-    PersonaSpendStore spend,
-    ITeamCatalog teams,
+    ScopeIdStore ids,
+    NeedsYouSpendStore ledger,
     IFeedPublisher feed,
     ILogger<NeedsYouCaps>? logger = null)
 {
     /// <summary>The key of the global scope.</summary>
     public const string GlobalKey = "global";
 
-    private const string Usd = "USD";
     private const string TeamPrefix = "team:";
     private const string ProjectPrefix = "project:";
 
@@ -51,25 +51,24 @@ internal sealed class NeedsYouCaps(
         }
     }
 
-    /// <summary>The key of a Team's scope.</summary>
-    /// <param name="team">The Team's name.</param>
-    public static string TeamKey(string team) => TeamPrefix + team;
+    /// <summary>The key of a Team's scope. The one place a scope key is built, so a rename, which changes no id, moves nothing.</summary>
+    /// <param name="teamId">The Team's id from <see cref="ScopeIdStore"/>.</param>
+    public static string TeamKey(string teamId) => TeamPrefix + teamId;
 
     /// <summary>The key of a Project's scope.</summary>
-    /// <param name="team">The Team's name.</param>
-    /// <param name="project">The Project's name.</param>
-    public static string ProjectKey(string team, string project) => ProjectPrefix + team + "/" + project;
+    /// <param name="projectId">The Project's id from <see cref="ScopeIdStore"/>.</param>
+    public static string ProjectKey(string projectId) => ProjectPrefix + projectId;
 
     /// <summary>The key of the scope that supplied a resolved level.</summary>
     /// <param name="resolved">The level.</param>
     /// <param name="team">The Team the level was asked for, which names the Project's Team.</param>
-    public static string KeyOf(EffectiveLevel resolved, string team)
+    public string KeyOf(EffectiveLevel resolved, string team)
     {
         ArgumentNullException.ThrowIfNull(resolved);
         return resolved.Scope switch
         {
-            NeedsYouScope.Project => ProjectKey(team, resolved.ScopeName ?? string.Empty),
-            NeedsYouScope.Team => TeamKey(resolved.ScopeName ?? team),
+            NeedsYouScope.Project => ProjectKey(ids.ProjectId(team, resolved.ScopeName ?? string.Empty)),
+            NeedsYouScope.Team => TeamKey(ids.TeamId(resolved.ScopeName ?? team)),
             _ => GlobalKey,
         };
     }
@@ -89,7 +88,7 @@ internal sealed class NeedsYouCaps(
             return false;
         }
 
-        string key = KeyOf(resolved, team);
+        string key = this.KeyOf(resolved, team);
         bool opened = false;
         bool reached;
         lock (this.gate)
@@ -167,26 +166,22 @@ internal sealed class NeedsYouCaps(
     }
 
     /// <summary>The scope's first-line name for a message: <c>Huddle</c>, the Team, or <c>Team / Project</c>.</summary>
-    private static string NameOf(string key)
+    private string NameOf(string key) => this.Split(key) switch
+    {
+        (null, _) => string.Equals(key, GlobalKey, StringComparison.OrdinalIgnoreCase) ? "Huddle" : key,
+        (string team, null) => team,
+        (string team, string project) => team + " / " + project,
+    };
+
+    /// <summary>The names of the Team and Project a scope key stands for today; both <see langword="null"/> for the global scope or an id that is gone.</summary>
+    private (string? Team, string? Project) Split(string key)
     {
         if (key.StartsWith(ProjectPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            return key[ProjectPrefix.Length..].Replace("/", " / ", StringComparison.Ordinal);
+            return ids.ProjectNamesOf(key[ProjectPrefix.Length..]) is { } names ? (names.Team, names.Project) : (null, null);
         }
 
-        return key.StartsWith(TeamPrefix, StringComparison.OrdinalIgnoreCase) ? key[TeamPrefix.Length..] : "Huddle";
-    }
-
-    private static (string? Team, string? Project) Split(string key)
-    {
-        if (key.StartsWith(ProjectPrefix, StringComparison.OrdinalIgnoreCase))
-        {
-            string rest = key[ProjectPrefix.Length..];
-            int slash = rest.IndexOf('/', StringComparison.Ordinal);
-            return slash < 0 ? (rest, null) : (rest[..slash], rest[(slash + 1)..]);
-        }
-
-        return key.StartsWith(TeamPrefix, StringComparison.OrdinalIgnoreCase) ? (key[TeamPrefix.Length..], null) : (null, null);
+        return key.StartsWith(TeamPrefix, StringComparison.OrdinalIgnoreCase) ? (ids.TeamNameOf(key[TeamPrefix.Length..]), null) : (null, null);
     }
 
     private static string Money(decimal amount) => amount.ToString("F2", CultureInfo.InvariantCulture);
@@ -222,38 +217,38 @@ internal sealed class NeedsYouCaps(
 
     private CapAsk ToAsk(CapRow row)
     {
-        (string? team, string? project) = Split(row.Scope);
-        return new CapAsk(row.Scope, NameOf(row.Scope), team, project, row.Cap, this.Total(row.Scope) - row.Baseline);
+        (string? team, string? project) = this.Split(row.Scope);
+        return new CapAsk(row.Scope, this.NameOf(row.Scope), team, project, row.Cap, this.Total(row.Scope) - row.Baseline);
     }
 
-    private static FeedMessage Notification(CapRow row, decimal spent)
+    private FeedMessage Notification(CapRow row, decimal spent)
     {
         string limit = row.Allowance == row.Cap ? "its cap" : "its allowance";
         string message = string.Create(
             CultureInfo.InvariantCulture,
-            $"{NameOf(row.Scope)} has spent {Money(spent)} USD running inside the Team, {limit}. Let it spend another {Money(row.Cap)} USD?");
+            $"{this.NameOf(row.Scope)} has spent {Money(spent)} USD running inside the Team, {limit}. Let it spend another {Money(row.Cap)} USD?");
         return new FeedMessage(
             FeedSourceType.SpendCapReached,
             row.Scope,
             FeedActor.Huddle,
             true,
-            new SpendCapReachedPayload(row.Scope, Split(row.Scope).Team, row.Cap, message));
+            new SpendCapReachedPayload(row.Scope, this.Split(row.Scope).Team, row.Cap, message));
     }
 
-    /// <summary>What the counted Personas have spent in USD in all: every Persona for the global scope, the Team's members otherwise.</summary>
+    /// <summary>What a scope has been charged in USD: the global row, the Team's row, or for a Project its Team's row; zero when it has none.</summary>
     private decimal Total(string key)
     {
-        IEnumerable<StoredSpend> amounts;
-        if (Split(key).Team is { } team)
+        if (string.Equals(key, GlobalKey, StringComparison.OrdinalIgnoreCase))
         {
-            amounts = teams.Find(team) is { } summary ? spend.ForPersonas(summary.Members) : [];
-        }
-        else
-        {
-            amounts = spend.All().Select(static row => new StoredSpend(row.Currency, row.Amount));
+            return ledger.Get(GlobalKey);
         }
 
-        return amounts.Where(static amount => string.Equals(amount.Currency, Usd, StringComparison.OrdinalIgnoreCase)).Sum(static amount => amount.Amount);
+        if (key.StartsWith(ProjectPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return ids.ProjectNamesOf(key[ProjectPrefix.Length..]) is { } names ? ledger.Get(TeamKey(ids.TeamId(names.Team))) : 0m;
+        }
+
+        return ledger.Get(key);
     }
 
     private void RaiseChanged() =>

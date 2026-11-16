@@ -214,8 +214,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             new AgentSettingsGuard(workDir, Path.Combine(this.options.DataDir, "hooks")),
             protectedDirectory is null ? null : new ProtectedDirectoryGuard(protectedDirectory, workDir),
             mergeGate is null ? null : new MergeGateGuard(mergeGate),
-            this.serviceProvider.GetService<ITeamRenames>() is { } renames ? new RenamedFolderGuard(teamsRoot, workDir, renames) : null,
-            new NeedsYouLevelGuard(teamsRoot, workDir, prompts));
+            this.serviceProvider.GetService<ITeamRenames>() is { } renames ? new RenamedFolderGuard(teamsRoot, workDir, renames) : null);
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>

@@ -1,14 +1,8 @@
 @implements IDisposable
 @using System.Globalization
-@using Agency.Huddle.App.Data
-@using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Teams
-@using Microsoft.Extensions.Options
 @inject NeedsYouLevels Levels
 @inject NeedsYouCaps Caps
-@inject ITeamFolders Folders
-@inject NeedsYouLevelStore Store
-@inject IOptions<TeamOptions> Options
 
 @*
     The one Needs You level control (ADR-0088), drawn on Settings (no Team), a Team's Process tab (Team) and a Project's dialog (Team and
@@ -116,17 +110,18 @@
     private bool Dirty => this.choice != this.storedChoice || (this.choice == RunChoice && !string.Equals(this.capText.Trim(), this.storedCapText, StringComparison.Ordinal));
 
     private string UnavailableText => this.IsProject
-        ? "This project has no folder it can keep a level in, so it follows the Team."
-        : "This Team has no team file to keep a level in, so it follows Settings.";
+        ? "This is not one of the Team's projects, so it follows the Team."
+        : "This Team does not exist, so it follows Settings.";
 
     /// <summary>Whether the level in force was set by the scope this control shows, so the line reads "In force" rather than "Inherits".</summary>
     private bool OwnsEffective => this.effective is { } level && level.Scope == this.Scope;
 
-    private string OwnKey => this.Scope switch
+    /// <summary>Names the scope by its Team and Project, which is what tells a changed scope from a repaint; the spend question is matched by the scope's stored key instead.</summary>
+    private string ScopeName => this.Scope switch
     {
-        NeedsYouScope.Project => NeedsYouCaps.ProjectKey(this.Team ?? string.Empty, this.Project ?? string.Empty),
-        NeedsYouScope.Team => NeedsYouCaps.TeamKey(this.Team ?? string.Empty),
-        _ => NeedsYouCaps.GlobalKey,
+        NeedsYouScope.Project => "project:" + this.Team + "/" + this.Project,
+        NeedsYouScope.Team => "team:" + this.Team,
+        _ => "global",
     };
 
     /// <inheritdoc />
@@ -140,7 +135,7 @@
     protected override void OnParametersSet()
     {
         // A parent that repaints must not drop what the Human is typing: reload only when the scope itself changed.
-        string scope = this.OwnKey;
+        string scope = this.ScopeName;
         if (!string.Equals(scope, this.loadedScope, StringComparison.Ordinal))
         {
             this.loadedScope = scope;
@@ -158,8 +153,8 @@
     /// <summary>Reads what the scope sets, what is in force and the open questions, and drops an unsaved edit.</summary>
     private void Reload()
     {
-        (NeedsYouLevel? level, decimal? cap) = this.ReadOwn();
-        this.canSet = this.Team is null || this.CanKeepLevel();
+        (NeedsYouLevel? level, decimal? cap) = this.Levels.Own(this.Team, this.IsProject ? this.Project : null);
+        this.canSet = this.Team is null || this.Levels.CanSet(this.Team, this.IsProject ? this.Project : null);
         this.storedChoice = level switch
         {
             NeedsYouLevel.AskMe => AskMeChoice,
@@ -177,36 +172,9 @@
     private void Refresh()
     {
         this.effective = this.Levels.For(this.Team ?? string.Empty, this.IsProject ? this.Project : null);
-        string key = this.OwnKey;
-        this.asks = [.. this.Caps.Pending.Where(ask => string.Equals(ask.Scope, key, StringComparison.Ordinal))];
+        string? key = this.Levels.KeyOf(this.Team, this.IsProject ? this.Project : null);
+        this.asks = [.. this.Caps.Pending.Where(ask => string.Equals(ask.Scope, key, StringComparison.OrdinalIgnoreCase))];
     }
-
-    /// <summary>The level and cap the scope itself sets, read from the same places the setters write.</summary>
-    private (NeedsYouLevel? Level, decimal? Cap) ReadOwn()
-    {
-        if (this.Team is null)
-        {
-            if (this.Store.Get() is { } saved)
-            {
-                return (saved.Level, saved.SpendCap);
-            }
-
-            NeedsYouOptions configured = this.Options.Value.NeedsYouLevel;
-            return (NeedsYouLevelText.ParseOrNull(configured.Level) ?? NeedsYouLevel.AskMe, NeedsYouLevelText.Usable(configured.SpendCap));
-        }
-
-        if (this.IsProject)
-        {
-            return this.Folders.ReadProjectFile(this.Team, this.Project ?? string.Empty) is { } project ? (project.NeedsYouLevel, project.SpendCap) : (null, null);
-        }
-
-        return this.Folders.ReadTeamFile(this.Team) is { } team ? (team.NeedsYouLevel, team.SpendCap) : (null, null);
-    }
-
-    /// <summary>Whether a Team has a team file, or a Project a folder, to keep a level in; a Project's file may be absent until the first save.</summary>
-    private bool CanKeepLevel() => this.IsProject
-        ? this.Folders.FindTeam(this.Team ?? string.Empty).Value is not null
-        : this.Folders.ReadTeamFile(this.Team ?? string.Empty) is not null;
 
     private void OnChoiceChanged(string? value)
     {

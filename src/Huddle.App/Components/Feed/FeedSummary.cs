@@ -197,7 +197,7 @@ internal static class FeedSummary
         return count > 1 ? string.Create(CultureInfo.InvariantCulture, $"{count} Agents") : null;
     }
 
-    private static string? InTeam(string team) => team.Length > 0 ? "in " + team : null;
+    private static string? InTeam(string? team) => !string.IsNullOrEmpty(team) ? "in " + team : null;
 
     private static string Clock(DateTimeOffset at, TimeZoneInfo zone) =>
         TimeZoneInfo.ConvertTime(at, zone).ToString("HH:mm", CultureInfo.InvariantCulture);
