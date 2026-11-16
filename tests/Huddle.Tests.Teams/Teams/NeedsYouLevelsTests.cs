@@ -127,6 +127,7 @@ public sealed class NeedsYouLevelsTests
         Assert.True(levels.SetProject("Dev", "Site", NeedsYouLevel.AskMe, null));
         TaskItem inProject = TestTasks.Make(location: new TaskLocation("Dev", "Site", false));
         TaskItem inTeam = TestTasks.Make(location: new TaskLocation("Dev", null, false));
+        levels.Place(inTeam);
 
         Assert.Equal((NeedsYouLevel.AskMe, NeedsYouScope.Project), (levels.ForTask(inProject).Level, levels.ForTask(inProject).Scope));
         Assert.Equal((NeedsYouLevel.RunInsideTheTeam, NeedsYouScope.Team), (levels.ForTask(inTeam).Level, levels.ForTask(inTeam).Scope));
@@ -315,7 +316,7 @@ public sealed class NeedsYouLevelsTests
         {
             this.Catalog = new FakeTeamCatalog { Teams = [new TeamSummary("Dev", ["Site"], [], true)] };
             this.Ids = new ScopeIdStore(dir.Options());
-            this.Levels = new NeedsYouLevels(this.Catalog, new NeedsYouLevelStore(dir.Options()), this.Ids, dir.Options(configure));
+            this.Levels = new NeedsYouLevels(this.Catalog, new NeedsYouLevelStore(dir.Options()), this.Ids, new TaskScopeStore(dir.Options()), dir.Options(configure));
             this.Rewrite = new NeedsYouRenameRewrite(this.Ids);
         }
 

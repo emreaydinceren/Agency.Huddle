@@ -572,6 +572,7 @@ public static class ServiceCollectionExtensions
 
         // The Needs You level per scope (ADR-0088): every scope's level and cap live in team.db, under the Team's or Project's id.
         services.AddSingleton<ScopeIdStore>();
+        services.AddSingleton<TaskScopeStore>(); // the scope Huddle placed each Task in; a Task never takes a laxer level than it.
         services.AddSingleton<NeedsYouLevelStore>();
         services.AddSingleton<NeedsYouCapStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.NeedsYouCaps>(); // the spend cap's counting and its Yes/No question.

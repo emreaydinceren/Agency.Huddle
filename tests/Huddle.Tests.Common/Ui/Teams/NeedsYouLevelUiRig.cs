@@ -42,7 +42,7 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
         this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Spend, this.Catalog, this.Feed);
         this.Store = new NeedsYouLevelStore(this.dir.Options());
         var options = this.dir.Options(configured => configured.NeedsYouLevel.Level = globalLevel ?? string.Empty);
-        this.Levels = new NeedsYouLevels(this.Catalog, this.Store, this.Ids, options, caps: this.Caps);
+        this.Levels = new NeedsYouLevels(this.Catalog, this.Store, this.Ids, new TaskScopeStore(this.dir.Options()), options, caps: this.Caps);
 
         ctx.Services.AddSingleton<ITeamFolders>(this.Folders);
         ctx.Services.AddSingleton<ITeamCatalog>(this.Catalog);
@@ -70,7 +70,7 @@ internal sealed class NeedsYouLevelUiRig : IDisposable
         ctx.Services.AddSingleton(store);
         ctx.Services.AddSingleton(ids);
         ctx.Services.AddSingleton(caps);
-        ctx.Services.AddSingleton(new NeedsYouLevels(catalog, store, ids, options, caps: caps));
+        ctx.Services.AddSingleton(new NeedsYouLevels(catalog, store, ids, new TaskScopeStore(options), options, caps: caps));
     }
 
     /// <summary>The Team catalog.</summary>

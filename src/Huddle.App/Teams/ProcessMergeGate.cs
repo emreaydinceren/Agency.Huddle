@@ -180,6 +180,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
         bool runsInside = false;
         DateTimeOffset now = this.clock.GetUtcNow();
         List<TaskItem> own = [];
+        List<TaskItem> released = [];
         TaskItem? old = null;
         foreach (TaskItem task in tasks.All)
         {
@@ -207,7 +208,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
             // The level is read again, so a scope set back to Ask me (or past its spend cap) stops passing merges at once.
             if (localOnly && NeedsYouRelease.Holds(task, now) && levels?.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam)
             {
-                return null;
+                released.Add(task);
             }
 
             runsInside |= !task.Status.IsTerminal() && levels?.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam;
@@ -217,21 +218,64 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
             }
         }
 
-        if (old is not null)
+        if (localOnly && MergesOnlyReleasedWork(GitCommandLine.BranchesMergedIntoMain(command), released))
         {
-            return string.Create(
-                CultureInfo.InvariantCulture,
-                $"Cannot merge: the Human's Accept on Task {old.Id} is more than 24 hours old. Ask for a fresh one: move the Task to Needs You again with update_task so the Human can Accept it. Do not ask for the Accept in chat.");
+            return null;
         }
 
-        return NoAcceptRefusal(own, runsInside);
+        return old is not null ? StaleAcceptRefusal(old) : NoAcceptRefusal(own, runsInside, released);
+    }
+
+    private static string StaleAcceptRefusal(TaskItem old) =>
+        string.Create(
+            CultureInfo.InvariantCulture,
+            $"Cannot merge: the Human's Accept on Task {old.Id} is more than 24 hours old. Ask for a fresh one: move the Task to Needs You again with update_task so the Human can Accept it. Do not ask for the Accept in chat.");
+
+    /// <summary>
+    /// Whether every branch a line merges into main is named after a released Task: the Task's id appears in the branch name as a whole
+    /// word, ignoring case (<c>feat/DEV-12-login</c> names DEV-12, never DEV-1 or DEV-123). A line that merges no branch, <c>git merge -</c> or a SHA
+    /// names no Task.
+    /// </summary>
+    /// <param name="branches">The branches the line puts on main.</param>
+    /// <param name="released">The released Tasks of the Persona's Teams whose level is Run inside the Team now.</param>
+    private static bool MergesOnlyReleasedWork(List<string> branches, List<TaskItem> released) =>
+        branches.Count > 0 && branches.TrueForAll(branch => released.Exists(task => NamesTask(branch, task.Id)));
+
+    /// <summary>Whether the branch name holds the Task's id as a whole word, ignoring case.</summary>
+    /// <param name="branch">The branch name as typed.</param>
+    /// <param name="id">The Task's id.</param>
+    internal static bool NamesTask(string branch, TaskId id)
+    {
+        string text = id.ToString();
+        int at = branch.IndexOf(text, StringComparison.OrdinalIgnoreCase);
+        while (at >= 0)
+        {
+            int end = at + text.Length;
+            if ((at == 0 || !char.IsAsciiLetterOrDigit(branch[at - 1])) && (end == branch.Length || !char.IsAsciiLetterOrDigit(branch[end])))
+            {
+                return true;
+            }
+
+            at = branch.IndexOf(text, at + 1, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return false;
     }
 
     /// <summary>The refusal text when no Task of the Team carries the merge: one under Run inside the Team, or one under Ask me.</summary>
     /// <param name="own">The Persona's open Tasks of the Team.</param>
     /// <param name="runsInside">Whether an open Task of the Team is under the level Run inside the Team.</param>
-    private static string NoAcceptRefusal(List<TaskItem> own, bool runsInside)
+    /// <param name="released">The released Tasks of the Persona's Teams under Run inside the Team, which a branch named after one would have passed.</param>
+    private static string NoAcceptRefusal(List<TaskItem> own, bool runsInside, List<TaskItem> released)
     {
+        if (released.Count > 0)
+        {
+            string ids = string.Join(", ", released.Select(static task => task.Id.ToString()));
+            return string.Create(
+                CultureInfo.InvariantCulture,
+                $"Cannot merge: under Run inside the Team a merge into main runs without an Accept only for a branch named after a released Task's id, for example feat/{released[0].Id}-login. Released now: {ids}. Name the branch after its Task, or put the merge in the Action of the Task it belongs to.");
+        }
+
         if (runsInside)
         {
             return "Cannot merge yet: under Run inside the Team a merge into main runs once a Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";

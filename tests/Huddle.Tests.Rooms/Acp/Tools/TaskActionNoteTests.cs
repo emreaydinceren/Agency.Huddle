@@ -24,7 +24,7 @@ public sealed class TaskActionNoteTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using NeedsYouLevelRig rig = new(teamLevel: NeedsYouLevel.RunInsideTheTeam);
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, levels: rig.Levels);
         CreateTaskTool tool = CreateTool(harness, rig);
 
         string result = await tool.InvokeAsync(CreateArguments(action: "Merge feat/greeting into main"), ct);
@@ -77,7 +77,7 @@ public sealed class TaskActionNoteTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using NeedsYouLevelRig rig = new(teamLevel: NeedsYouLevel.RunInsideTheTeam);
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, levels: rig.Levels);
         TaskItem task = harness.CreateTask("Ship it");
         UpdateTaskTool tool = new(harness.Service, harness.Store, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), harness.NovaIdOrThrow(), rig.Levels, rig.Gates);
 

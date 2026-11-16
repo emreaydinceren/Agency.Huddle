@@ -162,6 +162,7 @@ public sealed class ProposeSprintNeedsYouLevelTests
     private sealed class Rig : IDisposable
     {
         private readonly TempDataDir levelDir = new();
+        private readonly NeedsYouLevels levels;
 
         private Rig(TaskToolHarness harness, NeedsYouLevel? teamLevel, NeedsYouLevel? siteLevel, bool wireApprover)
         {
@@ -172,10 +173,10 @@ public sealed class ProposeSprintNeedsYouLevelTests
             {
                 Teams = [new TeamSummary("Platform", [Site], ["Nova", "Kai"], true) { Manager = "Nova" }],
             };
-            NeedsYouLevels levels = new(catalog, new NeedsYouLevelStore(this.levelDir.Options()), new ScopeIdStore(this.levelDir.Options()), this.levelDir.Options());
-            _ = levels.SetTeam("Platform", teamLevel, null);
-            _ = levels.SetProject("Platform", Site, siteLevel, null);
-            this.Approver = new SprintApprover((SprintStore)harness.Sprints, harness.Service, harness.Store, levels, this.Feed);
+            this.levels = new(catalog, new NeedsYouLevelStore(this.levelDir.Options()), new ScopeIdStore(this.levelDir.Options()), new TaskScopeStore(this.levelDir.Options()), this.levelDir.Options());
+            _ = this.levels.SetTeam("Platform", teamLevel, null);
+            _ = this.levels.SetProject("Platform", Site, siteLevel, null);
+            this.Approver = new SprintApprover((SprintStore)harness.Sprints, harness.Service, harness.Store, this.levels, this.Feed);
             this.Tool = new ProposeSprintTool(
                 harness.Store,
                 harness.Sprints,
@@ -206,6 +207,7 @@ public sealed class ProposeSprintNeedsYouLevelTests
             TaskItem toWrite = task with { Path = TaskLayout.PathFor(this.Harness.Store.RootDirectory, task.Location, task.Id) };
             _ = this.Harness.Store.Create(toWrite, TaskFileFormat.Compose(toWrite))
                 ?? throw new InvalidOperationException("Fixture collided with an existing file.");
+            this.levels.Place(toWrite);
         }
 
         public TaskItem Read(string id) =>

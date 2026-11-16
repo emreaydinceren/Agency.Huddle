@@ -16,6 +16,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="teams">Finds a Team by name, ignoring case.</param>
 /// <param name="store">Holds each scope's level and cap.</param>
 /// <param name="ids">Maps a Team or Project name to the id its scope is stored under.</param>
+/// <param name="taskScopes">Holds the scope Huddle placed each Task in, which a Task's level is also read from.</param>
 /// <param name="options">Holds the configured global level.</param>
 /// <param name="logger">Logs a store that could not be read; optional.</param>
 /// <param name="renames">Resolves a Team's or Project's old name to today's; optional.</param>
@@ -24,6 +25,7 @@ internal sealed class NeedsYouLevels(
     ITeamCatalog teams,
     NeedsYouLevelStore store,
     ScopeIdStore ids,
+    TaskScopeStore taskScopes,
     IOptions<TeamOptions> options,
     ILogger<NeedsYouLevels>? logger = null,
     ITeamRenames? renames = null,
@@ -32,14 +34,76 @@ internal sealed class NeedsYouLevels(
     /// <summary>Raised after the Human changed a level or cap, so a page can repaint. A subscriber that throws is logged and does not stop the others.</summary>
     public event Action? Changed;
 
-    /// <summary>The level that applies to a Task: its Project's, else its Team's, else the global one.</summary>
-    /// <param name="task">The Task; its folder is its scope.</param>
-    /// <returns>The level, the scope that supplied it and that scope's cap.</returns>
+    /// <summary>
+    /// The level that applies to a Task: the stricter of the level of the scope Huddle placed it in (where it was created or the Human last
+    /// moved it, issue #602) and the level of the folder it sits in now. Ask me is stricter than Run inside the Team. A Task Huddle never
+    /// placed, such as a file written by a shell, is under Ask me, and so is one whose recorded Team or Project no longer exists.
+    /// </summary>
+    /// <param name="task">The Task.</param>
+    /// <returns>The level, the scope that supplied it and that scope's cap; the folder's when both are Run inside the Team.</returns>
     public EffectiveLevel ForTask(TaskItem task)
     {
         ArgumentNullException.ThrowIfNull(task);
-        return this.For(task.Location.Team, task.Location.Project);
+        EffectiveLevel folder = this.For(task.Location.Team, task.Location.Project);
+        if (folder.Level == NeedsYouLevel.AskMe)
+        {
+            return folder;
+        }
+
+        EffectiveLevel? placed = this.Placed(task);
+        if (placed is null)
+        {
+            return folder with { Level = NeedsYouLevel.AskMe };
+        }
+
+        return placed.Level == NeedsYouLevel.AskMe ? placed : folder;
     }
+
+    /// <summary>Records the scope a Task sits in now as the one that governs its level: called when Huddle creates the Task and when the Human moves it.</summary>
+    /// <param name="task">The Task as just written.</param>
+    public void Place(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        try
+        {
+            string team = this.TeamNameOf(task.Location.Team);
+            string teamId = ids.TeamId(team);
+            string? projectId = string.IsNullOrWhiteSpace(task.Location.Project) ? null : ids.ProjectId(team, task.Location.Project);
+            taskScopes.Set(task.Id.ToString(), teamId, projectId);
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The scope of Task {TaskId} could not be recorded; it stays under Ask me.", task.Id.ToString());
+        }
+    }
+
+    /// <summary>The level of the scope a Task was placed in, or <see langword="null"/> when Huddle never placed it. A scope that no longer resolves is Ask me.</summary>
+    private EffectiveLevel? Placed(TaskItem task)
+    {
+        try
+        {
+            if (taskScopes.Get(task.Id.ToString()) is not { } placement)
+            {
+                return null;
+            }
+
+            string? team = ids.TeamNameOf(placement.TeamId);
+            if (placement.ProjectId is null)
+            {
+                return team is null ? AskMeAnywhere : this.For(team, null);
+            }
+
+            return ids.ProjectNamesOf(placement.ProjectId) is { } names ? this.For(names.Team, names.Project) : AskMeAnywhere;
+        }
+        catch (SqliteException ex)
+        {
+            logger?.LogWarning(ex, "The scope of Task {TaskId} could not be read; it falls back to Ask me.", task.Id.ToString());
+            return AskMeAnywhere;
+        }
+    }
+
+    private static EffectiveLevel AskMeAnywhere { get; } = new(NeedsYouLevel.AskMe, NeedsYouScope.Global, null, null);
 
     /// <summary>The level that applies to a Team, or to one of its Projects.</summary>
     /// <param name="team">The Team's name; an old name still works.</param>

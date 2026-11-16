@@ -59,6 +59,17 @@ internal static partial class GitCommandLine
         /// <summary>Whether the command is a <c>git merge</c> or <c>git pull</c> that puts work on main (see <see cref="WouldPutWorkOnMain"/>), which stays in the local repository.</summary>
         internal bool MergesLocallyIntoMain => this.Subcommand is "merge" or "pull" && this.WouldPutWorkOnMain;
 
+        /// <summary>
+        /// The words a local merge or pull puts on main: for a merge the positional words that are not main (a <c>-</c> or a SHA included), for a
+        /// pull those after the remote. Empty for any other command.
+        /// </summary>
+        internal IReadOnlyList<string> BranchesIntoMain => this.Subcommand switch
+        {
+            "merge" => [.. this.Args.Where(static arg => !IsMainBranch(arg))],
+            "pull" => [.. this.Args.Skip(1).Select(static arg => arg.TrimStart('+')).Where(static arg => !IsMainBranch(arg))],
+            _ => [],
+        };
+
         private bool PushesToMain() =>
             this.Args.Contains("--all", StringComparer.Ordinal)
             || this.Args.Contains("--mirror", StringComparer.Ordinal)
@@ -95,6 +106,14 @@ internal static partial class GitCommandLine
         List<Call> calls = Parse(command);
         return calls.Exists(static call => call.MergesLocallyIntoMain) && !calls.Exists(static call => call.PushesWork);
     }
+
+    /// <summary>
+    /// Every branch the line's local merges and pulls put on main, in order. A line that has no such command, or that also pushes, has none
+    /// that matter: the caller checks <see cref="OnlyLocalMergesIntoMain"/> first.
+    /// </summary>
+    /// <param name="command">The shell line.</param>
+    internal static List<string> BranchesMergedIntoMain(string command) =>
+        [.. Parse(command).Where(static call => call.MergesLocallyIntoMain).SelectMany(static call => call.BranchesIntoMain)];
 
     /// <summary>Whether the name is main or master, local or on origin.</summary>
     /// <param name="name">The branch name as typed.</param>

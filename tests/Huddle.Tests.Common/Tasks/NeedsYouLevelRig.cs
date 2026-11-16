@@ -50,6 +50,7 @@ internal sealed class NeedsYouLevelRig : IDisposable
             this.Catalog,
             new NeedsYouLevelStore(this.levelDir.Options()),
             ids,
+            new TaskScopeStore(this.levelDir.Options()),
             this.levelDir.Options(options =>
             {
                 options.NeedsYouLevel.Level = globalLevel ?? string.Empty;

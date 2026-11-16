@@ -67,7 +67,8 @@ internal sealed class TaskToolHarness : IDisposable
     /// <param name="gates">The process gates the Task service enforces on a status change; <see langword="null"/> (the default) enforces none.</param>
     /// <param name="proof">Supplies a Task's Proof to the Human gate rules; <see langword="null"/> (the default) means an empty, complete Proof.</param>
     /// <param name="feed">Receives the Feed items the Task service produces; <see langword="null"/> (the default) posts nothing.</param>
-    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null, Agency.Huddle.App.Feed.IFeedPublisher? feed = null)
+    /// <param name="levels">The Needs You levels the Task service records each created Task's scope in; <see langword="null"/> (the default) records none.</param>
+    public TaskToolHarness(TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null, Agency.Huddle.App.Feed.IFeedPublisher? feed = null, Agency.Huddle.App.Teams.NeedsYouLevels? levels = null)
     {
         this.Options = this.dir.Options();
         this.gates = gates;
@@ -101,7 +102,8 @@ internal sealed class TaskToolHarness : IDisposable
             this.Clock,
             NullLogger<TaskService>.Instance,
             gates,
-            proof: proof);
+            proof: proof,
+            levels: levels);
         this.feedPublisher = feed is null ? null : Agency.Huddle.Tests.Tasks.TaskFeedPublishers.Over(this.Events, feed, this.Options, proof);
         this.Views = new ViewStore(this.Options, NullLogger<ViewStore>.Instance);
         this.TurnActivity = new TurnActivity();
@@ -147,10 +149,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// <param name="sprintsText">Forwarded to the constructor; see its own parameter doc.</param>
     /// <param name="gates">Forwarded to the constructor; see its own parameter doc.</param>
     /// <param name="proof">Forwarded to the constructor; see its own parameter doc.</param>
+    /// <param name="levels">The Needs You levels the Task service records each created Task's scope in; <see langword="null"/> records none, so every Task is under Ask me.</param>
     /// <returns>A harness whose <see cref="Directory"/> already knows the Human, Nova and Kai.</returns>
-    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null)
+    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null, string? sprintsText = null, Agency.Huddle.App.Teams.ProcessGateService? gates = null, Agency.Huddle.App.Tasks.HumanGate.IProofSource? proof = null, Agency.Huddle.App.Teams.NeedsYouLevels? levels = null)
     {
-        TaskToolHarness harness = new(clock, sprintsText, gates, proof);
+        TaskToolHarness harness = new(clock, sprintsText, gates, proof, levels: levels);
 
         await harness.Directory.InitializeAsync("You", ct);
         User nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct)

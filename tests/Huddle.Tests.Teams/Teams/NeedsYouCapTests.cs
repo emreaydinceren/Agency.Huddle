@@ -44,6 +44,7 @@ public sealed class NeedsYouCapTests
                 this.Catalog,
                 new NeedsYouLevelStore(this.dir.Options()),
                 this.Ids,
+                new TaskScopeStore(this.dir.Options()),
                 this.dir.Options(options =>
                 {
                     options.NeedsYouLevel.Level = globalLevel ?? string.Empty;
@@ -394,7 +395,7 @@ public sealed class NeedsYouCapTests
         TaskItem first = rig.CreateInReview();
         _ = rig.AddEvidence(first);
         Assert.Single(rig.Releases(first));
-        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/x"));
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-x"));
 
         rig.Spend.Add("Nova", null, Usd, 5m);
         TaskItem second = rig.CreateInReview();
@@ -402,7 +403,7 @@ public sealed class NeedsYouCapTests
 
         Assert.Equal(TaskState.NeedsYou, rig.Read(second).Status);
         Assert.Empty(rig.Releases(second));
-        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", "git merge feat/x"));
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-x"));
         Assert.Single(rig.Feed.Posts, static post => post.SourceType == FeedSourceType.SpendCapReached);
     }
 }

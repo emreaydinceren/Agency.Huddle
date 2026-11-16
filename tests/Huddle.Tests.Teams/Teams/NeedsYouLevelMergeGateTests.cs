@@ -12,6 +12,7 @@ namespace Agency.Huddle.Tests.Teams;
 public sealed class NeedsYouLevelMergeGateTests
 {
     private const string FeatureMerge = "git merge feat/x";
+    private const string ReleasedMerge = "git merge feat/PLAT-0001-x";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
     private const string PushText = "Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in Task PLAT-0001's Action with update_task, for example 'Push feat/x to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.";
     private const string NothingReadyText = "Cannot merge yet: under Run inside the Team a merge into main runs once a Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
@@ -34,8 +35,8 @@ public sealed class NeedsYouLevelMergeGateTests
         using NeedsYouLevelRig rig = RunInsideRig();
         _ = Release(rig);
 
-        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
-        Assert.Null(rig.Gate.RefusalFor("Nova", "git pull origin feat/x"));
+        Assert.Null(rig.Gate.RefusalFor("Nova", ReleasedMerge));
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git pull origin feat/PLAT-0001-x"));
         Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push origin main"));
         Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push ../bare main"));
         Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push"));
@@ -51,7 +52,7 @@ public sealed class NeedsYouLevelMergeGateTests
 
         rig.Levels.SetGlobal(NeedsYouLevel.AskMe, null);
 
-        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", ReleasedMerge));
     }
 
     /// <summary>With nothing released, a local merge is refused with the Run inside the Team text, which tells the Agent not to set an Action.</summary>
@@ -72,10 +73,10 @@ public sealed class NeedsYouLevelMergeGateTests
         _ = Release(rig);
 
         rig.Clock.Advance(TimeSpan.FromHours(24));
-        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Null(rig.Gate.RefusalFor("Nova", ReleasedMerge));
 
         rig.Clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.Equal(NothingReadyText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Equal(NothingReadyText, rig.Gate.RefusalFor("Nova", ReleasedMerge));
     }
 
     /// <summary>A released Task that reached Done carries a merge for an hour and not after.</summary>
@@ -87,10 +88,10 @@ public sealed class NeedsYouLevelMergeGateTests
         _ = Assert.IsType<TaskResult.Saved>(rig.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, NeedsYouLevelRig.Nova));
 
         rig.Clock.Advance(TimeSpan.FromHours(1));
-        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Null(rig.Gate.RefusalFor("Nova", ReleasedMerge));
 
         rig.Clock.Advance(TimeSpan.FromSeconds(1));
-        Assert.NotNull(rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", ReleasedMerge));
     }
 
     /// <summary>Under Ask me nothing changes: the merge and the push keep the texts they always had.</summary>
@@ -158,9 +159,66 @@ public sealed class NeedsYouLevelMergeGateTests
         TaskItem task = Release(rig);
         _ = Assert.IsType<TaskResult.Saved>(rig.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, NeedsYouLevelRig.Nova));
 
-        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Null(rig.Gate.RefusalFor("Nova", ReleasedMerge));
 
         rig.Clock.Advance(TimeSpan.FromHours(1) + TimeSpan.FromSeconds(1));
-        Assert.Equal(ChecksFirst, rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Equal(ChecksFirst, rig.Gate.RefusalFor("Nova", ReleasedMerge));
+    }
+
+    /// <summary>A line that merges a branch names the released Task only when its id is a whole word of the branch, ignoring case; both directions of the boundary hold.</summary>
+    [Fact]
+    public void RefusalFor_ReleasedTask_PassesOnlyABranchNamingItsId()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = Release(rig);
+
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-site"));
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge plat-0001"));
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge fix/plat-0001"));
+        Assert.Contains("PLAT-0001", rig.Gate.RefusalFor("Nova", "git merge feat/other"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-00012"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001x"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge feat/XPLAT-0001"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge -"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge 3f2a9c1"));
+    }
+
+    /// <summary>A line merging two branches passes only when each names a released Task; one stray branch refuses the whole line.</summary>
+    [Fact]
+    public void RefusalFor_TwoBranches_NeedBothToNameAReleasedTask()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = Release(rig);
+
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-a feat/PLAT-0001-b"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-a feat/other"));
+        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-a && git merge feat/other"));
+    }
+
+    /// <summary>A pull passes by its branch the same way, and the refusal for a stray branch says to name the branch after the released Task's id.</summary>
+    [Fact]
+    public void RefusalFor_Pull_NeedsTheBranchToNameTheReleasedTask()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = Release(rig);
+
+        Assert.Null(rig.Gate.RefusalFor("Nova", "git pull origin feat/PLAT-0001-site"));
+        string? refusal = rig.Gate.RefusalFor("Nova", "git pull origin feat/other");
+        Assert.NotNull(refusal);
+        Assert.Contains("only for a branch named after a released Task's id", refusal, StringComparison.Ordinal);
+        Assert.Contains("PLAT-0001", refusal, StringComparison.Ordinal);
+    }
+
+    /// <summary>Setting the Team's level back to Ask me refuses the very merge that passed by the released Task's branch.</summary>
+    [Fact]
+    public void RefusalFor_LevelSetBackToAskMe_RefusesTheBranchOfTheReleasedTask()
+    {
+        using NeedsYouLevelRig rig = RunInsideRig();
+        _ = Release(rig);
+        Assert.Null(rig.Gate.RefusalFor("Nova", ReleasedMerge));
+
+        _ = rig.Levels.SetTeam(NeedsYouLevelRig.Team, NeedsYouLevel.AskMe, null);
+
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", ReleasedMerge));
     }
 }
