@@ -11,8 +11,8 @@ internal static class NeedsYouLevelCopy
 
     /// <summary>What Run inside the Team means, under the choice. It names what still waits, so it promises no more than the code does.</summary>
     public const string RunInsideNote =
-        "Run inside the Team: a local merge into main, a Sprint and new Backlog Tasks go ahead without you. "
-        + "Any push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.";
+        "Run inside the Team: a local merge into main of a Task's own branch once its Proof is complete, a Sprint and new Backlog Tasks go ahead without you. "
+        + "Every push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.";
 
     /// <summary>The cap field's explanation.</summary>
     public const string CapNote = "When the Team has spent this much running inside the Team, it asks you before going on.";

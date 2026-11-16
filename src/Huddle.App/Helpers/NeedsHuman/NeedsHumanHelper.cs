@@ -78,7 +78,7 @@ internal sealed class NeedsHumanHelper(TaskStore tasks, TaskService service, Nee
     /// <param name="scope">The scope that set the level.</param>
     internal static string LevelNoteFor(NeedsYouScope scope) => string.Create(
         CultureInfo.InvariantCulture,
-        $"\n\nThe human set this task's {scope.ToDisplay()} to run inside the team: a merge into the team's local main stays inside the team and does not need the human. A push to any remote still does, and so does everything else listed.");
+        $"\n\nThe human set this task's {scope.ToDisplay()} to run inside the team: a merge into the team's local main of a branch named after this task's id stays inside the team and does not need the human. Every push to any remote still does, and so does everything else listed.");
 
     /// <summary>The prompt values for <paramref name="input"/>: the Task, its description without the Evidence section and cut to <see cref="MaxDescriptionLength"/> characters.</summary>
     /// <param name="input">The input.</param>

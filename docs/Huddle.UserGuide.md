@@ -1057,7 +1057,7 @@ The **Needs You level** says how much of a Team's work waits for you. There are 
 | Level | What waits for you |
 | --- | --- |
 | **Ask me** (the default) | Everything that waits today: every merge into main, every push, every Task with an Action, every connector call. |
-| **Run inside the Team** | The same, except three steps go ahead without you: a **local merge** into main of the Team's own repository, a **Sprint** proposal (approved at once when every Task it names runs inside the Team) and new Backlog Tasks. |
+| **Run inside the Team** | The same, except three steps go ahead without you: a **local merge** into main of a Task's own branch (named after the Task's id) once its Proof is complete, a **Sprint** proposal (approved at once when every Task it names runs inside the Team) and new Backlog Tasks. |
 
 Under both levels these still wait for your **Accept**: any `git push` (to a URL, to a path, to anywhere), every Task with an Action (send, pay, publish,
 sign, delete) or marked **Requires your acceptance**, and every connector call.

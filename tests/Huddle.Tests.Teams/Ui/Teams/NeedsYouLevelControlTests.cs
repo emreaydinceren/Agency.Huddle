@@ -161,7 +161,7 @@ public sealed class NeedsYouLevelControlTests
         await cut.InvokeAsync(() => ChooseAsync(cut, Run));
 
         Assert.Equal(
-            "Run inside the Team: a local merge into main, a Sprint and new Backlog Tasks go ahead without you. Any push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.",
+            "Run inside the Team: a local merge into main of a Task's own branch once its Proof is complete, a Sprint and new Backlog Tasks go ahead without you. Every push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.",
             cut.Find(".needs-you-level-note").TextContent.Trim());
         Assert.Equal("When the Team has spent this much running inside the Team, it asks you before going on.", cut.Find(".needs-you-level-cap .mud-input-helper-text").TextContent.Trim());
     }

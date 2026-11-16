@@ -15,7 +15,7 @@ public sealed class NeedsYouLevelMergeGateTests
     private const string ReleasedMerge = "git merge feat/PLAT-0001-x";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
     private const string PushText = "Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in Task PLAT-0001's Action with update_task, for example 'Push feat/x to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.";
-    private const string NothingReadyText = "Cannot merge yet: under Run inside the Team a merge into main runs once a Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
+    private const string NothingReadyText = "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-12-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
     private const string AskMeText = "Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in Task PLAT-0001's Action with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.";
 
     private static NeedsYouLevelRig RunInsideRig(string gates = "'accept-before-merge'") => new(teamLevel: NeedsYouLevel.RunInsideTheTeam, gates: gates);

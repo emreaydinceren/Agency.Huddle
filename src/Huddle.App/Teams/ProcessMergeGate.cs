@@ -273,12 +273,12 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
             string ids = string.Join(", ", released.Select(static task => task.Id.ToString()));
             return string.Create(
                 CultureInfo.InvariantCulture,
-                $"Cannot merge: under Run inside the Team a merge into main runs without an Accept only for a branch named after a released Task's id, for example feat/{released[0].Id}-login. Released now: {ids}. Name the branch after its Task, or put the merge in the Action of the Task it belongs to.");
+                $"Cannot merge: under Run inside the Team a merge into main runs without an Accept only for a branch named after a released Task's id, for example feat/{released[0].Id}-login. Released now: {ids}. Rename the branch after its Task (git branch -m), or put the merge in the Action of the Task it belongs to.");
         }
 
         if (runsInside)
         {
-            return "Cannot merge yet: under Run inside the Team a merge into main runs once a Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
+            return "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-12-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
         }
 
         string where = own.Count == 1

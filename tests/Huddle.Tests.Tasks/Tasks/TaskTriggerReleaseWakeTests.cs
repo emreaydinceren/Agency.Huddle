@@ -25,7 +25,7 @@ public sealed class TaskTriggerReleaseWakeTests
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Contains(
-            "Task PLAT-0001's Proof is complete and its project level is Run inside the Team, so its merge needs no Accept. Merge its work into the local main now, then move the Task to Done. A push still waits for the Human's Accept: put a push in the Task's Action.",
+            "Task PLAT-0001's Proof is complete and its project level is Run inside the Team, so its merge needs no Accept. Merge its branch into the local main now, then move the Task to Done. The branch must be named after the Task id, for example feat/PLAT-0001-login; if yours is not, rename it first with git branch -m. A push still waits for the Human's Accept: put a push in the Task's Action.",
             post.Message.Text,
             StringComparison.Ordinal);
         Assert.Equal(WakeOutcome.Woken, harness.Activity.LastWake(task.Id)?.Outcome);
