@@ -827,7 +827,7 @@ Under a Team's title (not a Project's), the header has two more things:
   the **New team name** and a **Workspace folder** (left blank, it means none,
   which is refused when the type requires one). The new Team has
   the same team type, and each member is hired afresh under a new name, on the
-  same Model, Effort and Adapter as the member it copies (a member left on the
+  same Model, Effort, Work Mode and Adapter as the member it copies (a member left on the
   default stays on the default); no memory, Library file or Task is copied, and
   account connectors start off. A member whose role no longer exists
   in the type, or who was added without a role, is listed as skipped before you

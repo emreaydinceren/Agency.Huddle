@@ -6,4 +6,5 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="RoleId">The role id within the type.</param>
 /// <param name="Card">The resolved card carrying the name, model pick, skills and packs.</param>
 /// <param name="Effort">The effort to store for the Agent, or <see langword="null"/> for the model's default.</param>
-internal sealed record HireRequest(string Team, string TypeId, string RoleId, CardState Card, string? Effort = null);
+/// <param name="WorkMode">The Work Mode to store for the Agent, or <see langword="null"/> for the Adapter's own mode.</param>
+internal sealed record HireRequest(string Team, string TypeId, string RoleId, CardState Card, string? Effort = null, string? WorkMode = null);

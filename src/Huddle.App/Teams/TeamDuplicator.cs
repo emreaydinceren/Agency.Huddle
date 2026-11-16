@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Copies a Team's roster to a new Team with new names, a new workspace and fresh memory (HR-12). The team
-/// type and the roles are carried over, and so are each member's Model, Effort and Adapter (a member with none stored
+/// type and the roles are carried over, and so are each member's Model, Effort, Work Mode and Adapter (a member with none stored
 /// stays without one). No Library file, memory or Task content is copied, connectors are never copied, and
 /// <c>owns</c> starts empty.
 /// </summary>
@@ -134,7 +134,7 @@ internal sealed class TeamDuplicator(
                 continue;
             }
 
-            members.Add(new SourceMember(name, identity.Role.TypeId, spec, persona.Model, persona.Effort, persona.Adapter));
+            members.Add(new SourceMember(name, identity.Role.TypeId, spec, persona.Model, persona.Effort, persona.WorkMode, persona.Adapter));
         }
 
         return members;
@@ -151,7 +151,7 @@ internal sealed class TeamDuplicator(
         }
 
         ModelPick? pick = card.Pick is null ? null : new ModelPick(member.Adapter ?? card.Pick.AdapterId, member.Model);
-        HireResult result = hire.Hire(new HireRequest(target, member.TypeId, member.Spec.Id, card with { Pick = pick }, member.Effort));
+        HireResult result = hire.Hire(new HireRequest(target, member.TypeId, member.Spec.Id, card with { Pick = pick }, member.Effort, member.WorkMode));
         if (result.PersonaName is null)
         {
             skipped.Add(new SkippedMember(member.Name, result.Error ?? string.Empty));
@@ -183,6 +183,6 @@ internal sealed class TeamDuplicator(
         return Directory.Exists(workspace) ? null : WorkspaceMissingMessage;
     }
 
-    /// <summary>A source member with its resolved role and the Model, Effort and Adapter it runs on.</summary>
-    private sealed record SourceMember(string Name, string TypeId, RoleSpec Spec, string? Model, string? Effort, string? Adapter);
+    /// <summary>A source member with its resolved role and the Model, Effort, Work Mode and Adapter it runs on.</summary>
+    private sealed record SourceMember(string Name, string TypeId, RoleSpec Spec, string? Model, string? Effort, string? WorkMode, string? Adapter);
 }

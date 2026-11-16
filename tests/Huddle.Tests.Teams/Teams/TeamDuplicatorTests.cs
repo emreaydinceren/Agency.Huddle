@@ -438,6 +438,36 @@ public sealed class TeamDuplicatorTests
         Assert.Equal("high", grace.Effort);
     }
 
+    /// <summary>A copied member keeps its source's stored Work Mode (#610).</summary>
+    [Fact]
+    public void Duplicate_SourceWithWorkMode_CopiesIt()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        Persona ada = f.Personas.Get("Ada") ?? throw new InvalidOperationException("Ada was not seeded.");
+        _ = f.Personas.Update("Ada", ada.Text, ada.Model, ada.Effort, "plan");
+        Assert.Equal("plan", f.Personas.Get("Ada")?.WorkMode);
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Equal("plan", f.Personas.Get("Grace")?.WorkMode);
+    }
+
+    /// <summary>A source with no stored Work Mode gives a copy with none (#610).</summary>
+    [Fact]
+    public void Duplicate_SourceWithoutWorkMode_CopyHasNone()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        Assert.Null(f.Personas.Get("Dev1")?.WorkMode);
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.Null(f.Personas.Get("Dev2")?.WorkMode);
+    }
+
     /// <summary>A source with no stored Model or Effort gives a copy with none, even though the tier-map pick carries a model.</summary>
     [Fact]
     public void Duplicate_SourceWithoutModelOrEffort_CopyHasNone()
