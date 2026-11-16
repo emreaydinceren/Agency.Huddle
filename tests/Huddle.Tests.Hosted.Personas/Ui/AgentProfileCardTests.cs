@@ -500,6 +500,22 @@ public sealed class AgentProfileCardTests
         Assert.Empty(cut.FindAll("button[aria-label='Actions for coo']"));
     }
 
+    /// <summary>The Delete confirm says the Agent's browser profile, and the sites signed in to in it, go too (#551, owner decision Q4).</summary>
+    [Fact]
+    public async Task ConfirmingRemove_SaysTheBrowserProfileGoesToo()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        await OpenDeleteAsync(cut, "coo");
+
+        Assert.Equal(
+            "Its browser profile goes too, including the sites signed in to in its browser.",
+            cut.Find(".agent-profile-card-remove-note").TextContent.Trim());
+    }
+
     /// <summary>Confirming Delete actually removes the Persona and closes the dialog. The menu is found by its aria-label, "Actions for {name}".</summary>
     [Fact]
     public async Task ConfirmRemove_RemovesThePersonaAndClosesTheDialog()

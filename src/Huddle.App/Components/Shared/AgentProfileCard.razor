@@ -231,6 +231,8 @@
                 {
                     @if (this.confirmingRemove)
                     {
+                        @* The prompt stays the shared Delete title (its aria-label is pinned); the note says what else goes with the Agent. *@
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-remove-note">Its browser profile goes too, including the sites signed in to in its browser.</MudText>
                         <InlineConfirm Prompt="@ConfirmCopy.DeleteTitle(this.name)" OnConfirm="this.ConfirmRemove" OnCancel="this.CancelRemove" />
                     }
                     else
@@ -294,6 +296,9 @@
 
             @* P6a: the account-connectors switch. View mode only - a new Agent is always off, and the grant is a deliberate act on an existing one. *@
             <AgentConnectorsRow Name="@this.name" Adapter="@this.adapter" Restarting="@(this.status.State is PersonaState.Starting)" />
+
+            @* P6b: the browser switch (#551). View mode only, directly under P6a; on by default, so turning it off needs no confirm. *@
+            <AgentBrowserRow Name="@this.name" Adapter="@this.adapter" Restarting="@(this.status.State is PersonaState.Starting)" />
 
             @* Spec §6.5, SB-R16: what the next session will be told, part by part, read-only. Absent where the preview is not registered. *@
             @if (this.PromptPreview is { } preview)

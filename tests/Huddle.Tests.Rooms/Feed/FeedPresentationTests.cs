@@ -29,6 +29,18 @@ public sealed class FeedPresentationTests
         Assert.Equal("AGENTS.md Changes didn't tell Agents about Teams/Home/AGENTS.md: Fixes a spelling mistake", Flatten(line));
     }
 
+    /// <summary>The Human's browser switch reads "You turned {Name}'s browser off" or "on", with no actor name in front (#551).</summary>
+    [Fact]
+    public void Of_AgentBrowserChanged_ReadsYouTurnedTheBrowserOffOrOn()
+    {
+        FeedSummaryLine off = FeedSummary.Of(Item(FeedSourceType.AgentBrowserChanged, new AgentBrowserPayload("Nova", false)));
+        FeedSummaryLine on = FeedSummary.Of(Item(FeedSourceType.AgentBrowserChanged, new AgentBrowserPayload("Nova", true)));
+
+        Assert.Equal("You turned Nova's browser off", Flatten(off));
+        Assert.Equal("You turned Nova's browser on", Flatten(on));
+        Assert.True(off.OmitActor);
+    }
+
     /// <summary>Every source type reads as the sentence of §7, with its context after the dot.</summary>
     [Fact]
     public void Of_EachSourceType_ReadsAsTheSpecSentence()

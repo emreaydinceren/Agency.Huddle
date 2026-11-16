@@ -1,0 +1,124 @@
+@namespace Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Acp
+@inject PersonaStore Personas
+@inject AdapterCatalog Adapters
+@inject WorkModePolicy WorkModes
+@inject BrowserLaunchFactsSource Launch
+
+@* Row P6b of the Agent card, View mode only (issue #551, design section 6): whether this Agent has its own browser (Playwright MCP).
+   On is the default, so there is no confirm in either direction: turning it off only takes access away, and every acting call asks
+   anyway. It acts at once and does not wait for Save. The states are decided in the order Not Claude, no isolation, unavailable,
+   then the switch; each of the first three shows a sentence and no switch, because Huddle cannot give that Agent a browser. *@
+<section class="agent-profile-card-section agent-browser-row" data-browser-state="@this.StateName">
+    <div class="group-label">Browser</div>
+    @if (this.State == BrowserRowState.NotClaude)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary agent-browser-note">Huddle can't give @this.AdapterName a browser.</MudText>
+    }
+    else if (this.State == BrowserRowState.NoIsolation)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary agent-browser-note">Huddle gives a browser only to an Adapter with isolation on.</MudText>
+    }
+    else if (this.State == BrowserRowState.Unavailable)
+    {
+        <MudText Typo="Typo.body2" Class="mud-text-secondary agent-browser-note">No browser is available: @this.Facts.UnavailableReason.</MudText>
+    }
+    else
+    {
+        <MudSwitch T="bool" Value="@(this.on && !this.ModeSkipsPrompt)" ValueChanged="this.OnSwitchChanged" Disabled="this.ModeSkipsPrompt"
+                   Color="Color.Primary" Class="agent-browser-switch" Label="Browser" />
+        @if (this.ModeSkipsPrompt)
+        {
+            <MudText Typo="Typo.body2" Class="d-block mb-1 agent-browser-mode-note" role="status">This Agent's Work Mode never asks before a tool runs, so the browser stays off. Choose another Work Mode first.</MudText>
+        }
+        else if (this.Restarting)
+        {
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper" role="status">Restarting @this.Name to apply this.</MudText>
+        }
+        else if (this.on && this.Facts.NoDisplay)
+        {
+            @* The no-display sentence replaces the On line's window and sign-in sentences, which would promise what this computer cannot show. *@
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">On. This computer has no display, so @(this.Name)'s browser runs without a window and you can't sign in to sites for it. Reading pages runs freely; every click, typing or form step asks you first.</MudText>
+        }
+        else if (this.on)
+        {
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">On. @this.Name has its own browser window on this computer. Reading pages runs freely; every click, typing or form step asks you first. Sites signed in to in that window stay signed in for @this.Name only.</MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">Off. @this.Name has no browser.</MudText>
+        }
+    }
+</section>
+
+@code {
+    private bool on;
+
+    /// <summary>The Agent's name.</summary>
+    [Parameter, EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>The id of the Agent's Adapter, or <see langword="null"/> for the installation's default.</summary>
+    [Parameter]
+    public string? Adapter { get; set; }
+
+    /// <summary>True while the Agent's host is restarting, which is when a change is being applied.</summary>
+    [Parameter]
+    public bool Restarting { get; set; }
+
+    private enum BrowserRowState
+    {
+        NotClaude,
+        NoIsolation,
+        Unavailable,
+        Switch,
+    }
+
+    private AdapterProfile Profile => this.Adapters.Find(this.Adapter) ?? this.Adapters.Default;
+
+    private string AdapterName => this.Profile.DisplayName;
+
+    private BrowserLaunchFacts Facts => this.Launch.Current;
+
+    private BrowserRowState State
+    {
+        get
+        {
+            if (!AdapterCatalog.RunsClaude(this.Profile))
+            {
+                return BrowserRowState.NotClaude;
+            }
+
+            if (!this.Profile.IsolateUserSettings)
+            {
+                return BrowserRowState.NoIsolation;
+            }
+
+            return this.Facts.Available ? BrowserRowState.Switch : BrowserRowState.Unavailable;
+        }
+    }
+
+    private string StateName => this.State switch
+    {
+        BrowserRowState.Switch when this.ModeSkipsPrompt => "ModeSkips",
+        BrowserRowState.Switch when this.Restarting => "Restarting",
+        BrowserRowState.Switch when this.on && this.Facts.NoDisplay => "NoDisplay",
+        BrowserRowState.Switch => this.on ? "On" : "Off",
+        var other => other.ToString(),
+    };
+
+    /// <summary>Whether the Agent's Work Mode would skip the approval prompt, which keeps the browser off (ADR-0080).</summary>
+    private bool ModeSkipsPrompt => this.WorkModes.SkipsApproval(this.Personas.Get(this.Name)?.WorkMode);
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        this.on = !(this.Personas.Get(this.Name)?.BrowserOff ?? false);
+    }
+
+    private void OnSwitchChanged(bool value)
+    {
+        this.Personas.SetBrowser(this.Name, value);
+        this.on = value;
+    }
+}
