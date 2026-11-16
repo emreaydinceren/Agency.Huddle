@@ -390,7 +390,7 @@ DATA_ROOT="$SANDBOX/Application Support/Agency.Huddle"
 INSTALL_ROOT="$DATA_ROOT/install"
 LAUNCHER="$INSTALL_ROOT/bin/huddle"
 INSTANCE_FILE="$DATA_ROOT/data/instance.json"
-APP_EXE="$INSTALL_ROOT/app/Huddle.App"
+APP_EXE="$INSTALL_ROOT/app/HuddleApp"
 APP_BUNDLE="$HOME/Applications/Agency Huddle.app"
 LINK_PATH="$HOME/.local/bin/huddle"
 Team__Desktop__OpenBrowser=false
@@ -399,7 +399,7 @@ echo "Sandbox: $SANDBOX"
 
 others=$(ps -axww -o command= | grep -c '/app/Huddle\.App' || true)
 if [ "$others" -gt 0 ]; then
-    echo "Note: $others other Huddle.App process(es) are running outside the sandbox; they are left alone."
+    echo "Note: $others other HuddleApp process(es) are running outside the sandbox; they are left alone."
 fi
 
 # ---- STEP 0: the release folder -------------------------------------------------------------
@@ -435,12 +435,12 @@ run_installer "$RELEASE_DIR" --no-launch
 INSTALL_VIA_STDIN=0
 [ "$INSTALL_RC" -eq 0 ] || die "install.sh exited with $INSTALL_RC; last lines: $(last_lines "$INSTALL_LOG" 6)"
 [ -x "$LAUNCHER" ] || die "bin/huddle was not written or is not executable"
-[ -x "$APP_EXE" ] || die "app/Huddle.App is missing or not executable"
+[ -x "$APP_EXE" ] || die "app/HuddleApp is missing or not executable"
 
 # Extra macOS checks: the code signatures, the bundle plist, the bundle stub and the symlink.
 codesign --verify --deep --strict "$APP_EXE" </dev/null 2>"$LOG_DIR/codesign.txt" ||
     die "codesign --verify --deep --strict failed on the host: $(last_lines "$LOG_DIR/codesign.txt" 3)"
-info "codesign: app/Huddle.App verifies"
+info "codesign: app/HuddleApp verifies"
 find "$INSTALL_ROOT/app" -type f -name '*.dylib' >"$LOG_DIR/dylibs.txt"
 dylib_count=0
 while IFS= read -r dylib; do
@@ -483,18 +483,23 @@ start_app
 launch1_pid=$LAUNCH_PID
 wait_for_app "$launch1_pid" 90
 instance1_pid=$INST_PID
+# /health passes even when the app cannot find its wwwroot: every asset then answers 200 with an empty
+# body and the page renders unstyled.
+css_bytes=$(curl -s -o /dev/null -w '%{size_download}' --max-time 15 "${INST_URL%/}/_content/MudBlazor/MudBlazor.min.css" </dev/null || echo 0)
+[ "${css_bytes:-0}" -ge 1024 ] || die "MudBlazor.min.css returned $css_bytes bytes: the app is not serving its static files"
+info "static files served (MudBlazor.min.css $css_bytes bytes)"
 
 # ---- STEP 5: second start hands off ---------------------------------------------------------
 
-begin_step 5 "start bin/huddle a second time: exits 0 within 20 s, exactly one Huddle.App"
+begin_step 5 "start bin/huddle a second time: exits 0 within 20 s, exactly one HuddleApp"
 LOG_N=$((LOG_N + 1))
 run_timed 20 "$LOG_DIR/second-launch-$LOG_N.txt" "$LAUNCHER"
 [ "$RUN_RC" -ne 124 ] || die "the second launcher did not exit within 20 s"
 [ "$RUN_RC" -eq 0 ] || die "the second launcher exited with $RUN_RC"
 apps=$(count_procs "$APP_EXE")
-[ "$apps" -eq 1 ] || die "expected exactly one Huddle.App process under the sandbox, found $apps"
+[ "$apps" -eq 1 ] || die "expected exactly one HuddleApp process under the sandbox, found $apps"
 app_line=$(list_procs "$APP_EXE" | head -n 1)
-[ "${app_line%% *}" = "$instance1_pid" ] || die "the Huddle.App process is ${app_line%% *} but instance.json names $instance1_pid"
+[ "${app_line%% *}" = "$instance1_pid" ] || die "the HuddleApp process is ${app_line%% *} but instance.json names $instance1_pid"
 
 # ---- STEP 6: rerun while running ------------------------------------------------------------
 
@@ -513,7 +518,7 @@ marker="$DATA_ROOT/smoke-marker.txt"
 printf 'keep me' >"$marker"
 mkdir -p "$SANDBOX/x"
 tar -xzf "$RELEASE_DIR/$ARCHIVE_NAME" -C "$SANDBOX/x" </dev/null || die "could not extract $ARCHIVE_NAME to reuse its app/ as the second release"
-[ -f "$SANDBOX/x/app/Huddle.App" ] || die "the first archive has no app/Huddle.App to reuse as the second release"
+[ -f "$SANDBOX/x/app/HuddleApp" ] || die "the first archive has no app/HuddleApp to reuse as the second release"
 release2="$SANDBOX/rel2"
 LOG_N=$((LOG_N + 1))
 run_timed 900 "$LOG_DIR/build-$LOG_N.txt" sh "$BUILD_SH" --version "$VERSION2" --rid "$RID" --out "$release2" --publish-dir "$SANDBOX/x/app"
@@ -530,7 +535,7 @@ if pid_alive "$instance1_pid"; then
     die "the old app (pid $instance1_pid) is still running after the upgrade"
 fi
 wait "$launch1_pid" 2>/dev/null || true
-[ "$(count_procs "$APP_EXE")" -eq 0 ] || die "a Huddle.App process is still running after the upgrade"
+[ "$(count_procs "$APP_EXE")" -eq 0 ] || die "a HuddleApp process is still running after the upgrade"
 [ "$(installed_version)" = "$VERSION2" ] || die "install-state says version \"$(installed_version)\", expected $VERSION2"
 if [ ! -f "$marker" ] || [ "$(cat "$marker")" != "keep me" ]; then
     die "the marker file in the data root did not survive the upgrade"
@@ -538,7 +543,7 @@ fi
 
 # ---- STEP 8: start again, then stop ---------------------------------------------------------
 
-begin_step 8 'start again; bin/huddle stop exits 0 and prints "Stopped."; no Huddle.App or node is left'
+begin_step 8 'start again; bin/huddle stop exits 0 and prints "Stopped."; no HuddleApp or node is left'
 start_app
 launch3_pid=$LAUNCH_PID
 wait_for_app "$launch3_pid" 90
@@ -549,7 +554,7 @@ run_timed 120 "$stop_log" "$LAUNCHER" stop
 sed 's/^/    stop> /' "$stop_log"
 [ "$RUN_RC" -eq 0 ] || die "bin/huddle stop exited with $RUN_RC"
 grep -qx 'Stopped\.' "$stop_log" || die 'bin/huddle stop did not print "Stopped."'
-wait_pid_gone "$instance3_pid" 20 || die "Huddle.App (pid $instance3_pid) is still running after stop"
+wait_pid_gone "$instance3_pid" 20 || die "HuddleApp (pid $instance3_pid) is still running after stop"
 wait "$launch3_pid" 2>/dev/null || true
 [ ! -e "$INSTANCE_FILE" ] || die "instance.json is still there after stop"
 waited=0

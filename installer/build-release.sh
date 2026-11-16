@@ -129,9 +129,16 @@ main() {
             make_zip "$stage" "$archive"
             ;;
         *)
-            # macOS needs the apphost executable; a publish from Windows does not set the mode bit.
+            # macOS kills any executable whose name ends in .app (seen on macOS 27: even a copy of
+            # /bin/echo named Echo.App dies with SIGKILL), and the apphost is named after the
+            # assembly, Huddle.App. It finds Huddle.App.dll by its own embedded name, so renaming
+            # the host is safe. install.sh and tests/smoke.sh expect app/HuddleApp.
             if [ -f "$stage/app/Huddle.App" ]; then
-                chmod +x "$stage/app/Huddle.App"
+                mv "$stage/app/Huddle.App" "$stage/app/HuddleApp"
+            fi
+            # macOS needs the apphost executable; a publish from Windows does not set the mode bit.
+            if [ -f "$stage/app/HuddleApp" ]; then
+                chmod +x "$stage/app/HuddleApp"
             fi
             archive="$out/huddle-$rid.tar.gz"
             rm -f "$archive"

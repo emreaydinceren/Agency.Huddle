@@ -29,7 +29,7 @@ test_resolve_paths_defaults() {
     resolve_paths
     t_assert_eq "$DATA_DEFAULT/install" "$INSTALL_ROOT" "INSTALL_ROOT"
     t_assert_eq "$DATA_DEFAULT" "$DATA_ROOT" "DATA_ROOT"
-    t_assert_eq "$DATA_DEFAULT/install/app/Huddle.App" "$APP_EXE" "APP_EXE"
+    t_assert_eq "$DATA_DEFAULT/install/app/HuddleApp" "$APP_EXE" "APP_EXE"
     t_assert_eq "$DATA_DEFAULT/install/node/bin/node" "$NODE_BIN" "NODE_BIN"
     t_assert_eq "$DATA_DEFAULT/install/tools/acp/node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js" "$ADAPTER_ENTRY" "ADAPTER_ENTRY"
     t_assert_eq "$DATA_DEFAULT/install/install-state" "$STATE_FILE" "STATE_FILE"
@@ -41,7 +41,7 @@ test_resolve_paths_honours_overrides() {
     resolve_paths
     t_assert_eq "/opt/hi" "$INSTALL_ROOT" "INSTALL_ROOT override"
     t_assert_eq "/opt/hd" "$DATA_ROOT" "DATA_ROOT override"
-    t_assert_eq "/opt/hi/app/Huddle.App" "$APP_EXE" "APP_EXE follows INSTALL_ROOT"
+    t_assert_eq "/opt/hi/app/HuddleApp" "$APP_EXE" "APP_EXE follows INSTALL_ROOT"
     t_assert_eq "/opt/hi/install-state" "$STATE_FILE" "STATE_FILE follows INSTALL_ROOT"
     t_assert_eq "/opt/hd/cache" "$CACHE_DIR" "CACHE_DIR follows DATA_ROOT"
 }
@@ -1018,7 +1018,7 @@ ap_stubs() {
     }
     is_macho() {
         case $1 in
-            *.dylib | */Huddle.App) return 0 ;;
+            *.dylib | */HuddleApp) return 0 ;;
         esac
         return 1
     }
@@ -1083,7 +1083,7 @@ ap_build_archive() {
     mkdir -p "$ap_src/app" "$ap_src/tools/acp"
     if [ "${2:-}" != nohost ]; then
         # The shebang makes `[ -x ]` meaningful on Windows (Git Bash infers it from the shebang).
-        printf '#!/bin/sh\n# host %s\n' "$1" >"$ap_src/app/Huddle.App"
+        printf '#!/bin/sh\n# host %s\n' "$1" >"$ap_src/app/HuddleApp"
     fi
     printf 'lib %s\n' "$1" >"$ap_src/app/libx.dylib"
     printf '{}\n' >"$ap_src/tools/acp/package.json"
@@ -1148,8 +1148,8 @@ test_install_app_fresh_install() {
     unset -f chmod
     t_assert_eq "0" "$rc" "install_app succeeds"
     t_assert_eq "1" "$APP_CHANGED" "APP_CHANGED is 1 after an install"
-    if [ -x "$APP_EXE" ]; then t_pass; else t_fail "app/Huddle.App must be executable"; fi
-    t_assert_eq "chmod +x $INSTALL_ROOT.staging/app/Huddle.App" "$(grep '^chmod' "$AP_CALLS")" "the host is made executable (Windows cannot show the bit)"
+    if [ -x "$APP_EXE" ]; then t_pass; else t_fail "app/HuddleApp must be executable"; fi
+    t_assert_eq "chmod +x $INSTALL_ROOT.staging/app/HuddleApp" "$(grep '^chmod' "$AP_CALLS")" "the host is made executable (Windows cannot show the bit)"
     t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the host comes from the archive"
     t_assert_file "$INSTALL_ROOT/app/libx.dylib" "the dylib is installed"
     t_assert_file "$INSTALL_ROOT/tools/acp/package.json" "package.json is installed"
@@ -1173,7 +1173,7 @@ test_install_app_signs_only_macho_files_that_fail_verification() {
     ap_setup
     ap_build_archive v1
     install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
-    expected_verify="codesign --verify $INSTALL_ROOT.staging/app/Huddle.App${NL}codesign --verify $INSTALL_ROOT.staging/app/libx.dylib"
+    expected_verify="codesign --verify $INSTALL_ROOT.staging/app/HuddleApp${NL}codesign --verify $INSTALL_ROOT.staging/app/libx.dylib"
     t_assert_eq "$expected_verify" "$(grep -- '--verify' "$AP_CALLS" | sort)" "only the Mach-O files are verified"
     t_assert_eq "codesign --force --sign - $INSTALL_ROOT.staging/app/libx.dylib" "$(grep -- '--force' "$AP_CALLS")" "only the file that failed verification is signed"
 }
@@ -1254,7 +1254,7 @@ test_install_app_archive_without_host_fails_and_changes_nothing() {
     t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ is untouched"
     t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
     t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is left"
-    t_assert_contains "$(cat "$AP/out")" "app/Huddle.App" "the missing file is named"
+    t_assert_contains "$(cat "$AP/out")" "app/HuddleApp" "the missing file is named"
     t_assert_contains "$(cat "$AP/out")" "fix:" "with a fix line"
     t_assert_eq "0" "$(ap_count_calls '^stop')" "the app was not stopped for a bad archive"
 }
@@ -1302,7 +1302,7 @@ test_install_app_recovers_a_swap_that_died_between_its_renames() {
     printf 'junk\n' >"$INSTALL_ROOT.staging/junk"
     printf '{}\n' >"$INSTALL_ROOT.staging/release-info.json"
     mkdir -p "$INSTALL_ROOT.staging/app"
-    printf 'host\n' >"$INSTALL_ROOT.staging/app/Huddle.App"
+    printf 'host\n' >"$INSTALL_ROOT.staging/app/HuddleApp"
     ap_build_archive v2
     rc=0
     install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
@@ -1456,7 +1456,7 @@ test_install_app_deletes_a_marked_leftover_old_and_staging() {
     ap_install_with_markers v1
     mkdir -p "$INSTALL_ROOT.old/app" "$INSTALL_ROOT.staging"
     printf '{}\n' >"$INSTALL_ROOT.old/release-info.json"
-    printf 'host\n' >"$INSTALL_ROOT.old/app/Huddle.App"
+    printf 'host\n' >"$INSTALL_ROOT.old/app/HuddleApp"
     printf 'schema=1\n' >"$INSTALL_ROOT.staging/install-state"
     ap_build_archive v2
     rc=0
@@ -1646,7 +1646,7 @@ test_stop_still_waits_for_and_kills_the_real_app_pid() {
     ap_setup
     ap_instance_json 4242
     AP_ALIVE=1
-    AP_COMM=Huddle.App
+    AP_COMM=HuddleApp
     OPT_FORCE=1
     rc=0
     stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
@@ -1676,10 +1676,10 @@ test_stop_skips_the_pid_wait_when_the_stop_verb_succeeded_and_removed_the_record
 test_process_command_of_prints_the_executable_name_from_ps() {
     ap_setup
     mkdir -p "$AP/bin"
-    printf '#!/bin/sh\nif [ "$1 $2 $3" = "-p 77 -o" ] && [ "$4" = "comm=" ]; then\n    printf "  /Applications/My Apps/Huddle.App  \\n"\n    exit 0\nfi\nexit 1\n' >"$AP/bin/ps"
+    printf '#!/bin/sh\nif [ "$1 $2 $3" = "-p 77 -o" ] && [ "$4" = "comm=" ]; then\n    printf "  /Applications/My Apps/HuddleApp  \\n"\n    exit 0\nfi\nexit 1\n' >"$AP/bin/ps"
     chmod +x "$AP/bin/ps"
     out=$(ap_child "PATH=\"$AP/bin:\$PATH\"" 'printf "[%s]\n" "$(process_command_of 77)"' 'printf "[%s]\n" "$(process_command_of 99)"')
-    t_assert_eq "[Huddle.App]${NL}[]" "$out" "the base name of the command, and nothing for a missing process"
+    t_assert_eq "[HuddleApp]${NL}[]" "$out" "the base name of the command, and nothing for a missing process"
 }
 
 test_resolve_asset_adds_the_v_of_the_release_tag_to_a_bare_version() {
@@ -1710,10 +1710,10 @@ test_folder_is_replaceable_needs_the_host_next_to_release_info() {
     folder_is_replaceable "$ap_dir" || rc=$?
     t_assert_eq "1" "$rc" "a folder with only release-info.json is not ours"
     mkdir -p "$ap_dir/app"
-    printf 'host\n' >"$ap_dir/app/Huddle.App"
+    printf 'host\n' >"$ap_dir/app/HuddleApp"
     rc=0
     folder_is_replaceable "$ap_dir" || rc=$?
-    t_assert_eq "0" "$rc" "release-info.json with app/Huddle.App is replaceable"
+    t_assert_eq "0" "$rc" "release-info.json with app/HuddleApp is replaceable"
     rm -rf "$ap_dir"
     mkdir -p "$ap_dir"
     printf 'schema=1\n' >"$ap_dir/install-state"
@@ -2359,7 +2359,7 @@ test_launcher_content_with_space_in_paths() {
     resolve_paths
     output=$(launcher_content)
     expected_data_dir="'$TEST_HOME/data root/data'"
-    expected_app_exe="'$TEST_HOME/my app/app/Huddle.App'"
+    expected_app_exe="'$TEST_HOME/my app/app/HuddleApp'"
     t_assert_contains "$output" "export Team__DataDir=$expected_data_dir" "DataDir quoted with space"
     t_assert_contains "$output" "exec $expected_app_exe \"\$@\"" "APP_EXE quoted with space"
 }
@@ -2425,6 +2425,15 @@ test_launcher_content_lines_exact_order() {
     lines=$(printf '%s' "$output" | tr '\n' '|')
     t_assert_contains "$lines" "#!/bin/sh|set -eu|export Team__Desktop__Enabled=true|export Team__Acp__Enabled=true" "first four lines in order"
     t_assert_not_contains "$output" "$(printf '\r')" "no carriage returns"
+}
+
+# The app's wwwroot is found from the current directory, so the launcher moves into the app folder first.
+test_launcher_content_starts_the_app_from_its_own_folder() {
+    parse_args
+    resolve_paths
+    output=$(launcher_content)
+    lines=$(printf '%s' "$output" | tr '\n' '|')
+    t_assert_contains "$lines" "|cd '$INSTALL_ROOT/app'|exec '$APP_EXE' \"\$@\"" "cd into the app folder right before exec"
 }
 
 # ---- Task 38: main (Spec sections 6 and 7) -------------------------------------------------
@@ -2592,7 +2601,7 @@ test_main_first_run_installs_everything() {
     t_assert_contains "$MN_OUT" "[ok] node" "node step"
     t_assert_contains "$MN_OUT" "[ok] adapter" "adapter step"
     t_assert_contains "$MN_OUT" "[ok] launcher" "launcher step"
-    t_assert_file "$MN_ROOT/app/Huddle.App" "app host"
+    t_assert_file "$MN_ROOT/app/HuddleApp" "app host"
     t_assert_file "$MN_ROOT/node/bin/node" "node"
     t_assert_file "$MN_ROOT/tools/acp/node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js" "adapter entry"
     t_assert_file "$MN_ROOT/bin/huddle" "launcher"
@@ -2954,6 +2963,7 @@ t_run test_app_stub_content_with_space_and_quote
 t_run test_plist_content_basic
 t_run test_plist_content_escapes_xml_special_chars
 t_run test_launcher_content_lines_exact_order
+t_run test_launcher_content_starts_the_app_from_its_own_folder
 
 t_run test_t_run_honours_t_only_and_prints_run_lines_only_for_failures
 t_run test_install_adapter_runs_npm_ci_when_nothing_is_installed
@@ -3348,7 +3358,7 @@ un_setup() {
     la_run
     printf 'schema=1\nversion=1.2.3\n' >"$INSTALL_ROOT/install-state"
     mkdir -p "$INSTALL_ROOT/app" "$DATA_ROOT/data" "$DATA_ROOT/cache"
-    printf '#!/bin/sh\n' >"$INSTALL_ROOT/app/Huddle.App"
+    printf '#!/bin/sh\n' >"$INSTALL_ROOT/app/HuddleApp"
     printf 'my rooms\n' >"$DATA_ROOT/data/rooms.json"
     printf 'download\n' >"$DATA_ROOT/cache/asset.tar.gz"
     : >"$AP_CALLS"
@@ -3481,7 +3491,7 @@ test_do_uninstall_refuses_a_folder_without_the_marker() {
     t_assert_eq "1" "$UN_RC" "exit code"
     t_assert_contains "$UN_OUT" "[!!]" "failure line"
     t_assert_contains "$UN_OUT" "fix:" "fix line"
-    t_assert_file "$INSTALL_ROOT/app/Huddle.App" "install untouched"
+    t_assert_file "$INSTALL_ROOT/app/HuddleApp" "install untouched"
     t_assert_file "$APP_BUNDLE/Contents/Info.plist" "bundle untouched"
     t_assert_file "$LINK_PATH" "link untouched"
     t_assert_file "$DATA_ROOT/data/rooms.json" "data untouched"

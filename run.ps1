@@ -316,12 +316,35 @@ if ($CleanOnly) {
     exit 0
 }
 
+# This script builds from source, so it needs a developer's tools. Someone who only wants to use
+# Huddle should not install them: the release installer brings a prebuilt app, Node and the adapter.
+$installerHint = 'irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.ps1 | iex'
+
+# Without this check a machine with no .NET SDK fails at the build with PowerShell's own
+# "dotnet is not recognized" error. global.json pins the 11.0.1xx feature band (latestPatch).
+if (-not $DryRun) {
+    $dotnetSdks = @()
+    if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+        $dotnetSdks = @(& dotnet --list-sdks 2>$null | Where-Object { $_ -match '^11\.0\.1' })
+    }
+
+    if ($dotnetSdks.Count -eq 0) {
+        Write-Host 'The .NET 11 SDK was not found, and building Huddle from source needs it.' -ForegroundColor Yellow
+        Write-Host '   To use Huddle without building it, install the release instead (no admin rights needed):' -ForegroundColor Gray
+        Write-Host "      $installerHint" -ForegroundColor Gray
+        Write-Host '   To build from source, install the .NET 11 SDK: https://dotnet.microsoft.com/download/dotnet/11.0' -ForegroundColor Gray
+        exit 1
+    }
+}
+
 # Acp:Enabled is on in Development and spawns one node process per Persona, so a
 # missing node turns into a startup failure rather than a missing feature.
 if (-not $NoAcp -and -not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "node was not found on PATH." -ForegroundColor Yellow
     Write-Host "   Development config sets Team:Acp:Enabled=true, which starts one node process per Persona." -ForegroundColor Gray
     Write-Host "   Install node, or run without them: ./run.ps1 -NoAcp" -ForegroundColor Gray
+    Write-Host '   To use Huddle without building it, install the release instead (it brings its own Node):' -ForegroundColor Gray
+    Write-Host "      $installerHint" -ForegroundColor Gray
     exit 1
 }
 
