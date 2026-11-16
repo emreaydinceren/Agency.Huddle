@@ -22,6 +22,12 @@ using Agency.Huddle.App.Teams;
 /// With no <c>originRoomId</c> the origin is the Room of the caller's one running Turn, when the caller is a Member of it
 /// (<see cref="TurnActivity.SoleRoom"/>). Models leave the argument out, and a Task with no origin is woken in a
 /// {Human, assignee} Team chat rather than in the Room it was asked for in.
+/// <para>
+/// With no <c>project</c> (omitted, empty or blank) the Task is filed in the first Project that applies: the origin Room's, the
+/// <c>parent</c> Task's, or that of the Task the caller's Turn was woken for (<see cref="TurnActivity.TaskInHand"/>). A source counts
+/// only when it is in the Task's own Team and the Team's catalog still lists the Project; otherwise the Task stays at the Team root.
+/// An explicit <c>project</c> is never overridden. When a Project was defaulted the result says where it came from.
+/// </para>
 /// </remarks>
 internal sealed class CreateTaskTool(
     TaskService tasks,
@@ -32,7 +38,9 @@ internal sealed class CreateTaskTool(
     string callerAgentId,
     TurnActivity? turnActivity = null,
     NeedsYouLevels? levels = null,
-    ProcessGateService? gates = null) : IAppTool
+    ProcessGateService? gates = null,
+    ITeamCatalog? catalog = null,
+    TaskStore? store = null) : IAppTool
 {
     /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
     private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
@@ -128,6 +136,14 @@ internal sealed class CreateTaskTool(
             return actorRefusal;
         }
 
+        ProjectDefault? filed = string.IsNullOrWhiteSpace(raw.Project)
+            ? await this.DefaultProjectAsync(raw, values, cancellationToken).ConfigureAwait(false)
+            : null;
+        if (filed is not null)
+        {
+            raw = raw with { Project = filed.Project };
+        }
+
         if (!TaskToolText.TryGetBool(arguments, "human_gate", false, out bool humanGate, out string gateRefusal)
             || !TaskToolText.TryGetString(arguments, "action", out string? action, out gateRefusal))
         {
@@ -145,8 +161,59 @@ internal sealed class CreateTaskTool(
             return runRefusal;
         }
 
-        return this.DescribeResult(result, actor);
+        return this.DescribeResult(result, actor, filed);
     }
+
+    /// <summary>
+    /// The Project a Task with no <c>project</c> is filed in: the first of the origin Room's, the parent's and the Task in hand's
+    /// that is in the Task's Team and still listed by the catalog. <see langword="null"/> means the Team root.
+    /// </summary>
+    /// <param name="raw">The argument texts, with the origin Room already defaulted.</param>
+    /// <param name="values">The parsed values, which carry the parent.</param>
+    /// <param name="cancellationToken">Propagated to <see cref="ITeamDirectory"/>.</param>
+    private async Task<ProjectDefault?> DefaultProjectAsync(RawArguments raw, ParsedValues values, CancellationToken cancellationToken)
+    {
+        if (catalog?.Find(raw.Team) is not { } team)
+        {
+            return null;
+        }
+
+        if (!string.IsNullOrWhiteSpace(raw.OriginRoomId)
+            && await directory.GetRoomAsync(raw.OriginRoomId, cancellationToken).ConfigureAwait(false) is { } room
+            && Listed(team, room.Team, room.Project) is { } fromRoom)
+        {
+            return new ProjectDefault(fromRoom, string.Create(CultureInfo.InvariantCulture, $"from Room \"{room.Name}\", where this Task was asked for"));
+        }
+
+        if (values.ParentId is { } parentId && this.ListedFor(team, parentId) is { } fromParent)
+        {
+            return new ProjectDefault(fromParent, string.Create(CultureInfo.InvariantCulture, $"from {parentId}, its parent"));
+        }
+
+        if (turnActivity?.SoleRoom(callerAgentId) is { } turnRoom
+            && turnActivity.TaskInHand(callerAgentId, turnRoom) is { } inHand
+            && this.ListedFor(team, inHand) is { } fromInHand)
+        {
+            return new ProjectDefault(fromInHand, string.Create(CultureInfo.InvariantCulture, $"from {inHand}, the Task you were woken for"));
+        }
+
+        return null;
+    }
+
+    /// <summary>The Project of Task <paramref name="id"/>, in the catalog's spelling, when the Task is in <paramref name="team"/> and the Team lists it.</summary>
+    /// <param name="team">The Task's Team.</param>
+    /// <param name="id">The Task to read the Project of.</param>
+    private string? ListedFor(TeamSummary team, TaskId id) =>
+        store?.Get(id) is { } source ? Listed(team, source.Location.Team, source.Location.Project) : null;
+
+    /// <summary>The catalog's spelling of <paramref name="project"/> when <paramref name="sourceTeam"/> is <paramref name="team"/> (ignoring case) and the Team lists it.</summary>
+    /// <param name="team">The Task's Team.</param>
+    /// <param name="sourceTeam">The Team the default would come from.</param>
+    /// <param name="project">The Project the default would come from.</param>
+    private static string? Listed(TeamSummary team, string? sourceTeam, string? project) =>
+        string.IsNullOrWhiteSpace(project) || !string.Equals(sourceTeam, team.Name, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : team.Projects.FirstOrDefault(name => string.Equals(name, project, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Reads every argument's text in the order the checks run: <c>title</c> and <c>team</c> first (required), then the
@@ -347,11 +414,12 @@ internal sealed class CreateTaskTool(
     /// <summary>Words the outcome of <see cref="TaskService.Create"/> for the model.</summary>
     /// <param name="result">The service result.</param>
     /// <param name="actor">The caller.</param>
-    private string DescribeResult(TaskResult? result, TaskActor actor)
+    /// <param name="filed">Where the Project came from when it was defaulted, else <see langword="null"/>.</param>
+    private string DescribeResult(TaskResult? result, TaskActor actor, ProjectDefault? filed)
     {
         return result switch
         {
-            TaskResult.Saved saved => this.BuildSuccessText(saved, actor),
+            TaskResult.Saved saved => this.BuildSuccessText(saved, actor, filed),
             TaskResult.Refused refused => string.Join('\n', refused.Problems),
             TaskResult.GateRefused gateRefused => gateRefused.Message,
 
@@ -398,7 +466,8 @@ internal sealed class CreateTaskTool(
     /// <summary>Builds the §11.2 success text: what was created, its assignee, and who is notified.</summary>
     /// <param name="saved">The result <see cref="TaskService.Create"/> returned.</param>
     /// <param name="actor">The caller, as resolved by <see cref="TaskToolText.ResolveActorAsync"/>.</param>
-    private string BuildSuccessText(TaskResult.Saved saved, TaskActor actor)
+    /// <param name="filed">Where the Project came from when it was defaulted, else <see langword="null"/>.</param>
+    private string BuildSuccessText(TaskResult.Saved saved, TaskActor actor, ProjectDefault? filed)
     {
         TaskItem task = saved.Task;
         string location = task.Location.Project is null
@@ -415,7 +484,11 @@ internal sealed class CreateTaskTool(
         WakePreview preview = triggers.Preview(saved.Change.Before, saved.Change.After, actor);
         string notify = TaskToolText.NotifyClause(preview, actor.Name);
 
-        return string.Create(CultureInfo.InvariantCulture, $"Created {task.Id} \"{task.Title}\" in {location}, {assigneeClause}. {notify}{TaskActionNote.For(task, levels, gates, prompts)}");
+        string filedClause = filed is null
+            ? string.Empty
+            : string.Create(CultureInfo.InvariantCulture, $"Filed in project \"{filed.Project}\" ({filed.Reason}). Pass project to file it elsewhere. ");
+
+        return string.Create(CultureInfo.InvariantCulture, $"Created {task.Id} \"{task.Title}\" in {location}, {assigneeClause}. {filedClause}{notify}{TaskActionNote.For(task, levels, gates, prompts)}");
     }
 
     /// <summary>Parses an optional <c>yyyy-MM-dd</c> date argument (Spec §11.2 check 4).</summary>
@@ -530,6 +603,11 @@ internal sealed class CreateTaskTool(
         string? StartDate,
         string? DueDate,
         string? Sprint);
+
+    /// <summary>A Project chosen for a Task that named none, and where it came from.</summary>
+    /// <param name="Project">The Project, in the catalog's spelling.</param>
+    /// <param name="Reason">The source, worded to follow <c>Filed in project "P" (</c>.</param>
+    private sealed record ProjectDefault(string Project, string Reason);
 
     /// <summary>The values parsed out of <see cref="RawArguments"/>.</summary>
     /// <param name="Status">The initial status.</param>

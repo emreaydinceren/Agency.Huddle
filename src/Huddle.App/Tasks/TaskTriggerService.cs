@@ -988,7 +988,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return false;
         }
 
-        WakeOutcome outcome = await this.PostWakeAsync(batch, latest, assigneeName, senderId, room, ct).ConfigureAwait(false);
+        WakeOutcome outcome = await this.PostWakeNotingTaskAsync(batch, latest, assignee, assigneeName, senderId, room, ct).ConfigureAwait(false);
         this.RecordOutcome(id, assigneeName, room, outcome);
         if (outcome == WakeOutcome.BudgetSpent)
         {
@@ -1214,6 +1214,41 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
     }
 
+    /// <summary>
+    /// <see cref="PostWakeAsync"/>, noting in <see cref="TurnActivity"/> which Task the woken Agent's Turn is for. The note is made before
+    /// the post, because the post can start the Turn before it returns, and withdrawn when the wake was not posted.
+    /// </summary>
+    /// <param name="batch">The batch being delivered.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="assignee">The user being woken.</param>
+    /// <param name="assigneeName">The Name being woken.</param>
+    /// <param name="senderId">The sender's user id.</param>
+    /// <param name="room">The Room to post in.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>What the wake did.</returns>
+    private async Task<WakeOutcome> PostWakeNotingTaskAsync(Batch batch, TaskItem latest, User assignee, string assigneeName, string senderId, Room room, CancellationToken ct)
+    {
+        bool noted = assignee.Kind == UserKind.Agent;
+        if (noted)
+        {
+            this.turns.RecordWake(assignee.Id, room.Id, latest.Id);
+        }
+
+        WakeOutcome outcome = WakeOutcome.Failed;
+        try
+        {
+            outcome = await this.PostWakeAsync(batch, latest, assigneeName, senderId, room, ct).ConfigureAwait(false);
+            return outcome;
+        }
+        finally
+        {
+            if (noted && outcome is not (WakeOutcome.Woken or WakeOutcome.Offline))
+            {
+                this.turns.ForgetWake(assignee.Id, room.Id, latest.Id);
+            }
+        }
+    }
+
     /// <summary>Posts the wake text in <paramref name="room"/>; an Agent's wake budget is refunded unless the post went through.</summary>
     /// <param name="batch">The batch being delivered.</param>
     /// <param name="latest">The Task's latest state.</param>
@@ -1325,7 +1360,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <item><description>No Room found: <see cref="ChatService.CreateRoomForAsync(IReadOnlyList{string}, CancellationToken)"/> creates one for the last step's S without the Human (it adds the Human itself, and one Agent gives the direct Room).</description></item>
     /// </list>
     /// Steps 2-4 run in the Task's Team Scope (found and created scoped to <see cref="TaskLocation.Team"/>); a Team the
-    /// catalog does not know stays at the root. Every set tried contains the sender (Huddle, which takes no seat, aside), so <see cref="ChatService.PostAsync"/>'s membership check
+    /// catalog does not know stays at the root. A Task in a Project the Team still lists is woken in that Project, in the catalog's
+    /// spelling, so the Turn it starts and the Tasks that Turn files are in the Project too; a Room of the same members at the Team
+    /// level is not reused for it, nor is a Project's Room for a Team-level Task. A Project the catalog does not list (archived or gone)
+    /// gives a Team-level Room. Every set tried contains the sender (Huddle, which takes no seat, aside), so <see cref="ChatService.PostAsync"/>'s membership check
     /// passes. Runs inside the fire gate, which is what keeps two racing fires from creating two Rooms.
     /// </summary>
     /// <param name="task">The latest Task.</param>
@@ -1357,16 +1395,26 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
 
         // The fallback Room lives in the Task's Team Scope (Team chats D-15); a Team the catalog does not know stays at the root.
-        string? scope = this.teams?.Find(task.Location.Team)?.Name;
-        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, ct: ct).ConfigureAwait(false);
+        TeamSummary? team = this.teams?.Find(task.Location.Team);
+        string? scope = team?.Name;
+        string? project = ListedProject(team, task.Location.Project);
+        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, scope, project, ct).ConfigureAwait(false);
         if (existing is not null)
         {
             return existing;
         }
 
         List<string> agentIds = [.. memberSet.Where(static id => !string.Equals(id, KnownIds.Human, StringComparison.Ordinal))];
-        return await this.chat.CreateRoomForAsync(agentIds, scope, null, FeedActor.Huddle, ct).ConfigureAwait(false);
+        return await this.chat.CreateRoomForAsync(agentIds, scope, project, FeedActor.Huddle, ct).ConfigureAwait(false);
     }
+
+    /// <summary>The Project as <paramref name="team"/> lists it (ignoring case), or <see langword="null"/> when the Task has none or the Team no longer lists it.</summary>
+    /// <param name="team">The Task's Team in the catalog, or <see langword="null"/> when the catalog does not know it.</param>
+    /// <param name="project">The Task's Project.</param>
+    private static string? ListedProject(TeamSummary? team, string? project) =>
+        team is null || string.IsNullOrWhiteSpace(project)
+            ? null
+            : team.Projects.FirstOrDefault(name => string.Equals(name, project, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Adds <paramref name="id"/> to <paramref name="ids"/> unless it is already there (ordinal).</summary>
     /// <param name="ids">The member set being built.</param>

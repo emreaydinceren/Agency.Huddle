@@ -2010,7 +2010,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>getHelp.tasks</c> to <c>prompt.digest</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, holding <c>getHelp.tasks</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart33Help() =>
     [
@@ -2031,6 +2031,10 @@ internal static class PromptCatalog
                 to it in a Message; the Human sees it as a link. A sprint groups Tasks in time and
                 spans Teams. Give create_task, update_task or list_tasks a sprint as its name or id, or
                 as current; it must already exist, because you cannot create one.
+                Follow-up work you find while working a project's Task belongs in that project: pass
+                `project`. Left out, `create_task` files the Task in the project of its Room, its parent
+                or the Task you were woken for, and says so; for Team-wide work, leave it out and read
+                that line.
 
                 Some work is outward: it reaches people or systems beyond this team, such as sending
                 a message, publishing, paying or deleting for good. Create such a Task with
@@ -2058,7 +2062,12 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.Live),
+    ];
 
+    /// <summary>Builds one contiguous slice of the catalog, from <c>prompt.digest</c> to <c>installSkillPack.body</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart34() =>
+    [
         new PromptDefinition(
             Key: "prompt.digest",
             Label: "Digest prompt",
@@ -2072,12 +2081,7 @@ internal static class PromptCatalog
             Placeholders: ["{{team}}", "{{since}}"],
             RequiredPlaceholders: ["{{team}}", "{{since}}"],
             Timing: PromptTiming.Live),
-    ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>prompt.rollup</c> to <c>installSkillPack.body</c>.</summary>
-    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
-    private static PromptDefinition[] BuildPart34() =>
-    [
         new PromptDefinition(
             Key: "prompt.rollup",
             Label: "Roll-up prompt",

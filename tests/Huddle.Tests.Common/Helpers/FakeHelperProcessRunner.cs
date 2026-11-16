@@ -37,10 +37,12 @@ internal sealed class FakeHelperProcessRunner : IHelperProcessRunner
     /// <inheritdoc/>
     public async Task<HelperTurn> RunAsync(AgentProcessOptions processOptions, HelperSessionRequest request, CancellationToken cancellationToken)
     {
-        _ = Interlocked.Increment(ref this.calls);
+        // Count the call only once its request is recorded: a test that waits for Calls then reads Requests would otherwise
+        // see the count before the request (CI run 1615 saw Calls == 2 with one request).
         lock (this.Requests)
         {
             this.Requests.Add(request);
+            _ = Interlocked.Increment(ref this.calls);
         }
 
         int now = Interlocked.Increment(ref this.inFlight);

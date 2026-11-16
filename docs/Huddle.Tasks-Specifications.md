@@ -986,6 +986,20 @@ never registered.
    Human itself, and a single Agent id returns the direct Room (:338). Then publish nothing
    further; `CreateRoomForAsync` publishes `RoomsChanged` itself.
 
+Steps 2-4 look up and create the Room in the Task's Team Scope (Team chats D-15). When the Task is
+in a Project that the Team's catalog still lists, they also use that Project, in the catalog's
+spelling ([ADR-0089](adr/0089-a-rooms-project-files-the-tasks-asked-for-in-it.md)). A Room with
+the same Members at Team level is then not reused, and a Project's Room is not reused for a
+Team-level Task. A Project the catalog no longer lists, because it is archived or gone, gives a
+Team-level Room. Rooms created before this rule stay where they are.
+
+When the woken user is an Agent, the trigger notes the wake's (Agent, Room, Task) in `TurnActivity`
+before posting, and withdraws the note when the wake was not posted. The Agent's next Turn in that
+Room takes the note as its **Task in hand**, and the Turn's end clears it. When two different
+Tasks' wakes wait for the same Turn, it has no Task in hand. A note older than five minutes when
+the Turn begins is dropped, and so are an Agent's notes when it reconnects (`ClearAgent`): a Turn
+that starts that late may be unrelated to the wake. `create_task` reads it (§11.2).
+
 Add this method to `ITeamDirectory` and implement it in `SqliteTeamDirectory`, next to
 `FindRoomWithExactMembersAsync` (:375-388):
 
@@ -1181,6 +1195,20 @@ kept as it is, because the line is for a model, not for parsing.
 
 `assignee` accepts a Name, an Alias or `"me"`, which means the caller.
 
+**The default Project** ([ADR-0089](adr/0089-a-rooms-project-files-the-tasks-asked-for-in-it.md)).
+An explicit `project` is never changed. When `project` is left out, empty or blank, the Task is
+filed in the first Project of these that applies:
+
+1. The origin Room's Project: the `originRoomId` given, or the one defaulted in check 2.
+2. The `parent` Task's Project.
+3. The Project of the Task in hand: the Task whose wake started the caller's running Turn (§10.4).
+4. None: the Team root, as before.
+
+A source counts only when it is in the Task's own Team and the catalog still lists its Project. A
+Room or Task in another Team, or a Project that is archived or gone, gives no default, and the next
+source is tried. Models leave optional arguments out, so a follow-up found while working a
+Project's Task would otherwise land at the Team root (#546).
+
 **Success text:**
 
 ```text
@@ -1190,6 +1218,10 @@ Created PLAT-0042 "Support SAML login" in Platform/Auth v2, assigned to Kai. Kai
 - With no assignee: *"… unassigned. No one is notified."*
 - When the caller assigned themselves: *"… assigned to you. No one is notified."*
 - The notify clause comes from `TaskTriggerService.Preview`.
+- When the Project was defaulted, one sentence follows the first and names its source:
+  *"Filed in project "Todo Website" (from DEVT-0007, the Task you were woken for). Pass project to
+  file it elsewhere."* The other two sources read *(from Room "…", where this Task was asked for)*
+  and *(from PLAT-0040, its parent)*.
 
 ### 11.3 `get_task`
 
