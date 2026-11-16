@@ -14,7 +14,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 2. Create the Teams **Marketing** and **Research** by making the folders `<data>\Teams\Marketing` and `<data>\Teams\Research`, and reload the page.
 3. Add **Ada**, **Bo** and **Kim** to Marketing: open each card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line and save. Wait until each is **Online** again. Ola stays in no Team. Marketing's Team Room appears within a few seconds and holds you, Ada, Bo and Kim, so it needs a Mention to wake anyone.
 4. Open Ola's one-to-one under **Rooms** and send `hello`, so Ola has an open session. Open the Marketing Team Room and send `@Ada hello`, so Ada has a session there.
-5. Create two Tasks in Marketing with **New task** on the Tasks page. Note their ids (`MARK-1`, `MARK-2`) and each Task's **Change log**.
+5. Create two Tasks in Marketing with **New task** on the Tasks page. Note their ids (`MARK-1`, `MARK-2`) and the Change log events in each Task's **Timeline**.
 6. In the Marketing Team Room, type `@`, pick the Team **Marketing**, and send. Attach any small text file with the paperclip and send. Note the upload path in the Message: it holds `Teams\Marketing\raw\`.
 7. The tests run in order and share the fixture. TEAMRENAME-03 renames Marketing to **Growth**, and every later test says which name the Team has.
 
@@ -114,7 +114,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 **Steps**
 
 1. Open the Growth Tasks view and find the two Tasks.
-2. Open each Task and read its **Change log**.
+2. Open each Task and read the Change log events in its **Timeline**.
 3. Create a third Task in Growth. Read its id.
 
 **Pass if — all of these**

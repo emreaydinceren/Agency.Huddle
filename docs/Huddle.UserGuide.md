@@ -1099,8 +1099,8 @@ in its panel.
 
 - In the **Task panel**, saving a status change that a gate refuses shows a
   warning that names the gate, with a **Move anyway** button. It asks you to
-  confirm ("This skips the ... gate and is logged in the Change log"). Only you
-  can override a gate, and the override is written to the Change log as `gate
+  confirm, saying the move skips that gate and is logged. Only you can override
+  a gate, and the override shows in the Task's **Timeline** as the event `gate
   overridden by Human: <gate>`.
 - On the **board**, a card you drag into a refused column snaps back and a message
   says "Could not move <Task>: " and the gate's reason. The card does not move,
