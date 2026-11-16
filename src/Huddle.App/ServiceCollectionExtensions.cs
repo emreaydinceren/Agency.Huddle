@@ -414,6 +414,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<PersonaConnectorsStore>();
+        services.AddSingleton<BrowserLaunchFactsSource>();
         services.AddSingleton<ConnectorsNoticeStore>();
         services.AddSingleton<PersonaSpendStore>();
         services.AddSingleton<RoomSpendStore>();
