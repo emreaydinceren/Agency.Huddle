@@ -101,6 +101,10 @@ public sealed class AgentsMdLedgerJudgementTests : IDisposable
     /// <summary>
     /// Runs every queued judgement and waits until they have had the chance to reach the invoker: a sentinel on its own key
     /// is queued after them, the dispatcher's clock is moved past every wait, and the sentinel's call is awaited.
+    /// It sees only judgements whose timer is armed. A key whose earlier run has reached the invoker may still be finishing
+    /// in the dispatcher; a new enqueue of that key is held until the run ends and arms its timer only then, after this
+    /// drain has moved the clock. A test that queues the same key again after a run waits with
+    /// <see cref="JudgementsReachedTheInvoker"/>, which advances the clock on every poll.
     /// </summary>
     /// <param name="cancellationToken">Cancels the wait.</param>
     private async Task DrainAsync(CancellationToken cancellationToken)
@@ -646,9 +650,11 @@ public sealed class AgentsMdLedgerJudgementTests : IDisposable
         Assert.False(inside);
         Assert.Single(this.JudgementCalls());
         this.ledgerClock.Advance(TimeSpan.FromSeconds(300));
+        using CancellationTokenSource bound = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        bound.CancelAfter(TimeSpan.FromSeconds(30));
 
         bool after = this.ledger.TryStartJudgement(this.TheFile(), JudgementReason.TurnAsked);
-        await this.DrainAsync(ct);
+        await Eventually.UntilAsync(() => this.JudgementsReachedTheInvoker(2), bound.Token);
 
         Assert.True(after);
         Assert.Equal(2, this.JudgementCalls().Count);
