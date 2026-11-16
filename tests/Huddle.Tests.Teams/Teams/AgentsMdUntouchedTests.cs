@@ -33,7 +33,10 @@ public sealed class AgentsMdUntouchedTests
         bool posted = await onboarding.PostIfDueAsync(Team, "Nova", ct);
 
         Assert.True(posted);
-        Assert.Equal("Nova", Assert.Single(poster.Posts).Manager);
+        (string team, string manager, _) = Assert.Single(poster.OneToOnePosts);
+        Assert.Equal(Team, team);
+        Assert.Equal("Nova", manager);
+        Assert.Empty(poster.Posts);
         Assert.True(f.Folders.ReadTeamFile(Team)?.Onboarded);
         Assert.Equal(Prose, f.ReadProse());
     }

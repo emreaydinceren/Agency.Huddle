@@ -21,4 +21,15 @@ internal interface IOnboardingPoster
     /// <param name="ct">Cancels the post.</param>
     /// <returns><see langword="true"/> when the message was posted; <see langword="false"/> when the recipient or a Room could not be reached.</returns>
     Task<bool> PostToTeamAsync(string team, string recipientName, string text, CancellationToken ct);
+
+    /// <summary>
+    /// Posts <paramref name="text"/> as the Human in the manager's one-to-one scoped to <paramref name="team"/>, the Room the
+    /// Team page's Message button opens, creating it when it does not exist.
+    /// </summary>
+    /// <param name="team">The Team being onboarded.</param>
+    /// <param name="managerName">The manager Agent's Name.</param>
+    /// <param name="text">The message.</param>
+    /// <param name="ct">Cancels the post.</param>
+    /// <returns><see langword="true"/> when the message was posted; <see langword="false"/> when the manager is unknown, the Team is unknown or the post was refused.</returns>
+    Task<bool> PostToTeamOneToOneAsync(string team, string managerName, string text, CancellationToken ct);
 }

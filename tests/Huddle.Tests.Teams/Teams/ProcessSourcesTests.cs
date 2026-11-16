@@ -139,7 +139,9 @@ public sealed class ProcessSourcesTests
 
         // The two bullets under "## Onboarding", up to the next heading, joined by a newline (the same shape TeamOnboardingTests pins).
         Assert.True(posted);
-        (string manager, string text) = Assert.Single(poster.Posts);
+        (string team, string manager, string text) = Assert.Single(poster.OneToOnePosts);
+        Assert.Equal(Team, team);
+        Assert.Empty(poster.Posts);
         Assert.Equal(Manager, manager);
         Assert.Equal("Your Team has just started. Work through these onboarding steps, then tell the Human what you found:\n\n- Read the workspace.\n- Run the tests.\n\nEnd by suggesting one starter Task in your reply, and ask the Human whether to start it. Do not create a Task or assign anyone until the Human says yes.", text);
         Assert.True(folders.File?.Onboarded);
@@ -160,6 +162,7 @@ public sealed class ProcessSourcesTests
         // Only Process.md exists, so there are no steps and the marker is not written.
         Assert.False(posted);
         Assert.Empty(poster.Posts);
+        Assert.Empty(poster.OneToOnePosts);
         Assert.False(folders.File?.Onboarded);
     }
 

@@ -380,7 +380,7 @@ order decides per Token, independently.
 | `Teams/RetroProposalService.cs` | Shows a retro's proposed changes to the Human and applies the ones the Human accepts. |
 | `Teams/RetroVerifier.cs` | The register rows the next retro must check against later evidence (RT-7), and which are due. |
 | `Skills/SkillProvenance.cs` | The `.source.json` record written beside a copied Skill (Source, origin, `copiedFrom`, commit, folder hash, time), read back for provenance and local-edit detection. |
-| `Teams/TeamOnboarding.cs`, `Teams/ChatOnboardingPoster.cs` | Posts the manager's onboarding prompt into the manager's direct Room as the Human, once: the Team card then records `onboarded: true`. `IOnboardingPoster` (in `TeamOnboarding.cs`) also has `PostToTeamAsync`, the Team-aware post that cadence uses; onboarding keeps `PostAsync`, which stays root-only (ADR-0052). |
+| `Teams/TeamOnboarding.cs`, `Teams/ChatOnboardingPoster.cs` | Posts the manager's onboarding prompt as the Human, once, into the manager's one-to-one scoped to the Team (`PostToTeamOneToOneAsync`, the Room the Team page's Message opens; issue #574): the Team card then records `onboarded: true`. `IOnboardingPoster` also has `PostToTeamAsync`, the Team Room post that cadence uses, which falls back to the root-only `PostAsync` (ADR-0052). |
 | `Tasks/RequestFields.cs` | The Request keys of an ordinary Task file, and the `RequestKind` (bug, feature, feedback, question) and `TriageState` enums. ADR-0040. |
 | `Tasks/RequestLifecycle.cs` | The Request state machine: `Apply` decides each transition from the current state and an event, and is pure. |
 | `Acp/Tools/FileRequestTool.cs` (`file_request`) | Files a Request into another Team's backlog. Offered only to a Persona whose Skill lists the tool. |

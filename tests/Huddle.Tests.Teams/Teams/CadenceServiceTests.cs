@@ -92,6 +92,7 @@ public sealed class CadenceServiceTests
         Assert.Equal(2, harness.Poster.Posts.Count);
         Assert.Equal([Team, Team], harness.Poster.PostedTeams);
         Assert.Equal(0, harness.Poster.RootPostCount);
+        Assert.Equal(0, harness.Poster.OneToOnePostCount);
     }
 
     /// <summary>After a digest fires the next one waits another full period.</summary>
@@ -318,6 +319,9 @@ public sealed class CadenceServiceTests
         /// <summary>How many posts went through the root-only <see cref="PostAsync"/>.</summary>
         public int RootPostCount { get; private set; }
 
+        /// <summary>How many calls went through <see cref="PostToTeamOneToOneAsync"/>, which cadence must never make.</summary>
+        public int OneToOnePostCount { get; private set; }
+
         /// <summary>What <see cref="PostAsync"/> reports; false simulates a refused post.</summary>
         public bool Accept { get; set; } = true;
 
@@ -337,6 +341,13 @@ public sealed class CadenceServiceTests
             ct.ThrowIfCancellationRequested();
             this.PostedTeams.Add(team);
             return this.RecordAsync(recipientName, text);
+        }
+
+        /// <inheritdoc />
+        public Task<bool> PostToTeamOneToOneAsync(string team, string managerName, string text, CancellationToken ct)
+        {
+            this.OneToOnePostCount++;
+            return this.RecordAsync(managerName, text);
         }
 
         private Task<bool> RecordAsync(string managerName, string text)
