@@ -5,6 +5,7 @@
     <InternalsVisibleTo Include="Huddle.Tests.SkillPacks" />
     <InternalsVisibleTo Include="Huddle.Tests.Agents" />
     <InternalsVisibleTo Include="Huddle.Tests.Hosted" />
+    <InternalsVisibleTo Include="Huddle.Tests.Hosted.Gateway" />
     <InternalsVisibleTo Include="Huddle.Tests.Hosted.Personas" />
     <InternalsVisibleTo Include="Huddle.Tests.Hosted.Workspace" />
     <InternalsVisibleTo Include="Huddle.Tests.Tasks" />

@@ -117,4 +117,7 @@ paths = [
   # Components lines above stay: the sync's history scan still sees those files at their old paths.
   '''(^|/)tests/Huddle\.Tests\.Gateway/(Gateway|Settings/RemoteAccess)/.*''',
   '''(^|/)tests/Huddle\.Tests\.Gateway/Desktop/DesktopHandOffBootstrapTests\.cs$''',
+  # The hosted gateway tests after they left Huddle.Tests.Hosted for their own project. The Hosted line above stays
+  # for the same history reason.
+  '''(^|/)tests/Huddle\.Tests\.Hosted\.Gateway/Gateway/.*''',
 ]
