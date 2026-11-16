@@ -357,7 +357,7 @@ order decides per Token, independently.
 | `Teams/TierModelPicker.cs` | Picks a card's model from `Team:Teams:Tiers:<adapterId>:<tier>`; an adapter with no entry for a tier uses its default model. |
 | `Teams/FileConnectorStatus.cs` | Reads the connected connectors from `connectors.json` in the data folder on every call; a missing or malformed file means none. |
 | `Teams/MemberWarnings.cs` | The setup warnings for one member: a shared vendor, too many Skills, and Skills sharing a catalog sub-category. |
-| `Teams/TeamDuplicator.cs` | Copies a Team's members into a new Team for Duplicate, and reports each member it did not copy, with the reason. Each copy gets its source's stored Model, Effort and Adapter, and none when the source has none (#565). It gives the new Team its own copy of the source's avatar image (a new file name, never shared). |
+| `Teams/TeamDuplicator.cs` | Copies a Team's members into a new Team for Duplicate, and reports each member it did not copy, with the reason. Each copy gets its source's stored Model, Effort, Work Mode and Adapter, and none when the source has none (#565, #610). It gives the new Team its own copy of the source's avatar image (a new file name, never shared). |
 | `Teams/ProcessDocument.cs` | Parses and writes the process prose of a Team's `AGENTS.md` (outline headings and the Definition of Done), and the six declarable `GateId`s. |
 | `Teams/ProcessSettings.cs` | The process settings kept in `_team.md` (Spec §7.2): gates, work-in-progress limit, the retro and digest cadences and the check command. |
 | `Teams/ProcessProvisioner.cs` | Copies a process template into the Team folder as `AGENTS.md` prose and `_team.md` settings. It never overwrites one; `ProvisionResult` says how the call ended. |
