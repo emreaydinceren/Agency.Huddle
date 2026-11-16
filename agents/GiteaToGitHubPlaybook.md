@@ -67,6 +67,17 @@ messages, and old revisions of docs.
 - **The `personal-email` rule in `.gitleaks.toml` embeds the address as an escaped regex.**
   The replacements file therefore needs the escaped form as a separate line, or the public
   copy of the rule would name the very address the scrub is hiding.
+- **`private/` never ships.** The maintainer's history lives there: the PR logs, their
+  classification and update guide (`private/feature-logs/`), and plans that carry run costs or
+  owner gates. The sync strips the folder from every revision, along with the paths those files
+  had before they moved (listed in `sync-github.yaml`), and the verify step fails if any of them
+  survives. A public page may name a `private/` path in backticks, but must never link to it:
+  the link would be broken on GitHub. To keep a new file off the mirror, put it under
+  `private/`. If it ever lived somewhere else, add that old path to both lists in
+  `sync-github.yaml`.
+- **Stripping a path does not scrub text.** A line that leaked into a kept page stays in that
+  page's old revisions. Fix the page, and if the old revisions matter, add a needle to
+  `SYNC_REPLACEMENTS`.
 - **`.claude/settings.local.json` is stripped defensively.** It has never been committed, but
   it is the file that would hold machine-specific permissions.
 - **JSON-escaped Windows paths need their own rule.** A path inside a JSON string appears with
@@ -98,7 +109,10 @@ Do this on a throwaway clone **before** editing the secrets. It needs `git-filte
 ```bash
 git clone --no-local <path-to-this-repo> scrub-clone
 cd scrub-clone
-git filter-repo --force --path .claude/settings.local.json --invert-paths \
+git filter-repo --force --path .claude/settings.local.json --path private/ \
+  --path docs/FeaturesSummary/PRs.md --path docs/FeaturesSummary/Prs-Feature.md \
+  --path docs/FeaturesSummary/UPDATING.md --path docs/FeaturesSummary/pr-classification.csv \
+  --path docs/Huddle.SecondBrainZeroFixes-ProjectPlan.md --invert-paths \
   --replace-text ../replacements.txt --replace-message ../replacements.txt \
   --mailmap ../mailmap.txt
 gitleaks git . --config .gitleaks.toml --redact --no-banner --log-opts="--all"
