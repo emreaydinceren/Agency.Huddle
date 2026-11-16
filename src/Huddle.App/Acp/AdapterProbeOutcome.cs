@@ -37,4 +37,10 @@ internal sealed record AdapterProbeOutcome(
     /// UNFILTERED: it may be the Adapter's <c>"default"</c> sentinel, which names no level.
     /// </summary>
     public string? CurrentEffort { get; init; }
+
+    /// <summary>
+    /// Whether the Adapter reported a person signed in during the probe. <see cref="AgentSignInStatus.Unknown"/> for an
+    /// Adapter that does not report it. An init property for the same reason as <see cref="Modes"/>.
+    /// </summary>
+    public AgentSignInStatus SignIn { get; init; }
 }

@@ -85,6 +85,17 @@
     {
         <span class="roster-connect">Not connected yet: @string.Join("; ", profile.UnconnectedConnectors)</span>
     }
+    @if (profile.SignInWarning is not null)
+    {
+        <span class="roster-signin">
+            <span class="roster-signin-text">@profile.SignInWarning</span>
+            @if (this.OnCheckSignIn.HasDelegate)
+            {
+                <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@this.CheckingSignIn" OnClick="@(() => this.OnCheckSignIn.InvokeAsync())"
+                           aria-label="Check again whether the Adapter is signed in" Class="roster-signin-check">@(this.CheckingSignIn ? "Checking…" : "Check again")</MudButton>
+            }
+        </span>
+    }
     @if (this.Actions is not null)
     {
         <div class="roster-actions">@this.Actions</div>
@@ -139,6 +150,14 @@
     /// <summary>When set, the avatar becomes a <c>Change avatar</c> button that invokes this; the Settings Profile tab uses it to open the avatar editor.</summary>
     [Parameter]
     public EventCallback OnAvatarClick { get; set; }
+
+    /// <summary>When set, the sign-in warning draws a "Check again" button that invokes this.</summary>
+    [Parameter]
+    public EventCallback OnCheckSignIn { get; set; }
+
+    /// <summary>True while a sign-in check runs: the "Check again" button is disabled and reads "Checking…".</summary>
+    [Parameter]
+    public bool CheckingSignIn { get; set; }
 
     /// <summary>Extra classes appended to the root.</summary>
     [Parameter]

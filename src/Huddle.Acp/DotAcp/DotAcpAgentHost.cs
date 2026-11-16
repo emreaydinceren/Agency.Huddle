@@ -35,6 +35,8 @@ public sealed partial class DotAcpAgentHost(
 
     private bool started;
 
+    private bool advertisesSignIn;
+
     private bool disposed;
 
     public AgentHostInfo Info => this.info ?? throw new InvalidOperationException("Host not started.");
@@ -117,7 +119,35 @@ public sealed partial class DotAcpAgentHost(
             DotAcpAgentHost.MapPromptCapabilities(response.AgentCapabilities?.PromptCapabilities),
             response.AgentCapabilities?.SessionCapabilities?.Delete is not null);
 
+        this.advertisesSignIn = response.AgentCapabilities?.Meta is { } capabilityMeta
+            && capabilityMeta.ContainsKey("authStatus");
+
         _ = Task.Run(() => this.WatchForDisconnectAsync(clientAdapter, establishedConnection, launchedProcess), CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether <c>initialize</c> advertised <c>agentCapabilities._meta.authStatus</c>, the marker of an
+    /// agent that pushes its sign-in status (<c>_auth/status_update</c>). False before the host is started.
+    /// </summary>
+    public bool AdvertisesSignIn => Volatile.Read(ref this.advertisesSignIn);
+
+    /// <summary>
+    /// Reads whether the agent reports a person signed in. Answers <see cref="AgentSignInStatus.Unknown"/> at once when the
+    /// agent never advertised that it reports identity; otherwise answers the latest push, waiting up to
+    /// <paramref name="wait"/> for the first one. Only the status is kept, never the account details beside it.
+    /// </summary>
+    /// <param name="wait">The longest to wait for a first push.</param>
+    /// <param name="cancellationToken">Ends the wait early, answering what is known so far.</param>
+    /// <returns>The status, or <see cref="AgentSignInStatus.Unknown"/> when it cannot be determined.</returns>
+    public async Task<AgentSignInStatus> ReadSignInStatusAsync(TimeSpan wait, CancellationToken cancellationToken)
+    {
+        DotAcpClientAdapter? activeAdapter = this.adapter;
+        if (activeAdapter is null || !this.AdvertisesSignIn)
+        {
+            return AgentSignInStatus.Unknown;
+        }
+
+        return await activeAdapter.WaitForSignInAsync(wait, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<IAgentSession> StartSessionAsync(AgentSessionOptions options, CancellationToken cancellationToken)

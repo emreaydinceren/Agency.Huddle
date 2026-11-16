@@ -5,7 +5,7 @@ with the right actions, that Members, Files and Tasks tabs navigate and function
 creating Teams and Projects works with the right validation, and — the one case this page exists
 to answer — whether a file in a Team's shared Memory surfaces in another member's next Turn.
 
-**15 tests** · 15 free, 0 paid · about 0.7 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
+**17 tests** · 17 free, 0 paid · about 0.8 hours (plus about 15 minutes to build the fixture in Setup) · **none of them has been run yet.** This page documents what to
 run, not a result — see [Known limits](../known-limits.md) for what that leaves unverified today.
 TP-T13 was removed: no free oracle can read a Persona's system prompt (see Setup).
 
@@ -453,6 +453,49 @@ draft and deletes a removed member (the Agent, not only the label).*
 - The type cards or the Team name can be changed, or the Details tab shows role cards.
 - The removed member is still on the Agents page, or only lost the `Garden` label.
 - The new draft was not hired, or a member was hired a second time.
+
+### TP-T17 — A signed-out Adapter warns on the draft and still hires
+
+**Free** · about 3 min
+
+*Proves that Build a team warns, and never blocks, when the draft's Adapter is not signed in, and that **Check again** re-asks.*
+
+**Steps**
+
+1. Do not sign out of your real login. Start a separate Huddle whose environment points `CLAUDE_CONFIG_DIR`, `USERPROFILE`, `HOME`, `APPDATA` and `LOCALAPPDATA` at an empty folder (and has no `ANTHROPIC_*` or `CLAUDE_CODE_*` variables), so its Adapter finds no credentials.
+2. Open **Build a team**, choose **Blank Team**, name it `Garden` and add any role from the role cards.
+3. Read the draft card, then select **Check again** on the warning once.
+4. Select **Approve & hire**. Do not send the new Agent a Message.
+
+**Pass if**
+
+- After step 2 the card shows "<Adapter name> does not seem to be signed in. The hire will work, but this Agent's first Turn will fail until you sign in." with a **Check again** button, and no **Needs setup** line for it.
+- **Approve & hire** is enabled throughout.
+- **Check again** reads "Checking…" and is off while it runs, then the warning shows again (still signed out).
+- The Team is created and the Agent hired.
+
+**Fail if**
+
+- **Approve & hire** is off because of the warning, or the warning shows as a **Needs setup** reason.
+- The warning is drawn before **Add** is pressed, or on opening the page.
+
+### TP-T18 — A signed-in Adapter shows no warning
+
+**Free** · about 2 min
+
+*Proves that a signed-in Adapter, and one whose sign-in Huddle cannot tell, leave the draft card without any sign-in line.*
+
+**Steps**
+
+1. With the Adapter signed in, open **Build a team**, choose **Blank Team**, name it `Garden` and add any role.
+
+**Pass if**
+
+- The draft card has no sign-in warning and no **Check again** button.
+
+**Fail if**
+
+- The card says the Adapter is not signed in although it is.
 
 ### TP-REAL-02 — Dark theme and narrow-window styling
 

@@ -25,6 +25,10 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // for, and nothing has asked to tune how long a one-off probe is allowed to hang.
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(20);
 
+    // How long a recorded sign-in status is believed: long enough that a screen does not re-probe on every render,
+    // short enough that signing in elsewhere shows up on the next visit.
+    private static readonly TimeSpan SignInFreshness = TimeSpan.FromMinutes(5);
+
     /// <summary>The adapter's effort id meaning "let the model choose": a sentinel that names no level.</summary>
     private const string EffortSentinelId = "default";
 
@@ -69,7 +73,13 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     private readonly ConcurrentDictionary<string, AdapterDefaults> defaultsCache =
         new(StringComparer.Ordinal);
 
+    // What the last probe of each RESOLVED profile id observed about the sign-in, and when. Written by every probe,
+    // success or failure, so a failure after a SignedOut leaves Unknown rather than a stale claim.
+    private readonly ConcurrentDictionary<string, SignInRecord> signInCache =
+        new(StringComparer.Ordinal);
+
     private readonly WorkModePolicy workModePolicy;
+    private readonly TimeProvider timeProvider;
 
     /// <summary>Builds the probe over its resolver and its process-spawning seam.</summary>
     /// <param name="agentPaths">Locates the Work Dir root the probe spawns into.</param>
@@ -81,12 +91,14 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// <see cref="IAdapterProbeRunner"/>'s own doc comment for why this seam exists.
     /// </param>
     /// <param name="workModePolicy">Decides which advertised Work Modes are offered (ADR-0033).</param>
+    /// <param name="timeProvider">The clock a recorded sign-in status ages by; the system clock when omitted.</param>
     public ModelCatalogProbe(
         AgentPaths agentPaths,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
         IAdapterProbeRunner probeRunner,
-        WorkModePolicy workModePolicy)
+        WorkModePolicy workModePolicy,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(loggerFactory);
@@ -99,6 +111,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         this.resolver = resolver;
         this.probeRunner = probeRunner;
         this.workModePolicy = workModePolicy;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public void Dispose()
@@ -145,14 +158,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
             (bool succeeded, ProbeResult result) = await this.ProbeAsync(profile, null, cancellationToken).ConfigureAwait(false);
             if (succeeded)
             {
-                this.modelCache[profile.Id] = result.Models;
-
-                // This probe ran with no model requested, so its session's effort list IS the
-                // default-model answer for this Adapter - store it under the same key
-                // GetEffortLevelsAsync would have probed for itself. The payoff: opening a card and
-                // leaving the model at "Agent default" costs zero extra adapter spawns.
-                this.effortCache[ModelCatalogProbe.EffortCacheKey(profile.Id, null)] = new SessionCatalog(result.EffortLevels, result.Modes);
-                this.defaultsCache[profile.Id] = new AdapterDefaults(result.CurrentModel, result.CurrentEffort);
+                this.CacheDefaultModelProbe(profile.Id, result);
             }
 
             return result.Models;
@@ -161,6 +167,92 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         {
             this.gate.Release();
         }
+    }
+
+    /// <inheritdoc/>
+    public AgentSignInStatus PeekSignIn(string? adapterId)
+    {
+        (AdapterProfile profile, _) = this.resolver.Resolve(adapterId);
+        return this.FreshSignIn(profile.Id) ?? AgentSignInStatus.Unknown;
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<AgentSignInStatus> CheckSignInAsync(string? adapterId, bool refresh, CancellationToken cancellationToken)
+    {
+        (AdapterProfile profile, string? warning) = this.resolver.Resolve(adapterId);
+
+        if (!refresh && this.FreshSignIn(profile.Id) is { } recorded)
+        {
+            return recorded;
+        }
+
+        // The same gate every other probe takes: two throwaway adapter processes must never run at once.
+        await this.gate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!refresh && this.FreshSignIn(profile.Id) is { } recordedAfterWait)
+            {
+                return recordedAfterWait;
+            }
+
+            if (warning is not null)
+            {
+                this.logger.LogWarning("Model catalog probe: {Warning}", warning);
+            }
+
+            // A null-model probe answers exactly what GetAsync would, so a success refreshes the caches the same way:
+            // a refresh after signing in replaces whatever was cached, and a later GetAsync costs no spawn.
+            (bool succeeded, ProbeResult result) = await this.ProbeAsync(profile, null, cancellationToken).ConfigureAwait(false);
+            if (succeeded)
+            {
+                this.CacheDefaultModelProbe(profile.Id, result);
+            }
+
+            return result.SignIn;
+        }
+        finally
+        {
+            this.gate.Release();
+        }
+    }
+
+    /// <summary>
+    /// Stores what a successful probe that requested no model answered: the model list, and the effort ladder, Work Modes and
+    /// defaults of the Adapter's own default model.
+    /// </summary>
+    /// <param name="profileId">The RESOLVED Adapter profile's id.</param>
+    /// <param name="result">The successful probe's answer.</param>
+    private void CacheDefaultModelProbe(string profileId, ProbeResult result)
+    {
+        this.modelCache[profileId] = result.Models;
+
+        // This probe ran with no model requested, so its session's effort list IS the
+        // default-model answer for this Adapter - store it under the same key
+        // GetEffortLevelsAsync would have probed for itself. The payoff: opening a card and
+        // leaving the model at "Agent default" costs zero extra adapter spawns.
+        this.effortCache[ModelCatalogProbe.EffortCacheKey(profileId, null)] = new SessionCatalog(result.EffortLevels, result.Modes);
+        this.defaultsCache[profileId] = new AdapterDefaults(result.CurrentModel, result.CurrentEffort);
+    }
+
+    /// <summary>The recorded sign-in status of a profile when it is still fresh, otherwise <see langword="null"/>.</summary>
+    /// <param name="profileId">The RESOLVED Adapter profile's id.</param>
+    private AgentSignInStatus? FreshSignIn(string profileId)
+    {
+        if (this.signInCache.TryGetValue(profileId, out SignInRecord? record)
+            && this.timeProvider.GetUtcNow() - record.At < ModelCatalogProbe.SignInFreshness)
+        {
+            return record.Status;
+        }
+
+        return null;
+    }
+
+    /// <summary>Records the sign-in status one probe observed, replacing any earlier record of the profile.</summary>
+    /// <param name="profileId">The RESOLVED Adapter profile's id.</param>
+    /// <param name="status">What the probe observed; <see cref="AgentSignInStatus.Unknown"/> for a failed probe.</param>
+    private void RecordSignIn(string profileId, AgentSignInStatus status)
+    {
+        this.signInCache[profileId] = new SignInRecord(status, this.timeProvider.GetUtcNow());
     }
 
     public async ValueTask<IReadOnlyList<AgentEffortOption>> GetEffortLevelsAsync(string? adapterId, string? model, CancellationToken cancellationToken)
@@ -333,10 +425,14 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         IReadOnlyList<AgentEffortOption> EffortLevels,
         IReadOnlyList<AgentModeOption> Modes,
         string? CurrentModel = null,
-        string? CurrentEffort = null)
+        string? CurrentEffort = null,
+        AgentSignInStatus SignIn = AgentSignInStatus.Unknown)
     {
         internal static ProbeResult Empty { get; } = new ProbeResult([], [], []);
     }
+
+    /// <summary>A sign-in status one probe observed, and when.</summary>
+    private sealed record SignInRecord(AgentSignInStatus Status, DateTimeOffset At);
 
     /// <summary>The model and effort ids an Adapter reported running when none was requested.</summary>
     private sealed record AdapterDefaults(string? Model, string? Effort);
@@ -346,7 +442,21 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         IReadOnlyList<AgentEffortOption> EffortLevels,
         IReadOnlyList<AgentModeOption> Modes);
 
+    /// <summary>
+    /// Runs one probe and records the sign-in status it observed against the profile. A probe whose Adapter reports nobody
+    /// signed in is not a success: its catalog is not a real answer, so nothing from it is cached.
+    /// </summary>
+    /// <param name="profile">The RESOLVED Adapter profile.</param>
+    /// <param name="model">The model to start the session with, or <see langword="null"/> for the Adapter's own default.</param>
+    /// <param name="cancellationToken">Cancels the probe.</param>
     private async Task<(bool Succeeded, ProbeResult Result)> ProbeAsync(AdapterProfile profile, string? model, CancellationToken cancellationToken)
+    {
+        (bool succeeded, ProbeResult result) = await this.RunProbeAsync(profile, model, cancellationToken).ConfigureAwait(false);
+        this.RecordSignIn(profile.Id, result.SignIn);
+        return (succeeded && result.SignIn != AgentSignInStatus.SignedOut, result);
+    }
+
+    private async Task<(bool Succeeded, ProbeResult Result)> RunProbeAsync(AdapterProfile profile, string? model, CancellationToken cancellationToken)
     {
         // The Agents ROOT, Directory.CreateDirectory'd — not a Persona's own folder, since this
         // probe is not a Persona and has no name to scope a subdirectory to. Never the repo root or
@@ -373,12 +483,12 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         try
         {
             AdapterProbeOutcome outcome = await this.probeRunner.RunAsync(processOptions, probeCwd, model, timeoutCts.Token).ConfigureAwait(false);
-            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes, outcome.CurrentModel, outcome.CurrentEffort));
+            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes, outcome.CurrentModel, outcome.CurrentEffort, outcome.SignIn));
         }
         catch (AgentAuthenticationRequiredException ex)
         {
             this.logger.LogWarning(ex, "Model catalog probe skipped: the adapter needs authentication.");
-            return (false, ProbeResult.Empty);
+            return (false, ProbeResult.Empty with { SignIn = AgentSignInStatus.SignedOut });
         }
         catch (AgentException ex)
         {

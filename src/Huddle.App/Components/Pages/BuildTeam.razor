@@ -218,6 +218,7 @@
                             bool removing = deleting || departing;
                             bool badged = this.IsBadgedManager(draft);
                             <ProfileCard @key="draft.Key" ListItem="true" Profile="@this.ProfileOf(draft)" Manager="@badged" Existing="@draft.Existing"
+                                         OnCheckSignIn="@(() => this.CheckSignInAgainAsync(draft.Adapter))" CheckingSignIn="@this.signInChecking.Contains(draft.Adapter ?? string.Empty)"
                                          Membership="@this.MembershipOf(draft)" RemovingText="@RemovingTextOf(deleting, departing)">
                                 <Actions>
                                     @if (removing)
@@ -513,6 +514,7 @@
         Tier = draft.RoleId.Length > 0 ? this.TierOf(draft) : null,
         SkillNames = [.. draft.Skills.Select(static skill => skill.Name)],
         SetupReasons = draft.Reasons,
+        SignInWarning = draft.Existing ? null : this.Services.GetService<AgentProfiles>()?.SignInWarningOf(draft.Adapter),
         UnconnectedConnectors = draft.UnconnectedConnectors,
         PendingImage = draft.Image,
         PendingImageExtension = draft.ImageExtension,
@@ -582,6 +584,9 @@
     private readonly CancellationTokenSource pageCancellation = new();
     private Agency.Huddle.App.SkillSources.SkillRegistry? subscribedRegistry;
     private bool approving;
+
+    /// <summary>The Adapters (the empty string for the default) whose "Check again" is running, so the button is off meanwhile.</summary>
+    private readonly HashSet<string> signInChecking = new(StringComparer.Ordinal);
     private string? continueTeam;
     private bool nameEdited;
     private bool purposeEdited;
@@ -1076,6 +1081,10 @@
             {
                 this.managerKey = draft.Key;
             }
+
+            // Asked once the draft is drawn, so a draft whose tier names its model never waits on a probe to appear (#564).
+            this.StateHasChanged();
+            await this.CheckSignInAsync(draft.Adapter, false);
         }
     }
 
@@ -1102,6 +1111,50 @@
         {
             // The page went while the probe ran; nothing will draw or hire this draft.
             return draft;
+        }
+    }
+
+    /// <summary>
+    /// Learns whether the Adapter is signed in so a new draft's card can warn (#564). Pressing Add or "Check again" is a user
+    /// action, so the probe is allowed; the card reads the answer from the catalog's record and never probes on a render. An
+    /// Adapter that cannot be asked, or a page that goes meanwhile, leaves the record empty and the card says nothing.
+    /// </summary>
+    /// <param name="adapter">The draft's Adapter id; nothing is asked for <see langword="null"/>.</param>
+    /// <param name="refresh">True to probe even when a fresh record exists.</param>
+    private async Task CheckSignInAsync(string? adapter, bool refresh)
+    {
+        if (adapter is null || this.Services.GetService<AgentProfiles>() is not { } profiles)
+        {
+            return;
+        }
+
+        try
+        {
+            await profiles.CheckSignInAsync(adapter, refresh, this.pageCancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went while the probe ran; nothing will draw the answer.
+        }
+    }
+
+    /// <summary>The "Check again" button: probes the Adapter once more and redraws, with the button off while it runs.</summary>
+    /// <param name="adapter">The draft's Adapter id.</param>
+    private async Task CheckSignInAgainAsync(string? adapter)
+    {
+        string key = adapter ?? string.Empty;
+        if (!this.signInChecking.Add(key))
+        {
+            return;
+        }
+
+        try
+        {
+            await this.CheckSignInAsync(adapter, true);
+        }
+        finally
+        {
+            _ = this.signInChecking.Remove(key);
         }
     }
 

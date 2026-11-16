@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
@@ -517,10 +518,230 @@ public sealed class ModelCatalogCacheTests
         Assert.Equal("opus", names.Model);
     }
 
+    /// <summary>A probe whose Adapter reports nobody signed in is recorded SignedOut and caches no catalog: a second read probes again.</summary>
+    [Fact]
+    public async Task GetAsync_SignedOutOutcome_RecordsSignedOutAndCachesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([new AgentModelOption("m1", "Model 1", null)], []) { SignIn = AgentSignInStatus.SignedOut, CurrentModel = "m1" },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetAsync("claude", ct);
+        await probe.GetAsync("claude", ct);
+
+        Assert.Equal(AgentSignInStatus.SignedOut, probe.PeekSignIn("claude"));
+        Assert.Equal(2, runner.Calls.Count);
+        Assert.Null(probe.PeekDefaultModel("claude"));
+    }
+
+    /// <summary>A probe whose Adapter reports a sign-in is recorded SignedIn and cached as before.</summary>
+    [Fact]
+    public async Task GetAsync_SignedInOutcome_RecordsSignedInAndCaches()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([new AgentModelOption("m1", "Model 1", null)], []) { SignIn = AgentSignInStatus.SignedIn },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetAsync("claude", ct);
+        await probe.GetAsync("claude", ct);
+
+        Assert.Equal(AgentSignInStatus.SignedIn, probe.PeekSignIn("claude"));
+        Assert.Single(runner.Calls);
+    }
+
+    /// <summary>An Adapter that does not report its sign-in reads Unknown, and its catalog is cached as before.</summary>
+    [Fact]
+    public async Task GetAsync_UnknownOutcome_RecordsUnknownAndCaches()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetAsync("claude", ct);
+        await probe.GetAsync("claude", ct);
+
+        Assert.Equal(AgentSignInStatus.Unknown, probe.PeekSignIn("claude"));
+        Assert.Single(runner.Calls);
+    }
+
+    /// <summary>An Adapter that refuses the session until authenticated is recorded SignedOut.</summary>
+    [Fact]
+    public async Task GetAsync_AuthenticationRequired_RecordsSignedOut()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => throw new AgentAuthenticationRequiredException([]) };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetAsync("claude", ct);
+
+        Assert.Equal(AgentSignInStatus.SignedOut, probe.PeekSignIn("claude"));
+    }
+
+    /// <summary>Any other failure leaves Unknown, and replaces an earlier SignedOut rather than keeping it as a claim.</summary>
+    /// <param name="failure">Which failure the probe suffers.</param>
+    [Theory]
+    [InlineData("io")]
+    [InlineData("agent")]
+    [InlineData("timeout")]
+    public async Task CheckSignInAsync_OtherFailure_BecomesUnknown(string failure)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], []) { SignIn = AgentSignInStatus.SignedOut },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        Assert.Equal(AgentSignInStatus.SignedOut, await probe.CheckSignInAsync("claude", refresh: true, ct));
+
+        runner.Handler = (_, _, _) => failure switch
+        {
+            "io" => throw new IOException("adapter unreachable"),
+            "agent" => throw new AgentException("adapter broke"),
+            _ => throw new OperationCanceledException(),
+        };
+        AgentSignInStatus after = await probe.CheckSignInAsync("claude", refresh: true, ct);
+
+        Assert.Equal(AgentSignInStatus.Unknown, after);
+        Assert.Equal(AgentSignInStatus.Unknown, probe.PeekSignIn("claude"));
+    }
+
+    /// <summary>A fresh record answers CheckSignInAsync without a spawn.</summary>
+    [Fact]
+    public async Task CheckSignInAsync_FreshRecordNoRefresh_DoesNotProbe()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], []) { SignIn = AgentSignInStatus.SignedOut },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.CheckSignInAsync("claude", refresh: false, ct);
+
+        AgentSignInStatus again = await probe.CheckSignInAsync("claude", refresh: false, ct);
+
+        Assert.Equal(AgentSignInStatus.SignedOut, again);
+        Assert.Single(runner.Calls);
+    }
+
+    /// <summary>A refresh probes even with models cached, and a sign-in since then replaces the status and the cached catalog.</summary>
+    [Fact]
+    public async Task CheckSignInAsync_Refresh_ProbesAgainAndReplacesCaches()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        AgentSignInStatus signIn = AgentSignInStatus.Unknown;
+        string model = "old";
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = (_, _, _) => new AdapterProbeOutcome([new AgentModelOption(model, model, null)], []) { SignIn = signIn, CurrentModel = model },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+        signIn = AgentSignInStatus.SignedIn;
+        model = "new";
+
+        AgentSignInStatus refreshed = await probe.CheckSignInAsync("claude", refresh: true, ct);
+        IReadOnlyList<AgentModelOption> models = await probe.GetAsync("claude", ct);
+
+        Assert.Equal(AgentSignInStatus.SignedIn, refreshed);
+        Assert.Equal(2, runner.Calls.Count);
+        Assert.Equal("new", Assert.Single(models).Id);
+        Assert.Equal("new", probe.PeekDefaultModel("claude"));
+    }
+
+    /// <summary>A recorded status is believed for a few minutes only; after that PeekSignIn reads Unknown again.</summary>
+    [Fact]
+    public async Task PeekSignIn_AfterFreshnessWindow_IsUnknown()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeTimeProvider clock = new(DateTimeOffset.Parse("2026-01-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture));
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], []) { SignIn = AgentSignInStatus.SignedOut },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner, clock);
+        await probe.GetAsync("claude", ct);
+
+        clock.Advance(TimeSpan.FromMinutes(4));
+        AgentSignInStatus beforeExpiry = probe.PeekSignIn("claude");
+        clock.Advance(TimeSpan.FromMinutes(2));
+        AgentSignInStatus afterExpiry = probe.PeekSignIn("claude");
+
+        Assert.Equal(AgentSignInStatus.SignedOut, beforeExpiry);
+        Assert.Equal(AgentSignInStatus.Unknown, afterExpiry);
+    }
+
+    /// <summary>A stale record is probed again by CheckSignInAsync even without a refresh.</summary>
+    [Fact]
+    public async Task CheckSignInAsync_StaleRecord_Probes()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeTimeProvider clock = new(DateTimeOffset.Parse("2026-01-01T12:00:00Z", System.Globalization.CultureInfo.InvariantCulture));
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner, clock);
+        await probe.CheckSignInAsync("claude", refresh: false, ct);
+
+        clock.Advance(TimeSpan.FromMinutes(6));
+        await probe.CheckSignInAsync("claude", refresh: false, ct);
+
+        Assert.Equal(2, runner.Calls.Count);
+    }
+
+    /// <summary>A GetAsync probe records the status, so CheckSignInAsync without a refresh costs no spawn afterwards.</summary>
+    [Fact]
+    public async Task CheckSignInAsync_AfterGetAsyncProbe_DoesNotProbe()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], []) { SignIn = AgentSignInStatus.SignedIn },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+        await probe.GetAsync("claude", ct);
+
+        AgentSignInStatus status = await probe.CheckSignInAsync("claude", refresh: false, ct);
+
+        Assert.Equal(AgentSignInStatus.SignedIn, status);
+        Assert.Single(runner.Calls);
+    }
+
+    /// <summary>An effort probe records the status it observed too.</summary>
+    [Fact]
+    public async Task GetEffortLevelsAsync_RecordsSignIn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], []) { SignIn = AgentSignInStatus.SignedIn },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetEffortLevelsAsync("claude", "m1", ct);
+
+        Assert.Equal(AgentSignInStatus.SignedIn, probe.PeekSignIn("claude"));
+    }
+
     /// <summary>Builds a <see cref="ModelCatalogProbe"/> over two configured Adapters, "claude" and "agency".</summary>
     /// <param name="dir">The isolated data directory the probe's Work Dir root lives under.</param>
     /// <param name="runner">The fake probe runner standing in for the real process spawn.</param>
-    private static ModelCatalogProbe CreateProbe(TempDataDir dir, FakeAdapterProbeRunner runner)
+    /// <param name="timeProvider">The clock the probe ages sign-in records by, or null for the system clock.</param>
+    private static ModelCatalogProbe CreateProbe(TempDataDir dir, FakeAdapterProbeRunner runner, TimeProvider? timeProvider = null)
     {
         AcpOptions acp = new()
         {
@@ -534,6 +755,6 @@ public sealed class ModelCatalogCacheTests
         AdapterCatalog catalog = new(options);
         AdapterProfileResolver resolver = new(catalog);
 
-        return new ModelCatalogProbe(new(options), NullLoggerFactory.Instance, resolver, runner, new WorkModePolicy(options));
+        return new ModelCatalogProbe(new(options), NullLoggerFactory.Instance, resolver, runner, new WorkModePolicy(options), timeProvider);
     }
 }
