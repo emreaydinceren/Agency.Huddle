@@ -231,6 +231,59 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps
 sh installer/tests/smoke.sh dist
 ```
 
+The smoke test checks `GET /health` and that `MudBlazor.min.css` comes back non-empty. The
+second check exists because `/health` passes when the app cannot find its `wwwroot`: the app
+takes its content root from the current directory, so started from any other folder every
+stylesheet and script answers `200` with an empty body and the page renders unstyled. Both
+launchers `cd` into the `app` folder for that reason.
+
+### A mock release on a clean machine
+
+Before the first public release, the one-liner can be run end to end against a release you build
+yourself, on a machine (or VM) that has nothing installed. `-BaseUrl` takes an `https://` URL or a
+folder, so serve the files over plain HTTP from the build machine and let the clean machine copy
+them into a folder that stands in for the GitHub release page.
+
+On the build machine, from the repository root:
+
+```sh
+sh installer/build-release.sh --version 0.0.1 --rid win-x64 --out dist
+sed "s|__HUDDLE_REPO__|emreaydinceren/Agency.Huddle|g" installer/install.ps1 > dist/install.ps1
+sh installer/make-sums.sh dist huddle-win-x64.zip install.ps1
+python -m http.server 8765 --directory dist
+```
+
+On the clean Windows machine, in a normal PowerShell window (`<host>` is the build machine's
+address, for a Hyper-V Default Switch VM the host's `vEthernet (Default Switch)` address):
+
+```powershell
+$m = "$env:USERPROFILE\Downloads\mock-github-release"; New-Item $m -ItemType Directory -Force > $null
+'huddle-win-x64.zip', 'SHA256SUMS', 'install.ps1' | ForEach-Object { Invoke-WebRequest "http://<host>:8765/$_" -OutFile "$m\$_" -UseBasicParsing }
+$env:HUDDLE_BASE_URL = $m; irm http://<host>:8765/install.ps1 | iex
+```
+
+Run this way on 2026-11-15 on a Windows 11 VM with no .NET, no Node, Windows PowerShell 5.1, the
+execution policy `Restricted` and only Claude Code installed and signed in: every step passed,
+the browser opened on the styled first-run page, and the Chief of Staff answered a message.
+
+The Claude Code native installer leaves `%USERPROFILE%\.local\bin` off the user PATH on such a
+machine, so `claude` is "not recognized" there. Huddle does not depend on it: the sign-in check
+uses the copy of Claude Code that the adapter brings with it, which reads the same sign-in.
+
+The same day, on an Apple Silicon Mac with macOS 27.0.1, the `osx-arm64` archive (cross-built on
+Windows) installed with `install.sh` the same way (`HUDDLE_BASE_URL` set to the downloaded folder),
+started from `Agency Huddle.app`, and the Chief of Staff answered. That run found the reason the
+macOS host is not named after the assembly: **macOS kills any executable whose name ends in
+`.app`**, case-insensitively and with no crash report (`SIGKILL`, exit code 137), even a copy of
+`/bin/echo` named `Echo.App`. The apphost `Huddle.App` therefore never started. `build-release.sh`
+renames it to `app/HuddleApp` in the macOS archives; it still finds `Huddle.App.dll` by its embedded
+name. A hosted macOS runner older than macOS 27 may not show this, so the CI smoke test alone does
+not prove it.
+
+Over SSH, `claude auth status` reports "not signed in" on a Mac that is signed in: an SSH session
+cannot read the login keychain. The app started from the Mac's own session (`open`, Spotlight or
+Launchpad) reads it fine.
+
 ## Releasing a new version
 
 The repository is a public mirror at `github.com/emreaydinceren/Agency.Huddle`.
@@ -264,11 +317,14 @@ fetches the pinned Node and runs `npm ci` on the user's machine.
 **Manual steps not done yet** (they need the first sync, a Mac and real accounts):
 
 - M1: run `sync-github`, then the `Release` workflow once; use the one-liner against it.
-- M2: a clean Windows account.
+- M2: a clean Windows account. Done against a mock release on 2026-11-15 (see
+  [A mock release on a clean machine](#a-mock-release-on-a-clean-machine)); repeat it with the first real release.
 - M3: an Apple Silicon Mac and, if there is one, an Intel Mac (the Intel build is not
-  smoke-tested in CI).
+  smoke-tested in CI). Apple Silicon done against a mock release on 2026-11-15; repeat it with the
+  first real release. Intel not done.
 - M4: behind a corporate proxy.
-- M5: a real Claude sign-in and one Turn (spends money).
+- M5: a real Claude sign-in and one Turn (spends money). Done on Windows and on the Apple Silicon Mac
+  with the same mock releases.
 
 Until M1 has run, the workflows under `.github/workflows/` have never executed, and
 `shellcheck`, PSScriptAnalyzer and `actionlint` were not available when they were written.
