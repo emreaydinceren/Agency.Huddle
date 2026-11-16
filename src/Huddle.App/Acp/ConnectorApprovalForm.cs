@@ -44,10 +44,11 @@ internal static class ConnectorApprovalForm
         string who = string.IsNullOrWhiteSpace(agentName) ? "An Agent" : Clean(agentName, MaxNameLength);
         string tool = Clean(context.ToolCall.ToolName ?? context.ToolCall.Title ?? string.Empty, MaxNameLength);
         ArgumentView arguments = ReadArguments(context.ToolCall.RawInputJson);
-        string what = tool.Length == 0 ? "one of your connected accounts" : $"the connector tool {tool}";
+        string connector = tool.Length == 0 ? "one of your connected accounts" : $"the connector tool {tool}";
+        string what = BrowserCallPolicy.Concerns(context.ToolCall) ? BrowserWhat(context.ToolCall, tool) : $"use {connector}";
         string message = arguments.Complete
-            ? $"{who} wants to use {what}. Allow this one call?"
-            : $"{who} wants to use {what}, but its arguments cannot be shown in full, so this call can only be refused.";
+            ? $"{who} wants to {what}. Allow this one call?"
+            : $"{who} wants to {what}, but its arguments cannot be shown in full, so this call can only be refused.";
 
         // A call whose arguments are not all on the card cannot be allowed: the part left out could be the destination.
         object[] choices = arguments.Complete
@@ -69,6 +70,40 @@ internal static class ConnectorApprovalForm
             message,
             JsonSerializer.Serialize(schema, SchemaOptions),
             arguments.Text);
+    }
+
+    /// <summary>
+    /// Says what a browser call does, in the words the Human reads on the card. A tool without its own words, and an unknown one,
+    /// reads "use the browser tool NAME".
+    /// </summary>
+    private static string BrowserWhat(ToolCallInfo call, string cleanFullName)
+    {
+        string? bare = BrowserCallPolicy.BareName(call);
+        string? verb = bare switch
+        {
+            "browser_click" => "click",
+            "browser_type" => "type text",
+            "browser_fill_form" => "fill in a form",
+            "browser_select_option" => "choose an option",
+            "browser_press_key" => "press a key",
+            "browser_hover" => "hover over an element",
+            "browser_drag" or "browser_drop" => "drag and drop",
+            "browser_file_upload" => "upload a file",
+            "browser_handle_dialog" => "answer a dialog",
+            "browser_evaluate" => "run a script on the page",
+            "browser_emulate_media" => "change how the page is shown",
+            "browser_take_screenshot" => "save a screenshot",
+            "browser_navigate" => "open a page",
+            "browser_tabs" => "change its tabs",
+            _ => null,
+        };
+        if (verb is not null)
+        {
+            return $"{verb} in its browser";
+        }
+
+        string name = bare is null ? cleanFullName : Clean(bare, MaxNameLength);
+        return name.Length == 0 ? "use its browser" : $"use the browser tool {name}";
     }
 
     /// <summary>Gets the tool name with control, format and bidi characters removed and at most <see cref="MaxNameLength"/> long, for the audit log.</summary>

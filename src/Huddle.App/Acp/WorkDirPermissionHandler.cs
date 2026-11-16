@@ -81,7 +81,7 @@ internal sealed class WorkDirPermissionHandler(
         }
 
         // Last, after every refusal above, so a call a guard refuses never posts a card (Agent Connectors spec 8.4).
-        return ConnectorCallClassifier.AsksHuman(context.ToolCall)
+        return ConnectorCallClassifier.AsksHuman(context.ToolCall) || BrowserCallPolicy.AsksHuman(context.ToolCall)
             ? await this.AskHumanAsync(context, cancellationToken).ConfigureAwait(false)
             : Approve(context.Options);
     }
