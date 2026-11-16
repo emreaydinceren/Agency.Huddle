@@ -27,6 +27,7 @@ namespace Agency.Huddle.App.Agents;
 /// <param name="hireLimits">Checks the Proposal against the per-Team and live-process hire limits.</param>
 /// <param name="logger">Used to log what an Approve did.</param>
 /// <param name="roleHirer">Hires a Candidate that carries a role from its team type; <see langword="null"/> when team types are not available, and such a Candidate is written as a plain one.</param>
+/// <param name="modelCatalog">Learns an Adapter's default model for a hire whose tier names none, role or plain Candidate alike, so its Agent stores a model as a Build a team hire does (#623); <see langword="null"/> stores nothing.</param>
 internal sealed partial class ProposalService(
     ProposalStore proposals,
     CandidateChecker checker,
@@ -35,7 +36,8 @@ internal sealed partial class ProposalService(
     ITeamDirectory directory,
     HireLimitGuard hireLimits,
     ILogger<ProposalService> logger,
-    RoleHirer? roleHirer = null)
+    RoleHirer? roleHirer = null,
+    IModelCatalog? modelCatalog = null)
 {
     // Serialises Persona creation across every Proposal in the app - the same race
     // PersonaStore.Add's own writeGate closes for the Agent card (Spec §6.10's implementation
@@ -98,6 +100,10 @@ internal sealed partial class ProposalService(
         var created = new List<string>();
         var failed = new List<CandidateFailure>();
 
+        // One read per Adapter for the whole Approve: a failed probe caches nothing in the catalog, so without this a
+        // broken Adapter would be probed again for every Candidate while CreationGate is held (#623).
+        DefaultModelReads? defaults = modelCatalog is null ? null : new DefaultModelReads(modelCatalog, logger);
+
         await CreationGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -112,7 +118,7 @@ internal sealed partial class ProposalService(
 
                 if (candidate.Role is not null && roleHirer is not null)
                 {
-                    HireResult hired = roleHirer.Hire(candidate);
+                    HireResult hired = await roleHirer.HireAsync(candidate, defaults, ct).ConfigureAwait(false);
                     if (hired.PersonaName is not null)
                     {
                         created.Add(candidate.Name);
@@ -126,9 +132,10 @@ internal sealed partial class ProposalService(
                 }
 
                 var identity = new PersonaIdentity(candidate.Name, candidate.Title, candidate.Alias, candidate.Teams);
+                string? model = defaults is null ? null : await defaults.ReadAsync(null, ct).ConfigureAwait(false);
                 try
                 {
-                    personas.Add(identity, candidate.Body);
+                    personas.Add(identity, candidate.Body, model);
                     created.Add(candidate.Name);
                 }
                 catch (ChatException ex)

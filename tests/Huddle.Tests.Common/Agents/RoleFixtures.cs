@@ -48,15 +48,29 @@ internal static class RoleFixtures
     /// <summary>A hire context in which one adapter answered and nothing else is connected.</summary>
     public sealed class Context : IHireContext
     {
+        /// <summary>Creates the context with its tier map naming <c>sonnet</c> for Balanced.</summary>
+        public Context()
+            : this(emptyTierMap: false)
+        {
+        }
+
+        /// <summary>Creates the context, optionally with an empty tier map like a default install has.</summary>
+        /// <param name="emptyTierMap">When <see langword="true"/>, no tier names a model.</param>
+        public Context(bool emptyTierMap)
+        {
+            this.TierMap = emptyTierMap
+                ? new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>(StringComparer.Ordinal)
+                : new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>(StringComparer.Ordinal)
+                {
+                    ["claude-agent-acp"] = new Dictionary<ModelTier, string> { [ModelTier.Balanced] = "sonnet" },
+                };
+        }
+
         /// <inheritdoc />
         public IReadOnlyList<AdapterAvailability> Answered { get; } = [new AdapterAvailability("claude-agent-acp", ["sonnet"])];
 
         /// <inheritdoc />
-        public IReadOnlyDictionary<string, IReadOnlyDictionary<ModelTier, string>> TierMap { get; } =
-            new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>(StringComparer.Ordinal)
-            {
-                ["claude-agent-acp"] = new Dictionary<ModelTier, string> { [ModelTier.Balanced] = "sonnet" },
-            };
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<ModelTier, string>> TierMap { get; }
 
         /// <inheritdoc />
         public IReadOnlyCollection<string> AvoidAdapters { get; } = [];

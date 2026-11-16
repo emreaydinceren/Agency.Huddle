@@ -12,6 +12,7 @@ using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Teams;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Factories;
 
@@ -450,6 +451,124 @@ public sealed class ProposalServiceTests
         Assert.Empty(plain.Skills ?? []);
     }
 
+    /// <summary>A role Candidate approved where no tier names a model stores the Adapter's cached default model.</summary>
+    [Fact]
+    public async Task Approve_RoleCandidateNoTierModel_StoresCachedDefaultModel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { DefaultModel = "sonnet" };
+        using Fixture fixture = await Fixture.CreateAsync(ct, withRoles: true, emptyTierMap: true, catalog: catalog);
+
+        await ProposalServiceTests.ApproveAsync(fixture, [new Candidate("Jane", "jane", "Whatever", "Body.", [RoleFixtures.TeamName], null, "web/dev")], ct);
+
+        Assert.Equal("sonnet", fixture.Personas.Get("Jane")?.Model);
+        Assert.Equal(0, catalog.ProbeCount);
+    }
+
+    /// <summary>A default learned only by probing is stored too: the hire probes once, then peeks.</summary>
+    [Fact]
+    public async Task Approve_RoleCandidateNoTierModel_ProbesWhenDefaultNotCached()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { DefaultModelAfterProbe = "sonnet" };
+        using Fixture fixture = await Fixture.CreateAsync(ct, withRoles: true, emptyTierMap: true, catalog: catalog);
+
+        await ProposalServiceTests.ApproveAsync(fixture, [new Candidate("Jane", "jane", "Whatever", "Body.", [RoleFixtures.TeamName], null, "web/dev")], ct);
+
+        Assert.Equal("sonnet", fixture.Personas.Get("Jane")?.Model);
+        Assert.Equal(1, catalog.ProbeCount);
+    }
+
+    /// <summary>A probe that fails stores no Model and the hire still succeeds.</summary>
+    [Fact]
+    public async Task Approve_RoleCandidateProbeFails_HiresWithoutModel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { ThrowOnProbe = true };
+        using Fixture fixture = await Fixture.CreateAsync(ct, withRoles: true, emptyTierMap: true, catalog: catalog);
+
+        ProposalOutcome outcome = await ProposalServiceTests.ApproveAsync(fixture, [new Candidate("Jane", "jane", "Whatever", "Body.", [RoleFixtures.TeamName], null, "web/dev")], ct);
+
+        Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
+        Persona? jane = fixture.Personas.Get("Jane");
+        Assert.NotNull(jane);
+        Assert.Null(jane.Model);
+    }
+
+    /// <summary>A plain Candidate stores the default Adapter's default model.</summary>
+    [Fact]
+    public async Task Approve_PlainCandidate_StoresDefaultModel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { DefaultModel = "sonnet" };
+        using Fixture fixture = await Fixture.CreateAsync(ct, catalog: catalog);
+
+        await ProposalServiceTests.ApproveAsync(fixture, [new Candidate("Quill", "quill", "Writer", "You write things.", [], null)], ct);
+
+        Assert.Equal("sonnet", fixture.Personas.Get("Quill")?.Model);
+    }
+
+    /// <summary>A plain Candidate whose probe fails is still created and stores no Model.</summary>
+    [Fact]
+    public async Task Approve_PlainCandidateProbeFails_CreatesWithoutModel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { ThrowOnProbe = true };
+        using Fixture fixture = await Fixture.CreateAsync(ct, catalog: catalog);
+
+        ProposalOutcome outcome = await ProposalServiceTests.ApproveAsync(fixture, [new Candidate("Quill", "quill", "Writer", "You write things.", [], null)], ct);
+
+        Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
+        Persona? quill = fixture.Personas.Get("Quill");
+        Assert.NotNull(quill);
+        Assert.Null(quill.Model);
+    }
+
+    /// <summary>A failed probe is not repeated for every Candidate of one Approve: the Adapter is read once.</summary>
+    [Fact]
+    public async Task Approve_ProbeFailsForSeveralCandidates_ProbesTheAdapterOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { ThrowOnProbe = true };
+        using Fixture fixture = await Fixture.CreateAsync(ct, catalog: catalog);
+
+        ProposalOutcome outcome = await ProposalServiceTests.ApproveAsync(
+            fixture,
+            [new Candidate("Quill", "quill", "Writer", "You write things.", [], null), new Candidate("Vera", "vera", "Editor", "You edit things.", [], null)],
+            ct);
+
+        Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
+        Assert.Equal(1, catalog.ProbeCount);
+    }
+
+    /// <summary>A tier-mapped role keeps the tier's model and never probes.</summary>
+    [Fact]
+    public async Task Approve_RoleCandidateWithTierModel_StoresTierModelWithoutProbing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeModelCatalog catalog = new() { DefaultModelAfterProbe = "opus" };
+        using Fixture fixture = await Fixture.CreateAsync(ct, withRoles: true, catalog: catalog);
+
+        await ProposalServiceTests.ApproveAsync(fixture, [new Candidate("Jane", "jane", "Whatever", "Body.", [RoleFixtures.TeamName], null, "web/dev")], ct);
+
+        Assert.Equal("sonnet", fixture.Personas.Get("Jane")?.Model);
+        Assert.Equal(0, catalog.ProbeCount);
+    }
+
+    /// <summary>Proposes <paramref name="candidates"/> in a fresh Room and approves them.</summary>
+    /// <param name="fixture">The fixture holding the service.</param>
+    /// <param name="candidates">The Candidates to propose.</param>
+    /// <param name="ct">Cancels the calls.</param>
+    private static async Task<ProposalOutcome> ApproveAsync(Fixture fixture, IReadOnlyList<Candidate> candidates, CancellationToken ct)
+    {
+        var proposer = await fixture.Directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
+        Assert.NotNull(proposer);
+        var room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, proposer.Id], ct);
+        var proposal = ProposalServiceTests.MakeProposal(room.Id, proposer.Id, proposer.Name, candidates);
+        _ = fixture.Proposals.TryPut(proposal);
+        return await fixture.Service.ApproveAsync(room.Id, proposal.Id, ct);
+    }
+
     /// <summary>
     /// Bundles the real collaborators one <see cref="ProposalService"/> under test needs - a
     /// <see cref="SqliteTeamDirectory"/>, a <see cref="PersonaStore"/>, a <see cref="CandidateChecker"/>,
@@ -510,7 +629,9 @@ public sealed class ProposalServiceTests
         /// <param name="maxPerTeam"><see cref="AcpOptions.MaxAgentsPerTeam"/> for this fixture.</param>
         /// <param name="maxLive"><see cref="AcpOptions.MaxLiveProcesses"/> for this fixture.</param>
         /// <param name="withRoles">When <see langword="true"/>, the service can hire Candidates that carry a role, from the fake <c>web</c> team type.</param>
-        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16, bool withRoles = false)
+        /// <param name="emptyTierMap">When <see langword="true"/>, no tier names a model, as on a default install.</param>
+        /// <param name="catalog">The model catalog both hire paths read the default model from; <see langword="null"/> passes none.</param>
+        public static async Task<Fixture> CreateAsync(CancellationToken ct, int maxPerTeam = 8, int maxLive = 16, bool withRoles = false, bool emptyTierMap = false, FakeModelCatalog? catalog = null)
         {
             var dataDir = new TempDataDir();
 
@@ -542,10 +663,10 @@ public sealed class ProposalServiceTests
                 FakeSkillAvailability packs = RoleFixtures.Packs(dataDir);
                 AvatarStore avatars = new(options, NullLogger<AvatarStore>.Instance);
                 HireService hires = new(personas, types, packs, avatars, limits.Guard, new FakeSkillCopier(), new FakeStartGate(), NullLogger<HireService>.Instance);
-                roleHirer = new RoleHirer(hires, types, packs, new RoleFixtures.Context());
+                roleHirer = new RoleHirer(hires, types, packs, new RoleFixtures.Context(emptyTierMap));
             }
 
-            var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance, roleHirer);
+            var service = new ProposalService(proposals, checker, personas, chat, directory, limits.Guard, NullLogger<ProposalService>.Instance, roleHirer, catalog);
 
             return new Fixture(dataDir, directory, personas, proposals, store, chat, service, limits);
         }
