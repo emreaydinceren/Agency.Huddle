@@ -31,7 +31,7 @@
     <PageHeader Title="Archived" Subtitle="Teams, Projects and Rooms you archived. Select one and restore it." />
 
     <MudTabs Class="archived-tabs" KeepPanelsAlive="false" Elevation="0" MinimumTabWidth="96px" AlwaysShowScrollButtons="false"
-             ActivePanelIndex="@((int)this.ActiveTab)" ActivePanelIndexChanged="this.OnTabChanged">
+             ActivePanelIndex="@((int)this.ActiveTab)" OnPreviewInteraction="this.OnTabInteraction">
         <MudTabPanel Text="Teams" Icon="@TabIcons.For("team")">
             <ArchivedEntryList Label="Archived Teams" Icon="@TabIcons.For("team")" Entries="this.teams"
                                Selected="@this.selectedTeam" SelectedChanged="@(key => this.selectedTeam = key)" OnActivate="this.RestoreTeamAsync"
@@ -135,15 +135,22 @@
         this.StateHasChanged();
     });
 
-    /// <summary>Navigates to the clicked tab's address; the address, not this handler, moves the active tab.</summary>
-    /// <param name="index">The clicked tab's index.</param>
-    private void OnTabChanged(int index)
+    /// <summary>
+    /// Navigates to the tab the Human picked and keeps MudTabs from moving itself; the address, not this handler, moves the active tab.
+    /// This is MudTabs' preview of an activation, not its <c>ActivePanelIndexChanged</c>: that one also fires when a panel removes
+    /// itself, so a circuit teardown (which disposes the panels before their MudTabs) would point the Tab at another address.
+    /// A preview for the tab the address already shows is MudTabs following the address and is left alone.
+    /// </summary>
+    /// <param name="args">The interaction MudTabs is about to act on.</param>
+    private Task OnTabInteraction(TabInteractionEventArgs args)
     {
+        int index = args.PanelIndex;
         if (!Enum.IsDefined((ArchivedTab)index) || (ArchivedTab)index == this.ActiveTab)
         {
-            return;
+            return Task.CompletedTask;
         }
 
+        args.Cancel = true;
         string url = ArchivedTabs.Href((ArchivedTab)index);
         if (this.Page is { } page)
         {
@@ -151,6 +158,7 @@
         }
 
         this.Navigation.NavigateTo(url);
+        return Task.CompletedTask;
     }
 
     /// <summary>Reads the archived Teams, the live Teams' archived Projects and the archived Rooms, and drops a selection whose row is gone.</summary>

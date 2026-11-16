@@ -721,9 +721,13 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
   Members. The **page** owns the text, in its component state keyed by tab (each tab component
   takes `Search` and raises `SearchChanged`), and clears it when the route moves to another Team
   or Project. It is not in the URL (§14 D-8).
-- `MudTabs ActivePanelIndex` is computed from the route. `ActivePanelIndexChanged` calls
-  `NavigationManager.NavigateTo(...)`. The page never flips a local field (the `Settings.razor`
+- `MudTabs ActivePanelIndex` is computed from the route. `OnPreviewInteraction` (not
+  `ActivePanelIndexChanged`) calls `NavigationManager.NavigateTo(...)` for a tab other than the one
+  the route shows, and cancels the activation. The page never flips a local field (the `Settings.razor`
   rule). The tab headers have no `href`: the route drives the tab, and a click only navigates.
+  `ActivePanelIndexChanged` is not used because it also fires when a `MudTabPanel` disposes itself:
+  a circuit teardown disposes the panels in the renderer's table order, possibly before their
+  `MudTabs`, and each one would navigate on a circuit nobody sees (Gitea #640).
 - **Title and breadcrumbs.** The page names itself with a `PageHeader` h1: the Team's name on a Team
   page, with **Duplicate** in the header's `Actions` on the right of the same row, and the Project's
   name on a Project page. The shell's Top Bar (`TopBar`, drawing `PageBreadcrumbs`, see the Tabs

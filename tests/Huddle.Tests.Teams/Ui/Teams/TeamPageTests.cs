@@ -250,6 +250,104 @@ public sealed class TeamPageTests
         Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
     }
 
+    /// <summary>Disposing the page (a circuit teardown, or the Human leaving for another page) issues no navigation: only a Human's tab click does.</summary>
+    /// <param name="tab">The tab the route shows when the page goes away.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("files")]
+    [InlineData("process")]
+    [InlineData("details")]
+    public async Task Dispose_IssuesNoNavigation(string? tab)
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+        ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders { ReadResult = NewTeamFile(Avatar.None) });
+        ctx.ComponentFactories.AddStub<ProcessTab>();
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
+        BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
+        Assert.Equal("Members,Library,Process,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Empty(navigation.History);
+
+        await ctx.DisposeAsync();
+
+        Assert.Equal([], navigation.History.Select(entry => entry.Uri).ToArray());
+    }
+
+    /// <summary>
+    /// A teardown that disposes the tab panels before their <c>MudTabs</c> (the renderer disposes in the order of its component table,
+    /// which a long-lived circuit has shuffled) moves MudTabs' active index once per panel; none of those moves is the Human's click, so
+    /// the page issues no navigation. On a real lane this was a failed <c>NavigateTo</c> per panel in the server log, for a circuit nobody sees.
+    /// </summary>
+    /// <param name="tab">The tab the route shows when the circuit goes away.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("files")]
+    [InlineData("process")]
+    [InlineData("details")]
+    public async Task TabPanelsDisposedBeforeTheirTabs_IssueNoNavigation(string? tab)
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+        ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders { ReadResult = NewTeamFile(Avatar.None) });
+        ctx.ComponentFactories.AddStub<ProcessTab>();
+        IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
+        BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
+        Assert.Equal("Members,Library,Process,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Empty(navigation.History);
+
+        foreach (IRenderedComponent<MudTabPanel> panel in cut.FindComponents<MudTabPanel>())
+        {
+            await ctx.Renderer.Dispatcher.InvokeAsync(() => ((IAsyncDisposable)panel.Instance).DisposeAsync().AsTask());
+        }
+
+        Assert.Equal([], navigation.History.Select(entry => entry.Uri).ToArray());
+    }
+
+    /// <summary>The Human leaving the Team page (it is removed while the circuit lives) issues no navigation, so no tab bounces them back.</summary>
+    /// <param name="tab">The tab the route shows when the page goes away.</param>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("process")]
+    [InlineData("details")]
+    public async Task Removed_WhileTheCircuitLives_IssuesNoNavigation(string? tab)
+    {
+        await using MudBunitContext ctx = NewContext(Catalog());
+        ctx.Services.AddSingleton<ITeamFolders>(new FakeTeamFolders { ReadResult = NewTeamFile(Avatar.None) });
+        ctx.ComponentFactories.AddStub<ProcessTab>();
+        IRenderedComponent<PageSwitch> cut = ctx.Render<PageSwitch>(p => p.Add(x => x.Tab, tab));
+        BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
+        Assert.Single(cut.FindComponents<TeamPage>());
+
+        cut.Render(p => p.Add(x => x.Show, false));
+
+        Assert.Empty(cut.FindComponents<TeamPage>());
+        Assert.Equal([], navigation.History.Select(entry => entry.Uri).ToArray());
+    }
+
+    /// <summary>Shows the Team page of Business while <see cref="Show"/> is set, so a test can remove it from a living renderer.</summary>
+    private sealed class PageSwitch : ComponentBase
+    {
+        /// <summary>Whether the Team page is in the tree.</summary>
+        [Parameter]
+        public bool Show { get; set; } = true;
+
+        /// <summary>The Team page's tab segment.</summary>
+        [Parameter]
+        public string? Tab { get; set; }
+
+        /// <inheritdoc />
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            if (!this.Show)
+            {
+                return;
+            }
+
+            builder.OpenComponent<TeamPage>(0);
+            builder.AddAttribute(1, nameof(TeamPage.Team), "Business");
+            builder.AddAttribute(2, nameof(TeamPage.Tab), this.Tab);
+            builder.CloseComponent();
+        }
+    }
+
     /// <summary>An unknown Team shows the Warning alert naming it with a link to the Agents page, and renders no tabs.</summary>
     /// <param name="project">A Project route value, or <see langword="null"/>: an unknown Team wins either way.</param>
     [Theory]
