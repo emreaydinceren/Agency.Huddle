@@ -53,6 +53,13 @@ id = "internal-mdns-host"
 description = "Personal/internal .local (mDNS) hostname — must be followed by a URL/text delimiter, not another dot, so *.local.json / *.local.xml filenames don't match"
 regex = '''\b[a-z0-9][a-z0-9-]*\.local(?::[0-9]+)?(?:[/'"`:;,)\]}<>|\s]|$)'''
 
+  [rules.allowlist]
+  description = "The SkillPacks JSON schemas once used invented https://huddle.local/schemas/... ids (2026-10-18); they are urn:agency-huddle:schema:... now, but the sync's history scan still sees them. Matched on the whole $id line, so a real .local host anywhere else still fails."
+  regexTarget = "line"
+  regexes = [
+    '''"\$id": "https://huddle\.local/schemas/[a-z]+\.schema\.json"''',
+  ]
+
 [[rules]]
 id = "private-ipv4"
 description = "Private / RFC1918 IP address committed"
@@ -85,6 +92,13 @@ regexes = [
   # Deliberate neutral hosts in docs and tests — redacted placeholders, not real leaks
   '''example\.(com|org)''',
   '''[a-z0-9-]+\.example\b''',
+  # The reserved test domains (RFC 2606) as test fixtures use them: probe@example.test,
+  # fixture@example.invalid. Old revisions of test files hold these; the sync scans history.
+  '''@example\.(test|invalid)\b''',
+  # Invented addresses in old revisions of MarkdownRendererMentionTests (now a@example.com).
+  '''^a@(b|ops)\.com$''',
+  # Razor, not an email: class="doc-history-kind-@entry.Kind.ToString()..." in DocumentHistory.razor.
+  '''-@entry\.Kind\.ToString$''',
   # Bot/commit noreply addresses, incl. the maintainer's public GitHub noreply identity
   '''noreply@''',
   # GitHub's numbered per-user noreply format (id+username@users.noreply.github.com) —
