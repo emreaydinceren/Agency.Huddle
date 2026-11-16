@@ -98,7 +98,7 @@ messages, and old revisions of docs.
 | --- | --- |
 | GitHub | An empty `Agency.Huddle` repo and the fine-grained PAT above |
 | Gitea repo secrets | `SYNC_GITHUB_TOKEN`, `SYNC_MAILMAP`, `SYNC_REPLACEMENTS` |
-| Gitea runner | The `dotnet-10` label (the Mac mini runner). Only `sync-github.yaml` still uses it; CI moved to `dotnet-10-local` |
+| Gitea runner | The `dotnet-10-local` label (the Windows desktop runner), the same as CI. Until 2026-11-16 it named the Mac mini's retired `dotnet-10` runner, and run 1642 sat queued with no runner to take it |
 | Local clone | `git remote add github https://github.com/emreaydinceren/Agency.Huddle.git` |
 
 ## Dry-running a rule change locally

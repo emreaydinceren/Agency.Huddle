@@ -229,7 +229,8 @@ endings to LF first — see [Line endings](#line-endings) for why that can matte
 CI runs on one Gitea Actions runner on the Windows desktop, in Docker Desktop, with the label
 `dotnet-10-local`. It replaced the Mac mini's `dotnet-10` runner on 2026-10-09: the workflows were
 first run side by side for a PR, and the Mac mini copies (`ci-pr.yaml`, `ci-main.yaml`) were then
-deleted. Only `sync-github.yaml` still names `dotnet-10`.
+deleted. `sync-github.yaml` kept naming `dotnet-10` until 2026-11-16, so its first run after the
+move (1642) waited for a runner that was gone; it now runs on `dotnet-10-local` too.
 
 The consequence is that **CI is only as available as that desktop.** With the PC off, or Docker Desktop
 stopped, `validate` stays queued and the required check never reports. See the failure-mode table.
