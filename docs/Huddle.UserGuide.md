@@ -836,6 +836,15 @@ Under a Team's title (not a Project's), the header has two more things:
 - **Spent** shows what the Team's members have cost in total, one amount per
   currency. It stays blank until something was spent, and it survives restarts.
 
+Under a Project's title, **Spent** shows what the Project's own work has cost, one
+amount per currency, with the note "Counts Turns run in this Project's Rooms." It adds
+up the Turns that ran in the Project's Rooms (a Task of the Project wakes its Agent in
+one of them), whoever ran them, and it updates as Turns finish. A Turn in a Room outside
+the Project, or in an Agent's shared session (an Adapter that keeps one session for
+every Room), counts toward no Project. Deleting one of the Project's Rooms keeps what
+it spent in the total. It stays blank until something was spent there; spend from before this
+was recorded is not shown.
+
 #### Editing a team
 
 A Team page's last tab, **Details**, holds the first two steps of Build a team for that
@@ -1081,7 +1090,8 @@ nothing. A Task's level is fixed where Huddle put it (or where you last moved it
 Beside **Run inside the Team** you can enter a **Spend cap (USD)**. When the Team (or project) has spent that much running inside the Team it
 falls back to **Ask me** and asks you, in Needs you and in the Feed: **Let it spend another** that amount, or **No, ask me for each step**. Yes lets
 it spend exactly one more cap, then it asks again. No keeps it on Ask me until you change the level or the cap. The cap counts the USD spend of
-the Team's Agents as it happens (all Agents for the Settings level), so an Agent leaving the Team or a rename moves no count. Saving the same level and
+the Team's Agents as it happens (all Agents for the Settings level), so an Agent leaving the Team or a rename moves no count. A project's
+cap counts only the project's own spend: the Turns run in its Rooms, as its page shows. Saving the same level and
 cap again restarts nothing. The cap does not stop a Turn in progress. A step that went ahead shows as a Change log entry
 on the Task, "proceeded under Team level Run inside the Team", and as an item in the Feed.
 

@@ -416,6 +416,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaConnectorsStore>();
         services.AddSingleton<ConnectorsNoticeStore>();
         services.AddSingleton<PersonaSpendStore>();
+        services.AddSingleton<RoomSpendStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
         services.AddSingleton<Agency.Huddle.App.Teams.RetroFileStore>();
 

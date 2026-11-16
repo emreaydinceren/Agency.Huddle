@@ -126,6 +126,7 @@ public sealed class ProcessStepTests
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
+        ctx.ComponentFactories.AddStub<ProjectSpend>();
 
         IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p.Add(x => x.Team, Team).Add(x => x.Tab, "process"));
 

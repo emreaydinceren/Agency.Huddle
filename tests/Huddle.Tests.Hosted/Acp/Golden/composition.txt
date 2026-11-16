@@ -69,6 +69,7 @@ Singleton Agency.Huddle.App.Data.PersonaModelStore -> Agency.Huddle.App.Data.Per
 Singleton Agency.Huddle.App.Data.PersonaSpendStore -> Agency.Huddle.App.Data.PersonaSpendStore
 Singleton Agency.Huddle.App.Data.PersonaWorkModeStore -> Agency.Huddle.App.Data.PersonaWorkModeStore
 Singleton Agency.Huddle.App.Data.RawBaselineStore -> Agency.Huddle.App.Data.RawBaselineStore
+Singleton Agency.Huddle.App.Data.RoomSpendStore -> Agency.Huddle.App.Data.RoomSpendStore
 Singleton Agency.Huddle.App.Data.ScopeIdStore -> Agency.Huddle.App.Data.ScopeIdStore
 Singleton Agency.Huddle.App.Data.TaskScopeStore -> Agency.Huddle.App.Data.TaskScopeStore
 Singleton Agency.Huddle.App.DocHistory.DocHistoryLibraryListener -> Agency.Huddle.App.DocHistory.DocHistoryLibraryListener

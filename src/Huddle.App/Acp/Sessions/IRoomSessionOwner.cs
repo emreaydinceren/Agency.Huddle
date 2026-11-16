@@ -38,7 +38,8 @@ internal interface IRoomSessionOwner
     /// <param name="sessionId">The Adapter session that reported the total; the Spend memory is keyed by it.</param>
     /// <param name="runningTotal">The session's running total so far, not the amount of one Turn.</param>
     /// <param name="currency">The currency of <paramref name="runningTotal"/>.</param>
-    void AddSpend(string sessionId, decimal runningTotal, string currency);
+    /// <param name="roomId">The Room the reporting session belongs to, or <see langword="null"/> for the shared session, whose Spend is recorded against no Room.</param>
+    void AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId);
 
     /// <summary>
     /// Reports the complete list of commands an Adapter session now advertises (Commands spec, section

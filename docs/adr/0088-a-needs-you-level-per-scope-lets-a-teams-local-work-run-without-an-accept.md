@@ -145,10 +145,13 @@ A scope that sets Run inside the Team may also set a **spend cap** in USD, store
 `needs_you_levels`, and `Team:NeedsYouLevel:SpendCap` for the global default. The cap travels with the level. The scope
 whose value is the effective level also supplies the cap, and a scope with no cap has no bound.
 
-- **What is counted.** Spend is recorded per Agent, not per project or per Task. Each USD spend is added, at the moment it
+- **What is counted.** Spend is recorded per Agent, not per Task. Each USD spend is added, at the moment it
   happens, to a ledger (`needs_you_spend`, by scope) under `global` and under `team:<teamId>` of every Team the Persona
-  belongs to then. The global scope counts every Agent. A Team counts what was charged to it. A project counts its Team's
-  ledger, because spend is per Agent. So an Agent who leaves a Team, or a rename, moves no count. The count starts from
+  belongs to then. The global scope counts every Agent. A Team counts what was charged to it. A project counts its own
+  spend: each Turn's spend is also recorded against the Room it ran in (`room_spend`), and a project's total is the sum
+  over the Rooms that belong to it (`room_projects`), read when the count is read. A Turn in a Room outside the project,
+  or in a shared session with no Room, never counts toward it (amended by issue #557; it counted its Team's ledger before).
+  So an Agent who leaves a Team, or a rename, moves no count. The count starts from
   the ledger's total when the Human set the level or the cap at that scope. Spend in other currencies is not counted.
 - **What restarts the count.** Only a Save that changes the level or the cap. Saving the same values again restarts
   nothing and does not cancel an open question.
@@ -201,7 +204,7 @@ that supplied a Task's level (for example "Team and project"), not only the firs
 | Store the level in the Team's process (`gates`) | A process is Team data that a retro can change. ADR-0061 rejected that for the same reason |
 | Resolve a merge's scope from the Agent's Room | A permission request has no Room, and a brief given in the Team Room would apply the Team's level to project work |
 | Read the Task's Action wording to tell a merge Action from others | It invites an Agent to word its way past the gate (ADR-0078). Only Huddle's own merge naming is skipped |
-| A cap that pauses every Turn in the scope | It needs spend recorded per project and a spend read on the Turn path, and neither exists. The Room Budget already stops a loop |
+| A cap that pauses every Turn in the scope | It needs a spend read on the Turn path, which does not exist (spend per project is recorded since #557, by Room). The Room Budget already stops a loop |
 | Fold the Room Budget into the level | A runaway-loop guard and a plan approval are different stops (readiness review). The owner kept them apart |
 | Refuse a laxer move in `update_task` | It covers one tool. A Task created in a project, or a file moved by a shell, never passes through it. Fixing the governing scope where Huddle placed the Task covers every path |
 | Keep the level in `_team.md` with a write guard | A shell write got past the guard, and so did a Task file moved between folders. Keeping the level where no Agent can write closes both without a guard |

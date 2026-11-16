@@ -2279,7 +2279,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         // last update of a Turn, as a running total for this session.
         if (usage.Cost is { } cost)
         {
-            this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency);
+            this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency, this.RoomId);
         }
     }
 

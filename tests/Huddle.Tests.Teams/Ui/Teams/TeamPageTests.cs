@@ -516,6 +516,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
+        ctx.ComponentFactories.AddStub<ProjectSpend>();
         return ctx;
     }
     /// <summary>Renders the page with the route values a router would bind.</summary>

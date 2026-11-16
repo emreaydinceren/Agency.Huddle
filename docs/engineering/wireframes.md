@@ -359,7 +359,7 @@ slate `B` badges name the same containers.
 `/teams/{Team}/projects/{Project}` (and `…/{Tab}`) is the same component as the Team page,
 `TeamPage.razor`, so it uses the same containers and codes. It differs only by omission.
 
-![The Project page: the shell breadcrumb "Teams › Growth" above a page container that opens with an h1 naming the Project, with no spend strip under it, then a tab rail of Files and Tasks, and a Files panel with the library tree, headed by its search and New note row, beside an empty document panel](../images/wireframes/06b-project-page.svg)
+![The Project page: the shell breadcrumb "Teams › Growth" above a page container that opens with an h1 naming the Project, with its Spent line (M3) under it, then a tab rail of Files and Tasks, and a Files panel with the library tree, headed by its search and New note row, beside an empty document panel](../images/wireframes/06b-project-page.svg)
 
 | Code | On the Project page |
 | --- | --- |
@@ -367,7 +367,7 @@ slate `B` badges name the same containers.
 | `L2`, `L2c`, `L3` | The Files panel's tree, its header and the document panel, as in Figure 5 |
 | `M1` | Same container. It opens with an h1 (`PageHeader`) naming the Project, "Lifecycle Emails", and the shell breadcrumb (`S1a`) reads "Teams › Growth › Lifecycle Emails". The Team page's own tab in the strip (`W4`) is a separate Tab from the Project's |
 | `M2` | Absent: Duplicate is for a Team only |
-| `M3` | Absent: spend is recorded per Agent, not per Project, so the Team members' figure would read as the Project's (#543) |
+| `M3` | `ProjectSpend` (`.project-spend`) instead of `TeamSpend`: the Project's own spend, the sum over its Rooms (`room_spend`), one line per currency, with the caption "Counts Turns run in this Project's Rooms." (`.project-spend-note`). Nothing is drawn until the Project has spent something (#557) |
 | `M4a` | Files and Tasks only, in that order; with Library off only Tasks shows, with Tasks off only Files. The default tab is the first one shown |
 | `M14` | Drawn in `Actions` as **Needs You level…** before Archive; it opens the Project's level control in a dialog |
 | `M4b` | `TeamFilesTab` and `TeamTasksTab`, each given the Project so they list only its files and Tasks. No Members, Process or Details panel. The Files panel is the `LibraryExplorer` (Figure 5) alone, with no toolbar above it: the tree (`L2`) on the left, headed by its search and New note / New folder row (`L2c`), and on the right `L3` with its empty state "Select a note to read it, or start a new one." and a New note button |

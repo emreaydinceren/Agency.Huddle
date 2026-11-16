@@ -1085,7 +1085,7 @@ public sealed class PersonaRunnerTests
         var persona = TestPersonas.Nova;
         var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
         using TempDataDir spendDir = new();
-        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(spendDir.Options()));
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(spendDir.Options()), new RoomSpendStore(spendDir.Options()));
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, spend: spend);
         await server.HandshakeAsync(runner, ct);
@@ -1093,6 +1093,23 @@ public sealed class PersonaRunnerTests
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
         await ReceiveUntilAsync<PostMessage>(server, ct);
 
+        Assert.Equal([new SpendAmount(0.05m, "USD")], spend.Get("nova"));
+    }
+
+    /// <summary>A cost a Room Session reports through its owner is recorded against that Room, because the runner forwards the Room's id to the spend recorder.</summary>
+    [Fact]
+    public async Task AddSpend_FromARoomSession_IsRecordedAgainstThatRoom()
+    {
+        await using FakePersonaServer server = new();
+        var options = TestOptions.Create(opts => opts.PipeName = server.PipeName);
+        using TempDataDir spendDir = new();
+        RoomSpendStore roomSpend = new(spendDir.Options());
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(spendDir.Options()), roomSpend);
+        await using PersonaRunner runner = new(TestPersonas.Nova, options, new FakeAgentHostFactory(), new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, spend: spend);
+
+        ((IRoomSessionOwner)runner).AddSpend("session-1", 0.05m, "USD", "room-1");
+
+        Assert.Equal([new StoredSpend("USD", 0.05m)], roomSpend.ForRoom("room-1"));
         Assert.Equal([new SpendAmount(0.05m, "USD")], spend.Get("nova"));
     }
 

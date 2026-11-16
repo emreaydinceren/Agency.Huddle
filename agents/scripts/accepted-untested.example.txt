@@ -7,6 +7,7 @@ src/Huddle.App/Acp/Tools/CloseTaskTool.cs|{conflict.Current.Id} was changed by s
 src/Huddle.App/Acp/Tools/ReopenTaskTool.cs|{conflict.Current.Id} was changed by someone else; please try again.|J41: as close_task
 src/Huddle.App/Components/Tasks/TaskCard.razor|task-card {edge} task-overdue|a CSS class string, pinned by TaskCardTests' class-list asserts
 src/Huddle.App/Components/Tasks/TaskListView.razor|{rank}\u0000{label.ToUpperInvariant()}|an internal sort key, never shown
+src/Huddle.App/Data/RoomSpendStore.cs|SELECT currency, amount FROM room_spend WHERE room_id = $a;|a SQL query, read by RoomSpendStoreTests through ForRoom
 src/Huddle.App/Tasks/TaskPresence.cs|Acp.PersonaStatusResolver.Resolve(bool, Acp.PersonaStatus?)|an XML doc cref
 src/Huddle.App/Tasks/TaskService.cs|canonicalTeam|a nameof argument
 src/Huddle.App/Tasks/TaskStore.cs|MaxVersionHistory|a nameof argument

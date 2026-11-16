@@ -48,15 +48,17 @@ public sealed class TeamSpendTests
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
+        ctx.ComponentFactories.AddStub<ProjectSpend>();
 
         IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p.Add(x => x.Team, "Business"));
 
         Assert.Equal(["Nova", "Kit"], cut.FindComponent<Stub<TeamSpend>>().Instance.Parameters.Get(x => x.Members));
+        Assert.Empty(cut.FindComponents<Stub<ProjectSpend>>());
     }
 
-    /// <summary>A Project page shows no spend line: the spend is the Team members' all-time figure, not the Project's (#543).</summary>
+    /// <summary>A Project page shows its own Rooms' spend, not the Team members' figure (#557): ProjectSpend gets the Team and Project, TeamSpend is absent.</summary>
     [Fact]
-    public async Task ProjectPage_Header_HasNoSpend()
+    public async Task ProjectPage_Header_ShowsProjectSpendNotTeamSpend()
     {
         FakeTeamCatalog catalog = new() { Teams = [new TeamSummary("Business", ["Marketing"], ["Nova", "Kit"], true)] };
         await using MudBunitContext ctx = new();
@@ -66,6 +68,7 @@ public sealed class TeamSpendTests
         ctx.ComponentFactories.AddStub<TeamFilesTab>();
         ctx.ComponentFactories.AddStub<TeamTasksTab>();
         ctx.ComponentFactories.AddStub<TeamSpend>();
+        ctx.ComponentFactories.AddStub<ProjectSpend>();
 
         IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p
             .Add(x => x.Team, "Business")
@@ -73,5 +76,8 @@ public sealed class TeamSpendTests
 
         Assert.Single(cut.FindAll(".team-project-kind"));
         Assert.Empty(cut.FindComponents<Stub<TeamSpend>>());
+        Stub<ProjectSpend> stub = cut.FindComponent<Stub<ProjectSpend>>().Instance;
+        Assert.Equal("Business", stub.Parameters.Get(x => x.Team));
+        Assert.Equal("Marketing", stub.Parameters.Get(x => x.Project));
     }
 }

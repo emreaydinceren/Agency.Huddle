@@ -15,6 +15,7 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     private readonly List<ProtocolMessage> written = [];
     private readonly List<string> reportCalls = [];
     private readonly List<(string SessionId, decimal RunningTotal, string Currency)> spendAdded = [];
+    private readonly List<string?> spendRoomIds = [];
 
     /// <inheritdoc />
     /// <remarks>
@@ -113,12 +114,25 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
         }
     }
 
+    /// <summary>The <c>roomId</c> every <see cref="AddSpend"/> call carried, in call order; <see langword="null"/> for the shared session.</summary>
+    public IReadOnlyList<string?> SpendRoomIds
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.spendRoomIds];
+            }
+        }
+    }
+
     /// <inheritdoc />
-    public void AddSpend(string sessionId, decimal runningTotal, string currency)
+    public void AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId)
     {
         lock (this.gate)
         {
             this.spendAdded.Add((sessionId, runningTotal, currency));
+            this.spendRoomIds.Add(roomId);
         }
     }
 
