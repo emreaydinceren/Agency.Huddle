@@ -111,9 +111,9 @@ public sealed class TeamsPhase3EndToEndTests
         Assert.Single(overriddenTask?.ChangeLog.Where(static entry => entry.Summary.EndsWith("(gate overridden by Human: qa-evidence-before-done)", StringComparison.Ordinal)) ?? []);
     }
 
-    /// <summary>Flow 3: the developer's <c>git push</c> permission request is refused until a passing check Evidence exists on an open Team Task. It pushes a feature branch, not main, because a push to main also waits for the Human's Accept (<c>accept-before-merge</c>, issue #401) and this flow pins the checks gate alone.</summary>
+    /// <summary>Flow 3: the developer's <c>git push</c> permission request is refused for the checks gate until a passing check Evidence exists on an open Team Task, and then still refused because every push waits for the Human's Accept on a Task whose Action names a push (issue #602).</summary>
     [Fact]
-    public async Task GitPush_IsRefused_UntilPassingCheckEvidence()
+    public async Task GitPush_IsRefused_ForChecksThenForTheAccept()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir workspace = NewWorkspace();
@@ -136,13 +136,18 @@ public sealed class TeamsPhase3EndToEndTests
             ]);
         TaskItem task = Assert.IsType<TaskResult.Saved>(service.Create(new TaskDraft("Ship it", TeamName, null, TaskState.InProgress, Assignee: developer.Name), human)).Task;
 
+        IMergeGate gate = run.Services.GetRequiredService<IMergeGate>();
         PermissionDecision before = await handler.DecideAsync(push, ct);
+        string? beforeText = gate.RefusalFor(developer.Name, "git push origin feat/ship");
         TaskActor qa = await cast.ActorAsync(run, QaRole, ct);
         _ = service.AddEvidence(task.Id, new EvidenceLine(DateTimeOffset.UtcNow, qa.Name, CheckCommand, 0, null, null, string.Empty), qa);
         PermissionDecision after = await handler.DecideAsync(push, ct);
+        string? afterText = gate.RefusalFor(developer.Name, "git push origin feat/ship");
 
         Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(before).OptionId);
-        Assert.Equal("allow-1", Assert.IsType<SelectedDecision>(after).OptionId);
+        Assert.Equal("reject-1", Assert.IsType<SelectedDecision>(after).OptionId);
+        Assert.StartsWith("Gate checks-before-merge:", beforeText, StringComparison.Ordinal);
+        Assert.StartsWith("Cannot push: a push leaves the Team's repository and waits for the Human's Accept", afterText, StringComparison.Ordinal); // contains-ok: the full wording is pinned in ProcessMergeGateTests.
     }
 
     /// <summary>Flow 4: the manager's <c>propose_sprint</c> call only queues a proposal; the Human's approval creates the Sprint and puts the Task in it.</summary>
