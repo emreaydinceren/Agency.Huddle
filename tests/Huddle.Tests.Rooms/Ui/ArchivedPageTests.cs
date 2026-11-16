@@ -482,6 +482,41 @@ public sealed class ArchivedPageTests
         Assert.Equal("/archived/teams", Assert.Single(tabs.Tabs).Url);
     }
 
+    /// <summary>
+    /// A teardown that disposes the tab panels before their <c>MudTabs</c> (the renderer disposes in the order of its component table)
+    /// moves MudTabs' active index once per panel; none of those moves is the Human's click, so the Tab keeps its address and nothing navigates.
+    /// </summary>
+    [Fact]
+    public async Task TabPanelsDisposedBeforeTheirTabs_LeaveTheTabAddressAndTheRouteAlone()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using MudBunitContext ctx = await NewTeamsContextAsync(new RecordingArchiveService(), new FakeTeamCatalog(), ct);
+        Agency.Huddle.App.Tabs.TabService tabs = ctx.Services.GetRequiredService<Agency.Huddle.App.Tabs.TabService>();
+        Agency.Huddle.App.Tabs.Tab tab = tabs.Open("/archived/rooms", "Archived");
+        NavigationManager navigation = ctx.Services.GetRequiredService<NavigationManager>();
+        string before = navigation.Uri;
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<CascadingValue<Agency.Huddle.App.Tabs.TabPageContext>>(0);
+            builder.AddAttribute(1, "Value", new Agency.Huddle.App.Tabs.TabPageContext(tab.Url, tab.Id));
+            builder.AddAttribute(2, "ChildContent", (RenderFragment)(inner =>
+            {
+                inner.OpenComponent<ArchivedPage>(0);
+                inner.CloseComponent();
+            }));
+            builder.CloseComponent();
+        });
+        Assert.Equal("Rooms", cut.Find(".mud-tab.mud-tab-active").TextContent.Trim());
+
+        foreach (IRenderedComponent<MudTabPanel> panel in cut.FindComponents<MudTabPanel>())
+        {
+            await ctx.Renderer.Dispatcher.InvokeAsync(() => ((IAsyncDisposable)panel.Instance).DisposeAsync().AsTask());
+        }
+
+        Assert.Equal("/archived/rooms", Assert.Single(tabs.Tabs).Url);
+        Assert.Equal(before, navigation.Uri);
+    }
+
     /// <summary>A Team archived elsewhere (the sidebar) appears on the open page when the catalog changes, with no reload.</summary>
     [Fact]
     public async Task TeamsTab_CatalogChange_ReadsTheListAgain()
