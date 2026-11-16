@@ -104,6 +104,53 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// <inheritdoc/>
     public string? PeekDefaultModel(string? adapterId) => this.DefaultModel;
 
+    /// <summary>What <see cref="PeekSignIn"/> and <see cref="CheckSignInAsync"/> report for an Adapter with no entry in <see cref="SignInByAdapter"/>.</summary>
+    public AgentSignInStatus SignIn { get; set; }
+
+    /// <summary>The status to report for a specific Adapter id, set per test as needed. Keyed ordinal, like <see cref="ModelsByAdapter"/>.</summary>
+    public Dictionary<string, AgentSignInStatus> SignInByAdapter { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// When set, <see cref="CheckSignInAsync"/> with <c>refresh</c> true makes this the new status of the asked Adapter
+    /// (the default when the id is <c>null</c>) before answering, standing in for a person who signed in between two checks.
+    /// </summary>
+    public AgentSignInStatus? SignInAfterRefresh { get; set; }
+
+    /// <summary>Every (Adapter id, refresh) pair <see cref="CheckSignInAsync"/> was asked, in call order.</summary>
+    public List<(string? Adapter, bool Refresh)> SignInChecks { get; } = [];
+
+    /// <inheritdoc/>
+    public AgentSignInStatus PeekSignIn(string? adapterId) => this.SignInOf(adapterId);
+
+    /// <inheritdoc/>
+    public ValueTask<AgentSignInStatus> CheckSignInAsync(string? adapterId, bool refresh, CancellationToken cancellationToken)
+    {
+        this.SignInChecks.Add((adapterId, refresh));
+        if (this.ThrowOnProbe)
+        {
+            throw new InvalidOperationException("The fake probe was told to fail.");
+        }
+
+        if (refresh && this.SignInAfterRefresh is { } after)
+        {
+            if (adapterId is null)
+            {
+                this.SignIn = after;
+            }
+            else
+            {
+                this.SignInByAdapter[adapterId] = after;
+            }
+        }
+
+        return ValueTask.FromResult(this.SignInOf(adapterId));
+    }
+
+    private AgentSignInStatus SignInOf(string? adapterId) =>
+        adapterId is not null && this.SignInByAdapter.TryGetValue(adapterId, out AgentSignInStatus forAdapter)
+            ? forAdapter
+            : this.SignIn;
+
     public ValueTask<IReadOnlyList<AgentModelOption>> GetAsync(string? adapterId, CancellationToken cancellationToken)
     {
         this.ProbeCount++;

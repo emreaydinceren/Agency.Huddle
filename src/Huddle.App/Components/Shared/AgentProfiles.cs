@@ -1,3 +1,4 @@
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
@@ -192,6 +193,49 @@ internal sealed class AgentProfiles(
     public async Task<string?> DefaultModelAsync(string? adapter, CancellationToken ct)
     {
         return await ModelCatalogDefaults.ReadDefaultModelAsync(modelCatalog, adapter, logger, ct);
+    }
+
+    /// <summary>
+    /// The warning Build a team draws on a new draft whose Adapter reports nobody signed in, or <see langword="null"/> when it
+    /// is signed in or Huddle cannot tell. It reads the catalog's record and never probes. It is a warning only: the hire works.
+    /// </summary>
+    /// <param name="adapter">The draft's Adapter id.</param>
+    /// <returns>The sentence naming the Adapter, or <see langword="null"/> for anything but a recorded sign-out.</returns>
+    public string? SignInWarningOf(string? adapter)
+    {
+        // A draft with no Adapter has nothing to sign in to; the default Adapter's record is not its own.
+        if (adapter is null || modelCatalog.PeekSignIn(adapter) != AgentSignInStatus.SignedOut)
+        {
+            return null;
+        }
+
+        string name = (adapters.Find(adapter) ?? adapters.Default).DisplayName;
+        return $"{name} does not seem to be signed in. The hire will work, but this Agent's first Turn will fail until you sign in.";
+    }
+
+    /// <summary>
+    /// Asks whether the Adapter is signed in so <see cref="SignInWarningOf"/> has a record to read. Build a team calls it
+    /// on Add (a user action; it costs nothing when the default-model read just probed) and on "Check again" with a refresh.
+    /// </summary>
+    /// <param name="adapter">The Adapter id.</param>
+    /// <param name="refresh">True to probe even when a fresh record exists.</param>
+    /// <param name="ct">Cancels the probe.</param>
+    public async Task CheckSignInAsync(string? adapter, bool refresh, CancellationToken ct)
+    {
+        try
+        {
+            _ = await modelCatalog.CheckSignInAsync(adapter, refresh, ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Safe to swallow: the warning is advisory, so a check that breaks leaves the card saying nothing, and the
+            // hire it never blocks goes on as before.
+            logger.LogWarning(ex, "Checking whether the Adapter is signed in failed.");
+        }
     }
 
     /// <summary>

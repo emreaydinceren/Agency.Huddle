@@ -1071,6 +1071,8 @@ Teams: Sidebar, Members, Files, Tasks and Shared Memory — [area file](team-pag
 | [TP-T14](team-pages.md#tp-t14--team-exists-with-no-members-but-has-members-page) |  | Active | |  |
 | [TP-T15](team-pages.md#tp-t15--team-with-no-folder-yet-creates-folder-on-first-save) |  | Active | |  |
 | [TP-T16](team-pages.md#tp-t16--details-tab-saves-the-purpose-the-members-tab-hires-and-deletes) |  | Active | |  |
+| [TP-T17](team-pages.md#tp-t17--a-signed-out-adapter-warns-on-the-draft-and-still-hires) |  | Active | |  |
+| [TP-T18](team-pages.md#tp-t18--a-signed-in-adapter-shows-no-warning) |  | Active | |  |
 | [TP-REAL-02](team-pages.md#tp-real-02--dark-theme-and-narrow-window-styling) |  | Active | |  |
 
 ## turn-detail

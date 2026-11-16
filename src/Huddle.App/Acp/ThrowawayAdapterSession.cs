@@ -55,6 +55,15 @@ internal sealed class ThrowawayAdapterSession : IAsyncDisposable
         }
     }
 
+    /// <summary>Reads whether the adapter reports a person signed in; see <see cref="DotAcpAgentHost.ReadSignInStatusAsync"/>.</summary>
+    /// <param name="wait">The longest to wait for the adapter's first report; nothing is waited for when it never advertised one.</param>
+    /// <param name="cancellationToken">Ends the wait early.</param>
+    /// <returns>The status, or <see cref="AgentSignInStatus.Unknown"/> when it cannot be determined.</returns>
+    public Task<AgentSignInStatus> ReadSignInStatusAsync(TimeSpan wait, CancellationToken cancellationToken)
+    {
+        return this.host.ReadSignInStatusAsync(wait, cancellationToken);
+    }
+
     /// <summary>Disposes the session, then the host.</summary>
     public async ValueTask DisposeAsync()
     {

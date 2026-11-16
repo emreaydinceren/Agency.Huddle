@@ -97,4 +97,37 @@ internal interface IModelCatalog
     /// <param name="adapterId">The Persona's configured Adapter id, or <see langword="null"/> for the default Adapter.</param>
     /// <returns>The cached default model id, or <see langword="null"/> when nothing is cached for the Adapter.</returns>
     string? PeekDefaultModel(string? adapterId);
+
+    /// <summary>
+    /// Whether the Adapter reported a person signed in, read from what the latest probe of it observed. It never
+    /// probes and never waits: a surface that must not block calls it and shows nothing for
+    /// <see cref="AgentSignInStatus.Unknown"/>.
+    /// </summary>
+    /// <remarks>
+    /// Every probe records what it saw: <see cref="GetAsync"/>, the effort and Work Mode reads and
+    /// <see cref="CheckSignInAsync"/> alike. A record is believed for a few minutes only, after which the answer is
+    /// Unknown again. An Adapter that does not report its sign-in is always Unknown, and so is one whose latest probe
+    /// failed for any reason other than needing authentication.
+    /// </remarks>
+    /// <param name="adapterId">The Persona's configured Adapter id, or <see langword="null"/> for the default Adapter.</param>
+    /// <returns>The fresh recorded status, or <see cref="AgentSignInStatus.Unknown"/> when nothing fresh is recorded.</returns>
+    AgentSignInStatus PeekSignIn(string? adapterId);
+
+    /// <summary>
+    /// Whether the Adapter reports a person signed in, probing for it when nothing fresh is recorded or when asked to.
+    /// </summary>
+    /// <remarks>
+    /// A probe is one throwaway session with no model requested, run under the same gate as every other probe, and it
+    /// updates the caches exactly as <see cref="GetAsync"/> does on a success. So a later <see cref="GetAsync"/> costs no
+    /// spawn, and a refresh after the person signed in replaces what was cached. A probe that finds nobody signed in
+    /// caches no catalog at all: authenticating and reopening works with no restart.
+    /// </remarks>
+    /// <param name="adapterId">The Persona's configured Adapter id, or <see langword="null"/> for the default Adapter.</param>
+    /// <param name="refresh">
+    /// <see langword="true"/> to probe even when a fresh status is recorded (a "Check again" after signing in);
+    /// <see langword="false"/> to answer a fresh record without spawning anything.
+    /// </param>
+    /// <param name="cancellationToken">Cancels the probe.</param>
+    /// <returns>The status the probe or the fresh record gave; <see cref="AgentSignInStatus.Unknown"/> when it cannot be determined.</returns>
+    ValueTask<AgentSignInStatus> CheckSignInAsync(string? adapterId, bool refresh, CancellationToken cancellationToken);
 }

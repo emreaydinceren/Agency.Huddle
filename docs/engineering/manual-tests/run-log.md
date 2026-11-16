@@ -5230,6 +5230,20 @@ File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-t16--deta
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### TP-T17 — A signed-out Adapter warns on the draft and still hires
+
+File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-t17--a-signed-out-adapter-warns-on-the-draft-and-still-hires)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TP-T18 — A signed-in Adapter shows no warning
+
+File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-t18--a-signed-in-adapter-shows-no-warning)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ### TP-REAL-02 — Dark theme and narrow-window styling
 
 File: [`docs/engineering/manual-tests/team-pages.md`](team-pages.md#tp-real-02--dark-theme-and-narrow-window-styling)

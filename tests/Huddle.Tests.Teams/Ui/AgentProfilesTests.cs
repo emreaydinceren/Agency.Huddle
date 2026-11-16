@@ -123,6 +123,31 @@ public sealed class AgentProfilesTests
         Assert.Null(model);
     }
 
+    /// <summary>A recorded sign-out gives the warning naming the Adapter; a draft with no Adapter gets none, even while the default Adapter is signed out (#564).</summary>
+    [Fact]
+    public void SignInWarningOf_SignedOut_NamesTheAdapter_AndNoAdapterGetsNone()
+    {
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.SignIn = Agency.Huddle.Acp.Abstractions.AgentSignInStatus.SignedOut;
+
+        Assert.Equal(
+            "Claude Code does not seem to be signed in. The hire will work, but this Agent's first Turn will fail until you sign in.",
+            fixture.Profiles.SignInWarningOf("claude"));
+        Assert.Null(fixture.Profiles.SignInWarningOf(null));
+    }
+
+    /// <summary>A sign-in check whose catalog throws is swallowed, so pressing Add or Check again never breaks the page (#564).</summary>
+    [Fact]
+    public async Task CheckSignInAsync_CatalogThrows_DoesNotThrow()
+    {
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.ThrowOnProbe = true;
+
+        await fixture.Profiles.CheckSignInAsync("claude", refresh: true, TestContext.Current.CancellationToken);
+
+        Assert.Single(fixture.ModelCatalog.SignInChecks);
+    }
+
     /// <summary>An Agent hired on the Adapter's default model keeps its role's tier chip when the Adapter still reports that default (no tier map names a model); a different stored model shows none.</summary>
     [Theory]
     [InlineData("sonnet", ModelTier.Balanced)]

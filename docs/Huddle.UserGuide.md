@@ -925,7 +925,11 @@ Each draft card shows how many **Skills** the role brings (hover for the names) 
 something is missing, **Needs setup** with the reason, such as "no logged-in adapter for
 tier Balanced". A role that reads a connector you have not set up shows a grey line instead,
 such as "Not connected yet: email:read". That line is information only and never stops the
-approval. Before anything is created, **Approve &
+approval. When an Adapter reports that nobody is signed in, a new draft's card also warns
+"<Adapter> does not seem to be signed in. The hire will work, but this Agent's first Turn will
+fail until you sign in." It is a warning only: **Approve & hire** stays on. Huddle checks when you
+press **Add**, and **Check again** on the warning asks once more after you sign in. When Huddle
+cannot tell, the card says nothing. Before anything is created, **Approve &
 hire** copies the Skills the roster needs into `Skills/`. A Skill that cannot be copied (not downloaded,
 broken, or withdrawn by its Source) stops the approval with "Skills not ready: …" and nothing is created.
 A card that names such a Skill already shows **Needs setup** with a **Copy prompt**; paste it into your AI

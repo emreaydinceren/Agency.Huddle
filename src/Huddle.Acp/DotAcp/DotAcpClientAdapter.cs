@@ -20,8 +20,16 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
     // strips the leading underscore before calling ExtNotificationAsync.
     private const string SessionNoticeMethod = "session/notice";
 
+    // The connection-scoped sign-in push of the Claude Adapter (_auth/status_update, underscore stripped by dotacp).
+    private const string AuthStatusMethod = "auth/status_update";
+
     // At most this many early updates are held across all starting sessions; more are dropped with the Warning.
     private const int MaxEarlyEvents = 256;
+
+    // The latest AgentSignInStatus as its int value (Volatile access), and the signal of the first push.
+    private int signIn;
+
+    private readonly TaskCompletionSource firstSignIn = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private readonly ConcurrentDictionary<string, ISessionSink> sinks = new ConcurrentDictionary<string, ISessionSink>();
 
@@ -233,8 +241,66 @@ internal sealed partial class DotAcpClientAdapter(ILogger<DotAcpClientAdapter> l
             return Task.CompletedTask;
         }
 
+        if (string.Equals(method, DotAcpClientAdapter.AuthStatusMethod, StringComparison.Ordinal))
+        {
+            this.RecordSignIn(notification);
+            return Task.CompletedTask;
+        }
+
         DotAcpClientAdapter.LogExtensionNotificationIgnored(logger, method);
         return Task.CompletedTask;
+    }
+
+    /// <summary>The latest sign-in status the agent pushed, or <see cref="AgentSignInStatus.Unknown"/> when it has not pushed one.</summary>
+    internal AgentSignInStatus SignIn => (AgentSignInStatus)Volatile.Read(ref this.signIn);
+
+    /// <summary>
+    /// Waits for the agent's first sign-in push, for at most <paramref name="wait"/>.
+    /// </summary>
+    /// <param name="wait">The longest to wait; a status that already arrived is returned at once.</param>
+    /// <param name="cancellationToken">Ends the wait early, answering what is known so far.</param>
+    /// <returns>The latest status, <see cref="AgentSignInStatus.Unknown"/> when none arrived in time.</returns>
+    internal async Task<AgentSignInStatus> WaitForSignInAsync(TimeSpan wait, CancellationToken cancellationToken)
+    {
+        if (this.SignIn == AgentSignInStatus.Unknown && wait > TimeSpan.Zero)
+        {
+            try
+            {
+                await this.firstSignIn.Task.WaitAsync(wait, cancellationToken).ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                // No push in time: the answer is Unknown, which is the honest "cannot determine".
+            }
+            catch (OperationCanceledException)
+            {
+                // The caller gave up waiting: answer what is known so far.
+            }
+        }
+
+        return this.SignIn;
+    }
+
+    /// <summary>
+    /// Records the sign-in status from an <c>auth/status_update</c> push. Reads <c>authStatus.kind</c> and nothing else:
+    /// the same params carry account details, which are never read, stored or logged. A push with no readable kind is ignored.
+    /// </summary>
+    /// <param name="notification">The notification's params: a dictionary of Newtonsoft tokens, as dotacp hands them over.</param>
+    private void RecordSignIn(object notification)
+    {
+        if (notification is not IDictionary<string, object> arguments
+            || !arguments.TryGetValue("authStatus", out object? status)
+            || status is not JObject fields
+            || fields["kind"] is not JValue { Value: string { Length: > 0 } kind })
+        {
+            return;
+        }
+
+        AgentSignInStatus parsed = string.Equals(kind, "none", StringComparison.Ordinal)
+            ? AgentSignInStatus.SignedOut
+            : AgentSignInStatus.SignedIn;
+        Volatile.Write(ref this.signIn, (int)parsed);
+        this.firstSignIn.TrySetResult();
     }
 
     public void OnDisconnected(dotacp.client.Connection connection)

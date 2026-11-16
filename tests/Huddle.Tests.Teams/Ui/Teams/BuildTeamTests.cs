@@ -586,14 +586,14 @@ public sealed class BuildTeamTests
         Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
     }
 
-    /// <summary>Over the real <see cref="ModelCatalogProbe"/> with nothing cached, a fresh draft's card names its tier's Model by its alias ("Sonnet", not "sonnet") and the render spawns no probe.</summary>
+    /// <summary>Over the real <see cref="ModelCatalogProbe"/> with nothing cached, a fresh draft's card names its tier's Model by its alias ("Sonnet", not "sonnet") and opening the page spawns no probe. Pressing Add spawns exactly one, the sign-in check (#564); here it fails, so nothing is cached and the alias still shows.</summary>
     [Fact]
-    public async Task Roster_FreshDraft_ShowsTheAliasNameBeforeAnyProbe()
+    public async Task Roster_FreshDraft_ShowsTheAliasNameWhenNothingIsCached()
     {
         using Fixture fixture = new(typeCount: 3);
         await using MudBunitContext ctx = fixture.NewContext();
         using TempDataDir dir = new();
-        FakeAdapterProbeRunner runner = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => throw new IOException("probe failed") };
         AcpOptions acp = new() { Adapters = [new AdapterProfileOptions { Id = "claude", DisplayName = "Claude Code", Command = "node" }] };
         IOptions<TeamOptions> options = dir.Options(opts => opts.Acp = acp);
         using ModelCatalogProbe probe = new(new(options), NullLoggerFactory.Instance, new AdapterProfileResolver(new AdapterCatalog(options)), runner, new WorkModePolicy(options));
@@ -601,12 +601,13 @@ public sealed class BuildTeamTests
         ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
         await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        Assert.Empty(runner.Calls);
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
 
         IElement card = Assert.Single(cut.FindAll(".roster-card"));
         Assert.Equal("Sonnet", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
-        Assert.Empty(runner.Calls);
+        Assert.Single(runner.Calls);
     }
 
     /// <summary>A new draft whose tier names no model takes the Adapter's own default model when it is added: its card names that model (no "(default)") and Approve &amp; hire stores it, so the card never promises a model the hire does not store (#607). The tier chip stays.</summary>
@@ -898,6 +899,117 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
         Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+    }
+
+    /// <summary>Renders Build a team over <paramref name="catalog"/> with the Blank type, a Team name typed and the Bookkeeper role added, and returns the page.</summary>
+    /// <param name="ctx">The context, with nothing rendered yet.</param>
+    /// <param name="catalog">The fake model catalog the test reads afterwards.</param>
+    /// <param name="add">False to stop after the page opens, before Add is pressed.</param>
+    private static async Task<IRenderedComponent<ContainerFragment>> OpenWithDraftAsync(MudBunitContext ctx, FakeModelCatalog catalog, bool add = true)
+    {
+        AddProfiles(ctx, catalog);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        if (add)
+        {
+            await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        }
+
+        return cut;
+    }
+
+    /// <summary>An Adapter that reports nobody signed in puts a warning naming it on the new draft's card, after Add, and Approve &amp; hire stays on and hires (#564).</summary>
+    [Fact]
+    public async Task SignIn_AdapterSignedOut_WarnsOnTheDraftAndStillHires()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        FakeModelCatalog catalog = new() { SignIn = AgentSignInStatus.SignedOut };
+
+        IRenderedComponent<ContainerFragment> cut = await OpenWithDraftAsync(ctx, catalog);
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal(
+            "Claude Code does not seem to be signed in. The hire will work, but this Agent's first Turn will fail until you sign in.Check again",
+            card.QuerySelector(".roster-signin")?.TextContent.Trim());
+        Assert.False(Assert.Single(catalog.SignInChecks).Refresh);
+        Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Assert.Single(fixture.Personas.Entries, entry => entry.Teams.Contains("Garden", StringComparer.Ordinal));
+    }
+
+    /// <summary>An Adapter that reports a person signed in draws no sign-in line.</summary>
+    [Fact]
+    public async Task SignIn_AdapterSignedIn_ShowsNoWarning()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = await OpenWithDraftAsync(ctx, new FakeModelCatalog { SignIn = AgentSignInStatus.SignedIn });
+
+        Assert.Empty(cut.FindAll(".roster-signin"));
+    }
+
+    /// <summary>When Huddle cannot tell (the probe failed, or the Adapter does not report), the card makes no sign-in claim at all.</summary>
+    [Fact]
+    public async Task SignIn_Unknown_ShowsNothingAboutSigningIn()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = await OpenWithDraftAsync(ctx, new FakeModelCatalog { SignIn = AgentSignInStatus.Unknown, ThrowOnProbe = true });
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Empty(cut.FindAll(".roster-signin"));
+        Assert.DoesNotContain("signed in", card.TextContent, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("sign in", card.TextContent, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>"Check again" probes with a refresh, and the warning goes once the Adapter reports a person signed in.</summary>
+    [Fact]
+    public async Task SignIn_CheckAgain_RefreshesAndClearsTheWarningOnceSignedIn()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        FakeModelCatalog catalog = new() { SignIn = AgentSignInStatus.SignedOut, SignInAfterRefresh = AgentSignInStatus.SignedIn };
+        IRenderedComponent<ContainerFragment> cut = await OpenWithDraftAsync(ctx, catalog);
+        Assert.NotEmpty(cut.FindAll(".roster-signin"));
+        Assert.DoesNotContain(catalog.SignInChecks, check => check.Refresh);
+
+        await cut.InvokeAsync(() => cut.Find("button.roster-signin-check").ClickAsync());
+
+        Assert.Single(catalog.SignInChecks, check => check.Refresh);
+        Assert.Empty(cut.FindAll(".roster-signin"));
+    }
+
+    /// <summary>Opening the page, with no Add pressed, never asks the catalog about signing in: a load must not probe.</summary>
+    [Fact]
+    public async Task SignIn_PlainLoad_AsksNothing()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        FakeModelCatalog catalog = new() { SignIn = AgentSignInStatus.SignedOut };
+
+        _ = await OpenWithDraftAsync(ctx, catalog, add: false);
+
+        Assert.Empty(catalog.SignInChecks);
+        Assert.Equal(0, catalog.ProbeCount);
+    }
+
+    /// <summary>The sign-in warning is not a setup reason: no Needs setup line, and no setup reason on the card.</summary>
+    [Fact]
+    public async Task SignIn_Warning_IsNotASetupReason()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = await OpenWithDraftAsync(ctx, new FakeModelCatalog { SignIn = AgentSignInStatus.SignedOut });
+
+        Assert.NotEmpty(cut.FindAll(".roster-signin"));
+        Assert.Empty(cut.FindAll(".roster-setup"));
     }
 
     /// <summary>A name an existing Agent already has is refused before the Team is created, and nothing is written.</summary>

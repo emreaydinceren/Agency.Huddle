@@ -416,4 +416,30 @@ public sealed class ProfileCardTests
         Assert.Empty(cut.FindAll(".avatar-edit-column"));
         Assert.Empty(cut.FindAll("button"));
     }
+
+    /// <summary>A profile with a sign-in warning draws it as its own line, with a "Check again" button only when a callback is given, and the button is off while checking.</summary>
+    [Fact]
+    public async Task SignInWarning_DrawsItsLine_AndCheckAgainOnlyWithACallback()
+    {
+        await using MudBunitContext ctx = new();
+        AgentProfile warned = Plain with { SignInWarning = "Claude does not seem to be signed in." };
+        int checks = 0;
+
+        var without = RenderIt(ctx, warned);
+        Assert.Equal("Claude does not seem to be signed in.", without.Find(".roster-signin-text").TextContent.Trim());
+        Assert.Empty(without.FindAll("button.roster-signin-check"));
+
+        var with = RenderIt(ctx, warned, parameters => parameters.Add(p => p.OnCheckSignIn, EventCallback.Factory.Create(this, () => checks++)));
+        await with.InvokeAsync(() => with.Find("button.roster-signin-check").ClickAsync());
+        Assert.Equal(1, checks);
+
+        var busy = RenderIt(ctx, warned, parameters =>
+        {
+            parameters.Add(p => p.OnCheckSignIn, EventCallback.Factory.Create(this, () => checks++));
+            parameters.Add(p => p.CheckingSignIn, true);
+        });
+        Assert.True(busy.Find("button.roster-signin-check").HasAttribute("disabled"));
+        Assert.Equal("Checking…", busy.Find("button.roster-signin-check").TextContent.Trim());
+        Assert.Empty(RenderIt(ctx, Plain).FindAll(".roster-signin"));
+    }
 }
