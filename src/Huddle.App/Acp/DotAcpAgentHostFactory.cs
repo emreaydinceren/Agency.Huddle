@@ -47,6 +47,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly AgentFolderMoves folderMoves;
     private readonly ITeamCatalog teamCatalog;
     private readonly WorkModePolicy workModePolicy;
+    private readonly BrowserLaunchFactsSource browserFacts;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
@@ -74,6 +75,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="folderMoves">Awaited before creating a Persona's Work Dir, so a rename's Agent-folder move never races this factory creating a stale copy of it - corrections-B2 item 20.</param>
     /// <param name="teamCatalog">The Teams and their Projects, handed to each Persona's host so its session start can list the Team Memory of the Teams the Persona belongs to (Spec §6.4).</param>
     /// <param name="workModePolicy">Decides whether a Persona's Work Mode may be sent to its Adapter (ADR-0033).</param>
+    /// <param name="browserFacts">What was found about running a browser on this computer, read when a session's <c>_meta</c> is built.</param>
     public DotAcpAgentHostFactory(
         IOptions<TeamOptions> options,
         IServiceProvider serviceProvider,
@@ -84,7 +86,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         AgentPaths agentPaths,
         AgentFolderMoves folderMoves,
         ITeamCatalog teamCatalog,
-        WorkModePolicy workModePolicy)
+        WorkModePolicy workModePolicy,
+        BrowserLaunchFactsSource browserFacts)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -96,7 +99,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(folderMoves);
         ArgumentNullException.ThrowIfNull(teamCatalog);
         ArgumentNullException.ThrowIfNull(workModePolicy);
+        ArgumentNullException.ThrowIfNull(browserFacts);
 
+        this.browserFacts = browserFacts;
         this.options = options.Value;
         this.workModePolicy = workModePolicy;
         this.teamCatalog = teamCatalog;
@@ -128,7 +133,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
-        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
+        AgentMeta agentMeta = this.BuildAgentMeta(persona, profile, workDir);
+        ToolSet toolSet = this.BuildToolSet(persona, agentId, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels, agentMeta.BrowserPassed);
 
         var toolServer = new AppToolServer(ToolServerName, toolSet.Tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -140,7 +146,6 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
 
-        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(profile, ConnectorsPassed(profile, EffectiveConnectors(persona, this.workModePolicy)));
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -165,12 +170,44 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.options.Teams,
             workDir,
             toolServer.Endpoint,
-            meta,
+            agentMeta.Meta,
             this.loggerFactory,
             this.workModePolicy,
             roleBlock,
-            sources);
+            sources,
+            agentMeta.BrowserPassed);
     }
+
+    /// <summary>What <see cref="BuildAgentMeta"/> decided for one session start.</summary>
+    /// <param name="Meta">The session <c>_meta</c>, or <see langword="null"/> when the profile asks for none.</param>
+    /// <param name="BrowserPassed">Whether the Playwright server is in the <c>_meta</c>; the system prompt needs it to say whether the Agent has a browser.</param>
+    private readonly record struct AgentMeta(IReadOnlyDictionary<string, object>? Meta, bool BrowserPassed);
+
+    /// <summary>Builds the session <c>_meta</c> for the Persona: connectors, ask rules and, when it passes, the browser server.</summary>
+    /// <param name="persona">The Persona being started.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <param name="workDir">The Persona's Work Dir, which holds the browser's output folder.</param>
+    /// <returns>The <c>_meta</c> and whether the browser is in it.</returns>
+    private AgentMeta BuildAgentMeta(Persona persona, AdapterProfile profile, string workDir)
+    {
+        BrowserLaunchFacts facts = this.browserFacts.Current;
+        bool browserPassed = this.OffersBrowser(persona, profile);
+        Dictionary<string, object>? browserServer = browserPassed
+            ? BrowserServerConfig.Build(facts, profile.Command, this.agentPaths.BrowserProfile(persona.Name), Path.Combine(workDir, "browser-output"))
+            : null;
+        IReadOnlyDictionary<string, object>? meta = BuildIsolationMeta(
+            profile,
+            ConnectorsPassed(profile, EffectiveConnectors(persona, this.workModePolicy)),
+            browserServer: browserServer);
+        return new AgentMeta(meta, browserServer is not null);
+    }
+
+    /// <summary>Whether this Persona's sessions get the browser server, by the stored switch, its Work Mode, its profile and what this computer has.</summary>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns>The result of <see cref="BrowserPassed"/> for the current launch facts.</returns>
+    private bool OffersBrowser(Persona persona, AdapterProfile profile) =>
+        BrowserPassed(profile, EffectiveBrowser(persona, this.workModePolicy), this.browserFacts.Current);
 
     /// <summary>
     /// Whether the account connectors are passed to this Persona's sessions: the stored switch, unless its Work Mode never asks before
@@ -192,6 +229,33 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="effective">The result of <see cref="EffectiveConnectors"/>.</param>
     /// <returns><see langword="true"/> only for an isolating profile whose Agent is on.</returns>
     internal static bool ConnectorsPassed(AdapterProfile profile, bool effective) => effective && profile.IsolateUserSettings;
+
+    /// <summary>
+    /// Whether the Persona is offered the browser: the stored switch (<see cref="Persona.BrowserOff"/> inverted), unless its Work Mode never asks
+    /// before a tool runs, where the approval prompt that guards every browser call would be skipped.
+    /// </summary>
+    /// <param name="persona">The Persona.</param>
+    /// <param name="policy">Decides which Work Modes skip approval.</param>
+    /// <returns><see langword="true"/> only when the switch is on and the mode asks.</returns>
+    internal static bool EffectiveBrowser(Persona persona, WorkModePolicy policy)
+    {
+        return !persona.BrowserOff && !policy.SkipsApproval(persona.WorkMode);
+    }
+
+    /// <summary>
+    /// Whether the browser server is passed on this profile: only an isolating profile that runs Claude carries the <c>settings</c> that hold
+    /// the ask and deny rules the browser needs, and only when the install has a CLI, a browser and the kill switch on.
+    /// </summary>
+    /// <param name="profile">The Adapter Profile the session runs on.</param>
+    /// <param name="effective">The result of <see cref="EffectiveBrowser"/>.</param>
+    /// <param name="facts">What was found about the browser on this computer.</param>
+    /// <returns><see langword="true"/> only when every condition holds.</returns>
+    internal static bool BrowserPassed(AdapterProfile profile, bool effective, BrowserLaunchFacts facts)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        ArgumentNullException.ThrowIfNull(facts);
+        return effective && profile.IsolateUserSettings && AdapterCatalog.RunsClaude(profile) && facts.Available;
+    }
 
     /// <summary>
     /// Builds the guards one Persona's permission handler consults, in the order it consults them. There is no <c>~/.claude</c> guard when
@@ -265,8 +329,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="skillResolution">The Persona's resolved Skills.</param>
     /// <param name="proposesTeamMemory">Whether to offer <c>propose_team_memory</c>.</param>
     /// <param name="teamLabels">The Persona's Team labels; those with a Team folder become <c>get_help</c>'s Second Brain map.</param>
+    /// <param name="browser">Whether the session passes the browser; <c>get_help</c> then lists its topic.</param>
     /// <returns>The tool set.</returns>
-    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory, IReadOnlyList<string> teamLabels)
+    private ToolSet BuildToolSet(Persona persona, string agentId, AdapterProfile profile, SkillResolution skillResolution, bool proposesTeamMemory, IReadOnlyList<string> teamLabels, bool browser)
     {
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
         // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
@@ -308,7 +373,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             toolNamePrefix,
             teamNames,
             this.serviceProvider.GetRequiredService<Agency.Huddle.App.Data.RawBaselineStore>(),
-            this.options);
+            this.options,
+            browser);
         IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
         return new ToolSet(
@@ -609,8 +675,18 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// replace the Adapter's computed settings and is known to drop a <c>CLAUDE_MODEL_CONFIG</c> override: for it the merge gate keeps only the hook
     /// (see known-limits.md).
     /// </param>
+    /// <param name="browserServer">
+    /// The Playwright MCP entry from <see cref="BrowserServerConfig.Build"/>, or <see langword="null"/> for no browser. Added as
+    /// <c>options.mcpServers.playwright</c> only when the profile isolates and <paramref name="askRules"/> is <see langword="true"/>: the browser is
+    /// never passed without its ask rule (<c>mcp__playwright__*</c>) and its deny rule (<c>browser_run_code_unsafe</c>, denied outright, which removes
+    /// the tool from the Agent's tool list), because both live in the same <c>permissions</c> key. In every other case the meta is exactly what it is without it.
+    /// </param>
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
-    internal static Dictionary<string, object>? BuildIsolationMeta(AdapterProfile profile, bool connectors, bool askRules = true)
+    internal static Dictionary<string, object>? BuildIsolationMeta(
+        AdapterProfile profile,
+        bool connectors,
+        bool askRules = true,
+        IReadOnlyDictionary<string, object>? browserServer = null)
     {
         Dictionary<string, object> options = new(StringComparer.Ordinal);
         if (profile.IsolateUserSettings)
@@ -624,10 +700,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             {
                 // `settings` replaces the Adapter's computed settings and a `permissions` key replaces any other, so the one list is
                 // sent here beside autoMemoryEnabled, whatever `connectors` is (issue #432).
-                settings["permissions"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                Dictionary<string, object> permissions = new(StringComparer.Ordinal)
                 {
-                    ["ask"] = AskRules(connectors),
+                    ["ask"] = AskRules(connectors, browserServer is not null),
                 };
+                if (browserServer is not null)
+                {
+                    permissions["deny"] = DenyRules();
+                    options["mcpServers"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        [BrowserServerConfig.ServerName] = browserServer,
+                    };
+                }
+
+                settings["permissions"] = permissions;
             }
 
             options["settings"] = settings;
@@ -677,11 +763,35 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         "Edit", "Write",
     ];
 
-    /// <summary>The Agent's <c>permissions.ask</c> list: <see cref="AgentAskRules"/>, plus every claude.ai connector tool when the connectors are on (Agent Connectors spec 8.4).</summary>
+    /// <summary>
+    /// The Agent's <c>permissions.ask</c> list: <see cref="AgentAskRules"/>, plus every claude.ai connector tool when the connectors are on (Agent
+    /// Connectors spec 8.4) and every Playwright tool when the browser is passed. The connector rule comes first, the browser rule last.
+    /// </summary>
     /// <param name="connectors">Whether the account connectors are passed.</param>
+    /// <param name="browser">Whether the browser server is passed.</param>
     /// <returns>A new array.</returns>
-    internal static string[] AskRules(bool connectors) =>
-        connectors ? [.. AgentAskRules, "mcp__claude_ai_*"] : [.. AgentAskRules];
+    internal static string[] AskRules(bool connectors, bool browser)
+    {
+        List<string> rules = [.. AgentAskRules];
+        if (connectors)
+        {
+            rules.Add("mcp__claude_ai_*");
+        }
+
+        if (browser)
+        {
+            rules.Add($"mcp__{BrowserServerConfig.ServerName}__*");
+        }
+
+        return [.. rules];
+    }
+
+    /// <summary>
+    /// The <c>permissions.deny</c> list sent with the browser: the one Playwright tool that runs arbitrary code in the Agent's process is denied
+    /// outright (#551 owner decision). MEASURED in the spike: a deny rule removes it from the tool list.
+    /// </summary>
+    /// <returns>A new array.</returns>
+    internal static string[] DenyRules() => [$"mcp__{BrowserServerConfig.ServerName}__browser_run_code_unsafe"];
 
     /// <summary>Builds the factory that produces the Persona's role block at each session start.</summary>
     /// <param name="parsed">The Persona's parsed identity, or <see langword="null"/> when it has none.</param>
@@ -714,7 +824,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         PersonaIdentity? parsed = ParseIdentity(persona);
         IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(parsed?.Skills ?? []);
-        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels);
+        bool browser = this.OffersBrowser(persona, profile);
+        ToolSet toolSet = this.BuildToolSet(persona, persona.Name, profile, skillResolution, this.ProposesTeamMemory(persona.Name, teamLabels), teamLabels, browser);
         IReadOnlyList<string> toolNames = [.. toolSet.Tools.Select(tool => $"{toolSet.ToolNamePrefix}{tool.Name}")];
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -750,7 +861,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             huddleMemory: inputs.HuddleMemory,
             outputs: inputs.Outputs,
             workspaces: inputs.Workspaces,
-            needsYou: inputs.NeedsYou);
+            needsYou: inputs.NeedsYou,
+            browser: browser);
         return (parts, profile.Id);
     }
 }

@@ -37,4 +37,10 @@ namespace Agency.Huddle.App.Acp;
 /// Stored in <see cref="Agency.Huddle.App.Data.PersonaConnectorsStore"/>, written only by <c>PersonaStore.SetConnectors</c>; a scalar so the restart
 /// check picks a change up through record equality. Off by default.
 /// </param>
-public sealed record Persona(string Name, string Text, string? Model = null, string? Effort = null, string? Adapter = null, string? WorkMode = null, bool Connectors = false);
+/// <param name="BrowserOff">
+/// Whether the Human switched this Persona's browser (the Playwright MCP server, issue #551) off. The browser is on by default,
+/// so the stored fact is the "off". Stored in <see cref="Agency.Huddle.App.Data.PersonaBrowserStore"/>, written only by
+/// <c>PersonaStore.SetBrowser</c> (and by <c>PersonaStore.Add</c> for a new Agent); a scalar so the restart check picks a change
+/// up through record equality.
+/// </param>
+public sealed record Persona(string Name, string Text, string? Model = null, string? Effort = null, string? Adapter = null, string? WorkMode = null, bool Connectors = false, bool BrowserOff = false);

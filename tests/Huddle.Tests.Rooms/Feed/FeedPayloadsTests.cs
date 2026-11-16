@@ -63,6 +63,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.AgentConnectorsChanged, "agent-connectors-changed"),
             (FeedSourceType.RoomMentionHeld, "room-mention-held"),
             (FeedSourceType.TeamRenameStuck, "team-rename-stuck"),
+            (FeedSourceType.AgentBrowserChanged, "agent-browser-changed"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -255,6 +256,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.TeamArchived, FeedCategory.SecondBrain),
             (FeedSourceType.BuiltinAgentUpdateAvailable, FeedCategory.SecondBrain),
             (FeedSourceType.AgentConnectorsChanged, FeedCategory.SecondBrain),
+            (FeedSourceType.AgentBrowserChanged, FeedCategory.SecondBrain),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));

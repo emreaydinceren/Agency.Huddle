@@ -3,6 +3,7 @@ Singleton Agency.Huddle.App.Acp.AdapterCatalog -> Agency.Huddle.App.Acp.AdapterC
 Singleton Agency.Huddle.App.Acp.AdapterProfileResolver -> Agency.Huddle.App.Acp.AdapterProfileResolver
 Singleton Agency.Huddle.App.Acp.AgentFolderMoves -> Agency.Huddle.App.Acp.AgentFolderMoves
 Singleton Agency.Huddle.App.Acp.AgentPaths -> Agency.Huddle.App.Acp.AgentPaths
+Singleton Agency.Huddle.App.Acp.BrowserLaunchFactsSource -> Agency.Huddle.App.Acp.BrowserLaunchFactsSource
 Singleton Agency.Huddle.App.Acp.DotAcpAgentHostFactory -> Agency.Huddle.App.Acp.DotAcpAgentHostFactory
 Singleton Agency.Huddle.App.Acp.IAdapterProbeRunner -> Agency.Huddle.App.Acp.AdapterProcessProbeRunner
 Singleton Agency.Huddle.App.Acp.IAgentHostFactory -> factory Agency.Huddle.App.Acp.IAgentHostFactory
@@ -63,6 +64,7 @@ Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Da
 Singleton Agency.Huddle.App.Data.NeedsYouCapStore -> Agency.Huddle.App.Data.NeedsYouCapStore
 Singleton Agency.Huddle.App.Data.NeedsYouLevelStore -> Agency.Huddle.App.Data.NeedsYouLevelStore
 Singleton Agency.Huddle.App.Data.NeedsYouSpendStore -> Agency.Huddle.App.Data.NeedsYouSpendStore
+Singleton Agency.Huddle.App.Data.PersonaBrowserStore -> Agency.Huddle.App.Data.PersonaBrowserStore
 Singleton Agency.Huddle.App.Data.PersonaConnectorsStore -> Agency.Huddle.App.Data.PersonaConnectorsStore
 Singleton Agency.Huddle.App.Data.PersonaEffortStore -> Agency.Huddle.App.Data.PersonaEffortStore
 Singleton Agency.Huddle.App.Data.PersonaModelStore -> Agency.Huddle.App.Data.PersonaModelStore

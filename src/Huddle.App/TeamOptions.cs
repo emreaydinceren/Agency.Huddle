@@ -72,6 +72,9 @@ public sealed class TeamOptions
     /// <summary>Configuration for the Tasks feature.</summary>
     public TasksOptions Tasks { get; set; } = new();
 
+    /// <summary>Configuration for the Agents' browser, bound from <c>Team:Browser</c>.</summary>
+    public BrowserOptions Browser { get; set; } = new();
+
     /// <summary>Configuration for scheduled Jobs.</summary>
     public JobsOptions Jobs { get; set; } = new();
 

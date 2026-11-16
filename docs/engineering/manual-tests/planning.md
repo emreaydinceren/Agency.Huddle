@@ -68,6 +68,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 43 | [AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's wording, `/compact`, a real restart and a save loop](agents-md-changes.md) | 11 | 10 | 3.1h |
 | 44 | [Account connectors: the default off, the confirm, the switch, the Feed item, the Adapter text, the notice and the paid log checks](agent-connectors.md) | 10 | 4 | 1.8h |
 | 45 | [Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals, recovery and the paid checks](team-rename.md) | 15 | 3 | 3.0h |
+| 46 | [Agent browser: on by default, off per Agent, every click and type asks, the sign-in the Human types, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once](agent-browser.md) | 11 | 11 | 1.8h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.

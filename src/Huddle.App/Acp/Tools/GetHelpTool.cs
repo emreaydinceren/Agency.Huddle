@@ -53,6 +53,7 @@ internal sealed class GetHelpTool : IAppTool
     private readonly IReadOnlyList<string> teamNames;
     private readonly RawBaselineStore? rawBaselines;
     private readonly TeamOptions? options;
+    private readonly bool browser;
 
     /// <summary>Initialises a new instance of the <see cref="GetHelpTool"/> class.</summary>
     /// <param name="otherTools">
@@ -81,13 +82,18 @@ internal sealed class GetHelpTool : IAppTool
     /// Locates the Teams folder (<see cref="TeamOptions.DataDir"/> and <see cref="TeamsOptions.Dir"/>) for the map and
     /// the scan, or <see langword="null"/> to leave the section out.
     /// </param>
+    /// <param name="browser">
+    /// Whether the session passes the browser to the Agent. Only then does the help text carry <c>getHelp.browser</c>, so an Agent
+    /// without a browser is never told about one.
+    /// </param>
     public GetHelpTool(
         IReadOnlyList<IAppTool> otherTools,
         IPromptSource prompts,
         string toolNamePrefix,
         IReadOnlyList<string>? teamNames = null,
         RawBaselineStore? rawBaselines = null,
-        TeamOptions? options = null)
+        TeamOptions? options = null,
+        bool browser = false)
     {
         ArgumentNullException.ThrowIfNull(otherTools);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -102,6 +108,7 @@ internal sealed class GetHelpTool : IAppTool
         this.teamNames = teamNames is { Count: > 0 } && options is not null ? [.. teamNames] : [];
         this.rawBaselines = rawBaselines;
         this.options = options;
+        this.browser = browser;
 
         // this.Description reads a prompt, so prompts must already be assigned. This tool goes first for
         // the same reason AllTools once yielded it first: it is offered first.
@@ -153,6 +160,11 @@ internal sealed class GetHelpTool : IAppTool
         if (this.catalog.Any(static entry => string.Equals(entry.Name, "create_task", StringComparison.Ordinal)))
         {
             sections.Add(this.prompts.Render("getHelp.tasks"));
+        }
+
+        if (this.browser)
+        {
+            sections.Add(this.prompts.Render("getHelp.browser"));
         }
 
         if (this.options is not null && this.teamNames.Count > 0)

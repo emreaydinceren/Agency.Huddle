@@ -225,6 +225,10 @@ internal static class SystemPromptComposer
     /// The <c>(scope, level)</c> of each of the Persona's Teams and Projects, or <see langword="null"/> or empty for none; either leaves the output
     /// byte-identical to a call without it. Otherwise <c>systemPrompt.needsYou</c> follows the outputs index and precedes the closing part.
     /// </param>
+    /// <param name="browser">
+    /// Whether the session passes the browser server to the Agent. <see langword="false"/> leaves the output byte-identical to a call without it;
+    /// <see langword="true"/> adds <c>systemPrompt.browser</c> after the other tool paragraphs.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -252,16 +256,17 @@ internal static class SystemPromptComposer
         MemorySnapshot? huddleMemory = null,
         OutputsSnapshot? outputs = null,
         IReadOnlyList<(string Team, string Path)>? workspaces = null,
-        IReadOnlyList<(string Scope, string Level)>? needsYou = null)
+        IReadOnlyList<(string Scope, string Level)>? needsYou = null,
+        bool browser = false)
     {
         IReadOnlyList<PromptPart> parts = ComposeParts(
-            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces, needsYou);
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces, needsYou, browser);
 
         return string.Join("\n\n", parts.Select(static part => part.Text));
     }
 
     /// <summary>
-    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?, IReadOnlyList{ValueTuple{string, string}}?)"/>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?, IReadOnlyList{ValueTuple{string, string}}?, bool)"/>
     /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
     /// </summary>
     /// <param name="persona">The Persona whose text and name are spliced in.</param>
@@ -282,6 +287,7 @@ internal static class SystemPromptComposer
     /// <param name="outputs">The outputs index of the Persona's Teams, or <see langword="null"/> or an empty one for none; it adds <c>systemPrompt.outputsIndex</c> after Team Memory.</param>
     /// <param name="workspaces">The <c>(team, path)</c> of each Team with a readable workspace, in the Persona's <c>teams</c> order, or <see langword="null"/> for none; each adds one <c>systemPrompt.secondBrainWorkspace</c> part after the Second Brain summary.</param>
     /// <param name="needsYou">The <c>(scope, level)</c> of each of the Persona's Teams and Projects, or <see langword="null"/> or empty for none; it adds <c>systemPrompt.needsYou</c> after the outputs index.</param>
+    /// <param name="browser">Whether the session passes the browser server; it adds <c>systemPrompt.browser</c> after the other tool paragraphs.</param>
     /// <returns>The labelled parts in prompt order.</returns>
     internal static IReadOnlyList<PromptPart> ComposeParts(
         Persona persona,
@@ -301,7 +307,8 @@ internal static class SystemPromptComposer
         MemorySnapshot? huddleMemory = null,
         OutputsSnapshot? outputs = null,
         IReadOnlyList<(string Team, string Path)>? workspaces = null,
-        IReadOnlyList<(string Scope, string Level)>? needsYou = null)
+        IReadOnlyList<(string Scope, string Level)>? needsYou = null,
+        bool browser = false)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -321,7 +328,7 @@ internal static class SystemPromptComposer
         AddAgentsMdPart(parts, prompts, agentsMd);
         AddIdentityParts(parts, prompts, persona, toolNames);
 
-        AddToolParagraphs(parts, prompts, toolNames, askHumanToolName);
+        AddToolParagraphs(parts, prompts, toolNames, askHumanToolName, browser);
 
         AddSecondBrainPart(parts, prompts, toolNames);
         AddWorkspaceParts(parts, prompts, workspaces);
@@ -629,7 +636,8 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="toolNames">The offered tools' names, already prefixed.</param>
     /// <param name="askHumanToolName"><c>ask_human</c>'s own prefixed name, or <see langword="null"/> when it is not offered.</param>
-    private static void AddToolParagraphs(List<PromptPart> parts, IPromptSource prompts, IReadOnlyList<string> toolNames, string? askHumanToolName)
+    /// <param name="browser">Whether the session passes the browser; only then does <c>systemPrompt.browser</c> follow the other paragraphs.</param>
+    private static void AddToolParagraphs(List<PromptPart> parts, IPromptSource prompts, IReadOnlyList<string> toolNames, string? askHumanToolName, bool browser)
     {
         // An Adapter can defer a tool's own description, so the model may see only the name of
         // ask_human; this paragraph is the one place its "when to ask" is always read. The name
@@ -659,6 +667,14 @@ internal static class SystemPromptComposer
                 prompts.Render(
                     "systemPrompt.docHistory",
                     new Dictionary<string, string> { ["{{logChangeTool}}"] = logChangeToolName })));
+        }
+
+        // The browser rules are in the system prompt, not a Skill: an Agent may never load a Skill, and the
+        // rules about credentials and page text must be in context on every Turn. Sent only when the
+        // session passes the browser server, so a session without one reads what it read before.
+        if (browser)
+        {
+            parts.Add(PromptOf(prompts, "Tool paragraphs", "systemPrompt.browser", prompts.Render("systemPrompt.browser")));
         }
     }
 

@@ -134,7 +134,7 @@ internal sealed class TeamDuplicator(
                 continue;
             }
 
-            members.Add(new SourceMember(name, identity.Role.TypeId, spec, persona.Model, persona.Effort, persona.WorkMode, persona.Adapter));
+            members.Add(new SourceMember(name, identity.Role.TypeId, spec, persona.Model, persona.Effort, persona.WorkMode, persona.Adapter, persona.BrowserOff));
         }
 
         return members;
@@ -151,7 +151,7 @@ internal sealed class TeamDuplicator(
         }
 
         ModelPick? pick = card.Pick is null ? null : new ModelPick(member.Adapter ?? card.Pick.AdapterId, member.Model);
-        HireResult result = hire.Hire(new HireRequest(target, member.TypeId, member.Spec.Id, card with { Pick = pick }, member.Effort, member.WorkMode));
+        HireResult result = hire.Hire(new HireRequest(target, member.TypeId, member.Spec.Id, card with { Pick = pick }, member.Effort, member.WorkMode, member.BrowserOff));
         if (result.PersonaName is null)
         {
             skipped.Add(new SkippedMember(member.Name, result.Error ?? string.Empty));
@@ -183,6 +183,6 @@ internal sealed class TeamDuplicator(
         return Directory.Exists(workspace) ? null : WorkspaceMissingMessage;
     }
 
-    /// <summary>A source member with its resolved role and the Model, Effort, Work Mode and Adapter it runs on.</summary>
-    private sealed record SourceMember(string Name, string TypeId, RoleSpec Spec, string? Model, string? Effort, string? WorkMode, string? Adapter);
+    /// <summary>A source member with its resolved role, the Model, Effort, Work Mode and Adapter it runs on, and whether its browser is off.</summary>
+    private sealed record SourceMember(string Name, string TypeId, RoleSpec Spec, string? Model, string? Effort, string? WorkMode, string? Adapter, bool BrowserOff);
 }

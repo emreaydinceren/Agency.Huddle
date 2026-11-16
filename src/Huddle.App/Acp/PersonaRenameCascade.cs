@@ -80,7 +80,19 @@ internal sealed partial class PersonaRenameCascade(
     private const int MaxWorkDirMoveAttempts = 5;
     private static readonly TimeSpan WorkDirMoveRetryDelay = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>How many times a removed Agent's browser profile delete is tried while its browser shuts down.</summary>
+    private const int MaxProfileDeleteAttempts = 20;
+
+    /// <summary>The wait between two profile delete attempts.</summary>
+    private static readonly TimeSpan ProfileDeleteRetryDelay = TimeSpan.FromMilliseconds(500);
+
     private bool subscribed;
+
+    // PersonaStore raises PersonaRemoved for the OLD Name right after PersonaRenamed (it diffs Names), so a removal handler cannot tell a
+    // rename from a delete by itself. The old Names of renames not yet followed by their removal are kept here, so the removal that is
+    // really a rename never deletes a browser profile the detached move is about to carry to the new Name.
+    private readonly Lock renamedAwayGate = new();
+    private readonly HashSet<string> renamedAway = new(StringComparer.OrdinalIgnoreCase);
 
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
@@ -88,7 +100,87 @@ internal sealed partial class PersonaRenameCascade(
         personaStore.PersonaRenamed += this.OnPersonaRenamed;
         personaStore.PersonaRemoved += this.OnPersonaRemoved;
         this.subscribed = true;
+
+        // The startup sweep of browser profile folders no Persona owns: a removal while the app was off, or one whose delete failed on a
+        // locked folder, leaves one behind, and the sign-ins in it must not wait for a same-named Persona to be created.
+        this.SweepBrowserProfiles();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Deletes every folder under <c>browser-profiles</c> whose name no Persona has. The name match ignores case on every OS: it refuses
+    /// a delete, so a folder that differs only by case from a Persona's Name is kept even on a case-sensitive file system. Never throws; each
+    /// failure is logged and the sweep goes on.
+    /// </summary>
+    internal void SweepBrowserProfiles()
+    {
+        try
+        {
+            string root = agentPaths.BrowserProfilesRoot;
+
+            // A Persona file that failed to load still names an Agent the Human may fix; sweeping now would delete its sign-ins.
+            if (!Directory.Exists(root) || personaStore.RejectedFiles.Count > 0)
+            {
+                return;
+            }
+
+            HashSet<string> names = new(personaStore.ListNames(), StringComparer.OrdinalIgnoreCase);
+            foreach (string folder in Directory.EnumerateDirectories(root))
+            {
+                string name = Path.GetFileName(folder);
+                if (!names.Contains(name))
+                {
+                    this.DeleteBrowserProfile(folder, name);
+                }
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogBrowserProfileSweepFailed(logger, ex);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a removed Agent's browser profile, retrying while the browser its stopping host started still holds files, so a same-named
+    /// Agent hired soon after never inherits the sign-ins. The first attempt runs before the first await, so an unlocked folder is gone on return.
+    /// After the last attempt the failure is logged and the startup sweep tries again.
+    /// </summary>
+    /// <param name="folder">The folder to delete.</param>
+    /// <param name="name">The Persona Name the folder is for, for the failure log.</param>
+    /// <returns>A task that ends when the folder is gone or the attempts ran out.</returns>
+    private async Task DeleteBrowserProfileWithRetryAsync(string folder, string name)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                BrowserProfileFolders.DeleteTree(folder);
+                return;
+            }
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && attempt < MaxProfileDeleteAttempts)
+            {
+                await Task.Delay(ProfileDeleteRetryDelay).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                LogBrowserProfileDeleteFailed(logger, name, ex);
+                return;
+            }
+        }
+    }
+    /// <summary>Deletes one browser profile folder, logging a failure instead of throwing.</summary>
+    /// <param name="folder">The folder to delete.</param>
+    /// <param name="name">The Persona Name the folder is for, for the failure log.</param>
+    private void DeleteBrowserProfile(string folder, string name)
+    {
+        try
+        {
+            BrowserProfileFolders.DeleteTree(folder);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogBrowserProfileDeleteFailed(logger, name, ex);
+        }
     }
 
     /// <inheritdoc />
@@ -123,6 +215,17 @@ internal sealed partial class PersonaRenameCascade(
     /// <param name="renamed">The old and the new Name of the Persona that changed.</param>
     private void OnPersonaRenamed(PersonaRenamed renamed)
     {
+        lock (this.renamedAwayGate)
+        {
+            _ = this.renamedAway.Remove(renamed.NewName);
+
+            // A case-only rename raises no removal (the Names match ignoring case), so nothing would ever consume the marker.
+            if (!string.Equals(renamed.OldName, renamed.NewName, StringComparison.OrdinalIgnoreCase))
+            {
+                _ = this.renamedAway.Add(renamed.OldName);
+            }
+        }
+
         this.RenamePersonaScopedState(renamed);
         this.RenameTaskAndViewReferences(renamed);
 
@@ -302,6 +405,20 @@ internal sealed partial class PersonaRenameCascade(
         {
             LogRoomSessionsRemoveFailed(logger, removed.Name, ex);
         }
+
+        // The Agent's browser sign-ins go with it (#551, owner decision), unless this "removal" is the old Name of a rename, whose profile the
+        // move carries to the new Name. A folder still locked by a running browser is left for the startup sweep.
+        bool wasRenamed;
+        lock (this.renamedAwayGate)
+        {
+            wasRenamed = this.renamedAway.Remove(removed.Name);
+        }
+
+        if (!wasRenamed)
+        {
+            // The Agent's host is still stopping, so its browser may hold the folder for a moment: the first try runs now, the rest retry briefly.
+            _ = this.DeleteBrowserProfileWithRetryAsync(agentPaths.BrowserProfile(removed.Name), removed.Name);
+        }
     }
 
     /// <summary>
@@ -340,6 +457,7 @@ internal sealed partial class PersonaRenameCascade(
         try
         {
             await this.MoveAgentFolderAsync(oldName, newName).ConfigureAwait(false);
+            await this.MoveBrowserProfileAsync(oldName, newName).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -432,7 +550,7 @@ internal sealed partial class PersonaRenameCascade(
             return;
         }
 
-        if (!await this.TryMoveDirectoryWithRetryAsync(source, target, caseOnlyChange, oldName, newName).ConfigureAwait(false))
+        if (!await this.TryMoveDirectoryWithRetryAsync(source, target, caseOnlyChange, ex => LogWorkDirMoveFailed(logger, oldName, newName, ex)).ConfigureAwait(false))
         {
             return;
         }
@@ -440,14 +558,41 @@ internal sealed partial class PersonaRenameCascade(
         this.FinishFolderMove(target, oldName, newName);
     }
 
+    /// <summary>
+    /// Moves the renamed Agent's browser profile folder from <c>browser-profiles/{oldName}</c> to <c>browser-profiles/{newName}</c>, with the
+    /// same retry as the Agent folder move and inside the same <see cref="AgentFolderMoves"/> gate, so a restart under the new Name never
+    /// opens the browser on an empty profile while the sign-ins are still under the old one. A missing source is nothing to do, and an existing
+    /// target is logged and left alone, as for the Agent folder.
+    /// </summary>
+    /// <param name="oldName">The Persona's old Name.</param>
+    /// <param name="newName">The Persona's new Name.</param>
+    private async Task MoveBrowserProfileAsync(string oldName, string newName)
+    {
+        string source = agentPaths.BrowserProfile(oldName);
+        string target = agentPaths.BrowserProfile(newName);
+        if (!Directory.Exists(source))
+        {
+            return;
+        }
+
+        bool caseOnlyChange = !string.Equals(oldName, newName, StringComparison.Ordinal)
+            && string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase);
+        if (!caseOnlyChange && Directory.Exists(target))
+        {
+            LogBrowserProfileTargetExists(logger, oldName, newName);
+            return;
+        }
+
+        _ = await this.TryMoveDirectoryWithRetryAsync(source, target, caseOnlyChange, ex => LogBrowserProfileMoveFailed(logger, oldName, newName, ex)).ConfigureAwait(false);
+    }
+
     /// <summary>Moves the folder, retrying a locked directory a few times before giving up.</summary>
-    /// <param name="source">The old Agent folder.</param>
-    /// <param name="target">The new Agent folder.</param>
+    /// <param name="source">The old folder.</param>
+    /// <param name="target">The new folder.</param>
     /// <param name="caseOnlyChange">Whether the rename only changes letter case, so the move goes through a temporary sibling.</param>
-    /// <param name="oldName">The Persona's old Name, for the failure log.</param>
-    /// <param name="newName">The Persona's new Name, for the failure log.</param>
+    /// <param name="logFailure">Logs the failure of the last attempt.</param>
     /// <returns><see langword="true"/> when the folder moved; <see langword="false"/> when every attempt failed and the failure was logged.</returns>
-    private async Task<bool> TryMoveDirectoryWithRetryAsync(string source, string target, bool caseOnlyChange, string oldName, string newName)
+    private async Task<bool> TryMoveDirectoryWithRetryAsync(string source, string target, bool caseOnlyChange, Action<IOException> logFailure)
     {
         for (var attempt = 1; attempt <= MaxWorkDirMoveAttempts; attempt++)
         {
@@ -475,7 +620,7 @@ internal sealed partial class PersonaRenameCascade(
             }
             catch (IOException ex)
             {
-                LogWorkDirMoveFailed(logger, oldName, newName, ex);
+                logFailure(ex);
                 return false;
             }
         }
@@ -525,6 +670,22 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that an Agent folder move failed after every retry.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move the Agent folder for '{OldName}' to '{NewName}' after several attempts.")]
     private static partial void LogWorkDirMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that a browser profile folder move was skipped because the target already exists.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Did not move the browser profile for '{OldName}' to '{NewName}': a folder already exists at the target. Both were left in place.")]
+    private static partial void LogBrowserProfileTargetExists(ILogger logger, string oldName, string newName);
+
+    /// <summary>Logs that a browser profile folder move failed after every retry.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move the browser profile for '{OldName}' to '{NewName}' after several attempts.")]
+    private static partial void LogBrowserProfileMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that deleting a browser profile folder failed. The startup sweep tries again.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not delete the browser profile for '{Name}'.")]
+    private static partial void LogBrowserProfileDeleteFailed(ILogger logger, string name, Exception exception);
+
+    /// <summary>Logs that the startup sweep of browser profile folders could not list the folder.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not sweep the browser profile folders.")]
+    private static partial void LogBrowserProfileSweepFailed(ILogger logger, Exception exception);
 
     /// <summary>Logs that moving a renamed Persona's File Changes state failed. The Team Directory rename proceeds regardless.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move File Changes state for '{OldName}' to '{NewName}'.")]

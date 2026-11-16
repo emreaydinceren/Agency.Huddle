@@ -6905,3 +6905,95 @@ File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+## Agent browser: on by default, off per Agent, every click and type asks, the sign-in the Human types, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once
+
+Back to [the manual test script](../manual-tests.md).
+
+### BROWSER-01 — A new Agent has the browser on, with no action 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-01--a-new-agent-has-the-browser-on-with-no-action-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | By an agent acting as the Human, on Sonnet, lane :5551. New Agent Scout: Browser row On with the full helper text and no action; the process list showed `node cli.js --browser msedge --user-data-dir ...\browser-profiles\Scout`; Scout counted 24 `mcp__playwright__` tools, `browser_run_code_unsafe` not among them; the prompt preview holds "You have your own browser". Hired Team members showed On too. Spend for the whole run: 0.837 USD (Chief of Staff 0.457 on Greeting Turns only, Scout 0.380), plus about 0.5 USD in an earlier spike lane. |
+
+### BROWSER-02 — Switching off removes the server 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-02--switching-off-removes-the-server-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | Row Off ("Off. Scout has no browser."), `persona_browser_off` row written; after the restart no `node cli.js` process for Scout's profile, and Scout counted 0 `mcp__playwright__` tools. Next session, back on, Scout wrongly called the 0 wrong: model confabulation, the process list is the evidence. |
+
+### BROWSER-03 — The Agent summarises a page that needs JavaScript 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-03--the-agent-summarises-a-page-that-needs-javascript-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | `https://quotes.toscrape.com/js/`: Scout listed three quotes with authors (Einstein, J.K. Rowling, Einstein). Calls ToolSearch, `browser_navigate`, `browser_snapshot`, `browser_close`; no card and no "Connector call asks" log line. |
+
+### BROWSER-04 — A sign-in the Human types, and a page behind it 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-04--a-sign-in-the-human-types-and-a-page-behind-it-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Inconclusive | `86eac5c2` | #551 | **Stand-in, not the test as written.** The sign-in was not typed by hand: with Scout's browser closed, a Playwright script (not shipped) signed in to `saucedemo.com` as `standard_user` in Scout's own profile folder (cookie `session-username`). Scout then opened `/inventory.html` without typing or clicking: "The inventory page loaded without asking me to log in", Backpack $29.99, Bike Light $9.99, Bolt T-Shirt $15.99. **Owed:** a Human typing the sign-in into the Agent's visible window by hand. |
+
+### BROWSER-05 — A click asks, and Refuse stops it 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-05--a-click-asks-and-refuse-stops-it-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | `demo.playwright.dev/todomvc`: `browser_click` posted "Scout wants to click in its browser. Allow this one call?" (target `e8`, "What needs to be done?" input); Allow once ran it (log: allowed once). The following `browser_type` was refused (log: refused by the Human); Scout: "You refused permission for this, so I didn't type or submit anything and I'm not retrying it." |
+
+### BROWSER-06 — A type step's card shows the exact text 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-06--a-type-steps-card-shows-the-exact-text-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | The card read "Scout wants to type text in its browser. Allow this one call?" with `target` e8, `submit` true, `text` `buy milk at 5pm` and the element name. |
+
+### BROWSER-07 — A Team duplicate keeps a member's browser off 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-07--a-team-duplicate-keeps-a-members-browser-off-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | Research Team (Ethan, Yusuf): Ethan switched off, Duplicate to "Research Copy Three"; the copy Mira was hired with a `persona_browser_off` row at the moment of the hire. Deleting Mira showed "Its browser profile goes too, including the sites signed in to in its browser." and removed `browser-profiles\Mira`. Side findings, not this feature: Yusuf has no `_role` so Duplicate skips it, and a second duplicate hit "Ethan: name conflict" until the first copy was deleted. |
+
+### BROWSER-08 — Resetting the Chief of Staff turns the browser on 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-08--resetting-the-chief-of-staff-turns-the-browser-on-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | Chief of Staff switched Off, then Reset to default > Reset: row back to On and no `persona_browser_off` row. |
+
+### BROWSER-09 — Work Modes: `acceptEdits` asks, a mode that never asks has no server 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-09--work-modes-acceptedits-asks-a-mode-that-never-asks-has-no-server-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | Mode set through `team.db` plus a Persona text touch to restart, not the Edit-mode picker. `acceptEdits`: the server ran and `browser_click` still posted the card (Allow once ran it). `bypassPermissions`: no `node cli.js` process for Scout during the Turn and Scout listed no `mcp__playwright__` tools. |
+
+### BROWSER-10 — The tool-call log holds the Playwright calls 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-10--the-tool-call-log-holds-the-playwright-calls-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | `logs\tool-calls\Scout\2026-11-16.jsonl` holds each call with its arguments, for example `{"tool":"mcp__playwright__browser_navigate","arguments":"{\"url\":\"https://quotes.toscrape.com/js/\"}","status":"completed"}` and the refused `browser_type` with `{"text":"buy milk at 5pm","submit":true,...}`. |
+
+### BROWSER-11 — Two Rooms at once: the second says the browser is in use 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-11--two-rooms-at-once-the-second-says-the-browser-is-in-use-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-16 | Pass | `86eac5c2` |  | Scout's browser open in its one-to-one Room, Scout invited to a second Room (Chief of Staff, Scout): "Error: Browser is already in use for C:\HuddleLane551\data\browser-profiles\Scout, use --isolated to run multiple instances of the same browser"; Scout said another of its Rooms probably has the browser open and offered to retry later. |

@@ -75,6 +75,7 @@ internal static class FeedTestSupport
         FeedSourceType.TeamRenameStuck => new TeamRenameStuckPayload(team, "Renaming " + team + " did not finish"),
         FeedSourceType.BuiltinAgentUpdateAvailable => new BuiltinAgentUpdatePayload(team, "An update exists for " + team),
         FeedSourceType.AgentConnectorsChanged => new AgentConnectorsPayload("Nova", true),
+        FeedSourceType.AgentBrowserChanged => new AgentBrowserPayload("Nova", false),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 
