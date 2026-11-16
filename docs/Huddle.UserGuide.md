@@ -1,16 +1,20 @@
 # Huddle user guide
 
-Huddle is a chat workspace where you work with a small team of AI
-**Agents**. You talk to them in Rooms, organise them into Teams and
-Projects, hand them Tasks, and share notes with them through the Library. This
-guide is for the person running Huddle on their own machine. It explains what
-each part of the app does, how the parts relate, and **what Huddle writes to
-disk** every time you change something.
+Huddle gives you a team of AI **Agents** that do work for you and remember what
+they learn. Each Agent has one job and knows only its part of your work or your
+life, such as school, meals, the house or a codebase. You talk to them in Rooms.
+What is worth keeping does not stay in the chat: it is filed as a Task, a note in
+Memory or a document, in the same folders in every Team. That is your
+[Second Brain](#your-second-brain), and it is plain files on your own machine.
 
-Applies to `main` as of 2026-09-29, which includes Room Sessions, Tasks, Skills,
-the Library and Team Pages, plus the Teams work on the `feat/teams` branch (team
-types, hiring, processes and gates, Requests and retrospectives). This guide does not cover installing adapters or
-configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for that.
+**Tasks** are where the two meet. A Task is remembered like everything else, and
+it is how Agents hand work to each other and to you: who owns it, what happened
+on it, and the proof that it was done.
+
+This guide is for the person running Huddle on their own machine. It explains what
+each part of the app does, how the parts relate, and **what Huddle writes to
+disk** every time you change something. It does not cover installing adapters or
+configuring models; see [the chat-surface hub](Huddle.EngineeringGuide.md) for that.
 
 ## Contents at a glance
 
@@ -1636,7 +1640,7 @@ Teams/
     raw/        what came in
     memory/     what lasts
     outputs/    what was made
-    _tasks/     what is due (Huddle keeps these)
+    _tasks/     the work: who owns it, its timeline and proof (Huddle keeps these)
     Repairs/                    a Project in the Team
       AGENTS.md
       raw/  memory/  outputs/  _tasks/
@@ -1647,7 +1651,7 @@ Teams/
 | `raw/` | Files you attach in chat or to a Task: PDFs, emails, screenshots, statements | You, by attaching | **No.** Kept exactly as it arrived. An Agent may add a derived file beside an original, such as a scan or a transcript | When a Message names a file, or when asked |
 | `memory/` | One topic per file, its `description` line saying what it holds: decisions and their reasons, who owns what, agreed ways of working | Agents, and you | Yes. A topic is corrected in place when it changes | **Every session**, as a short index of each file's `description` |
 | `outputs/` | Documents worth reading again: briefs, plans, comparisons, reports, prep notes | Agents, and you | Yes | **Every session**, as an index of each document's "Read when…" line |
-| `_tasks/` | One file per Task | Huddle, through the Tasks screens | Through Tasks | Through the Task tools |
+| `_tasks/` | One file per Task: the work, who owns it, its timeline of comments, Evidence and changes, and its Proof. Tasks are how Agents hand work to each other and to you | Huddle, when you use the Tasks screens or an Agent uses the Task tools | Through Tasks. The description can be edited; the timeline is only added to | Through the Task tools |
 | `AGENTS.md` | Rules: how to behave here | **You only** | When you edit it | **Every session**, in full |
 
 Two more things complete the picture:
