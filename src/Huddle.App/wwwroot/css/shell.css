@@ -1319,7 +1319,7 @@ body.sidebar-resizing {
     line-height: 1.25;
 }
 
-.room-row-text > .sidebar-row-label,
+.room-row-name-line > .sidebar-row-label,
 .room-row-title {
     min-width: 0;
     max-width: 100%;
@@ -1385,6 +1385,50 @@ body.sidebar-resizing {
 .hover-reveal-row:hover .hover-reveal-menu-button,
 .hover-reveal-row:focus-within .hover-reveal-menu-button {
     opacity: 1;
+}
+
+/* A Team one-to-one's scope after the Agent's name (RoomNavRow's .room-row-scope): a muted dot, the Team's small icon
+   (the Feed chip's 18px) and the Team, or Team / Project. The scope gives way first so the Agent's name stays readable
+   (a name past 60% of the line truncates too), and both truncate with an ellipsis in a narrow sidebar. */
+.room-row-name-line {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.room-row-name-line > .sidebar-row-label,
+.room-row-scope-text {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room-row-name-line > .sidebar-row-label {
+    flex: 0 0 auto;
+    max-width: 60%;
+}
+
+.room-row-scope {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    margin-left: 4px;
+    color: var(--mud-palette-text-secondary);
+}
+
+.room-row-scope-dot {
+    flex: none;
+}
+
+.room-row-scope .mud-avatar.room-scope-avatar {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    vertical-align: middle;
 }
 
 /* The Team a Room still names after the Team is gone (RoomNavRow's TeamLabel): muted, after the Room's name. */

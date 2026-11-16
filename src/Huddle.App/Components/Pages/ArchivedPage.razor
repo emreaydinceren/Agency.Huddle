@@ -201,12 +201,7 @@
 
     /// <summary>Where a chat belongs, shown after its name: "Marketing / Q3 launch" for a Project's Room, "Marketing" for a Team's, none for a root Room.</summary>
     /// <param name="room">The archived Room.</param>
-    private static string? ScopeLabel(Room room) => room switch
-    {
-        { Team: { } team, Project: { Length: > 0 } project } => $"{team} / {project}",
-        { Team: { } team } => team,
-        _ => null,
-    };
+    private static string? ScopeLabel(Room room) => RoomScopeLabel.Scope(room);
 
     /// <summary>The row's date: "Archived Oct 3", or "Created Oct 3" for a Room archived before the instant was recorded.</summary>
     /// <param name="room">The archived Room.</param>

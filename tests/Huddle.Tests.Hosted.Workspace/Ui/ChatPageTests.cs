@@ -233,6 +233,56 @@ public sealed class ChatPageTests
         Assert.Single(cut.FindAll("button[aria-label=\"Rename room\"]"));
     }
 
+    /// <summary>#635: a Team one-to-one's header reads "Name · Team" with the Team avatar, and renaming edits the stored name; the root one-to-one stays plain.</summary>
+    [Fact]
+    public async Task ChatPage_RoomHeader_TeamOneToOne_ShowsTheTeamScope_AndRootOneStaysPlain()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("rhea", null, ct);
+        Assert.NotNull(agent);
+        Room root = await chat.EnsureRoomForAsync(agent, ct);
+        Room scoped = await directory.CreateRoomAsync(root.Name, [KnownIds.Human, agent.Id], "Development Team", false, null, ct);
+        _ = Directory.CreateDirectory(Path.Combine(factory.TasksDirPath, "Development Team"));
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var scopedCut = ChatPageTests.RenderChatPage(ctx, scoped.Id);
+
+        scopedCut.WaitForAssertion(() => Assert.Equal($"{root.Name} · Development Team", scopedCut.Find("h1").TextContent.Trim()));
+        Assert.NotNull(scopedCut.Find(".room-team-avatar"));
+        await scopedCut.InvokeAsync(() => scopedCut.Find("button[aria-label=\"Rename room\"]").ClickAsync());
+        scopedCut.WaitForAssertion(() => Assert.Equal(root.Name, scopedCut.Find("input[aria-label=\"Room name\"]").GetAttribute("value")));
+
+        await using MudBunitContext rootCtx = ChatPageTests.NewContext(factory);
+        var rootCut = ChatPageTests.RenderChatPage(rootCtx, root.Id);
+
+        rootCut.WaitForAssertion(() => Assert.Equal(root.Name, rootCut.Find("h1").TextContent.Trim()));
+        Assert.Empty(rootCut.FindAll(".room-team-avatar"));
+    }
+
+    /// <summary>#635: a one-to-one of a Team that is not in the catalog has no scope label in its header: a plain h1 and no Team avatar.</summary>
+    [Fact]
+    public async Task ChatPage_RoomHeader_VanishedTeamOneToOne_HasNoScopeLabel()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, _, _) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("rhea", null, ct);
+        Assert.NotNull(agent);
+        Room orphan = await directory.CreateRoomAsync("rhea", [KnownIds.Human, agent.Id], "Gone Team", false, null, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, orphan.Id);
+
+        cut.WaitForAssertion(() => Assert.Equal("rhea", cut.Find("h1").TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".room-team-avatar"));
+    }
+
     /// <summary>Pressing Enter in the Rename control commits the typed name through <see cref="ChatService.RenameRoomAsync"/>.</summary>
     [Fact]
     public async Task ChatPage_Rename_EnterCommitsTheTypedNameThroughChatService()

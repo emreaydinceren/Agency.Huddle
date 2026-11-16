@@ -59,7 +59,7 @@ public sealed class R3RoomTests
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "Chat.razor"));
 
-        Assert.Contains("<PageHeader Title=\"@this.room.Name\" Chrome=\"true\"", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
+        Assert.Contains("<PageHeader Title=\"@RoomScopeLabel.Display(this.room, this.members, this.TeamCatalog)\" Chrome=\"true\"", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("TitleEditor=", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.Contains("title-inline-edit", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
         Assert.DoesNotContain("<PageTitle>", markup, StringComparison.Ordinal);

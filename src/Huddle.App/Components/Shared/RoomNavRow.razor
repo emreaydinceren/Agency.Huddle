@@ -27,6 +27,7 @@
 @inject IJSRuntime JS
 @inject AvatarStore Avatars
 @inject PersonaStore Personas
+@inject ITeamCatalog Catalog
 
 <div class="hover-reveal-row room-nav-row"
      @oncontextmenu="this.OnRowContextMenuAsync"
@@ -42,7 +43,7 @@
     }
     else
     {
-        <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.Room.Name" Class="@this.LinkClass"
+        <NavTabLink Href="@($"/rooms/{this.Room.Id}")" TabTitle="@this.DisplayName" Class="@this.LinkClass"
                     Icon="@(this.oneToOneAgent is null ? ActionIcons.Chat : null)">
             @if (this.oneToOneAgent is not null)
             {
@@ -53,16 +54,20 @@
             {
                 @* Two lines at every sidebar width: the name, then the Agent's title muted below it. *@
                 <span class="room-row-text">
-                    <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
+                    <span class="room-row-name-line">
+                        <span class="sidebar-row-label" title="@this.DisplayName">@this.Room.Name</span>
+                        @this.ScopeBadge
+                    </span>
                     <span class="room-row-title" title="@agentTitle">@agentTitle</span>
                 </span>
             }
             else
             {
                 @* One line: the name truncates with an ellipsis and the full name is the tooltip. *@
-                <span class="sidebar-row-label" title="@this.Room.Name">@this.Room.Name</span>
+                <span class="sidebar-row-label" title="@this.DisplayName">@this.Room.Name</span>
+                @this.ScopeBadge
             }
-            @if (this.TeamLabel is not null)
+            @if (this.TeamLabel is not null && this.scope is null)
             {
                 <span class="room-team-label">(@this.TeamLabel)</span>
             }
@@ -98,6 +103,7 @@
     private bool busy;
     private int uploadCount;
     private User? oneToOneAgent;
+    private string? scope;
 
     /// <summary>The Room this row shows.</summary>
     [Parameter, EditorRequired]
@@ -124,7 +130,21 @@
     {
         List<User> agents = [.. this.Members.Where(static member => member.Kind == UserKind.Agent)];
         this.oneToOneAgent = agents.Count == 1 ? agents[0] : null;
+
+        // A Team that has left the catalog has no icon to draw, so its Rooms keep the muted "(Team)" bracket instead.
+        this.scope = RoomScopeLabel.ScopeFor(this.Room, this.Members, this.Catalog);
     }
+
+    /// <summary>A Team one-to-one's scope after the name: a muted dot, the Team's icon and the scope text; nothing for any other Room.</summary>
+    private RenderFragment ScopeBadge => @<text>
+        @if (this.scope is not null && this.Room.Team is { } scopeTeam)
+        {
+            <span class="room-row-scope"><span class="room-row-scope-dot">·</span><TeamAvatar Team="@scopeTeam" Avatar="this.Catalog.Find(scopeTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="room-scope-avatar" /><span class="room-row-scope-text">@this.scope</span></span>
+        }
+    </text>;
+
+    /// <summary>The full text of the name line, for its tooltip: <c>Name · Scope</c> for a Team one-to-one, else the name.</summary>
+    private string DisplayName => RoomScopeLabel.Display(this.Room, this.Members, this.Catalog);
 
     /// <summary>
     /// The 1:1 Room's Agent's title (its Persona's <c>title</c>), or <see langword="null"/> for a group Room, an Agent with no

@@ -6,9 +6,11 @@
     See docs/Huddle.NeedsYou-Specifications.md section 6.4.
 *@
 @implements IDisposable
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.NeedsYou
 @inject NeedsYouTracker Tracker
 @inject ITeamDirectory TeamDirectory
+@inject ITeamCatalog Catalog
 @inject RoomEvents Events
 @inject TimeProvider Clock
 
@@ -24,7 +26,13 @@
                     }
                 </span>
                 <span class="needs-you-text">
-                    <span class="needs-you-name" title="@row.RoomName">@row.RoomName</span>
+                    <span class="needs-you-name" title="@row.RoomName">
+                        @row.BaseName
+                        @if (row.ScopeTeam is not null)
+                        {
+                            <span class="room-row-scope"><span class="room-row-scope-dot">·</span><TeamAvatar Team="@row.ScopeTeam" Avatar="this.Catalog.Find(row.ScopeTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="room-scope-avatar" /><span class="room-row-scope-text">@row.Scope</span></span>
+                        }
+                    </span>
                     <span class="needs-you-detail">@row.Detail</span>
                 </span>
             </NavTabLink>
@@ -74,12 +82,13 @@
     {
         var entries = this.Tracker.Snapshot();
         var rooms = await this.TeamDirectory.GetRoomsAsync();
+        var membersByRoom = await this.TeamDirectory.GetMembersByRoomAsync();
         var byId = rooms.Where(room => !room.Archived).ToDictionary(room => room.Id, StringComparer.Ordinal);
         var now = this.Clock.GetLocalNow();
 
         this.rows = [.. entries
             .Where(entry => byId.ContainsKey(entry.RoomId))
-            .Select(entry => new Row(entry.RoomId, byId[entry.RoomId].Name, Describe(entry, now), Reasons(entry)))];
+            .Select(entry => NewRow(entry, byId[entry.RoomId], membersByRoom, now))];
 
         if (this.rows.Count != this.lastCount)
         {
@@ -127,7 +136,22 @@
         return icons;
     }
 
-    private sealed record Row(string RoomId, string RoomName, string Detail, IReadOnlyList<ReasonIcon> Reasons);
+    /// <summary>One row for a waiting Room; a Team one-to-one carries its Team and scope so the row can draw the Team icon.</summary>
+    private Row NewRow(NeedsYouEntry entry, Room room, IReadOnlyDictionary<string, IReadOnlyList<User>> membersByRoom, DateTimeOffset now)
+    {
+        IReadOnlyList<User> members = membersByRoom.TryGetValue(room.Id, out IReadOnlyList<User>? found) ? found : [];
+        string? scope = RoomScopeLabel.ScopeFor(room, members, this.Catalog);
+        return new Row(
+            entry.RoomId,
+            RoomScopeLabel.Display(room, members, this.Catalog),
+            room.Name,
+            scope is null ? null : room.Team,
+            scope,
+            Describe(entry, now),
+            Reasons(entry));
+    }
+
+    private sealed record Row(string RoomId, string RoomName, string BaseName, string? ScopeTeam, string? Scope, string Detail, IReadOnlyList<ReasonIcon> Reasons);
 
     private sealed record ReasonIcon(string Icon, Color Color, string Tooltip);
 }
