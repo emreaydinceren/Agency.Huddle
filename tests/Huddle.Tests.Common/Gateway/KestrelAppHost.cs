@@ -37,12 +37,24 @@ internal sealed class KestrelAppHost : IDisposable
                 }
             }
         });
-        this.app.UseKestrel();
-        this.app.StartServer();
+        try
+        {
+            this.app.UseKestrel();
+            this.app.StartServer();
 
-        this.Listener = this.app.Services.GetRequiredService<GatewayListener>();
-        string url = this.Listener.AppUrl ?? throw new InvalidOperationException("GatewayListener.AppUrl was not set after the server started.");
-        this.AppUrl = new Uri(url);
+            this.Listener = this.app.Services.GetRequiredService<GatewayListener>();
+            string url = this.Listener.AppUrl ?? throw new InvalidOperationException("GatewayListener.AppUrl was not set after the server started.");
+            this.AppUrl = new Uri(url);
+        }
+        catch
+        {
+            // A start that fails (a port another process took first) never reaches Dispose, yet the factory already owns a temp
+            // data directory: release both here, then let the caller see the original exception.
+            this.app.Dispose();
+            this.root.Dispose();
+            throw;
+        }
+
         this.Client = new HttpClient { BaseAddress = this.AppUrl };
     }
 

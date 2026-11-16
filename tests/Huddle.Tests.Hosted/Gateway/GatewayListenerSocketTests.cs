@@ -12,6 +12,13 @@ namespace Agency.Huddle.Tests.Gateway;
 /// </summary>
 public sealed class GatewayListenerSocketTests
 {
+    /// <summary>How many fresh ports <see cref="StartOnFreePort"/> tries before it hands back whatever the last start produced.</summary>
+    private const int PortAttempts = 5;
+
+    /// <summary>
+    /// A loopback port that was free a moment ago. It is released before it is returned, so another process may take it before
+    /// the app binds it; a test that needs the app to bind it starts through <see cref="StartOnFreePort"/>, which absorbs that race.
+    /// </summary>
     private static int FreePort()
     {
         TcpListener probe = new(IPAddress.Loopback, 0);
@@ -23,6 +30,71 @@ public sealed class GatewayListenerSocketTests
         finally
         {
             probe.Stop();
+        }
+    }
+
+    /// <summary>A free port that is not <paramref name="taken"/>: two probes in a row can return the same number once the first is released.</summary>
+    private static int FreePortOtherThan(int taken)
+    {
+        int port = FreePort();
+        while (port == taken)
+        {
+            port = FreePort();
+        }
+
+        return port;
+    }
+
+    /// <summary>Whether something other than this test now listens on <paramref name="port"/>: a loopback listen on it fails.</summary>
+    private static bool HeldElsewhere(int port)
+    {
+        TcpListener probe = new(IPAddress.Loopback, port);
+        try
+        {
+            probe.Start();
+            return false;
+        }
+        catch (SocketException)
+        {
+            return true;
+        }
+        finally
+        {
+            probe.Stop();
+        }
+    }
+
+    /// <summary>
+    /// Starts a host on a freshly probed port, and probes again only when another process took that port between the probe and
+    /// the app's bind (the start throws <see cref="IOException"/>, or <paramref name="bound"/> says the app did not get it) and
+    /// the port is still held elsewhere. A product fault leaves the port free, so it is returned for the test to fail on, not retried.
+    /// </summary>
+    /// <param name="start">Starts the host given the probed port.</param>
+    /// <param name="bound">Whether the started host got the probed port.</param>
+    /// <returns>The started host.</returns>
+    private static KestrelAppHost StartOnFreePort(Func<int, KestrelAppHost> start, Func<KestrelAppHost, int, bool> bound)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            int port = FreePort();
+            bool last = attempt == PortAttempts;
+            KestrelAppHost host;
+            try
+            {
+                host = start(port);
+            }
+            catch (IOException) when (!last && HeldElsewhere(port))
+            {
+                continue;
+            }
+
+            // When the app did not get the port, it does not hold it either, so a held port here means another process won the race.
+            if (last || bound(host, port) || !HeldElsewhere(port))
+            {
+                return host;
+            }
+
+            host.Dispose();
         }
     }
 
@@ -132,12 +204,18 @@ public sealed class GatewayListenerSocketTests
     public async Task Start_Lan_BindsOneAnyAddressEndpointAndAnswersOnLoopback()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        int port = FreePort();
-        using KestrelAppHost host = new(new Dictionary<string, string?>
-        {
-            ["Team:Gateway:Bind"] = "lan",
-            ["Team:Gateway:Port"] = port.ToString(System.Globalization.CultureInfo.InvariantCulture),
-        });
+        int port = 0;
+        using KestrelAppHost host = StartOnFreePort(
+            probed =>
+            {
+                port = probed;
+                return new KestrelAppHost(new Dictionary<string, string?>
+                {
+                    ["Team:Gateway:Bind"] = "lan",
+                    ["Team:Gateway:Port"] = probed.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                });
+            },
+            static (started, probed) => started.Listener.Reason is null && started.AppUrl.Port == probed);
 
         HttpStatusCode status = await StatusAsync(host.Client, $"http://127.0.0.1:{port}/health", ct);
 
@@ -152,8 +230,14 @@ public sealed class GatewayListenerSocketTests
     [Fact]
     public void Desktop_FreeStoredPort_IsBoundAndRemembered()
     {
-        int stored = FreePort();
-        using KestrelAppHost host = new(Desktop(), dir => new GatewaySettingsStore(dir).SetDesktopPort(stored));
+        int stored = 0;
+        using KestrelAppHost host = StartOnFreePort(
+            probed =>
+            {
+                stored = probed;
+                return new KestrelAppHost(Desktop(), dir => new GatewaySettingsStore(dir).SetDesktopPort(probed));
+            },
+            static (started, probed) => started.AppUrl.Port == probed);
 
         Assert.Equal(stored, host.AppUrl.Port);
         Assert.Equal(stored, new GatewaySettingsStore(host.DataDir).DesktopPort);
@@ -176,11 +260,17 @@ public sealed class GatewayListenerSocketTests
     [Fact]
     public void Desktop_ConfiguredPort_WinsOverTheStoredPort()
     {
-        int stored = FreePort();
-        int configured = FreePort();
-        Dictionary<string, string?> settings = Desktop();
-        settings["Team:Gateway:Port"] = configured.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        using KestrelAppHost host = new(settings, dir => new GatewaySettingsStore(dir).SetDesktopPort(stored));
+        int configured = 0;
+        using KestrelAppHost host = StartOnFreePort(
+            probed =>
+            {
+                configured = probed;
+                int stored = FreePortOtherThan(probed);
+                Dictionary<string, string?> settings = Desktop();
+                settings["Team:Gateway:Port"] = probed.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return new KestrelAppHost(settings, dir => new GatewaySettingsStore(dir).SetDesktopPort(stored));
+            },
+            static (started, probed) => started.AppUrl.Port == probed);
 
         Assert.Equal(configured, host.AppUrl.Port);
     }
