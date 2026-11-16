@@ -26,7 +26,9 @@ env:
 
 jobs:
   sync:
-    runs-on: dotnet-10
+    # The Windows desktop runner, like CI. The Mac mini's `dotnet-10` runner was retired on
+    # 2026-10-09, and a job asking for it waits in the queue for ever.
+    runs-on: dotnet-10-local
     container:
       # Same image the CI jobs use, so the runner already holds it. The job needs no .NET
       # at all — only git, python3 and curl — so the tag is about not pulling a second image.
