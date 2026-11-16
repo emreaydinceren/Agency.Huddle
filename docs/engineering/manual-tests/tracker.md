@@ -1379,3 +1379,21 @@ Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requ
 | [TEAMRENAME-13](team-rename.md#teamrename-13--a-request-filed-to-a-team-keeps-working-after-the-filers-team-is-renamed-) | 💰 | Active |  |  |
 | [TEAMRENAME-14](team-rename.md#teamrename-14--a-real-agents-read-of-the-old-name-is-forwarded-and-its-write-is-refused-and-it-learns-the-new-name-first-) | 💰 | Active |  |  |
 | [TEAMRENAME-15](team-rename.md#teamrename-15--a-real-agents-write-to-the-old-folder-is-refused-silently-and-bash-is-not-caught-) | 💰 | Active |  |  |
+
+## agent-browser
+
+Agent browser: on by default, off per Agent, every click and type asks, the sign-in the Human types, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once (paid, Sonnet minimum; a stub until the paid run)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [BROWSER-01](agent-browser.md#browser-01--a-new-agent-has-the-browser-on-with-no-action-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-02](agent-browser.md#browser-02--switching-off-removes-the-server-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-03](agent-browser.md#browser-03--the-agent-summarises-a-page-that-needs-javascript-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-04](agent-browser.md#browser-04--a-sign-in-the-human-types-and-a-page-behind-it-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-05](agent-browser.md#browser-05--a-click-asks-and-refuse-stops-it-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-06](agent-browser.md#browser-06--a-type-steps-card-shows-the-exact-text-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-07](agent-browser.md#browser-07--a-team-duplicate-keeps-a-members-browser-off-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-08](agent-browser.md#browser-08--resetting-the-chief-of-staff-turns-the-browser-on-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-09](agent-browser.md#browser-09--work-modes-acceptedits-asks-a-mode-that-never-asks-has-no-server-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-10](agent-browser.md#browser-10--the-tool-call-log-holds-the-playwright-calls-) | 💰 | Active | #551 | not run yet |
+| [BROWSER-11](agent-browser.md#browser-11--two-rooms-at-once-the-second-says-the-browser-is-in-use-) | 💰 | Active | #551 | not run yet |

@@ -649,6 +649,22 @@ An Agent cannot use your claude.ai account connectors (mail, calendar, files) un
 Turning the switch off applies at once, with no question. Renaming an Agent turns it off again, so switch it back on after a rename. Resetting the Chief of Staff to its default also turns it off. The switch appears only for the Claude Adapter with isolation on. For any other Adapter the card says what Huddle cannot control instead.
 
 If you upgraded with Agents already in place, the Agents page shows a one-time notice that connectors are now off. Dismiss it and it does not come back. The Feed records each time you turn the switch on or off.
+
+### Your Agents' browser
+
+Every Agent has its own browser, so it can read pages that need JavaScript and work inside a site you signed in to for it. It is on for every Agent, including a new one, with nothing for you to do. An Agent opens no window until it first browses.
+
+- **Turning it off.** Open the Agent and find **Browser** under Account connectors. The switch acts at once, with no question and no Save. The line under it says "Off. {Name} has no browser." Turn it on again the same way.
+- **The window.** The first time the Agent browses, a browser window opens on this computer. It is the Agent's own, with its own sign-ins, and never your everyday browser's profile. You can watch it work.
+- **Signing in.** When a site needs a login, the Agent stops and says which site. Type the password or code yourself, in that window, then tell the Agent it is done. Never give an Agent a password or a code: it is told not to type one. The sign-in stays for that Agent only and is not seen by your other Agents.
+- **What asks.** Reading a page runs at once. Every click, typing, key press, form step, upload, dialog answer or script asks you first, on a card in the Room that names the Agent and shows what it will do, such as the exact text to type. Choose **Allow once** or **Refuse**. There is no "always allow". If you refuse, the Agent says what it wanted to do and does not retry. If you do not answer within ten minutes, the call is refused.
+- **Deleting an Agent** deletes its browser profile too, with every site it was signed in to. Renaming an Agent keeps them.
+- **Work Modes.** A Work Mode that never asks before a tool runs (Bypass permissions, Auto) cannot be combined with the browser. The switch shows off and says why. Choose another Work Mode first.
+- **Where it does not work.** The switch is text instead of a switch for an Adapter that is not Claude, and where no Edge or Chrome is installed. On Linux with no display the browser runs without a window, so you cannot sign in to sites for it.
+- **One Room at a time.** An Agent that browses in two Rooms at once can use the browser in only one: the second gets "Browser is already in use" until the first finishes.
+
+The Feed records each time you turn the switch on or off. Duplicating a Team keeps a member's browser off in the copy, and resetting the Chief of Staff to its default turns it on.
+
 ### Renaming an Agent
 
 Change **Name** on the Edit card and save. Huddle warns you first:

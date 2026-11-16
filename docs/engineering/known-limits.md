@@ -305,6 +305,30 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     session would otherwise have carried. `settingSources` is not affected — it merges rather
     than replaces. `AdapterProfile.IsolateUserSettings`'s remarks carry this in code.
 - **Account connectors are off for every Agent until the Human turns them on, and every connector call then asks first.** Every Agent session starts with `ENABLE_CLAUDEAI_MCP_SERVERS=false` unless the Human used the Agent card's Account connectors switch (stored in `persona_connectors`, written only by `PersonaStore.SetConnectors`). The switch exists only for the stock Claude Adapter with isolation; any other Adapter shows text instead, and the text claims nothing about whether that Adapter loads the connectors (spec 7.3 forbids the claim until each preset is checked). Every connector call asks first (spec 8.4). Limits: the `_meta` that carries the tool name is unproven for connectors until the paid check, so a request with no name and kind `Other` asks (fail safe); a Work Mode that never asks (`bypassPermissions`, `auto`) refuses the switch, and `acceptEdits` is allowed because the Adapter source reaches its permission check for a non-edit tool (not confirmed in Claude Code itself); a question unanswered for `UserInputTimeoutSeconds` (600 s) refuses and refuses the rest of that Turn's connector calls; arguments past 4 KB are hidden with a count; the Human's answer is also posted as a Message in the Room; a Work Dir `.mcp.json` server does not ask, because user-level servers do not load in Agents. A custom profile that runs Claude without isolating gets a `_meta` carrying only `options.env` with the connectors off (the stored "on" is ignored there); an Adapter that does not run Claude gets none (spec 3.6). On such a custom profile the Human-chosen Work Mode (a `defaultMode` or allow rule from the Human's own settings, which are not isolated there) can still skip the prompt, so the prompt is not guaranteed on a non-isolating profile. What stays soft, because no setting reaches it: (1) a `claude -p` run from Bash is a new process that Huddle's handler never sees, so it is not intercepted; (2) a Human-chosen skipping mode (`bypassPermissions`, `auto`) or a Human allow rule on a non-isolating profile skips the prompt there, because that profile's session takes the Human's own settings; (3) a shell command can write `team.db` and so the connectors row, since the guards see path arguments only (spec 6.2). A file an Agent writes in its Work Dir (an allow rule, a hook, `defaultMode`) did not get a stand-in connector tool past the handler, and Huddle's own `permissions.ask` rule for `mcp__claude_ai_*` is sent with the connectors on; that was measured on a stand-in server (source `project`), not a real connector, and the same file routes do self-grant ordinary tools, which is issue #432. MCP servers a Human put in `~/.claude.json` are **untested**: the isolation leaves `user` out of `settingSources`, but no check proved those servers stay out (spec 3.3).
+- **Every Agent has its own browser, on by default, and only what it does to a page asks** ([ADR-0090](../adr/0090-an-agent-has-its-own-browser-through-playwright-mcp.md),
+  [spec](../Huddle.AgentBrowser-Specifications.md)). The Human can switch it off per Agent on the card. The limits:
+  - An Agent with `Bash` can still run Playwright itself, write its own MCP server config or read the profile
+    folder (`browser-profiles/<Name>`, which holds the Agent's sign-ins). The switch governs only the server Huddle
+    configures. This is the same soft boundary as the other ungoverned routes on this page.
+  - The rule never to type a password, one-time code, card or bank number or government ID is an instruction.
+    Huddle cannot see field types. The Human's check is the approval card for typing.
+  - Every click asks, so Huddle cannot tell "Submit" from a link. `browser_navigate` does not ask, so a URL with query
+    text is not approved. The card cannot show the page URL either: Huddle does not know it, and `element` is the
+    Agent's own words.
+  - `browser_network_request`, `browser_network_requests` and `browser_console_messages` are read tools and run
+    without asking. On a page the Human signed in to they can show the model the site's tokens.
+  - There is no live view from another device. Watching and signing in need the PC that runs Huddle. On Linux with no
+    display the browser runs headless and the Human cannot sign in to a site for it.
+  - One Agent per profile folder at a time: Chromium lets one browser hold a profile. Each Room's session starts its
+    own server, so an Agent in two Rooms at once gets "Browser is already in use" in the second until the first
+    calls `browser_close` or the 30-minute idle close fires. Claude Adapter Agents only; the Agency Adapter and a
+    Claude profile without isolation get none.
+  - The MCP node process (about 95 to 125 MB) starts with every isolating session, whether or not the Agent browses.
+    The browser itself (8 to 10 processes, about 500 MB) starts on the first browser call.
+    `Team:Browser:Enabled=false` removes both for the install.
+  - A Persona file deleted by hand keeps its switch row until the app sees the file gone (the rescan removes it) or,
+    if the app was off, until an Agent with the same name is hired, which clears it. A row for a missing Agent is
+    harmless: nothing reads it.
 - **One `AppToolServer` per Persona** — one loopback Kestrel each. Revisit past
   about four Personas.
 - **`SystemPromptMode.Append` has never been evidenced against a live model.** If

@@ -6905,3 +6905,84 @@ File: [`docs/engineering/manual-tests/team-rename.md`](team-rename.md#teamrename
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+## Agent browser: on by default, off per Agent, every click and type asks, the sign-in the Human types, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once
+
+Back to [the manual test script](../manual-tests.md).
+
+### BROWSER-01 — A new Agent has the browser on, with no action 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-01--a-new-agent-has-the-browser-on-with-no-action-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-02 — Switching off removes the server 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-02--switching-off-removes-the-server-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-03 — The Agent summarises a page that needs JavaScript 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-03--the-agent-summarises-a-page-that-needs-javascript-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-04 — A sign-in the Human types, and a page behind it 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-04--a-sign-in-the-human-types-and-a-page-behind-it-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-05 — A click asks, and Refuse stops it 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-05--a-click-asks-and-refuse-stops-it-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-06 — A type step's card shows the exact text 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-06--a-type-steps-card-shows-the-exact-text-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-07 — A Team duplicate keeps a member's browser off 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-07--a-team-duplicate-keeps-a-members-browser-off-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-08 — Resetting the Chief of Staff turns the browser on 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-08--resetting-the-chief-of-staff-turns-the-browser-on-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-09 — Work Modes: `acceptEdits` asks, a mode that never asks has no server 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-09--work-modes-acceptedits-asks-a-mode-that-never-asks-has-no-server-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-10 — The tool-call log holds the Playwright calls 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-10--the-tool-call-log-holds-the-playwright-calls-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### BROWSER-11 — Two Rooms at once: the second says the browser is in use 💰
+
+File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browser-11--two-rooms-at-once-the-second-says-the-browser-is-in-use-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
