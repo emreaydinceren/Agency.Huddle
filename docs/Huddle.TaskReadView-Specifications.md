@@ -115,7 +115,7 @@ that Tab so it is permanent, not a preview.
 The page body is `TaskDetail` with `Mode="TaskDetailMode.Expanded"` (the two-column layout
 `TaskDetailDialog` uses today) and `ExternalFooter="true"`. It keeps every behaviour:
 conflict handling, gate refusals, Move anyway, the Human gate switch, attachments, the
-Change log, the wake label on Save, and `MudExitPrompt` for leaving the browser page.
+Timeline, the wake label on Save, and `MudExitPrompt` for leaving the browser page.
 
 **Rejected:** a new editor for the page. Two editors would drift, and the scope forbids
 functional change.
@@ -132,8 +132,8 @@ on the Team page, `M2`). One band at the top replaces the drawer's footer.
 ### D-6. Two columns only when the page is wide enough
 
 The editor (`K3`) is two columns only when `K3` itself is at least **1024px wide**: the fields
-on the left (7 of 12), and the Human gate, Proof, decision card and Change log on the right
-(5 of 12). Below that it is one column, with the side column's content after the fields in
+on the left (7 of 12), and the Human gate, Proof and decision card on the right (4 of 12);
+the Timeline (ADR-0086) closes the left column. Below that it is one column, with the side column's content after the fields in
 the same order.
 
 The width is measured on `K3`, with a container query (`container-type: inline-size` on
@@ -215,7 +215,7 @@ large layout now. `TaskDetailDialog` stays, because Make a copy… still uses it
 
 `T7` (`ResizableEndDrawer`, unchanged) hosting `TaskReadView`.
 
-![The Task read view: the Tasks page dimmed on the left with its List unchanged; on the right the detail drawer, with its header, an action row holding Edit, copy and the menu, a dashed request strip, a property grid of label and value pairs, the rendered description, a read-only human gate summary, the Proof list, the decision card, and the collapsed Change log with the footer meta](images/wireframes/11-task-read-view.svg)
+![The Task read view: the Tasks page dimmed on the left with its List unchanged; on the right the detail drawer, with its header, an action row holding Edit, copy and the menu, a dashed request strip, a property grid of label and value pairs, the rendered description, a read-only human gate summary, the Proof list, the decision card, and the Timeline (oldest first, with its comment box) and the footer meta](images/wireframes/11-task-read-view.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |
@@ -235,7 +235,7 @@ large layout now. `TaskDetailDialog` stays, because Make a copy… still uses it
 
 `TaskEditPage.razor`, route `/tasks/item/{TaskIdText}/edit`.
 
-![The Task edit page: a tab strip with a permanent Tab titled Edit PLAT-0013 marked unsaved; below it a page container with a page header holding the id line, the Task's title as an h1, a View task button, copy, menu, Cancel and Save; the editor body in two columns, fields on the left and the human gate, Proof list, decision card and change log on the right; a Markdown toolbar above the description; and an inset showing the same editor narrower than 1024px as one column, beside the Right sidebar with its Activity, Blocked by, Blocks and Linked documents panels](images/wireframes/12-task-edit-page.svg)
+![The Task edit page: a tab strip with a permanent Tab titled Edit PLAT-0013 marked unsaved; below it a page container with a page header holding the id line, the Task's title as an h1, a View task button, copy, menu, Cancel and Save; the editor body in two columns, fields and then the Timeline (with its comment box) on the left, and the human gate, Proof list and decision card on the right; a Markdown toolbar above the description; and an inset showing the same editor narrower than 1024px as one column, beside the Right sidebar with its Activity, Blocked by, Blocks and Linked documents panels](images/wireframes/12-task-edit-page.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |

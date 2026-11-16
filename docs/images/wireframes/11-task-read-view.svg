@@ -1,12 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 980" width="1100" height="980" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 11: The Task read view in the detail drawer">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 1300" width="1100" height="1300" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 11: The Task read view in the detail drawer">
 <title>Figure 11: The Task read view in the detail drawer</title>
 <defs><filter id="sh" x="-10%" y="-10%" width="125%" height="130%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.22"/></filter><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="#6b7280"/></marker></defs>
-<rect width="1100" height="980" fill="#ffffff"/>
+<rect width="1100" height="1300" fill="#ffffff"/>
 <text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430">Figure 11: The Task read view (proposed)</text>
 <text x="24" y="48" font-size="12" fill="#6b7280">T7 hosts TaskReadView (T15) instead of the editable TaskDetail. Every value is text; Edit (T15b) opens the Task edit page (Figure 12) in a new Tab.</text>
 
 <!-- dimmed Tasks page -->
-<rect x="24" y="64" width="560" height="896" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="24" y="64" width="560" height="1212" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
 <text x="304" y="96" font-size="11" font-weight="600" fill="#6b7280" text-anchor="middle">Tasks page (T1), unchanged</text>
 <text x="304" y="112" font-size="10" fill="#6b7280" text-anchor="middle" font-style="italic">List or Kanban (T4) render exactly as today</text>
 <rect x="44" y="130" width="520" height="30" rx="3" fill="#f6f7f9" stroke="#8b93a1"/>
@@ -16,11 +16,11 @@
 <rect x="44" y="238" width="520" height="30" rx="3" fill="#f6f7f9" stroke="#8b93a1"/>
 
 <!-- drawer T7 -->
-<rect x="600" y="64" width="476" height="896" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" filter="url(#sh)"/>
+<rect x="600" y="64" width="476" height="1212" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" filter="url(#sh)"/>
 <rect x="596" y="58" width="25" height="17" rx="8.5" fill="#b45309"/><text x="608.5" y="70.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T7</text>
 <text x="627" y="71" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Task detail (drawer, unchanged shell)</text>
-<rect x="600" y="64" width="6" height="896" fill="#d1d5db"/>
-<text x="603" y="520" font-size="9" fill="#6b7280" text-anchor="middle" transform="rotate(-90 603 520)">T7a</text>
+<rect x="600" y="64" width="6" height="1212" fill="#d1d5db"/>
+<text x="603" y="670" font-size="9" fill="#6b7280" text-anchor="middle" transform="rotate(-90 603 670)">T7a</text>
 
 <text x="620" y="96" font-size="12" fill="#6b7280">PLAT-0013 · Platform</text>
 <text x="620" y="118" font-size="16" font-weight="600" fill="#1f2430">Findings memo v2 — accept or request changes</text>
@@ -99,11 +99,46 @@
 <rect x="628" y="826" width="100" height="24" rx="4" fill="#fff" stroke="#8b93a1"/><text x="678" y="842" font-size="10" text-anchor="middle" fill="#1f2430">Request changes</text>
 <rect x="736" y="826" width="64" height="24" rx="4" fill="#0e7c86"/><text x="768" y="842" font-size="10" text-anchor="middle" fill="#fff">Accept</text>
 
-<!-- T15g change log + meta -->
-<rect x="614" y="876" width="450" height="68" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<!-- T15g timeline + meta -->
+<rect x="614" y="876" width="450" height="384" rx="4" fill="#ffffff" stroke="#8b93a1"/>
 <rect x="610" y="870" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="882.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15g</text>
-<text x="650" y="883" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Change log (collapsed) and footer meta, as today</text>
-<text x="628" y="908" font-size="10" fill="#1f2430">▸ Change log (6)</text>
-<text x="628" y="930" font-size="10" fill="#6b7280">Created Oct 8 · Updated today 11:02</text>
-<text x="1056" y="930" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">no sticky footer: nothing to save</text>
+<text x="650" y="883" font-size="10" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Timeline, always open, oldest first · then footer meta</text>
+<text x="628" y="906" font-size="11" font-weight="600" fill="#6b7280">Timeline (9)</text>
+<text x="1056" y="906" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">entries are immutable: no edit or delete control</text>
+<line x1="636" y1="918" x2="636" y2="1136" stroke="#d1d5db" stroke-width="2"/>
+<g font-size="10">
+<!-- event entry -->
+<circle cx="636" cy="936" r="5" fill="#9ca3af"/>
+<circle cx="656" cy="922" r="7" fill="#cbd5e1"/><text x="668" y="926" font-weight="600" fill="#1f2430">Miriam</text>
+<text x="650" y="940" fill="#1f2430">status: In Progress → Review</text>
+<text x="650" y="953" font-size="9" fill="#6b7280">Fri 06:00</text>
+<text x="1056" y="940" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">event: one summary row</text>
+<!-- T15h evidence entry -->
+<circle cx="636" cy="996" r="5" fill="#9ca3af"/>
+<circle cx="656" cy="970" r="7" fill="#cbd5e1"/><text x="668" y="974" font-weight="600" fill="#1f2430">Ruth</text>
+<rect x="700" y="963" width="54" height="16" rx="4" fill="#f3f4f6" stroke="#d1d5db"/><text x="727" y="975" fill="#1f2430" text-anchor="middle" font-size="9">Evidence</text>
+<text x="650" y="992" font-family="Consolas, 'Courier New', monospace" fill="#1f2430">citation-check memo-v2.md</text>
+<rect x="650" y="998" width="52" height="15" rx="7.5" fill="#dcfce7"/><text x="676" y="1009" fill="#166534" text-anchor="middle" font-size="9">✓ exit 0</text>
+<text x="650" y="1025" font-family="Consolas, 'Courier New', monospace" font-size="9" fill="#6b7280">.huddle/logs/ruth/tool-calls.md#L12</text>
+<text x="650" y="1038" font-size="9" fill="#6b7280">Today 08:10</text>
+<rect x="1018" y="966" width="34" height="17" rx="8.5" fill="#b45309"/><text x="1035" y="978.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15h</text>
+<!-- comment entry -->
+<circle cx="636" cy="1070" r="5" fill="#9ca3af"/>
+<circle cx="656" cy="1052" r="7" fill="#cbd5e1"/><text x="668" y="1056" font-weight="600" fill="#1f2430">Miriam</text>
+<rect x="650" y="1062" width="400" height="22" rx="4" fill="#ffffff" stroke="#d1d5db"/><text x="660" y="1077" fill="#1f2430">Two sources are still pending; the rest is cited.</text>
+<text x="650" y="1097" font-size="9" fill="#6b7280">Today 08:20</text>
+<text x="1056" y="1097" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">comment: its Markdown in a bordered body</text>
+<!-- event entry by the Human -->
+<circle cx="636" cy="1124" r="5" fill="#9ca3af"/>
+<circle cx="656" cy="1110" r="7" fill="#cbd5e1"/><text x="668" y="1114" font-weight="600" fill="#1f2430">Emre</text>
+<rect x="700" y="1105" width="26" height="13" rx="6.5" fill="#f3f4f6"/><text x="713" y="1115" font-size="9" fill="#6b7280" text-anchor="middle">you</text>
+<text x="650" y="1128" fill="#1f2430">human gate on</text>
+<text x="650" y="1141" font-size="9" fill="#6b7280">Today 11:02</text>
+</g>
+<!-- T15i comment box -->
+<rect x="610" y="1150" width="34" height="17" rx="8.5" fill="#b45309"/><text x="627" y="1162.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">T15i</text>
+<rect x="628" y="1170" width="422" height="40" rx="4" fill="#ffffff" stroke="#8b93a1"/><text x="638" y="1186" font-size="10" fill="#6b7280">Add a comment</text>
+<rect x="976" y="1216" width="74" height="22" rx="4" fill="#ffffff" stroke="#8b93a1"/><text x="1013" y="1231" font-size="10" fill="#6b7280" text-anchor="middle">Comment</text>
+<text x="628" y="1250" font-size="10" fill="#6b7280">Created Oct 8 · Updated today 11:02</text>
+<text x="960" y="1231" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">no sticky footer: nothing to save</text>
 </svg>

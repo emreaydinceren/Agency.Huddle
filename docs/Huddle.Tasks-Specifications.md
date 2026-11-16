@@ -1534,7 +1534,7 @@ release).
 | Presence dot on an avatar | `MudBadge Dot="true" Overlap="true"` + `MudTooltip` | [Usage](https://mudblazor.com/components/badge#usage) | — |
 | "AI reacting" | `MudChip` holding `MudProgressCircular Indeterminate="true" Size="Size.Small"` | [Circular Progress](https://mudblazor.com/components/progress#circular-progress) | — |
 | Dates | `MudDatePicker` (`Date` is `DateTime?`; convert to and from `DateOnly` at the component) | [Basic Usage](https://mudblazor.com/components/datepicker#basic-usage) | — |
-| Change log | `MudTimeline` (dense, one item per entry) inside a `MudExpansionPanel` | [Basic](https://mudblazor.com/components/timeline#basic) | `ProposalCard.razor` for expansion panels |
+| Timeline | `MudTimeline` (one item per entry), always open, in `TaskTimeline` | [Basic](https://mudblazor.com/components/timeline#basic) | The document History panel (`DocHistoryComponentBase`) |
 | Description Edit / Preview | `MudToggleGroup` + `MudTextField Lines AutoGrow` | [Multiline](https://mudblazor.com/components/textfield#multiline) | `AgentProfileCard.razor:252-257` |
 | Search matches in titles | `MudHighlighter` | [Usage](https://mudblazor.com/components/highlighter#usage) | — |
 | Wake-up toast | `ISnackbar.Add(RenderFragment, …)` with a per-Task `key` | [RenderFragment messages](https://mudblazor.com/components/snackbar#renderfragment-messages), [Preventing duplication](https://mudblazor.com/components/snackbar#preventing-duplication) | `SkillsPanel.razor` |
@@ -1823,7 +1823,7 @@ MudBlazor freezes a dialog's parameters once it opens (the trap at `AgentProfile
 Status and priority (Status, Duplicate of or Reason, Priority, the wake notice), People (Assignee, the
 "Woken in Room" link), Planning (Team, Project, Sprint, Parent, Blocked by, Tags) and Dates (Start, Due).
 Created, Updated and Closed are not a group: they are the footer meta (`.task-detail-footer-meta`, 12px
-`TextSecondary`) at the bottom of the form, after the Change log. Group headings are 14px, weight 600; the
+`TextSecondary`) at the bottom of the form, after the Timeline. Group headings are 14px, weight 600; the
 label column is 120px and 13px `TextSecondary`. Every field has a visible label, the Description included. The groups are a
 size container (`task-detail`): from 368px of container width (a 400px drawer less its padding) each
 property is two columns, label | value; narrower, the label sits above the value. The drawer (`ResizableEndDrawer`)
@@ -1848,8 +1848,8 @@ just under the header, not in it. The Expanded dialog is titled "{id} · {title}
 | Tags | the same chip-set pattern as Blocked by: closable chips, plus a `MudTextField` that adds a tag on Enter |
 | Description | V1 has an **Edit / Preview** `MudToggleGroup`. Edit is a `MudTextField Lines="10" AutoGrow` (the `AgentProfileCard.razor:252-257` pattern). Preview is `@((MarkupString)MarkdownRenderer.ToHtml(text))` (the `MessageList.razor:15` pattern) |
 | Origin | a link to `/rooms/{id}`, or *(Room no longer exists)* |
-| Created, Updated, Closed | read-only, derived; shown as the footer meta line at the bottom of the form, after the Change log |
-| Change log | a `MudExpansionPanels` holding one `MudExpansionPanel` titled **Change log (N)**, collapsed. Inside it is a `MudTimeline TimelinePosition="TimelinePosition.Start"` with one small `MudTimelineItem` per entry, newest first. Each item shows the date and time in `ItemOpposite`, and the actor and summary in `ItemContent` (both `RenderFragment`s, confirmed by reflection) |
+| Created, Updated, Closed | read-only, derived; shown as the footer meta line at the bottom of the form, after the Timeline |
+| Timeline | `TaskTimeline` (§7.7, ADR-0086), shared with the read view: an h3 **Timeline (N)**, always open, over a `MudTimeline TimelinePosition="TimelinePosition.Start"` with one small `MudTimelineItem` per entry, oldest first. Each entry shows the author's avatar and name, a **you** mark for the Human, and the day and time. An event (a Change log line) is one summary row, a comment is its Markdown in a bordered body, and an Evidence entry wears an **Evidence** chip with the command, the exit code and the log reference. No entry has an edit or delete control. Under the list is the **Add a comment** box with a **Comment** button, which writes only the timeline. [wireframes.md](engineering/wireframes.md) `T15g` to `T15i` and `K3b` to `K3d` own the detail |
 
 **The wake notice and the Save button.** On every change to `pending`, call
 `TaskTriggerService.Preview(loaded, loaded-with-pending-applied, humanActor)` and show:

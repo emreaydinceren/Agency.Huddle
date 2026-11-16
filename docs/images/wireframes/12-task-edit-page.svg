@@ -1,11 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1040" width="1200" height="1040" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 12: The Task edit page in its own Tab">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1316" width="1200" height="1316" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" xml:space="preserve" style="white-space: pre" role="img" aria-label="Figure 12: The Task edit page in its own Tab">
 <title>Figure 12: The Task edit page in its own Tab</title>
-<rect width="1200" height="1040" fill="#ffffff"/>
+<rect width="1200" height="1316" fill="#ffffff"/>
 <text x="24" y="30" font-size="18" font-weight="700" fill="#1f2430">Figure 12: The Task edit page (proposed)</text>
 <text x="24" y="48" font-size="12" fill="#6b7280">TaskEditPage at /tasks/item/{id}/edit, opened by Edit (T15b) as a permanent Tab (W4). The body is today's TaskDetail (Expanded) plus the Markdown toolbar. Cancel and Save are in the header.</text>
 
 <!-- workspace -->
-<rect x="24" y="64" width="1152" height="700" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
+<rect x="24" y="64" width="1152" height="976" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
 <text x="34" y="80" font-size="10" fill="#6b7280">Group pane (W2), wide: K3 is 1024px or more</text>
 
 <!-- tab strip -->
@@ -16,7 +16,7 @@
 <text x="412" y="110" font-size="10" fill="#6b7280" font-style="italic">new permanent Tab, right of the Tasks Tab; ● while there are unsaved edits</text>
 
 <!-- K1 page -->
-<rect x="36" y="128" width="1128" height="624" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
+<rect x="36" y="128" width="1128" height="900" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="32" y="122" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="44.5" y="134.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K1</text>
 <text x="63" y="135" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Page container · MudContainer MaxWidth.Large, left-aligned, pa-4</text>
 
@@ -38,13 +38,13 @@
 <rect x="1004" y="171" width="128" height="24" rx="4" fill="#0e7c86"/><text x="1068" y="187" font-size="11" font-weight="600" fill="#fff" text-anchor="middle">Save and wake</text>
 
 <!-- K3 body, two columns -->
-<rect x="52" y="222" width="1096" height="518" rx="4" fill="#f6f7f9" stroke="#8b93a1"/>
+<rect x="52" y="222" width="1096" height="794" rx="4" fill="#f6f7f9" stroke="#8b93a1"/>
 <rect x="48" y="216" width="25" height="17" rx="8.5" fill="#7c3aed"/><text x="60.5" y="228.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K3</text>
 <text x="79" y="229" font-size="11" font-weight="600" fill="#1f2430" stroke="#fff" stroke-width="4" paint-order="stroke">Editor · TaskDetail Mode=Expanded · two columns from 1024px of its own width</text>
 <text x="68" y="252" font-size="10" fill="#6b7280" font-style="italic">notices first when they apply: save error, gate refusal, conflict (as today)</text>
 
-<rect x="68" y="262" width="620" height="462" rx="4" fill="#ffffff" stroke="#8b93a1"/>
-<text x="80" y="282" font-size="10" font-weight="600" fill="#6b7280">fields (7 of 12)</text>
+<rect x="68" y="262" width="620" height="738" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<text x="80" y="282" font-size="10" font-weight="600" fill="#6b7280">fields (7 of 12), then the Timeline (1 of 12)</text>
 <g font-size="11">
 <text x="80" y="306" font-weight="600" fill="#6b7280" font-size="10">STATUS AND PRIORITY</text>
 <rect x="80" y="314" width="270" height="28" rx="4" fill="#fff" stroke="#8b93a1"/><text x="90" y="332" fill="#1f2430">Status ▾</text>
@@ -65,15 +65,44 @@
 <rect x="80" y="588" width="596" height="124" rx="4" fill="#fff" stroke="#8b93a1"/>
 <rect x="92" y="604" width="500" height="8" rx="3" fill="#d1d5db"/><rect x="92" y="620" width="540" height="8" rx="3" fill="#d1d5db"/><rect x="92" y="636" width="420" height="8" rx="3" fill="#d1d5db"/>
 </g>
+<!-- K3b timeline, the last section of the left column -->
+<line x1="80" y1="726" x2="676" y2="726" stroke="#e5e7eb"/>
+<rect x="76" y="732" width="34" height="17" rx="8.5" fill="#7c3aed"/><text x="93" y="744.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K3b</text>
+<text x="118" y="745" font-size="11" font-weight="600" fill="#6b7280">Timeline (9)</text>
+<text x="676" y="745" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">oldest first · TaskTimeline, as T15g · immutable: no edit or delete</text>
+<line x1="88" y1="756" x2="88" y2="904" stroke="#d1d5db" stroke-width="2"/>
+<g font-size="10">
+<circle cx="88" cy="774" r="5" fill="#9ca3af"/>
+<circle cx="108" cy="760" r="7" fill="#cbd5e1"/><text x="120" y="764" font-weight="600" fill="#1f2430">Miriam</text>
+<text x="102" y="778" fill="#1f2430">status: In Progress → Review</text>
+<text x="102" y="790" font-size="9" fill="#6b7280">Fri 06:00</text>
+<circle cx="88" cy="830" r="5" fill="#9ca3af"/>
+<circle cx="108" cy="806" r="7" fill="#cbd5e1"/><text x="120" y="810" font-weight="600" fill="#1f2430">Ruth</text>
+<rect x="152" y="799" width="54" height="16" rx="4" fill="#f3f4f6" stroke="#d1d5db"/><text x="179" y="811" fill="#1f2430" text-anchor="middle" font-size="9">Evidence</text>
+<rect x="212" y="799" width="34" height="16" rx="8" fill="#7c3aed"/><text x="229" y="811" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">K3c</text>
+<text x="102" y="828" font-family="Consolas, 'Courier New', monospace" fill="#1f2430">citation-check memo-v2.md</text>
+<rect x="268" y="818" width="52" height="15" rx="7.5" fill="#dcfce7"/><text x="294" y="829" fill="#166534" text-anchor="middle" font-size="9">✓ exit 0</text>
+<text x="102" y="842" font-family="Consolas, 'Courier New', monospace" font-size="9" fill="#6b7280">.huddle/logs/ruth/tool-calls.md#L12</text>
+<text x="102" y="854" font-size="9" fill="#6b7280">Today 08:10</text>
+<circle cx="88" cy="884" r="5" fill="#9ca3af"/>
+<circle cx="108" cy="868" r="7" fill="#cbd5e1"/><text x="120" y="872" font-weight="600" fill="#1f2430">Miriam</text>
+<rect x="102" y="878" width="574" height="20" rx="4" fill="#ffffff" stroke="#d1d5db"/><text x="112" y="892" fill="#1f2430">Two sources are still pending; the rest is cited.</text>
+<text x="102" y="910" font-size="9" fill="#6b7280">Today 08:20</text>
+</g>
+<rect x="76" y="918" width="34" height="17" rx="8.5" fill="#7c3aed"/><text x="93" y="930.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">K3d</text>
+<rect x="80" y="938" width="596" height="30" rx="4" fill="#ffffff" stroke="#8b93a1"/><text x="90" y="957" font-size="10" fill="#6b7280">Add a comment</text>
+<rect x="602" y="972" width="74" height="20" rx="4" fill="#ffffff" stroke="#8b93a1"/><text x="639" y="986" font-size="10" fill="#6b7280" text-anchor="middle">Comment</text>
+<text x="594" y="986" font-size="9" fill="#6b7280" text-anchor="end" font-style="italic">writes only the timeline: pending edits stay pending</text>
+<text x="80" y="986" font-size="10" fill="#6b7280">Created Oct 8 · Updated today 11:02</text>
 
-<rect x="704" y="262" width="428" height="462" rx="4" fill="#ffffff" stroke="#8b93a1"/>
-<text x="716" y="282" font-size="10" font-weight="600" fill="#6b7280">side (5 of 12)</text>
+<rect x="704" y="262" width="428" height="738" rx="4" fill="#ffffff" stroke="#8b93a1"/>
+<text x="716" y="282" font-size="10" font-weight="600" fill="#6b7280">side (4 of 12)</text>
 <rect x="716" y="294" width="404" height="96" rx="4" fill="#fffbeb" stroke="#8b93a1"/><text x="728" y="314" font-size="10" font-weight="600" fill="#1f2430">T10 Human gate (switch, What will happen)</text>
 <rect x="716" y="402" width="404" height="96" rx="4" fill="#fff" stroke="#8b93a1"/><text x="728" y="422" font-size="10" font-weight="600" fill="#1f2430">T11 Proof list</text>
 <rect x="716" y="510" width="404" height="96" rx="4" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="6 4"/><text x="728" y="530" font-size="10" font-weight="600" fill="#1f2430">T12 Decision card (locked while edits are unsaved)</text>
-<rect x="716" y="618" width="404" height="56" rx="4" fill="#fff" stroke="#8b93a1"/><text x="728" y="638" font-size="10" font-weight="600" fill="#1f2430">Change log · footer meta</text>
 
 <!-- narrow inset -->
+<g transform="translate(0 276)">
 <text x="24" y="796" font-size="13" font-weight="700" fill="#1f2430">Narrow: K3 under 1024px, here because the Right sidebar is open</text>
 <rect x="24" y="806" width="520" height="220" rx="6" fill="#eceef2" stroke="#8b93a1" stroke-width="1.4"/>
 <rect x="36" y="818" width="496" height="52" rx="4" fill="#ffffff" stroke="#8b93a1"/>
@@ -88,7 +117,7 @@
 <rect x="48" y="898" width="472" height="40" rx="4" fill="#ffffff" stroke="#8b93a1"/><text x="60" y="922" font-size="10" fill="#1f2430">fields: Status and priority, People, Planning, Dates, Description</text>
 <rect x="48" y="944" width="472" height="18" rx="3" fill="#fffbeb" stroke="#8b93a1"/><text x="60" y="957" font-size="9" fill="#1f2430">T10 Human gate</text>
 <rect x="48" y="966" width="472" height="18" rx="3" fill="#ffffff" stroke="#8b93a1"/><text x="60" y="979" font-size="9" fill="#1f2430">T11 Proof list</text>
-<rect x="48" y="988" width="472" height="18" rx="3" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="4 3"/><text x="60" y="1001" font-size="9" fill="#1f2430">T12 Decision card · then Change log and meta</text>
+<rect x="48" y="988" width="472" height="18" rx="3" fill="#fffbeb" stroke="#8b93a1" stroke-dasharray="4 3"/><text x="60" y="1001" font-size="9" fill="#1f2430">T12 Decision card · then Timeline (K3b), comment box and meta</text>
 <!-- S4 right sidebar -->
 <rect x="556" y="806" width="300" height="220" rx="6" fill="#ffffff" stroke="#8b93a1" stroke-width="1.4" stroke-dasharray="6 4"/>
 <rect x="552" y="800" width="25" height="17" rx="8.5" fill="#475569"/><text x="564.5" y="812.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">S4</text>
@@ -115,4 +144,5 @@
 <text x="876" y="910" font-size="11" fill="#6b7280">S4 shows only computed values about the</text>
 <text x="876" y="926" font-size="11" fill="#6b7280">saved Task (D-8). It opens only when the</text>
 <text x="876" y="942" font-size="11" fill="#6b7280">Human toggles it (S1c).</text>
+</g>
 </svg>

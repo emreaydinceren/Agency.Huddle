@@ -125,7 +125,7 @@ have, and that an outside edit is logged rather than silently overwritten.*
 2. Change the `priority:` line to a different valid priority and save once.
 3. Without reloading the browser, watch the Task's card/row on `/tasks` for 10 seconds.
 4. Open the Task (click its title or use `/tasks/item/<id>`).
-5. Scroll to the **Change log**.
+5. Scroll to the **Timeline**.
 6. Read the newest entry.
 
 **Pass if — all of these**

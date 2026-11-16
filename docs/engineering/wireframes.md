@@ -504,7 +504,7 @@ popover (`O9`), which leaves the page as it is.
 
 `TaskEditPage.razor`, route `/tasks/item/{TaskIdText}/edit`.
 
-![The Task edit page: a tab strip with a permanent Tab titled Edit PLAT-0013 marked unsaved; below it a page container with a page header holding the id line, the Task's title as an h1, a View task button, copy, menu, Cancel and Save; the editor body in two columns, fields on the left and the human gate, Proof list, decision card and Timeline (with its comment box) on the right; a Markdown toolbar above the description; and an inset showing the same editor narrower than 1024px as one column, beside the Right sidebar with its Activity, Blocked by, Blocks and Linked documents panels](images/wireframes/12-task-edit-page.svg)
+![The Task edit page: a tab strip with a permanent Tab titled Edit PLAT-0013 marked unsaved; below it a page container with a page header holding the id line, the Task's title as an h1, a View task button, copy, menu, Cancel and Save; the editor body in two columns, fields and then the Timeline (with its comment box) on the left, and the human gate, Proof list and decision card on the right; a Markdown toolbar above the description; and an inset showing the same editor narrower than 1024px as one column, beside the Right sidebar with its Activity, Blocked by, Blocks and Linked documents panels](images/wireframes/12-task-edit-page.svg)
 
 | Code | Name | Component | Notes |
 | --- | --- | --- | --- |

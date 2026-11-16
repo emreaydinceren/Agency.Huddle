@@ -49,7 +49,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/TaskListView.razor` | The List (Spec §13.3a): a read-only `MudDataGrid<TaskItem>` whose columns follow `View.Fields` and whose grouping matches `TaskQuery`'s own ordering rule. |
 | `Components/Tasks/TaskBoard.razor` | The Board (Spec §13.4): one `MudDropContainer` with one `MudDropZone` per lane/column, laid out from `BoardLayout.Build`. |
 | `Components/Tasks/TaskCard.razor` | The Board's card (Spec §13.4): a `<div>` root so the ⋮ menu's activator and the Awake link sit outside the clickable open-detail control. |
-| `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), the editor hosted by the edit page: every field, the Save/Revert cycle, the conflict UI, Close/Reopen/Make a copy, and the Change log. |
+| `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), the editor hosted by the edit page: every field, the Save/Revert cycle, the conflict UI, Close/Reopen/Make a copy, and the Timeline (`TaskTimeline`). |
 | `Components/Tasks/TaskTabs.cs` | How a Task is opened for editing: always in the edit page's own Tab (`OpenNew`, `OpenCopy`), and the draft a copy starts from. |
 | `Components/Tasks/FieldsDialog.razor` | The **Fields…** dialog (Spec §13.5): reorder, switch off, remove and add the View's fields. |
 | `Components/Tasks/TaskFilterChip.razor` | One "Label: Value" filter or Group by chip of the toolbar, with a menu and a clear button; also the Members tab's team type filter in `BuildTeam`, in its `NoMenu` form (no caret, no menu). |

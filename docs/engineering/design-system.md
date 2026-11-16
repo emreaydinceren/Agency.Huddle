@@ -965,7 +965,7 @@ detail (`T7`) moved to the Right sidebar on 2026-10-28, and `ResizableEndDrawer`
 - **Every field has a visible label.** Team and Project are two rows, and Description has
   a label. The control's own floating label stays in the DOM, visually hidden.
 - **Created, Updated and Closed are footer meta.** They leave the Dates group and sit at the
-  bottom in `.task-detail-footer-meta` (12px `TextSecondary`), after the change log.
+  bottom in `.task-detail-footer-meta` (12px `TextSecondary`), after the Timeline.
 
 ### In-place action rows
 
