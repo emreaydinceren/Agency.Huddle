@@ -977,7 +977,7 @@ loads, but nothing enforces it.
 A role names a **tier** (strongest, balanced or fast), never a model. Huddle picks
 an adapter that is available, preferring one that keeps a role on a different
 vendor from the role it must differ from, and then looks for the model with
-`Team:Teams:Tiers:<adapter>:<tier>` in your configuration. With no entry for that adapter and tier, the adapter's default model is used. A
+`Team:Teams:Tiers:<adapter>:<tier>` in your configuration. With no entry for that adapter and tier, the adapter's default model is used, and Build a team stores that default model on the hire. A
 mapped model the adapter does not list is ignored in the same way.
 
 The Chief of Staff is not hired for a role. A new install creates it on **Opus** at

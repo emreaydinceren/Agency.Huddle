@@ -388,6 +388,28 @@ public sealed class ModelCatalogCacheTests
         Assert.Single(runner.Calls);
     }
 
+    /// <summary>The default model is unknown before any probe, and the peek never starts one; after a probe it is the model id the session reported running.</summary>
+    [Fact]
+    public async Task PeekDefaultModel_BeforeAndAfterAProbe_ReportsTheSessionsCurrentModel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new() { Handler = static (_, _, _) => ModelCatalogCacheTests.Outcome("opus", "high") };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        string? before = probe.PeekDefaultModel("claude");
+        Assert.Empty(runner.Calls);
+
+        await probe.GetAsync("claude", ct);
+        string? after = probe.PeekDefaultModel("claude");
+        string? unnamed = probe.PeekDefaultModel(null);
+
+        Assert.Null(before);
+        Assert.Equal("opus", after);
+        Assert.Equal("opus", unnamed);
+        Assert.Single(runner.Calls);
+    }
+
     /// <summary>Peek resolves the Adapter the way the probe does, so the default Adapter's cache answers for an unnamed one.</summary>
     [Fact]
     public async Task PeekRuntime_UnnamedAdapter_UsesTheDefaultAdaptersCache()

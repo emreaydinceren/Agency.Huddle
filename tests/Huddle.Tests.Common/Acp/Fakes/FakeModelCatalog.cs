@@ -76,6 +76,9 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// <summary>What <see cref="PeekRuntime"/> hands back, as the cache would; the default is nothing cached.</summary>
     public RuntimeNames Runtime { get; set; }
 
+    /// <summary>What <see cref="PeekDefaultModel"/> hands back, as the cache would after a probe; the default is nothing cached.</summary>
+    public string? DefaultModel { get; set; }
+
     /// <summary>Every (Adapter id, model id, effort id) triple <see cref="PeekRuntime"/> was asked about, in call order.</summary>
     public List<(string? AdapterId, string? Model, string? Effort)> PeeksAsked { get; } = [];
 
@@ -91,6 +94,9 @@ public sealed class FakeModelCatalog : IModelCatalog
         this.PeeksAsked.Add((adapterId, model, effort));
         return this.Runtime;
     }
+
+    /// <inheritdoc/>
+    public string? PeekDefaultModel(string? adapterId) => this.DefaultModel;
 
     public ValueTask<IReadOnlyList<AgentModelOption>> GetAsync(string? adapterId, CancellationToken cancellationToken)
     {

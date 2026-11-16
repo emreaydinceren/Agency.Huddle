@@ -609,6 +609,130 @@ public sealed class BuildTeamTests
         Assert.Empty(runner.Calls);
     }
 
+    /// <summary>A new draft whose tier names no model takes the Adapter's own default model when it is added: its card names that model (no "(default)") and Approve &amp; hire stores it, so the card never promises a model the hire does not store (#607). The tier chip stays.</summary>
+    [Fact]
+    public async Task Roster_FreshDraftWithNoTierModel_TakesTheAdaptersDefaultAndTheHireStoresIt()
+    {
+        using Fixture fixture = new(typeCount: 1, managedJob: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.AddSingleton<IHireContext>(new UnmappedTierContext());
+        FakeModelCatalog catalog = new()
+        {
+            Models = [new AgentModelOption("sonnet", "Sonnet 5.5", null)],
+            DefaultModel = "sonnet",
+            Runtime = new RuntimeNames("Sonnet 5.5", null),
+        };
+        AddProfiles(ctx, catalog);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t97");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal("Sonnet 5.5", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+        Assert.Equal("Model default", card.QuerySelector(".roster-runtime-effort")?.TextContent.Trim());
+        Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
+        string name = card.QuerySelector(".roster-name")?.TextContent.Trim() ?? string.Empty;
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Persona hired = Assert.IsType<Persona>(fixture.Personas.Get(name));
+        Assert.Equal("sonnet", hired.Model);
+        Assert.Null(hired.Effort);
+    }
+
+    /// <summary>A member hired with the Adapter's default model keeps its tier chip on the Members tab while the Adapter still reports that default (the empty tier map names no model); a model that is not the default and no tier names shows no chip.</summary>
+    [Theory]
+    [InlineData("sonnet", "balanced")]
+    [InlineData("opus", null)]
+    public async Task Roster_ExistingMemberOnTheAdapterDefault_KeepsItsTierChip(string adapterDefault, string? expectedChip)
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.Personas.Add(new PersonaIdentity("Ada", "Lead", "ada", Teams: ["Garden"], Role: new RoleRef("t01", "tutor", "1.0.0")), "You lead.", "sonnet", null);
+        fixture.Catalog.Teams = [new TeamSummary("Garden", [], ["Ada"], true) { TeamType = new VersionedRef("t01", "1.0.0"), Manager = "Ada" }];
+        fixture.Folders.UpdateResult = true;
+        fixture.Folders.ReadResult = new TeamFile(new VersionedRef("t01", "1.0.0"), "Ada", null, null, string.Empty);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.AddSingleton<IHireContext>(new UnmappedTierContext());
+        AddProfiles(ctx, new FakeModelCatalog { DefaultModel = adapterDefault });
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal(expectedChip, card.QuerySelector(".roster-tier")?.TextContent.Trim());
+    }
+
+    /// <summary>When the Adapter's default cannot be learned (the probe fails), a new draft with no tier model reads "Agent default" and the hire stores no Model: the card promises nothing it cannot keep.</summary>
+    [Fact]
+    public async Task Roster_FreshDraftWithNoTierModel_ProbeFails_ReadsAgentDefaultAndStoresNothing()
+    {
+        using Fixture fixture = new(typeCount: 1, managedJob: true);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.AddSingleton<IHireContext>(new UnmappedTierContext());
+        AddProfiles(ctx, new FakeModelCatalog { ThrowOnProbe = true, Runtime = new RuntimeNames("Sonnet 5.5", null) });
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=t97");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+
+        IElement card = Assert.Single(cut.FindAll(".roster-card"));
+        Assert.Equal("Agent default", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+        Assert.Equal("balanced", card.QuerySelector(".roster-tier")?.TextContent.Trim());
+        string name = card.QuerySelector(".roster-name")?.TextContent.Trim() ?? string.Empty;
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Persona hired = Assert.IsType<Persona>(fixture.Personas.Get(name));
+        Assert.Null(hired.Model);
+    }
+
+    /// <summary>A draft whose Model is cleared to the blank "Agent default" option in Edit draft reads "Agent default" on its card, not "{name} (default)" although the cache knows the default's name, because a draft stores exactly what it carries (#607).</summary>
+    [Fact]
+    public async Task Roster_DraftEditedToAgentDefault_ReadsAgentDefaultNotTheCachedName()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ctx.Services.CopyFrom(
+            factory.Services,
+            typeof(PersonaSpend),
+            typeof(PersonaCommands),
+            typeof(PersonaSupervisor),
+            typeof(BuiltinAgentReset),
+            typeof(Agency.Huddle.App.Gateway.HostActions),
+            typeof(Agency.Huddle.App.Gateway.IRemoteAccessState));
+        FakeModelCatalog catalog = new()
+        {
+            Models = [new AgentModelOption("haiku", "Haiku", null), new AgentModelOption("sonnet", "Sonnet", null)],
+            Runtime = new RuntimeNames("Sonnet 5.5", null),
+        };
+        AddProfiles(ctx, catalog);
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button.roster-edit").ClickAsync());
+        cut.WaitForAssertion(() => Assert.False(AgentProfileCardTestSupport.IsSelectInert(cut, "Model")));
+
+        await AgentProfileCardTestSupport.OpenSelectAsync(cut, "Model");
+        await AgentProfileCardTestSupport.ClickSelectItemAsync(cut, "Agent default");
+        await AgentProfileCardTestSupport.ClickButtonAsync(cut, "Save draft");
+
+        string name = string.Empty;
+        cut.WaitForAssertion(() =>
+        {
+            IElement card = Assert.Single(cut.FindAll(".roster-card"));
+            Assert.Equal("Agent default", card.QuerySelector(".roster-runtime-model")?.TextContent.Trim());
+            name = card.QuerySelector(".roster-name")?.TextContent.Trim() ?? string.Empty;
+        });
+
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+
+        Persona hired = Assert.IsType<Persona>(fixture.Personas.Get(name));
+        Assert.Null(hired.Model);
+    }
+
     /// <summary>A member on the Team page's Members tab shows the Model and Effort stored for it, as its avatar popover does.</summary>
     [Fact]
     public async Task Roster_ExistingMember_ShowsItsStoredModel()
@@ -1670,5 +1794,24 @@ public sealed class BuildTeamTests
                 {{roles}}
               ] }
             """;
+    }
+
+    /// <summary>The fixture's hire context with an empty tier map: one Adapter answered, but no tier names a model, as in a default install, so a role's pick carries no Model.</summary>
+    private sealed class UnmappedTierContext : IHireContext
+    {
+        private readonly RoleFixtures.Context inner = new();
+
+        /// <inheritdoc />
+        public IReadOnlyList<AdapterAvailability> Answered => this.inner.Answered;
+
+        /// <inheritdoc />
+        public IReadOnlyDictionary<string, IReadOnlyDictionary<ModelTier, string>> TierMap { get; } =
+            new Dictionary<string, IReadOnlyDictionary<ModelTier, string>>(StringComparer.Ordinal);
+
+        /// <inheritdoc />
+        public IReadOnlyCollection<string> AvoidAdapters => this.inner.AvoidAdapters;
+
+        /// <inheritdoc />
+        public IConnectorStatus Connectors => this.inner.Connectors;
     }
 }

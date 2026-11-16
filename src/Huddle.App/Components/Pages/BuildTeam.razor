@@ -508,15 +508,42 @@
     /// <param name="draft">The roster card's draft.</param>
     private AgentProfile ProfileOf(DraftMember draft) => new(draft.Name, draft.Title, draft.Description, draft.Avatar)
     {
-        Runtime = this.Services.GetService<AgentProfiles>()?.DescribeRuntime(draft.Adapter, draft.Model, draft.Effort),
+        Runtime = this.RuntimeOf(draft),
         State = draft.Existing && this.MemberState is { } stateOf ? stateOf(draft.Name) : null,
-        Tier = draft.RoleId.Length > 0 ? TierOfModel.Of(draft.Tier, draft.Model, this.HireContext.TierMap) : null,
+        Tier = draft.RoleId.Length > 0 ? this.TierOf(draft) : null,
         SkillNames = [.. draft.Skills.Select(static skill => skill.Name)],
         SetupReasons = draft.Reasons,
         UnconnectedConnectors = draft.UnconnectedConnectors,
         PendingImage = draft.Image,
         PendingImageExtension = draft.ImageExtension,
     };
+
+    /// <summary>The tier chip for a draft with a role. A Model taken from the Adapter's default when the draft was added is treated as no Model chosen, so the chip stays on the role's tier.</summary>
+    /// <param name="draft">The roster card's draft.</param>
+    private ModelTier? TierOf(DraftMember draft)
+    {
+        bool fromAdapterDefault = string.Equals(draft.Model, draft.DefaultModel, StringComparison.Ordinal);
+        string? model = fromAdapterDefault ? null : draft.Model;
+        return this.Services.GetService<AgentProfiles>() is { } profiles
+            ? profiles.TierOf(draft.Tier, draft.Adapter, model, this.HireContext.TierMap)
+            : TierOfModel.Of(draft.Tier, model, this.HireContext.TierMap);
+    }
+
+    /// <summary>What the roster card says the draft runs on: a new draft stores exactly what it carries, so its card never names an unchosen default; a member of the Team being edited reads like its Members tab card.</summary>
+    /// <param name="draft">The roster card's draft.</param>
+    /// <returns>The three strings, or <see langword="null"/> when <see cref="AgentProfiles"/> is not registered.</returns>
+    private ProfileRuntime? RuntimeOf(DraftMember draft)
+    {
+        AgentProfiles? profiles = this.Services.GetService<AgentProfiles>();
+        if (profiles is null)
+        {
+            return null;
+        }
+
+        return draft.Existing
+            ? profiles.DescribeRuntime(draft.Adapter, draft.Model, draft.Effort)
+            : profiles.DescribeDraftRuntime(draft.Adapter, draft.Model, draft.Effort);
+    }
 
     private string ChiefName => this.Personas.Entries
         .FirstOrDefault(static entry => string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal))?.Name
@@ -937,7 +964,8 @@
     /// <param name="Existing">Whether this is a member of the Team being edited rather than a new draft; a member is never hired again.</param>
     /// <param name="Setup">The Packs and Skills that are not ready, from the card resolver and again after each edit or registry change.</param>
     /// <param name="Unconnected">The role's connectors that are not connected, from the card resolver; shown as information, never a reason.</param>
-    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false, IReadOnlyList<SkillSetupItem>? Setup = null, IReadOnlyList<string>? Unconnected = null)
+    /// <param name="DefaultModel">The id taken from the Adapter's own default when the draft was added because its tier named no model; <see langword="null"/> when the Model was named by the tier or chosen. It is only there so the tier chip is worked out as if no model was chosen.</param>
+    private sealed record DraftMember(string Key, string RoleId, string Title, string Description, ModelTier Tier, bool Manager, string Name, string Text, IReadOnlyList<string> NameChoices, Avatar Avatar, IReadOnlyList<string> AvatarChoices, string? AvatarFile, byte[]? Image, string? ImageExtension, IReadOnlyList<SkillRef> Skills, IReadOnlyList<VersionedRef> Packs, string? Adapter, string? Model, string? Effort, IReadOnlyList<string> Reasons, bool Existing = false, IReadOnlyList<SkillSetupItem>? Setup = null, IReadOnlyList<string>? Unconnected = null, string? DefaultModel = null)
     {
         /// <summary>The role's connectors that are not connected yet; informational, never blocks a hire; empty when all are.</summary>
         public IReadOnlyList<string> UnconnectedConnectors => this.Unconnected ?? [];
@@ -1034,11 +1062,46 @@
 
         if (draft is not null)
         {
+            draft = await this.WithDefaultModelAsync(draft);
+
+            // The Name was drawn before the awaits above, so another Add may have taken it meanwhile.
+            string drawnName = draft.Name;
+            if (this.drafts.Exists(other => string.Equals(other.Name, drawnName, StringComparison.OrdinalIgnoreCase)))
+            {
+                draft = draft with { Name = this.FreeName(draft.NameChoices, null) };
+            }
+
             this.drafts.Add(draft);
             if (this.EditMode && draft.Manager && (this.managerKey is null || this.removed.Contains(this.managerKey)))
             {
                 this.managerKey = draft.Key;
             }
+        }
+    }
+
+    /// <summary>
+    /// The draft with the Adapter's default model filled in when its tier named none (#607): without it the card
+    /// would name the default while the hire stored no Model. Pressing Add is a user action, so the probe is
+    /// allowed here. The draft comes back unchanged when it already has a Model, has no Adapter, the default
+    /// cannot be learned, or the page goes while the probe runs.
+    /// </summary>
+    /// <param name="draft">The new draft.</param>
+    private async Task<DraftMember> WithDefaultModelAsync(DraftMember draft)
+    {
+        if (draft.Model is not null || draft.Adapter is null || this.Services.GetService<AgentProfiles>() is not { } profiles)
+        {
+            return draft;
+        }
+
+        try
+        {
+            string? model = await profiles.DefaultModelAsync(draft.Adapter, this.pageCancellation.Token);
+            return model is null ? draft : draft with { Model = model, DefaultModel = model };
+        }
+        catch (OperationCanceledException)
+        {
+            // The page went while the probe ran; nothing will draw or hire this draft.
+            return draft;
         }
     }
 

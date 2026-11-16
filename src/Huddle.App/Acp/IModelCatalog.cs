@@ -88,4 +88,13 @@ internal interface IModelCatalog
     /// <param name="effort">The chosen effort id, or <see langword="null"/> when none was chosen.</param>
     /// <returns>The names that could be resolved from the cache; <see langword="null"/> members are unknown.</returns>
     RuntimeNames PeekRuntime(string? adapterId, string? model, string? effort);
+
+    /// <summary>
+    /// The id of the model the Adapter's own throwaway session reported running, read from what an earlier
+    /// <see cref="GetAsync"/> cached. It never probes and never waits: Build a team calls it right after
+    /// <see cref="GetAsync"/> to store the model a new draft would otherwise only name.
+    /// </summary>
+    /// <param name="adapterId">The Persona's configured Adapter id, or <see langword="null"/> for the default Adapter.</param>
+    /// <returns>The cached default model id, or <see langword="null"/> when nothing is cached for the Adapter.</returns>
+    string? PeekDefaultModel(string? adapterId);
 }
