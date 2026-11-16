@@ -20,19 +20,20 @@ jobs:
   secret-scan:
     runs-on: dotnet-10-local
     container:
-      # Exact patch, not the floating :10.0 tag. global.json requires 11.0.100 with
+      # Built locally on the runner host from .gitea/ci-image/Dockerfile (the stock SDK image plus
+      # Node.js and gitleaks), so nothing is downloaded per run. Not in any registry: the runner's
+      # config.yaml needs `force_pull: false`. global.json requires 11.0.100 with
       # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it, and a runner holding a
       # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
-      # runs. An exact tag forces the pull. Bump this together with global.json — one decision.
-      image: mcr.microsoft.com/dotnet/sdk:11.0.100
+      # runs. Rebuild the image and bump this tag together with global.json — one decision.
+      image: huddle-ci:11.0.100
     defaults:
       run:
         shell: bash
 
     steps:
-      # No actions/checkout. It is a Node.js action, and this container ships no Node
-      # (the validate job apt-installs one, but that is inside the job, too late for an
-      # action). Cloning by hand is the only option that works here.
+      # No actions/checkout. It is a Node.js action, and it would have to run before the job
+      # container is usable; cloning by hand keeps the checkout independent of that.
       - name: 📥 Checkout
         env:
           GIT_TOKEN: ${{ github.token }}
@@ -42,21 +43,6 @@ jobs:
           BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
           git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
           git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
-
-      - name: 🔐 Install gitleaks
-        run: |
-          set -euo pipefail
-          case "$(uname -m)" in
-            x86_64) ARCH=x64 ;;
-            aarch64|arm64) ARCH=arm64 ;;
-            *) echo "Unsupported arch: $(uname -m)"; exit 1 ;;
-          esac
-          VER=$(curl -sSLf https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
-                | grep -oE '"tag_name": *"v[^"]+"' | head -1 | sed -E 's/.*"v?([^"]+)".*/\1/')
-          echo "Installing gitleaks $VER (linux_$ARCH)"
-          curl -sSLf "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_${ARCH}.tar.gz" -o /tmp/gitleaks.tgz
-          tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
-          gitleaks version
 
       - name: 🔎 Scan working tree for secrets
         run: |
@@ -69,11 +55,13 @@ jobs:
   validate:
     runs-on: dotnet-10-local
     container:
-      # Exact patch, not the floating :10.0 tag. global.json requires 11.0.100 with
+      # Built locally on the runner host from .gitea/ci-image/Dockerfile (the stock SDK image plus
+      # Node.js and gitleaks), so nothing is downloaded per run. Not in any registry: the runner's
+      # config.yaml needs `force_pull: false`. global.json requires 11.0.100 with
       # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it, and a runner holding a
       # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
-      # runs. An exact tag forces the pull. Bump this together with global.json — one decision.
-      image: mcr.microsoft.com/dotnet/sdk:11.0.100
+      # runs. Rebuild the image and bump this tag together with global.json — one decision.
+      image: huddle-ci:11.0.100
     defaults:
       run:
         shell: bash
@@ -96,21 +84,10 @@ jobs:
           git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
           git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
 
-      # Huddle.Acp.Tests' AgentProcessLauncherTests ([Trait("Category", "Process")]) launch a
-      # real `node -e` subprocess to prove the stdio pipe wiring works. The dotnet SDK image
-      # has no Node, and those 6 tests fail with `Failed to start 'node'` without this step.
-      # Ubuntu 26.04 (this image's base) ships Node 22, which is plenty for `node -e`. The ACP
-      # adapter itself wants something newer, but it only runs under TEAM_E2E=1, which CI pins off.
-      - name: 🟩 Install Node.js
-        run: |
-          set -euo pipefail
-          apt-get update -qq
-          apt-get install -y -qq nodejs
-          node --version
-
       # global.json pins SDK 11.0.100 with rollForward=latestPatch, so only an 11.0.1xx SDK
-      # satisfies it. A stale cached sdk:10.0 image fails here with "Requested SDK version:
-      # 11.0.100 ... Install the [11.0.100] .NET SDK" — pull the image, don't debug the code.
+      # satisfies it. A stale huddle-ci image built from an older SDK fails here with "Requested
+      # SDK version: 11.0.100 ... Install the [11.0.100] .NET SDK" — rebuild the image, don't
+      # debug the code.
       - name: 📦 Restore dependencies
         run: dotnet restore Huddle.slnx
 
@@ -143,8 +120,8 @@ jobs:
       # the app in-process through TeamWebApplicationFactory, so none of them can fail when the
       # composed app does not boot as a process - which is the only thing this step asserts.
       # It builds nothing, so it must follow the build step. 120s rather than the script's 60s
-      # default: this runner is arm64 and cold-starts slowly.
-      # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:11.0.100 - PowerShell 7.7.0,
-      # installed as a global tool by the image (PowerShell.Linux.arm64 on this runner).
+      # default: a cold start on a busy runner can be slow.
+      # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:11.0.100 (the base of huddle-ci) -
+      # PowerShell 7.7.0, installed as a global tool by the image (PowerShell.Linux.amd64 here).
       - name: 🩺 Health endpoint smoke test
         run: pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
