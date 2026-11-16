@@ -45,7 +45,7 @@ list_targz() {
 
 has_entry() {
     # $1 = listing, $2 = exact entry name
-    printf '%s\n' "$1" | grep -qx "$2"
+    printf '%s\n' "$1" | grep -qx -- "$2"
 }
 
 # A fake publish directory standing in for 'dotnet publish' output.
@@ -135,6 +135,48 @@ esac
 sh "$SCRIPT" --version 1.2.3 --rid osx-x64 --publish-dir "$TMP/fake-mac" --out "$OUT" > "$TMP/osx64.log" 2>&1 \
     || { cat "$TMP/osx64.log" >&2; fail "build-release.sh --rid osx-x64 exited non-zero"; }
 [ -f "$OUT/huddle-osx-x64.tar.gz" ] || fail "missing $OUT/huddle-osx-x64.tar.gz"
+
+# --- win-arm64 -> zip, same layout as win-x64 --------------------------------
+sh "$SCRIPT" --version 1.2.3 --rid win-arm64 --publish-dir "$TMP/fake" --out "$OUT" > "$TMP/winarm.log" 2>&1 \
+    || { cat "$TMP/winarm.log" >&2; fail "build-release.sh --rid win-arm64 exited non-zero"; }
+ZIP="$OUT/huddle-win-arm64.zip"
+[ -f "$ZIP" ] || fail "missing $ZIP"
+LISTING=$(list_zip "$ZIP")
+for entry in app/Huddle.App.exe app/Huddle.App.dll release-info.json tools/acp/package-lock.json; do
+    has_entry "$LISTING" "$entry" || fail "win-arm64 zip does not list $entry"
+done
+mkdir -p "$TMP/winarm-x"
+if command -v unzip > /dev/null 2>&1; then
+    unzip -q "$ZIP" -d "$TMP/winarm-x"
+else
+    "$(find_bsdtar)" -xf "$ZIP" -C "$TMP/winarm-x"
+fi
+case "$(cat "$TMP/winarm-x/release-info.json")" in
+    *'"rid":"win-arm64"'*) ;;
+    *) fail "win-arm64 release-info.json lacks rid win-arm64" ;;
+esac
+
+# --- the release version reaches dotnet publish -----------------------------
+# A fake dotnet records its arguments and writes a publish folder where -o points.
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/dotnet" << 'FAKE'
+#!/bin/sh
+printf '%s\n' "$@" > "$FAKE_DOTNET_ARGS"
+while [ $# -gt 0 ]; do
+    if [ "$1" = "-o" ]; then
+        mkdir -p "$2"
+        echo host > "$2/Huddle.App.exe"
+    fi
+    shift
+done
+FAKE
+chmod +x "$TMP/bin/dotnet"
+FAKE_DOTNET_ARGS="$TMP/dotnet-args.txt" PATH="$TMP/bin:$PATH" \
+    sh "$SCRIPT" --version 2.3.4-rc.1 --rid win-arm64 --out "$TMP/out-v" > "$TMP/v.log" 2>&1 \
+    || { cat "$TMP/v.log" >&2; fail "build-release.sh with the fake dotnet exited non-zero"; }
+ARGS=$(cat "$TMP/dotnet-args.txt")
+has_entry "$ARGS" "-p:Version=2.3.4-rc.1" || fail "dotnet publish was not given -p:Version=2.3.4-rc.1: $ARGS"
+has_entry "$ARGS" "win-arm64" || fail "dotnet publish was not given the win-arm64 RID: $ARGS"
 
 # --- argument errors --------------------------------------------------------
 if sh "$SCRIPT" --version 1.2.3 --rid linux-x64 --publish-dir "$TMP/fake" --out "$TMP/bad" > /dev/null 2>&1; then

@@ -832,8 +832,9 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     mark to the files, so Windows SmartScreen and macOS Gatekeeper do not prompt. The binaries
     themselves are unsigned (macOS ones are ad-hoc signed by the installer). Downloading the archives
     in a browser and opening them by hand would show the prompts.
-  - **The Intel Mac build is not smoke-tested in CI.** `macos-latest` is Apple Silicon. An
-    Intel Mac is manual step M3 in [installer.md](installer.md).
+  - **The Intel Mac and ARM64 Windows builds are tested only on CI runners.** The `Release`
+    workflow smoke-tests them on `macos-15-intel` and `windows-11-arm` (the latter a GitHub public
+    preview); neither has been run on real hardware. See [installer.md](installer.md#releasing-a-new-version).
   - **`latest` can need a retry.** `SHA256SUMS` and the archive are two requests. A release
     published between them fails the hash check; run the installer again.
   - **The PowerShell installer leaves a little behind after `irm | iex`.** It removes its own

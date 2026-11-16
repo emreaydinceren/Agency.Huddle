@@ -1,8 +1,8 @@
 #!/bin/sh
-# Builds one release archive (plan Spec 2): huddle-<rid>.zip for win-x64,
+# Builds one release archive (plan Spec 2): huddle-<rid>.zip for win-x64 and win-arm64,
 # huddle-<rid>.tar.gz for osx-arm64 and osx-x64.
 #
-#   build-release.sh --version 1.2.3 --rid win-x64|osx-arm64|osx-x64 --out <dir> [--publish-dir <dir>]
+#   build-release.sh --version 1.2.3 --rid win-x64|win-arm64|osx-arm64|osx-x64 --out <dir> [--publish-dir <dir>]
 #
 # --publish-dir skips 'dotnet publish' and packages that directory as app/ (the test hook).
 # Layout of the archive root: app/, tools/acp/package.json, tools/acp/package-lock.json, release-info.json.
@@ -12,7 +12,7 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=""
 
 usage() {
-    echo "usage: build-release.sh --version <version> --rid win-x64|osx-arm64|osx-x64 --out <dir> [--publish-dir <dir>]" >&2
+    echo "usage: build-release.sh --version <version> --rid win-x64|win-arm64|osx-arm64|osx-x64 --out <dir> [--publish-dir <dir>]" >&2
 }
 
 die() {
@@ -84,8 +84,8 @@ main() {
         *[!A-Za-z0-9._+-]*) die "--version may only contain letters, digits and . _ + -: $version" ;;
     esac
     case "$rid" in
-        win-x64 | osx-arm64 | osx-x64) ;;
-        *) die "unsupported --rid '$rid' (use win-x64, osx-arm64 or osx-x64)" ;;
+        win-x64 | win-arm64 | osx-arm64 | osx-x64) ;;
+        *) die "unsupported --rid '$rid' (use win-x64, win-arm64, osx-arm64 or osx-x64)" ;;
     esac
     if [ -n "$publish_dir" ] && [ ! -d "$publish_dir" ]; then
         die "--publish-dir is not a directory: $publish_dir"
@@ -112,8 +112,10 @@ main() {
         cp -R "$publish_dir" "$stage/app"
     else
         # Self-contained and ReadyToRun; deliberately not trimmed or AOT (decision D2).
+        # -p:Version stamps the release version into the binaries (file and product version), which
+        # otherwise all say 1.0.0.
         dotnet publish "$ROOT/src/Huddle.App/Huddle.App.csproj" -c Release -r "$rid" \
-            --self-contained true -p:PublishReadyToRun=true \
+            --self-contained true -p:PublishReadyToRun=true -p:Version="$version" \
             -p:DebugType=none -p:DebugSymbols=false -o "$stage/app"
     fi
 
@@ -123,7 +125,7 @@ main() {
         "$version" "$rid" "$node_version" > "$stage/release-info.json"
 
     case "$rid" in
-        win-x64)
+        win-x64 | win-arm64)
             archive="$out/huddle-$rid.zip"
             rm -f "$archive"
             make_zip "$stage" "$archive"
