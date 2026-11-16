@@ -15,8 +15,9 @@ public sealed class RoleHirerTests
 {
     /// <summary>A Candidate whose role is not known, or that names no Team, is refused in plain words and nothing is written.</summary>
     [Fact]
-    public void Hire_UnknownRoleOrNoTeam_RefusedWithoutWriting()
+    public async Task Hire_UnknownRoleOrNoTeam_RefusedWithoutWriting()
     {
+        CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         TeamOptions options = new();
         PersonaStore personas = new(new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
@@ -27,8 +28,8 @@ public sealed class RoleHirerTests
         HireService hires = new(personas, types, packs, new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance), harness.Guard, installer, new FakeStartGate(), NullLogger<HireService>.Instance);
         RoleHirer hirer = new(hires, types, packs, new RoleFixtures.Context());
 
-        HireResult unknown = hirer.Hire(new Candidate("Jane", "jane", "Dev", "Body.", [RoleFixtures.TeamName], null, "web/ghost"));
-        HireResult noTeam = hirer.Hire(new Candidate("Kai", "kai", "Dev", "Body.", [], null, "web/dev"));
+        HireResult unknown = await hirer.HireAsync(new Candidate("Jane", "jane", "Dev", "Body.", [RoleFixtures.TeamName], null, "web/ghost"), null, ct);
+        HireResult noTeam = await hirer.HireAsync(new Candidate("Kai", "kai", "Dev", "Body.", [], null, "web/dev"), null, ct);
 
         Assert.False(unknown.Ok);
         Assert.Equal("Jane does not name a known role and Team.", unknown.Error);

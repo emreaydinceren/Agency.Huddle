@@ -88,12 +88,26 @@ public sealed class AgentProfilesTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
-        fixture.ModelCatalog.DefaultModel = "sonnet";
+        fixture.ModelCatalog.DefaultModelAfterProbe = "sonnet";
 
         string? model = await fixture.Profiles.DefaultModelAsync("codex", ct);
 
         Assert.Equal("sonnet", model);
         Assert.Equal(1, fixture.ModelCatalog.ProbeCount);
+    }
+
+    /// <summary>A default already in the cache is returned without probing the Adapter again.</summary>
+    [Fact]
+    public async Task DefaultModelAsync_Cached_ReturnsItWithoutProbing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ProfileFixture fixture = new();
+        fixture.ModelCatalog.DefaultModel = "sonnet";
+
+        string? model = await fixture.Profiles.DefaultModelAsync("codex", ct);
+
+        Assert.Equal("sonnet", model);
+        Assert.Equal(0, fixture.ModelCatalog.ProbeCount);
     }
 
     /// <summary>A probe that fails yields no default instead of an exception, so adding a draft never breaks on an Adapter that cannot start.</summary>
@@ -103,7 +117,6 @@ public sealed class AgentProfilesTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
         fixture.ModelCatalog.ThrowOnProbe = true;
-        fixture.ModelCatalog.DefaultModel = "sonnet";
 
         string? model = await fixture.Profiles.DefaultModelAsync("codex", ct);
 

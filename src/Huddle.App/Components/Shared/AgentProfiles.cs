@@ -191,23 +191,7 @@ internal sealed class AgentProfiles(
     /// <returns>The default model id, or <see langword="null"/> when the Adapter reported none or could not be probed.</returns>
     public async Task<string?> DefaultModelAsync(string? adapter, CancellationToken ct)
     {
-        try
-        {
-            _ = await modelCatalog.GetAsync(adapter, ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            // Safe to swallow: the draft simply keeps no Model and its card says "Agent default", which is
-            // exactly what the hire stores; the catalog caches nothing on failure, so the next Add tries again.
-            logger.LogWarning(ex, "Reading the Adapter's default model for a new draft failed.");
-            return null;
-        }
-
-        return modelCatalog.PeekDefaultModel(adapter);
+        return await ModelCatalogDefaults.ReadDefaultModelAsync(modelCatalog, adapter, logger, ct);
     }
 
     /// <summary>

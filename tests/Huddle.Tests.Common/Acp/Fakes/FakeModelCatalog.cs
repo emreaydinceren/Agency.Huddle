@@ -79,6 +79,12 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// <summary>What <see cref="PeekDefaultModel"/> hands back, as the cache would after a probe; the default is nothing cached.</summary>
     public string? DefaultModel { get; set; }
 
+    /// <summary>
+    /// When set, the first successful <see cref="GetAsync"/> makes <see cref="DefaultModel"/> this value, standing in
+    /// for a real catalog that learns the Adapter's default only by probing it.
+    /// </summary>
+    public string? DefaultModelAfterProbe { get; set; }
+
     /// <summary>Every (Adapter id, model id, effort id) triple <see cref="PeekRuntime"/> was asked about, in call order.</summary>
     public List<(string? AdapterId, string? Model, string? Effort)> PeeksAsked { get; } = [];
 
@@ -108,6 +114,10 @@ public sealed class FakeModelCatalog : IModelCatalog
         }
 
         this.AdaptersProbed.Add(adapterId);
+        if (this.DefaultModelAfterProbe is not null)
+        {
+            this.DefaultModel = this.DefaultModelAfterProbe;
+        }
 
         var models = adapterId is not null && this.ModelsByAdapter.TryGetValue(adapterId, out var forAdapter)
             ? forAdapter

@@ -132,7 +132,7 @@ Adapter with no modes shows no **Work mode** choice.
 ### Choosing a model
 
 Team types name a tier for each role (strongest, balanced or fast), and Huddle maps it to a model through
-`Team:Teams:Tiers:<adapter>:<tier>`. With no entry, the Adapter's default model is used, and Build a team stores that default model on the hire.
+`Team:Teams:Tiers:<adapter>:<tier>`. With no entry, the Adapter's default model is used, and Build a team and an approved Proposal store that default model on the hire.
 
 Haiku is the cheapest model. It suits Agents that answer questions, file what you tell them and do short
 jobs. Choose a larger model for an Agent that manages a Team or runs long, many-step Tasks. On Haiku you
