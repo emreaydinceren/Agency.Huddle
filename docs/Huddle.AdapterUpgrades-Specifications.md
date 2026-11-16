@@ -2,8 +2,7 @@
 
 What `claude-agent-acp` 0.76–0.100 can do that Huddle does not use yet, which of it Huddle takes, and
 how. Written 2026-11-03, after PR #336 (`feat/acp-session-notices`) moved
-`tools/acp` from 0.75.1 to 0.100.0 and added session notices. The task plan is
-[Huddle.AdapterUpgrades-ProjectPlan.md](Huddle.AdapterUpgrades-ProjectPlan.md).
+`tools/acp` from 0.75.1 to 0.100.0 and added session notices.
 
 Every wire fact below was read from the vendored packages on 2026-11-03
 (`tools/acp/node_modules`: `claude-agent-acp` 0.100.0, `@agentclientprotocol/sdk` 2.4.0,

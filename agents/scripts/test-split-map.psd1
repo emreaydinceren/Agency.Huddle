@@ -1,5 +1,5 @@
 @{
-    # Design 2.1 and 2.2 of docs/Huddle.TestProjectSplit-ProjectPlan.md as data for Split-TestProject.ps1.
+    # The folder-to-feature table of agents/Testing.md ("Where a test goes"), as data for Split-TestProject.ps1.
     # Paths are relative to the old project root, with forward slashes. Resolution order for a file:
     # Files, then RootFiles, then the longest matching Folders prefix, then Fallback (files directly in
     # that folder only), else unmapped.
