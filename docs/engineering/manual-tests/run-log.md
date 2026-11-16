@@ -4244,6 +4244,14 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-25--a-task-file-
 | --- | --- | --- | --- | --- |
 | 2026-11-15 | Pass *(run by an agent, paid lane)* | `feat/issue-586-task-timeline` `ec9c0956` | #586 | CALC-0002 written in the old form while the app was stopped (last Change log entry dated ahead so startup reconciliation did not write). After start the file was byte-identical; the panel showed the description without Evidence, Proof 2/3 and 7 Timeline entries (two Evidence, one undated note with no author, four events). A priority change on the edit page converted it: `## Timeline` with the Change log lines copied verbatim, Evidence as `evidence` lines (the note dated with the line before it), Proof still 2/3, 8 entries. Lane spend for TASKS-24 and -25 together: 0.78 USD (Calc 0.53, Chief of Staff 0.25 on its own first-run Turns). |
 
+### TASKS-26 — Follow-ups a manager files while answering a Project's question Task show on that Project's board
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-26--follow-ups-a-manager-files-while-answering-a-projects-question-task-show-on-that-projects-board)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-15 | Pass *(run by an agent, paid lane)* | `fix/issue-546-project-default`, uncommitted | #546 | Lane from the `software-co` seed, every Persona on Sonnet in `persona_models`, schedules paused. In the Chief of Staff's root Room the Human asked for a question Task in Platform/API v2 for Grace: PLAT-0019 (origin the root Room, which Grace is not in). The wake opened the Room "Chief of Staff, Grace", stored in `room_projects` as API v2 and listed under the Project's Rooms. Grace filed PLAT-0020..0022 with no `parent`; she passed `project: "API v2"` herself, so those results carry no Filed line. Asked in that Room to file one more with `project` left out (input: team, title, description), she got `Created PLAT-0023 … in Platform/API v2, unassigned. Filed in project "API v2" (from Room "Chief of Staff, Grace", where this Task was asked for). …`. All five show on the API v2 board; the follow-ups' own wakes opened Rooms listed under API v2. Spend 0.66 USD (Grace 0.26, Marcus 0.17, Chief of Staff 0.09, Alan 0.08, Lena 0.07). The Task-in-hand fallback was not reached live; unit tests cover it. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

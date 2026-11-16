@@ -44,6 +44,10 @@ deletes. Write a Task's id, for example PLAT-0042, to refer
 to it in a Message; the Human sees it as a link. A sprint groups Tasks in time and
 spans Teams. Give create_task, update_task or list_tasks a sprint as its name or id, or
 as current; it must already exist, because you cannot create one.
+Follow-up work you find while working a project's Task belongs in that project: pass
+`project`. Left out, `create_task` files the Task in the project of its Room, its parent
+or the Task you were woken for, and says so; for Team-wide work, leave it out and read
+that line.
 
 Some work is outward: it reaches people or systems beyond this team, such as sending
 a message, publishing, paying or deleting for good. Create such a Task with

@@ -26,7 +26,7 @@ date: 2026-11-11
 ## Consequences
 
 - **A Room cannot move into a Project.** Existing Rooms stay at Team level. Moving one would be its own decision.
-- **The Project is not yet something an Agent knows.** If a Project's Room should scope Team Memory or uploads, that needs its own decision and a change to the prompt goldens.
+- **The Project is not yet something an Agent knows.** If a Project's Room should scope Team Memory or uploads, that needs its own decision and a change to the prompt goldens. *Revised by [ADR-0089](0089-a-rooms-project-files-the-tasks-asked-for-in-it.md): a Task's wake Room is in the Task's Project, and `create_task` files a Task with no `project` in its Room's Project. The turn prompt still does not name it.*
 - **Project Task Views narrow by Project.** `/teams/{Team}/projects/{Project}/tasks/{ViewId}` shows that Project's Tasks, and `/teams/{Team}/tasks/{ViewId}` now shows only the Team's Tasks that have no Project.
 
 ## Rejected

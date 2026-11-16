@@ -5,8 +5,10 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Teams;
 
 /// <summary>Covers Spec §11.2's <c>create_task</c> tool: its checks, in order, its success text, and that every expected failure is text, never a throw.</summary>
 public sealed class CreateTaskToolTests
@@ -406,4 +408,265 @@ public sealed class CreateTaskToolTests
     }
 
     private static string RequireId(string? id) => id ?? throw new InvalidOperationException("Expected a seeded id.");
+
+    private static FakeTeamCatalog ProjectCatalog() => new()
+    {
+        Teams =
+        [
+            // Both Teams list a "Site", so a source in Marketing gives no default only because its Team differs, not its Project.
+            new TeamSummary("Platform", ["Web", "Api", "Docs", "Site"], ["Nova", "Kai"], true),
+            new TeamSummary("Marketing", ["Site"], [], true),
+        ],
+    };
+
+    private static CreateTaskTool ToolFor(TaskToolHarness harness, TurnActivity? turns = null, ITeamCatalog? catalog = null) =>
+        new(harness.Service, harness.Triggers, harness.Directory, harness.Sprints, new FakePromptSource(), RequireId(harness.NovaId), turns, catalog: catalog, store: harness.Store);
+
+    private static async Task<Room> RoomOfAsync(TaskToolHarness harness, string? team, string? project, CancellationToken ct) =>
+        await harness.Directory.CreateRoomAsync("Work", [KnownIds.Human, RequireId(harness.NovaId)], team, false, project, ct);
+
+    private static TaskItem SeedIn(TaskToolHarness harness, string id, string team, string project) =>
+        harness.SeedOnDisk(TestTasks.Make(id: id, location: new TaskLocation(team, project, false)));
+
+    private static JsonObject Args(string? project = null, string? parent = null, string? originRoomId = null, string team = "Platform")
+    {
+        JsonObject arguments = new() { ["title"] = "Follow-up", ["team"] = team };
+        if (project is not null)
+        {
+            arguments["project"] = project;
+        }
+
+        if (parent is not null)
+        {
+            arguments["parent"] = parent;
+        }
+
+        if (originRoomId is not null)
+        {
+            arguments["originRoomId"] = originRoomId;
+        }
+
+        return arguments;
+    }
+
+    private static TaskItem Written(TaskToolHarness harness, string result) =>
+        harness.Store.All.Single(task => string.Equals(task.Title, "Follow-up", StringComparison.Ordinal)
+            && result.StartsWith($"Created {task.Id} ", StringComparison.Ordinal)); // contains-ok: picks the Task the result names; each test then asserts the whole text or the Project.
+
+    private static string Filed(TaskItem task, string location, string clause) =>
+        $"Created {task.Id} \"Follow-up\" in {location}, unassigned. {clause} Pass project to file it elsewhere. No one is notified.";
+
+    /// <summary>With no project, the Room of the running Turn files the Task in its Project, and the result says so.</summary>
+    [Fact]
+    public async Task CreateTask_NoProject_TurnRoomInProject_FilesInRoomsProject()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", "Web", ct);
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(), ct);
+
+        TaskItem written = Written(harness, result);
+        Assert.Equal("Web", written.Location.Project);
+        Assert.Equal(Filed(written, "Platform/Web", "Filed in project \"Web\" (from Room \"Work\", where this Task was asked for)."), result);
+    }
+
+    /// <summary>An explicit <c>originRoomId</c> in a Project files the Task there, in the catalog's spelling of the Project.</summary>
+    [Fact]
+    public async Task CreateTask_NoProject_ExplicitOriginRoomInProject_FilesInThatProject()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "platform", "web", ct);
+
+        string result = await ToolFor(harness, catalog: ProjectCatalog()).InvokeAsync(Args(originRoomId: room.Id), ct);
+
+        TaskItem written = Written(harness, result);
+        Assert.Equal("Web", written.Location.Project);
+        Assert.Equal(Filed(written, "Platform/Web", "Filed in project \"Web\" (from Room \"Work\", where this Task was asked for)."), result);
+    }
+
+    /// <summary>With no Room Project, the parent Task's Project is the default, and the result names the parent.</summary>
+    [Fact]
+    public async Task CreateTask_NoProject_ParentInProject_FilesInParentsProject()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem parent = SeedIn(harness, "PLAT-0100", "Platform", "Api");
+
+        string result = await ToolFor(harness, catalog: ProjectCatalog()).InvokeAsync(Args(parent: parent.Id.ToString()), ct);
+
+        TaskItem written = Written(harness, result);
+        Assert.Equal("Api", written.Location.Project);
+        Assert.Equal(Filed(written, "Platform/Api", "Filed in project \"Api\" (from PLAT-0100, its parent)."), result);
+    }
+
+    /// <summary>With no Room Project and no parent, the Task the Turn was woken for gives the Project, and the result names it.</summary>
+    [Fact]
+    public async Task CreateTask_NoProject_TaskInHandInProject_FilesInItsProject()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", null, ct);
+        TaskItem inHand = SeedIn(harness, "PLAT-0101", "Platform", "Docs");
+        TurnActivity turns = new();
+        turns.RecordWake(RequireId(harness.NovaId), room.Id, inHand.Id);
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(), ct);
+
+        TaskItem written = Written(harness, result);
+        Assert.Equal("Docs", written.Location.Project);
+        Assert.Equal(Filed(written, "Platform/Docs", "Filed in project \"Docs\" (from PLAT-0101, the Task you were woken for)."), result);
+    }
+
+    /// <summary>The Room's Project beats the parent's, which beats the Task in hand's.</summary>
+    [Fact]
+    public async Task CreateTask_NoProject_RoomBeatsParentBeatsTaskInHand()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room projectRoom = await RoomOfAsync(harness, "Platform", "Web", ct);
+        Room plainRoom = await RoomOfAsync(harness, "Platform", null, ct);
+        TaskItem parent = SeedIn(harness, "PLAT-0100", "Platform", "Api");
+        TaskItem inHand = SeedIn(harness, "PLAT-0101", "Platform", "Docs");
+        string nova = RequireId(harness.NovaId);
+
+        TurnActivity roomTurns = new();
+        roomTurns.RecordWake(nova, projectRoom.Id, inHand.Id);
+        roomTurns.Begin(nova, projectRoom.Id);
+        string byRoom = await ToolFor(harness, roomTurns, ProjectCatalog()).InvokeAsync(Args(parent: parent.Id.ToString()), ct);
+
+        TurnActivity plainTurns = new();
+        plainTurns.RecordWake(nova, plainRoom.Id, inHand.Id);
+        plainTurns.Begin(nova, plainRoom.Id);
+        string byParent = await ToolFor(harness, plainTurns, ProjectCatalog()).InvokeAsync(Args(parent: parent.Id.ToString()), ct);
+
+        Assert.Equal("Web", Written(harness, byRoom).Location.Project);
+        Assert.Equal("Api", Written(harness, byParent).Location.Project);
+    }
+
+    /// <summary>A <c>project</c> the model passes is never overridden by a default, and the text carries no Filed clause.</summary>
+    [Fact]
+    public async Task CreateTask_ExplicitProject_IsNeverOverridden()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", "Web", ct);
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(project: "Docs"), ct);
+
+        Assert.Equal("Docs", Written(harness, result).Location.Project);
+        Assert.DoesNotContain("Filed in project", result, StringComparison.Ordinal);
+    }
+
+    /// <summary>An empty or whitespace <c>project</c> counts as omitted and gets the default.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateTask_BlankProject_GetsTheDefault(string blank)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", "Web", ct);
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(project: blank), ct);
+
+        Assert.Equal("Web", Written(harness, result).Location.Project);
+    }
+
+    /// <summary>With no Room Project, parent or Task in hand, the Task is filed at the Team root and the text is unchanged.</summary>
+    [Fact]
+    public async Task CreateTask_NoContext_StaysAtTeamRootWithUnchangedText()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+
+        string result = await ToolFor(harness, new TurnActivity(), ProjectCatalog()).InvokeAsync(Args(), ct);
+
+        Assert.Equal("Created PLAT-0001 \"Follow-up\" in Platform, unassigned. No one is notified.", result);
+        Assert.Null(Assert.Single(harness.Store.All).Location.Project);
+    }
+
+    /// <summary>A source in another Team gives no default: not the Room's, not the parent's, not the Task in hand's.</summary>
+    [Theory]
+    [InlineData("room")]
+    [InlineData("parent")]
+    [InlineData("inhand")]
+    public async Task CreateTask_SourceInAnotherTeam_GivesNoDefault(string source)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        string nova = RequireId(harness.NovaId);
+        Room room = await RoomOfAsync(harness, source == "room" ? "Marketing" : "Platform", source == "room" ? "Site" : null, ct);
+        TaskItem foreign = SeedIn(harness, "MKT-0100", "Marketing", "Site");
+        TurnActivity turns = new();
+        if (source == "inhand")
+        {
+            turns.RecordWake(nova, room.Id, foreign.Id);
+        }
+
+        turns.Begin(nova, room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(parent: source == "parent" ? foreign.Id.ToString() : null), ct);
+
+        Assert.DoesNotContain("Filed in project", result, StringComparison.Ordinal);
+        Assert.Null(Written(harness, result).Location.Project);
+    }
+
+    /// <summary>A Project the catalog no longer lists gives no default, and the next fallback is tried.</summary>
+    [Fact]
+    public async Task CreateTask_RoomsProjectNotInCatalog_FallsBackToParent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", "Old", ct);
+        TaskItem parent = SeedIn(harness, "PLAT-0100", "Platform", "Api");
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(parent: parent.Id.ToString()), ct);
+
+        TaskItem written = Written(harness, result);
+        Assert.Equal("Api", written.Location.Project);
+        Assert.Equal(Filed(written, "Platform/Api", "Filed in project \"Api\" (from PLAT-0100, its parent)."), result);
+    }
+
+    /// <summary>A Project that is not listed anywhere gives no default at all.</summary>
+    [Fact]
+    public async Task CreateTask_OnlySourceProjectNotInCatalog_StaysAtTeamRoot()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", "Old", ct);
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns, ProjectCatalog()).InvokeAsync(Args(), ct);
+
+        Assert.DoesNotContain("Filed in project", result, StringComparison.Ordinal);
+        Assert.Null(Written(harness, result).Location.Project);
+    }
+
+    /// <summary>With no catalog injected nothing is defaulted.</summary>
+    [Fact]
+    public async Task CreateTask_NoCatalog_DefaultsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Room room = await RoomOfAsync(harness, "Platform", "Web", ct);
+        TurnActivity turns = new();
+        turns.Begin(RequireId(harness.NovaId), room.Id);
+
+        string result = await ToolFor(harness, turns).InvokeAsync(Args(), ct);
+
+        Assert.DoesNotContain("Filed in project", result, StringComparison.Ordinal);
+        Assert.Null(Written(harness, result).Location.Project);
+    }
 }

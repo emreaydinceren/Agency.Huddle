@@ -189,6 +189,7 @@ internal static class TaskTriggerTestSupport
             Trigger = trigger,
             Feed = feed,
             Activity = activity,
+            Turns = turns,
             Gateway = gateway,
             Directory = directory,
             Personas = personas,
@@ -240,6 +241,9 @@ internal static class TaskTriggerTestSupport
         /// <summary>The wake budget backing <see cref="Trigger"/>.</summary>
         public required TaskActivity Activity { get; init; }
 
+        /// <summary>The Turn activity <see cref="Trigger"/> notes the Task of each Agent wake in.</summary>
+        public required TurnActivity Turns { get; init; }
+
         /// <summary>The fake Agent connection registry backing <see cref="Trigger"/>.</summary>
         public required FakeAgentGateway Gateway { get; init; }
 
@@ -275,7 +279,14 @@ internal static class TaskTriggerTestSupport
 
         /// <summary>Records one posted Message; subscribed to <see cref="RoomEvents.MessagePosted"/>.</summary>
         /// <param name="posted">The published Message.</param>
-        public void OnMessagePosted(MessagePostedEvent posted) => this.posts.Enqueue(posted);
+        public void OnMessagePosted(MessagePostedEvent posted)
+        {
+            this.posts.Enqueue(posted);
+            this.WhilePosting?.Invoke(posted);
+        }
+
+        /// <summary>Runs synchronously inside the publish of each posted Message, to act as a Turn the post starts would.</summary>
+        public Action<MessagePostedEvent>? WhilePosting { get; set; }
 
         /// <summary>Writes <paramref name="task"/> as a new file at its layout path, so <see cref="TaskStore.Get"/> returns it.</summary>
         /// <param name="task">The Task to create.</param>

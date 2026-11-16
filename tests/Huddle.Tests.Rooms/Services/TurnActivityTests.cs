@@ -1,10 +1,15 @@
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
+using Microsoft.Extensions.Time.Testing;
 
 namespace Agency.Huddle.Tests.Services;
 
 /// <summary>Tests for <see cref="TurnActivity"/> (Spec §10.8).</summary>
 public sealed class TurnActivityTests
 {
+    private static readonly TaskId First = new("PLAT", 1);
+    private static readonly TaskId Second = new("PLAT", 2);
+
     /// <summary>After <see cref="TurnActivity.Begin"/>, both <see cref="TurnActivity.IsBusy"/> and <see cref="TurnActivity.IsBusyIn"/> report the Turn.</summary>
     [Fact]
     public void Begin_ThenIsBusyAndIsBusyIn()
@@ -138,5 +143,149 @@ public sealed class TurnActivityTests
         Assert.False(activity.IsBusyIn("agent-1", "room-a"));
         Assert.False(activity.IsBusyIn("agent-1", "room-b"));
         Assert.True(activity.IsBusyIn("agent-2", "room-a"));
+    }
+
+    /// <summary>A wake recorded for an Agent and Room becomes the Task in hand when the pair's Turn begins.</summary>
+    [Fact]
+    public void RecordWake_ThenBegin_TaskInHand()
+    {
+        TurnActivity activity = new();
+
+        activity.RecordWake("agent-1", "room-a", First);
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Equal(First, activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>Ending the pair's last Turn clears the Task in hand, so it never leaks into a later, unrelated Turn.</summary>
+    [Fact]
+    public void End_ClearsTaskInHand()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-a", First);
+        activity.Begin("agent-1", "room-a");
+
+        activity.End("agent-1", "room-a");
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>A wake for another Room does not apply to this Room's Turn.</summary>
+    [Fact]
+    public void RecordWake_OtherRoom_DoesNotApply()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-b", First);
+
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>A wake recorded while a Turn runs stays pending: the running Turn did not start from it, the next one does.</summary>
+    [Fact]
+    public void RecordWake_WhileTurnRuns_AppliesToNextTurnOnly()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-a", First);
+        activity.Begin("agent-1", "room-a");
+
+        activity.RecordWake("agent-1", "room-a", Second);
+        activity.Begin("agent-1", "room-a");
+        Assert.Equal(First, activity.TaskInHand("agent-1", "room-a"));
+
+        activity.End("agent-1", "room-a");
+        activity.End("agent-1", "room-a");
+        activity.Begin("agent-1", "room-a");
+        Assert.Equal(Second, activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>Two different Tasks waiting when the Turn begins tie it to neither; the same Task twice is one Task.</summary>
+    [Fact]
+    public void RecordWake_TwoDifferentTasks_NoTaskInHand_SameTaskTwiceIsFine()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-a", First);
+        activity.RecordWake("agent-1", "room-a", Second);
+        activity.RecordWake("agent-2", "room-a", First);
+        activity.RecordWake("agent-2", "room-a", First);
+
+        activity.Begin("agent-1", "room-a");
+        activity.Begin("agent-2", "room-a");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+        Assert.Equal(First, activity.TaskInHand("agent-2", "room-a"));
+    }
+
+    /// <summary>A withdrawn wake no longer becomes the Task in hand.</summary>
+    [Fact]
+    public void ForgetWake_RemovesPendingWake()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-a", First);
+        activity.ForgetWake("agent-1", "room-a", First);
+
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>A wake note older than the pending-wake lifetime is dropped at Begin, so a later unrelated Turn has no Task in hand.</summary>
+    [Fact]
+    public void Begin_PendingWakeOlderThanWindow_NoTaskInHand()
+    {
+        FakeTimeProvider clock = new(DateTimeOffset.Parse("2026-01-01T10:00:00Z", System.Globalization.CultureInfo.InvariantCulture));
+        TurnActivity activity = new(timeProvider: clock);
+        activity.RecordWake("agent-1", "room-a", First);
+
+        clock.Advance(TimeSpan.FromMinutes(5) + TimeSpan.FromSeconds(1));
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>A wake note just inside the pending-wake lifetime still becomes the Task in hand.</summary>
+    [Fact]
+    public void Begin_PendingWakeJustInsideWindow_TaskInHand()
+    {
+        FakeTimeProvider clock = new(DateTimeOffset.Parse("2026-01-01T10:00:00Z", System.Globalization.CultureInfo.InvariantCulture));
+        TurnActivity activity = new(timeProvider: clock);
+        activity.RecordWake("agent-1", "room-a", First);
+
+        clock.Advance(TimeSpan.FromMinutes(5) - TimeSpan.FromSeconds(1));
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Equal(First, activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>Clearing an Agent drops its pending wake notes, so a Turn after a reconnect starts fresh.</summary>
+    [Fact]
+    public void ClearAgent_DropsPendingWake()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-a", First);
+
+        activity.ClearAgent("agent-1");
+        activity.Begin("agent-1", "room-a");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+    }
+
+    /// <summary>Clearing an Agent drops its Tasks in hand, and leaves another Agent's alone.</summary>
+    [Fact]
+    public void ClearAgent_ClearsTaskInHand()
+    {
+        TurnActivity activity = new();
+        activity.RecordWake("agent-1", "room-a", First);
+        activity.RecordWake("agent-2", "room-a", Second);
+        activity.Begin("agent-1", "room-a");
+        activity.Begin("agent-2", "room-a");
+
+        activity.ClearAgent("agent-1");
+
+        Assert.Null(activity.TaskInHand("agent-1", "room-a"));
+        Assert.Equal(Second, activity.TaskInHand("agent-2", "room-a"));
     }
 }

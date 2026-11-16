@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**25 tests** · 18 free, 7 paid 💰 · about 4.3 hours.
+**26 tests** · 18 free, 8 paid 💰 · about 4.6 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -1149,6 +1149,42 @@ migration step, and the first write converts it without changing what it shows.*
 
 **Fail if — any of these**
 - The Proof count changes -> the older file's Evidence is read by a different rule than before (`TaskFileFormat` §7.7.3).
+
+---
+
+### TASKS-26 — Follow-ups a manager files while answering a Project's question Task show on that Project's board
+
+**Paid 💰** · about 15 min · 3-5 Turns
+
+*Proves #546 ([ADR-0089](../../adr/0089-a-rooms-project-files-the-tasks-asked-for-in-it.md)): a Project Task wakes its
+assignee in a Room of that Project, and `create_task` with no `project` and no `parent` files the Task in that Project
+and says so.*
+
+**Before you start**
+
+- A Chief of Staff and a development Team with a manager on a live Adapter (Sonnet or better). The Team has a Project,
+  for example **Todo Website**.
+
+**Steps**
+
+1. In the Chief of Staff's own Room, ask it to file a question Task in the Team's Project for the manager, for example
+   "What would it take to run Todo Website as a stable home service? List the follow-up work as Tasks."
+2. Wait for the manager's Turn in the Room the wake opened.
+3. In that Room, ask the manager to file one more follow-up and to leave the `project` argument out of `create_task`,
+   and to reply with the text the tool returned. The Tasks help asks a model to pass `project`, and it often does, so
+   this step is what reaches the default.
+4. Open the Project's board, then the Team's board.
+
+**Pass if — all of these**
+
+- The wake Room is listed under the Project's Rooms, not at Team level.
+- The manager's follow-up Tasks, including step 3's, have no `parent` and are on the Project's board, not the Team's.
+- Step 3's result says `Filed in project "…" (from Room "…", where this Task was asked for)`. The tool-call log shows
+  which earlier calls passed `project` themselves; their results carry no such line.
+
+**Fail if — any of these**
+- The follow-ups are on the Team's board -> `create_task` did not default `project` (`CreateTaskTool.DefaultProjectAsync`).
+- The wake Room is at Team level -> the fallback Room ignored the Project (`TaskTriggerService.ChooseRoomAsync`).
 
 ---
 
