@@ -5,22 +5,32 @@ name: Release
 # How it starts: by hand. Nothing is ever pushed to GitHub directly. Gitea main is the source of
 # truth and GitHub main is a scrubbed mirror updated by .gitea/workflows/sync-github.yaml; the
 # mirror carries main only, so a v* tag would not exist here. A maintainer runs this workflow from
-# the Actions tab after a sync, entering the version (for example 1.0.0). `publish` creates the
-# release AND its tag from the exact commit that was built (--target "$GITHUB_SHA").
+# the Actions tab after a sync. The version goes up by itself: left empty, it is the latest tag
+# with its patch number bumped (or minor/major, see `bump`); typed in, it must be newer than every
+# existing tag. `publish` creates the release AND its tag from the exact commit that was built
+# (--target "$GITHUB_SHA").
 #
 # This file reaches GitHub only through the sync, so it cannot be exercised before the first one.
-# Jobs: build (matrix) -> assemble -> smoke-windows + smoke-macos -> publish. The release exists
-# only after both smoke tests pass. The Intel macOS build is not smoke-tested (no free Intel
-# runner): that is manual step M3. No signing steps and no secrets other than github.token.
+# Jobs: version -> build (matrix: win-x64, win-arm64, osx-arm64, osx-x64) -> assemble ->
+# smoke-windows + smoke-windows-arm64 + smoke-macos + smoke-macos-intel -> publish. Each build is
+# installed for real on a runner of its own CPU, and the release exists only after all four pass.
+# No signing steps and no secrets other than github.token.
 # Every third-party action is pinned to a full commit SHA with its tag in a trailing comment.
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version without the v prefix, for example 1.0.0'
-        required: true
+        description: 'Leave empty for the next version, or type one without the v prefix (1.0.0, 1.1.0-rc.1); it must be newer than the latest'
+        required: false
+        default: ''
         type: string
+      bump:
+        description: 'Which number goes up when the version is left empty'
+        required: false
+        default: patch
+        type: choice
+        options: [patch, minor, major]
 
 # No permissions by default; each job asks for exactly what it needs.
 permissions: {}
@@ -30,32 +40,55 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Decides the version before anything is built, so a bad or stale version fails in seconds.
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.next.outputs.version }}
+    env:
+      INPUT_VERSION: ${{ inputs.version }}
+      BUMP: ${{ inputs.bump }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Check the ref
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "::error::run this workflow from main (got $GITHUB_REF): the mirror carries main only"
+            exit 1
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      # installer/next-version.sh: no input bumps the latest v* tag; an input must be newer than it.
+      - name: Next version
+        id: next
+        run: |
+          set -o pipefail
+          args=(--bump "${BUMP:-patch}")
+          if [[ -n "$INPUT_VERSION" ]]; then
+            args+=(--version "$INPUT_VERSION")
+          fi
+          version=$(gh api "repos/$GH_REPO/tags" --paginate --jq '.[].name' | sh installer/next-version.sh "${args[@]}")
+          echo "Release version: $version"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
   build:
     name: build (${{ matrix.rid }})
+    needs: version
     runs-on: ubuntu-latest
     permissions:
       contents: read
     strategy:
       fail-fast: true
       matrix:
-        rid: [win-x64, osx-arm64, osx-x64]
+        rid: [win-x64, win-arm64, osx-arm64, osx-x64]
     env:
-      VERSION: ${{ inputs.version }}
+      VERSION: ${{ needs.version.outputs.version }}
     steps:
-      # First step on purpose: a bad version or a run from another branch fails before anything is
-      # built. The pattern is the one install.ps1 and install.sh use for their version option.
-      - name: Validate version and ref
-        run: |
-          pattern='^[0-9]+\.[0-9]+\.[0-9]+([-+.][0-9A-Za-z.]+)*$'
-          if [[ ! "$VERSION" =~ $pattern ]]; then
-            echo "::error::version '$VERSION' is not a release version such as 1.0.0 or 1.0.0-rc.1"
-            exit 1
-          fi
-          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
-            echo "::error::run this workflow from main (got $GITHUB_REF): the mirror carries main only"
-            exit 1
-          fi
-
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
@@ -112,7 +145,7 @@ jobs:
           done
 
       - name: Write checksums
-        run: sh installer/make-sums.sh dist huddle-win-x64.zip huddle-osx-arm64.tar.gz huddle-osx-x64.tar.gz install.ps1 install.sh
+        run: sh installer/make-sums.sh dist huddle-win-x64.zip huddle-win-arm64.zip huddle-osx-arm64.tar.gz huddle-osx-x64.tar.gz install.ps1 install.sh
 
       - name: List release files
         run: ls -l dist
@@ -131,6 +164,7 @@ jobs:
           path: dist
           if-no-files-found: error
 
+  # smoke.ps1 tests the build install.ps1 picks for the runner's CPU: win-x64 here.
   smoke-windows:
     needs: assemble
     runs-on: windows-latest
@@ -153,6 +187,29 @@ jobs:
           EXPECTED_REPO: ${{ github.repository }}
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir dist -ExpectedRepo $env:EXPECTED_REPO
 
+  # The same smoke test on a Windows ARM64 runner, so it installs and runs the native win-arm64 build.
+  smoke-windows-arm64:
+    needs: assemble
+    runs-on: windows-11-arm
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Download release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Smoke test
+        shell: pwsh
+        env:
+          EXPECTED_REPO: ${{ github.repository }}
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir dist -ExpectedRepo $env:EXPECTED_REPO
+
+  # smoke.sh picks the build from the runner's CPU: osx-arm64 here (Apple Silicon).
   smoke-macos:
     needs: assemble
     runs-on: macos-latest
@@ -172,13 +229,32 @@ jobs:
       - name: Smoke test
         run: sh installer/tests/smoke.sh dist
 
+  # The same smoke test on an Intel Mac runner, so it installs and runs the osx-x64 build.
+  smoke-macos-intel:
+    needs: assemble
+    runs-on: macos-15-intel
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Download release files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-dist
+          path: dist
+
+      - name: Smoke test
+        run: sh installer/tests/smoke.sh dist
+
   publish:
-    needs: [smoke-windows, smoke-macos]
+    needs: [version, smoke-windows, smoke-windows-arm64, smoke-macos, smoke-macos-intel]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
-      VERSION: ${{ inputs.version }}
+      VERSION: ${{ needs.version.outputs.version }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:

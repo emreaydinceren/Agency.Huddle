@@ -159,7 +159,7 @@ function Resolve-InstallPaths {
         ReleaseInfoPath = Join-Path $InstallRoot 'release-info.json'
         LauncherPath    = Join-Path $InstallRoot 'huddle.cmd'
         ShortcutPath    = $ShortcutPath
-        Rid           = 'win-x64'
+        Rid             = Get-WindowsRid
     }
 }
 
@@ -378,7 +378,7 @@ function Get-VerifiedAsset {
 # ---------------------------------------------------------------------------
 
 # The keys the state file may carry, in the order they are written.
-$script:StateKeys = @('version', 'appSha256', 'nodeVersion', 'lockSha256')
+$script:StateKeys = @('version', 'appSha256', 'nodeVersion', 'lockSha256', 'rid')
 
 function Read-InstallState {
     [CmdletBinding()]
@@ -1040,7 +1040,8 @@ function Install-Node {
         $NodeBaseUrl = 'https://nodejs.org/dist/' + $version
     }
 
-    $wrapper = 'node-' + $version + '-win-x64'
+    # nodejs.org names its Windows zips with the same win-x64 / win-arm64 the release uses.
+    $wrapper = 'node-' + $version + '-' + $Paths.Rid
     $zipName = $wrapper + '.zip'
 
     Write-Step -Status '..' -Name 'node' -Detail ('downloading ' + $zipName)
@@ -1828,6 +1829,18 @@ function Get-HostArchitecture {
     return ([string]$arch).ToUpperInvariant()
 }
 
+# The release this PC installs: win-arm64 on an ARM64 PC, win-x64 everywhere else.
+function Get-WindowsRid {
+    [CmdletBinding()]
+    param()
+
+    if ((Get-HostArchitecture) -eq 'ARM64') {
+        return 'win-arm64'
+    }
+
+    return 'win-x64'
+}
+
 function Test-CommandAvailable {
     [CmdletBinding()]
     param(
@@ -1996,10 +2009,10 @@ function Test-Prerequisites {
         $items.Add((ConvertTo-PrereqItem -Name 'CPU' -Ok $true -Detail 'AMD64'))
     }
     elseif ($arch -eq 'ARM64') {
-        $items.Add((ConvertTo-PrereqItem -Name 'CPU' -Ok $true -Detail 'ARM64 host, runs under x64 emulation'))
+        $items.Add((ConvertTo-PrereqItem -Name 'CPU' -Ok $true -Detail 'ARM64'))
     }
     else {
-        $items.Add((ConvertTo-PrereqItem -Name 'CPU' -Ok $false -Detail ('unsupported CPU ' + $arch) -Fix 'Use a 64-bit Windows PC (x64, or ARM64 with x64 emulation).'))
+        $items.Add((ConvertTo-PrereqItem -Name 'CPU' -Ok $false -Detail ('unsupported CPU ' + $arch) -Fix 'Use a 64-bit Windows PC (x64 or ARM64).'))
     }
 
     $psVersion = $PSVersionTable.PSVersion
@@ -2361,7 +2374,9 @@ function Show-ClaudeSignIn {
         $Paths
     )
 
-    $claude = Join-Path $Paths.InstallRoot 'tools\acp\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64\claude.exe'
+    # npm installs the Claude binary for Node's own architecture: win32-x64 or win32-arm64.
+    $sdk = 'claude-agent-sdk-win32-' + $Paths.Rid.Substring('win-'.Length)
+    $claude = Join-Path $Paths.InstallRoot ('tools\acp\node_modules\@anthropic-ai\' + $sdk + '\claude.exe')
     try {
         if (Test-InteractiveSession) {
             $status = -1
@@ -2415,8 +2430,16 @@ function Invoke-InstallSteps {
 
     $step = 'release'
     try {
-        $archiveName = 'huddle-' + $Paths.Rid + '.zip'
         $sums = Get-ReleaseSums -Paths $Paths -BaseUrl $BaseUrl -Version $Version
+        $archiveName = 'huddle-' + $Paths.Rid + '.zip'
+        # A release older than the win-arm64 build (asked for with -Version) has only the x64 zip,
+        # which ARM64 Windows runs under its built-in x64 emulation.
+        if (($Paths.Rid -eq 'win-arm64') -and (-not $sums.ContainsKey($archiveName))) {
+            $Paths.Rid = 'win-x64'
+            $archiveName = 'huddle-win-x64.zip'
+            Write-Step -Status '..' -Name 'release' -Detail 'this release has no ARM64 build; installing the x64 build, which runs under emulation'
+        }
+
         $expected = Get-ExpectedHash -Sums $sums -Name $archiveName
         $state = Read-InstallState -Path $Paths.StatePath
         $values = [ordered]@{}
@@ -2427,6 +2450,19 @@ function Invoke-InstallSteps {
                     $values[$key] = [string]$property.Value
                 }
             }
+        }
+
+        # Node and the adapter's packages are built for one CPU. When the build changes (an ARM64 PC
+        # moving from the x64 build to the native one), they are installed again rather than [skip]ped.
+        # A state file without a rid predates win-arm64, so it describes a win-x64 install.
+        $installedRid = 'win-x64'
+        if ($values.Contains('rid') -and $values['rid']) {
+            $installedRid = $values['rid']
+        }
+
+        $cpuState = $state
+        if ($installedRid -ne $Paths.Rid) {
+            $cpuState = $null
         }
 
         # Each Install-* function decides for itself whether it is satisfied, stops the app only when a
@@ -2447,13 +2483,14 @@ function Invoke-InstallSteps {
         Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ version = [string]$info.version; appSha256 = $expected })
 
         $step = 'node'
-        $nodeChanged = [bool](Install-Node -Paths $Paths -NodeVersion ([string]$info.nodeVersion) -State $state -Force:$Force)
+        $nodeChanged = [bool](Install-Node -Paths $Paths -NodeVersion ([string]$info.nodeVersion) -State $cpuState -Force:$Force)
         Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ nodeVersion = [string]$info.nodeVersion })
 
         $step = 'adapter'
-        $adapterChanged = [bool](Install-Adapter -Paths $Paths -State $state -Force:$Force)
+        $adapterChanged = [bool](Install-Adapter -Paths $Paths -State $cpuState -Force:$Force)
         $lockSha = Get-FileSha256 -Path (Join-Path $Paths.InstallRoot 'tools\acp\package-lock.json')
-        Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ lockSha256 = $lockSha })
+        # rid is written only here, once Node and the adapter match it: an interrupted switch runs again.
+        Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ lockSha256 = $lockSha; rid = $Paths.Rid })
 
         $step = 'launcher'
         $launcherChanged = [bool](Install-Launcher -Paths $Paths -NoShellIntegration:$NoShellIntegration)

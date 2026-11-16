@@ -51,10 +51,16 @@ Describe 'install.ps1 file shape' {
 
 Describe 'Resolve-InstallPaths' {
     It 'uses the per-user LOCALAPPDATA defaults' {
+        Mock Get-HostArchitecture { 'AMD64' }
         $paths = Resolve-InstallPaths
         $paths.InstallRoot | Should -Be (Join-Path $env:LOCALAPPDATA 'Programs\Agency.Huddle')
         $paths.DataRoot | Should -Be (Join-Path $env:LOCALAPPDATA 'Agency.Huddle')
         $paths.Rid | Should -Be 'win-x64'
+    }
+
+    It 'chooses the native win-arm64 release on an ARM64 PC' {
+        Mock Get-HostArchitecture { 'ARM64' }
+        (Resolve-InstallPaths).Rid | Should -Be 'win-arm64'
     }
 
     It 'derives the files under InstallRoot' {
@@ -239,11 +245,11 @@ Describe 'Test-Prerequisites' {
         (Get-PrereqItem (Test-Prerequisites -Paths $paths -BaseUrl '') 'OS').Ok | Should -BeTrue
     }
 
-    It 'allows ARM64 with an emulation note' {
+    It 'allows ARM64, which gets its own native build' {
         Mock Get-HostArchitecture { 'ARM64' }
         $item = Get-PrereqItem (Test-Prerequisites -Paths $paths -BaseUrl '') 'CPU'
         $item.Ok | Should -BeTrue
-        $item.Detail | Should -BeLike '*emulation*'
+        $item.Detail | Should -Be 'ARM64'
     }
 
     It 'fails an x86 CPU' {
@@ -1378,6 +1384,11 @@ Describe 'Install-Node' {
         { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw "*'node-v24.21.0-win-x64.zip' is not listed*"
     }
 
+    It 'asks for the win-arm64 Node zip when the install is win-arm64' {
+        $script:NPaths.Rid = 'win-arm64'
+        { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw "*'node-v24.21.0-win-arm64.zip' is not listed*"
+    }
+
     It 'downloads SHASUMS256.txt and the zip from nodejs.org/dist/<version> by default' {
         Mock Invoke-Download { Copy-Item -LiteralPath (Join-Path $script:NSrc ($Url -replace '^.*/', '')) -Destination $OutFile -Force }
         $null = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null 6>$null
@@ -2486,19 +2497,33 @@ Describe 'Invoke-Main orchestration' {
             return $hash
         }
 
-        # A folder that plays nodejs.org/dist/v24.21.0: the Windows zip plus SHASUMS256.txt.
+        # A folder that plays nodejs.org/dist/v24.21.0: the win-x64 and win-arm64 zips plus SHASUMS256.txt.
         function New-FakeNodeDist {
             param([string]$Dir)
             New-Item -ItemType Directory -Path $Dir -Force | Out-Null
-            $wrapper = 'node-v24.21.0-win-x64'
-            $src = Join-Path $TestDrive ('node-src-' + [guid]::NewGuid().ToString('N'))
-            New-Item -ItemType Directory -Path (Join-Path $src "$wrapper\node_modules\npm\bin") -Force | Out-Null
-            [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node.exe"), 'node v24.21.0')
-            [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node_modules\npm\bin\npm-cli.js"), '// npm cli')
-            $zip = Join-Path $Dir ($wrapper + '.zip')
-            Compress-Archive -Path (Join-Path $src $wrapper) -DestinationPath $zip -Force
+            $sums = ''
+            foreach ($rid in @('win-x64', 'win-arm64')) {
+                $wrapper = 'node-v24.21.0-' + $rid
+                $src = Join-Path $TestDrive ('node-src-' + [guid]::NewGuid().ToString('N'))
+                New-Item -ItemType Directory -Path (Join-Path $src "$wrapper\node_modules\npm\bin") -Force | Out-Null
+                [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node.exe"), ('node v24.21.0 ' + $rid))
+                [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node_modules\npm\bin\npm-cli.js"), '// npm cli')
+                $zip = Join-Path $Dir ($wrapper + '.zip')
+                Compress-Archive -Path (Join-Path $src $wrapper) -DestinationPath $zip -Force
+                $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+                $sums += ($hash + '  ' + $wrapper + ".zip`n")
+            }
+
+            [System.IO.File]::WriteAllText((Join-Path $Dir 'SHASUMS256.txt'), $sums)
+        }
+
+        # Adds huddle-win-arm64.zip (a copy of the x64 zip) to a release folder and to its SHA256SUMS.
+        function Add-Arm64Build {
+            param([string]$Dir)
+            $zip = Join-Path $Dir 'huddle-win-arm64.zip'
+            Copy-Item -LiteralPath (Join-Path $Dir 'huddle-win-x64.zip') -Destination $zip -Force
             $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
-            [System.IO.File]::WriteAllText((Join-Path $Dir 'SHASUMS256.txt'), ($hash + '  ' + $wrapper + ".zip`n"))
+            [System.IO.File]::AppendAllText((Join-Path $Dir 'SHA256SUMS'), ($hash + '  huddle-win-arm64.zip' + "`n"))
         }
 
         # Runs Invoke-Main and returns its exit code and everything it wrote to the host.
@@ -2596,7 +2621,7 @@ Describe 'Invoke-Main orchestration' {
         Mock Start-HuddleLauncher { }
     }
 
-    It 'first run exits 0, runs every step and writes all four state keys' {
+    It 'first run exits 0, runs every step and writes every state key' {
         $result = Invoke-MainCapture -Arguments $script:OArgs
         $result.Code | Should -Be 0
         foreach ($step in @('app', 'node', 'adapter', 'launcher')) {
@@ -2609,12 +2634,62 @@ Describe 'Invoke-Main orchestration' {
         $state.appSha256 | Should -Be $script:OHash
         $state.nodeVersion | Should -Be 'v24.21.0'
         $state.lockSha256 | Should -Be (Get-FileSha256 -Path (Join-Path $script:OInstall 'tools\acp\package-lock.json'))
+        $state.rid | Should -Be 'win-x64'
         Test-Path -LiteralPath $script:OPaths.ExePath | Should -BeTrue
         Test-Path -LiteralPath $script:OPaths.NodeExe | Should -BeTrue
         Test-Path -LiteralPath $script:OPaths.AdapterEntry | Should -BeTrue
         Test-Path -LiteralPath $script:OPaths.LauncherPath | Should -BeTrue
         Test-Path -LiteralPath ($script:OInstall + '.staging') | Should -BeFalse
         Test-Path -LiteralPath ($script:OInstall + '.old') | Should -BeFalse
+    }
+
+    It 'an ARM64 PC installs the win-arm64 release, ARM64 Node and checks the arm64 Claude binary' {
+        Mock Get-HostArchitecture { 'ARM64' }
+        Mock Test-InteractiveSession { return $true }
+        Add-Arm64Build -Dir $script:ORelease
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        $result.Text | Should -Not -BeLike '*no ARM64 build*'
+        (Read-InstallState -Path $script:OPaths.StatePath).rid | Should -Be 'win-arm64'
+        Should -Invoke Invoke-Download -Times 1 -Exactly -ParameterFilter { $Url -like '*/node-v24.21.0-win-arm64.zip' }
+        Should -Invoke Invoke-Download -Times 0 -Exactly -ParameterFilter { $Url -like '*/node-v24.21.0-win-x64.zip' }
+        $claude = Join-Path $script:OInstall 'tools\acp\node_modules\@anthropic-ai\claude-agent-sdk-win32-arm64\claude.exe'
+        Should -Invoke Invoke-ClaudeAuthStatus -Times 1 -Exactly -ParameterFilter { $ClaudePath -eq $claude }
+    }
+
+    It 'an ARM64 PC given a release without an ARM64 build installs the x64 one' {
+        Mock Get-HostArchitecture { 'ARM64' }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        $result.Text | Should -BeLike '*this release has no ARM64 build; installing the x64 build*'
+        (Read-InstallState -Path $script:OPaths.StatePath).rid | Should -Be 'win-x64'
+        Should -Invoke Invoke-Download -Times 1 -Exactly -ParameterFilter { $Url -like '*/node-v24.21.0-win-x64.zip' }
+    }
+
+    It 'an x64 install on an ARM64 PC moves to the native build: node and adapter install again' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        Mock Get-HostArchitecture { 'ARM64' }
+        Add-Arm64Build -Dir $script:ORelease
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        $result.Text | Should -BeLike '*[[]ok] node*'
+        $result.Text | Should -BeLike '*[[]ok] adapter*'
+        (Read-InstallState -Path $script:OPaths.StatePath).rid | Should -Be 'win-arm64'
+        Should -Invoke Invoke-Download -Times 1 -Exactly -ParameterFilter { $Url -like '*/node-v24.21.0-win-arm64.zip' }
+    }
+
+    It 'a state file written before the rid key reads as win-x64: an x64 rerun skips node and adapter' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        $old = Read-InstallState -Path $script:OPaths.StatePath
+        Write-InstallState -Path $script:OPaths.StatePath -State @{ version = $old.version; appSha256 = $old.appSha256; nodeVersion = $old.nodeVersion; lockSha256 = $old.lockSha256 }
+        (Read-InstallState -Path $script:OPaths.StatePath).PSObject.Properties['rid'] | Should -BeNullOrEmpty
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        $result.Text | Should -BeLike '*[[]skip] node*'
+        $result.Text | Should -BeLike '*[[]skip] adapter*'
+        (Read-InstallState -Path $script:OPaths.StatePath).rid | Should -Be 'win-x64'
     }
 
     It 'takes the install mutex once and releases it once' {

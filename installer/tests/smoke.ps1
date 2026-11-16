@@ -2,7 +2,7 @@
 .SYNOPSIS
     End-to-end smoke test of the Windows installer against a real release (plan task 39).
 .DESCRIPTION
-    Builds <ReleaseDir> with installer/build-release.sh when huddle-win-x64.zip is not there, then installs it
+    Builds <ReleaseDir> with installer/build-release.sh when huddle-<rid>.zip is not there, then installs it
     into a temp sandbox (-InstallRoot / -DataRoot under the sandbox, -NoShellIntegration so the real user PATH
     and Start menu are never edited), starts the app on 127.0.0.1 and walks Spec section 6 and 8:
     install, check, idempotent rerun, start, second start, rerun while running, upgrade over the running app,
@@ -11,7 +11,8 @@
     ASCII only; runs under Windows PowerShell 5.1:
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir <dir>
 .PARAMETER ReleaseDir
-    Folder with huddle-win-x64.zip and SHA256SUMS. Built when the zip is missing.
+    Folder with huddle-<rid>.zip and SHA256SUMS, where <rid> is win-arm64 on an ARM64 PC and win-x64
+    otherwise (the build install.ps1 picks). Built when the zip is missing.
 .PARAMETER ExpectedRepo
     Optional owner/repo the release workflow stamped into install.ps1 (the workflow passes its own repository).
     When given, the stamped copy must contain it and must no longer contain the placeholder.
@@ -493,6 +494,20 @@ try {
     Write-Host ('Sandbox: ' + $script:Sandbox)
     $env:Team__Desktop__OpenBrowser = 'false'
 
+    # The build install.ps1 picks for this PC; an ARM64 runner tests the native win-arm64 build.
+    $arch = $env:PROCESSOR_ARCHITEW6432
+    if (-not $arch) {
+        $arch = $env:PROCESSOR_ARCHITECTURE
+    }
+
+    $script:Rid = 'win-x64'
+    if (([string]$arch).ToUpperInvariant() -eq 'ARM64') {
+        $script:Rid = 'win-arm64'
+    }
+
+    $script:ZipName = 'huddle-' + $script:Rid + '.zip'
+    Write-Host ('Build under test: ' + $script:Rid)
+
     $others = @(Get-Process -Name 'Huddle.App' -ErrorAction SilentlyContinue)
     if ($others.Count -gt 0) {
         Write-Host ('Note: ' + $others.Count + ' other Huddle.App process(es) are running outside the sandbox; they are left alone.')
@@ -500,24 +515,24 @@ try {
 
     # STEP 0: the release folder.
     Start-SmokeStep 0 ('release folder ' + $ReleaseDir)
-    $zip1 = Join-Path $ReleaseDir 'huddle-win-x64.zip'
+    $zip1 = Join-Path $ReleaseDir $script:ZipName
     if (-not (Test-Path -LiteralPath $zip1 -PathType Leaf)) {
         Write-Info 'building it with installer/build-release.sh (dotnet publish; this takes a few minutes)'
-        $build = Invoke-Sh @('installer/build-release.sh', '--version', $script:Version1, '--rid', 'win-x64', '--out', $ReleaseDir)
+        $build = Invoke-Sh @('installer/build-release.sh', '--version', $script:Version1, '--rid', $script:Rid, '--out', $ReleaseDir)
         if ($build.Code -ne 0) {
             Stop-Smoke ('build-release.sh failed with exit code ' + $build.Code + ': ' + ((@($build.Lines) | Select-Object -Last 8) -join ' | '))
         }
     }
 
     if (-not (Test-Path -LiteralPath (Join-Path $ReleaseDir 'SHA256SUMS') -PathType Leaf)) {
-        $sums = Invoke-Sh @('installer/make-sums.sh', $ReleaseDir, 'huddle-win-x64.zip')
+        $sums = Invoke-Sh @('installer/make-sums.sh', $ReleaseDir, $script:ZipName)
         if ($sums.Code -ne 0) {
             Stop-Smoke ('make-sums.sh failed with exit code ' + $sums.Code + ': ' + ((@($sums.Lines) | Select-Object -Last 5) -join ' | '))
         }
     }
 
     if (-not (Test-Path -LiteralPath $zip1 -PathType Leaf)) {
-        Stop-Smoke ('huddle-win-x64.zip is not in ' + $ReleaseDir)
+        Stop-Smoke ($script:ZipName + ' is not in ' + $ReleaseDir)
     }
 
     Write-Info ('release zip: ' + [math]::Round((Get-Item -LiteralPath $zip1).Length / 1MB, 1) + ' MB')
@@ -533,6 +548,13 @@ try {
     if (-not (Test-Path -LiteralPath $script:Launcher -PathType Leaf)) {
         Stop-Smoke 'huddle.cmd was not written'
     }
+
+    $installedRid = [string](([System.IO.File]::ReadAllText((Join-Path $script:InstallRoot 'release-info.json'))) | ConvertFrom-Json).rid
+    if ($installedRid -ne $script:Rid) {
+        Stop-Smoke ('install.ps1 installed the ' + $installedRid + ' build on a ' + $script:Rid + ' PC')
+    }
+
+    Write-Info ('installed the ' + $installedRid + ' build')
 
     # STEP 2: check only.
     Start-SmokeStep 2 'install.ps1 -CheckOnly'
@@ -629,12 +651,12 @@ try {
     }
 
     $release2 = Join-Path $script:Sandbox 'rel2'
-    $build = Invoke-Sh @('installer/build-release.sh', '--version', $script:Version2, '--rid', 'win-x64', '--out', $release2, '--publish-dir', $publish)
+    $build = Invoke-Sh @('installer/build-release.sh', '--version', $script:Version2, '--rid', $script:Rid, '--out', $release2, '--publish-dir', $publish)
     if ($build.Code -ne 0) {
         Stop-Smoke ('building the second release failed with exit code ' + $build.Code + ': ' + ((@($build.Lines) | Select-Object -Last 8) -join ' | '))
     }
 
-    $sums = Invoke-Sh @('installer/make-sums.sh', $release2, 'huddle-win-x64.zip')
+    $sums = Invoke-Sh @('installer/make-sums.sh', $release2, $script:ZipName)
     if ($sums.Code -ne 0) {
         Stop-Smoke ('make-sums.sh failed for the second release with exit code ' + $sums.Code)
     }

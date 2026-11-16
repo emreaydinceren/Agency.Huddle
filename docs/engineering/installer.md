@@ -53,7 +53,7 @@ at once, not just the first.
 | Check | What it requires |
 | --- | --- |
 | OS version | Windows build >= 17763 (Windows 10 1809); macOS major >= 15 |
-| CPU | x86_64 (AMD64) or ARM64; Windows ARM64 runs x64 under emulation with a warning |
+| CPU | x86_64 (AMD64) or ARM64; each gets its own native build (`win-x64`, `win-arm64`, `osx-x64`, `osx-arm64`) |
 | Tools | PowerShell >= 5.1 and `tar.exe` (Windows); `curl`, `tar`, `shasum` or `sha256sum`, `codesign`, `xattr` (macOS) |
 | Disk space | >= 2048 MB free on the InstallRoot drive and DataRoot drive |
 | Write access | InstallRoot parent and DataRoot must be creatable |
@@ -67,7 +67,7 @@ changes made.
 
 State is stored in `install-state.json` (Windows) or an `install-state` file
 (macOS), with the keys `version`, `appSha256`, `nodeVersion` and `lockSha256`
-(`app_sha256`, `node_version`, `lock_sha256` on macOS). A second
+(`app_sha256`, `node_version`, `lock_sha256` on macOS), plus `rid` on Windows. A second
 run with nothing new prints `[skip]` for every step, ends with `Already up to
 date`, changes no file, and exits 0. An interrupted run resumes at the first
 unsatisfied step: state keys are written last.
@@ -190,6 +190,17 @@ starts loopback-only and says why. `AllowedHosts` stays `localhost;127.0.0.1`, a
 On macOS the installer picks `osx-arm64` or `osx-x64` from the real CPU, including from a
 Rosetta shell on Apple Silicon.
 
+On Windows it picks `win-arm64` on an ARM64 PC and `win-x64` everywhere else, and downloads the
+Node build of the same CPU, so npm installs the matching Claude binary
+(`claude-agent-sdk-win32-arm64` or `-win32-x64`). Two cases around the switch:
+
+- A release older than the `win-arm64` build (asked for with `-Version`) has only the x64 zip. An
+  ARM64 PC then installs that one, says so, and runs it under Windows' x64 emulation.
+- The state file's `rid` records the build that Node and the adapter were installed for; a state
+  file without it is a `win-x64` install. When the build changes (an ARM64 PC moving from x64 to
+  the native build), Node and the adapter install again instead of `[skip]`, and `rid` is written
+  only after both succeed.
+
 ## Testing
 
 ### Pester (PowerShell unit tests)
@@ -225,6 +236,10 @@ T_ONLY=test_main_first_run sh installer/tests/install_test.sh
 # Windows (GitHub Workflow also runs this)
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir dist
 ```
+
+`smoke.ps1` tests the build `install.ps1` picks for the PC it runs on (`huddle-win-arm64.zip` on
+ARM64, `huddle-win-x64.zip` otherwise) and fails if the installed `release-info.json` names another.
+`smoke.sh` does the same with `osx-arm64` and `osx-x64`.
 
 ```sh
 # macOS
@@ -294,22 +309,44 @@ hand. To cut one:
 
 1. Merge the work into Gitea `main`.
 2. Run the Gitea workflow `sync-github` (Actions tab).
-3. On GitHub, open Actions, choose `Release`, and run it from `main` with the `version`
-   input (for example `1.0.0`; a suffix such as `1.0.0-rc.1` makes a pre-release).
+3. On GitHub, open Actions, choose `Release`, and run it from `main`. Leave `version` empty to
+   get the next version, or type one.
+
+**Versions only go up.** `installer/next-version.sh` decides the version from the `v*` tags that
+already exist:
+
+| `version` input | Result |
+| --- | --- |
+| Empty | The latest tag with `bump` applied: `patch` (default) `1.2.3` → `1.2.4`, `minor` → `1.3.0`, `major` → `2.0.0`. With no tags yet, `0.1.0` |
+| Empty, the latest is only a pre-release (`1.3.0-rc.1`, no `1.3.0`) | Its final release, `1.3.0` |
+| Typed (`2.0.0`, `1.5.0-rc.1`) | That version, if it is newer than every tag; otherwise the run fails before anything is built. A suffix such as `-rc.1` makes a pre-release |
+
+`build-release.sh` passes the version to `dotnet publish` as `-p:Version`, so the app's file and
+product version and its `AssemblyInformationalVersion` carry it as well as `release-info.json`.
 
 The `Release` workflow (`.github/workflows/release.yaml`) runs these jobs in order:
 
-1. `build`: `installer/build-release.sh` for `win-x64`, `osx-arm64` and `osx-x64`.
-2. `assemble`: copies `install.ps1` and `install.sh` with `__HUDDLE_REPO__` replaced by the
+1. `version`: checks the run is from `main` and decides the version as above.
+2. `build`: `installer/build-release.sh` for `win-x64`, `win-arm64`, `osx-arm64` and `osx-x64`,
+   all cross-built on Linux.
+3. `assemble`: copies `install.ps1` and `install.sh` with `__HUDDLE_REPO__` replaced by the
    repository name (and fails if the placeholder is still there), writes `SHA256SUMS`, and
    records build provenance for every file.
-3. `smoke-windows` and `smoke-macos`: install the assembled release for real on a hosted
-   runner and run the whole life cycle (`installer/tests/smoke.ps1`, `smoke.sh`).
-4. `publish`: only if both smoke jobs pass, creates the release and its tag `v<version>` from
+4. Four smoke jobs, each installing the assembled release for real on a hosted runner of its own
+   CPU and running the whole life cycle (`installer/tests/smoke.ps1`, `smoke.sh`):
+
+   | Job | Runner | Build it installs |
+   | --- | --- | --- |
+   | `smoke-windows` | `windows-latest` | `win-x64` |
+   | `smoke-windows-arm64` | `windows-11-arm` (public preview) | `win-arm64` |
+   | `smoke-macos` | `macos-latest` | `osx-arm64` |
+   | `smoke-macos-intel` | `macos-15-intel` | `osx-x64` |
+
+5. `publish`: only if all four smoke jobs pass, creates the release and its tag `v<version>` from
    the exact commit that was built, and refuses a version that already exists.
 
-Release files: `huddle-win-x64.zip`, `huddle-osx-arm64.tar.gz`, `huddle-osx-x64.tar.gz`,
-`install.ps1`, `install.sh`, `SHA256SUMS`. Each archive holds `app/` (self-contained .NET),
+Release files: `huddle-win-x64.zip`, `huddle-win-arm64.zip`, `huddle-osx-arm64.tar.gz`,
+`huddle-osx-x64.tar.gz`, `install.ps1`, `install.sh`, `SHA256SUMS`. Each archive holds `app/` (self-contained .NET),
 `tools/acp/package.json` and `package-lock.json`, and `release-info.json` (schema, version,
 RID, Node version). Node and the Claude adapter are **not** in the archive: the installer
 fetches the pinned Node and runs `npm ci` on the user's machine.
@@ -319,9 +356,9 @@ fetches the pinned Node and runs `npm ci` on the user's machine.
 - M1: run `sync-github`, then the `Release` workflow once; use the one-liner against it.
 - M2: a clean Windows account. Done against a mock release on 2026-11-15 (see
   [A mock release on a clean machine](#a-mock-release-on-a-clean-machine)); repeat it with the first real release.
-- M3: an Apple Silicon Mac and, if there is one, an Intel Mac (the Intel build is not
-  smoke-tested in CI). Apple Silicon done against a mock release on 2026-11-15; repeat it with the
-  first real release. Intel not done.
+- M3: an Apple Silicon Mac. Done against a mock release on 2026-11-15; repeat it with the first
+  real release. The Intel build is smoke-tested in CI (`smoke-macos-intel`), and so is the native
+  ARM64 Windows build (`smoke-windows-arm64`); neither has been tried on real hardware.
 - M4: behind a corporate proxy.
 - M5: a real Claude sign-in and one Turn (spends money). Done on Windows and on the Apple Silicon Mac
   with the same mock releases.
@@ -372,6 +409,7 @@ For scripted/non-interactive installs (SSH, CI), the sign-in step is skipped.
 | `install.sh` | macOS installer (POSIX shell, runs under `sh` and `dash`) |
 | `build-release.sh` | Builds one release archive for a runtime id (called by the Release workflow) |
 | `make-sums.sh` | Writes `SHA256SUMS` atomically, sorted in C-locale order |
+| `next-version.sh` | Decides the next release version from the existing tags; versions only go up |
 | `node-version.txt` | Pinned Node.js LTS version (read with CR and LF stripped) |
 | `PSScriptAnalyzerSettings.psd1` | Settings for the PowerShell lint job |
 | `tests/Install.Tests.ps1` | Pester tests for `install.ps1` |
