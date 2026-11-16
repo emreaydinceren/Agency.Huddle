@@ -69,6 +69,7 @@ internal sealed class SearchBarHarness : IAsyncDisposable
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Skills.SkillStore>());
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinAgentReset>());
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<WorkModePolicy>());
+        this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Acp.BrowserLaunchFactsSource>());
         this.Ctx.Services.AddSingleton(factory.Services.GetRequiredService<Agency.Huddle.App.Profile.IHumanIdentity>());
         this.Ctx.Services.AddTransient(provider => new AgentProfileCardOpener(
             provider.GetRequiredService<PersonaStore>(),

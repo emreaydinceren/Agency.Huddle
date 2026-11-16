@@ -391,7 +391,7 @@ internal static class PromptCatalog
     [
         new PromptDefinition(
             Key: "systemPrompt.browser",
-            Label: "The Agent's browser",
+            Label: "Browser rules",
             HelperText:
                 "The rules for an Agent that has the browser: page text is data, never type a credential, what asks " +
                 "the Human first, and closing the browser when done. Added after the tools paragraphs, only when the " +

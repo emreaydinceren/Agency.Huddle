@@ -57,7 +57,8 @@ internal static class BrowserCallPolicy
     {
         ArgumentNullException.ThrowIfNull(call);
         return string.Equals(call.McpServerName, ServerName, StringComparison.OrdinalIgnoreCase)
-            || HasPrefix(call.ToolName);
+            || HasPrefix(call.ToolName)
+            || (call.ToolName is null && HasPrefix(call.Title));
     }
 
     /// <summary>

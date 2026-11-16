@@ -137,6 +137,14 @@ public sealed class BrowserCallPolicyTests
         Assert.False(BrowserCallPolicy.AsksHuman(Call(null, "{}", "playwright", Prefix + "browser_snapshot")));
     }
 
+    /// <summary>A call that carries only a Playwright title, with no tool or server name, is still a browser call and asks.</summary>
+    [Fact]
+    public void TitleOnly_Detected()
+    {
+        Assert.True(BrowserCallPolicy.Concerns(Call(null, "{}", null, Prefix + "browser_click")));
+        Assert.True(BrowserCallPolicy.AsksHuman(Call(null, "{}", null, Prefix + "browser_click")));
+    }
+
     /// <summary>The prefix is matched ignoring case.</summary>
     [Fact]
     public void CaseInsensitivePrefix_Detected()

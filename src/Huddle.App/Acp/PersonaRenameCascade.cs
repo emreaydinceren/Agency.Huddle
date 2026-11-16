@@ -80,6 +80,12 @@ internal sealed partial class PersonaRenameCascade(
     private const int MaxWorkDirMoveAttempts = 5;
     private static readonly TimeSpan WorkDirMoveRetryDelay = TimeSpan.FromMilliseconds(250);
 
+    /// <summary>How many times a removed Agent's browser profile delete is tried while its browser shuts down.</summary>
+    private const int MaxProfileDeleteAttempts = 20;
+
+    /// <summary>The wait between two profile delete attempts.</summary>
+    private static readonly TimeSpan ProfileDeleteRetryDelay = TimeSpan.FromMilliseconds(500);
+
     private bool subscribed;
 
     // PersonaStore raises PersonaRemoved for the OLD Name right after PersonaRenamed (it diffs Names), so a removal handler cannot tell a
@@ -134,6 +140,34 @@ internal sealed partial class PersonaRenameCascade(
         }
     }
 
+    /// <summary>
+    /// Deletes a removed Agent's browser profile, retrying while the browser its stopping host started still holds files, so a same-named
+    /// Agent hired soon after never inherits the sign-ins. The first attempt runs before the first await, so an unlocked folder is gone on return.
+    /// After the last attempt the failure is logged and the startup sweep tries again.
+    /// </summary>
+    /// <param name="folder">The folder to delete.</param>
+    /// <param name="name">The Persona Name the folder is for, for the failure log.</param>
+    /// <returns>A task that ends when the folder is gone or the attempts ran out.</returns>
+    private async Task DeleteBrowserProfileWithRetryAsync(string folder, string name)
+    {
+        for (int attempt = 1; ; attempt++)
+        {
+            try
+            {
+                BrowserProfileFolders.DeleteTree(folder);
+                return;
+            }
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && attempt < MaxProfileDeleteAttempts)
+            {
+                await Task.Delay(ProfileDeleteRetryDelay).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                LogBrowserProfileDeleteFailed(logger, name, ex);
+                return;
+            }
+        }
+    }
     /// <summary>Deletes one browser profile folder, logging a failure instead of throwing.</summary>
     /// <param name="folder">The folder to delete.</param>
     /// <param name="name">The Persona Name the folder is for, for the failure log.</param>
@@ -382,7 +416,8 @@ internal sealed partial class PersonaRenameCascade(
 
         if (!wasRenamed)
         {
-            this.DeleteBrowserProfile(agentPaths.BrowserProfile(removed.Name), removed.Name);
+            // The Agent's host is still stopping, so its browser may hold the folder for a moment: the first try runs now, the rest retry briefly.
+            _ = this.DeleteBrowserProfileWithRetryAsync(agentPaths.BrowserProfile(removed.Name), removed.Name);
         }
     }
 

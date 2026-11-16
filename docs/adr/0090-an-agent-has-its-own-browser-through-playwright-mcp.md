@@ -68,5 +68,5 @@ that page.
   site's tokens. This is recorded in [known-limits.md](../engineering/known-limits.md).
 - An Agent with `Bash` can still read the profile folder or run Playwright itself. The switch governs only the server
   Huddle configures.
-- The read list is pinned to the package version. A version bump that adds a tool fails a test until someone sorts it.
+- The read list is written for the pinned package version. A tool a later version adds is not on it, so it asks until someone sorts it; re-read the tool list when the pin moves.
 - One Agent in two Rooms at once cannot browse in both: the second gets "Browser is already in use".

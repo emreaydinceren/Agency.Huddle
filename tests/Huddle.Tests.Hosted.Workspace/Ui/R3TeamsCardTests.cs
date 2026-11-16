@@ -42,7 +42,7 @@ public sealed class R3TeamsCardTests
         IRenderedComponent<ContainerFragment> cut = await OpenViewCardAsync(ctx, factory, "coo");
 
         string[] labels = [.. cut.FindAll(".mud-dialog-content .agent-profile-card-section > .group-label").Select(static label => label.TextContent.Trim())];
-        Assert.Equal(["Persona", "Model", "Effort", "Work mode", "Account connectors", "What this Agent reads", "Persona file"], labels);
+        Assert.Equal(["Persona", "Model", "Effort", "Work mode", "Account connectors", "Browser", "What this Agent reads", "Persona file"], labels);
         Assert.Empty(cut.FindAll(".mud-dialog-content .mud-paper-outlined"));
     }
 
