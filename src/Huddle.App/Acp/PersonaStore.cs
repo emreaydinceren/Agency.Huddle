@@ -1235,6 +1235,9 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             return;
         }
 
+        // A rename seen only by the watcher (a hand-edited name:) keeps the Human's "off" as Update does, before the old row goes below.
+        this.CarryBrowserOffAcrossRenames(value.Previous, value.Updated);
+
         // A Persona file that vanished (deleted or moved outside Remove, seen by a rescan) takes its connectors row with it, so a
         // later Agent of the same name cannot inherit the access.
         foreach (PersonaEntry gone in value.Previous.Entries.Where(entry => value.Updated.ByName(entry.Name) is null))
@@ -1280,6 +1283,32 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// is not good enough there.
     /// </summary>
     internal void RescanNow() => this.RefreshIndexAndNotify();
+
+    /// <summary>
+    /// Writes the browser "off" row under the new Name of every Persona whose file kept its path but changed its Name, when the old Name
+    /// is still off. <see cref="Update"/> has already moved the row for a rename it made, so this only acts on a rename the watcher found
+    /// (a hand-edited <c>name:</c>), which would otherwise lose the Human's "off" when the old Name's row is removed.
+    /// </summary>
+    /// <param name="previous">The index before the change.</param>
+    /// <param name="updated">The index after it.</param>
+    private void CarryBrowserOffAcrossRenames(PersonaIndex previous, PersonaIndex updated)
+    {
+        if (this.browser is null)
+        {
+            return;
+        }
+
+        Dictionary<string, PersonaEntry> updatedByPath = updated.Entries.ToDictionary(entry => entry.Path, StringComparer.Ordinal);
+        foreach (PersonaEntry before in previous.Entries)
+        {
+            if (updatedByPath.TryGetValue(before.Path, out PersonaEntry? after)
+                && !string.Equals(before.Name, after.Name, StringComparison.Ordinal)
+                && this.browser.IsOff(before.Name))
+            {
+                this.browser.Set(after.Name, on: false);
+            }
+        }
+    }
 
     /// <summary>
     /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
@@ -1573,7 +1602,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
         // This is the door a hand-edited file (bypassing Update entirely) reaches - the ONLY place
         // a rename made outside the app is ever detected, which is why RaiseRenames has to run here
-        // too, not only from RefreshIndexAndNotify. Still strictly before PersonasChanged.
+        // too, not only from RefreshIndexAndNotify. Still strictly before PersonasChanged. The browser "off" is carried first, as NotifyChanged does.
+        this.CarryBrowserOffAcrossRenames(swap.Previous, swap.Updated);
         this.RaiseRenames(swap.Previous, swap.Updated);
 
         // And for exactly the same reason, in the same order as RefreshIndexAndNotify: a .md file

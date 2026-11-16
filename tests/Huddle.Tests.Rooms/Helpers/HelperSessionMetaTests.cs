@@ -54,4 +54,19 @@ public sealed class HelperSessionMetaTests
         Assert.NotSame(first, second);
         Assert.NotSame(Options(first), Options(second));
     }
+
+    /// <summary>#551: a Helper has no tools and never a browser, even on a profile that runs Claude: no <c>mcpServers</c>, no <c>permissions</c>, no mention of Playwright.</summary>
+    [Fact]
+    public void Helper_NeverGetsBrowser()
+    {
+        AdapterProfile claude = new("claude", "Claude", null, "claude-agent-acp", null, null, true, null, true, true, true, null, true);
+
+        IReadOnlyDictionary<string, object>? meta = HelperSessionMeta.For(claude);
+
+        Assert.NotNull(meta);
+        Dictionary<string, object> options = Options(meta);
+        Assert.False(options.ContainsKey("mcpServers"));
+        Assert.False(((Dictionary<string, object>)options["settings"]).ContainsKey("permissions"));
+        Assert.DoesNotContain("playwright", System.Text.Json.JsonSerializer.Serialize(meta), StringComparison.OrdinalIgnoreCase);
+    }
 }

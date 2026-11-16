@@ -865,6 +865,193 @@ public sealed class PersonaRenameCascadeTests
         };
     }
 
+    /// <summary>Creates a browser profile folder holding one file, as a Chromium profile would, and returns its path.</summary>
+    private static async Task<string> CreateProfileAsync(TempDataDir dir, string name, CancellationToken ct)
+    {
+        string path = new AgentPaths(dir.Options()).BrowserProfile(name);
+        Directory.CreateDirectory(path);
+        await File.WriteAllTextAsync(Path.Combine(path, "Cookies"), "sign-in", ct);
+        return path;
+    }
+
+    /// <summary>#551: a rename moves the browser profile folder with the Agent, inside the same gate as the Work Dir move, so the sign-ins follow the Name.</summary>
+    [Fact]
+    public async Task Rename_MovesProfileFolder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        string oldProfile = await CreateProfileAsync(dir, "echo", ct);
+
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
+
+        Assert.False(Directory.Exists(oldProfile));
+        Assert.Equal("sign-in", await File.ReadAllTextAsync(Path.Combine(new AgentPaths(dir.Options()).BrowserProfile("echoprime"), "Cookies"), ct));
+    }
+
+    /// <summary>#551: a case-only rename moves the profile through a temporary sibling, as the Agent folder does, and keeps its contents.</summary>
+    [Fact]
+    public async Task Rename_CaseOnly_MovesProfileFolder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("Nova"), "You are Nova.");
+        await CreateProfileAsync(dir, "Nova", ct);
+        AgentPaths paths = new(dir.Options());
+
+        harness.PersonaStore.Update("Nova", TestPersonas.FrontmatterText("NOVA", "You are Nova."), model: null, effort: null, workMode: null);
+        await harness.FolderMoves.WhenSettledAsync("NOVA", ct);
+
+        string[] entries = [.. Directory.EnumerateDirectories(paths.BrowserProfilesRoot).Select(Path.GetFileName).OfType<string>()];
+        Assert.Equal(["NOVA"], entries);
+        Assert.True(File.Exists(Path.Combine(paths.BrowserProfile("NOVA"), "Cookies")));
+    }
+
+    /// <summary>#551: a Persona that never used the browser has no profile folder, and a rename neither fails nor creates one.</summary>
+    [Fact]
+    public async Task Rename_NoProfileFolder_IsANoOp()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
+
+        Assert.False(Directory.Exists(new AgentPaths(dir.Options()).BrowserProfilesRoot));
+    }
+
+    /// <summary>#551: when a profile folder already exists at the new Name, the move is not made and both folders are left as they were.</summary>
+    [Fact]
+    public async Task Rename_ProfileTargetExists_LeavesBothInPlace()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        string oldProfile = await CreateProfileAsync(dir, "echo", ct);
+        string newProfile = await CreateProfileAsync(dir, "echoprime", ct);
+        await File.WriteAllTextAsync(Path.Combine(newProfile, "Cookies"), "someone else", ct);
+
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
+
+        Assert.Equal("sign-in", await File.ReadAllTextAsync(Path.Combine(oldProfile, "Cookies"), ct));
+        Assert.Equal("someone else", await File.ReadAllTextAsync(Path.Combine(newProfile, "Cookies"), ct));
+    }
+
+    /// <summary>#551 owner decision: removing a Persona deletes its browser profile folder, and only its own.</summary>
+    [Fact]
+    public async Task Remove_DeletesProfileFolder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        harness.PersonaStore.Add(TestPersonas.Identity("kept"), "You stay.");
+        string profile = await CreateProfileAsync(dir, "echo", ct);
+        string keptProfile = await CreateProfileAsync(dir, "kept", ct);
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.False(Directory.Exists(profile));
+        Assert.True(Directory.Exists(keptProfile));
+    }
+
+    /// <summary>#551: a link inside a profile is unlinked, never followed: what it points at outside the profile survives the delete.</summary>
+    [Fact]
+    public async Task Remove_ProfileHoldsALink_DoesNotFollowItOut()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir(supportsReparsePoints: true);
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        string profile = await CreateProfileAsync(dir, "echo", ct);
+        string outside = Path.Combine(dir.Path, "outside");
+        Directory.CreateDirectory(outside);
+        await File.WriteAllTextAsync(Path.Combine(outside, "precious.txt"), "keep", ct);
+        if (!Agency.Huddle.Tests.Library.TestLinks.TryCreateLink(Path.Combine(profile, "link"), outside))
+        {
+            Assert.Skip("This machine cannot create a directory link.");
+        }
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.False(Directory.Exists(profile));
+        Assert.True(File.Exists(Path.Combine(outside, "precious.txt")));
+    }
+
+    /// <summary>#551: removing a Persona that has no profile folder does nothing and does not throw.</summary>
+    [Fact]
+    public async Task Remove_NoProfileFolder_IsANoOp()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.False(Directory.Exists(new AgentPaths(dir.Options()).BrowserProfilesRoot));
+    }
+
+    /// <summary>
+    /// #551: the startup sweep deletes profile folders no Persona has and keeps one that matches a Persona's Name in any letter case
+    /// (it refuses a delete, so it compares ignoring case on every OS). It runs from <c>StartAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task Sweep_DeletesOrphans_IgnoringCase()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("Alice"), "You are Alice.");
+        string alice = await CreateProfileAsync(dir, "alice", ct);
+        string bob = await CreateProfileAsync(dir, "bob", ct);
+
+        await harness.Cascade.StopAsync(ct);
+        await harness.Cascade.StartAsync(ct);
+
+        Assert.True(Directory.Exists(alice));
+        Assert.False(Directory.Exists(bob));
+    }
+
+    /// <summary>#551: while any Persona file is rejected (a hand edit that fails to load), its Persona is missing from the list, so the sweep deletes nothing.</summary>
+    [Fact]
+    public async Task Sweep_RejectedPersonaFile_DeletesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        string badFolder = new AgentPaths(dir.Options()).AgentFolder("broken");
+        Directory.CreateDirectory(badFolder);
+        await File.WriteAllTextAsync(Path.Combine(badFolder, "broken.md"), "---\nname: [unclosed\n---\nbody", ct);
+        harness.PersonaStore.RescanNow();
+        Assert.NotEmpty(harness.PersonaStore.RejectedFiles);
+        string profile = await CreateProfileAsync(dir, "broken", ct);
+
+        harness.Cascade.SweepBrowserProfiles();
+
+        Assert.True(Directory.Exists(profile));
+    }
+
+    /// <summary>#551: with no <c>browser-profiles</c> folder the sweep has nothing to do and does not throw.</summary>
+    [Fact]
+    public async Task Sweep_NoProfilesRoot_DoesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+
+        harness.Cascade.SweepBrowserProfiles();
+
+        Assert.False(Directory.Exists(new AgentPaths(dir.Options()).BrowserProfilesRoot));
+    }
+
     /// <summary>Creates the Work Dir folder a Persona named <paramref name="name"/> would have as its <c>cwd</c>, and returns its path.</summary>
     private static string CreateWorkDir(TempDataDir dir, string name)
     {

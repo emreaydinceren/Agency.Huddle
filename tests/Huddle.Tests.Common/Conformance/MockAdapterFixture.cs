@@ -159,6 +159,10 @@ public sealed class MockAdapterFixture : IAsyncDisposable
     /// do what the app does at that moment (a hire, say) and have the session start straight after it,
     /// as the supervisor's does, with no wait. <see langword="null"/> does nothing.
     /// </param>
+    /// <param name="browserFacts">
+    /// What the factory finds out about running a browser, so a test does not depend on what is installed on this computer;
+    /// <see langword="null"/> keeps the real lookup.
+    /// </param>
     /// <param name="cancellationToken">Cancels startup.</param>
     /// <returns>The started fixture.</returns>
     internal static Task<MockAdapterFixture> StartAsync(
@@ -167,8 +171,9 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         TimeProvider? timeProvider = null,
         Action<FakeAcpAgent>? scriptAgent = null,
         Action<IServiceProvider>? beforeRunnerStart = null,
+        BrowserLaunchFacts? browserFacts = null,
         CancellationToken cancellationToken = default)
-        => StartCoreAsync(persona, additionalConfig, timeProvider, scriptAgent, beforeRunnerStart, fullPipeline: false, dataDirPath: null, cancellationToken);
+        => StartCoreAsync(persona, additionalConfig, timeProvider, scriptAgent, beforeRunnerStart, fullPipeline: false, dataDirPath: null, browserFacts, cancellationToken);
 
     /// <summary>
     /// Starts a fixture whose runner gets the whole Turn pipeline the supervisor builds from the container (AGENTS.md hook first),
@@ -188,7 +193,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         TimeProvider? timeProvider = null,
         Action<FakeAcpAgent>? scriptAgent = null,
         CancellationToken cancellationToken = default)
-        => StartCoreAsync(persona, additionalConfig, timeProvider, scriptAgent, beforeRunnerStart: null, fullPipeline: true, dataDirPath, cancellationToken);
+        => StartCoreAsync(persona, additionalConfig, timeProvider, scriptAgent, beforeRunnerStart: null, fullPipeline: true, dataDirPath, browserFacts: null, cancellationToken);
 
     private static async Task<MockAdapterFixture> StartCoreAsync(
         Persona persona,
@@ -198,6 +203,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         Action<IServiceProvider>? beforeRunnerStart,
         bool fullPipeline,
         string? dataDirPath,
+        BrowserLaunchFacts? browserFacts,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(persona);
@@ -249,6 +255,13 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         FakeAgentProcessLauncher launcher = new();
         scriptAgent?.Invoke(launcher.Agent);
         builder.Services.AddSingleton<IAgentProcessLauncher>(launcher);
+
+        // A test that asks for a browser must not depend on what is installed here: it names the facts the factory reads.
+        if (browserFacts is not null)
+        {
+            builder.Services.RemoveAll<BrowserLaunchFactsSource>();
+            builder.Services.AddSingleton(new BrowserLaunchFactsSource(browserFacts));
+        }
 
         // The Helper must never reach a real adapter process: the fake answers instead.
         builder.Services.RemoveAll<IHelperProcessRunner>();

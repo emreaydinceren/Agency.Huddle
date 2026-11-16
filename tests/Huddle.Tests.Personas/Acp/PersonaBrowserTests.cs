@@ -210,4 +210,36 @@ public sealed class PersonaBrowserTests
         Assert.False(store.Get("nova")?.BrowserOff);
         _ = Assert.Throws<InvalidOperationException>(() => store.SetBrowser("nova", false));
     }
+
+    /// <summary>A hand-edited <c>name:</c> in the Persona file, found only by the watcher, keeps the Human's "off" under the new Name.</summary>
+    [Fact]
+    public async Task Rename_HandEditedName_KeepsOff()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using PersonaStore store = dir.CreatePersonaStore();
+        _ = store.Add(TestPersonas.Identity("nova"), "You are Nova.");
+        store.SetBrowser("nova", false);
+        string path = store.PathFor("nova");
+        List<PersonaRenamed> renames = [];
+        store.PersonaRenamed += renamed => renames.Add(renamed);
+        TaskCompletionSource done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.PersonasChanged += () =>
+        {
+            if (renames.Count > 0)
+            {
+                _ = done.TrySetResult();
+            }
+        };
+
+        await File.WriteAllTextAsync(path, TestPersonas.FrontmatterText("nova2", "You are Nova."), ct);
+
+        using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        await using CancellationTokenRegistration registration = cts.Token.Register(() => done.TrySetCanceled());
+        await done.Task;
+
+        Assert.True(store.Get("nova2")?.BrowserOff);
+        Assert.True(new PersonaBrowserStore(dir.Options()).IsOff("nova2"));
+    }
 }

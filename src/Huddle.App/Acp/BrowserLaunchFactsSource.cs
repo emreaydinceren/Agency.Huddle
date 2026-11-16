@@ -16,6 +16,14 @@ internal sealed class BrowserLaunchFactsSource
             () => BrowserServerLocator.Locate(options.Value.Browser, AppContext.BaseDirectory, null));
     }
 
+    /// <summary>Creates a source that always answers with the given facts, for a test that must not depend on what is installed.</summary>
+    /// <param name="facts">The facts to answer with.</param>
+    internal BrowserLaunchFactsSource(BrowserLaunchFacts facts)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        this.facts = new Lazy<BrowserLaunchFacts>(() => facts);
+    }
+
     /// <summary>The facts, computed on the first read.</summary>
     public BrowserLaunchFacts Current => this.facts.Value;
 }
