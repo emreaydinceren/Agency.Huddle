@@ -391,6 +391,14 @@ Nothing in the ACP effort's subtree changes.
 
 ---
 
+## 10a. The level control's limits caption (ADR-0088)
+
+The Needs You level control (Settings, a Team's Process tab, a project's dialog) shows a limits caption
+(`.needs-you-level-limits`, `NeedsYouLevelCopy.LimitsNote`) under the level at every level: "What this cannot catch: Huddle
+asks before a merge or push it can see in an Agent's command, so a script or a git alias saved earlier in a git config file can
+still merge or push without asking. An Agent can also create a Task straight into a project set to Run inside the Team, and one
+Accept on a push Task lets the Team push anything for up to 24 hours. For a guarantee, protect the branch on your git server."
+
 ## 11. The spend cap question (ADR-0088)
 
 A scope whose Needs You level is Run inside the Team may carry a spend cap. When the scope has spent its cap it falls back to Ask me, and

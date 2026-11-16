@@ -1061,7 +1061,7 @@ Team, and household basics for a Household.
 
 A Team with a `_team.md` has a **Process** tab on its page. It shows the Team's
 `AGENTS.md` as a document, with an **Edit** button that opens it in the Library.
-Above the document sits the Team's [Needs You level](#the-needs-you-level), and below it one switch for each gate `_team.md` turns on (except `accept-before-merge`, which the level replaces). Turning a
+Above the document sits the Team's [Needs You level](#the-needs-you-level) with the caption "A merge into main and every push that Huddle sees in an Agent's command wait for your Accept. The level above decides which merges wait.", and below it one switch for each gate `_team.md` turns on (except `accept-before-merge`, which the level replaces). Turning a
 switch off asks first, naming the gate and its risk (for example, "A Task can then
 be marked Done with no verified Evidence."). Only **Turn off** rewrites the `gates:`
 line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab only
@@ -1074,12 +1074,24 @@ The **Needs You level** says how much of a Team's work waits for you. There are 
 
 | Level | What waits for you |
 | --- | --- |
-| **Ask me** (the default) | Everything that waits today: every merge into main, every push, every Task with an Action, every connector call. |
+| **Ask me** (the default) | Everything that waits today: every merge into main, every push Huddle sees in an Agent's command, every Task with an Action, every connector call. |
 | **Run inside the Team** | The same, except three steps go ahead without you: a **local merge** into main of a Task's own branch (named after the Task's id) once its Proof is complete, a **Sprint** proposal (approved at once when every Task it names runs inside the Team) and new Backlog Tasks. |
 
-Under both levels, in every Team, these still wait for your **Accept**: every `git push`, whatever its form (a named branch, a URL, a path, `--all`; it passes
-only when you accept a Task whose Action names the push, and an Agent in no Team cannot push at all), every Task with an Action (send, pay, publish,
+Under both levels, in every Team, these still wait for your **Accept**: every `git push` Huddle sees in an Agent's command, whatever its form (a named branch, a URL, a path, `--all`; it passes
+only when you accept a Task whose Action names the push, and an Agent in no Team is refused every push it is seen making), every Task with an Action (send, pay, publish,
 sign, delete) or marked **Requires your acceptance**, and every connector call.
+
+**What this cannot catch.** Huddle asks before a merge or push by reading the command an Agent runs, so it is an early warning and not enforcement. The caption under the level control says the same. These get past it:
+
+- a script, or a command built with `$(…)`, that merges or pushes (`./deploy.sh`);
+- a git alias saved earlier in a git config file. A push alias set on the same command line (`-c alias.x=push`, `git config alias.x push`) is caught; a merge alias is not;
+- a Task an Agent creates straight into a project (or a Team) set to **Run inside the Team**;
+- the push window: one Accept on a Task whose Action names a push lets the Team push anything for up to 24 hours (one hour after the Accept took the Task to **Done**);
+- the Needs Human Helper, which is a model and may still send a merge to you that it should not have;
+- an Agent on the Codex Adapter, which has no hook;
+- a Task with an Action: it waits in **Needs you** for your Accept, but Huddle cannot stop an Agent doing that step another way.
+
+For a guarantee, protect the branch on your git server (branch protection). A connector call asks you first (see the known limits for its soft edges).
 
 You set the level in three places, and the most specific one wins: **Settings › Needs You level** for everything, the **Process** tab of a Team page
 for that Team, and **Needs You level…** on a project for that project. A scope you leave unset inherits from the one above, and the line under the
@@ -1100,7 +1112,7 @@ on the Task, "proceeded under Team level Run inside the Team", and as an item in
 
 | Gate | Refuses |
 | --- | --- |
-| `accept-before-merge` | A `git merge` into main by any Agent in the Team waits for your **Accept** in every Team, whatever its `gates:` line says. In a Team whose process lists `accept-before-merge` (every development process) the process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. In any other Team Huddle never names the merge: the Agent must put it in a Task's Action. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. The gate has no switch: set the Team's or project's [Needs You level](#the-needs-you-level) instead. Under **Run inside the Team**, in a Team whose process lists this gate, a local merge of a branch named after the Task's id needs no Accept, so Huddle does not move the Task to **Needs you** for it; a push still does, at every level: put the push in a Task's Action. |
+| `accept-before-merge` | A `git merge` into main by any Agent in the Team waits for your **Accept** in every Team, whatever its `gates:` line says. In a Team whose process lists `accept-before-merge` (every development process) the process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. In any other Team Huddle never names the merge: the Agent must put it in a Task's Action. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. The gate has no switch: set the Team's or project's [Needs You level](#the-needs-you-level) instead. Under **Run inside the Team**, in a Team whose process lists this gate, a local merge of a branch named after the Task's id needs no Accept, so Huddle does not move the Task to **Needs you** for it; a push Huddle sees in the command still waits, at every level: put the push in a Task's Action. |
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. When the Team's Definition of Done names no command, a note from that member is enough. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
@@ -1159,9 +1171,11 @@ without asking (its `auto` mode), because Huddle installs a small hook that make
 ask before a `git merge` or `git push`. A Codex Adapter has no such hook, so the gate
 only works there in modes where Codex asks. It reads through a `FOO=1` prefix, `sudo`,
 `env`, a command wrapped in `bash -c` or `pwsh -Command`, and redirections. It does not
-catch a git alias, `$(…)`, a script that pushes, a rebase onto main, `gh pr merge`, a
-direct commit on main, or a push from an IDE or another tool. Your own approval of a
-prompt is never intercepted.
+catch a git alias saved earlier in a git config file, `$(…)`, a script that pushes, a rebase onto main, `gh pr merge`, a
+direct commit on main, or a push from an IDE or another tool. The gate is an early warning, not enforcement: the
+[Needs You level](#the-needs-you-level) section lists the rest of what it cannot catch (the 24-hour push window and a
+Task created straight into a **Run inside the Team** project among them), and for a guarantee you protect the branch on
+your git server. Your own approval of a prompt is never intercepted.
 
 > **Example (Scenario 4).** The Team's process lists `failing-test-before-fix`, so a
 > bug Task cannot move to Review until its Evidence shows the test failing and then

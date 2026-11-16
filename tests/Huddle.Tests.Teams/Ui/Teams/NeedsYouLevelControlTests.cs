@@ -16,6 +16,11 @@ public sealed class NeedsYouLevelControlTests
 {
     private const string Run = "Run inside the Team";
 
+    private const string Limits =
+        "What this cannot catch: Huddle asks before a merge or push it can see in an Agent's command, so a script or a git alias saved earlier in a git config file can still merge or push without asking. "
+        + "An Agent can also create a Task straight into a project set to Run inside the Team, and one Accept on a push Task lets the Team push anything for up to 24 hours. "
+        + "For a guarantee, protect the branch on your git server.";
+
     private static IRenderedComponent<ContainerFragment> Render(MudBunitContext ctx, string? team = null, string? project = null) =>
         ctx.RenderWithPopovers(builder =>
         {
@@ -150,7 +155,7 @@ public sealed class NeedsYouLevelControlTests
         Assert.Equal(2.5m, saved?.SpendCap);
     }
 
-    /// <summary>The note under Run inside the Team says what still waits, so the copy promises no more than the code does.</summary>
+    /// <summary>The note under Run inside the Team says what still waits and what Huddle only asks about when it sees it, so the copy promises no more than the code does.</summary>
     [Fact]
     public async Task Global_RunInsideTheTeam_NamesWhatStillWaits()
     {
@@ -161,7 +166,7 @@ public sealed class NeedsYouLevelControlTests
         await cut.InvokeAsync(() => ChooseAsync(cut, Run));
 
         Assert.Equal(
-            "Run inside the Team: a local merge into main of a Task's own branch once its Proof is complete, a Sprint and new Backlog Tasks go ahead without you. Every push, every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you.",
+            "Run inside the Team: a local merge into main of a Task's own branch once its Proof is complete, a Sprint and new Backlog Tasks go ahead without you. Every Task with an Action (send, pay, publish, sign, delete) and every connector call still wait for you, and Huddle still asks you before every push it sees in an Agent's command.",
             cut.Find(".needs-you-level-note").TextContent.Trim());
         Assert.Equal("When the Team has spent this much running inside the Team, it asks you before going on.", cut.Find(".needs-you-level-cap .mud-input-helper-text").TextContent.Trim());
     }
@@ -198,6 +203,56 @@ public sealed class NeedsYouLevelControlTests
         Assert.Empty(rig.Caps.Pending);
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".needs-you-cap-ask")));
         Assert.True(rig.Levels.For(NeedsYouLevelUiRig.Team, null).CapReached);
+    }
+
+    /// <summary>The Settings control names what the gate cannot catch under Ask me, so the Human is not told every push is held.</summary>
+    [Fact]
+    public async Task Global_AskMe_ShowsWhatTheGateCannotCatch()
+    {
+        await using MudBunitContext ctx = new();
+        using NeedsYouLevelUiRig rig = new(ctx);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        Assert.Equal(Limits, cut.Find(".needs-you-level-limits").TextContent.Trim());
+    }
+
+    /// <summary>A Team set to Run inside the Team still shows what the gate cannot catch.</summary>
+    [Fact]
+    public async Task Team_RunInsideTheTeam_ShowsWhatTheGateCannotCatch()
+    {
+        await using MudBunitContext ctx = new();
+        using NeedsYouLevelUiRig rig = new(ctx);
+        Assert.True(rig.Levels.SetTeam(NeedsYouLevelUiRig.Team, NeedsYouLevel.RunInsideTheTeam, null));
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, NeedsYouLevelUiRig.Team);
+
+        Assert.Equal(Limits, cut.Find(".needs-you-level-limits").TextContent.Trim());
+    }
+
+    /// <summary>A project's control shows what the gate cannot catch.</summary>
+    [Fact]
+    public async Task Project_ShowsWhatTheGateCannotCatch()
+    {
+        await using MudBunitContext ctx = new();
+        using NeedsYouLevelUiRig rig = new(ctx);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, NeedsYouLevelUiRig.Team, NeedsYouLevelUiRig.Project);
+
+        Assert.Equal(Limits, cut.Find(".needs-you-level-limits").TextContent.Trim());
+    }
+
+    /// <summary>A control for a Team that does not exist, which cannot set a level, still shows what the gate cannot catch.</summary>
+    [Fact]
+    public async Task UnknownTeam_ControlUnavailable_StillShowsWhatTheGateCannotCatch()
+    {
+        await using MudBunitContext ctx = new();
+        using NeedsYouLevelUiRig rig = new(ctx);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, "No Such Team");
+
+        Assert.NotEmpty(cut.FindAll(".needs-you-level-unavailable"));
+        Assert.Equal(Limits, cut.Find(".needs-you-level-limits").TextContent.Trim());
     }
 
     /// <summary>A change made elsewhere repaints the control on <c>NeedsYouLevels.Changed</c>.</summary>

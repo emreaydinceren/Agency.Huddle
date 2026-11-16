@@ -8,7 +8,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>Pins that the Process tab offers the Needs You level (ADR-0088) and no longer offers the accept-before-merge switch the level replaced.</summary>
 public sealed class ProcessTabNeedsYouLevelTests
 {
-    private const string LevelNote = "A merge into main and every push wait for your Accept. The level above decides which merges wait.";
+    private const string LevelNote = "A merge into main and every push that Huddle sees in an Agent's command wait for your Accept. The level above decides which merges wait.";
 
     private static IRenderedComponent<ContainerFragment> RenderTab(MudBunitContext ctx) =>
         ctx.RenderWithPopovers(builder =>
@@ -37,7 +37,7 @@ public sealed class ProcessTabNeedsYouLevelTests
         Assert.NotEmpty(cut.FindAll(".process-tab-level .needs-you-level"));
     }
 
-    /// <summary>A Team whose gates line is empty still shows the note, because every Team's merge into main and every push wait for an Accept.</summary>
+    /// <summary>A Team whose gates line is empty still shows the note, because every Team's merge into main and every push Huddle sees in an Agent's command wait for an Accept.</summary>
     [Fact]
     public async Task Tab_NoGates_StillShowsTheMergeAndPushNote()
     {

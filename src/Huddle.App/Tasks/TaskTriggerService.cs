@@ -1535,7 +1535,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="scope">The scope word the release names: <c>global</c>, <c>Team</c> or <c>project</c>.</param>
     private static string ReleaseSentence(TaskItem latest, string scope) => string.Create(
         CultureInfo.InvariantCulture,
-        $"Task {latest.Id}'s Proof is complete and its {scope} level is Run inside the Team, so its merge needs no Accept. Merge its branch into the local main now, then move the Task to Done. The branch must be named after the Task id, for example feat/{latest.Id}-login; if yours is not, rename it first with git branch -m. A push still waits for the Human's Accept: put a push in the Task's Action.");
+        $"Task {latest.Id}'s Proof is complete and its {scope} level is Run inside the Team, so its merge needs no Accept. Merge its branch into the local main now, then move the Task to Done. The branch must be named after the Task id, for example feat/{latest.Id}-login; if yours is not, rename it first with git branch -m. A push still needs the Human's Accept, whatever runs it: put a push in the Task's Action.");
 
     /// <summary>
     /// #350: the line that tells the requesting Team's manager a Request has reached Done and waits for their Team to confirm it.

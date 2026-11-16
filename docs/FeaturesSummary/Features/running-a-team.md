@@ -23,7 +23,7 @@ A Team's process has two parts:
 
 | Gate | What it requires |
 | --- | --- |
-| `accept-before-merge` | Your Accept on one of the Team's Tasks before an Agent merges into `main`, in every Team. Set the Team's Needs You level (kept in `team.db`) to Run inside the Team and a local merge of a branch named after the Task's id needs no Accept; every push still waits for an Accept on a Task whose Action names it |
+| `accept-before-merge` | Your Accept on one of the Team's Tasks before an Agent merges into `main`, in every Team. Set the Team's Needs You level (kept in `team.db`) to Run inside the Team and a local merge of a branch named after the Task's id needs no Accept; Huddle still asks before every push it sees in an Agent's command, and releases it only on an Accept of a Task whose Action names it |
 | `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done; only a note when the Definition of Done names no command |
 | `checks-before-merge` | Evidence that the Team's check command passed, before an Agent's `git merge` or `git push` |
 | `spec-approved-before-build` | An approved parent spec Task before a Task moves to In Progress |
@@ -121,9 +121,19 @@ Huddle does so when the Task's Proof is complete. In any other Team the Agent mu
 
 **What it doesn't catch:**
 
-- A git alias, `$(…)`, or a script that pushes
+- A git alias saved earlier in a git config file (a push alias set on the same command line, `-c alias.x=push` or
+  `git config alias.x push`, is caught; a merge alias is not), `$(…)`, or a script that merges or pushes
+- A Task with an Action: it waits in Needs You for your Accept, but Huddle cannot stop an Agent doing that step another way
 - A rebase onto main, `gh pr merge`, or a direct commit on main
 - A push from an IDE or another tool
+- A Task an Agent creates straight into a project (or a Team) set to Run inside the Team
+- The push window: one Accept on a Task whose Action names a push lets the Team push anything for up to 24 hours (one hour
+  after the Accept took the Task to Done)
+- The Needs Human Helper, which is a model and may still gate a merge it should not
+
+The gate is an early warning, not enforcement. For a guarantee, protect the branch on your git server (branch
+protection). The Settings, Process tab and project dialog show this as a "What this cannot catch" caption under the
+level control.
 
 **Which Adapters.** On Claude, a generated hook makes the Adapter ask before any `git merge` or `git push`, even in
 its auto mode. A Codex Adapter has no such hook, so the gate works there only in modes where Codex asks.

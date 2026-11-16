@@ -447,6 +447,7 @@
 }
 
 .needs-you-level-note,
+.needs-you-level-limits,
 .needs-you-level-effective {
     color: var(--mud-palette-text-secondary);
 }

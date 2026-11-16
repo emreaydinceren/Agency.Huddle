@@ -16,7 +16,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 public sealed class TaskActionNoteTests
 {
     /// <summary>The whole note for the first Task of Team Platform, the same for both tools; it ends the tool's result.</summary>
-    private const string Note = "Note: PLAT-0001's Team Platform runs inside the Team, so a local merge into main needs no Action; this Action sends the Task to the Human. Use an Action only for a step that leaves the Team, such as a push: every push waits for the Human's Accept and needs a push in the Task's Action. Only a branch named after the Task id, for example feat/DEV-0012-login, merges without an Accept.";
+    private const string Note = "Note: PLAT-0001's Team Platform runs inside the Team, so a local merge into main needs no Action; this Action sends the Task to the Human. Use an Action only for a step that leaves the Team, such as a push: every push needs the Human's Accept, whatever runs it, and a push in the Task's Action. Only a branch named after the Task id, for example feat/DEV-0012-login, merges without an Accept.";
 
     /// <summary>Creating a Task with an Action under Run inside the Team, with the gate on, appends the note.</summary>
     [Fact]
