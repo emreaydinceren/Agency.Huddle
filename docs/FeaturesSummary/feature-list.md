@@ -410,7 +410,7 @@ adds the Tasks. PRs: #136.
 `BUSI-0001` (prefix from the Team, numbers never reused). There are nine statuses: Backlog,
 To Do, In Progress, Review, Needs you, Done, Cancelled, Duplicate and Rejected. Priority,
 assignee, parent, blockers, duplicate-of, tags, start and due dates, a description and an
-append-only Change log (with day and time). Closing is separate from status and moves the
+append-only Timeline of events, comments and Evidence (with day and time). Closing is separate from status and moves the
 file to `_closed/`; there is no delete. Hand edits are noticed and logged, and two people
 editing the same Task get a per-field merge. PRs: #79, then #245.
 

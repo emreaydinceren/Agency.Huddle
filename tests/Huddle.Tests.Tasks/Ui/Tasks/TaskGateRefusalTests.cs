@@ -16,7 +16,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 public sealed class TaskGateRefusalTests
 {
     private const string GateId = "qa-evidence-before-done";
-    private const string ConfirmText = "This skips the qa-evidence-before-done gate and is logged in the History.";
+    private const string ConfirmText = "This skips the qa-evidence-before-done gate and is recorded on the Task's Timeline.";
 
     /// <summary>Saving a move to Done that the QA gate refuses shows the gate's message in an alert and writes nothing.</summary>
     [Fact]
