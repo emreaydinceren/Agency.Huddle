@@ -748,7 +748,7 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 If no agent reply exists yet, judge only the Human half and record the agent-attribution checks as INCONCLUSIVE until `hi @Ada` has produced a reply. A `Yesterday` or dated separator cannot be judged on a fresh seed; record that sub-case as not observed.
 
 > [!NOTE]
-> Two documented NON-bugs: (a) the displayed time is converted to local time on the SERVER, so in a multi-machine deployment it would show the server's timezone, not the browser's — irrelevant when testing on one machine, and not to be filed from a single-machine run; (b) a Message from last week sits under a dated day separator, not a bare time. Optional extra: setting `$env:Team__HumanName='Emre'`, deleting `team.db` and restarting causes NEW Messages to be attributed to `Emre` — only run this if a full reset is acceptable.
+> Two documented NON-bugs: (a) the displayed time is converted to local time on the SERVER, so in a multi-machine deployment it would show the server's timezone, not the browser's — irrelevant when testing on one machine, and not to be filed from a single-machine run; (b) a Message from last week sits under a dated day separator, not a bare time. Optional extra: setting `$env:Team__HumanName='Sam'`, deleting `team.db` and restarting causes NEW Messages to be attributed to `Sam` — only run this if a full reset is acceptable.
 
 ### ROOMMESSAGING-17 — The transcript autoscrolls on a new Message and while a Draft grows
 

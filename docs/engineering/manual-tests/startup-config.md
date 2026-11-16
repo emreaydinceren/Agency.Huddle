@@ -644,7 +644,7 @@ This test uses an absolute path on purpose. A RELATIVE `Team:DataDir` is resolve
 
 1. Open the `Ada` Room, type exactly `hello before rename` and press Enter, and wait for Ada's reply.
 2. Open **Tasks**, create a Task titled `rename probe` and assign it to `You`.
-3. Open **Settings**. The **Profile** tab is first and already selected. Change **Name** to `Emre`, **Alias** to `em` and **Title** to `Site Reliability Engineer`, then press **Save**.
+3. Open **Settings**. The **Profile** tab is first and already selected. Change **Name** to `Sam`, **Alias** to `sm` and **Title** to `Site Reliability Engineer`, then press **Save**.
 4. Return to the `Ada` Room and read the right sidebar's **Members** panel.
 5. Click your own avatar in the Members panel and read the popover.
 6. Open the `rename probe` Task and read its Assignee.
@@ -653,26 +653,26 @@ This test uses an absolute path on purpose. A RELATIVE `Team:DataDir` is resolve
 
 **Pass if — all of these**
 
-- The Members panel lists `Emre` and `Ada`, and no `You`.
-- The popover shows a card reading `Emre` over `Site Reliability Engineer`, with only an **Edit** button; **Edit** opens Settings > Profile.
-- The `rename probe` Task's Assignee reads `Emre`.
-- The search hit for `before rename` names the sender `Emre`, although that message was sent as `You`.
+- The Members panel lists `Sam` and `Ada`, and no `You`.
+- The popover shows a card reading `Sam` over `Site Reliability Engineer`, with only an **Edit** button; **Edit** opens Settings > Profile.
+- The `rename probe` Task's Assignee reads `Sam`.
+- The search hit for `before rename` names the sender `Sam`, although that message was sent as `You`.
 - No error appears anywhere.
 
 **Fail if — any of these**
 
 - The Members panel still shows `You` -> the Team Directory row was not renamed; check the console for `The Team Directory refused to rename the Human`.
-- The popover says `No profile for Emre` -> the profile popover has no Human branch.
+- The popover says `No profile for Sam` -> the profile popover has no Human branch.
 - The Task still names `You` -> the rename cascade did not reach the Task files.
 - The search hit names `You` -> the hit is reading the stored sender name rather than matching your sender id.
-- After the app is stopped, any line in `C:\seeds\huddle\uat\data\rooms\*.jsonl` from step 1 carries `"senderName":"Emre"` -> transcript lines are being rewritten after the fact, which they must never be.
+- After the app is stopped, any line in `C:\seeds\huddle\uat\data\rooms\*.jsonl` from step 1 carries `"senderName":"Sam"` -> transcript lines are being rewritten after the fact, which they must never be.
 
 **Inconclusive if**
 
 The `.jsonl` lines from step 1 still reading `"senderName":"You"` is CORRECT: the file records the Name at the time of posting, and the app shows your current Name by matching `"senderId":"human"`. Do not file it as a half-applied rename.
 
 > [!NOTE]
-> `Team__HumanName` no longer renames you once a profile is saved: it is only the Name a blank system starts with. Optional oracle if sqlite3 is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE id='human';"` returns `Emre`.
+> `Team__HumanName` no longer renames you once a profile is saved: it is only the Name a blank system starts with. Optional oracle if sqlite3 is available: `sqlite3 C:\seeds\huddle\uat\data\team.db "SELECT name FROM users WHERE id='human';"` returns `Sam`.
 ### STARTUPCONFIG-22 — The renamed Team__Acp__PersonaDir key refuses to start the app rather than scanning nothing
 
 **Free** · about 5 min

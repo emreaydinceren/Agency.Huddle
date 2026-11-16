@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Reports on and performs the move of test files from the old Domain and Components test projects
-    into the per-feature test projects (Design 5.2 of docs/Huddle.TestProjectSplit-ProjectPlan.md).
+    into the per-feature test projects (the "Where a test goes" section of agents/Testing.md).
 
 .DESCRIPTION
     The map (test-split-map.psd1) assigns each file of an old project to a feature. Resolution order:

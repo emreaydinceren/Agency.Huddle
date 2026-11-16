@@ -282,9 +282,8 @@ that shape this section:
   doctors and insurance, an index of where documents are, a maintenance schedule and
   contractors, a storage inventory, cleaning rotations, meal plans with a pantry and shopping
   list, and a family calendar.
-- **AI "family chief of staff" products** appeared in late 2026: Fambot, Google's CC, and
-  home-built versions on Claude. They read school emails into a daily plan and send a morning
-  or Sunday briefing. That is an Agent posting in a Team Room.
+- **A family chief of staff** reads school emails into a daily plan and sends a morning or
+  Sunday briefing. That is an Agent posting in a Team Room.
 - **Upkeep kills systems.** People drop a second brain that costs more time than it saves. The
   seeded Agents should be seen doing the filing.
 

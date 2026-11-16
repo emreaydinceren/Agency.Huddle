@@ -689,8 +689,8 @@ with `memory` in between.
 
 ### 2.4 How it maps to Jeff Su's system and BrainOS
 
-The Human's vault runs Jeff Su's Cowork layout with BrainOS's raw-source half on top. Each piece
-has a home in this spec:
+A vault laid out the Jeff Su Cowork way, with BrainOS's raw-source half on top, maps onto Huddle
+piece by piece:
 
 | Jeff Su / BrainOS | Huddle | Where |
 | --- | --- | --- |
