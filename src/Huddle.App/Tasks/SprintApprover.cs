@@ -113,11 +113,19 @@ internal sealed class SprintApprover(SprintStore sprints, TaskService tasks, Tas
                 sprint.Id.ToString(),
                 FeedActor.Huddle,
                 false,
-                new SprintProceededPayload(sprint.Name, found[0].Location.Team, source.ForTask(found[0]).Scope.ToDisplay(), additions.Applied.Count)));
+                new SprintProceededPayload(sprint.Name, SharedTeam(found), ScopesOf(found, source), additions.Applied.Count)));
         }
 
         return $"Sprint '{sprint.Name}' approved: every Task runs inside the Team, so it needed no Human approval. {Tail(additions)}";
     }
+
+    /// <summary>The Team every Task is in, or <see langword="null"/> when they are in more than one.</summary>
+    private static string? SharedTeam(IReadOnlyList<TaskItem> tasks) =>
+        tasks.Select(static task => task.Location.Team).Distinct(StringComparer.OrdinalIgnoreCase).Take(2).ToList() is [var only] ? only : null;
+
+    /// <summary>The distinct scope words of the Tasks' levels in first-seen order, joined with "and".</summary>
+    private static string ScopesOf(IReadOnlyList<TaskItem> tasks, NeedsYouLevels levelSource) =>
+        string.Join(" and ", tasks.Select(task => levelSource.ForTask(task).Scope.ToDisplay()).Distinct(StringComparer.Ordinal));
 
     /// <summary>Sets the Sprint on one Task.</summary>
     private string? AddToSprint(string idText, Sprint sprint, TaskActor actor, bool proceededUnderLevel)

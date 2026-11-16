@@ -62,6 +62,7 @@ Singleton Agency.Huddle.App.Data.JobStateStore -> Agency.Huddle.App.Data.JobStat
 Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Data.NeedsHumanOverrideStore
 Singleton Agency.Huddle.App.Data.NeedsYouCapStore -> Agency.Huddle.App.Data.NeedsYouCapStore
 Singleton Agency.Huddle.App.Data.NeedsYouLevelStore -> Agency.Huddle.App.Data.NeedsYouLevelStore
+Singleton Agency.Huddle.App.Data.NeedsYouSpendStore -> Agency.Huddle.App.Data.NeedsYouSpendStore
 Singleton Agency.Huddle.App.Data.PersonaConnectorsStore -> Agency.Huddle.App.Data.PersonaConnectorsStore
 Singleton Agency.Huddle.App.Data.PersonaEffortStore -> Agency.Huddle.App.Data.PersonaEffortStore
 Singleton Agency.Huddle.App.Data.PersonaModelStore -> Agency.Huddle.App.Data.PersonaModelStore

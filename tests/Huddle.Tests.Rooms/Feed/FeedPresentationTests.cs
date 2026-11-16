@@ -47,6 +47,19 @@ public sealed class FeedPresentationTests
         Assert.Equal("No evidence", gate.Context);
     }
 
+    /// <summary>A Sprint approved from Tasks of two scopes names both, and one whose Tasks span Teams has no Team context and still reads.</summary>
+    [Fact]
+    public void Of_SprintProceededFromMixedScopes_NamesEveryScopeAndToleratesNoTeam()
+    {
+        FeedSummaryLine mixed = FeedSummary.Of(Item(FeedSourceType.SprintProceeded, new SprintProceededPayload("Launch", "Growth", "project and Team", 2)));
+        FeedSummaryLine acrossTeams = FeedSummary.Of(Item(FeedSourceType.SprintProceeded, new SprintProceededPayload("Launch", null, "Team", 2)));
+
+        Assert.Equal("proceeded under project and Team level Run inside the Team: Sprint Launch approved without the Human", Flatten(mixed));
+        Assert.Equal("in Growth", mixed.Context);
+        Assert.Equal("proceeded under Team level Run inside the Team: Sprint Launch approved without the Human", Flatten(acrossTeams));
+        Assert.Null(acrossTeams.Context);
+    }
+
     /// <summary>Room items name the Room, a deleted Room reads as such, and a two-Member Room reads as "A ↔ B".</summary>
     [Fact]
     public void Of_RoomItems_NameTheRoom()

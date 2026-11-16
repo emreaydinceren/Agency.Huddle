@@ -575,6 +575,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TaskScopeStore>(); // the scope Huddle placed each Task in; a Task never takes a laxer level than it.
         services.AddSingleton<NeedsYouLevelStore>();
         services.AddSingleton<NeedsYouCapStore>();
+        services.AddSingleton<NeedsYouSpendStore>(); // the USD each scope has been charged, so a member leaving never lowers a count.
         services.AddSingleton<Agency.Huddle.App.Teams.NeedsYouCaps>(); // the spend cap's counting and its Yes/No question.
         services.AddSingleton<Agency.Huddle.App.Teams.NeedsYouLevels>();
         services.AddHostedService<Agency.Huddle.App.Teams.NeedsYouCapWatcher>(); // opens the question as spend reaches a cap.

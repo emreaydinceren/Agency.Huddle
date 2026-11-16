@@ -7,8 +7,9 @@ namespace Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Counts what a scope that runs inside the Team has spent against its cap, and asks the Human once the cap is reached (ADR-0088). Spend
-/// is recorded per Agent, so the global scope counts every Agent's persisted USD spend and a Team or Project scope counts its Team's
-/// members. The count starts when the Human sets the level or cap, or when the scope is first evaluated with a cap, and it starts again
+/// is recorded per Agent and charged, as it happens, to the global scope and to every Team the Agent was in at that moment (the ledger,
+/// <see cref="NeedsYouSpendStore"/>); a Project scope counts its Team's ledger row. A member who leaves, or a Team that is renamed, moves no
+/// count. The count starts when the Human sets the level or cap, or when the scope is first evaluated with a cap, and it starts again
 /// when the cap in the file differs from the one counted for.
 /// </summary>
 /// <remarks>
@@ -17,22 +18,19 @@ namespace Agency.Huddle.App.Teams;
 /// </remarks>
 /// <param name="store">Holds each scope's counting row.</param>
 /// <param name="ids">Maps a scope key's Team or Project id back to the names, and a name to its id.</param>
-/// <param name="spend">Reads what the Personas spent.</param>
-/// <param name="teams">Names a Team's members.</param>
+/// <param name="ledger">Reads what each scope has been charged.</param>
 /// <param name="feed">Receives the Notification and its resolution.</param>
 /// <param name="logger">Logs a subscriber that threw; optional.</param>
 internal sealed class NeedsYouCaps(
     NeedsYouCapStore store,
     ScopeIdStore ids,
-    PersonaSpendStore spend,
-    ITeamCatalog teams,
+    NeedsYouSpendStore ledger,
     IFeedPublisher feed,
     ILogger<NeedsYouCaps>? logger = null)
 {
     /// <summary>The key of the global scope.</summary>
     public const string GlobalKey = "global";
 
-    private const string Usd = "USD";
     private const string TeamPrefix = "team:";
     private const string ProjectPrefix = "project:";
 
@@ -237,20 +235,20 @@ internal sealed class NeedsYouCaps(
             new SpendCapReachedPayload(row.Scope, this.Split(row.Scope).Team, row.Cap, message));
     }
 
-    /// <summary>What the counted Personas have spent in USD in all: every Persona for the global scope, the Team's members otherwise.</summary>
+    /// <summary>What a scope has been charged in USD: the global row, the Team's row, or for a Project its Team's row; zero when it has none.</summary>
     private decimal Total(string key)
     {
-        IEnumerable<StoredSpend> amounts;
         if (string.Equals(key, GlobalKey, StringComparison.OrdinalIgnoreCase))
         {
-            amounts = spend.All().Select(static row => new StoredSpend(row.Currency, row.Amount));
-        }
-        else
-        {
-            amounts = this.Split(key).Team is { } team && teams.Find(team) is { } summary ? spend.ForPersonas(summary.Members) : [];
+            return ledger.Get(GlobalKey);
         }
 
-        return amounts.Where(static amount => string.Equals(amount.Currency, Usd, StringComparison.OrdinalIgnoreCase)).Sum(static amount => amount.Amount);
+        if (key.StartsWith(ProjectPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return ids.ProjectNamesOf(key[ProjectPrefix.Length..]) is { } names ? ledger.Get(TeamKey(ids.TeamId(names.Team))) : 0m;
+        }
+
+        return ledger.Get(key);
     }
 
     private void RaiseChanged() =>

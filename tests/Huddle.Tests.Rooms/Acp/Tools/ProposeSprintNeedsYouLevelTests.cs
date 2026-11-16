@@ -55,8 +55,23 @@ public sealed class ProposeSprintNeedsYouLevelTests
         Assert.Equal("proceeded under project level Run inside the Team: Sprint 'Launch' approved without the Human", Assert.Single(projectTask.ChangeLog, static entry => NeedsYouRelease.IsSprintApproval(entry.Summary)).Summary);
         FeedMessage post = Assert.Single(rig.Feed.Posts, static message => message.SourceType == FeedSourceType.SprintProceeded);
         Assert.False(post.Notify);
-        Assert.Equal(new SprintProceededPayload("Launch", "Platform", "Team", 2), post.Payload);
+        Assert.Equal(new SprintProceededPayload("Launch", "Platform", "Team and project", 2), post.Payload);
         Assert.DoesNotContain(rig.Feed.Posts, static message => message.SourceType == FeedSourceType.TaskProceeded);
+    }
+
+    /// <summary>Tasks that all take their level from the same scope: the Feed item names that one scope, as before.</summary>
+    [Fact]
+    public async Task InvokeAsync_EveryTaskSharesOneScope_FeedNamesThatScope()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct, teamLevel: NeedsYouLevel.RunInsideTheTeam);
+        rig.Put("PLAT-0001", null);
+        rig.Put("PLAT-0002", null);
+
+        _ = await rig.Tool.InvokeAsync(Arguments("Launch", "PLAT-0001", "PLAT-0002"), ct);
+
+        FeedMessage post = Assert.Single(rig.Feed.Posts, static message => message.SourceType == FeedSourceType.SprintProceeded);
+        Assert.Equal(new SprintProceededPayload("Launch", "Platform", "Team", 2), post.Payload);
     }
 
     /// <summary>One Task under Ask me: exactly today's behaviour, the proposal waits, nothing is created or written and nothing is posted.</summary>

@@ -399,7 +399,7 @@ internal static class PromptCatalog
                 """
                 Needs You level (what waits for the Human):
                 {{levels}}
-                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-12-login: a merge of any other branch still waits for the Human. Every push waits for the Human at every level, so a push, and any step that leaves the Team, goes in the Task's Action.
+                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-12-login: a merge of any other branch still waits for the Human. Every push waits for the Human at every level, so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.
                 """,
             Placeholders: ["{{levels}}"],
             RequiredPlaceholders: ["{{levels}}"],

@@ -32,6 +32,12 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
     /// </summary>
     internal event Action<string>? SpendChanged;
 
+    /// <summary>
+    /// Raised, outside the lock and before <see cref="SpendChanged"/>, with the Persona's Name as it was reported, the currency and the
+    /// amount that report added. A ledger that charges each increase to the scopes the Persona is in at that moment subscribes here.
+    /// </summary>
+    internal event Action<SpendIncrease>? SpendAdded;
+
     /// <summary>How many handlers are subscribed to <see cref="SpendChanged"/>. Test seam only: it proves a disposed card unsubscribed.</summary>
     internal int SubscriberCount => this.SpendChanged?.GetInvocationList().Length ?? 0;
 
@@ -57,6 +63,7 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
         }
 
         bool raise;
+        decimal added;
         lock (this.gate)
         {
             if (!this.personas.TryGetValue(personaName, out PersonaSpendState? state))
@@ -79,6 +86,7 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
             }
 
             raise = delta > 0;
+            added = delta;
             if (raise)
             {
                 store.Add(personaName, taskId, currency, delta);
@@ -87,6 +95,7 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
 
         if (raise)
         {
+            EventRaise.Isolated(this.SpendAdded, new SpendIncrease(personaName, currency, added), ex => logger.LogWarning(ex, "A spend-added subscriber threw for persona '{PersonaName}'.", personaName));
             this.RaiseSpendChanged(personaName);
         }
     }
@@ -149,6 +158,12 @@ internal sealed class PersonaSpend(ILogger<PersonaSpend> logger, PersonaSpendSto
         // One broken subscriber, typically a card that was disposed mid-event, must not stop the others.
         EventRaise.Isolated(this.SpendChanged, personaName, ex => logger.LogWarning(ex, "A spend-changed subscriber threw for persona '{PersonaName}'.", personaName));
     }
+
+    /// <summary>One increase a report added: who spent it, in which currency, and how much.</summary>
+    /// <param name="PersonaName">The Persona's Name as it was reported.</param>
+    /// <param name="Currency">The currency of the report.</param>
+    /// <param name="Amount">The amount this report added, positive.</param>
+    internal readonly record struct SpendIncrease(string PersonaName, string Currency, decimal Amount);
 
     /// <summary>The mutable state one Persona accumulates behind <see cref="gate"/>; never handed out.</summary>
     private sealed class PersonaSpendState

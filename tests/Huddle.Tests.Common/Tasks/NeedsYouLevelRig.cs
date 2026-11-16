@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
@@ -43,9 +44,9 @@ internal sealed class NeedsYouLevelRig : IDisposable
         FakeTeamFolders folders = new();
         ProcessGateService gateService = this.Gates = TaskGateText.BuildGates(this.gateDir, TaskGateText.Process(gates), sharedFolders: folders);
         this.Catalog = new FakeTeamCatalog { Teams = [new TeamSummary(Team, [Project], [], true) { TeamType = new VersionedRef("web", "1.2.0") }] };
-        this.Spend = new PersonaSpendStore(this.levelDir.Options());
+        NeedsYouSpendStore ledger = new(this.levelDir.Options());
         ScopeIdStore ids = new(this.levelDir.Options());
-        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), ids, this.Spend, this.Catalog, this.Feed);
+        this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.levelDir.Options()), ids, ledger, this.Feed);
         this.Levels = new NeedsYouLevels(
             this.Catalog,
             new NeedsYouLevelStore(this.levelDir.Options()),
@@ -57,6 +58,7 @@ internal sealed class NeedsYouLevelRig : IDisposable
                 options.NeedsYouLevel.SpendCap = globalCap;
             }),
             caps: this.Caps);
+        this.Spend = NeedsYouSpendWiring.Attach(new PersonaSpendStore(this.levelDir.Options()), ledger, ids, this.Catalog, this.Levels);
         _ = this.Levels.SetTeam(Team, teamLevel, null);
         _ = this.Levels.SetProject(Team, Project, projectLevel, null);
         this.Service = new TaskService(
@@ -86,8 +88,8 @@ internal sealed class NeedsYouLevelRig : IDisposable
     /// <summary>The Team catalog.</summary>
     public FakeTeamCatalog Catalog { get; }
 
-    /// <summary>The persisted spend the cap counts.</summary>
-    public PersonaSpendStore Spend { get; }
+    /// <summary>Where spend is recorded; the ledger the cap counts is charged from it.</summary>
+    public PersonaSpend Spend { get; }
 
     /// <summary>The spend cap's counting and question.</summary>
     public NeedsYouCaps Caps { get; }

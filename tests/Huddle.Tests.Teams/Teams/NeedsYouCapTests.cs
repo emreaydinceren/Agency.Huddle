@@ -36,10 +36,11 @@ public sealed class NeedsYouCapTests
                     new TeamSummary("Ops", [], ["Ivy"], true),
                 ],
             };
-            this.Spend = new PersonaSpendStore(this.dir.Options());
+            this.SpendStore = new PersonaSpendStore(this.dir.Options());
+            this.Ledger = new NeedsYouSpendStore(this.dir.Options());
             this.Feed = new RecordingFeedPublisher();
             this.Ids = new ScopeIdStore(this.dir.Options());
-            this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Spend, this.Catalog, this.Feed);
+            this.Caps = new NeedsYouCaps(new NeedsYouCapStore(this.dir.Options()), this.Ids, this.Ledger, this.Feed);
             this.Levels = new NeedsYouLevels(
                 this.Catalog,
                 new NeedsYouLevelStore(this.dir.Options()),
@@ -51,6 +52,7 @@ public sealed class NeedsYouCapTests
                     options.NeedsYouLevel.SpendCap = globalCap;
                 }),
                 caps: this.Caps);
+            this.Spend = NeedsYouSpendWiring.Attach(this.SpendStore, this.Ledger, this.Ids, this.Catalog, this.Levels);
         }
 
         public FakeTeamCatalog Catalog { get; }
@@ -61,7 +63,11 @@ public sealed class NeedsYouCapTests
 
         public string ProjectKey => NeedsYouCaps.ProjectKey(this.Ids.ProjectId(NeedsYouCapTests.Dev, "Site"));
 
-        public PersonaSpendStore Spend { get; }
+        public PersonaSpendStore SpendStore { get; }
+
+        public NeedsYouSpendStore Ledger { get; }
+
+        public PersonaSpend Spend { get; }
 
         public RecordingFeedPublisher Feed { get; }
 
@@ -71,7 +77,7 @@ public sealed class NeedsYouCapTests
 
         public EffectiveLevel Current => this.Levels.For(NeedsYouCapTests.Dev, null);
 
-        public void Spent(string persona, decimal amount, string currency = Usd) => this.Spend.Add(persona, null, currency, amount);
+        public void Spent(string persona, decimal amount, string currency = Usd) => this.Spend.Spent(persona, amount, currency);
 
         public void Dispose() => this.dir.Dispose();
     }
@@ -213,6 +219,69 @@ public sealed class NeedsYouCapTests
         Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
         rig.Spent("Nova", 0.5m);
         Assert.Equal(NeedsYouLevel.AskMe, rig.Current.Level);
+    }
+
+    /// <summary>A member who leaves the Team does not lower what the Team has spent: the cap is reached at the same total as if they had stayed.</summary>
+    [Fact]
+    public void Counting_MemberLeavesTheTeam_SpendStaysCounted()
+    {
+        using Rig rig = new();
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        rig.Spent("Nova", 4m);
+        rig.Catalog.Teams = [new TeamSummary(Dev, ["Site"], ["Leo"], true), new TeamSummary("Ops", [], ["Ivy"], true)];
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
+
+        rig.Spent("Leo", 1m);
+
+        Assert.True(rig.Current.CapReached);
+        Assert.Equal(5m, rig.Ledger.Get(rig.TeamKey));
+    }
+
+    /// <summary>Spend a Persona recorded before it joined the Team is not counted for that Team, and what it spends after joining is.</summary>
+    [Fact]
+    public void Counting_MemberJoinsTheTeam_EarlierSpendIsNotCounted()
+    {
+        using Rig rig = new();
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        rig.Spent("Ivy", 50m);
+        rig.Catalog.Teams = [new TeamSummary(Dev, ["Site"], ["Nova", "Leo", "Ivy"], true), new TeamSummary("Ops", [], ["Ivy"], true)];
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Current.Level);
+        Assert.Equal(0m, rig.Ledger.Get(rig.TeamKey));
+
+        rig.Spent("Ivy", 5m);
+
+        Assert.True(rig.Current.CapReached);
+    }
+
+    /// <summary>Renaming the Team keeps what it has spent, so the cap is reached at the same total.</summary>
+    [Fact]
+    public void Counting_TeamRenamed_KeepsTheCount()
+    {
+        using Rig rig = new();
+        _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
+        string teamKey = rig.TeamKey;
+        rig.Spent("Nova", 3m);
+        rig.Ids.RenameTeam(Dev, "Build");
+        rig.Catalog.Teams = [new TeamSummary("Build", ["Site"], ["Nova", "Leo"], true), new TeamSummary("Ops", [], ["Ivy"], true)];
+        Assert.Equal(NeedsYouLevel.RunInsideTheTeam, rig.Levels.For("Build", null).Level);
+
+        rig.Spent("Leo", 2m);
+
+        Assert.True(rig.Levels.For("Build", null).CapReached);
+        Assert.Equal(5m, rig.Ledger.Get(teamKey));
+    }
+
+    /// <summary>A report in another currency adds nothing to any scope, and the currency compares ignoring case.</summary>
+    [Fact]
+    public void Counting_OtherCurrency_IsNotCounted()
+    {
+        using Rig rig = new();
+
+        rig.Spent("Nova", 500m, "EUR");
+        rig.Spent("Nova", 2m, "usd");
+
+        Assert.Equal(2m, rig.Ledger.Get(rig.TeamKey));
+        Assert.Equal(2m, rig.Ledger.Get(NeedsYouCaps.GlobalKey));
     }
 
     /// <summary>The global scope counts every Persona, whichever Team it is in.</summary>
@@ -375,8 +444,8 @@ public sealed class NeedsYouCapTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Rig rig = new();
         _ = rig.Levels.SetTeam(Dev, NeedsYouLevel.RunInsideTheTeam, 5m);
-        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.Spend);
-        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog);
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance, rig.SpendStore);
+        NeedsYouCapWatcher watcher = new(spend, rig.Levels, rig.Catalog, rig.Ledger, rig.Ids);
         await watcher.StartAsync(ct);
 
         spend.Add("Nova", "session-1", 5m, Usd);
@@ -397,7 +466,7 @@ public sealed class NeedsYouCapTests
         Assert.Single(rig.Releases(first));
         Assert.Null(rig.Gate.RefusalFor("Nova", "git merge feat/PLAT-0001-x"));
 
-        rig.Spend.Add("Nova", null, Usd, 5m);
+        rig.Spend.Spent("Nova", 5m);
         TaskItem second = rig.CreateInReview();
         _ = rig.AddEvidence(second);
 
