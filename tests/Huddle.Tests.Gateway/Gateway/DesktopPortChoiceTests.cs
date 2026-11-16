@@ -44,18 +44,27 @@ public sealed class DesktopPortChoiceTests : IDisposable
         Assert.Equal(0, DesktopPortChoice.Choose(stored, _ => throw new InvalidOperationException("not consulted")));
     }
 
-    /// <summary>The real probe says busy while a listener holds the port and free once it is released.</summary>
+    /// <summary>
+    /// The real probe says busy while a listener holds the port and free once it is released. Another process may take a released
+    /// port before the second probe, so a fresh port is tried a few times; a probe that never reports free still fails.
+    /// </summary>
     [Fact]
     public void IsFree_ReflectsALiveListener()
     {
-        TcpListener listener = new(IPAddress.Loopback, 0);
-        listener.Start();
-        int port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        bool freeOnceReleased = false;
+        for (int attempt = 0; attempt < 5 && !freeOnceReleased; attempt++)
+        {
+            TcpListener listener = new(IPAddress.Loopback, 0);
+            listener.Start();
+            int port = ((IPEndPoint)listener.LocalEndpoint).Port;
 
-        Assert.False(DesktopPortChoice.IsFree(port));
-        listener.Stop();
+            Assert.False(DesktopPortChoice.IsFree(port));
+            listener.Stop();
 
-        Assert.True(DesktopPortChoice.IsFree(port));
+            freeOnceReleased = DesktopPortChoice.IsFree(port);
+        }
+
+        Assert.True(freeOnceReleased);
     }
 
     /// <summary>A fresh database has no desktop port.</summary>

@@ -49,7 +49,7 @@ dotnet test Huddle.slnx --
 
 ## Where a test goes
 
-The suite is thirteen projects under `tests/`: four split by what a test needs to run (the three
+The suite is fourteen projects under `tests/`: five split by what a test needs to run (the four
 Hosted projects and Agents), the shared library (Common), and eight feature projects split by the part of `src/Huddle.App` a test
 covers. Each project keeps the folder layout of the old single projects, so
 `Ui/Tasks/TasksPageTests.cs` lives at `tests/Huddle.Tests.Tasks/Ui/Tasks/TasksPageTests.cs`, and every
@@ -60,9 +60,10 @@ project sets the same `RootNamespace`, so namespaces do not change. To find a cl
 | Project (folder = project = assembly name) | Holds | Rule |
 | --- | --- | --- |
 | `tests/Huddle.Tests.Common` | Every non-test `.cs`: fakes, fixtures, harnesses, `TempDataDir`, `TestPaths`, `TeamWebApplicationFactory`, `MudBunitContext`. Class library | Non-test file |
-| `tests/Huddle.Tests.Hosted.Personas` | Tests that start the app in-process, for Agents: the profile card, avatars, the Agents page | Uses `TeamWebApplicationFactory` |
+| `tests/Huddle.Tests.Hosted.Personas` | Tests that start the app in-process, for Agents: the profile card, the avatar library and endpoint, the Agents page | Uses `TeamWebApplicationFactory` |
 | `tests/Huddle.Tests.Hosted.Workspace` | Tests that start the app in-process, for the work: the Room page and message list, Teams, Library, Tasks, search, references, the sidebar | Uses `TeamWebApplicationFactory` |
-| `tests/Huddle.Tests.Hosted` | Tests that start the app in-process, for everything else: settings, appearance, the gateway, desktop hand-off, app host and composition, the prompt goldens | Uses `TeamWebApplicationFactory` |
+| `tests/Huddle.Tests.Hosted.Gateway` | Tests that start the app in-process, for remote access: the gateway's gates, endpoints and listeners, host filtering, the desktop bootstrap endpoint (the `Gateway/` folder) | Uses `TeamWebApplicationFactory` |
+| `tests/Huddle.Tests.Hosted` | Tests that start the app in-process, for everything else: settings (the Profile and Spending panels among them), the avatar editor, appearance, desktop wiring, app host and composition, the prompt goldens | Uses `TeamWebApplicationFactory` |
 | `tests/Huddle.Tests.Agents` | Tests that use a pipe or a child process (`mock-acp`, `node` harnesses) | Pipe or process markers |
 | `tests/Huddle.Tests.Tasks`, `Library`, `Teams`, `Personas`, `Rooms`, `Gateway`, `Shell`, `SkillPacks` | Everything else, by feature: services, stores, tools, parsers, convention scanners and bUnit component tests for that part of the app | The feature folder table |
 
@@ -79,12 +80,16 @@ A test file goes to the first project whose rule it matches, checked in this ord
    `Huddle.Tests.Shell`; the
    `Ui/**` Node harnesses (`*.harness.*`, `*-harness.*`) go to `Huddle.Tests.Agents`.
 2. No `[Fact` or `[Theory` in the file: `Huddle.Tests.Common`.
-3. Mentions `TeamWebApplicationFactory`: `Huddle.Tests.Hosted.Personas` or `Huddle.Tests.Hosted.Workspace`
-   when it covers what the table above gives them, otherwise `Huddle.Tests.Hosted`. A non-test helper
-   that only one of the three uses (`ChatPageContext`, `GatewayGateHost`) lives beside its tests.
-   The three were split to shorten CI: each runs at most 2 tests at once, so one Hosted project set
-   the length of the whole run. Keep their total test times roughly equal (2026-10-31: about 85-90 s
-   each); when one grows well past the others, move a folder rather than raising its thread count.
+3. Mentions `TeamWebApplicationFactory`: `Huddle.Tests.Hosted.Personas`, `Huddle.Tests.Hosted.Workspace`
+   or `Huddle.Tests.Hosted.Gateway` when it covers what the table above gives them, otherwise
+   `Huddle.Tests.Hosted`. A non-test helper that only one of the four uses (`ChatPageContext`,
+   `GatewayGateHost`) lives beside its tests. They were split to shorten CI: each runs at most 2 tests
+   at once, so one Hosted project set the length of the whole run. Keep their test times roughly equal
+   (2026-11-16, in a full run on Windows: Workspace about 70 s, Personas and Hosted about 60-65 s,
+   Gateway about 48 s; the whole run about 70 s); when one grows well past the others, move a folder
+   rather than raising its thread count. Under a full run the machine is short of CPU, so each extra
+   Hosted project slows the others: the fourth one bought about 6 s (76 s to 70 s), not the 25 s its
+   own share suggested. Time a change with a full `dotnet test Huddle.slnx --`, not one project alone.
 4. Mentions `PipeHostFixture`, `MockAdapterFixture`, `FakeAgentProcess*`, `ProcessStartInfo` or
    `Process.Start`: `Huddle.Tests.Agents`.
 5. Mentions `MudBunitContext`, `BunitContext`, `.Render<` or `RenderComponent<`, or matches none of
@@ -114,7 +119,7 @@ Each project's `xunit.runner.json` sets `maxParallelThreads` from this table, an
 
 | Project | `maxParallelThreads` | Why |
 | --- | --- | --- |
-| Hosted, Hosted.Personas, Hosted.Workspace | `2` | Each test boots the app; under load, start-up plus one request outran a 10 s budget |
+| Hosted, Hosted.Personas, Hosted.Workspace, Hosted.Gateway | `2` | Each test boots the app; under load, start-up plus one request outran a 10 s budget |
 | Agents | `"0.5x"` | Child processes and pipes; half the cores leaves room for the processes they start |
 | Each feature project and SkillPacks | `"1x"` | In-process; start at the default and tune later |
 

@@ -522,7 +522,7 @@ dotnet run --project src/Huddle.App --urls http://localhost:5100
 > `TEAM_E2E=1`. Leave that unset and the whole suite is free.
 
 `./test-health.ps1` is the only check that runs the app as a **process**. Every
-test in `tests/Huddle.Tests.Hosted` hosts it in-process through
+test in the `tests/Huddle.Tests.Hosted*` projects hosts it in-process through
 `TeamWebApplicationFactory`, so a bad options binding or a hosted service that
 throws at startup passes the entire suite and fails only here. The script starts
 the built output on a loopback port the kernel picks, GETs `/health`, prints PASS
