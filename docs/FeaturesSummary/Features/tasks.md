@@ -85,10 +85,16 @@ due_date: 2026-10-15
 ---
 Draft the October invoice run and check it against last month.
 
-## Change log
-- 2026-09-25T08:30:00Z | You | created
-- 2026-09-25T09:12:41Z | You | assignee: — → Nova
+## Timeline
+- 2026-09-25T08:30:00Z | You | event | created
+- 2026-09-25T09:12:41Z | You | event | assignee: — → Nova
+- 2026-09-25T11:04:27Z | Nova | evidence | dotnet test | exit 0
+- 2026-09-25T11:20:05Z | You | comment | Looks right. Send it on Friday.
 ```
+
+The description comes first. Everything after `## Timeline` is one line per entry, oldest first, in the
+form `- time | author | kind | text`. The kind is `event` (a change Huddle logged), `comment` or
+`evidence`.
 
 | Field | Rules |
 | --- | --- |
@@ -98,8 +104,7 @@ Draft the October invoice run and check it against last month.
 | `assignee` | An Agent or you, with one at most |
 | `origin` | The Room the Task was created from, if any |
 | `start_date`, `due_date` | `yyyy-MM-dd` |
-| `## Evidence` | Optional, and lines are only ever added |
-| `## Change log` | Huddle adds lines and never edits old ones |
+| `## Timeline` | Huddle adds lines and never edits old ones. Evidence is an `evidence` entry here |
 
 The Team and Project aren't fields. They come from the folder the file is in.
 
@@ -122,7 +127,7 @@ Closing hides a Task from active Views and doesn't change its status. Huddle nev
 | Action | Result |
 | --- | --- |
 | **New task** | A new file with a `created` line, defaulting to Backlog and Medium |
-| Edit any field | One Change log line, such as `status: To Do → In Progress` |
+| Edit any field | One `event` line on the Timeline, such as `status: To Do → In Progress` |
 | Drag a card | Saves immediately |
 | Change Team or Project | Moves the file and logs `moved: A → B`. A new Project name creates the folder |
 | **Close task** or **Reopen** | Moves the file in or out of `_closed/` |
@@ -200,4 +205,4 @@ An uploaded file goes under `raw/Tasks/`. A Task that links to a file also appea
 | A Task didn't wake its assignee | The assignee is you, made the change, is offline or no longer exists, or the wake budget is spent. Use **Allow 10 more**, or **Wake** on its Notification after a restart |
 | A Task is missing from every View | It's under **Tasks that didn't load**, or in `_closed/` while the View shows Active |
 | A Task wouldn't move, naming a gate | Add the Evidence it asks for, or use **Move anyway** in the Task panel |
-| A hand-edited status went back | A gate refused it, and the Change log says so |
+| A hand-edited status went back | A gate refused it, and the Timeline says so |

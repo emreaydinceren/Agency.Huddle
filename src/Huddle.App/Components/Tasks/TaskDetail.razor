@@ -1854,7 +1854,7 @@ else if (this.loaded is { } task)
 
         bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
             "Move anyway?",
-            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is logged in the History.",
+            $"This skips the {ProcessDocument.ToId(refusal.Gate)} gate and is recorded on the Task's Timeline.",
             yesText: "Move anyway",
             cancelText: "Cancel");
         if (confirmed == true)
