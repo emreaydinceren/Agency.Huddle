@@ -104,4 +104,7 @@ public enum FeedSourceType
 
     /// <summary>A Team rename did not finish and Huddle will try again at the next start.</summary>
     TeamRenameStuck,
+
+    /// <summary>The Human switched an Agent's browser on or off.</summary>
+    AgentBrowserChanged,
 }

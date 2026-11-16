@@ -74,6 +74,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     private readonly PersonaEffortStore efforts;
     private readonly PersonaWorkModeStore workModes;
     private readonly PersonaConnectorsStore? connectors;
+    private readonly PersonaBrowserStore? browser;
     private readonly IFeedPublisher? feed;
     private readonly ILogger<PersonaStore> logger;
     private readonly IHumanIdentity? human;
@@ -119,7 +120,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="logger">Used to warn if the filesystem watcher reports a dropped-event buffer overflow.</param>
     /// <param name="human">The Human's live identity (rules.md); built by hand without one, no Agent Name is refused for matching it.</param>
     /// <param name="connectors">The SQLite-backed store of which Personas may use the account connectors; built by hand without one, every Persona reads as off and <see cref="SetConnectors"/> throws.</param>
-    /// <param name="feed">Where a connectors change is recorded for the Human; without one nothing is recorded.</param>
+    /// <param name="feed">Where a connectors or browser change is recorded for the Human; without one nothing is recorded.</param>
+    /// <param name="browser">The SQLite-backed store of which Personas the Human switched the browser off for; built by hand without one, every Persona reads as on and <see cref="SetBrowser"/> throws.</param>
     public PersonaStore(
         AgentPaths agentPaths,
         PersonaModelStore models,
@@ -128,7 +130,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         ILogger<PersonaStore> logger,
         IHumanIdentity? human = null,
         PersonaConnectorsStore? connectors = null,
-        IFeedPublisher? feed = null)
+        IFeedPublisher? feed = null,
+        PersonaBrowserStore? browser = null)
     {
         ArgumentNullException.ThrowIfNull(agentPaths);
         ArgumentNullException.ThrowIfNull(models);
@@ -143,6 +146,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         this.logger = logger;
         this.human = human;
         this.connectors = connectors;
+        this.browser = browser;
         this.feed = feed;
 
         // Created eagerly (rather than lazily on first Add) so the watcher below has a directory
@@ -310,7 +314,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // both PersonaSupervisor and the razor page already go through Get. Adapter is not part of
         // that join - unlike Model and Effort, it travels with the file itself (Spec §7.1), so it
         // is carried straight off the entry rather than looked up in a store.
-        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter, this.workModes.Get(entry.Name), this.connectors?.IsOn(entry.Name) ?? false);
+        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter, this.workModes.Get(entry.Name), this.connectors?.IsOn(entry.Name) ?? false, this.browser?.IsOff(entry.Name) ?? false);
     }
 
     /// <summary>
@@ -340,7 +344,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="model">The Model to store for the new Persona, or <see langword="null"/> for the agent's default.</param>
     /// <param name="effort">The Effort to store for the new Persona, or <see langword="null"/> for the model's default.</param>
     /// <param name="workMode">The Work Mode to store for the new Persona, or <see langword="null"/> for the Adapter's own mode.</param>
-    public Persona Add(PersonaIdentity identity, string body, string? model = null, string? effort = null, string? workMode = null)
+    /// <param name="browserOff"><see langword="true"/> to start the new Persona with its browser switched off (a Team duplicate copying a member's "off"); <see langword="false"/> starts it on, clearing any stale row. Written inside the write gate, so no host of the new Agent ever starts with the wrong value.</param>
+    public Persona Add(PersonaIdentity identity, string body, string? model = null, string? effort = null, string? workMode = null, bool browserOff = false)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
@@ -384,6 +389,9 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
             // A new Agent starts with the connectors off (spec 6.3), whatever row a file deleted outside Remove left behind.
             this.connectors?.Remove(entry.Name);
+
+            // The browser starts on unless the caller says off, and a stale row of a file deleted outside Remove must not decide it.
+            this.browser?.Set(entry.Name, !browserOff);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
             this.workModes.Set(entry.Name, workMode);
@@ -397,7 +405,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // Raised only after writeGate is released - see NotifyChanged's remarks for why.
         this.NotifyChanged(change);
 
-        return new Persona(entry.Name, text, model, effort, entry.Adapter, workMode);
+        return new Persona(entry.Name, text, model, effort, entry.Adapter, workMode, BrowserOff: browserOff && this.browser is not null);
     }
 
     /// <summary>
@@ -454,6 +462,15 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
                 // The target name starts off as well: a stale row under it must not grant the renamed Agent access.
                 this.connectors?.Remove(entry.Name);
+
+                // The browser row moves with the Agent, unlike connectors: off stays off, and the target name takes the
+                // source's value so a stale row under it cannot decide it.
+                if (this.browser is not null)
+                {
+                    bool wasOff = this.browser.IsOff(current.Name);
+                    this.browser.Remove(current.Name);
+                    this.browser.Set(entry.Name, !wasOff);
+                }
             }
 
             this.models.Set(entry.Name, model);
@@ -603,6 +620,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         this.efforts.Remove(current.Name);
         this.workModes.Remove(current.Name);
         this.connectors?.Remove(current.Name);
+        this.browser?.Remove(current.Name);
 
         this.RefreshIndexAndNotify();
     }
@@ -656,6 +674,53 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         {
             // The Feed is a record for the Human, not part of the switch: a failed post must not undo it.
             this.logger.LogWarning(ex, "The Feed could not record the connectors change for {Persona}.", personaName);
+        }
+    }
+
+    /// <summary>
+    /// Switches the Persona's browser (the Playwright MCP server, issue #551) on or off. The only writer of
+    /// <see cref="PersonaBrowserStore"/> besides <see cref="Add"/> for a new Agent: no Agent Tool, proposal, Pack
+    /// update or frontmatter key reaches it, and <see cref="Update"/> does not take the flag. A change raises
+    /// <see cref="PersonasChanged"/> once, so the supervisor restarts the host and the new session
+    /// <c>_meta</c> takes the setting; the same value again does nothing. Records the change in the Feed.
+    /// </summary>
+    /// <param name="name">The Persona's Name.</param>
+    /// <param name="on"><see langword="true"/> to give the Persona its browser, <see langword="false"/> to take it away.</param>
+    /// <exception cref="ChatException">No Persona has that Name.</exception>
+    /// <exception cref="InvalidOperationException">The store was built without a browser store.</exception>
+    public void SetBrowser(string name, bool on)
+    {
+        PersonaBrowserStore store = this.browser ?? throw new InvalidOperationException("This PersonaStore has no browser store.");
+        (PersonaIndex Previous, PersonaIndex Updated)? change;
+        string personaName;
+
+        lock (this.writeGate)
+        {
+            PersonaEntry current = this.index.ByName(name) ?? throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' does not exist.");
+            if (store.IsOff(current.Name) == !on)
+            {
+                return;
+            }
+
+            personaName = current.Name;
+            store.Set(personaName, on);
+            change = this.PublishFreshIndex();
+        }
+
+        this.NotifyChanged(change);
+        this.PostBrowserChanged(personaName, on);
+    }
+
+    private void PostBrowserChanged(string personaName, bool on)
+    {
+        try
+        {
+            this.feed?.Post(new FeedMessage(FeedSourceType.AgentBrowserChanged, personaName, new FeedActor(FeedActorKind.Human, "You"), false, new AgentBrowserPayload(personaName, on)));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The Feed is a record for the Human, not part of the switch: a failed post must not undo it.
+            this.logger.LogWarning(ex, "The Feed could not record the browser change for {Persona}.", personaName);
         }
     }
 
@@ -1175,6 +1240,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         foreach (PersonaEntry gone in value.Previous.Entries.Where(entry => value.Updated.ByName(entry.Name) is null))
         {
             this.connectors?.Remove(gone.Name);
+            this.browser?.Remove(gone.Name);
         }
 
         // PersonaRenamed BEFORE PersonasChanged - see that event's own remarks for why the ordering

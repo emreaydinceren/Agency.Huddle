@@ -67,6 +67,7 @@ internal static class FeedSummary
             TeamRenameStuckPayload p => new([Text(p.Message)], null, OmitActor: true),
             BuiltinAgentUpdatePayload p => new([Text(p.Message)], null, OmitActor: true),
             AgentConnectorsPayload p => new([Text(p.On ? "You turned on account connectors for " : "You turned off account connectors for "), Strong(p.Name)], null, OmitActor: true),
+            AgentBrowserPayload p => new([Text("You turned "), Strong(p.Name), Text(p.On ? "'s browser on" : "'s browser off")], null, OmitActor: true),
             _ => new([Text("Something happened")], null, OmitActor: true),
         };
     }

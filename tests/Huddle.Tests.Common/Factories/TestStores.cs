@@ -55,5 +55,5 @@ internal static class TestStores
     /// <param name="options">The options whose data directory holds the Agents.</param>
     /// <param name="feed">Where a connectors change is recorded, or <see langword="null"/> to record none.</param>
     public static PersonaStore CreatePersonaStore(this IOptions<TeamOptions> options, IFeedPublisher? feed = null) =>
-        new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance, connectors: new PersonaConnectorsStore(options), feed: feed);
+        new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance, connectors: new PersonaConnectorsStore(options), feed: feed, browser: new PersonaBrowserStore(options));
 }

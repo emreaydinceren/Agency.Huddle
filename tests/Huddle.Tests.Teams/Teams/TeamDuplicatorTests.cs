@@ -98,6 +98,47 @@ public sealed class TeamDuplicatorTests
         Assert.True(f.Personas.Get("Ada")?.Connectors);
     }
 
+    /// <summary>A member whose browser the Human switched off is copied off, and the row is there the moment the copy is added, not set afterwards (issue #551).</summary>
+    [Fact]
+    public void Duplicate_MemberOff_CopyOff_InSameWrite()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+        f.Personas.SetBrowser("Ada", false);
+        List<bool?> seenAtFirstEvent = [];
+        f.Personas.PersonasChanged += () =>
+        {
+            Persona? copy = f.Personas.Get("Grace");
+            if (copy is not null && seenAtFirstEvent.Count == 0)
+            {
+                seenAtFirstEvent.Add(copy.BrowserOff);
+            }
+        };
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.True(Assert.Single(seenAtFirstEvent));
+        Assert.True(f.Personas.Get("Grace")?.BrowserOff);
+        Assert.False(f.Personas.Get("Dev2")?.BrowserOff);
+        Assert.True(f.Personas.Get("Ada")?.BrowserOff);
+    }
+
+    /// <summary>A member whose browser is on is copied on, and the source keeps its value (issue #551).</summary>
+    [Fact]
+    public void Duplicate_MemberOn_CopyOn()
+    {
+        using Fixture f = new();
+        f.SeedSource();
+
+        DuplicateResult result = f.Duplicator.Duplicate(Source, Target, null);
+
+        Assert.True(result.Ok);
+        Assert.NotEmpty(result.Hired);
+        Assert.All(result.Hired, name => Assert.False(f.Personas.Get(name)?.BrowserOff));
+        Assert.False(f.Personas.Get("Ada")?.BrowserOff);
+    }
+
     /// <summary>Nothing from the source Team's Library folder appears in the new Team's folder.</summary>
     [Fact]
     public void Duplicate_SourceLibraryFiles_NotCopied()

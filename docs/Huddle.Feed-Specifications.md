@@ -258,6 +258,7 @@ pins the pairing and is unit-tested for every value.
 | `HelperFailing` | `helper-failing` | `HelperFeed` | Yes | `helper:<id>` | `HelperFailingPayload(HelperId, Name, Failures, LastError)` |
 | `AgentsMdChangeSkipped` | `agents-md-change-skipped` | `AgentsMdChangeHelper` | No | `helper:<id>` | `AgentsMdChangeSkippedPayload(HelperId, Name, Path, Reason)` |
 | `AgentConnectorsChanged` | `agent-connectors-changed` | `PersonaStore` | No | The Agent's name | `AgentConnectorsPayload(Name, On)` |
+| `AgentBrowserChanged` | `agent-browser-changed` | `PersonaStore` | No | The Agent's name | `AgentBrowserPayload(Name, On)` |
 | `TaskProceeded` | `task-proceeded` | `TaskService` (through `TaskFeedRules`) | No | Task id | `TaskProceededPayload(Id, Title, Team, Scope)` |
 | `SprintProceeded` | `sprint-proceeded` | `SprintApprover` | No | Sprint id | `SprintProceededPayload(Name, Team, Scope, TaskCount)` |
 | `SpendCapReached` | `spend-cap-reached` | `NeedsYouCaps` | Yes | The scope key | `SpendCapReachedPayload(Scope, Team?, Cap, Message)` |
