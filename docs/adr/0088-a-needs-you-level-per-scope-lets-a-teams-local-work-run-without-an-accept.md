@@ -53,7 +53,8 @@ Under both levels, these always wait for the Human's Accept:
   a bare `push`, `--all`, `--mirror`, `-C <path>`, or an alias set with `-c alias.x=push` or `git config alias.x push`. It
   is released only by a fresh Accept on a Task of the Persona's Team whose Action names a push (the word `push`, ignoring
   case). Huddle's own merge Action does not release it, and neither does a released Task. A Persona who belongs to no Team
-  cannot push at all;
+  cannot push at all. Like a merge, the Accept names no push: for 24 hours (one hour after it took the Task to Done) any
+  push by a member of that Team passes, whatever it sends;
 - every Task that carries an Action (send, pay, publish, sign, delete, or any other) or has `human_gate: true`;
 - every connector call (ADR-0080: every call asks).
 
@@ -115,7 +116,7 @@ removing the entry can only make the gate refuse more, never less.
   Human's Accept certified under Ask me.
 - **The release is tied to the Task's own branch.** A line that only merges locally into main passes when every branch it
   merges names the id of a released Task of one of the Persona's Teams. The id must appear as a whole word, ignoring case
-  (`feat/DEV-12-login` names DEV-12, never DEV-1 or DEV-123), and that Task's level must be Run inside the Team now.
+  (`feat/DEV-0012-login` names DEV-0012, never DEV-0001 or DEV-00123), and that Task's level must be Run inside the Team now.
   `git merge -`, a SHA or a branch that names no released Task is refused, and the refusal says to name the branch after
   the Task id. Agents are told to name every branch after its Task id. So a released Task no longer lets another Task's
   or another project's merge through.

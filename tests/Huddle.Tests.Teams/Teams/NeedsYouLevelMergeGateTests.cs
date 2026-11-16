@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.Teams;
 using Agency.Huddle.Tests.Tasks;
 
@@ -14,8 +15,8 @@ public sealed class NeedsYouLevelMergeGateTests
     private const string FeatureMerge = "git merge feat/x";
     private const string ReleasedMerge = "git merge feat/PLAT-0001-x";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
-    private const string PushText = "Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in Task PLAT-0001's Action with update_task, for example 'Push feat/x to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.";
-    private const string NothingReadyText = "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-12-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
+    private const string PushText = "Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in Task PLAT-0001's Action with update_task, for example 'Push feat/DEV-0012-login to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.";
+    private const string NothingReadyText = "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-0012-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
     private const string AskMeText = "Cannot merge: a merge into main waits for the Human's Accept, and no Task of your Team has one. Put the merge in Task PLAT-0001's Action with update_task, for example 'Merge feat/x into main'. Huddle moves the Task to Needs You when its Proof is complete; merge after the Human accepts it. Do not ask for the Accept in chat.";
 
     private static NeedsYouLevelRig RunInsideRig(string gates = "'accept-before-merge'") => new(teamLevel: NeedsYouLevel.RunInsideTheTeam, gates: gates);
@@ -147,8 +148,41 @@ public sealed class NeedsYouLevelMergeGateTests
         using NeedsYouLevelRig rig = new(teamLevel: runInside ? NeedsYouLevel.RunInsideTheTeam : null, gates: gates);
         _ = rig.CreateInReview();
 
-        Assert.NotNull(rig.Gate.RefusalFor("Nova", FeatureMerge));
-        Assert.NotNull(rig.Gate.RefusalFor("Nova", "git push origin main"));
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Equal(PushText, rig.Gate.RefusalFor("Nova", "git push origin main"));
+    }
+
+    /// <summary>
+    /// A Team at Run inside the Team whose gates line is empty never has a merge released or named by Huddle, so its refusal says to put the
+    /// merge in a Task's Action (not the Run inside text, which forbids that), and an Accept on a Task with a merge Action lets the merge through.
+    /// </summary>
+    [Fact]
+    public void RefusalFor_RunInsideWithoutAcceptBeforeMerge_TellsTheAgentToPutTheMergeInAnAction()
+    {
+        using NeedsYouLevelRig rig = new(teamLevel: NeedsYouLevel.RunInsideTheTeam, gates: string.Empty);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(rig.Service.Create(
+            new TaskDraft("Quote calculator", NeedsYouLevelRig.Team, null, Assignee: "Nova") { HumanGate = true, Action = "Merge feat/x into main" },
+            rig.Human)).Task;
+        _ = rig.AddEvidence(task);
+
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", FeatureMerge));
+        Assert.Equal(AskMeText, rig.Gate.RefusalFor("Nova", ReleasedMerge));
+
+        task = Assert.IsType<TaskResult.Saved>(rig.Service.Update(task.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, NeedsYouLevelRig.Nova)).Task;
+        _ = Assert.IsType<TaskResult.Saved>(rig.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, rig.Human));
+
+        Assert.Null(rig.Gate.RefusalFor("Nova", FeatureMerge));
+    }
+
+    /// <summary>The Task id as <see cref="TaskId.ToString"/> writes it, zero-padded, names a branch that carries it; the unpadded form does not.</summary>
+    [Fact]
+    public void NamesTask_ZeroPaddedId_MatchesBranchCarryingIt()
+    {
+        Assert.True(TaskId.TryParse("DEV-0012", out TaskId id));
+
+        Assert.True(ProcessMergeGate.NamesTask("feat/DEV-0012-login", id));
+        Assert.False(ProcessMergeGate.NamesTask("feat/DEV-12-login", id));
+        Assert.False(ProcessMergeGate.NamesTask("feat/DEV-00123-login", id));
     }
 
     /// <summary>Evidence on a released Task that reached Done less than an hour ago still counts for <c>checks-before-merge</c>.</summary>

@@ -63,7 +63,7 @@ carries out the Action and then moves the Task to Done. A merge into main is
 refused until a Task of the Team has the Human's Accept, whoever runs it: put the
 merge in the Task's Action, wait in Needs You, and merge after the Accept. If the
 Team's Needs You level is Run inside the Team, do not set a merge Action: a local
-merge of a branch named after the Task's id, for example feat/DEV-12-login,
+merge of a branch named after the Task's id, for example feat/DEV-0012-login,
 proceeds when the Proof is complete. Every push waits for the Accept at every
 level and goes in the Task's Action. Use list_tasks with the
 status Needs You to see what is waiting for the Human.

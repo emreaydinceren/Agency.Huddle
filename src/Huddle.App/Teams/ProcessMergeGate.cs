@@ -162,7 +162,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
             : "the Action of the Task this push belongs to";
         return string.Create(
             CultureInfo.InvariantCulture,
-            $"Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in {where} with update_task, for example 'Push feat/x to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.");
+            $"Cannot push: a push leaves the Team's repository and waits for the Human's Accept at every Needs You level. Put the push in {where} with update_task, for example 'Push feat/DEV-0012-login to origin'. Huddle moves the Task to Needs You when its Proof is complete; push after the Human accepts it. Do not ask for the Accept in chat.");
     }
 
     /// <summary>The refusal for a merge into main that has no accepted Task of the Persona's Teams, or <see langword="null"/>.</summary>
@@ -178,6 +178,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
 
         bool localOnly = GitCommandLine.OnlyLocalMergesIntoMain(command);
         bool runsInside = false;
+        HashSet<string> namesMerge = this.TeamsNamingTheMerge(acceptTeams);
         DateTimeOffset now = this.clock.GetUtcNow();
         List<TaskItem> own = [];
         List<TaskItem> released = [];
@@ -211,7 +212,9 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
                 released.Add(task);
             }
 
-            runsInside |= !task.Status.IsTerminal() && levels?.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam;
+            // Only a Team whose gates line lists accept-before-merge has Huddle release or name its merge; for any other Team the
+            // Agent must put the merge in a Task's Action, so the Run inside text (which forbids that) would be a dead end.
+            runsInside |= !task.Status.IsTerminal() && namesMerge.Contains(task.Location.Team) && levels?.ForTask(task).Level == NeedsYouLevel.RunInsideTheTeam;
             if (!task.Status.IsTerminal() && string.Equals(task.Assignee, personaName, StringComparison.OrdinalIgnoreCase))
             {
                 own.Add(task);
@@ -226,6 +229,22 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
         return old is not null ? StaleAcceptRefusal(old) : NoAcceptRefusal(own, runsInside, released);
     }
 
+    /// <summary>The Teams whose gates line lists <c>accept-before-merge</c>: the only ones where Huddle releases or names a merge itself.</summary>
+    /// <param name="acceptTeams">The Persona's Teams the catalog knows.</param>
+    private HashSet<string> TeamsNamingTheMerge(HashSet<string> acceptTeams)
+    {
+        HashSet<string> named = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string team in acceptTeams)
+        {
+            if (gates.EnabledGates(team).Contains(GateId.AcceptBeforeMerge))
+            {
+                named.Add(team);
+            }
+        }
+
+        return named;
+    }
+
     private static string StaleAcceptRefusal(TaskItem old) =>
         string.Create(
             CultureInfo.InvariantCulture,
@@ -233,7 +252,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
 
     /// <summary>
     /// Whether every branch a line merges into main is named after a released Task: the Task's id appears in the branch name as a whole
-    /// word, ignoring case (<c>feat/DEV-12-login</c> names DEV-12, never DEV-1 or DEV-123). A line that merges no branch, <c>git merge -</c> or a SHA
+    /// word, ignoring case (<c>feat/DEV-0012-login</c> names DEV-0012, never DEV-0001 or DEV-00123). A line that merges no branch, <c>git merge -</c> or a SHA
     /// names no Task.
     /// </summary>
     /// <param name="branches">The branches the line puts on main.</param>
@@ -264,7 +283,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
 
     /// <summary>The refusal text when no Task of the Team carries the merge: one under Run inside the Team, or one under Ask me.</summary>
     /// <param name="own">The Persona's open Tasks of the Team.</param>
-    /// <param name="runsInside">Whether an open Task of the Team is under the level Run inside the Team.</param>
+    /// <param name="runsInside">Whether an open Task of a Team whose gates line lists <c>accept-before-merge</c> is under the level Run inside the Team.</param>
     /// <param name="released">The released Tasks of the Persona's Teams under Run inside the Team, which a branch named after one would have passed.</param>
     private static string NoAcceptRefusal(List<TaskItem> own, bool runsInside, List<TaskItem> released)
     {
@@ -278,7 +297,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
 
         if (runsInside)
         {
-            return "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-12-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
+            return "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-0012-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
         }
 
         string where = own.Count == 1

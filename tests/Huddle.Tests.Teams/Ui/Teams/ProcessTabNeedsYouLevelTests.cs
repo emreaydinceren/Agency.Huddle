@@ -8,6 +8,8 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>Pins that the Process tab offers the Needs You level (ADR-0088) and no longer offers the accept-before-merge switch the level replaced.</summary>
 public sealed class ProcessTabNeedsYouLevelTests
 {
+    private const string LevelNote = "A merge into main and every push wait for your Accept. The level above decides which merges wait.";
+
     private static IRenderedComponent<ContainerFragment> RenderTab(MudBunitContext ctx) =>
         ctx.RenderWithPopovers(builder =>
         {
@@ -31,8 +33,24 @@ public sealed class ProcessTabNeedsYouLevelTests
 
         Assert.Equal(["checks-before-merge"], cut.FindAll("div.process-tab-gate").Select(static gate => gate.GetAttribute("data-gate")).ToList());
         Assert.DoesNotContain("Accept before merge", cut.Find(".process-tab").TextContent, StringComparison.OrdinalIgnoreCase);
-        Assert.Equal("This Team asks before a merge into main. The level above decides what that waits for.", cut.Find(".process-tab-level .process-tab-gate-note").TextContent.Trim());
+        Assert.Equal(LevelNote, cut.Find(".process-tab-level .process-tab-gate-note").TextContent.Trim());
         Assert.NotEmpty(cut.FindAll(".process-tab-level .needs-you-level"));
+    }
+
+    /// <summary>A Team whose gates line is empty still shows the note, because every Team's merge into main and every push wait for an Accept.</summary>
+    [Fact]
+    public async Task Tab_NoGates_StillShowsTheMergeAndPushNote()
+    {
+        await using MudBunitContext ctx = new();
+        using NeedsYouLevelUiRig rig = new(ctx);
+        rig.Folders.ReadResult = new TeamFile(new VersionedRef("development", "1.0.0"), null, null, null, string.Empty)
+        {
+            Process = ProcessSettings.Empty with { Gates = [] },
+        };
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        Assert.Equal(LevelNote, cut.Find(".process-tab-level .process-tab-gate-note").TextContent.Trim());
     }
 
     /// <summary>A Team whose only gate is accept-before-merge shows the level and no switch at all.</summary>

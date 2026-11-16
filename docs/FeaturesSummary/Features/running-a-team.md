@@ -106,8 +106,10 @@ point to one line of it, such as `logs/tool-calls/Joe/2026-10-08.jsonl#L12`.
 
 ### How the merge gates work
 
-**Accept before merge.** The Team's process tells the Agent to name the merge as a Task's Action. Huddle moves the
-Task to **Needs you**, and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete.
+**Accept before merge.** Every Team's merge into main waits for your Accept, whatever its `gates:` line says. In a Team
+whose process lists `accept-before-merge` (every development process) the process tells the Agent to name the merge as a
+Task's Action; Huddle moves the Task to **Needs you**, and the merge follows your Accept. If no Agent names the merge,
+Huddle does so when the Task's Proof is complete. In any other Team the Agent must put the merge in the Task's Action itself.
 
 - **How long it lasts.** An Accept counts for 24 hours, or one hour if it took the Task straight to Done.
 - **What else it allows.** Another merge by the Team also passes in that time, because a command names no Task.
