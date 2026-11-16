@@ -609,6 +609,19 @@ public sealed partial class ChatService
     public Task<Room> EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct = default) =>
         this.EnsureTeamOneToOneCoreAsync(team, null, agent, null, ct);
 
+    /// <summary>As <see cref="EnsureTeamOneToOneAsync(string, User, CancellationToken)"/>, naming who asked for the Feed item.</summary>
+    /// <param name="team">The Team, matched ignoring case against the Team catalog.</param>
+    /// <param name="agent">The Agent.</param>
+    /// <param name="actor">Who asked, as the Feed names them.</param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    /// <returns>The Team-scoped one-to-one.</returns>
+    /// <exception cref="ChatException">The Team is unknown.</exception>
+    internal Task<Room> EnsureTeamOneToOneAsync(string team, User agent, FeedActor actor, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+        return this.EnsureTeamOneToOneCoreAsync(team, null, agent, actor, ct);
+    }
+
     /// <summary>The body of <see cref="EnsureTeamOneToOneAsync(string, User, CancellationToken)"/>.</summary>
     /// <param name="team">The Team, matched ignoring case against the Team catalog.</param>
     /// <param name="project">The Team's Project, or <see langword="null"/> for the Team-level one-to-one.</param>

@@ -102,15 +102,17 @@ public sealed class HireServiceOnboardingTests
         bool posted = await service.OnboardManagerAsync(TeamName, "Lee", ct);
 
         Assert.True(posted);
-        (string manager, string text) = Assert.Single(poster.Posts);
+        (string team, string manager, string text) = Assert.Single(poster.OneToOnePosts);
+        Assert.Equal(TeamName, team);
+        Assert.Empty(poster.Posts);
         Assert.Equal("Lee", manager);
         Assert.Equal("Your Team has just started. Work through these onboarding steps, then tell the Human what you found:\n\n- Read the workspace.\n- Run the tests.\n\nEnd by suggesting one starter Task in your reply, and ask the Human whether to start it. Do not create a Task or assign anyone until the Human says yes.", text);
         Assert.True(folders.File?.Onboarded);
     }
 
-    /// <summary>T20: onboarding posts through the root <c>PostAsync</c> and never through the Team-aware call, so it stays in the manager's root one-to-one.</summary>
+    /// <summary>T20: onboarding posts through the Team one-to-one call, never the root <c>PostAsync</c> or the Team Room call, so it lands where the Team page's Message button opens.</summary>
     [Fact]
-    public async Task OnboardManagerAsync_Onboarding_UsesRootPostNotTeamPost()
+    public async Task OnboardManagerAsync_Onboarding_UsesTeamOneToOneNotRootOrTeamRoom()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -123,7 +125,8 @@ public sealed class HireServiceOnboardingTests
         bool posted = await service.OnboardManagerAsync(TeamName, "Lee", ct);
 
         Assert.True(posted);
-        Assert.Single(poster.Posts);
+        Assert.Single(poster.OneToOnePosts);
+        Assert.Empty(poster.Posts);
         Assert.Empty(poster.TeamPosts);
     }
 
@@ -146,7 +149,8 @@ public sealed class HireServiceOnboardingTests
 
         Assert.True(firstPosted);
         Assert.False(secondPosted);
-        Assert.Single(poster.Posts);
+        Assert.Single(poster.OneToOnePosts);
+        Assert.Empty(poster.Posts);
     }
 
     /// <summary>A process with no onboarding steps posts nothing and leaves the marker unset.</summary>
@@ -165,6 +169,7 @@ public sealed class HireServiceOnboardingTests
 
         Assert.False(posted);
         Assert.Empty(poster.Posts);
+        Assert.Empty(poster.OneToOnePosts);
         Assert.False(folders.File?.Onboarded);
     }
 
@@ -203,7 +208,8 @@ public sealed class HireServiceOnboardingTests
 
         Assert.True(first);
         Assert.False(second);
-        Assert.Equal("Lee", Assert.Single(poster.Posts).Manager);
+        Assert.Equal("Lee", Assert.Single(poster.OneToOnePosts).Manager);
+        Assert.Empty(poster.Posts);
         Assert.Equal(["Lee", "Lee"], gate.Waited);
     }
 
@@ -227,6 +233,7 @@ public sealed class HireServiceOnboardingTests
 
         Assert.False(posted);
         Assert.Empty(poster.Posts);
+        Assert.Empty(poster.OneToOnePosts);
         Assert.False(folders.File?.Onboarded);
     }
 
@@ -258,8 +265,19 @@ internal sealed class FakeOnboardingPoster : IOnboardingPoster
     /// <summary>Gets the Team-aware posts, each the Team, the recipient's name and the text.</summary>
     public List<(string Team, string Recipient, string Text)> TeamPosts { get; } = [];
 
+    /// <summary>Gets the posts into a manager's Team-scoped one-to-one, each the Team, the manager's name and the text.</summary>
+    public List<(string Team, string Manager, string Text)> OneToOnePosts { get; } = [];
+
     /// <summary>Gets or sets whether the post reaches the manager.</summary>
     public bool Delivers { get; set; } = true;
+
+    /// <inheritdoc />
+    public Task<bool> PostToTeamOneToOneAsync(string team, string managerName, string text, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        this.OneToOnePosts.Add((team, managerName, text));
+        return Task.FromResult(this.Delivers);
+    }
 
     /// <inheritdoc />
     public Task<bool> PostToTeamAsync(string team, string recipientName, string text, CancellationToken ct)

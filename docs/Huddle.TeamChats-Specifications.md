@@ -64,7 +64,7 @@ it beat.
 | T17 | A *Marketing* Task assigned to Nova changes, and its origin Room is gone | The wake posts in Marketing's Room with the Human, the creator and Nova, created scoped if missing — not in the root *Nova* Room |
 | T18 | *Marketing*'s weekly digest fires | It posts in the *Marketing* Team Room, Mentioning the recipient so it replies in a Room of three or more |
 | T19 | Same as T18, but the Human archived the Team Room | It posts in the recipient's root one-to-one, as today |
-| T20 | A new Team is onboarded | The onboarding prompt posts in the manager's root one-to-one, as today |
+| T20 | A new Team is onboarded | The onboarding prompt posts in the manager's one-to-one scoped to that Team, the Room the Team page's **Message** opens, created if missing (issue #574; it used to post in the root one-to-one) |
 | T21 | The Human uploads a file in any *Marketing* Room | It lands in `Teams/Marketing/Uploads/<roomId>/`; *Uploads* shows in the Library and Files tab but not in the Projects list |
 
 ---
@@ -77,7 +77,7 @@ it beat.
 | **Removing an Agent from a Room** | No code removes a Room Member today (`ITeamDirectory` has no such call). Leaving a Team leaves the Agent in the Team Room; `known-limits.md` |
 | **Moving a Room between scopes** | Files already filed in one Team's folder would be in the wrong place |
 | **Scoping a Room to a Project** | A Project lives inside a Team; the Team is the unit the Human asked for. A Project scope can be added later on the same table |
-| **Moving onboarding into the Team Room** | The manager would reply only when Mentioned. The Human chose to keep it in the manager's root one-to-one (§11 Q-2) |
+| **Moving onboarding into the Team Room** | The manager would reply only when Mentioned. The Human chose to keep it in the manager's one-to-one (§11 Q-2): the root one at first, the Team one since issue #574 |
 | **Team Memory per Room** | A Persona in a Team chat still gets Memory for every Team it is in (`DotAcpPersonaHost.BuildOptions`). Narrowing it is a V2 question |
 | **A Team delete action** | Huddle has none (TeamPages §6). Archiving hangs off the Team leaving the catalog |
 
@@ -161,8 +161,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_room_teams_team_room ON room_teams(team) WH
   (`RoomNaming.Derive`).
 - `EnsureTeamOneToOneAsync(string team, User agent, CancellationToken ct)`: find with
   `team`, else create scoped. Returns the Room.
-- `EnsureRoomForAsync` stays root-only. Persona hello, onboarding (§11 Q-2), `create_room`
-  and the Agents page keep today's Rooms. Task wakes and cadence change on purpose (§6.9).
+- `EnsureRoomForAsync` stays root-only. Persona hello, `create_room`
+  and the Agents page keep today's Rooms. Task wakes and cadence change on purpose (§6.9), and
+  onboarding posts in the Team one-to-one through `EnsureTeamOneToOneAsync` (issue #574).
 - `InviteAsync` ignores Scope. A Team Room's name is the Team name, which is not the derived
   name, so the existing "re-derive only when auto-named" rule keeps it.
 
@@ -282,7 +283,8 @@ with them, the same Room the Members tab opens. Requests (ADR-0040) reach this t
 2. Otherwise → the recipient's root one-to-one, as today (T19).
 
 `ADR-0042`'s write-before-post and restore-on-refusal is unchanged; the poster still returns
-whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (§11 Q-2).
+whether it posted. Onboarding calls `PostToTeamOneToOneAsync`, which posts in the manager's Team one-to-one
+(T20, issue #574); `PostAsync` stays root-only, the fallback above.
 
 ---
 
@@ -313,8 +315,8 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
 - **read_records**: T15, a Room scoped to another Team is refused, the root sender rule is
   unchanged.
 - **Wakes and cadence**: T17 (fallback is scoped, origin Room still wins); T18 posts in the
-  Team Room and the text starts with the Mention; T19 falls back to root; T20 onboarding is
-  unchanged; ADR-0042's restore-on-refusal still holds.
+  Team Room and the text starts with the Mention; T19 falls back to root; T20 onboarding posts in the
+  Team one-to-one, never the root one or the Team Room; ADR-0042's restore-on-refusal still holds.
 - **Names**: `IsReservedProjectName("uploads")` is true; a Team folder with `Uploads/` lists
   no *Uploads* Project; creating a Project named *Uploads* is refused with the new message.
 - **bUnit**: `RoomList` hides scoped Rooms; `TeamsNav` lists them and shows **New room**
@@ -344,7 +346,7 @@ whether it posted. Onboarding keeps calling `PostAsync`, which stays root-only (
 | D-14 | The Team upload folder is visible `Uploads`, reserved like `memory` | Hidden `_uploads`. Chosen by the Human |
 | D-15 | A Task wake's fallback Room is scoped to the Task's Team | Root as today. Chosen by the Human: the wake lands where the Team's work is |
 | D-16 | Cadence posts in the Team Room with a Mention, falling back to the root one-to-one | Root as today. Chosen by the Human. Without the Mention, a Room of three or more would not wake the recipient |
-| D-17 | Onboarding stays in the manager's root one-to-one | The Team Room. Chosen by the Human |
+| D-17 | Onboarding stays in the manager's one-to-one, not the Team Room; since issue #574 the Team-scoped one, the Room the Team page's **Message** opens | The Team Room; the root one-to-one (the first choice). Chosen by the Human |
 
 ---
 
@@ -375,7 +377,7 @@ Nothing in the ACP effort's subtree changes.
 | # | Question | Answer |
 | --- | --- | --- |
 | Q-1 | The Team upload folder: hidden `_uploads`, or visible `Uploads`? | **Visible `Uploads`**, reserved like `memory` so it is never a Project (§6.8) |
-| Q-2 | Onboarding in the Team Room instead of the manager's root one-to-one? | **No**, root as today |
+| Q-2 | Onboarding in the Team Room instead of the manager's root one-to-one? | **No**. Root at first; the Team one-to-one since issue #574 |
 | Q-3 | A Task wake for a Team's Task in a Team-scoped Room? | **Yes**, Team-scoped (§6.9) |
 | Q-4 | Digest and retro in the Team Room? | **Yes**, with a Mention; root one-to-one if the Team Room is Archived (§6.9) |
 

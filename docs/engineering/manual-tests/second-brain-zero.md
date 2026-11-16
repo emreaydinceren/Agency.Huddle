@@ -260,7 +260,7 @@ Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** 
 
 **Paid** 💰 · about 15 min
 
-1. Click **Rooms** and open your one-to-one Room with **Hana**. Huddle posted the onboarding steps there, as you, once she started, and she will reply, probably with questions. Do not answer here. Do not stop the app while her first Turn runs: the reply is lost.
+1. On the Family Team page, click **Message** on **Hana**. It opens your Family one-to-one Room with her, not the root *Hana* Room. Huddle posted the onboarding steps there, as you, once she started, and she will reply, probably with questions. Do not answer here. Do not stop the app while her first Turn runs: the reply is lost.
 2. In the **Family** Team Room, click the paperclip and attach `family\family-profile.md` from the test documents. A file attached in the Team's Room goes to its `raw/`.
 3. Send this:
 
@@ -390,7 +390,7 @@ AGENTS.md
 C:\HuddleZero\data\Agents\Bea\Bea.md:7:skills: ['ingest', 'wrap-up', 'brain-check', 'team-management']
 ```
 
-There is no `_tasks` folder yet: it appears with the Team's first Task, which comes later. Bea takes her onboarding Turn in her one-to-one Room with you, as Hana did. She suggests a starter Task in her reply and creates nothing. Do not answer her there. ZERO-09 gives her what she needs.
+There is no `_tasks` folder yet: it appears with the Team's first Task, which comes later. Bea takes her onboarding Turn in her Bakery one-to-one Room with you (the Room **Message** on Bea opens from the Team page), as Hana did. She suggests a starter Task in her reply and creates nothing. Do not answer her there. ZERO-09 gives her what she needs.
 
 **Pass if**: **Approve & hire** works despite the connector warning, all three Agents go online, and the listing matches.
 **Fail if**: the connector warning blocks the hire, a Team Room does not appear, or the onboarding Turn creates a Task or wakes another Agent.
@@ -562,7 +562,7 @@ session in a new Room.
    ---
    ```
 
-3. Devon takes an onboarding Turn in the one-to-one Room with you. It reads the empty repository and suggests a starter Task in its reply. It creates no Task and wakes no other Agent. Do not answer it. ZERO-14 gives it the real job.
+3. Devon takes an onboarding Turn in its Dev Team one-to-one Room with you (the Room **Message** on Devon opens from the Team page). It reads the empty repository and suggests a starter Task in its reply. It creates no Task and wakes no other Agent. Do not answer it. ZERO-14 gives it the real job.
 
 **Expect**: `Copy prompt` gives text that names `InstallSkillPack.md`. **What this Agent reads** on Devon's page shows the workspace part with the repository's path.
 

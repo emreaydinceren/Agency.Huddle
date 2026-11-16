@@ -320,7 +320,11 @@ public sealed class BuildTeamTests
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
         Assert.StartsWith("# Flow", File.ReadAllText(fixture.AgentsMdPath), StringComparison.Ordinal); // contains-ok: haystack is the written process file, whose settings are split off
-        cut.WaitForAssertion(() => Assert.Equal(manager, Assert.Single(fixture.Poster.Posts).Manager));
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Equal(manager, Assert.Single(fixture.Poster.OneToOnePosts).Manager);
+            Assert.Empty(fixture.Poster.Posts);
+        });
     }
 
     /// <summary>A manager drafted from a type carries the role's Skills, which add the Second Brain's to the job's; the same job on a Blank Team carries only its own.</summary>

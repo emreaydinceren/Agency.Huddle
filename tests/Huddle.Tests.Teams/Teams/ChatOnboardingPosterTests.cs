@@ -4,17 +4,20 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.Tests.Feed;
 
 namespace Agency.Huddle.Tests.Teams;
 
 /// <summary>
 /// <see cref="ChatOnboardingPoster"/> over a real directory and <see cref="ChatService"/>: the Team-aware post lands in the
-/// Team Room with a Mention (T18) and falls back to the root one-to-one (T19), while <c>PostAsync</c> stays root-only (T20).
+/// Team Room with a Mention (T18) and falls back to the root one-to-one (T19), onboarding lands in the manager's Team-scoped
+/// one-to-one (T20), and <c>PostAsync</c> stays root-only as the cadence fallback.
 /// </summary>
 public sealed class ChatOnboardingPosterTests
 {
-    private sealed record Setup(ChatOnboardingPoster Poster, SqliteTeamDirectory Directory, List<MessagePostedEvent> Posts, User Nova, User Kai);
+    private sealed record Setup(ChatOnboardingPoster Poster, SqliteTeamDirectory Directory, List<MessagePostedEvent> Posts, User Nova, User Kai, ChatService Chat, RecordingFeedPublisher Feed);
 
     private static async Task<Setup> CreateAsync(TempDataDir dir, CancellationToken ct)
     {
@@ -22,16 +25,24 @@ public sealed class ChatOnboardingPosterTests
         await directory.InitializeAsync("You", ct);
         FileChatStore store = new(dir.Options(), NullLogger<FileChatStore>.Instance);
         RoomEvents events = new(NullLogger<RoomEvents>.Instance);
+        RecordingFeedPublisher feed = new();
         ChatService chat = new(
-            directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance);
+            directory, store, events, new FakeMentionAliasSource(), TestOptions.Create(), new ProposalStore(events), new QuestionStore(events), NullLogger<ChatService>.Instance)
+        {
+            TeamCatalog = MarketingCatalog(),
+            FeedPublisher = feed,
+        };
         List<MessagePostedEvent> posts = [];
         events.MessagePosted += posts.Add;
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
         User? kai = await directory.UpsertAgentUserAsync("Kai", null, ct);
         Assert.NotNull(nova);
         Assert.NotNull(kai);
-        return new Setup(new ChatOnboardingPoster(chat, directory), directory, posts, nova, kai);
+        return new Setup(new ChatOnboardingPoster(chat, directory), directory, posts, nova, kai, chat, feed);
     }
+
+    private static FakeTeamCatalog MarketingCatalog() =>
+        new() { Teams = [new TeamSummary("Marketing", [], [], true)] };
 
     private static Task<Room> TeamRoomAsync(Setup setup, CancellationToken ct) =>
         setup.Directory.CreateRoomAsync("Marketing", [KnownIds.Human, setup.Nova.Id, setup.Kai.Id], "Marketing", true, ct: ct);
@@ -127,7 +138,7 @@ public sealed class ChatOnboardingPosterTests
         Assert.Empty(setup.Posts);
     }
 
-    /// <summary>T20: <c>PostAsync</c> stays root-only - with a Team Room present, the onboarding prompt still goes to the manager's root one-to-one, unMentioned.</summary>
+    /// <summary><c>PostAsync</c> stays root-only, the cadence fallback: with a Team Room present, the text still goes to the manager's root one-to-one, unMentioned.</summary>
     [Fact]
     public async Task PostAsync_TeamRoomExists_StillPostsToRootOneToOne()
     {
@@ -170,6 +181,117 @@ public sealed class ChatOnboardingPosterTests
 
         Assert.False(posted);
         Assert.Empty(posts);
+        Assert.Empty(setup.Posts);
+    }
+
+    /// <summary>T20: onboarding lands in the manager's one-to-one scoped to the Team, as the Human and unMentioned, not in the Team Room and not at the root.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_PostsInTeamScopedOneToOne_NotRoot()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+        Room teamRoom = await TeamRoomAsync(setup, ct);
+
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("Marketing", "Nova", "Welcome aboard.", ct);
+
+        Assert.True(posted);
+        MessagePostedEvent post = Assert.Single(setup.Posts);
+        Assert.NotEqual(teamRoom.Id, post.Room.Id);
+        Assert.Equal("Marketing", post.Room.Team);
+        Assert.Equal(SortedIds(KnownIds.Human, setup.Nova.Id), SortedMembers(post));
+        Assert.Equal(KnownIds.Human, post.Message.SenderId);
+        Assert.Equal("Welcome aboard.", post.Message.Text);
+        Assert.Empty(post.Mentions);
+        Assert.Null(await setup.Directory.FindRoomWithExactMembersAsync(KnownIds.Human, setup.Nova.Id, null, null, ct));
+    }
+
+    /// <summary>A Team one-to-one the Human already opened from the Team page is reused, not duplicated.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_ExistingTeamOneToOne_ReusesIt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+        Room existing = await setup.Chat.EnsureTeamOneToOneAsync("Marketing", setup.Nova, ct);
+
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("Marketing", "Nova", "Welcome aboard.", ct);
+
+        Assert.True(posted);
+        Assert.Equal(existing.Id, Assert.Single(setup.Posts).Room.Id);
+    }
+
+    /// <summary>Huddle, not the Human, creates the Team one-to-one for onboarding, so no "Room created" Feed item is posted, as for the root one.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_CreatesRoom_PostsNoRoomCreatedFeedItem()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("Marketing", "Nova", "Welcome aboard.", ct);
+
+        Assert.True(posted);
+        Assert.Equal("Marketing", Assert.Single(setup.Posts).Room.Team);
+        Assert.DoesNotContain(setup.Feed.Posts, item => item.SourceType == FeedSourceType.RoomCreated);
+    }
+
+    /// <summary>The Team name is matched ignoring case, and the Room is stored under the catalog's spelling, as the Team page's Message finds it.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_TeamNameInOtherCase_UsesCatalogSpelling()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("marketing", "Nova", "Welcome aboard.", ct);
+
+        Assert.True(posted);
+        MessagePostedEvent post = Assert.Single(setup.Posts);
+        Assert.Equal("Marketing", post.Room.Team);
+        Assert.Equal(post.Room.Id, (await setup.Chat.EnsureTeamOneToOneAsync("Marketing", setup.Nova, ct)).Id);
+    }
+
+    /// <summary>A Team the catalog does not list is refused: false and nothing posted.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_UnknownTeam_ReturnsFalse()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("Nowhere", "Nova", "Welcome aboard.", ct);
+
+        Assert.False(posted);
+        Assert.Empty(setup.Posts);
+    }
+
+    /// <summary>A manager with no user row cannot be reached: false, nothing posted.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_UnknownManager_ReturnsFalse()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("Marketing", "Nobody", "Welcome aboard.", ct);
+
+        Assert.False(posted);
+        Assert.Empty(setup.Posts);
+    }
+
+    /// <summary>A refused post (blank text) in the Team one-to-one returns false, so the onboarding marker stays unset.</summary>
+    [Fact]
+    public async Task PostToTeamOneToOneAsync_PostRefused_ReturnsFalse()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Setup setup = await CreateAsync(dir, ct);
+
+        // The real ChatService refuses a blank text with a ChatException.
+        bool posted = await setup.Poster.PostToTeamOneToOneAsync("Marketing", "Nova", "   ", ct);
+
+        Assert.False(posted);
         Assert.Empty(setup.Posts);
     }
 

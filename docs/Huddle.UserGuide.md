@@ -926,8 +926,9 @@ Team's manager, and opens the Team. If a draft's name is already taken, you are 
 anything is created. The manager also carries the `ingest`, `wrap-up` and `brain-check` Skills.
 
 **Hiring starts work, and that costs money.** Once the manager is running, Huddle posts the
-process's onboarding steps to it in your one-to-one Room with it, once, and the manager takes a
-Turn. So set each draft's **Model** before you approve. With Adapters off the manager never starts,
+process's onboarding steps to it, once, in your one-to-one Room with it for that Team (the Room
+**Message** opens from the manager on the Team page), and the manager takes a Turn. So set each
+draft's **Model** before you approve. With Adapters off the manager never starts,
 so a Team hired then is not onboarded; ask the manager to work through the steps yourself.
 
 Each draft card shows how many **Skills** the role brings (hover for the names) and, when

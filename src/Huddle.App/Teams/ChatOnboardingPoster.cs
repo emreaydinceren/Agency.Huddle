@@ -4,7 +4,10 @@ using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>Posts the onboarding prompt as the Human into the manager's direct Room.</summary>
+/// <summary>
+/// Posts as the Human: the onboarding prompt into the manager's one-to-one scoped to the Team, the cadence prompt into the
+/// Team Room, and the cadence fallback into the manager's root one-to-one.
+/// </summary>
 /// <param name="chat">Finds or creates the Room and posts the Message.</param>
 /// <param name="directory">Resolves the manager's user.</param>
 internal sealed class ChatOnboardingPoster(ChatService chat, ITeamDirectory directory) : IOnboardingPoster
@@ -30,6 +33,32 @@ internal sealed class ChatOnboardingPoster(ChatService chat, ITeamDirectory dire
         catch (ChatException)
         {
             // A refused post (for example a spent Budget) leaves the marker unset so the next start tries again.
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> PostToTeamOneToOneAsync(string team, string managerName, string text, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(team);
+        ArgumentException.ThrowIfNullOrWhiteSpace(managerName);
+        ArgumentNullException.ThrowIfNull(text);
+
+        User? manager = await directory.FindUserByNameAsync(managerName, ct).ConfigureAwait(false);
+        if (manager is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            Room room = await chat.EnsureTeamOneToOneAsync(team, manager, FeedActor.Huddle, ct).ConfigureAwait(false);
+            _ = await chat.PostAsync(room.Id, KnownIds.Human, text, ct: ct).ConfigureAwait(false);
+            return true;
+        }
+        catch (ChatException)
+        {
+            // An unknown Team or a refused post (for example a spent Budget) leaves the marker unset so the next start tries again.
             return false;
         }
     }

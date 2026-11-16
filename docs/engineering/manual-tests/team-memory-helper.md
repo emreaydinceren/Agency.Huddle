@@ -218,7 +218,7 @@ Reset the card to defaults when done.
 **Steps**
 
 1. Hire a Development Team on that repository, following "Hiring a Team" in [`second-brain-zero.md`](second-brain-zero.md), with Route B.
-2. Send nothing. Wait for the manager's onboarding Turn in its one-to-one Room.
+2. Send nothing. Wait for the manager's onboarding Turn in its Team one-to-one Room (the Room **Message** on the manager opens from the Team page).
 3. Open `<data>\Teams\<Team>\memory\` and `<data>\Agents\<manager>\work\memory\` in the Library.
 
 **Pass if — all of these**
