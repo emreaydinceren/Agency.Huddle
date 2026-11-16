@@ -105,7 +105,7 @@ the database, and Feed items need both.
 | 4. Feed | Feed items, Helper usage and status in `team.db` | `FeedSeeder` |
 | 5. Folders | `Teams/<Team>/<Project>/`, `Archive/<Team>/…` | Projects with no Tasks still get their folder. An archived Team's `_team.md` needs the Room ids from step 3 |
 | 6. Agents, Skills and schedules | `Agents/<Name>/<Name>.md`, `Skills/<name>/SKILL.md`, `Agents/<Name>/schedule.md`, `Human/schedule.md` | `AgentFileWriter`; each `schedule.md` through the app's `JobDocument` (`JobSeeder.WriteFiles`) |
-| 7. Tasks | Task files, with their modified time set to the last Change log entry | Otherwise Huddle logs them as "edited outside Huddle" |
+| 7. Tasks | Task files, with their modified time set to the last timeline entry | Otherwise Huddle logs them as "edited outside Huddle" |
 | 8. Notes and binaries | Library notes, memory, images, chat uploads, Task uploads | |
 | 9. Sprints, history, settings | `sprints.md`, `doc-history/`, `views.json`, `avatars.json` | `sprints.md` only when a scenario has Sprints |
 | 10. Manifest | `<root>/manifest.md` | Every entity with its ids and paths |
@@ -149,7 +149,7 @@ round-trip tests in [§7](#7-round-trip-the-seed-loads-in-the-real-app).
 | SEED-INV-2 | **Overdue means at least two days late**, so a time-zone shift never turns it into "due today". | `Plan_OverdueTasksAreAtLeastTwoDaysLate` |
 | SEED-INV-3 | **Task ids are unique**, use a 4-digit number, and carry the prefix the app derives from the Team name: its first four letters or digits, upper-cased. | `Plan_TaskIdsAreUniqueAndUseTheDerivedPrefix` |
 | SEED-INV-4 | **Closed means finished.** A Task is in `_closed` exactly when its status is finished. The one exception is a Request that is Done but not yet confirmed, which stays open. | `Plan_ClosedMeansFinished` |
-| SEED-INV-5 | **Change logs run forward and end in the past.** `LastTouchedDaysAgo` is at least 1. | `Plan_ChangeLogsRunForwardAndEndInThePast` |
+| SEED-INV-5 | **Timelines run forward and end in the past.** `LastTouchedDaysAgo` is at least 1. | `Plan_TimelinesRunForwardAndEndInThePast` |
 | SEED-INV-6 | **References resolve.** Parents, `BlockedBy`, `DuplicateOf`, origin Rooms, Task ids in Messages, and attachment paths all exist in the plan. | `Plan_ReferencesResolve`, `Plan_RoomTranscriptsAreConsistent` |
 | SEED-INV-7 | **Agent names and aliases are unique**, and none is `Chief of Staff` or `cos`. Huddle creates that built-in Agent itself (`BuiltinAgentSeeder`). | `Plan_AgentNamesAndAliasesAreUnique` (the built-in name: —) |
 | SEED-INV-8 | **Transcripts are consistent.** Only the Human or a member sends, and Messages run forward in time. The one other sender is Huddle itself, and only in a Job Room (ADR-0065). | `Plan_RoomTranscriptsAreConsistent`, `Plan_JobRunsAreConsistent` |
@@ -421,7 +421,7 @@ are relative to `src/Huddle.Seeder/` unless they start with `tests/`. Checked ag
 | `Writing/DatabaseSeeder.cs` | `team.db`, `profile.json`, Rooms and transcripts, through the app's `SqliteTeamDirectory` and `FileChatStore` |
 | `Writing/AvatarWriter.cs` | Library pictures, `avatars.json`, and `Spread` (palette colours) |
 | `Writing/MessageReferences.cs` | Expands `{{…}}` tokens and builds `References` |
-| `Writing/TaskFileWriter.cs` | Task files and their Change log |
+| `Writing/TaskFileWriter.cs` | Task files and their timeline, in the app's own `TaskFileFormat` (`- time \| author \| event \| summary`) |
 | `Writing/FeedSeeder.cs`, `DocHistoryWriter.cs`, `AgentFileWriter.cs` | Feed rows, `doc-history/`, and Agent and Skill files |
 | `Writing/ManifestWriter.cs` | `manifest.md`, plus the helpers tests use: `Overdue`, `Blocked`, `LinksByNote`, `IsFinished` |
 | `Writing/SeedIo.cs` | Text writes (UTF-8, LF, final newline) and `Resolve` for `/` paths |
@@ -503,7 +503,7 @@ The seeder tests take a few seconds; the whole suite takes several minutes. Buil
   squiggles.
 - **Huddle watches its folders.** Never seed into a data folder Huddle is running on: a write
   becomes an outside edit, Tasks log it, and Agents restart.
-- **A Task file's modified time** is set to its last Change log entry. Without that, Huddle logs
+- **A Task file's modified time** is set to its last timeline entry (of any kind). Without that, Huddle logs
   it as edited outside Huddle and the backdated Updated date is lost.
 - **`Agents/.layout-migrated`** must exist, or Huddle's one-time migration moves notes out of
   `Teams/`.
@@ -550,3 +550,4 @@ The seeder tests take a few seconds; the whole suite takes several minutes. Buil
 | 2026-11-12 | Added SEED-SC-16 to -18: an archived Team (Legacy Site), an archived Project (Growth / Spring Promo) and four archived Team chats, written as `ArchiveService` leaves them. `SeedPlan.ArchivedTeams`, `SeedTeam.ArchivedProjects` and `SeedRoom.Project` are new; SEED-SC-9 counts fourteen Team-scoped Rooms; SEED-SC-13 and -14 now say "live". A defensive fix rode along: `ArchiveService.ArchivedProjects`, documented as working for archived Teams too, listed an archived Team's `raw`, `memory` and `outputs` folders as Projects. No caller asks it about an archived Team today (the Archived page asks about live Teams only), so nothing visible changed; it now skips the same names a live Project may not take. |
 | 2026-11-12 | Added SEED-SC-19 and SEED-RT-8: thirteen Jobs in every shape, four Job Rooms and two unreadable `schedule.md` sections, written through the app's `JobDocument`, `JobStateStore` and `JobRoomStore` (`Writing/JobSeeder.cs`, `Scenarios/SoftwareCoJobs.cs`). `SeedPlan.Jobs` and `JobProblems` are new, and so is `DatabaseResult.JobRoomIds`. SEED-INV-8 names Huddle as the one sender outside the Members. `JobScheduler.KeyOf` became `internal` so the seeder stores the scheduler's own key. |
 | 2026-11-12 | SEED-AV-5: Team colours come from named colour families before any computed spread. Spreading by hue still let violet and magenta, and teal and lime, through as one colour each (closest pair ΔE 26); the families keep the closest pair at ΔE 56. |
+| 2026-11-15 | Task files are written in the timeline format (ADR-0086, #611): `## Timeline` and `- time \| author \| event \| summary` lines, formatted by the app's own `TaskFileFormat.FormatTimelineEntry`. Created is the first event, Updated the last timeline entry, Closed the last `closed` event. `SeedLogNote` became `SeedTimelineEvent`, `SeedTask.ExtraLog` became `ExtraEvents`, `TaskFileWriter.BuildLog` became `BuildTimeline`, and `TaskLogLine` is gone. Pinned by `SeedRoundTripTests.Tasks_FilesAreInTheTimelineFormat`. |

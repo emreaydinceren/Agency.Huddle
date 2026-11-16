@@ -58,7 +58,7 @@ avatar pictures and the Needs you card. `manifest.md` in the seed root lists eve
 | Archived page | Every tab of `/archived` has something to restore. **Teams:** Legacy Site, archived with its Projects Checkout v1 and Old Marketing Site under `Archive/Legacy Site/`, its roster (Lena, Owen, Sofia) and Room ids in `_team.md`, and no Agent still labelled with it. **Projects:** Growth / Spring Promo under `Archive/Growth/`. **Chats:** the root `Q2 retro` plus four Team chats: Legacy Site's Team Room, `Checkout v1 sunset` (Legacy Site / Checkout v1), `Log shipping spike` (Platform / Observability) and `Spring promo wrap-up` (Growth / Spring Promo). Restoring Legacy Site brings back its folder, labels and Rooms. No Tasks sit in the archive. | `SoftwareCoArchive.cs`; Seeder spec SEED-SC-16 to -18 |
 | Jobs | The Scheduled view has thirteen Jobs, so Show all appears, and two sections to fix: Dana's `fortnightly` timetable and Theo's unknown `remind:` field. The Jobs cover every preset (Owen's one-off five days after the run date, Ben's month-end on the 31st, Ravi's on the 1st, Marcus every 4 hours). Two are the Human's: a daily plan, and a weekly review the Chief of Staff scheduled. Hattie scheduled Theo's grocery list as his manager. Dana's sweep is paused, and Jobs run in `UTC`, `Europe/London` and `America/New_York`. Four Jobs have Job Rooms (`⏰ <title>`) with past runs. Alan's on-call handover has three. Marcus's error-rate check ends on *Budget spent*, with no post for that run. Dana's Room is archived, so Run now brings it back. The Human's daily plan is answered, so Needs You is unchanged. The `Job` reason on Needs You lives in memory only, so no seed can set it: press Run now on a Human Job to see it. On a pinned `--today` the stored next runs are stale, and Huddle skips each to its next time, so nothing fires on start-up. | `SoftwareCoJobs.cs`, `Writing/JobSeeder.cs`; manifest Jobs table; [Seeder spec SEED-SC-19](../docs/Huddle.Seeder-Specifications.md) |
 | Needs you | `Launch crew` ends with an Owen Message that mentions `@You` and has no reply, and `Grandma's 70th` ends with a Hattie Message asking `@You` to choose a venue, so the card has two rows. | `SoftwareCoRooms.cs`, `SoftwareCoHome.cs` |
-| Feed | 32 items across the last ten hours ([Feed spec](../docs/Huddle.Feed-Specifications.md) §2): five Tasks Owen created (drawn as one grouped card), two Tasks assigned to you (`PLAT-0012`, `GROW-0013`), the unanswered `Launch crew` Mention, a Helper's gate-on for `SUPP-0008` (the Task is gated and its Change log carries the Helper's reason), the Needs Human Helper paused at its cap and failing, and asks that came and went (a Needs You, a gate refusal, a Room Budget, a Request, an earlier Helper failure) dimmed as resolved. Room and document items fill in the rest; nine Notifications are unseen, so the bell shows 9. Every unresolved Notification is true of the rest of the seed, because Huddle resolves the others at start-up. The Helper's usage (50 calls, 2 skipped) and status (3 failures) are written to `team.db`. Times are minutes before the run (or before 15:00 UTC on a pinned `--today`). | `SoftwareCoFeed.cs`, `SoftwareCoHome.Feed`, `Writing/FeedSeeder.cs`; `SeedFeedTests` |
+| Feed | 32 items across the last ten hours ([Feed spec](../docs/Huddle.Feed-Specifications.md) §2): five Tasks Owen created (drawn as one grouped card), two Tasks assigned to you (`PLAT-0012`, `GROW-0013`), the unanswered `Launch crew` Mention, a Helper's gate-on for `SUPP-0008` (the Task is gated and its timeline carries the Helper's reason), the Needs Human Helper paused at its cap and failing, and asks that came and went (a Needs You, a gate refusal, a Room Budget, a Request, an earlier Helper failure) dimmed as resolved. Room and document items fill in the rest; nine Notifications are unseen, so the bell shows 9. Every unresolved Notification is true of the rest of the seed, because Huddle resolves the others at start-up. The Helper's usage (50 calls, 2 skipped) and status (3 failures) are written to `team.db`. Times are minutes before the run (or before 15:00 UTC on a pinned `--today`). | `SoftwareCoFeed.cs`, `SoftwareCoHome.Feed`, `Writing/FeedSeeder.cs`; `SeedFeedTests` |
 
 ### Tokens in seed Message text
 
@@ -139,7 +139,7 @@ Unless the scenario forbids it, include:
 | Agents | One in **two or more Teams**; one in **no Team**; one holding a **Skill**; distinct personalities |
 | Teams | One with Projects; one with **no members**; one with **no Projects**; a Project with **no Tasks** |
 | Tasks | Each of the eight statuses; at least one **closed**; one **overdue** (due date past, status not finished); one **blocked** by an open Task; one blocked by a **finished** Task (it is not shown as blocked); a **sub-task**; a **Duplicate**; one **unassigned**; one **assigned to the Human**; Tasks at the Team root and inside a Project; tags; a long Markdown description |
-| Change logs | Entries by the Human and by Agents; a `status:` change; a `moved:` entry; a closed Task with a `closed` entry |
+| Timelines | `event` entries by the Human and by Agents; a `status:` change; a `moved:` entry; a closed Task with a `closed` entry |
 | Views | A List and a Board; a filter by Team, by assignee and by status; one grouped by Project |
 | Library | Notes linking with `[[wikilinks]]`; one note with several **backlinks**; one **unresolved** link; a note in an Agent's `work/` folder |
 | Memory | Team Memory facts; a Project memory fact; an Agent's personal memory |
@@ -376,10 +376,10 @@ due_date: 2026-09-15
 ---
 Collect the Q3 invoices and send them to the accountant.
 
-## Change log
-- 2026-09-01T09:00:00Z | You | created
-- 2026-09-01T09:05:00Z | You | assignee: — → Nova
-- 2026-09-02T10:30:00Z | Nova | status: To Do → In Progress
+## Timeline
+- 2026-09-01T09:00:00Z | You | event | created
+- 2026-09-01T09:05:00Z | You | event | assignee: — → Nova
+- 2026-09-02T10:30:00Z | Nova | event | status: To Do → In Progress
 ```
 
 | Key | Rule |
@@ -404,21 +404,26 @@ same prefix, the next Task created in the UI continues after your highest
 number. Give Teams names whose first four letters differ; two Teams starting
 `MARK` get `MARK` and `MARK2` in whatever order they are first used.
 
-**Write the Change log carefully.** It drives the Created, Updated and Closed
-dates:
+**Write the timeline carefully.** It drives the Created, Updated and Closed
+dates. Write it in the current format (ADR-0086): the description, a blank line,
+then `## Timeline`. The seeder takes the line format from the app's
+`TaskFileFormat`, so it cannot drift.
 
-- Each line is `- yyyy-MM-ddTHH:mm:ssZ | Actor | summary`, oldest first, in UTC,
-  with no fractions of a second. Lines that do not match are ignored.
-- **Created** is the first entry, and **Updated** is the last.
-- **Closed** is the last entry whose summary is exactly `closed`. Give every
+- Each line is `- yyyy-MM-ddTHH:mm:ssZ | Actor | kind | text`, oldest first, in
+  UTC, with no fractions of a second. The kind is `event`, `comment` or
+  `evidence`; the seeder writes `event` lines only. Lines that do not match are
+  ignored.
+- **Created** is the first `event`, and **Updated** is the last timeline entry
+  of any kind.
+- **Closed** is the last `event` whose text is exactly `closed`. Give every
   Task in `_closed/` one.
-- Use the app's wording so the log looks real: `created`,
+- Use the app's wording so the timeline looks real: `created`,
   `status: To Do → In Progress`, `priority: Medium → High`,
   `assignee: — → Nova` (`—` means empty), `tags: +finance`,
   `moved: Business → Business/Website`, `closed`, `reopened`,
   `description edited`.
 
-**Set each Task file's modified time to its last Change log entry.** When
+**Set each Task file's modified time to its last timeline entry.** When
 Huddle starts, it compares the two. If the file is more than two seconds newer,
 it appends `edited outside Huddle` with the current time, and your backdated
 Updated date is lost.
@@ -632,7 +637,7 @@ Start Huddle and walk this checklist. Record the results in the manifest.
 | Agents load | `/agents` | Every Agent, correct Teams; no "Files that didn't load" |
 | Teams and Projects | Sidebar **Teams** | Every Team and Project; empty Teams show **No members** |
 | Tasks load | `/tasks/all-tasks` | Every open Task; no "Tasks that didn't load" |
-| No outside edits | Each Task's **Change log** | No `edited outside Huddle` line you did not write |
+| No outside edits | Each Task's **timeline** | No `edited outside Huddle` line you did not write |
 | Board states | A Team page, **Tasks** tab | Correct columns and lanes; overdue icon; blocked Tasks |
 | Closed Tasks | A View with scope Closed | Every Task from `_closed/` |
 | Views | Sidebar **Tasks** | Every View from `views.json`; each shows its expected Task IDs |

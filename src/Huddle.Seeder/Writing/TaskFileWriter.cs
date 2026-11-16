@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Seeder.Model;
 using System.Globalization;
 using System.Text;
@@ -31,13 +32,13 @@ internal static class TaskFileWriter
     }
 
     /// <summary>
-    /// Builds the Change log. The first entry is the Created date, the last is the Updated date, and a closed Task
-    /// ends with a <c>closed</c> entry, which is what the app reads as the Closed date.
+    /// Builds the timeline, every entry an <c>event</c>. The first entry is the Created date, the last is the Updated date, and a
+    /// closed Task ends with a <c>closed</c> event, which is what the app reads as the Closed date.
     /// </summary>
     /// <param name="task">The Task.</param>
     /// <param name="today">The run date the offsets are measured from.</param>
     /// <returns>The entries, oldest first, spread evenly between the creation and last-touched times.</returns>
-    internal static IReadOnlyList<TaskLogLine> BuildLog(SeedTask task, DateOnly today)
+    internal static IReadOnlyList<TimelineEntry> BuildTimeline(SeedTask task, DateOnly today)
     {
         string worker = task.Assignee ?? task.Creator;
         List<(string Actor, string Summary)> steps = [(task.Creator, "created")];
@@ -57,7 +58,7 @@ internal static class TaskFileWriter
             steps.Add((worker, $"status: {change}"));
         }
 
-        foreach (SeedLogNote note in task.ExtraLog)
+        foreach (SeedTimelineEvent note in task.ExtraEvents)
         {
             steps.Add((note.Actor, note.Summary));
         }
@@ -69,14 +70,14 @@ internal static class TaskFileWriter
 
         DateTimeOffset start = At(today, -task.CreatedDaysAgo, "09:00");
         DateTimeOffset end = At(today, -task.LastTouchedDaysAgo, "16:00");
-        List<TaskLogLine> log = new(steps.Count);
+        List<TimelineEntry> timeline = new(steps.Count);
         for (int i = 0; i < steps.Count; i++)
         {
             DateTimeOffset at = steps.Count == 1 ? start : start + ((end - start) * i / (steps.Count - 1));
-            log.Add(new TaskLogLine(new DateTimeOffset(at.Year, at.Month, at.Day, at.Hour, at.Minute, 0, TimeSpan.Zero), steps[i].Actor, steps[i].Summary));
+            timeline.Add(new TimelineEntry(new DateTimeOffset(at.Year, at.Month, at.Day, at.Hour, at.Minute, 0, TimeSpan.Zero), steps[i].Actor, TimelineEntryKind.Event, steps[i].Summary));
         }
 
-        return log;
+        return timeline;
     }
 
     private static void AppendRequest(StringBuilder text, SeedTaskRequest request)
@@ -90,7 +91,7 @@ internal static class TaskFileWriter
     }
 
 
-    /// <summary>Renders the whole Task file: front matter, description and Change log.</summary>
+    /// <summary>Renders the whole Task file: front matter, description and timeline.</summary>
     /// <param name="task">The Task.</param>
     /// <param name="today">The run date the offsets are measured from.</param>
     /// <param name="originRoomId">The id of the Room named by <see cref="SeedTask.OriginRoom"/>, or <see langword="null"/>.</param>
@@ -144,12 +145,10 @@ internal static class TaskFileWriter
             text.Append(body).Append("\n\n");
         }
 
-        text.Append("## Change log\n");
-        foreach (TaskLogLine line in BuildLog(task, today))
+        text.Append(TaskFileFormat.TimelineHeading).Append('\n');
+        foreach (TimelineEntry entry in BuildTimeline(task, today))
         {
-            text.Append("- ")
-                .Append(line.At.UtcDateTime.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture))
-                .Append(" | ").Append(line.Actor).Append(" | ").Append(line.Summary).Append('\n');
+            text.Append(TaskFileFormat.FormatTimelineEntry(entry)).Append('\n');
         }
 
         return text.ToString();

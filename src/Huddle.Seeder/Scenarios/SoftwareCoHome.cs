@@ -215,7 +215,7 @@ internal static class SoftwareCoHome
             Status = "Review", Priority = "High", Creator = "Ravi", Assignee = "Ravi",
             Tags = ["boiler", "spend"], DueOffset = 5, CreatedDaysAgo = 4, LastTouchedDaysAgo = 1,
             HumanGate = true,
-            ExtraLog = [new("Ravi", "human gate on (reason: Spends money on the house)")],
+            ExtraEvents = [new("Ravi", "human gate on (reason: Spends money on the house)")],
             Body = "The pressure valve needs replacing: 180 pounds from Hill Heating, 240 from the other firm. Ravi recommends Hill Heating; the Human decides.",
         },
         new()
