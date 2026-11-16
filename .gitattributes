@@ -1,3 +1,8 @@
 *.sh text eol=lf
 installer/tests/*.sh text eol=lf
 src/Huddle.App/AvatarLibrary/*.png binary
+# Shipped byte-for-byte in every release archive, and the installer skips npm ci only while the
+# lock file's SHA-256 is unchanged. Without a fixed EOL a Windows checkout gets CRLF, so a release
+# built there differs from the Linux-built one and every upgrade reruns npm ci (release smoke STEP 7).
+tools/acp/package.json text eol=lf
+tools/acp/package-lock.json text eol=lf
