@@ -58,7 +58,7 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 **Steps**
 
 1. Go to http://localhost:5100/ and open Ada's Room.
-2. In the composer, type the absolute path to a Markdown file in the pinned root, `<repo>\docs\Huddle.Library-Specifications.md` written out in full (for example `E:\Repos\Huddle2\docs\Huddle.Library-Specifications.md`).
+2. In the composer, type the absolute path to a Markdown file in the pinned root, `<repo>\docs\Huddle.Library-Specifications.md` written out in full.
 3. Press Enter to send the message.
 4. In the message list, look at the rendered path. Does it appear as a link (blue, underlined, or otherwise styled as a link)?
 5. Click the link.

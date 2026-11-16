@@ -1,14 +1,14 @@
 # Agency.Huddle feature list
 
 What Huddle does **today**, on `main` at `987bf475` (PR #417, 2026-11-06). It is built
-from the feature log in [Prs-Feature.md](Prs-Feature.md), but each entry describes the
+from the feature log (`private/feature-logs/Prs-Feature.md`, not in the public mirror), but each entry describes the
 feature as it works now, after every later PR that changed it, not as it first shipped.
 
 Each entry ends with **PRs**: the PR that added the feature first, then the ones that
 changed it. Features that were replaced or removed are listed at the end, so an old PR
 description is not read as current behaviour.
 
-To bring this page up to date, follow [UPDATING.md](UPDATING.md).
+To bring this page up to date, follow `private/feature-logs/UPDATING.md`.
 
 Sources: `docs/Huddle.UserGuide.md`, the status column of `docs/Index.md`, the PR
 descriptions, and a check of `src/Huddle.App` where those disagreed.

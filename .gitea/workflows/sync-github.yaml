@@ -88,8 +88,18 @@ jobs:
           # trailers, which live in commit messages, not blobs. The --path strip is
           # defensive: .claude/settings.local.json has never been committed, but it is the one
           # file that would hold machine-specific permissions if it ever were.
+          # `private/` is the maintainer's history (PR logs, run costs, owner gates) and never
+          # ships. The old paths of what moved into it are stripped too, so no earlier revision
+          # carries them. A path added to this list is added to the verify step below.
           git-filter-repo --force \
-            --path .claude/settings.local.json --invert-paths \
+            --path .claude/settings.local.json \
+            --path private/ \
+            --path docs/FeaturesSummary/PRs.md \
+            --path docs/FeaturesSummary/Prs-Feature.md \
+            --path docs/FeaturesSummary/UPDATING.md \
+            --path docs/FeaturesSummary/pr-classification.csv \
+            --path docs/Huddle.SecondBrainZeroFixes-ProjectPlan.md \
+            --invert-paths \
             --replace-text ../replacements.txt \
             --replace-message ../replacements.txt \
             --mailmap ../mailmap.txt
@@ -100,10 +110,15 @@ jobs:
           set -euo pipefail
           fail=0
 
-          if [ -n "$(git log --all --oneline -- .claude/settings.local.json)" ]; then
-            echo "::error::.claude/settings.local.json still present in history after rewrite."
-            fail=1
-          fi
+          for stripped in .claude/settings.local.json private/ \
+              docs/FeaturesSummary/PRs.md docs/FeaturesSummary/Prs-Feature.md \
+              docs/FeaturesSummary/UPDATING.md docs/FeaturesSummary/pr-classification.csv \
+              docs/Huddle.SecondBrainZeroFixes-ProjectPlan.md; do
+            if [ -n "$(git log --all --oneline -- "$stripped")" ]; then
+              echo "::error::$stripped still present in history after rewrite."
+              fail=1
+            fi
+          done
 
           BAD_AUTHORS=$(git log --all --format='%ae%n%ce' | sort -u | grep -v '^13038027+emreaydinceren@users\.noreply\.github\.com$' || true)
           if [ -n "$BAD_AUTHORS" ]; then

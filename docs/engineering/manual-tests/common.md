@@ -19,8 +19,7 @@ Areas used to name these four different ways. One naming, everywhere:
 | **T-B** | Oracle window — processes, files, database, `curl.exe`. Never start the app from it. |
 | **T-C**, **T-D**, … | One per external bot a test connects. The test says which name each carries. |
 
-`<repo>` is the clone root, the folder that holds `Huddle.slnx` (on this machine
-`E:\Repos\Huddle2`). Every path in the manual tests is written `<repo>\…`.
+`<repo>` is the clone root, the folder that holds `Huddle.slnx`. Every path in the manual tests is written `<repo>\…`.
 
 All are PowerShell 7 (`pwsh`) opened at `<repo>`. A `$env:` variable set
 in one window is invisible to the others and gone when it closes — set it in the

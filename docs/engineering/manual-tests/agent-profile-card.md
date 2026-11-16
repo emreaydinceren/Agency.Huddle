@@ -2159,7 +2159,7 @@ You are Probe. Answer in one short sentence.
 6. Change **Name** back to `Probe` and press Tab. Note whether the note disappears.
 7. Change **Name** to `Probe2` again and click **Save**. Note the name the card now shows, the Persona file path it reports, and whether the card is on the details view.
 8. Open `<data>\Agents\Probe2\Probe2.md` in an editor. Note every frontmatter key present and the body.
-9. Click **Edit**, type an apostrophe into **Title**: `Emre's Probe`, press Tab and save, then re-open the file and note the `title:` line.
+9. Click **Edit**, type an apostrophe into **Title**: `Sam's Probe`, press Tab and save, then re-open the file and note the `title:` line.
 
 **Pass if — all of these**
 
@@ -2171,7 +2171,7 @@ You are Probe. Answer in one short sentence.
 - Step 6: the note disappears when the Name matches again.
 - Step 7: the card lands on the details view for `Probe2`, not on an error and not on a blank card, and the file path reads `<data>\Agents\Probe2\Probe2.md` (the folder and file both moved, ADR-0011).
 - Step 8: the file still holds `role:` and `consult_when:` with their original values, and the body is unchanged.
-- Step 9: the apostrophe round-trips — the file reads `title: 'Emre''s Probe'` and the card shows `Emre's Probe` when reopened.
+- Step 9: the apostrophe round-trips — the file reads `title: 'Sam''s Probe'` and the card shows `Sam's Probe` when reopened.
 
 **Fail if — any of these**
 

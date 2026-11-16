@@ -3,7 +3,7 @@
     Fetches every pull request from the Huddle Gitea repo and regenerates PRs.md and Prs-Feature.md.
 
 .DESCRIPTION
-    Step 1 of docs/FeaturesSummary/UPDATING.md. Everything it writes goes to docs/FeaturesSummary/, is
+    Step 1 of private/feature-logs/UPDATING.md. Everything it writes goes to private/feature-logs/, is
     CRLF, and has email addresses, the local Windows user path and the Gitea host redacted, because
     these files are tracked and the secret scan reads them. It:
       1. reads every PR (open, closed, merged) through the Gitea API;
@@ -30,7 +30,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (git -C $PSScriptRoot rev-parse --show-toplevel).Trim()
-$dir = Join-Path $repoRoot 'docs/FeaturesSummary'
+$dir = Join-Path $repoRoot 'private/feature-logs'
 $utf8 = [Text.UTF8Encoding]::new($false)
 
 # The host is read from the remote so no tracked file names it (agents/GiteaOperations.md).

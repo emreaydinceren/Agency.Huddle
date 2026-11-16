@@ -68,7 +68,7 @@ A **Fail** gets an issue. The result in this table is the index; the issue carri
 saw, quoted verbatim per [§0.5](../manual-tests.md#05-how-to-conclude-a-result) rule 2, and
 the implication the *Fail if* line gives.
 
-Issues live on this repo's Gitea instance under `/emre/Huddle/issues`. The host is
+Issues live on this repo's private Gitea instance, not on the public mirror. The host is
 deliberately not written here — `.gitleaks.toml`'s `internal-mdns-host` rule fails the
 `secret-scan` job on any `*.local` name in a tracked file, and `gitleaks dir .` scans the
 whole tree, so one hardcoded hostname would break CI on somebody else's unrelated commit.
