@@ -520,11 +520,12 @@ sentences.
 ### 10.5 Sprint proposals under the Needs You level (ADR-0088)
 
 `propose_sprint` normally waits for the Human to approve. When every Task the proposal names runs under the level Run inside the Team
-(resolved per Task, from its folder), `SprintApprover.ApproveWithoutHuman` approves it at once instead:
+(resolved per Task: the stricter of the scope Huddle placed it in and its folder), `SprintApprover.ApproveWithoutHuman` approves it at once instead:
 
 - It creates the Sprint (an existing name is accepted) and sets it on each named Task that still exists and is not Done.
 - Each Task added gets a Change log entry by Huddle: "proceeded under <scope> level Run inside the Team: Sprint '<name>' approved without the
-  Human". The Feed gets one `sprint-proceeded` item for the Sprint.
+  Human". The Feed gets one `sprint-proceeded` item for the Sprint; its `Scope` names every scope that supplied a Task's level, joined with
+  "and", and its `Team` is null when the Tasks are in more than one Team.
 - One Task under Ask me sends the whole proposal to the Human as before.
 
 ---

@@ -1059,25 +1059,29 @@ The **Needs You level** says how much of a Team's work waits for you. There are 
 | **Ask me** (the default) | Everything that waits today: every merge into main, every push, every Task with an Action, every connector call. |
 | **Run inside the Team** | The same, except three steps go ahead without you: a **local merge** into main of a Task's own branch (named after the Task's id) once its Proof is complete, a **Sprint** proposal (approved at once when every Task it names runs inside the Team) and new Backlog Tasks. |
 
-Under both levels these still wait for your **Accept**: any `git push` (to a URL, to a path, to anywhere), every Task with an Action (send, pay, publish,
+Under both levels, in every Team, these still wait for your **Accept**: every `git push`, whatever its form (a named branch, a URL, a path, `--all`; it passes
+only when you accept a Task whose Action names the push, and an Agent in no Team cannot push at all), every Task with an Action (send, pay, publish,
 sign, delete) or marked **Requires your acceptance**, and every connector call.
 
 You set the level in three places, and the most specific one wins: **Settings › Needs You level** for everything, the **Process** tab of a Team page
 for that Team, and **Needs You level…** on a project for that project. A scope you leave unset inherits from the one above, and the line under the
-control says which level is in force and where it comes from. Only you can set it: an Agent, a Helper or a retro proposal cannot, and a refused
-attempt goes to the log.
+control says which level is in force and where it comes from. The level is kept in Huddle's own database (`team.db`), not in `_team.md` or `_project.md`,
+so only you can set it: an Agent, a Helper or a retro proposal has nothing to write, and editing those files or moving a Task file changes
+nothing. A Task's level is fixed where Huddle put it (or where you last moved it) and can only get stricter: an Agent that moves a Task into a
+**Run inside the Team** project does not lax it, and a Task Huddle did not place is on **Ask me**.
 
 Beside **Run inside the Team** you can enter a **Spend cap (USD)**. When the Team (or project) has spent that much running inside the Team it
 falls back to **Ask me** and asks you, in Needs you and in the Feed: **Let it spend another** that amount, or **No, ask me for each step**. Yes lets
 it spend exactly one more cap, then it asks again. No keeps it on Ask me until you change the level or the cap. The cap counts the USD spend of
-the Team's Agents (all Agents for the Settings level) and does not stop a Turn in progress. A step that went ahead shows as a Change log entry
+the Team's Agents as it happens (all Agents for the Settings level), so an Agent leaving the Team or a rename moves no count. Saving the same level and
+cap again restarts nothing. The cap does not stop a Turn in progress. A step that went ahead shows as a Change log entry
 on the Task, "proceeded under Team level Run inside the Team", and as an item in the Feed.
 
 ### The six gates
 
 | Gate | Refuses |
 | --- | --- |
-| `accept-before-merge` | A `git merge` into main, or a `git push` to main, by any Agent in the Team until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. The gate has no switch: set the Team's or project's [Needs You level](#the-needs-you-level) instead. Under **Run inside the Team** a local merge needs no Accept, so Huddle does not move the Task to **Needs you** for it; a push still does. |
+| `accept-before-merge` | A `git merge` into main by any Agent in the Team, in every Team whatever its `gates:` line says, until a Task of the Team has your **Accept**. The Team's process tells the Agent to put the merge in a Task's Action; Huddle moves the Task to **Needs you** and the merge follows your Accept. If no Agent names the merge, Huddle does so when the Task's Proof is complete, as `Merge this Task's work into main`. If a Task has nothing to merge, clear its Action, then move it to **Done**. Your Accept carries a merge for 24 hours (one hour when it took the Task straight to **Done**); after that the merge needs a fresh Accept. As with the other gates, a refused Agent sees only that the request was denied, and the reason goes to the log. Within that time another merge by the Team is allowed too, because a command names no Task. The gate has no switch: set the Team's or project's [Needs You level](#the-needs-you-level) instead. Under **Run inside the Team** a local merge of a branch named after the Task's id needs no Accept, so Huddle does not move the Task to **Needs you** for it; a push still does, at every level: put the push in a Task's Action. |
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. When the Team's Definition of Done names no command, a note from that member is enough. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |

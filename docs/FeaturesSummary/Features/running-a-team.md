@@ -23,7 +23,7 @@ A Team's process has two parts:
 
 | Gate | What it requires |
 | --- | --- |
-| `accept-before-merge` | Your Accept on one of the Team's Tasks before an Agent merges or pushes into `main`. Set the Team's Needs You level to Run inside the Team and a local merge needs no Accept; a push still does |
+| `accept-before-merge` | Your Accept on one of the Team's Tasks before an Agent merges into `main`, in every Team. Set the Team's Needs You level (kept in `team.db`) to Run inside the Team and a local merge of a branch named after the Task's id needs no Accept; every push still waits for an Accept on a Task whose Action names it |
 | `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done; only a note when the Definition of Done names no command |
 | `checks-before-merge` | Evidence that the Team's check command passed, before an Agent's `git merge` or `git push` |
 | `spec-approved-before-build` | An approved parent spec Task before a Task moves to In Progress |

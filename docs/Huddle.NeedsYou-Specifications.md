@@ -398,6 +398,9 @@ A scope whose Needs You level is Run inside the Team may carry a spend cap. When
 question ("Spend cap reached", linking to `/needs-you#cap`), and the Needs You page draws `NeedsYouCapAskCard` with Yes and No buttons.
 The count of the card includes these rows.
 
+- The spend is counted from a ledger written at spend time against `global` and each Team the Agent belongs to then; a Project counts its Team's
+  ledger. A member leaving or a rename moves no count. A Save that changes neither the level nor the cap restarts nothing and leaves an open
+  question open. The level and the cap are stored in `team.db`, by scope id, not in `_team.md` or `_project.md`.
 - The question reads "<scope> has spent 5.00 USD running inside the Team, its cap. Let it spend another 5.00 USD?".
 - **Yes** lets the scope spend exactly one more cap, and the question returns when that is spent. **No** keeps the scope at Ask me until the
   Human changes the level or the cap.

@@ -264,6 +264,8 @@ pins the pairing and is unit-tested for every value.
 
 `task-proceeded` and `sprint-proceeded` record a step that went ahead under the level Run inside the Team (a local merge into main, a Sprint
 approved without the Human), so the Human can see what Huddle did on their behalf ([ADR-0088](adr/0088-a-needs-you-level-per-scope-lets-a-teams-local-work-run-without-an-accept.md)).
+The `SprintProceededPayload` `Scope` names every scope that supplied a Task's level, joined with "and". The `SpendCapReachedPayload` `Scope` is
+the scope key: `global`, `team:<teamId>` or `project:<projectId>`.
 `spend-cap-reached` is a Notification with a Yes/No question; it resolves when the Human answers or changes the level or cap.
 
 The `helper-paused` and `helper-failing` rows and the `Reason` of `task-gate-on` are slice 3 ([Helpers in the Feed](Huddle.HelpersInFeed-Specifications.md)).
