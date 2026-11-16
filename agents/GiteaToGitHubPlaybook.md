@@ -61,6 +61,12 @@ messages, and old revisions of docs.
 - **A tree scan is not enough.** The internal-hostname findings were in old revisions that no
   longer exist in the tree. The sync runs `gitleaks git` over the rewritten history as well as
   `gitleaks dir` over the tree.
+- **CI scans only what a PR changes; the sync scans all of history.** A fake value a PR later
+  replaced (`a@b.com`, `probe@example.test`, a schema id on an invented mDNS host) still fails the
+  next sync. Run 1649, the first after a six-week gap, stopped on ten of them. When a finding is
+  a fake, allowlist that exact value in `.gitleaks.toml`, or the whole line with
+  `regexTarget = "line"`. Never a file or a whole domain. Reproduce first with
+  `gitleaks git . --config .gitleaks.toml --log-opts="--all -- <files>"`.
 - **The verify step reads its needles from the runtime copy of the secret**, so this repo
   never contains them. Add a new needle to the secret and the verify step checks it
   automatically.
