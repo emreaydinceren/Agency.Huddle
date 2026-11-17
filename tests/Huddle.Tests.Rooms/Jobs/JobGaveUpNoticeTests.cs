@@ -31,6 +31,28 @@ public sealed class JobGaveUpNoticeTests
         Assert.Equal("⏰ Nova's Job \"Digest\" did not run: its Room is gone.", Assert.Single(await fixture.Transcript.ReadAllAsync(room.Id, ct)).Text);
     }
 
+    /// <summary>The Huddle line Mentions nobody, so it wakes no Agent and spends no Budget.</summary>
+    [Fact]
+    public async Task AgentJob_Line_MentionsNobodyAndSpendsNoBudget()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingFeedPublisher feed = new();
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct, feed);
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        JobRoomStore rooms = new(fixture.Directory.Options());
+        Room room = await fixture.Team.CreateRoomAsync("⏰ Digest", [KnownIds.Human, nova.Id], ct);
+        rooms.Set("job-1", room.Id);
+        JobGaveUpNotice notice = new(feed, rooms, fixture.Team, fixture.Service, NullLogger<JobGaveUpNotice>.Instance);
+        List<MessagePostedEvent> published = [];
+        fixture.Events.MessagePosted += published.Add;
+
+        await notice.NoteAsync(Draft(JobOwner.Agent("Nova")), "its Room is gone", ct);
+
+        MessagePostedEvent only = Assert.Single(published);
+        Assert.Empty(only.Mentions);
+        Assert.Equal(0, only.Budget.Used);
+    }
+
     /// <summary>The Human's one-off leaves a Notification and no Huddle line.</summary>
     [Fact]
     public async Task HumanJob_WritesANotificationAndNoLine()

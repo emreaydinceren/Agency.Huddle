@@ -266,7 +266,7 @@ internal sealed partial class JobScheduler(
         bool oneOff = job.When.Cadence == JobCadence.Once;
         DateTimeOffset due = before is not null && string.Equals(before.WhenKey, run.Save.WhenKey, StringComparison.Ordinal) && before.NextRunUtc is { } stamped
             ? stamped
-            : job.When.NextAfter(now - options.Value.Jobs.OverdueOneOffWithin, zone) ?? now;
+            : job.When.NextAfter(this.LookBackFrom(now, oneOff), zone) ?? now;
         DateTimeOffset? lateDue = run.Late ? TimeZoneInfo.ConvertTime(due, zone) : null;
         DueState beforeRun = before is not null && string.Equals(before.WhenKey, run.Save.WhenKey, StringComparison.Ordinal)
             ? before
@@ -288,6 +288,10 @@ internal sealed partial class JobScheduler(
             await this.RemoveWithTraceAsync(job, shown == JobOutcome.NoAgent ? "its Agent is no longer available" : "its Room is gone", ct).ConfigureAwait(false);
         }
     }
+
+    /// <summary>The instant to ask a timetable for its own time from: a one-off's time is found from the far past, so it is right whatever the window.</summary>
+    private DateTimeOffset LookBackFrom(DateTimeOffset now, bool oneOff) =>
+        oneOff ? DateTimeOffset.MinValue : now - options.Value.Jobs.OverdueOneOffWithin;
 
     private async Task<JobOutcome> PostAsync(Job job, DateTimeOffset now, DateTimeOffset? lateDue, CancellationToken ct)
     {

@@ -182,6 +182,39 @@ public sealed class JobSchedulerOverdueTests : IDisposable
         Assert.Equal([(job.Id, "it was more than 24 hours late")], this.notice.Notes);
     }
 
+    /// <summary>Deleting a Job, and a one-off giving up, each forget its retry count along with its state.</summary>
+    [Fact]
+    public async Task DeleteAndGiveUp_RemoveTheRetryRow()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Job deleted = this.Add(JobRecurrence.Daily(new TimeOnly(9, 0)));
+        Job gaveUp = this.Add(JobRecurrence.Once(new DateOnly(2026, 11, 2), new TimeOnly(9, 0)));
+        await this.scheduler.TickAsync(ct);
+        this.states.SetTries(deleted.Id, 2, true);
+        this.states.SetTries(gaveUp.Id, 1, true);
+
+        Assert.True(this.scheduler.Delete(deleted.Id));
+        this.clock.UtcNow = Monday0800.AddHours(26);
+        await this.scheduler.TickAsync(ct);
+
+        Assert.Equal(((0, false), (0, false)), (this.states.GetTries(deleted.Id), this.states.GetTries(gaveUp.Id)));
+        Assert.Null(this.store.Find(gaveUp.Id));
+    }
+
+    /// <summary>With no overdue window a one-off first seen late runs, and the late text carries its own due time, not the time of the run.</summary>
+    [Fact]
+    public async Task OneOff_NoWindow_FirstSeenLate_ReportsItsOwnDueTime()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        this.options.Value.Jobs.OverdueOneOffWithin = TimeSpan.Zero;
+        Job job = this.Add(JobRecurrence.Once(new DateOnly(2026, 10, 1), new TimeOnly(6, 0)));
+
+        await this.scheduler.TickAsync(ct);
+
+        Assert.Equal([new DateTimeOffset(2026, 10, 1, 6, 0, 0, TimeSpan.Zero)], this.runner.LateDues);
+        Assert.Null(this.store.Find(job.Id));
+    }
+
     /// <summary>With RunOverdue off a one-off first seen past the window is kept as before: no run and no trace.</summary>
     [Fact]
     public async Task OneOff_FirstSeenPastTheWindow_RunOverdueOff_IsKept()
