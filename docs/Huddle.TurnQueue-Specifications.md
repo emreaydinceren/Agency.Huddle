@@ -1,7 +1,7 @@
 # Huddle.TurnQueue — Design Specification
 
 **Date:** 2026-11-16, revised the same day after an independent review · **Status:** Proposed, not built; the
-owner has settled the open questions (§10), two remain (§11) · **Issues:** #617 (durable queue), #618 (folded
+owner has settled every open question (§10); one question for the ACP effort's owner remains, answered by a spike (§11) · **Issues:** #617 (durable queue), #618 (folded
 Turns), #619 (follow-ups and overdue runs) · **Decision records:** none yet; slices 1, 2 and 3 write ADR-0091,
 ADR-0092 and ADR-0093 (§12) · **Amends, when built:**
 [ADR-0004](adr/0004-direct-rooms-reply-without-mention.md) (its restart limitation),
@@ -137,7 +137,7 @@ Two documents cited stale lines, fixed in this commit because slices 1 and 2 tou
 
 ```text
 ChatService.PostCoreAsync ── under the Room's post lock ────────────────────────────────────────┐
-   budget  = RoomBudgets.After(budget, senderKind)          one pure function, used twice        │
+   budget  = RoomBudgets.After(budget, sender, allowance)   one pure function, used twice        │
    owed    = IOwedTurnPolicy.Owed(room, members, mentions, sender, budget)                       │
    ITurnLedger.Record(message, owed)                        before the append                    │
    IChatStore.AppendAsync, then PublishMessagePosted        as today                             │
@@ -149,23 +149,25 @@ AgentConnection after Welcome ──► TurnRedelivery.SendWaitingAsync(agentId)
         └─► AgentGateway.DeliverToAsync(agentId, event, redelivery)   MessagePosted built once   │
 TurnQueueRecovery (IHostedService, StartAsync, before PipeServer) ──► reconcile, expire, lines   │
 Chat.razor Stop / Don't answer ──► TurnControl.StopAsync(agentId, roomId) ──► close, then gateway│
+ChatService.BudgetUnpaused(roomId) ──► TurnRedelivery.SendHeldAsync(roomId), JobScheduler       │
 Delete Room / Persona removal ──► ITurnQueueControl.CloseForRoom / CloseForAgent ────────────────┘
 ```
 
 | Component | Kind | New or changed |
 | --- | --- | --- |
 | `Acp/IOwedTurnPolicy.cs`, `Acp/OwedTurnPolicy.cs` | Who owes a Turn for a posted Message. Beside `RoomReplyResolver` and sharing its recipient loop (`src/Huddle.App/Acp/RoomReplyResolver.cs:62-80`), so the fan-out of `ReplyGate.Decide` with follows exists once | New |
-| `Services/RoomBudgets.cs` | `After(budget, senderKind)`: the arithmetic `SpendBudget` does today (`src/Huddle.App/Services/ChatService.cs:318-328`), pure, called by `SpendBudget` and by the post path | New, extracted |
+| `Services/RoomBudgets.cs` | `After(budget, sender, allowance)`: the arithmetic `SpendBudget` does today (`src/Huddle.App/Services/ChatService.cs:318-328`), pure, called by `SpendBudget` and by the post path. `sender` is Human, Agent or Huddle: an Agent adds one, the Human resets to `(0, allowance)` (the configured `AgentMessageBudget`), Huddle leaves it as it is (`ChatService.cs:296-300`) | New, extracted |
 | `Data/TurnQueueStore.cs` | The `turn_queue` and `turn_queue_agents` tables, synchronous like `JobStateStore` | New |
 | `Services/TurnQueue.cs` | The one writer of the store; implements the three interfaces below | New |
 | `Services/ITurnLedger.cs` | `Record(message, owed)`, `Forget(messageId)`: for `ChatService` | New |
-| `Services/ITurnAcks.cs` | `Apply(connectionId, agentId, ack)`, `MarkReplied(agentId, inReplyTo)`: for `AgentConnection` | New |
-| `Services/ITurnQueueControl.cs` | `CloseForStop`, `CloseForRoom`, `CloseForAgent`, `CloseRunning(connectionId)`, `Waiting(agentId, now)`: for lifecycle code | New |
-| `Services/TurnRedelivery.cs` | Builds a `MessagePostedEvent` per waiting row and hands it to the gateway | New |
+| `Services/ITurnAcks.cs` | `Apply(connectionId, agentId, ack)`, `MarkReplied(agentId, roomId, inReplyTo)`, `MarkRefused(agentId, roomId, inReplyTo)`: for `AgentConnection` | New |
+| `Services/ITurnQueueControl.cs` | `CloseForStop`, `CloseForRoom`, `CloseForAgent`, `CloseRunning(connectionId)`, `TakeWaiting(agentId, now)` (expires as it hands out, so the name says it is not a plain read): for lifecycle code | New |
+| `Services/ITurnQueueView.cs` | Read-only, for the UI: `WaitingIn(roomId)` gives each Agent's waiting count and whether any is held for the Budget. Never closes or expires a row | New |
+| `Services/TurnRedelivery.cs` | Builds a `MessagePostedEvent` per waiting row and hands it to the gateway: `SendWaitingAsync(agentId)` after a Welcome, `SendHeldAsync(roomId)` when the Room's Budget stops being spent (§5.8) | New |
 | `Services/TurnControl.cs` | `StopAsync(agentId, roomId)`: closes rows, then calls `IAgentGateway.StopTurnAsync` | New |
 | `Services/TurnQueueRecovery.cs` | The start-up pass (§5.7) | New |
 | `Services/TurnQueueOptions.cs` | `Team:TurnQueue` (§9) | New |
-| `Services/ChatService.cs` | Calls the policy and the ledger in `PostCoreAsync`; asks `TurnRedelivery` after Continue | Changed |
+| `Services/ChatService.cs` | Calls the policy and the ledger in `PostCoreAsync`; raises one `BudgetUnpaused(roomId)` from both `ExtendBudgetAsync` and a Human post that ended a pause, which `TurnRedelivery` and `JobScheduler` subscribe to | Changed |
 | `Pipes/AgentConnection.cs` | Reads `Hello.DurableQueue`; routes `QueueAck` and `InReplyTo` to `ITurnAcks`; calls `TurnRedelivery` after Welcome and `CloseRunning` in its `finally` | Changed, transport only |
 | `Pipes/AgentGateway.cs`, `IAgentGateway.cs` | One new method, `DeliverToAsync(agentId, event, redelivery)`, sharing the payload build of `DeliverAsync` (`AgentGateway.cs:149-158`) | Changed |
 | `Contracts/Hello.cs`, `MessagePosted.cs`, `PostMessage.cs`, `QueueAck.cs`, `Redelivery.cs`, `QueueOutcome.cs`, `ProtocolMessage.cs` | Additive (§5.3) | Changed, new |
@@ -235,17 +237,24 @@ public sealed record PostMessage(string RoomId, string? MessageId, string Text, 
 
 /// <summary>What a client did with Messages the server queued for it. Client to server.</summary>
 /// <param name="MessageIds">The Messages concerned, oldest first; more than one only for a Folded Turn (§6).</param>
-/// <param name="Kind"><see cref="QueueAckKind.Started"/> carries <paramref name="ReplyMessageId"/>; <see cref="QueueAckKind.Finished"/> carries <paramref name="Outcome"/>.</param>
+/// <param name="Kind"><see cref="QueueAckKind.Started"/> carries <paramref name="ReplyMessageId"/>; <see cref="QueueAckKind.Finished"/> carries <paramref name="Outcome"/>; <see cref="QueueAckKind.Held"/> carries neither.</param>
 public sealed record QueueAck(
     string RoomId, IReadOnlyList<string> MessageIds, QueueAckKind Kind, string? ReplyMessageId = null, QueueOutcome? Outcome = null)
     : ProtocolMessage;
 
-public enum QueueAckKind { Started, Finished }
-public enum QueueOutcome { Silent, Failed, Stopped, Declined, Dropped, Held }
+public enum QueueAckKind { Started, Finished, Held }
+public enum QueueOutcome { Silent, Failed, Stopped, Declined, Dropped }
 ```
 
-- **Two kinds, one outcome enum.** A decline and a drop are `Finished` with an outcome, so each field is valid for
-  one kind only and the outcome is typed. `Held` is the one outcome that does not close a row (§5.8).
+- **Three kinds, one outcome enum.** A decline and a drop are `Finished` with an outcome, so each field is valid for
+  one kind only and the outcome is typed. `Held` is its own kind because it finishes nothing: the row stays
+  `waiting` (§5.8).
+- **`InReplyTo` is a new property on a client-to-server record.** [traps.md](engineering/traps.md)'s additive rule
+  names server-to-client records; the same reasoning holds the other way (an external client omits the property,
+  and only the in-process runner sends it), and the version stays 3. Slice 1 adds this case to traps.md. The ids
+  come from the wire, so each is checked with `NameRules.IsValidId`, as `MessageId` is
+  (`AgentConnection.cs:361-365`), and only rows of **this Agent in the posted Room** are closed by them. A fold's
+  ids fit easily in a line (`JsonLineStream`'s 1 MB limit, `src/Huddle.Contracts/JsonLineStream.cs:13`).
 - **Named `QueueAck`, not `TurnStarted`/`TurnEnded`.** `PersonaRunner` imports both `Agency.Huddle.Acp.Abstractions`
   and `Agency.Huddle.Contracts`, and the ACP side owns turn-event types ([traps.md](engineering/traps.md), "Two
   types can be named for the same ACP concept").
@@ -259,8 +268,9 @@ public enum QueueOutcome { Silent, Failed, Stopped, Declined, Dropped, Held }
 `ChatService.PostCoreAsync` (`ChatService.cs:250-309`) already holds the Room's post lock across the Budget
 decision, the append (`:293`) and the publish (`:302`). Inside it, before the append:
 
-1. `RoomBudgets.After(budget, senderKind)` gives the Budget this Message leaves, the value `SpendBudget` then
-   stores. One function, so the two cannot drift.
+1. `RoomBudgets.After(budget, sender, allowance)` gives the Budget this Message leaves, the value `SpendBudget`
+   then stores: one more for an Agent, `(0, allowance)` for the Human, unchanged for Huddle. One function, so the two
+   cannot drift.
 2. `IOwedTurnPolicy.Owed(room, members, mentions, senderId, budgetAfter, withheldFromAgentId, fromHuddle)` returns
    the Agent ids that owe a Turn: each recipient `AgentGateway` would send to (`MessagePostedEvent.IsRecipient`,
    minus the withheld Agent, `AgentGateway.cs:132-142`) for which `ReplyGate.Decide` answers `Reply`, with
@@ -280,8 +290,13 @@ server now remembers what the Reply Gate said at post time, and that is the only
 start-up removes (§5.7). The other order leaves a Message in the Transcript that nobody owes: today's loss.
 
 **A re-delivery after Continue** (`ExtendBudgetAsync`, `ChatService.cs:387-432`) records the same way, as an upsert
-on `(agent_id, message_id)` that only ever turns a missing row into `waiting`. After the extension, `ChatService`
-also asks `TurnRedelivery` to re-send the Room's rows that a Budget held (§5.8).
+on `(agent_id, message_id)` that only ever turns a missing row into `waiting`.
+
+**One trigger for "the Budget is no longer spent".** A pause ends two ways: the Human presses Continue
+(`ExtendBudgetAsync`) or the Human posts, which resets the Budget (`ChatService.cs:323-326`). `ChatService` raises one
+event, `BudgetUnpaused(roomId)`, from both: after `ExtendBudgetAsync` grants, and in `PostCoreAsync` when a Human
+post found the Budget exhausted. `TurnRedelivery.SendHeldAsync(roomId)` re-sends that Room's held rows (§5.8), and
+`JobScheduler` runs a held Follow-up on its next tick (§7.4). One place, so neither way is forgotten.
 
 ### 5.5 Closing a row
 
@@ -291,7 +306,8 @@ also asks `TurnRedelivery` to re-send the Room's rows that a Budget held (§5.8)
 | The Room Session drains an item unrun: a Stop mark (`RoomSession.cs:1099-1105`), a spent token Budget (`:1110`), a Stop during the Before hooks (`:1370`), the drop in `TryPublishTurn` (`:1494-1530`) | `RoomSession`: `Finished(Dropped)` | `done`, `dropped` |
 | A failed lazy open (`RoomSession.cs:1123-1127`), or an exception in `PrepareAndPublishAsync` before the prompt | `RoomSession`: `Finished(Failed)` | `done`, `failed` |
 | The prompt is about to be sent | `RoomSession`, just before `PromptAsync` (`RoomSession.cs:1655`): `Started(ids, replyId)` | `running`, `reply_message_id`, `connection_id`, `attempts + 1` |
-| The reply is posted | The reply's `PostMessage` carries `InReplyTo` = the Turn's trigger ids. `AgentConnection.HandlePostMessageAsync` (`src/Huddle.App/Pipes/AgentConnection.cs:359-384`) calls `ITurnAcks.MarkReplied(agentId, inReplyTo)` right after `chat.PostAsync` returns | those rows: `done`, `replied`, whatever their status |
+| The reply is posted | The reply's `PostMessage` carries `InReplyTo` = the Turn's trigger ids. `AgentConnection.HandlePostMessageAsync` (`src/Huddle.App/Pipes/AgentConnection.cs:359-384`) calls `ITurnAcks.MarkReplied(agentId, roomId, inReplyTo)` right after `chat.PostAsync` returns | those rows: `done`, `replied`, whatever their status |
+| **The reply is refused** (most often the Budget: another Agent spent it while this Turn ran, `ChatService.cs:282-286`) | `HandlePostMessageAsync`'s `catch (ChatException)` (`AgentConnection.cs:371-375`) calls `ITurnAcks.MarkRefused(agentId, roomId, inReplyTo)` before it writes the `ProtocolError`. The runner cannot report it: it marks the reply posted as soon as the envelope is written (`RoomSession.cs:1663-1665`) and sends no `Finished` | those rows: `done`, `failed`. Without this the row stays `running` and the next start re-runs, and pays for, a Turn the Budget refused |
 | The Turn ends with nothing posted: `NO_REPLY`, a refusal, a Stop, a timeout, a failure | `RoomSession.FinishTurnAsync` (`:1813-1848`): `Finished(Silent | Stopped | Failed)`, **only when the runner's own run token is not cancelled** | `done`, unless already `replied` |
 | The runner's run token is cancelled (Huddle closing, a Restart, a removal) | **Nothing.** The same gate as `StoreSessionEntry`'s `!ct.IsCancellationRequested` (`RoomSession.cs:1932-1934`) | left as it is; the server decides (§5.6) |
 | A Command Turn (`@Nova /compact`) | The same acks; its outcome line is a reply with `InReplyTo` like any other | as above |
@@ -324,10 +340,12 @@ The runner cannot tell a Restart from a close of Huddle: both cancel its run tok
   fired. It is not done in `AgentGateway.Unregister`: on a reconnect `Register` closes the stale connection after
   the new one is registered (`AgentGateway.cs:73-95`) and `Unregister` returns early for a stale one (`:104-112`),
   so a hook there would either not fire or close rows the new runner had just started.
-- So: **a Restart** (the button or a Persona edit) and **a dead Adapter** close the running Turn as `stopped` and
-  keep every `waiting` row, which the new runner receives after its Welcome (U11; owner decision D-29). **Huddle
-  closing** leaves the running row `running`, and the next start treats it as cut off (U2). **A stale connection**
-  closing late touches only its own rows.
+- So: **a Restart** (the button or a Persona edit) closes the running Turn as `stopped` and keeps every `waiting`
+  row, which the new runner receives after its Welcome (U11; owner decision D-29). **A dead Adapter** does not end
+  the pipe connection, so it never reaches this path: the Turn fails while the runner lives, and `FinishTurnAsync`
+  closes it with `Finished(Failed)` (§5.5); its waiting rows stay for the Restart. **Huddle closing** leaves the
+  running row `running`, and the next start treats it as cut off (U2). **A stale connection** closing late touches
+  only its own rows.
 
 ### 5.7 After a start: the start-up pass and re-delivery
 
@@ -346,20 +364,20 @@ is found or the file is read whole, so a long Room is not read in full. Then:
 | --- | --- | --- |
 | any open row | the Room is gone, or the Agent is no longer a Member, or its Persona is gone | `done`, `gone` |
 | `waiting` | the Message is absent (the crash fell between §5.4's steps 3 and 4) | deleted |
-| `running` | a Message with `reply_message_id`, or one whose `InReplyTo` names it, is there (U3) | `done`, `replied`: nothing runs again |
+| `running` | a Message with `reply_message_id` is there (U3). `InReplyTo` is not stored on `ChatMessage` (`src/Huddle.Contracts/ChatMessage.cs:4-9`), so the minted id is the one thing start-up can match | `done`, `replied`: nothing runs again |
 | `running`, `attempts` < 2 | no reply (U2) | `waiting`, cut off |
 | `running`, `attempts` ≥ 2 | no reply | `done`, `abandoned` |
 | `waiting` | the Message is older than `ResumeWithin` | `done`, `expired` |
 
 Then it prunes `done` rows older than `KeepDays`, and posts the restart line for each Room (§5.11).
 
-**One age rule, wherever rows are handed out.** `ITurnQueueControl.Waiting(agentId, now)` closes as `expired`
+**One age rule, wherever rows are handed out.** `ITurnQueueControl.TakeWaiting(agentId, now)` closes as `expired`
 every `waiting` row older than `ResumeWithin` before it returns the rest, with `now` from the injected
 `TimeProvider`. The start-up pass and re-delivery both call it, so an Agent that sat Offline for a week while Huddle
 stayed up and is then restarted with the button gets nothing older than the limit either.
 
 **Re-delivery.** When a connection with `DurableQueue` is registered (`AgentConnection.RunAsync`, after the Welcome,
-`AgentConnection.cs:97-150`), `TurnRedelivery.SendWaitingAsync(agentId)` takes `Waiting(agentId, now)`, oldest
+`AgentConnection.cs:97-150`), `TurnRedelivery.SendWaitingAsync(agentId)` takes `TakeWaiting(agentId, now)`, oldest
 first, rebuilds each Message's `MessagePostedEvent` from the Transcript, the Room's current Members and the current
 Budget, and hands it to `AgentGateway.DeliverToAsync(agentId, event, redelivery)`, which builds the envelope where
 `DeliverAsync` does (`AgentGateway.cs:149-158`) and sets `Redelivery` (`CutOff` for a cut-off row). The runner's
@@ -387,8 +405,9 @@ renamed Agent no longer matches the old Mention in the text (U11), a one-to-one 
 is lost at every Welcome (T-11).
 
 - The runner checks only the Room's Budget (`ReplyGate.Decide`'s first rule, `src/Huddle.App/Acp/ReplyGate.cs:57-60`).
-  Spent: it sends `Finished(Held)`, the row stays `waiting`, and `TurnRedelivery` re-sends it when the Human presses
-  Continue (§5.4). Not `declined`: Continue re-delivers only the Room's last Message (`ChatService.cs:402-403`).
+  Spent: it sends `QueueAck(Held)`, the row stays `waiting`, and `TurnRedelivery.SendHeldAsync` re-sends it on the
+  Room's `BudgetUnpaused`, whether the Human pressed Continue or spoke (§5.4). Not `declined`: Continue re-delivers
+  only the Room's last Message (`ChatService.cs:402-403`).
 - Otherwise it enqueues the Turn as a Reply, with `Foldable` from the Envelope as usual (§6).
 
 **What a late Turn sees.** Transcript Catch-up is read once, on the first Turn after a session opens, from the stored
@@ -400,10 +419,16 @@ next stored id is the reply's. The fix needs no wire change:
 - A Turn from a `Redelivery` reads its Transcript Catch-up **to the end of the Transcript**, not to the trigger:
   `ReadTranscript` with `BeforeMessageId` set to the Turn's own minted reply id, which is not in the Transcript yet,
   so the server reads to the end (`AgentConnection.cs:537-538`; RS §6.5). The reply id is minted before the
-  Catch-up step runs (`RoomSession.cs:1356`, `:1375`).
+  Catch-up step runs (`RoomSession.cs:1356`, `:1375`). That fall-through is today's code, not a contract
+  (`ReadTranscript.BeforeMessageId`'s own comment says "the one that started the Turn"), so slice 1 makes it one: a
+  comment at `AgentConnection.cs:537`, the parameter's doc comment saying "or an id not in the Transcript, to read
+  to the end", and a pinning test in `AgentConnectionReadTranscriptTests`.
 - `TurnPromptFramer` shows the Messages before the trigger as today, the trigger as the Message, and those after it
   under `turn.laterHeader` ("Posted after that Message, while it waited:"). D-7's reason for ending before the
   trigger (queued panellists not seeing each other) does not apply to a Turn that is late by definition (U12).
+- **The later block leaves out this Agent's own other waiting triggers.** In a group Room, a second Mention of Nova
+  that is also being re-sent would otherwise appear here as context and then again as its own Turn, and be
+  answered twice. The Room Session knows the ids queued behind it in that Room and drops them from the block.
 - The read still goes through the Catch-up token budget, so a long gap is trimmed as any Catch-up is.
 - A re-sent Turn on a session that is already open and was live the whole time has the runner's buffer, and needs
   none of this; the rule applies on a session's first Turn, which is the restart case.
@@ -413,29 +438,32 @@ next stored id is the reply's. The fix needs no wire change:
 | Event | Effect on the Turn Queue |
 | --- | --- |
 | **Stop** on a Draft | `Chat.razor` (`src/Huddle.App/Components/Pages/Chat.razor:885`) calls `TurnControl.StopAsync(agentId, roomId)` for each Agent instead of the gateway. It closes as `stopped` that Agent's `waiting` and `running` rows in that Room with `seq` up to the highest at the moment of the Stop, then calls `IAgentGateway.StopTurnAsync` as today. Closing by `seq`, not by time, matches the runner's own sequence mark (`PersonaRunner.cs:691-701`). The runner's `Dropped` acks then find the rows done |
-| **Don't answer** on the `C14` notice | The same call. This is the Human's way to call off a backlog for an Agent that is offline or has not reached it yet (U10) |
-| **Restart, a Persona edit, a dead Adapter** | §5.6: the running Turn of that connection closes `stopped`; waiting rows are re-sent |
+| **Don't answer** on the `C14` notice | The same call. It is offered **only where no Draft Stop exists for that Agent in that Room**: the Agent is offline, or its rows are held for the Budget. Then no Turn is running there, so the call can only close waiting rows. Where a Draft is on screen, its Stop already means "this Turn and what waits behind it", and `C14` shows the count without the button (U10). A waiting-only close while a Turn runs would need a second `TurnControl` method and a wire message that drains the runner's queue without cancelling; not needed, because the Draft's Stop covers the case and the Human loses nothing they did not choose |
+| **Restart, a Persona edit** | §5.6: the running Turn of that connection closes `stopped`; waiting rows are re-sent |
+| **A dead Adapter** | The Turn fails and closes `failed` through the runner (§5.6); waiting rows wait for the Restart |
 | **Huddle closing or crashing** | Nothing is touched on the way down; the start-up pass decides (§5.7) |
 | **Delete Room** | Its rows are deleted inside `SqliteTeamDirectory.DeleteRoomAsync`'s transaction, beside `room_jobs` (`SqliteTeamDirectory.cs:742`) |
 | **Archive** | Nothing. Archiving is a display filter and must never reach the delivery path ([rules.md](engineering/rules.md)) |
 | **Rename a Room or an Agent** | Nothing: rows hold ids (ADR-0011); a re-sent Message carries the current names and is not re-gated (§5.8) |
 | **Remove a Persona** | `PersonaRenameCascade.OnPersonaRemoved` calls `CloseForAgent` (`gone`) and deletes its `turn_queue_agents` row, beside the avatar call and above the "no Agent row" early return ([rules.md](engineering/rules.md)) |
 | **Remove an Agent from a Room** | At hand-out the Membership check closes the row as `gone` |
-| **Pause (a spent Budget)** | A Message the policy declines for the Budget writes no row (`PersonaRunner.cs:766-778` buffers nothing for it today). A re-sent row that meets a spent Budget is `Held` (§5.8) |
+| **Pause (a spent Budget)** | A Message the policy declines for the Budget writes no row (`PersonaRunner.cs:766-778` buffers nothing for it today). A re-sent row that meets a spent Budget is `Held` (§5.8) and re-sent on `BudgetUnpaused` (§5.4) |
 | **A paused Job** | Not a queue matter: §8.5 |
 
 **How the in-memory queue and the Turn Queue stay in step.** The Room Session's queue drives Turns; the Turn Queue
-feeds it only at Welcome and after Continue. The invariant, which the tests pin: every item in a connected runner's
-queue with a trigger Message has an open row, and every open row of a connected runner is in its queue, running,
-held for the Budget, or about to arrive as a delivery. Every way an item leaves the queue sends the ack that closes
-its row (§5.5's table), except a cancelled run token, which the server handles (§5.6).
+feeds it only at Welcome and on `BudgetUnpaused`. The invariant, which the tests pin: every item in a connected
+runner's queue with a trigger Message has an open row, and every open row of a connected runner is in its queue,
+running, held for a Budget that is still spent, or about to arrive as a delivery. A held row whose Room is no longer
+paused breaks it, which is why `BudgetUnpaused` fires from both ways a pause ends. Every way an item leaves the queue
+sends the ack that closes its row (§5.5's table), a refused reply is closed by the server (§5.5), and a cancelled run
+token is handled by the server (§5.6).
 
 ### 5.10 Beside `HeldMentions`
 
 `HeldMentions` (T-12) and the Turn Queue do not overlap. A Message the Budget refuses at post time writes no row, so
 an Agent's Mention of another Agent in a paused Room stays `HeldMentions`' to keep, with its Wake button, exactly as
 today. A row that is already owed and meets a spent Budget on re-delivery is the Turn Queue's (`Held`, re-sent on
-Continue). One owner per case.
+`BudgetUnpaused`). One owner per case.
 
 The precedent differs, deliberately: `HeldMentions` and the Feed's start-up passes only *close* at start-up, and
 `HeldMentions` says nothing is ever woken on startup because the pause is a cost guard. `TurnQueueRecovery` is the
@@ -452,7 +480,7 @@ produce a line. One line names every Agent and both outcomes:
 
 | Case | Text |
 | --- | --- |
-| Rows picked up | `Picked up after a restart.` Expanded: "Nova is answering 2 Messages that were waiting. Cleo is answering 1." |
+| Rows picked up | `Picked up after a restart.` Expanded: "2 Messages are waiting for Nova, 1 for Cleo." The pass runs before any Agent connects, so the line says what waits, not that anyone is answering: an Agent may never connect, or its rows may expire at hand-out |
 | Rows not picked up, with or without others picked up | The same line, adding: "Not picked up: 1 Message for Nova that waited more than 24 hours; 1 that Huddle stopped twice while Nova was answering it." When nothing was picked up the line reads `Not picked up after a restart.` |
 
 It is drawn like the Task wake row (`C4b`), a slim muted `system-row` with a restart icon, as `C4c`. Its first words
@@ -462,9 +490,11 @@ a Huddle post it mentions nobody, so it wakes nobody (`ReplyGate.cs:62-65`), spe
 nothing from Needs You. An Agent reads it as context on a later Turn, which is accurate.
 
 **The waiting notice, `C14`.** In the `C9` zone, one row per Agent that has `waiting` rows in this Room that are not
-its current Turn: "Waiting for Nova: 2 Messages", with **Don't answer** (§5.9). Shown while the Agent is offline,
-while its Messages are queued behind another Turn, and while they are held for the Budget. It is read from
-`ITurnQueueControl` on render and on a `TurnQueueChanged` event, like the Questions card.
+its current Turn: "Waiting for Nova: 2 Messages". Shown while the Agent is offline, while its Messages are queued
+behind another Turn, and while they are held ("Waiting for Nova: 1 Message, until this Room's Budget is continued").
+**Don't answer** (§5.9) is on the row only when that Agent has no Draft in this Room. It is read from the read-only
+`ITurnQueueView.WaitingIn(roomId)` on render and on a `TurnQueueChanged` event, like the Questions card; the UI
+never holds `ITurnQueueControl`.
 
 **Not shown:** no Feed item (the Room line is the record, and the answer is what the Human waited for); nothing
 after a sleep, since a suspended process loses nothing.
@@ -637,11 +667,16 @@ internal interface IJobDestination
 | Room | `room_jobs`, or a new `⏰` Room, unarchived (today's `EnsureRoomAsync`) | The set Room, left archived if it is; no `room_jobs` row |
 | Missing Room | A new Job Room | `NoRoom`: nothing posted |
 | Agent gone | `NoAgent` (never online, as today) | `NoAgent` also when its Persona was removed (the Agent row and Membership outlive it, rules.md "Removing a Persona…") or it left the Room |
-| Spent Budget | `BudgetSpent`, as today | `Held` (§7.4) |
+| Spent Budget | A recurring Job: `BudgetSpent`, as today, which `DueCheck` reads as `Ran` (that time is over). A one-off: `Held` | `Held` (§7.4) |
 | Text | `@Nova ⏰ <title>` + instruction | `@Nova ⏰ Follow-up: <title>` + instruction |
 
 `JobRunner` keeps the Agent lookup, the Huddle post and the Needs You mark, and asks the first destination that
 serves the Job.
+
+**`NoAgent` is reworded**, because it now also covers a removed Persona and an Agent that left the Room, and today's
+three strings say "has never come online": `JobText.cs:97` ("not posted, the Agent has never come online"),
+`JobText.cs:111` ("did not run: its Agent has never come online") and `JobsTool.cs:204`. All three become "its Agent
+is no longer available" ("is not available" in the tool's answer), true for every case.
 
 ### 7.3 How an Agent sets one
 
@@ -679,13 +714,15 @@ goldens' tool list and `get_help` keep one Jobs tool (D-25):
 | --- | --- | --- |
 | The Room exists, is not paused, and the Agent is a Member | Posts as Huddle; the Mention gets a Turn Queue row like any Message, so a Follow-up due while the runner is still starting is answered when it is up | `Delivered`, then removed |
 | The Room is archived | Posts anyway and leaves it archived | `Delivered` |
-| **The Room is paused** (Budget spent) | **Not posted.** It stays scheduled with its due time kept, and the `C13` row reads "waiting: this Room is paused". It runs once on the first tick after the Room is no longer paused (the Human spoke or pressed Continue), late by the §8 rule if it is late (owner decision D-26) | `Held`, not removed |
-| The Room was deleted | Nothing posted | `NoRoom`, removed |
-| The Agent's Persona was removed, or it left the Room, or it never came online | Nothing posted | `NoAgent`, removed |
+| **The Room is paused** (Budget spent) | **Not posted.** It stays scheduled with its due time kept, and the `C13` row reads "waiting: this Room is paused". It runs once on the first tick after the Room's `BudgetUnpaused` (the Human spoke or pressed Continue, §5.4), late by the §8 rule if it is late (owner decision D-26). **If the pause lasts past `OverdueOneOffWithin` (24 hours), it gives up**: a Room paused over a weekend drops its Follow-ups (D-35, E-16) | `Held`, not removed; then `job-gave-up` |
+| The Room was deleted | Nothing posted | `NoRoom`, removed, `job-gave-up` |
+| The Agent's Persona was removed, or it left the Room, or it never came online | Nothing posted | `NoAgent`, removed, `job-gave-up` |
 
-**A one-off is deleted only on `Delivered`, `NoRoom` or `NoAgent`.** Today it is deleted after any run
-(`JobScheduler.cs:201-206`, T-8). `Held` keeps it, and `Failed` keeps it for the capped retry (§8.2). That applies to
-every one-off, a Job Room one-off included, whose `BudgetSpent` becomes `Held` too.
+**A one-off is deleted only on `Delivered`, `NoRoom` or `NoAgent`, or when it gives up.** Today it is deleted after
+any run (`JobScheduler.cs:201-206`, T-8). `Held` keeps it, and `Failed` keeps it for the capped retry (§8.2). That
+applies to every one-off, a Job Room one-off included, whose `BudgetSpent` becomes `Held` too. **Every removal that is
+not `Delivered` leaves a trace**: the `job-gave-up` item (§7.5), so a Follow-up never vanishes from `C13` and
+Scheduled without a word.
 
 The Agent's Room Session for that Room is resumed, so it comes back with the conversation that led to the
 Follow-up: the point of #619.
@@ -696,7 +733,8 @@ Follow-up: the point of #619.
 | --- | --- |
 | **The Room** | `C13` *Follow-ups*, in the `C9` zone, one row per waiting Follow-up in this Room: "⏰ Nova will follow up Mon 16 Nov, 15:40: Check the Linux build" (or "waiting: this Room is paused"), with **Cancel**, which deletes the Job without asking. Gone when it has run or been cancelled. The run itself is an ordinary Huddle Message |
 | **The Scheduled view** | `J2` reads "For Nova · Follow-up in {Room} · Next: …"; `J4` shows the Room as a link, and its **Delete job…** is the Human's cancel. `J5` is unchanged |
-| **The Feed** | An Activity item (not a Notification) when an Agent sets a Follow-up, `job-follow-up-set`: "Nova set a Follow-up in {Room} for {time}"; and one when a one-off gives up (§8.2), `job-gave-up`: "{title} did not run: {reason}" |
+| **The Feed** | An Activity item (not a Notification) when an Agent sets a Follow-up, `job-follow-up-set`: "Nova set a Follow-up in {Room} for {time}". When a one-off gives up or is removed without posting (`NoRoom`, `NoAgent`, too late, retries spent), `job-gave-up`: "{title} did not run: {reason}". For an **Agent's** one-off it is Activity; for a **Human's** one-off it is a **Notification**, counted until seen, because a Human's reminder that silently did not happen is the case where silence hurts (D-35). Notification rather than a Needs You mark: Needs You's Job reason is in memory and lost on a restart (ADR-0074), the very event that causes most give-ups |
+| **The Agent that set it** | When its own Follow-up gives up, Huddle posts one Huddle line into the Follow-up's Room while it exists and the Agent is a Member, otherwise into the Agent's one-to-one with the Human (none for a removed Persona), Mentioning nobody: "⏰ Nova's Follow-up \"Check the Linux build\" did not run: {reason}." The Agent reads it as context on its next Turn there, so it knows its promise was not kept; it wakes no one and spends no Budget (ADR-0065) |
 
 ---
 
@@ -704,10 +742,18 @@ Follow-up: the point of #619.
 
 ### 8.1 `DueCheck`: the shared due-time function
 
-`JobScheduler`, `CadenceService` and the Memory Tidy timer (branch `spec/memory-tidy`,
-`docs/Huddle.MemoryTidy-Specifications.md` §6.7, commit `7940b3f9`) each decide "is it due, does it run late once,
-is it skipped, is a failure retried" today or in their designs. Slice 3a extracts that into one pure function, driven
-by the caller's `TimeProvider` reading, which every scheduler calls; none keeps its own copy.
+`JobScheduler` and the Memory Tidy timer (branch `spec/memory-tidy`, `docs/Huddle.MemoryTidy-Specifications.md`
+§6.7, commit `7940b3f9`) both decide "is it due, does it run late once, is it skipped, is a failure retried", one in
+code and one in its design. Slice 3a extracts that into one pure function, fed the caller's `TimeProvider` reading,
+which both call; neither keeps its own copy. **Slice 3a creates `src/Huddle.App/Scheduling/`; Memory Tidy's timer
+slice waits for it** and then consumes `DueCheck` instead of writing its own next-run logic.
+
+**`CadenceService` is left alone** (D-36, ADR-0042 unchanged). Three things in it have no place in `DueCheck`: a
+failed or refused post puts the previous state back and retries on every tick with no limit
+(`src/Huddle.App/Teams/CadenceService.cs:173-187`), where `MaxFailedTries` would give up; a clock that moved backwards
+is rebased (`:118-130`); and a changed cadence takes effect at once, because due is worked out from the last firing
+and today's setting (`:145-146`), where a changed `WhenKey` in `DueCheck` is a new baseline. Its whole due rule is one
+line (`Elapsed`, `:100-101`); an adapter would be larger than what it replaced.
 
 ```csharp
 namespace Agency.Huddle.App.Scheduling;
@@ -715,9 +761,9 @@ namespace Agency.Huddle.App.Scheduling;
 /// <summary>What a scheduler has stored about one timetable.</summary>
 /// <param name="WhenKey">What the next run was worked out from; a change means the timetable was edited.</param>
 /// <param name="NextRunUtc">The stored next run, or null when none is left.</param>
-/// <param name="FailedTries">How many runs of this due time have failed.</param>
-/// <param name="EverRan">Whether it has ever run, for a one-off first seen after its time.</param>
-internal sealed record DueState(string WhenKey, DateTimeOffset? NextRunUtc, int FailedTries, bool EverRan);
+/// <param name="FailedTries">How many runs of this due time have failed. Defaults to 0 for a caller whose table has no such column.</param>
+/// <param name="EverRan">Whether it has ever run, for a one-off first seen after its time. Defaults to false likewise.</param>
+internal sealed record DueState(string WhenKey, DateTimeOffset? NextRunUtc, int FailedTries = 0, bool EverRan = false);
 
 /// <summary>How a scheduler treats lateness and failure.</summary>
 /// <param name="Grace">Up to this late, a run is on time.</param>
@@ -727,17 +773,17 @@ internal sealed record DueState(string WhenKey, DateTimeOffset? NextRunUtc, int 
 /// <param name="MaxFailedTries">After this many failed tries of one due time, give up on it.</param>
 internal sealed record DuePolicy(TimeSpan Grace, bool RunLate, TimeSpan? MaxLateness, TimeSpan MergeWindow, int MaxFailedTries);
 
-/// <summary>What to do now.</summary>
+/// <summary>What to do now. Every decision but NotDue carries the whole state to save, so no caller assembles it.</summary>
 internal abstract record DueDecision
 {
     internal sealed record NotDue : DueDecision;
-    internal sealed record FirstSight(DateTimeOffset? SaveNext) : DueDecision;
-    internal sealed record Run(DateTimeOffset? SaveNext, bool Late) : DueDecision;
-    internal sealed record Skip(DateTimeOffset? SaveNext) : DueDecision;
-    internal sealed record GiveUp(DateTimeOffset? SaveNext) : DueDecision;
+    internal sealed record FirstSight(DueState Save) : DueDecision;
+    internal sealed record Run(DueState Save, bool Late) : DueDecision;
+    internal sealed record Skip(DueState Save) : DueDecision;
+    internal sealed record GiveUp(DueState Save, bool Remove) : DueDecision;
 }
 
-/// <summary>The one due-time rule every scheduler uses. Pure: no clock, no store.</summary>
+/// <summary>The one due-time rule for Jobs and the Memory Tidy timer. Pure: no clock, no store.</summary>
 internal static class DueCheck
 {
     /// <summary>Decides one tick for one timetable.</summary>
@@ -745,46 +791,62 @@ internal static class DueCheck
     internal static DueDecision Next(DueState? state, string whenKey, Func<DateTimeOffset, DateTimeOffset?> nextAfter, bool oneOff, DateTimeOffset now, DuePolicy policy);
 
     /// <summary>The state to store after a run ended, by how it ended.</summary>
-    internal static DueState AfterRun(DueState state, DueRunResult result, Func<DateTimeOffset, DateTimeOffset?> nextAfter, DateTimeOffset now);
+    internal static DueState AfterRun(DueState saved, DueState beforeRun, DueRunResult result);
 }
 
+/// <summary>How a run ended, as the timetable sees it.</summary>
 internal enum DueRunResult { Ran, Held, Failed }
 ```
 
 Files: `src/Huddle.App/Scheduling/DueCheck.cs`, `DueState.cs`, `DuePolicy.cs`, `DueDecision.cs`, `DueRunResult.cs`.
 Tests: `tests/Huddle.Tests.Rooms/Scheduling/DueCheckTests.cs`, every row of the table below on a fixed `now`, with
-no `TimeProvider`, timer or store.
+no `TimeProvider`, timer or store, plus one test per precedence pair (a state matching two rows takes the higher).
 
-| State and time | Decision |
+**Rows are tried top to bottom; the first that matches decides.** `next` below is `nextAfter(now)`; each `Save` keeps
+`WhenKey` and `EverRan` unless the row says otherwise.
+
+| # | State and time | Decision |
+| --- | --- | --- |
+| 1 | No state, or `WhenKey` changed; a one-off whose time has passed, never ran, within `MaxLateness` | `Run(Save: next, FailedTries 0, Late: true)` (T-10's belt; seeding at creation is the braces) |
+| 2 | No state, or `WhenKey` changed | `FirstSight(Save: next, FailedTries 0)` |
+| 3 | No next run, or next run after `now` | `NotDue` |
+| 4 | `FailedTries` at `MaxFailedTries` | `GiveUp(Save: next, FailedTries 0, Remove: oneOff)`: a recurring Job waits for its next time with a clean count, a one-off is given up. **Before every `Run` row**, so a failing run cannot be tried a fourth time |
+| 5 | Due, at most `Grace` late | `Run(Save: nextAfter(due), or next when that is at or before now, Late: false)`: today's on-time path (`JobScheduler.cs:180-184`) |
+| 6 | Due, later than `Grace`, `RunLate` false | `Skip(Save: next, FailedTries 0)`: today's rule (`:173-178`) |
+| 7 | Due, later than `Grace`, a one-off later than `MaxLateness` | `GiveUp(Save: next, FailedTries 0, Remove: true)`. **Before the merge window**, which a one-off never has anyway |
+| 8 | Due, later than `Grace`, a recurring timetable whose next regular run is within `MergeWindow` of `now` | `Skip(Save: next, FailedTries 0)`: the regular run comes soon, so the late one is not run as well (a daily 09:00 Job with Huddle started at 08:59) |
+| 9 | Due, later than `Grace` | `Run(Save: next, Late: true)`: once, however many times it was due |
+
+The caller stores `Save` **before** the post, as today (ADR-0042's at-most-once rule), then, when the run has ended,
+stores `AfterRun(saved, beforeRun, result)`:
+
+| `result` | State stored |
 | --- | --- |
-| No state, or `WhenKey` changed | `FirstSight(nextAfter(now))`; for a one-off whose time has passed, never ran and is within `MaxLateness`: `Run(null, Late: true)` (T-10's belt; seeding at creation is the braces) |
-| No next run, or next run after `now` | `NotDue` |
-| Due, at most `Grace` late | `Run(nextAfter(due), Late: false)`, with a following run at or before `now` moved to `nextAfter(now)`: today's on-time path (`JobScheduler.cs:180-188`) |
-| Due, later than `Grace`, `RunLate` false | `Skip(nextAfter(now))`: today's rule (`:173-178`) |
-| Due, later than `Grace`, a one-off later than `MaxLateness` | `GiveUp(null)` |
-| Due, later than `Grace`, next regular run within `MergeWindow` of `now` | `Skip(nextAfter(now))`: the regular run comes soon, so the late one is not run as well (a daily 09:00 Job with Huddle started at 08:59) |
-| Due, later than `Grace` | `Run(nextAfter(now), Late: true)`: once, however many times it was due |
-| `FailedTries` at `MaxFailedTries` | `GiveUp(nextAfter(now))`: a recurring Job waits for its next time, a one-off is given up |
+| `Ran` | `saved`, `FailedTries` 0, `EverRan` true |
+| `Held` | `beforeRun` (the due time kept), `FailedTries` unchanged: a hold is not a failure |
+| `Failed` | `beforeRun`, `FailedTries` + 1, so the next tick tries again until row 4 gives up |
 
-`AfterRun` with `Ran` resets `FailedTries` and sets `EverRan`; with `Held` keeps the due time and `FailedTries`;
-with `Failed` keeps the due time and adds one. The state is still written **before** the post, and put back on a
-failure (ADR-0042's at-most-once rule): the caller stores `Run.SaveNext`, posts, then stores `AfterRun`.
+`FailedTries` is reset by every row that moves to a new due time (1, 2, 4, 6, 7, 8) and by `Ran`; it survives only
+while the same due time is being retried. Without that, a recurring Job that once failed three times would give up on
+every later due time for ever.
+
+**Mapping a Job's outcome to `DueRunResult`.** `Delivered` → `Ran`. `Failed` (it threw) → `Failed`. `NoRoom`,
+`NoAgent` → `Ran`, and the one-off is removed with `job-gave-up` (§7.4). `BudgetSpent` and `Held`: **for a recurring
+Job, `Ran`** (that time is over, as today: its next time comes as usual); **for a one-off, `Held`**, and only a one-off
+can be held, so it is retried until it posts or row 7 gives up.
 
 **Consumers.**
 
 - **`JobScheduler`** (slice 3a): `TickJobAsync` (`JobScheduler.cs:157-207`) becomes a call to `DueCheck.Next`, a
-  switch on the decision, the run, and `AfterRun`. `job_state` gains `failed_tries` and `ever_ran` in a sibling
-  table, `job_state_tries`, not as columns (rules.md, the same `CREATE TABLE IF NOT EXISTS` trap). Its policy:
-  `Grace` two minutes, `RunLate` = `Team:Jobs:RunOverdue`, `MaxLateness` = `Team:Jobs:OverdueOneOffWithin` (24
-  hours), `MergeWindow` one hour, `MaxFailedTries` three.
-- **`CadenceService`** (slice 3a, behaviour unchanged): its digest is "fire when the cadence's days have elapsed since
-  the last firing, baseline on first sight" (`src/Huddle.App/Teams/CadenceService.cs:132-150`), which is `DueCheck`
-  with `nextAfter = last + days`, `RunLate` true and no merge window: an overdue digest already fires once today.
-  The retro's Done-count condition (`:152-158`) stays its own guard after `DueCheck` says `Run`. Its tests stay green
-  unchanged; that is the check that the extraction changed nothing.
-- **The Memory Tidy timer**: that spec's timer slice consumes `DueCheck` with `RunLate` true and no `MaxLateness`,
-  instead of its own next-run logic. That spec should say so when it is next revised; it already reads "an overdue
-  pass runs once" the same way.
+  switch on the decision, the run, and `AfterRun`. The two new fields live in a sibling table, `job_state_tries
+  (job_id, failed_tries, ever_ran)`, not as columns (rules.md, the `CREATE TABLE IF NOT EXISTS` trap); a missing row
+  reads as `DueState`'s defaults. Its policy: `Grace` two minutes, `RunLate` = `Team:Jobs:RunOverdue`,
+  `MaxLateness` = `Team:Jobs:OverdueOneOffWithin` (24 hours), `MergeWindow` one hour, `MaxFailedTries` three.
+- **The Memory Tidy timer** (its own spec's timer slice, after slice 3a): `RunLate` true, no `MaxLateness`, its own
+  `MergeWindow` (zero, since a weekly pass has no near next run). Its table, `memory_tidy_schedule(when_key,
+  next_run_utc, last_run_utc)`, has no `failed_tries` or `ever_ran`, which `DueState`'s defaults cover: it never
+  gives up on failure tries it does not count, and is never a one-off. That spec should name `DueCheck` when it is
+  next revised.
 
 ### 8.2 The overdue rule for Jobs
 
@@ -801,7 +863,9 @@ continues from now.** This replaces ADR-0074's "a run missed by more than two mi
   late", so without the cap it would retry each minute for ever.
 - **An overdue one-off older than `Team:Jobs:OverdueOneOffWithin` (24 hours) gives up** instead of posting: a
   three-week-old "check the build in an hour" is not wanted. A recurring Job has no such limit and still runs once.
-  This narrows the owner's "each overdue Job runs once" for one-offs; §11, Q-1.
+  The owner took this narrowing of "each overdue Job runs once" for one-offs (D-35), with the one-hour merge window
+  for recurring Jobs in the same decision: a daily Job 23 hours 10 minutes late is skipped in favour of its run 50
+  minutes later.
 - A missed one-off now runs once and leaves the schedule (T-8's first leak), and one that did not post is kept (§7.4,
   T-8's second).
 
@@ -885,10 +949,15 @@ The restart line, the waiting notice and the late Job wording are interface copy
 | D-28 | **Forms are not kept across a restart** | Persist and turn the answer into a Message | Owner decision (OQ-9): the Adapter cannot keep the request (T-5) |
 | D-29 | **Restart stops that connection's running Turn and keeps what waits** | Re-run it as after a crash | Owner decision (OQ-11), scoped to the connection that started the Turn |
 | D-30 | **Jobs switched back on: each overdue Job runs once** | Count from now | Owner decision (OQ-8): switching on is a restart |
-| D-31 | **One pure `DueCheck` for every scheduler; overdue runs once by the late tick; a failing run retried three times; seeded at creation; a merge window** | Each scheduler its own rule; OS power events; retry for ever | Owner decision for #619 and the cross-spec requirement with Memory Tidy |
+| D-31 | **One pure `DueCheck` for Jobs and the Memory Tidy timer (D-36); overdue runs once by the late tick; a failing run retried three times; seeded at creation; a merge window** | Each scheduler its own rule; OS power events; retry for ever | Owner decision for #619 and the cross-spec requirement with Memory Tidy |
 | D-32 | **A relative Follow-up time worked out in UTC and rounded up** | Local arithmetic | A daylight-saving change would shift or invalidate it |
 | D-33 | **The vocabulary is Turn Queue, Folded Turn and Follow-up** | Inbox, batch | *Inbox* is on three avoid lists in language.md |
 | D-34 | **`FoldOneToOne` and `RunOverdue` are temporary rollback switches** | Permanent options | Three ways to "restore today" are three more states to test |
+| D-35 | **An overdue one-off more than 24 hours late gives up; recurring Jobs still run once when overdue, with a one-hour merge window. A Follow-up held by a paused Room gives up after the same 24 hours, so a Room paused over a weekend drops its Follow-ups. A Human's one-off that gives up raises a `job-gave-up` Notification; an Agent's is Activity, and the Agent that set it is told by a Huddle line in the Room** | Run every one-off once however late; no merge window; Activity only; a Needs You mark for a Human's one-off | Owner decision (Q-1 of the first revision). A one-off is tied to a moment; a recurring run once late still does its job; the window stops two runs an hour apart; one number (24 hours) matches `ResumeWithin`. A Notification rather than Needs You because Needs You's Job reason is in memory and lost on a restart (ADR-0074), the event behind most give-ups. The weekend drop is stated in known-limits |
+| D-36 | **`DueCheck` serves `JobScheduler` and the Memory Tidy timer; `CadenceService` is left alone, and ADR-0042 is unchanged** | `CadenceService` on `DueCheck` too | Its unlimited retry, clock rebase and immediate effect of a changed cadence have no place in `DueCheck`, and its due rule is one line |
+| D-37 | **One `BudgetUnpaused(roomId)` from both `ExtendBudgetAsync` and a Human post that ended a pause** | Re-send held rows on Continue only | A Human who speaks instead of pressing Continue would leave held rows stuck until the next Welcome |
+| D-38 | **A refused reply closes its rows as `failed` on the server** | Leave it to the runner | The runner has already marked the reply posted and sends nothing; the row would be re-run and paid for again at the next start |
+| D-39 | **Don't answer only where the Agent has no Draft in the Room** | A waiting-only close plus a drain message on the wire | The Draft's Stop already means "this Turn and what waits"; the larger fix adds a wire message for a case the Human can already handle |
 
 ---
 
@@ -896,7 +965,6 @@ The restart line, the waiting notice and the late Job wording are interface copy
 
 | # | Question | Options | Recommendation |
 | --- | --- | --- | --- |
-| Q-1 | **For the owner.** The review asks that an overdue **one-off** (a Follow-up, a `once` Job) more than 24 hours late gives up instead of posting. That narrows your decision "each overdue Job runs once" for one-offs | (a) Give up after 24 hours, with a Feed item (as written). (b) Run once however late, as recurring Jobs do | **(a).** A three-week-old "check the build in an hour" is noise; the Feed says what was dropped. Recurring Jobs keep your rule unchanged |
 | ACP-1 | **For the ACP effort's owner, answered by spike S-0 before slice 1.** Does `session/resume` of a Claude Code conversation cut off in the middle of a tool call resume cleanly, and does the Adapter's process die with Huddle? | If resume fails with not-found, Huddle opens a fresh session with Catch-up (RS E-1); another failure, Huddle's two-failures rule closes and forgets it (RS §6.8) | No change requested. If S-0 shows a third outcome, the owner may want `Huddle.Acp` to map it to `AgentSessionNotFoundException` |
 
 ---
@@ -925,20 +993,22 @@ and hand ACP-1's answer to the ACP effort's owner.
 
 ### Slice 1: the Turn Queue (#617)
 
-The tables and store; `RoomBudgets`, `IOwedTurnPolicy`, the three interfaces; the wire additions; the acks and
-`InReplyTo`; `CloseRunning`; `TurnQueueRecovery`; `TurnRedelivery` and `DeliverToAsync`; the late Turn's Catch-up;
-`turn.cutOffNote` and `turn.laterHeader`; `TurnControl` and `C14`; Delete and removal; the restart line.
+The tables and store; `RoomBudgets`, `IOwedTurnPolicy`, the three control interfaces and `ITurnQueueView`; the wire
+additions; the acks, `InReplyTo` and `MarkRefused`; `CloseRunning`; `TurnQueueRecovery`; `TurnRedelivery`,
+`DeliverToAsync` and `BudgetUnpaused`; the late Turn's Catch-up and the pinned read-to-the-end; `turn.cutOffNote` and
+`turn.laterHeader`; `TurnControl` and `C14`; Delete and removal; the restart line.
 
 | Doc | Change |
 | --- | --- |
 | `docs/adr/0091-…-a-rooms-waiting-turns-are-kept-in-team-db.md` | New: the queue, the policy at post time, done by `InReplyTo`, cut-off once, the server deciding interrupted Turns, the age rule, the exception to the start-up precedent (§5.10). Amends ADR-0004 (its two restart limitations) and ADR-0022 |
 | `docs/engineering/known-limits.md` | Rewrite "What a Draft does not survive" (the Turn is not lost, its Draft is); add the Turn Queue's limits (§13: the in-process window, forms, follows and the Task in hand, a second answer after `post_message` in a cut-off Turn) |
+| `docs/engineering/traps.md` | The client-to-server case of "adding to the wire is not changing it": a nullable property on a client-to-server record (`PostMessage.InReplyTo`) and a new client-to-server type (`QueueAck`) are additive; ids taken from the wire are validated with `NameRules.IsValidId` |
 | `docs/Huddle.EngineeringGuide.md` | The three `Team:TurnQueue` keys |
 | `docs/Huddle.RoomSessions-Specifications.md` | §6.1, §6.5 and §6.6: the acks, the cut-off note, a cut-off Turn has no store entry, a re-sent Turn reads to the end |
 | `docs/engineering/language.md` | **Turn Queue** (avoid: inbox, backlog, mailbox) |
 | `docs/Huddle.UserGuide.md` | After a restart: what is answered, the line, Don't answer |
 | `docs/engineering/wireframes.md` | `C4c` Restart line, `C14` Waiting notice |
-| `docs/engineering/manual-tests/turn-queue.md`, `docs/engineering/code-map.md` | TQ-M1 to TQ-M3, TQ-M5, TQ-M12 to TQ-M14 |
+| `docs/engineering/manual-tests/turn-queue.md`, `docs/engineering/code-map.md` | TQ-M1 to TQ-M3, TQ-M5, TQ-M12 to TQ-M14, TQ-M18 |
 
 ### Slice 2: Folded Turns (#618)
 
@@ -956,7 +1026,8 @@ enrichers over every Message; acks and `InReplyTo` with every id; `Team:Acp:Fold
 
 ### Slice 3a: `DueCheck` and overdue runs (#619, second half)
 
-`DueCheck` and its tests; `JobScheduler` and `CadenceService` on it; `job_state_tries`; seeding at creation; late
+Creates `src/Huddle.App/Scheduling/`: `DueCheck` and its tests; `JobScheduler` on it (`CadenceService` untouched,
+D-36); `job_state_tries`; seeding at creation; late
 runs, `DeliveredLate`, the capped retry, the one-off age limit, the paused-Job rule; `Team:Jobs:RunOverdue` and
 `OverdueOneOffWithin`. After slice 1, with its switch on (§8.4).
 
@@ -971,8 +1042,7 @@ Scheduled rows; the two Feed source types; the Prompt sentences. After 3a, for a
 | `docs/adr/0093-…-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md` | New: amends ADR-0074 ("a run more than two minutes late is skipped", "every Job runs in its own Room", and its *Rejected* line "Catching up one missed run at startup"); records `DueCheck` as the one due-time rule |
 | `docs/Huddle.Jobs-Specifications.md` | §1 the `room` field, §4 the new rule, §5 a Follow-up's run, §6 the action, §7 the rows, §8 drop the non-goal |
 | `docs/Huddle.EngineeringGuide.md` | `Team:Jobs:RunOverdue`, `OverdueOneOffWithin`, `MaxFollowUpsPerAgent` |
-| `docs/engineering/known-limits.md` | T-8's two leaks are gone; a Follow-up is for its setter only |
-| `docs/engineering/language.md` | **Follow-up** (avoid: reminder, check-in; not **Following**) |
+| `docs/engineering/known-limits.md` | T-8's two leaks are gone; a Follow-up is for its setter only; **an overdue one-off more than 24 hours late gives up, and a Follow-up held by a paused Room for more than 24 hours is dropped, so a Room paused over a weekend loses its Follow-ups** (D-35); `CadenceService` keeps its own due rule (D-36) || `docs/engineering/language.md` | **Follow-up** (avoid: reminder, check-in; not **Following**) |
 | `docs/Huddle.UserGuide.md` | Follow-ups in a Room and in Scheduled; Jobs after a restart or sleep |
 | `docs/engineering/wireframes.md` | `C13` Follow-ups notice; `J2` and `J4` rows |
 | `docs/engineering/manual-tests/turn-queue.md`, `jobs.md` | TQ-M8 to TQ-M11, TQ-M15 to TQ-M17 |
@@ -998,7 +1068,7 @@ Scheduled rows; the two Feed source types; the Prompt sentences. After 3a, for a
 | E-13 | `Team:TurnQueue:Enabled` turned off with rows open | Nothing is re-sent; rows stay until pruned. Turned on again, those younger than `ResumeWithin` are handed out |
 | E-14 | A crash between `started` and its commit | The Turn runs again without the note (§5.7). Accepted |
 | E-15 | A cut-off Turn had already used `post_message` into its own Room | The re-run may answer the Human a second time; the note asks the Agent to check, nothing more enforces it. **Accepted limit**, in known-limits |
-| E-16 | A Follow-up's Room is paused for days | It waits, shown in `C13`; once the pause ends it runs, or gives up past `OverdueOneOffWithin` |
+| E-16 | A Follow-up's Room is paused for days | It waits, shown in `C13`; once the pause ends it runs. **A pause longer than `OverdueOneOffWithin` (24 hours) drops it**, with `job-gave-up` and a Huddle line for the Agent (D-35). A Room paused over a weekend loses its Follow-ups; stated in known-limits |
 
 ---
 
@@ -1015,23 +1085,25 @@ Transcript by hand.
 | `TurnQueueStore` | `Huddle.Tests.Rooms` | Round trip of every status and outcome; upsert on the key; `seq` strictly increasing; prune by age; a pre-feature `team.db` gains both tables |
 | `RoomBudgets`, `IOwedTurnPolicy` | `Huddle.Tests.Rooms` | `SpendBudget` and the policy see the same Budget; Reply recipients only; none for a withheld Agent, a CatchUp, a spent Budget or a Huddle post without a Mention; a follower owes |
 | `ITurnLedger.Record` | `Huddle.Tests.Rooms` | No row for a non-subscriber; written before the append and removed when the append throws; a throwing store never fails the post |
-| Acks and replies | `Huddle.Tests.Agents` | Each `QueueAck` moves the row; **a reply with `InReplyTo` closes its rows when `started` was never applied**; an ack never reopens a `done` row; a non-Member Room is refused; **a throwing store does not close the connection** |
+| Acks and replies | `Huddle.Tests.Agents` | Each `QueueAck` moves the row; **a reply with `InReplyTo` closes its rows when `started` was never applied**; an ack never reopens a `done` row; a non-Member Room is refused; **a throwing store does not close the connection**; **a reply the server refuses (a spent Budget) closes its rows as `failed`, and the next start does not re-run them**; an invalid `InReplyTo` id is ignored, and ids are applied only to this Agent's rows in the posted Room |
 | Interrupted Turns (B-1) | `Huddle.Tests.Agents`, `Huddle.Tests.Personas` | **A normal host stop leaves the row `running`; a Restart closes it `stopped`; a stale connection closing late leaves the new runner's rows alone**; the runner sends no `Finished` when its run token is cancelled |
 | `TurnQueueRecovery` | `Huddle.Tests.Rooms` | Every row of §5.7's table; reply present means no re-run (U3); a second cut-off abandoned; **a row written after the pass's start time is never touched (a post racing the pass)**; registered before `PipeServer` and every poster; the tail read stops at the oldest open Message |
 | Age rule | `Huddle.Tests.Rooms` | **Applied at re-delivery on the fake clock, not only at start-up**; a `TimeSpan` of minutes works |
 | Restart line | `Huddle.Tests.Rooms` | One per Room per start, naming every Agent and both outcomes; none for rows created after start-up (U4); `RestartLine.Prefix` shared by poster and parser |
-| Re-delivery | `Huddle.Tests.Agents` | Through `DeliverToAsync`, after Welcome, oldest first, `Redelivery` set; a client without `DurableQueue` gets nothing new; **a renamed Agent's waiting Mention is still answered** (not re-gated); a Budget-held row is `Held` and re-sent after Continue |
+| Re-delivery | `Huddle.Tests.Agents` | Through `DeliverToAsync`, after Welcome, oldest first, `Redelivery` set; a client without `DurableQueue` gets nothing new; **a renamed Agent's waiting Mention is still answered** (not re-gated); a Budget-held row is `Held` and re-sent on `BudgetUnpaused`, **both after Continue and after the Human speaks**; `BudgetUnpaused` is raised once by each way a pause ends and never by a post into an unpaused Room; the later block leaves out this Agent's other waiting triggers; a `ReadTranscript` whose `BeforeMessageId` is not in the Transcript reads to the end (`AgentConnectionReadTranscriptTests`, pinning §5.8) |
 | Late Turn Catch-up (M-3) | `Huddle.Tests.Personas` | **A re-sent Turn's prompt shows Messages posted after its trigger**, under `turn.laterHeader`; an ordinary Turn is unchanged |
 | Wire | `Huddle.Tests.Personas` (`ProtocolJsonTests`) | Literal JSON of `QueueAck`, `Hello`, `MessagePosted`, `PostMessage` with and without the new fields; absent when null; `Current` still 3 |
 | Runner and Room Session | `Huddle.Tests.Personas` | The ack for each way a Turn ends and each way an item leaves the queue (§5.5); `InReplyTo` on the reply; a duplicate re-sent Message is ignored; the cut-off note only with `CutOff` |
 | Stop and lifecycle | `Huddle.Tests.Agents`, `Huddle.Tests.Personas` | `TurnControl.StopAsync` closes by `seq` for an offline Agent and then calls the gateway; Delete Room removes rows in its transaction; removal closes rows and the subscriber row above the early return; a Hello without the flag clears it |
-| `C14`, `C4c` | `Huddle.Tests.Rooms` (bUnit) | The notice lists waiting rows and Don't answer calls `TurnControl`; the line is drawn as a system row |
+| `C14`, `C4c` | `Huddle.Tests.Rooms` (bUnit) | The notice lists waiting rows from `ITurnQueueView`; **Don't answer is absent while that Agent has a Draft in the Room** and present when it is offline or held, and it calls `TurnControl`; the line is drawn as a system row |
 | Questions (slice 0) | `Huddle.Tests.Rooms` | The card survives a new `QuestionStore` over the same database; every §6.5 drop deletes the row; Needs You lists a loaded card |
 | Fold | `Huddle.Tests.Personas` | One-to-one Human Messages fold; a group Room never does; a Command, a Huddle post or another Room's item ends the run; a Message arriving during the Turn joins the next; Stop marks respected; **after a fold of three, a fourth Message is still served**; a failed lazy open drops only the head; `FoldOneToOne` false folds nothing |
 | Folded prompt | `Huddle.Tests.Personas` | Golden for two and three Messages; one Message byte-identical; Catch-up ends before the first; `LastMessageId` is the last folded id after a silent Turn; enrichers see every Message |
 | `DueCheck` | `Huddle.Tests.Rooms` (`Scheduling/DueCheckTests`) | Every row of §8.1's table on fixed times; `AfterRun` for `Ran`, `Held`, `Failed` |
 | Overdue Jobs | `Huddle.Tests.Rooms` (`JobSchedulerTests`) | A run three days late runs once and next is after now; within `Grace` no late wording; **a failing late run stops after three tries**; **a one-off created inside one tick still runs (seeded)**; a one-off past `OverdueOneOffWithin` gives up with a Feed item; a paused Job's next run moves forward; `RunOverdue` false restores the skip; with the queue off, `RunOverdue` is off for Agent Jobs |
-| `CadenceService` | `Huddle.Tests.Teams` | Its existing tests pass unchanged on `DueCheck` |
+| `DueCheck` precedence | `Huddle.Tests.Rooms` (`Scheduling/DueCheckTests`) | One test per pair: rows 1 over 2, 4 over 5 and 9, 7 over 8; `FailedTries` is 0 after `GiveUp`, `Skip` and `Ran`; a recurring Job that failed three times on one due time runs normally at the next; `DueState` with defaults (no tries column) never gives up on tries |
+| Job outcomes | `Huddle.Tests.Rooms` (`JobSchedulerTests`) | A recurring Job's `BudgetSpent` maps to `Ran` and its next time comes; a one-off's maps to `Held` and it is retried; `NoRoom` and `NoAgent` remove it with `job-gave-up`; a Human's one-off gives up as a Notification, an Agent's as Activity plus the Huddle line; a Follow-up held 25 hours gives up |
+| Wording | `Huddle.Tests.Rooms` | The three `NoAgent` strings read "no longer available" (`JobText`, `JobsTool`) |
 | Follow-ups | `Huddle.Tests.Rooms` (`JobsToolTests`, `JobRunnerTests`, `JobStoreTests`) | `follow_up` creates a Room-bound one-off; `in 2 hours` across a daylight-saving change on the fake clock is the right instant; rounding up; refusals for another target, a non-Member Room, too soon, too far, the cap, and `update` to a recurring `when`; the destination posts in the Room with no `room_jobs` row; `Held` in a paused Room and run on the first tick after; `NoRoom`; `NoAgent` for a removed Persona; a one-off deleted only when it posted or never can |
 | Prompts | `Huddle.Tests.Hosted` (`PromptGoldenTests`) | New keys hold no `mcp__team__`; system-prompt goldens change in slice 3b only |
 
@@ -1060,6 +1132,7 @@ Huddle" means quitting the app; "kill" means ending the process in Task Manager.
 | TQ-M15 | Set a Follow-up; press **Cancel** on its `C13` row | It is gone from the Room and Scheduled; nothing posts at its time |
 | TQ-M16 | Spend a Room's Budget (`Team:AgentMessageBudget` small); let a Follow-up come due there; then speak in the Room | Nothing posts while paused, `C13` says "waiting: this Room is paused"; it runs once after you speak |
 | TQ-M17 | Pause a daily Job, wait past its time, resume it | It does not run on resume; it runs at its next time |
+| TQ-M18 | In a group Room with a small `Team:AgentMessageBudget`, let Nova and Cleo spend it; with a Mention of Nova waiting from before a restart, restart Huddle; then **type** in the Room instead of pressing Continue | Nova's waiting Mention is held while paused (`C14` says so, with Don't answer) and answered once you speak |
 
 ---
 
@@ -1083,13 +1156,13 @@ Each task is one commit: failing tests, then the code, then a green `dotnet buil
 | TQ-9 | The late Turn's Catch-up and `turn.laterHeader` | Late Turn Catch-up tests |
 | TQ-10 | `TurnControl.StopAsync`; `Chat.razor` Stop; Delete Room; removal | Stop and lifecycle tests |
 | TQ-11 | The restart line and `C14` | Line tests, bUnit |
-| TQ-12 | Slice 1 docs and ADR-0091; TQ-M1 to TQ-M3, TQ-M5, TQ-M12 to TQ-M14 | `Check-All.ps1` |
+| TQ-12 | Slice 1 docs (traps.md included) and ADR-0091; TQ-M1 to TQ-M3, TQ-M5, TQ-M12 to TQ-M14, TQ-M18 | `Check-All.ps1` |
 | TQ-13 | `WorkItem.Foldable` and `Folded`; the fold and its counts; `FoldOneToOne` | Fold tests |
 | TQ-14 | Folded prompt, `LastMessageId`, enrichers over every Message | Folded prompt goldens |
 | TQ-15 | Slice 2 docs and ADR-0092; TQ-M6, TQ-M7 | `Check-All.ps1` |
 | TQ-16 | `DueCheck` and its records | `DueCheckTests` |
 | TQ-17 | `JobScheduler` on `DueCheck`: `job_state_tries`, seeding, late runs, retry cap, one-off age, paused rule, `RunOverdue` | `JobSchedulerTests` |
-| TQ-18 | `CadenceService` on `DueCheck`, behaviour unchanged | Existing `CadenceService` tests |
+| TQ-18 | The outcome mapping, the give-up trace (`job-gave-up`, the Human Notification, the Agent's Huddle line), the `NoAgent` wording | Job outcome and wording tests |
 | TQ-19 | `Job.RoomId`, `- room:`, `Job.FollowUp`, `JobRules` | `JobStoreTests` |
 | TQ-20 | `IJobDestination`, both destinations, `Held`, `NoRoom`, delete-only-when-posted | `JobRunnerTests` |
 | TQ-21 | `jobs` `follow_up`, UTC arithmetic, the cap, the Prompt sentences | `JobsToolTests`, prompt goldens |
@@ -1121,7 +1194,7 @@ finding differently from the review's suggestion, the reason is here.
 | M-6 | Not posted in a paused Room; kept and run after the pause; one-offs deleted only when they posted or never can (owner decision) | §7.4 |
 | M-7 | `StartAsync`, registered before `PipeServer` and the posters; only rows from before the start time | §5.7 |
 | M-8 | One semaphore count per folded item; `Folded` records; the fold after the lazy open; shared mode folds contiguous items only; the fourth-Message test | §6.2, §6.3 |
-| M-9 | All of it, through `DueCheck`: seeding plus a first-sight rule, a three-try cap, "ran late" wording, a one-hour merge window, an age limit for one-offs (open as Q-1, since it narrows an owner decision) | §8 |
+| M-9 | All of it, through `DueCheck`: seeding plus a first-sight rule, a three-try cap, "ran late" wording, a one-hour merge window, an age limit for one-offs (put to the owner as Q-1, now decided: D-35) | §8 |
 | M-10 | The `C14` notice with Don't answer, through `TurnControl` | §5.9, §5.11 |
 | M-11 | The proposed shape, as named | §5.1, §5.4, §7.2 |
 | M-12 | §5.10 and T-12; the exception recorded for ADR-0091 | §5.10 |
@@ -1134,9 +1207,28 @@ finding differently from the review's suggestion, the reason is here.
 | m-7 | The dependency stated; `RunOverdue` off for Agent Jobs with the queue off; both switches temporary | §8.4, D-34 |
 | m-8 | §8.5 rewritten | §8.5 |
 | m-9 | `Job.FollowUp` and `JobRules`, called by `update` too | §7.1 |
-| m-10 | `NoAgent` for a removed Persona or a departed Member. **Differs slightly:** reuses `NoAgent` rather than a new outcome, since the Scheduled page already words it | §7.2, §7.4 |
+| m-10 | `NoAgent` for a removed Persona or a departed Member. **Differs slightly:** reuses `NoAgent` rather than a new outcome; after the re-review its three strings are reworded to be true for every case, and the removal leaves a `job-gave-up` trace | §7.2, §7.4 |
 | m-11 | UTC arithmetic, rounded up | §7.3 |
 | m-12 | Accepted limit E-15 | §13 |
 | m-13 | Cleared at a Hello without the flag and on removal | §5.2, §5.9 |
 | m-14 | Moved to the service tests | §14 |
 | Testability and slicing | `waiting_questions` is slice 0; V-2 and V-3 are spike S-0 before slice 1; the missing tests and TQ-M12 to TQ-M17 added; TQ-M11 needs macOS or a recorded "not verified" | §12, §14, Appendix B |
+
+**Re-review of `68867b57`** (4 Major, 8 Minor, and the owner's ruling on Q-1), applied in full:
+
+| Finding | Applied as | Where |
+| --- | --- | --- |
+| B-1 note | A dead Adapter does not end the connection; it closes through `Finished(Failed)` | §5.6, §5.9 |
+| N-1 | `MarkRefused` in `HandlePostMessageAsync`'s `catch` closes the rows as `failed`; a test | §5.5, D-38, §14 |
+| N-2 | One `BudgetUnpaused(roomId)` from `ExtendBudgetAsync` and from a Human post that ended a pause; `TurnRedelivery.SendHeldAsync` and `JobScheduler` subscribe; in the invariant and the tests; TQ-M18 | §5.4, §5.8, §5.9, D-37 |
+| N-3 | `CadenceService` left alone (D-36, ADR-0042 unchanged); each decision carries the full `DueState`; `FailedTries` reset after `GiveUp`, `Skip` and `Ran`; top-to-bottom precedence with the table reordered; recurring `BudgetSpent` → `Ran`, `Held` for one-offs only; `DueState` defaults; slice 3a creates `src/Huddle.App/Scheduling/` and Memory Tidy waits for it | §8.1, D-36 |
+| N-4 | **The smaller fix**: Don't answer only where the Agent has no Draft in the Room. The larger one (a waiting-only close and a drain message) is not needed: the Draft's Stop already covers that case | §5.9, §5.11, D-39 |
+| N-5 | The unreadable `InReplyTo` clause dropped from the recovery table; the minted id is what start-up matches | §5.7 |
+| N-6 | The read-to-the-end pinned by a comment, the parameter's doc comment and a test; the later block leaves out this Agent's other waiting triggers | §5.8, §14 |
+| N-7 | `InReplyTo` ids validated with `NameRules.IsValidId`, applied only to this Agent's rows in the posted Room; traps.md's client-to-server case in slice 1's doc list | §5.3, §12 |
+| N-8 | The three `NoAgent` strings reworded; `NoRoom` and `NoAgent` removals emit `job-gave-up` | §7.2, §7.4, §7.5 |
+| N-9 | The line says what is waiting, not who is answering | §5.11 |
+| N-10 | The merge window recorded with the one-off limit in one decision row | §8.2, D-35 |
+| N-11 | `TakeWaiting`; a read-only `ITurnQueueView` for the UI; `Held` is its own ack kind | §5.1, §5.3, §5.11 |
+| N-12 | `RoomBudgets.After(budget, sender, allowance)` with the Human reset and a Huddle case | §5.1, §5.4 |
+| Q-1 | Owner decision: give up after 24 hours, recurring Jobs unchanged, merge window kept. A Human's one-off that gives up is a **Notification** (not a Needs You mark, whose Job reason is lost on restart); a Follow-up held over 24 hours is dropped, stated in known-limits; the Agent that set it is told by a Huddle line | D-35, §7.4, §7.5, §8.2, E-16 |
