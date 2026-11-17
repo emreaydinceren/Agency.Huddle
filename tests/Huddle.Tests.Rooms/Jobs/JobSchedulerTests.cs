@@ -89,11 +89,12 @@ public sealed class JobSchedulerTests : IDisposable
         Assert.Single(this.runner.Runs);
     }
 
-    /// <summary>A run missed by more than the grace period, as when Huddle was stopped, is skipped to the next run.</summary>
+    /// <summary>With <c>Team:Jobs:RunOverdue</c> off, a run missed by more than the grace period, as when Huddle was stopped, is skipped to the next run.</summary>
     [Fact]
     public async Task MissedWhileStopped_IsSkipped()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
+        this.options.Value.Jobs.RunOverdue = false;
         Job job = this.Add(JobRecurrence.Daily(new TimeOnly(9, 0)));
         await this.scheduler.TickAsync(ct);
 
@@ -204,7 +205,13 @@ public sealed class JobSchedulerTests : IDisposable
         this.store.Add(new Job(string.Empty, JobOwner.Agent("Nova"), "Digest", "Do it.", when, "UTC", "You", false));
 
     private JobScheduler NewScheduler() =>
-        new(this.store, this.states, this.runner, this.options, NullLogger<JobScheduler>.Instance, this.clock);
+        new(this.store, this.states, this.runner, this.options, NullLogger<JobScheduler>.Instance, new NoNotice(), this.clock);
+
+    /// <summary>A trace writer that writes nothing: these tests do not look at give-ups.</summary>
+    private sealed class NoNotice : IJobGaveUpNotice
+    {
+        public Task NoteAsync(Job job, string reason, CancellationToken ct) => Task.CompletedTask;
+    }
 
     /// <summary>Records each run, and throws once when asked to.</summary>
     private sealed class RecordingRunner : IJobRunner
@@ -215,7 +222,7 @@ public sealed class JobSchedulerTests : IDisposable
 
         public bool FailNext { get; set; }
 
-        public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, CancellationToken ct)
+        public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, DateTimeOffset? lateDue, CancellationToken ct)
         {
             if (this.FailNext)
             {

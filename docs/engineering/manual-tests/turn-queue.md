@@ -2,7 +2,7 @@
 
 Prove that a Message an Agent owes is answered once whatever happens to Huddle between its post and the reply: a close, a kill, an Agent still connecting, a Restart; that no reply is ever posted twice; that a waiting `ask_human` card survives a restart; and that the Human can see and call off what waits. Spec: [Huddle.TurnQueue-Specifications.md](../../Huddle.TurnQueue-Specifications.md) (§14 lists the cases as TQ-M1 to TQ-M18; this page carries those built so far). Decision: [ADR-0091](../../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md).
 
-**11 tests** · 0 free · 11 paid · about 2.8 hours. Written 2026-11-17 for issues #617 (slices 0 and 1) and #618 (slice 2, TURNQUEUE-06 and -07). Run once, 2026-11-17, by an agent acting as the Human on Sonnet: the slice 0 and 1 cases on build `a3142a11` (9 Pass, about 0.5 USD) and TURNQUEUE-06 and -07 on build `3fd0745a` (2 Pass); see the [Run log](run-log.md). The Follow-up cases join this page with slice 3.
+**13 tests** · 0 free · 13 paid · about 3.2 hours. Written 2026-11-17 for issues #617 (slices 0 and 1) and #618 (slice 2, TURNQUEUE-06 and -07). Run once, 2026-11-17, by an agent acting as the Human on Sonnet: the slice 0 and 1 cases on build `a3142a11` (9 Pass, about 0.5 USD) and TURNQUEUE-06 and -07 on build `3fd0745a` (2 Pass); see the [Run log](run-log.md). The Follow-up cases join this page with slice 3.
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Every Agent is Sonnet or better, never Haiku, and the Chief of Staff is set to Sonnet / low before its first Turn. Each case is a few Turns, well under a dollar. Record each result in the [Run log](run-log.md).
 
@@ -17,8 +17,10 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 | TURNQUEUE-05 | TQ-M5 | Does a stopped Turn stay stopped across a restart while another Agent's waiting Mention is answered |
 | TURNQUEUE-06 | TQ-M6 | Do quick Human Messages in a one-to-one get one reply that answers them all |
 | TURNQUEUE-07 | TQ-M7 | Do quick Mentions in a group Room still get one reply each |
+| TURNQUEUE-11 | TQ-M11 | Does a Job due during a sleep run once on waking, on Windows and macOS |
 | TURNQUEUE-12 | TQ-M12 | Is a Mention posted while an Agent is still starting answered once it is up, with no restart line |
 | TURNQUEUE-13 | TQ-M13 | Does a Restart stop the running Turn and keep the Messages waiting behind it |
+| TURNQUEUE-17 | TQ-M17 | Does a paused Job stay quiet when it is resumed after its time |
 | TURNQUEUE-14 | TQ-M14 | Does the age limit and **Don't answer** keep old or refused Messages from coming back |
 | TURNQUEUE-18 | TQ-M18 | Is a waiting Mention held while its Room is paused and answered once the Human speaks |
 
@@ -199,6 +201,46 @@ Then `adapter: 'broken'` in the Agent's frontmatter makes it Offline, and removi
 **Pass if — all of these**
 
 - Nova answers each of the three Mentions in its own reply, three replies after the ping summary.
+
+### TURNQUEUE-11 — A Job due during a sleep runs once on waking 💰
+
+**Paid** · about 15 min
+
+*Proves U9 and V-4: after the computer sleeps across a Job's time, the minute timer fires on waking and the Job runs once, marked late. On Windows and on macOS; where macOS cannot be run, record "not verified on macOS".*
+
+**Before you start**
+
+- Nova Online. A daily Job for Nova ("Name one fruit.") due in five minutes. About 0.02 USD.
+
+**Steps**
+
+1. Put the computer to sleep before the Job's time; wake it about five minutes after it.
+2. Watch the Job's Room for a minute.
+
+**Pass if — all of these**
+
+- The Job posts once within a minute of waking, reading `⏰ <title> (ran late; due …)`, and Nova answers once.
+- The Job page reads "Ran late" and its next run is tomorrow.
+
+### TURNQUEUE-17 — A paused Job does not run late on resume 💰
+
+**Paid** · about 10 min
+
+*Proves §8.5: a Job paused across its time does not run when it is resumed; it runs at its next time.*
+
+**Before you start**
+
+- Nova Online. A Job for Nova that repeats every day at a time two minutes from now ("Name one colour."). About 0.02 USD.
+
+**Steps**
+
+1. Pause the Job on the Scheduled page before its time.
+2. Wait until three minutes after its time, then resume it.
+3. Watch its Room for two minutes and read the Job page.
+
+**Pass if — all of these**
+
+- Nothing is posted on resume; the Job page shows its next run tomorrow at that time.
 
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 

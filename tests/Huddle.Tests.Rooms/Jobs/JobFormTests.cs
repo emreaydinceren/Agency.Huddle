@@ -173,7 +173,7 @@ public sealed class JobFormTests
         Assert.Null(JobText.LastRun(null, null, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Last ran Mon 2 Nov, 08:00", JobText.LastRun(Monday0800, JobOutcome.Delivered, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, the Room's Budget is spent", JobText.LastRun(Monday0800, JobOutcome.BudgetSpent, TimeZoneInfo.Utc, Clock));
-        Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, the Agent has never come online", JobText.LastRun(Monday0800, JobOutcome.NoAgent, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Last ran Mon 2 Nov, 08:00: not posted, its Agent is no longer available", JobText.LastRun(Monday0800, JobOutcome.NoAgent, TimeZoneInfo.Utc, Clock));
     }
 
     /// <summary>The form's own answers: no title or instruction, a zone it does not know, and a one-off already past.</summary>
@@ -199,7 +199,7 @@ public sealed class JobFormTests
     {
         Assert.Equal("\"Ping\" ran.", JobText.RanNow("Ping", JobOutcome.Delivered));
         Assert.Equal("\"Ping\" did not run: its Room's Budget is spent.", JobText.RanNow("Ping", JobOutcome.BudgetSpent));
-        Assert.Equal("\"Ping\" did not run: its Agent has never come online.", JobText.RanNow("Ping", JobOutcome.NoAgent));
+        Assert.Equal("\"Ping\" did not run: its Agent is no longer available.", JobText.RanNow("Ping", JobOutcome.NoAgent));
         Assert.Equal("\"Ping\" no longer exists.", JobText.RanNow("Ping", null));
         Assert.Equal("\"Ping\" did not run.", JobText.RanNow("Ping", JobOutcome.Failed));
         Assert.Equal("Last ran Mon 2 Nov, 08:00: failed, trying again", JobText.LastRun(Monday0800, JobOutcome.Failed, TimeZoneInfo.Utc, Clock));

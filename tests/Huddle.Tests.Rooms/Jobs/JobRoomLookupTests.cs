@@ -74,6 +74,22 @@ public sealed class JobRoomLookupTests : IDisposable
         Assert.Null(states.Get("job-1"));
     }
 
+    /// <summary>A late delivery is stored as "delivered-late" and read back as <see cref="JobOutcome.DeliveredLate"/>.</summary>
+    [Fact]
+    public void JobStateStore_StoresALateDeliveryByName()
+    {
+        JobStateStore states = new(this.dir.Options());
+        states.Set(new JobState("job-1", "k", null, null, JobOutcome.DeliveredLate));
+
+        using Microsoft.Data.Sqlite.SqliteConnection connection = new($"Data Source={Path.Combine(this.dir.Path, "team.db")}");
+        connection.Open();
+        using Microsoft.Data.Sqlite.SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT last_outcome FROM job_state WHERE job_id = 'job-1';";
+
+        Assert.Equal("delivered-late", command.ExecuteScalar());
+        Assert.Equal(JobOutcome.DeliveredLate, states.Get("job-1")?.LastOutcome);
+    }
+
     /// <summary>An outcome is stored by name, never by number, so reordering the enum cannot rewrite history.</summary>
     [Fact]
     public void JobStateStore_StoresTheOutcomeByName()

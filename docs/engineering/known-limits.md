@@ -492,6 +492,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   is already there. Both are deliberate — it is a Singleton holding model output
   for the life of the process, and an Agent killed without a clean disconnect
   never sends the terminator that would clear it.
+- **An overdue one-off more than a day late gives up** ([ADR-0093](../adr/0093-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md)).
+  An overdue Job runs once when Huddle sees it, but a one-off more than `Team:Jobs:OverdueOneOffWithin` (24 hours) late
+  does not post: it is removed with a `job-gave-up` Feed item instead. A recurring Job whose next regular run is within an
+  hour skips its late run. `CadenceService` keeps its own due rule (a Team cadence is not a Job). The two leaks of the old
+  rule are gone: a missed one-off no longer stays in `schedule.md`, and a one-off that did not post is no longer deleted.
 - **What the Turn Queue does not cover** ([Turn Queue spec](../Huddle.TurnQueue-Specifications.md) §13).
   A crash in the instant between the runner writing `Started` and the server committing it re-runs that Turn
   as merely waiting, without the cut-off note (E-14). A form waiting when Huddle stops is part of its Turn and
