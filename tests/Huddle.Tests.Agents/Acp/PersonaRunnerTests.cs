@@ -750,15 +750,20 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         factory.Session.EnqueueReply("recovered");
         var persona = TestPersonas.Nova;
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
+        // One Message at a time: two quick one-to-one Human Messages would fold into the one Turn that fails (Turn Queue
+        // spec, section 6), and this test needs a second Turn to recover.
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
+        _ = await statuses.WaitForAsync(static history => history.Any(static status => status.State == PersonaState.Degraded), ct);
         await chat.PostAsync(roomId, KnownIds.Human, "second message", ct: ct);
 
         var history = await Eventually.HistoryCountAsync(store, roomId, 3, ct);
@@ -2635,7 +2640,10 @@ public sealed class PersonaRunnerTests
         var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
+        // One Message at a time: two quick one-to-one Human Messages would fold into the one Turn that fails (Turn Queue
+        // spec, section 6), and this test needs a second Turn to recover.
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
+        _ = await statuses.WaitForAsync(static history => history.Any(static status => status.State == PersonaState.Degraded), ct);
         await chat.PostAsync(roomId, KnownIds.Human, "second message", ct: ct);
 
         // Completed from the StatusChanged handler the moment an Online lands after a Degraded - the

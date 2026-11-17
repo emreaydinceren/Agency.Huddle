@@ -21,6 +21,15 @@ internal sealed class JobStateStore
         );
         """;
 
+    /// <summary>The sibling table for a Job's retry count and whether it ever ran, so the older table's shape is untouched (a <c>CREATE TABLE IF NOT EXISTS</c> never adds a column).</summary>
+    private const string DdlCreateJobStateTries = """
+        CREATE TABLE IF NOT EXISTS job_state_tries (
+            job_id       TEXT PRIMARY KEY,
+            failed_tries INTEGER NOT NULL,
+            ever_ran     INTEGER NOT NULL
+        );
+        """;
+
     private readonly string connectionString;
 
     /// <summary>Opens the database and creates the table when it is missing.</summary>
@@ -28,7 +37,48 @@ internal sealed class JobStateStore
     public JobStateStore(IOptions<TeamOptions> options)
     {
         ArgumentNullException.ThrowIfNull(options);
-        this.connectionString = SqliteTable.Open(options.Value, DdlCreateJobState);
+        this.connectionString = SqliteTable.Open(options.Value, DdlCreateJobState + "\n" + DdlCreateJobStateTries);
+    }
+
+    /// <summary>Reads how many runs of a Job's current due time have failed and whether it ever ran.</summary>
+    /// <param name="jobId">The Job's id.</param>
+    /// <returns>The pair; a Job with no row reads as 0 and <see langword="false"/>.</returns>
+    public (int FailedTries, bool EverRan) GetTries(string jobId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
+
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT failed_tries, ever_ran FROM job_state_tries WHERE job_id = $id;";
+        _ = command.Parameters.AddWithValue("$id", jobId);
+
+        using SqliteDataReader reader = command.ExecuteReader();
+        return reader.Read() ? (reader.GetInt32(0), reader.GetInt32(1) != 0) : (0, false);
+    }
+
+    /// <summary>Stores a Job's retry count and whether it ever ran.</summary>
+    /// <param name="jobId">The Job's id.</param>
+    /// <param name="failedTries">How many runs of the current due time have failed.</param>
+    /// <param name="everRan">Whether it ever ran.</param>
+    public void SetTries(string jobId, int failedTries, bool everRan)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(jobId);
+
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO job_state_tries(job_id, failed_tries, ever_ran)
+            VALUES($id, $failed, $ran)
+            ON CONFLICT(job_id) DO UPDATE SET
+                failed_tries = excluded.failed_tries,
+                ever_ran = excluded.ever_ran;
+            """;
+        _ = command.Parameters.AddWithValue("$id", jobId);
+#pragma warning disable HAA0601 // AddWithValue takes object, so boxing the integers cannot be avoided.
+        _ = command.Parameters.AddWithValue("$failed", failedTries);
+        _ = command.Parameters.AddWithValue("$ran", everRan ? 1 : 0);
+#pragma warning restore HAA0601
+        _ = command.ExecuteNonQuery();
     }
 
     /// <summary>Reads a Job's state.</summary>
@@ -90,7 +140,7 @@ internal sealed class JobStateStore
 
         using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "DELETE FROM job_state WHERE job_id = $id;";
+        command.CommandText = "DELETE FROM job_state WHERE job_id = $id; DELETE FROM job_state_tries WHERE job_id = $id;";
         _ = command.Parameters.AddWithValue("$id", jobId);
         _ = command.ExecuteNonQuery();
     }
@@ -107,6 +157,9 @@ internal sealed class JobStateStore
         JobOutcome.Delivered => "delivered",
         JobOutcome.BudgetSpent => "budget-spent",
         JobOutcome.NoAgent => "no-agent",
+        JobOutcome.DeliveredLate => "delivered-late",
+        JobOutcome.Held => "held",
+        JobOutcome.NoRoom => "no-room",
         _ => "failed",
     };
 
@@ -116,6 +169,9 @@ internal sealed class JobStateStore
         "budget-spent" => JobOutcome.BudgetSpent,
         "no-agent" => JobOutcome.NoAgent,
         "failed" => JobOutcome.Failed,
+        "delivered-late" => JobOutcome.DeliveredLate,
+        "held" => JobOutcome.Held,
+        "no-room" => JobOutcome.NoRoom,
         _ => null,
     };
 }

@@ -69,12 +69,25 @@ Summarise yesterday's Room activity for the Human and list anything waiting on t
 
 `JobScheduler` looks at every Job once a minute.
 
-1. A Job seen for the first time, or whose `when` or `timezone` changed, gets its next run worked out and does not run.
+Since 2026-11-17 the rule is the shared `DueCheck` ([Turn Queue spec](Huddle.TurnQueue-Specifications.md) §8,
+[ADR-0093](adr/0093-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md)):
+
+1. A Job seen for the first time, or whose `when` or `timezone` changed, gets its next run worked out and does not run. A
+   one-off seen first after its time runs once (late), unless it is more than `Team:Jobs:OverdueOneOffWithin` (24 hours)
+   late, when it gives up. A new Job's state is written when it is created, so a one-off due within the minute still runs.
 2. A Job whose next run has come runs if that time is at most **two minutes** ago. Its following run is saved first, so a
    restart cannot run it twice.
-3. A run older than two minutes (Huddle was stopped or asleep) is skipped: the next run moves to the next time after now.
-4. A run that throws keeps its time, so the next minute tries again; once it is two minutes late it is skipped.
-5. A one-off that has run leaves its owner's `schedule.md`.
+3. A run later than that (Huddle was stopped or asleep) **runs once**, its post marked `(ran late; due Mon 09:00)`, and the
+   Job continues from now. A recurring Job whose next regular run is within an hour skips the late one instead. A one-off
+   more than 24 hours late gives up. `Team:Jobs:RunOverdue=false` restores the old skip; with `Team:TurnQueue:Enabled`
+   false an Agent's Job skips too, because its runner could not be woken yet.
+4. A run that throws keeps its time and is tried again on the next ticks, at most three times; then the Job waits for its
+   next time, and a one-off gives up.
+5. A one-off leaves its owner's `schedule.md` only when it posted, or when it never can (its Room is gone, its Agent is no
+   longer available, it gave up). A one-off held by a spent Budget stays to try again. Every removal without a post leaves
+   a `job-gave-up` Feed item (a Notification for the Human's one-off, Activity for an Agent's), and an Agent is told by a
+   Huddle line.
+6. A paused Job's next run moves forward every minute, so resuming it never runs it late.
 
 **Run now** runs a Job at once and leaves its next run unchanged.
 
@@ -133,6 +146,7 @@ cannot do and asks; it does not pick something close. A Job's title must match i
 
 ## 8. Not covered
 
-- Cron expressions, end dates, run counts and catching up missed runs.
+- Cron expressions, end dates and run counts. (Catching up a missed run was a non-goal until 2026-11-17; an overdue run
+  now runs once, §4.)
 - Jobs for a Team; a Job is for one Agent or the Human.
 - A Job Room scoped to a Team: every Job Room is at the root.

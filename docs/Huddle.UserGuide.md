@@ -2427,8 +2427,10 @@ the data folder for yours. You can edit the file by hand; a line Huddle cannot r
 that job does not run until you fix it.
 
 > [!NOTE]
-> Huddle runs jobs only while it is running. A run more than two minutes late, because Huddle was stopped or the
-> computer was asleep, is skipped; the job runs next at its following time.
+> Huddle runs jobs only while it is running. A run that was due while Huddle was stopped or the computer was asleep
+> runs once when Huddle sees it, marked "ran late", and the job carries on from then. It is never run twice for
+> several missed times. A one-time job more than a day late does not run; you see "did not run" in the Feed. A
+> paused job does not run late when you resume it.
 
 ## Keeping notes in the Library
 

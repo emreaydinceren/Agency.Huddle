@@ -7258,6 +7258,13 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-07
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `3fd0745a` | #618 | Group Room (Kai, Nova, Cleo). While Nova ran `ping -n 30` from a Mention, three Mentions of Nova were sent. After the ping summary Nova answered each in its own reply: Banana, Blue, Jupiter. No fold. |
 
+### TURNQUEUE-11 — A Job due during a sleep runs once on waking 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-11--a-job-due-during-a-sleep-runs-once-on-waking-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 
 File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-)
@@ -7273,6 +7280,14 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-13
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `a3142a11` | #617 | Nova ran `ping -n 90`; two Messages queued; the notice read "Waiting for Nova: 2 Messages" with no Don't answer (Nova had a Draft). Editing Nova's Persona restarted it once the running tool returned (about 75 s; the cancel waits for the tool). The running row closed `stopped`; the restarted Nova answered 3 + 3 = 6 and Teal, once each; no restart line. |
+
+### TURNQUEUE-17 — A paused Job does not run late on resume 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-17--a-paused-job-does-not-run-late-on-resume-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `74e606fb` | #619 | By an agent acting as the Human, lane :5617, slice 3a build. A daily Job for Nova was paused on the Scheduled page before its 11:40 time and resumed at 11:42:46; nothing was posted in the two minutes after, and the Job's next run stayed tomorrow at 19:40 UTC (11:40 local). No spend: the Job never ran. |
 
 ### TURNQUEUE-14 — The age limit and Don't answer 💰
 

@@ -137,6 +137,7 @@ internal sealed class JobsTool(
         }
 
         Job job = store.Add(new Job(string.Empty, owner, title, instruction, when, zone, personaName, false));
+        scheduler.Seed(job);
         return $"Scheduled {job.Id} \"{job.Title}\" for {this.NameOf(job.Owner)}: {job.When}. {this.NextRunText(job)}";
     }
 
@@ -201,7 +202,7 @@ internal sealed class JobsTool(
         {
             JobOutcome.Delivered => $"Ran {job.Id} \"{job.Title}\": its instruction is posted in its Room.",
             JobOutcome.BudgetSpent => $"{job.Id} did not run: its Room's Budget is spent until the Human continues it.",
-            JobOutcome.NoAgent => $"{job.Id} did not run: {this.NameOf(job.Owner)} has never come online.",
+            JobOutcome.NoAgent => $"{job.Id} did not run: {this.NameOf(job.Owner)} is not available.",
             _ => $"{job.Id} did not run.",
         };
     }

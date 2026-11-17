@@ -23,7 +23,8 @@ before the Teams change added 91 tests. Treat a changed total as something to *c
 not something to fear; see [Known failure modes](#known-failure-modes).
 
 This page covers validation only. There is no packaging, publishing, or release step yet;
-when one arrives it belongs in a new job in `ci-main-local.yaml`, not inside `validate`.
+when one arrives it belongs in a new job in `ci-main-local.yaml` (`needs: ci`), not inside the
+shared `validate`.
 
 ## Topology
 
@@ -52,23 +53,19 @@ together, or not at all.
 
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
-| `.gitea/workflows/ci-pr-local.yaml` | `pull_request` into `main` | `secret-scan`, `validate` |
-| `.gitea/workflows/ci-main-local.yaml` | `push` to `main` | `secret-scan`, `validate` |
+| `.gitea/workflows/ci-pr-local.yaml` | `pull_request` into `main` | `ci` (calls `ci-shared.yaml`) |
+| `.gitea/workflows/ci-main-local.yaml` | `push` to `main` | `ci` (calls `ci-shared.yaml`) |
+| `.gitea/workflows/ci-shared.yaml` | `workflow_call` only; never runs alone | `docs`, `secret-scan`, `validate` (in parallel) |
 
-Both skip runs whose changes are confined to `docs/**`. A docs-only PR therefore produces
-**no run at all** — if you make these checks required in branch protection, such a PR will
-sit with a permanently pending check.
+The checks are defined once, in `ci-shared.yaml`; the PR and main workflows are thin callers that
+differ only in trigger and `concurrency`. There is no second copy to keep in step, so the old
+`diff` of the two `jobs:` blocks is gone. Change a step in `ci-shared.yaml` and both gates change.
 
-The two files' job definitions are byte-identical by construction. Keep them that way:
-
-```bash
-diff <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr-local.yaml) \
-     <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-main-local.yaml)
-```
-
-```text
-(no output — the jobs match)
-```
+The callers have **no `paths-ignore`**, so every PR and every push to `main` runs all three jobs,
+docs-only changes included. A docs-only PR therefore never strands a required check, and the `docs`
+job runs `agents/scripts/Check-DocIndex.ps1` on every change. The price is that a docs-only PR pays
+for a full `validate` run (about 3 minutes). Required checks on `main` are the three
+`CI (Shared) / <job> (pull_request)` contexts.
 
 ### What validate does
 
@@ -235,8 +232,12 @@ move (1642) waited for a runner that was gone; it now runs on `dotnet-10-local` 
 The consequence is that **CI is only as available as that desktop.** With the PC off, or Docker Desktop
 stopped, `validate` stays queued and the required check never reports. See the failure-mode table.
 
-The required status check on `main` is `CI (Pull Request) / validate (pull_request)`. Its text is
-the workflow `name:` plus the job name, so renaming either strands every PR.
+The required status check on `main` is built from the caller workflow's `name:` (`CI (Pull Request)`),
+its job id (`ci`) and the called job's name (`validate`), so renaming any of them strands every PR.
+Before `ci-shared.yaml` existed it was `CI (Pull Request) / validate (pull_request)`; with the
+reusable workflow the text is longer and Gitea decides the exact form, so **read it off the first
+finished run's commit status** and put that string in branch protection, replacing the old one. Until
+that is done the old check never reports.
 
 The runner is not in the repo. It is a `gitea/act_runner` container (`huddle-local-runner`) defined
 by a `compose.yaml` and a `config.yaml` in `C:\Users\user\gitea-runner\`, registered to this repo only
@@ -268,7 +269,7 @@ Check these before reading the code.
 | A local build fails with `MSB3021` or `MSB3027`: `Could not copy apphost.exe to Huddle.App.exe`, `The file is locked by Huddle.App (<pid>)` | The Human is running the app (it listens on port 1113) and the process holds its own `bin` output open. It is not a code error and a retry will not help | Check before building: `Get-Process Huddle.App -ErrorAction SilentlyContinue`. If it is running, ask the Human once, up front, to stop it, and do not stop it yourself (the auto-mode classifier refused it once as interfering with their work). Seen in two Huddle3 sessions, each costing an extra approval round trip |
 | `validate` sits queued and never starts | The runner is offline: the desktop is off or asleep, Docker Desktop is stopped, or the `huddle-local-runner` container is not running. Gitea shows it under Settings → Actions → Runners | Start Docker Desktop and run `docker compose up -d` in `C:\Users\user\gitea-runner\`. The container restarts on its own once Docker is up |
 | The test step takes about 7 minutes and `PersonaSpendTests.ConcurrentAdds_SumExactly` dominates it | The runner lost its RAM-backed `/tmp`: `config.yaml` was regenerated or not mounted, so jobs write SQLite to Docker's disk | Restore `container.options: "--tmpfs /tmp:exec"` in `config.yaml` and the `labels:` entry beside it, then restart the container |
-| A docs-only PR shows a check that never completes | Both workflows set `paths-ignore: docs/**`, so no run is queued at all | Push a non-docs change, or drop the required check for such PRs |
+| A docs-only PR shows a check that never completes | Only an old branch can do this now: it still carries the pre-`ci-shared.yaml` workflows with `paths-ignore: docs/**`, so no run is queued | Merge `main` into the branch |
 | `pwsh: command not found` at the Health endpoint smoke test step | The SDK image stopped shipping PowerShell. `11.0.100` (PowerShell 7.7.0) installs it as a global tool and symlinks `/usr/bin/pwsh` (`PowerShell.Linux.arm64` on this runner), but that is the image's choice, not a guarantee across bumps | Add a step before it — `dotnet tool install --global PowerShell` and put `$HOME/.dotnet/tools` on `PATH` — in **both** workflows. Confirm with `command -v pwsh && pwsh --version` |
 | The smoke test FAILs while the whole test suite is green | Read the stderr and stdout tails the script prints; that is what they are for. `AddressInUseException`, a missing `libe_sqlite3.so`, or a timeout waiting for `Now listening on:` are environmental — the app never bound. A `404 - the endpoint is not mapped` is **not** environmental | For 404, `app.MapHealthChecks("/health")` was removed from `Program.cs` and this step caught a real regression the suite cannot see. For the rest, re-run; if it persists, reproduce with the Docker command above |
 | The build step fails with `error MSB3883: Unexpected exception` and `ReleaseMutex failed. WaitOne Id: N Release Id: N`, on a project the change does not touch, with no `CS` diagnostic | The Roslyn compiler server (`VBCSCompiler`) lost a race on its own mutex. It is the runner, not the code. Seen once, on 2026-10-18 (run 1014, job 1702), on `Huddle.Contracts` | Re-run the job. If it recurs, add `-p:UseSharedCompilation=false` to `dotnet build` in **both** workflows, which trades the server's speed for no shared state |

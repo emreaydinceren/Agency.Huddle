@@ -68,8 +68,9 @@ Gitea Actions validates every PR into `main` and every push to `main`: restore,
 build and test `Huddle.slnx` (trailing `--` included), plus a gitleaks secret scan
 and a vulnerable-dependency check. The workflows are `.gitea/workflows/ci-pr-local.yaml`
 and `ci-main-local.yaml`, run by a runner on the Windows desktop (label `dotnet-10-local`, see
-`agents/CIPipeline.md`); their `validate` jobs are byte-identical on purpose, so change
-both or neither. `.gitea/**` and `.gitleaks.toml` are shared root-level files —
+`agents/CIPipeline.md`); both call the one `validate` definition in `ci-shared.yaml`, so a
+change to the gate is made there, once. It also runs the doc-index check (a `docs` job, on
+every PR and push, docs-only ones included). `.gitea/**` and `.gitleaks.toml` are shared root-level files —
 announce changes the same way as any other.
 
 Do **not** run the Linux Docker repro as a routine check, and do not add it to a delivery
