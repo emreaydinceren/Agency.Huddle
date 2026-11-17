@@ -1417,3 +1417,14 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 | [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Active | #620 | not yet run by a person |
 | [TIDYTIME-01](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start) |  | Active | #621 | not yet run by a person |
 | [TIDYTIME-02](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing) |  | Active | #621 | not yet run by a person |
+| [MEMTIDY-01](memory-tidy.md#memtidy-01--a-seeded-folder-is-tidied-with-a-copy-a-list-and-one-notification-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-02](memory-tidy.md#memtidy-02--a-second-tidy-now-at-once-makes-no-call) |  | Active | #621 | not yet run by a person |
+| [MEMTIDY-03](memory-tidy.md#memtidy-03--a-small-folder-is-not-judged) |  | Active | #621 | not yet run by a person |
+| [MEMTIDY-04](memory-tidy.md#memtidy-04--a-planted-link-is-not-written-into-any-file-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-05](memory-tidy.md#memtidy-05--a-file-that-claims-to-replace-another-does-not-get-it-dropped-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-06](memory-tidy.md#memtidy-06--a-qualifier-survives-a-rewrite-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-07](memory-tidy.md#memtidy-07--a-restored-file-is-back-and-tidy-keep-protects-it) |  | Active | #621 | not yet run by a person |
+| [MEMTIDY-08](memory-tidy.md#memtidy-08--an-older-session-hears-of-the-change-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-09](memory-tidy.md#memtidy-09--a-daily-cap-of-1-leaves-the-other-folders-eligible-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-10](memory-tidy.md#memtidy-10--closing-huddle-in-the-middle-of-a-pass-lists-what-was-done-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-12](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-) | 💰 | Active | #621 | not yet run by a person |

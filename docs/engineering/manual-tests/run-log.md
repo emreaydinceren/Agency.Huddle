@@ -7081,3 +7081,80 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+### MEMTIDY-01 — A seeded folder is tidied, with a copy, a list and one Notification 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-01--a-seeded-folder-is-tidied-with-a-copy-a-list-and-one-notification-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-02 — A second Tidy now at once makes no call
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-02--a-second-tidy-now-at-once-makes-no-call)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-03 — A small folder is not judged
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-03--a-small-folder-is-not-judged)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-04 — A planted link is not written into any file 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-04--a-planted-link-is-not-written-into-any-file-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-05 — A file that claims to replace another does not get it dropped 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-05--a-file-that-claims-to-replace-another-does-not-get-it-dropped-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-06 — A qualifier survives a rewrite 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-06--a-qualifier-survives-a-rewrite-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-07 — A restored file is back, and `tidy: keep` protects it
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-07--a-restored-file-is-back-and-tidy-keep-protects-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-08 — An older session hears of the change 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-08--an-older-session-hears-of-the-change-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-09 — A daily cap of 1 leaves the other folders eligible 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-09--a-daily-cap-of-1-leaves-the-other-folders-eligible-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-10 — Closing Huddle in the middle of a pass lists what was done 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-10--closing-huddle-in-the-middle-of-a-pass-lists-what-was-done-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### MEMTIDY-12 — A pass that meets the cap goes on the next day by itself 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |

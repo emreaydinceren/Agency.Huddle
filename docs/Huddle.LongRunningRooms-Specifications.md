@@ -593,7 +593,7 @@ edit its history, and Claude Code deletes it after 30 days unused. So this spec 
 | Pruning thresholds: server-side from max(50,000, 30 % of the window); client-side nothing below about 30 % use, hard clear at about 50 % | **Reference only** | They govern tool results, not the whole context, but they sit far below 200,000 on a 1M window, so 200,000 is treated as a ceiling to tune down from (Q-5) |
 | Session pruning of tool results | **Out of reach** | §7.1 |
 | Compaction quality guard, tool-pair-safe cuts | **Not needed** | Huddle writes no summary; a reread is the Room's own words |
-| "Dreaming": background consolidation into `MEMORY.md` | **No** | Removed after review (Appendix A): benchmarks and injection risk |
+| "Dreaming": background consolidation into `MEMORY.md` | **No** | Removed after review (Appendix A): benchmarks and injection risk. *2026-11-16: a narrower thing is built and is not this. The Memory Tidy Helper tidies an Agent's own Memory files once a week: only Memory files go in, it can create no file, Huddle refuses any new number, date, link or address, and a copy of every changed file is kept. See [Memory Tidy](Huddle.MemoryTidy-Specifications.md) and [ADR-0095](adr/0095-a-helper-tidies-memory-weekly-and-huddle-keeps-a-copy.md).* |
 | `memory_search`, `sessions_search` | **Elsewhere** | The `search` App Tool covers the Library; a Transcript `recall` stays a later feature (ADR-0051) |
 | Forks, resident history, store maintenance | **Not applicable** | OpenClaw's own session store and threading; Huddle has no equivalent |
 
