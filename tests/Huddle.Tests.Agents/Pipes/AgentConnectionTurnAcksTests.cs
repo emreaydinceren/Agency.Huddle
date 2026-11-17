@@ -39,10 +39,10 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
-        Welcome rio = await scenario.ConnectAsync("Rio", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
+        Welcome rio = await scenario.ConnectAsync("Rio", durable: false, ct);
         string rioRoom = Assert.Single(rio.Rooms).Id;
-        scenario.Seed(nova.AgentId, rioRoom, "m1");
+        await scenario.SeedAsync(nova.AgentId, rioRoom, "m1", ct);
 
         await scenario.Client("Nova").WriteAsync(new QueueAck(rioRoom, ["m1"], QueueAckKind.Finished, Outcome: QueueOutcome.Silent), ct);
         ProtocolError error = Assert.IsType<ProtocolError>(await scenario.Client("Nova").ReadAsync(ct));
@@ -73,9 +73,9 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
         string room = Assert.Single(nova.Rooms).Id;
-        scenario.Seed(nova.AgentId, room, "m1");
+        await scenario.SeedAsync(nova.AgentId, room, "m1", ct);
 
         await scenario.Client("Nova").WriteAsync(new QueueAck(room, ["bad id!", "m1"], QueueAckKind.Started, "reply-1"), ct);
         await scenario.Client("Nova").WriteAsync(new QueueAck(room, ["m2"], QueueAckKind.Started, "bad reply!"), ct);
@@ -94,13 +94,13 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
-        Welcome rio = await scenario.ConnectAsync("Rio", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
+        Welcome rio = await scenario.ConnectAsync("Rio", durable: false, ct);
         string novaRoom = Assert.Single(nova.Rooms).Id;
         string rioRoom = Assert.Single(rio.Rooms).Id;
-        scenario.Seed(nova.AgentId, novaRoom, "m1");
-        scenario.Seed(rio.AgentId, novaRoom, "m1");
-        scenario.Seed(nova.AgentId, rioRoom, "m2");
+        await scenario.SeedAsync(nova.AgentId, novaRoom, "m1", ct);
+        await scenario.SeedAsync(rio.AgentId, novaRoom, "m1", ct);
+        await scenario.SeedAsync(nova.AgentId, rioRoom, "m2", ct);
 
         await scenario.Client("Nova").WriteAsync(new QueueAck(novaRoom, ["m1", "m2"], QueueAckKind.Finished, Outcome: QueueOutcome.Silent), ct);
         await Scenario.UntilAsync(() => scenario.Row(nova.AgentId, novaRoom, "m1").Status == "done", ct);
@@ -116,11 +116,11 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
-        Welcome rio = await scenario.ConnectAsync("Rio", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
+        Welcome rio = await scenario.ConnectAsync("Rio", durable: false, ct);
         string novaRoom = Assert.Single(nova.Rooms).Id;
         string rioRoom = Assert.Single(rio.Rooms).Id;
-        scenario.Seed(nova.AgentId, rioRoom, "m2");
+        await scenario.SeedAsync(nova.AgentId, rioRoom, "m2", ct);
 
         await scenario.Client("Nova").WriteAsync(new QueueAck(novaRoom, ["m2"], QueueAckKind.Started, "reply-2"), ct);
         await scenario.Client("Nova").WriteAsync(new QueueAck(novaRoom, ["m3"], QueueAckKind.Started, "reply-3"), ct);
@@ -137,9 +137,9 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
         string room = Assert.Single(nova.Rooms).Id;
-        scenario.Seed(nova.AgentId, room, "m1");
+        await scenario.SeedAsync(nova.AgentId, room, "m1", ct);
 
         await scenario.Client("Nova").WriteAsync(new PostMessage(room, "reply-1", "on it", ["m1", "bad id!"]), ct);
         await Scenario.UntilAsync(() => scenario.Row(nova.AgentId, room, "m1").Status == "done", ct);
@@ -156,9 +156,9 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
         string room = Assert.Single(nova.Rooms).Id;
-        scenario.Seed(nova.AgentId, room, "m1");
+        await scenario.SeedAsync(nova.AgentId, room, "m1", ct);
 
         await scenario.Client("Nova").WriteAsync(new PostMessage(room, "reply-1", " ", ["m1"]), ct);
         _ = Assert.IsType<ProtocolError>(await scenario.Client("Nova").ReadAsync(ct));
@@ -193,9 +193,9 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
         string room = Assert.Single(nova.Rooms).Id;
-        scenario.Seed(nova.AgentId, room, "m1");
+        await scenario.SeedAsync(nova.AgentId, room, "m1", ct);
         await scenario.Client("Nova").WriteAsync(new QueueAck(room, ["m1"], QueueAckKind.Started, "reply-1"), ct);
         await Scenario.UntilAsync(() => scenario.Row(nova.AgentId, room, "m1").Status == "running", ct);
 
@@ -212,9 +212,9 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: false, ct);
         string room = Assert.Single(nova.Rooms).Id;
-        scenario.Seed(nova.AgentId, room, "m1");
+        await scenario.SeedAsync(nova.AgentId, room, "m1", ct);
         await scenario.Client("Nova").WriteAsync(new QueueAck(room, ["m1"], QueueAckKind.Started, "reply-1"), ct);
         await Scenario.UntilAsync(() => scenario.Row(nova.AgentId, room, "m1").Status == "running", ct);
 
@@ -232,10 +232,10 @@ public sealed class AgentConnectionTurnAcksTests
         using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
         CancellationToken ct = cts.Token;
         await using Scenario scenario = await Scenario.StartAsync(cts);
-        Welcome first = await scenario.ConnectAsync("Nova", durable: true, ct, key: "old");
-        _ = await scenario.ConnectAsync("Nova", durable: true, ct, key: "new");
+        Welcome first = await scenario.ConnectAsync("Nova", durable: false, ct, key: "old");
+        _ = await scenario.ConnectAsync("Nova", durable: false, ct, key: "new");
         string room = Assert.Single(first.Rooms).Id;
-        scenario.Seed(first.AgentId, room, "m1");
+        await scenario.SeedAsync(first.AgentId, room, "m1", ct);
         await scenario.Client("new").WriteAsync(new QueueAck(room, ["m1"], QueueAckKind.Started, "reply-1"), ct);
         await Scenario.UntilAsync(() => scenario.Row(first.AgentId, room, "m1").Status == "running", ct);
 
@@ -308,6 +308,7 @@ public sealed class AgentConnectionTurnAcksTests
     private sealed class Scenario : IAsyncDisposable
     {
         private readonly Dictionary<string, JsonLineStream> clients = new(StringComparer.Ordinal);
+        private readonly HashSet<string> appended = new(StringComparer.Ordinal);
 
         private Scenario(PipeHostFixture fixture)
         {
@@ -344,10 +345,20 @@ public sealed class AgentConnectionTurnAcksTests
             return Assert.IsType<Welcome>(await client.ReadAsync(ct));
         }
 
-        /// <summary>Writes one waiting row.</summary>
-        internal void Seed(string agentId, string roomId, string messageId)
+        /// <summary>
+        /// Writes one waiting row for a Message that really is in the Room's Transcript, so no re-delivery pass reads it as an orphan.
+        /// The connecting client is not durable: a durable Welcome starts a fire-and-forget pass that would close or send a seeded row
+        /// depending on whether it ran before or after the seed.
+        /// </summary>
+        internal async Task SeedAsync(string agentId, string roomId, string messageId, CancellationToken ct)
         {
             DateTimeOffset now = DateTimeOffset.UtcNow;
+            if (this.appended.Add($"{roomId}/{messageId}"))
+            {
+                IChatStore chatStore = this.Fixture.Services.GetRequiredService<IChatStore>();
+                await chatStore.AppendAsync(roomId, new ChatMessage(messageId, now, KnownIds.Human, "You", $"seeded {messageId}"), ct);
+            }
+
             _ = this.Store.Record(agentId, messageId, roomId, now, now);
         }
 
