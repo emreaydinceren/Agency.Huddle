@@ -131,10 +131,12 @@ case "$INFO" in
     *) fail "osx release-info.json lacks nodeVersion $NODE_VERSION: $INFO" ;;
 esac
 
-# --- osx-x64 -> tar.gz ------------------------------------------------------
-sh "$SCRIPT" --version 1.2.3 --rid osx-x64 --publish-dir "$TMP/fake-mac" --out "$OUT" > "$TMP/osx64.log" 2>&1 \
-    || { cat "$TMP/osx64.log" >&2; fail "build-release.sh --rid osx-x64 exited non-zero"; }
-[ -f "$OUT/huddle-osx-x64.tar.gz" ] || fail "missing $OUT/huddle-osx-x64.tar.gz"
+# --- osx-x64 is refused: Intel Macs are not supported ------------------------
+if sh "$SCRIPT" --version 1.2.3 --rid osx-x64 --publish-dir "$TMP/fake-mac" --out "$TMP/intel" > "$TMP/osx64.log" 2>&1; then
+    fail "--rid osx-x64 should exit non-zero"
+fi
+grep -q "unsupported --rid 'osx-x64'" "$TMP/osx64.log" || fail "--rid osx-x64 did not say why: $(cat "$TMP/osx64.log")"
+[ ! -e "$TMP/intel/huddle-osx-x64.tar.gz" ] || fail "--rid osx-x64 produced an archive"
 
 # --- win-arm64 -> zip, same layout as win-x64 --------------------------------
 sh "$SCRIPT" --version 1.2.3 --rid win-arm64 --publish-dir "$TMP/fake" --out "$OUT" > "$TMP/winarm.log" 2>&1 \
