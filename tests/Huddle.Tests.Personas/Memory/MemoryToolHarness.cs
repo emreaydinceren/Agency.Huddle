@@ -40,6 +40,12 @@ internal sealed class MemoryToolHarness : IDisposable
     /// <summary>The Teams the tool sees; set <see cref="FakeTeamCatalog.Teams"/> before a call.</summary>
     public FakeTeamCatalog Catalog { get; } = new();
 
+    /// <summary>The clock every tool of this harness reads; fixed at 2026-11-16 noon UTC in a UTC zone until a test moves it.</summary>
+    public ManualTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+
+    /// <summary>The Prompts every tool of this harness renders: catalog defaults until a test overrides one.</summary>
+    public FakePromptSource Prompts { get; } = new();
+
     /// <summary>The Recycle Bin a <c>delete</c> sends to.</summary>
     public RecordingRecycleBin Bin { get; } = new();
 
@@ -72,7 +78,7 @@ internal sealed class MemoryToolHarness : IDisposable
     /// <summary>Builds the tool for a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>
     public MemoryTool ToolFor(string persona = "Nova") =>
-        new(persona, this.paths, this.Access, this.gate, this.Bin, new FakePromptSource(), this.options, new MemoryWarnings(NullLogger<MemoryWarnings>.Instance), this.Logger, this.Renames);
+        new(persona, this.paths, this.Access, this.gate, this.Bin, this.Prompts, this.options, new MemoryWarnings(NullLogger<MemoryWarnings>.Instance), this.Logger, this.Renames, this.Clock);
 
     /// <summary>Runs one command as a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>

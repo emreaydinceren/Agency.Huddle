@@ -32,6 +32,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="warnings">Warns once about a memory file with malformed frontmatter when the tool lists or describes it.</param>
 /// <param name="logger">Records each mutation, and each refusal that points at a boundary.</param>
 /// <param name="renames">Resolves a Team's old name in a <c>folder</c> argument to today's; optional.</param>
+/// <param name="timeProvider">Gives the Human's local date that <c>reported.md</c> lines are stamped with; optional, the system clock when absent.</param>
 internal sealed class MemoryTool(
     string personaName,
     AgentPaths agentPaths,
@@ -42,12 +43,17 @@ internal sealed class MemoryTool(
     IOptions<TeamOptions> options,
     MemoryWarnings warnings,
     ILogger<MemoryTool> logger,
-    ITeamRenames? renames = null) : IAppTool
+    ITeamRenames? renames = null,
+    TimeProvider? timeProvider = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "memory";
 
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
+
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+
+    private int descriptionWarned;
 
     private readonly MemoryPaths paths = new(agentPaths, access, options);
 
@@ -322,6 +328,11 @@ internal sealed class MemoryTool(
     private async Task<string> AppendAsync(MemoryRequest request, MemoryFolder folder, string path, CancellationToken cancellationToken)
     {
         string file = request.File ?? string.Empty;
+        if (folder.Label == MemoryPaths.OwnFolder && folder.Team is null && !folder.HuddleWide && ReportedFile.IsName(file))
+        {
+            return await this.AppendReportedAsync(request, folder, path, cancellationToken).ConfigureAwait(false);
+        }
+
         byte[]? current = await ReadIfExistsAsync(path, cancellationToken).ConfigureAwait(false);
         if (current is null)
         {
@@ -337,6 +348,94 @@ internal sealed class MemoryTool(
         return (this.TooLarge(file, bytes.Length) ?? this.DescriptionLost(file, existing, result)) is { } refusal
             ? refusal
             : await this.CommitAsync(request, folder, path, bytes, "appended to", cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// <c>append</c> to <c>reported.md</c> in the caller's own folder (Memory Tidy spec §6.3): the tool sets the date and refuses several
+    /// lines, creates the file when it is missing, drops lines older than <c>Team:Memory:Reported:KeepDays</c> and, at the size cap,
+    /// the oldest dated lines, all in the one write.
+    /// </summary>
+    /// <param name="request">The call.</param>
+    /// <param name="folder">The caller's own folder.</param>
+    /// <param name="path">The file's full path.</param>
+    /// <param name="cancellationToken">Cancels the write.</param>
+    private async Task<string> AppendReportedAsync(MemoryRequest request, MemoryFolder folder, string path, CancellationToken cancellationToken)
+    {
+        string file = request.File ?? string.Empty;
+        DateOnly today = DateOnly.FromDateTime(this.clock.GetLocalNow().DateTime);
+        if (ReportedFile.BuildLine(request.Text, today, out string line) != ReportedFile.LineProblem.None)
+        {
+            return this.Say("systemPrompt.memoryReportedOneLine");
+        }
+
+        MemoryOptions memory = options.Value.Memory;
+        int keepDays = memory.Reported.KeepDays;
+        byte[]? current = await ReadIfExistsAsync(path, cancellationToken).ConfigureAwait(false);
+        string suffix = string.Empty;
+        string result;
+        if (current is null)
+        {
+            result = MemoryFileRules.Compose(this.ReportedDescription(file), line + "\n");
+            if (this.TooLarge(file, Utf8.GetByteCount(result)) is { } tooLargeAlone)
+            {
+                return tooLargeAlone;
+            }
+        }
+        else
+        {
+            ReportedAppend appended = ReportedFile.Append(Utf8.GetString(current), line, today, keepDays, memory.MaxFileBytes);
+            if (appended.Text is null)
+            {
+                return this.SayTooLarge(file, appended.Size, memory.MaxFileBytes);
+            }
+
+            result = appended.Text;
+            suffix = DroppedSuffix(appended, keepDays);
+        }
+
+        return await this.CommitAsync(request, folder, path, Utf8.GetBytes(result), "appended to", cancellationToken).ConfigureAwait(false) + suffix;
+    }
+
+    /// <summary>The reply words for the lines an <c>append</c> to <c>reported.md</c> dropped: by age first, then to make room.</summary>
+    /// <param name="appended">What the append did.</param>
+    /// <param name="keepDays">The age limit in days.</param>
+    private static string DroppedSuffix(ReportedAppend appended, int keepDays)
+    {
+        string suffix = string.Empty;
+        if (appended.DroppedByAge > 0)
+        {
+            string noun = appended.DroppedByAge == 1 ? "line" : "lines";
+            suffix += string.Create(CultureInfo.InvariantCulture, $"; dropped {appended.DroppedByAge} {noun} older than {keepDays} days");
+        }
+
+        if (appended.DroppedForRoom > 0)
+        {
+            suffix += string.Create(CultureInfo.InvariantCulture, $"; dropped {appended.DroppedForRoom} of the oldest lines to make room");
+        }
+
+        return suffix;
+    }
+
+    /// <summary>
+    /// The description a new <c>reported.md</c> gets: the Prompt's text, or the catalog default when a Human's override breaks the
+    /// description rule (a warning is logged once per tool instance), so the file can always be created.
+    /// </summary>
+    /// <param name="file">The file name.</param>
+    private string ReportedDescription(string file)
+    {
+        const string Key = "systemPrompt.memoryReportedDescription";
+        string rendered = prompts.Render(Key).Trim();
+        if (MemoryFileRules.DescriptionProblem(rendered, file) is not { } problem)
+        {
+            return rendered;
+        }
+
+        if (Interlocked.Exchange(ref this.descriptionWarned, 1) == 0)
+        {
+            logger.LogWarning("The Prompt '{Key}' is not an acceptable description ({Problem}); using the default.", Key, problem);
+        }
+
+        return PromptCatalog.Get(Key).Default;
     }
 
     /// <summary>Swaps <c>old</c> for <c>new</c>, refused unless <c>old</c> occurs exactly once. No version: the exact match is the check.</summary>

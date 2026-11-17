@@ -129,6 +129,8 @@
   "systemPrompt.memoryBadFile": "A memory file name is one name ending in .md, with no folders. MEMORY.md and Instructions.md are reserved: the index is built for you.",
   "systemPrompt.memoryBadDescription": "The description is not acceptable: {{problem}} Give one line of 20 to 200 characters (about 100 to 150 is best) that names the specific people, projects, places or events inside and says when to read the file, such as \"Read for...\" or \"Check before...\". Put no facts and nothing sensitive in it.",
   "systemPrompt.memoryTooLarge": "{{file}} would be {{size}} bytes, over the limit of {{max}}. Split it into topics, each in its own file.",
+  "systemPrompt.memoryReportedDescription": "What I have already told the Human, by date and Room. Read before reporting so nothing is said twice.",
+  "systemPrompt.memoryReportedOneLine": "One line for each thing you told the Human.",
   "systemPrompt.memoryReadFirst": "{{file}} already exists. Read it first with the read command, then write it with the version it gives.",
   "systemPrompt.memoryDeleted": "{{file}} was deleted since you read it. To create it again, write it without a version.",
   "systemPrompt.memoryNotFound": "{{file}} does not exist in that folder. Use the list command to see what is there.",

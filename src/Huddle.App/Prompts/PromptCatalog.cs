@@ -2669,6 +2669,24 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.memoryReportedDescription",
+            Label: "Memory reported.md description",
+            HelperText: "The description the memory tool gives reported.md when it starts the file on the first append. One line of 20 to 200 characters; a text that breaks that rule is replaced by the default.",
+            Default: "What I have already told the Human, by date and Room. Read before reporting so nothing is said twice.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedOneLine",
+            Label: "Memory reported.md, one line each",
+            HelperText: "Said when an append to reported.md holds more than one line, or none.",
+            Default: "One line for each thing you told the Human.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.memoryReadFirst",
             Label: "Memory file must be read first",
             HelperText: "Said when a write or delete names no version for a file that exists. Must keep {{file}}.",
