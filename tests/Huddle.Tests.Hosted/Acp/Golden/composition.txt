@@ -128,6 +128,8 @@ Singleton Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryInputBuilder -> Agency.
 Singleton Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryTrigger -> factory Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryTrigger
 Singleton Agency.Huddle.App.HiringPool.CustomRoleStore -> Agency.Huddle.App.HiringPool.CustomRoleStore
 Singleton Agency.Huddle.App.HiringPool.HiringPoolCatalog -> Agency.Huddle.App.HiringPool.HiringPoolCatalog
+Singleton Agency.Huddle.App.Jobs.IJobDestination -> Agency.Huddle.App.Jobs.FollowUpDestination
+Singleton Agency.Huddle.App.Jobs.IJobDestination -> Agency.Huddle.App.Jobs.JobRoomDestination
 Singleton Agency.Huddle.App.Jobs.IJobGaveUpNotice -> Agency.Huddle.App.Jobs.JobGaveUpNotice
 Singleton Agency.Huddle.App.Jobs.IJobRunner -> Agency.Huddle.App.Jobs.JobRunner
 Singleton Agency.Huddle.App.Jobs.JobScheduler -> Agency.Huddle.App.Jobs.JobScheduler

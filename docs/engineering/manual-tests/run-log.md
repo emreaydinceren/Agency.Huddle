@@ -7256,6 +7256,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-11
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Skipped (owner decision 2026-11-17) |  | #619 | Not run: it needs the computer put to sleep by hand. The overdue rule it would show is the same late tick a restart takes, which TURNQUEUE-10 and the automated JobScheduler tests cover. |
 
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 

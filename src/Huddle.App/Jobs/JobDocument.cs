@@ -1,4 +1,5 @@
 using System.Text;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Jobs;
 
@@ -30,9 +31,12 @@ internal static class JobDocument
     private const string ByKey = "by";
     private const string PausedKey = "paused";
 
-    private static readonly string[] Keys = [IdKey, WhenKey, TimeZoneKey, ByKey, PausedKey];
+    private const string RoomKey = "room";
 
-    private static readonly string KeyList = string.Join(", ", Keys);
+    private static readonly string[] Keys = [IdKey, WhenKey, TimeZoneKey, ByKey, PausedKey, RoomKey];
+
+    /// <summary>The fields named in a refusal: <c>room</c> is left out because only a Follow-up has it and the <c>jobs</c> tool sets it.</summary>
+    private static readonly string KeyList = string.Join(", ", Keys.Where(key => !string.Equals(key, RoomKey, StringComparison.Ordinal)));
 
     /// <summary>Reads every section of a file.</summary>
     /// <param name="text">The file's text.</param>
@@ -108,6 +112,11 @@ internal static class JobDocument
             _ = builder.Append("- ").Append(ByKey).Append(": ").Append(OneLine(by)).Append('\n');
         }
 
+        if (job.RoomId is { } roomId)
+        {
+            _ = builder.Append("- ").Append(RoomKey).Append(": ").Append(roomId).Append('\n');
+        }
+
         _ = builder.Append("- ").Append(PausedKey).Append(": ").Append(job.Paused ? "yes" : "no").Append('\n');
         _ = builder.Append('\n').Append(job.Instruction.ReplaceLineEndings("\n").Trim());
         return builder.ToString();
@@ -177,7 +186,14 @@ internal static class JobDocument
         bool paused = fields.GetValueOrDefault(PausedKey) is { } pausedText
             && (string.Equals(pausedText, "yes", StringComparison.OrdinalIgnoreCase) || string.Equals(pausedText, "true", StringComparison.OrdinalIgnoreCase));
         string? by = fields.GetValueOrDefault(ByKey) is { Length: > 0 } author ? author : null;
-        return new JobSection(new Job(id, owner, title, instruction, when, zone, by, paused), raw, title, null);
+        string? room = fields.GetValueOrDefault(RoomKey) is { Length: > 0 } roomText ? roomText : null;
+        if (room is not null && !NameRules.IsValidId(room))
+        {
+            return Invalid(raw, title, $"'{room}' is not a Room id.");
+        }
+
+        Job job = new(id, owner, title, instruction, when, zone, by, paused, room);
+        return JobRules.Check(job) is { } refusal ? Invalid(raw, title, refusal) : new JobSection(job, raw, title, null);
     }
 
     private static JobSection Invalid(string raw, string title, string problem) => new(null, raw, title, problem);

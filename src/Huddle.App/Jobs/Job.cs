@@ -12,6 +12,7 @@ namespace Agency.Huddle.App.Jobs;
 /// <param name="TimeZoneId">The time zone its times are in, or <see langword="null"/> for this machine's.</param>
 /// <param name="CreatedBy">Who scheduled it, by Name, or <see langword="null"/> when unknown.</param>
 /// <param name="Paused">Whether it is paused.</param>
+/// <param name="RoomId">The Room a Follow-up posts into, or <see langword="null"/> for an ordinary Job, which has a Job Room of its own.</param>
 internal sealed record Job(
     string Id,
     JobOwner Owner,
@@ -20,4 +21,19 @@ internal sealed record Job(
     JobRecurrence When,
     string? TimeZoneId,
     string? CreatedBy,
-    bool Paused);
+    bool Paused,
+    string? RoomId = null)
+{
+    /// <summary>A Follow-up: a one-off Job of an Agent that posts into a Room it names instead of a Job Room of its own (Turn Queue spec §7.1).</summary>
+    /// <param name="id">The Job's id.</param>
+    /// <param name="agentName">The Agent that set it, and that it is for.</param>
+    /// <param name="roomId">The Room to come back to.</param>
+    /// <param name="title">The title.</param>
+    /// <param name="instruction">What to do then.</param>
+    /// <param name="on">The date it runs.</param>
+    /// <param name="at">The time of day it runs.</param>
+    /// <param name="timeZoneId">The zone its time is in, or <see langword="null"/> for this machine's.</param>
+    /// <returns>A Job that <see cref="JobRules.Check"/> accepts.</returns>
+    public static Job FollowUp(string id, string agentName, string roomId, string title, string instruction, DateOnly on, TimeOnly at, string? timeZoneId = null) =>
+        new(id, JobOwner.Agent(agentName), title, instruction, JobRecurrence.Once(on, at), timeZoneId, agentName, false, roomId);
+}
