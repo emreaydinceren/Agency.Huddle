@@ -964,7 +964,7 @@ with `RegexOptions.CultureInvariant`, in `MemoryTidyTokens`:
 | Date | A whole date-shaped run: `2026-10-30`, `30/10/2026`, `30.10.2026`, `10/30`, and a time `14:30` | The exact text. `2026-10-30` is one token and is **not** satisfied by `2026`, `10` and `30` each being somewhere |
 | Number | A whole number with its separators and sign, whatever its length: `7`, `1,250`, `12.5`, `-3`, the digits of `12%` and `€40`. **Not a list marker**: digits at the start of a line followed by `.` or `)` and a space are left out, so a numbered list re-numbered after a merge neither adds nor loses a token | The exact text, so `3` to `9` is a new token. Tried after dates, on what dates did not take |
 | Link | `http://` or `https://` up to white space; `www.` up to white space; `mailto:` up to white space; a bare `name.tld/…` with a path; a UNC path `\\server\share…` | The text with trailing `. , ; : ! ? ) ] } ' "` trimmed, ignoring case |
-| E-mail address | `local@domain.tld` | Ignoring case |
+| E-mail address | `local@example.com`, any address of that shape | Ignoring case |
 
 What this does not check, said plainly in [known-limits.md](engineering/known-limits.md) and the User Guide: a
 number written as a word ("three"), a month name, a person's name, and a "not" or "never" that reverses a sentence.
