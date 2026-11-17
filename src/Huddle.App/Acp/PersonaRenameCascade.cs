@@ -2,10 +2,13 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
+using Microsoft.Data.Sqlite;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -58,6 +61,9 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="lastCatchUp">Moves a renamed Persona's catch-up records and notes, and deletes a removed Persona's.</param>
 /// <param name="commands">Moves a renamed Persona's offered Adapter commands, and forgets a removed Persona's — the Commands spec, section 6.3.</param>
 /// <param name="turnQueue">Closes a removed Agent's open Turn Queue rows as gone and drops its subscription — Turn Queue spec §5.7.</param>
+/// <param name="memoryTidy">Moves a renamed Agent's Memory Tidy marker, failure count and days to its new key, and deletes a removed Agent's rows — the Memory Tidy spec, section 6.5.</param>
+/// <param name="teamFolders">Rewrites <c>manager:</c> in the <c>_team.md</c> of every Team the renamed Persona manages, so the Team keeps naming a Persona that exists.</param>
+/// <param name="teams">Finds the Teams the renamed Persona manages.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
@@ -74,7 +80,10 @@ internal sealed partial class PersonaRenameCascade(
     PersonaSpend spend,
     PersonaCommands commands,
     LastCatchUpStore lastCatchUp,
-    ITurnQueueControl turnQueue) : IHostedService, IDisposable
+    ITurnQueueControl turnQueue,
+    MemoryTidyStateStore? memoryTidy = null,
+    ITeamFolders? teamFolders = null,
+    ITeamCatalog? teams = null) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -231,6 +240,13 @@ internal sealed partial class PersonaRenameCascade(
         this.RenamePersonaScopedState(renamed);
         this.RenameTaskAndViewReferences(renamed);
 
+        // Per Agent Name like Spend, and a folder is tidied whether or not an Agent row exists: ABOVE the "no Agent row" early return.
+        this.MoveMemoryTidyRows(renamed.OldName, renamed.NewName);
+
+        // A Team's manager is a Name in its _team.md: ABOVE the "no Agent row" early return (a manager can be renamed with Adapters off),
+        // and before PersonasChanged handlers run, so TeamMemoryAccess already sees the new manager.
+        this.RenameManagerInTeamFiles(renamed);
+
         // corrections-B2 item 18: ABOVE the "no Agent row" early return below, same reasoning as the
         // Avatar/file-state/Room-Session/Task/View moves above it - the Agent folder exists (once
         // any Work Dir has ever been created inside it, or a definition file placed there) whether or
@@ -381,6 +397,8 @@ internal sealed partial class PersonaRenameCascade(
         this.CloseTurnQueueOfRemovedAgent(removed.Name);
         spend.Forget(removed.Name);
         commands.Forget(removed.Name);
+
+        this.DeleteMemoryTidyRows(removed.Name);
 
         try
         {
@@ -726,6 +744,72 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that deleting a removed Persona's Room Session state failed.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove Room Session state for '{Name}'.")]
     private static partial void LogRoomSessionsRemoveFailed(ILogger logger, string name, Exception exception);
+
+    /// <summary>Moves a renamed Agent's Memory Tidy state and file rows to its new key; a failed write is logged, never allowed to stop the cascade.</summary>
+    /// <param name="oldName">The Name before.</param>
+    /// <param name="newName">The Name after.</param>
+    private void MoveMemoryTidyRows(string oldName, string newName)
+    {
+        try
+        {
+            memoryTidy?.RenameFolder("agent:" + oldName, "agent:" + newName);
+        }
+        catch (SqliteException ex)
+        {
+            LogMemoryTidyMoveFailed(logger, oldName, newName, ex);
+        }
+    }
+
+    /// <summary>
+    /// Rewrites <c>manager:</c> to the new Name in every Team whose manager is the old Name (ignoring case). The Team file writer refreshes
+    /// the Team catalog itself, so the new manager is visible when this returns; a failed write is logged, never allowed to stop the cascade.
+    /// </summary>
+    /// <param name="renamed">The old and the new Name of the Persona that changed.</param>
+    private void RenameManagerInTeamFiles(PersonaRenamed renamed)
+    {
+        if (teamFolders is null || teams is null || string.Equals(renamed.OldName, renamed.NewName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        foreach (TeamSummary team in teams.Teams.Where(team => string.Equals(team.Manager, renamed.OldName, StringComparison.OrdinalIgnoreCase)))
+        {
+            try
+            {
+                _ = teamFolders.UpdateTeamFile(team.Name, file => file with { Manager = renamed.NewName });
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                LogTeamManagerRenameFailed(logger, team.Name, renamed.OldName, renamed.NewName, ex);
+            }
+        }
+    }
+
+    /// <summary>Logs that rewriting a Team's manager after a rename failed. The rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not rename the manager of Team '{Team}' from '{OldName}' to '{NewName}' in its team file.")]
+    private static partial void LogTeamManagerRenameFailed(ILogger logger, string team, string oldName, string newName, Exception exception);
+
+    /// <summary>Deletes a removed Agent's Memory Tidy state and file rows; a failed write is logged.</summary>
+    /// <param name="name">The removed Agent's Name.</param>
+    private void DeleteMemoryTidyRows(string name)
+    {
+        try
+        {
+            memoryTidy?.DeleteFolder("agent:" + name);
+        }
+        catch (SqliteException ex)
+        {
+            LogMemoryTidyRemoveFailed(logger, name, ex);
+        }
+    }
+
+    /// <summary>Logs that moving a renamed Agent's Memory Tidy rows failed. The rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move Memory Tidy rows for '{OldName}' to '{NewName}'.")]
+    private static partial void LogMemoryTidyMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that deleting a removed Agent's Memory Tidy rows failed. The removal proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not delete Memory Tidy rows for '{Name}'.")]
+    private static partial void LogMemoryTidyRemoveFailed(ILogger logger, string name, Exception exception);
 
     /// <summary>Logs that moving a renamed Persona's catch-up records failed. The rename proceeds regardless.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move catch-up records for '{OldName}' to '{NewName}'.")]

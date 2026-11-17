@@ -40,6 +40,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly IReadOnlyList<IToolCallGuard> guards;
     private readonly TeamsOptions teamsOptions;
     private readonly int reportedDays;
+    private readonly Func<bool>? memoryTidy;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
     private readonly IReadOnlyDictionary<string, object>? meta;
@@ -77,6 +78,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="sources">Reads the Human's AGENTS.md files, decides who writes a Team's Memory and warns about malformed memory files.</param>
     /// <param name="browser">Whether the session <c>_meta</c> carries the browser server; the system prompt then adds the browser rules.</param>
     /// <param name="reportedDays">How many days the memory tool keeps a line of <c>reported.md</c> (<c>Team:Memory:Reported:KeepDays</c>); the Memory block names it.</param>
+    /// <param name="memoryTidy">Says at each session start whether the Memory Tidy Helper is on, so the Memory block carries its sentence; <see langword="null"/> for off.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
         AppToolServer toolServer,
@@ -104,10 +106,11 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         Func<RoleBlockInput?> roleBlock,
         SessionPromptSources sources,
         bool browser,
-        int reportedDays = MemoryReportedOptions.DefaultKeepDays)
+        int reportedDays = MemoryReportedOptions.DefaultKeepDays,
+        Func<bool>? memoryTidy = null)
     {
         ValidateSessionPromptSources(roleBlock, sources, guards);
-        (this.sources, this.browser, this.roleBlock, this.reportedDays) = (sources, browser, roleBlock, reportedDays);
+        (this.sources, this.browser, this.roleBlock, this.reportedDays, this.memoryTidy) = (sources, browser, roleBlock, reportedDays, memoryTidy);
         ValidateCollaborators(inner, toolServer, profile, persona, prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
@@ -303,7 +306,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             workspaces: inputs.Workspaces,
             needsYou: inputs.NeedsYou,
             browser: this.browser,
-            reportedDays: this.reportedDays);
+            reportedDays: this.reportedDays,
+            memoryTidy: this.memoryTidy?.Invoke() ?? false);
     }
 
     /// <summary>

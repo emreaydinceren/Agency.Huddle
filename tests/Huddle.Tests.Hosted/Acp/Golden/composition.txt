@@ -61,6 +61,7 @@ Singleton Agency.Huddle.App.Data.IChatStore -> Agency.Huddle.App.Data.FileChatSt
 Singleton Agency.Huddle.App.Data.ITeamDirectory -> Agency.Huddle.App.Data.SqliteTeamDirectory
 Singleton Agency.Huddle.App.Data.JobRoomStore -> Agency.Huddle.App.Data.JobRoomStore
 Singleton Agency.Huddle.App.Data.JobStateStore -> Agency.Huddle.App.Data.JobStateStore
+Singleton Agency.Huddle.App.Data.MemoryTidyMergeStore -> Agency.Huddle.App.Data.MemoryTidyMergeStore
 Singleton Agency.Huddle.App.Data.MemoryTidyScheduleStore -> Agency.Huddle.App.Data.MemoryTidyScheduleStore
 Singleton Agency.Huddle.App.Data.MemoryTidyStateStore -> Agency.Huddle.App.Data.MemoryTidyStateStore
 Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Data.NeedsHumanOverrideStore
@@ -95,12 +96,16 @@ Singleton Agency.Huddle.App.Helpers.AgentsMdChange.AgentsMdChangeHelper -> Agenc
 Singleton Agency.Huddle.App.Helpers.HelperBudget -> Agency.Huddle.App.Helpers.HelperBudget
 Singleton Agency.Huddle.App.Helpers.HelperDispatcher -> Agency.Huddle.App.Helpers.HelperDispatcher
 Singleton Agency.Huddle.App.Helpers.HelperFeed -> Agency.Huddle.App.Helpers.HelperFeed
+Singleton Agency.Huddle.App.Helpers.HelperJudge -> Agency.Huddle.App.Helpers.HelperJudge
 Singleton Agency.Huddle.App.Helpers.HelperRegistry -> Agency.Huddle.App.Helpers.HelperRegistry
 Singleton Agency.Huddle.App.Helpers.HelperRunner -> Agency.Huddle.App.Helpers.HelperRunner
 Singleton Agency.Huddle.App.Helpers.HelperSettingsResolver -> Agency.Huddle.App.Helpers.HelperSettingsResolver
 Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
 Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
 Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperCardSection -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyCardSectionRegistration
+Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
 Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
 Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
 Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
@@ -110,6 +115,10 @@ Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery -> Agency.Hud
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner -> factory Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyHelper -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyHelper
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyInputBuilder -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyInputBuilder
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyJudging -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyJudging
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyLastPassReader -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyLastPassReader
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler
 Singleton Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper -> Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper

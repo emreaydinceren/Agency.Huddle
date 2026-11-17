@@ -69,7 +69,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 44 | [Account connectors: the default off, the confirm, the switch, the Feed item, the Adapter text, the notice and the paid log checks](agent-connectors.md) | 10 | 4 | 1.8h |
 | 45 | [Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals, recovery and the paid checks](team-rename.md) | 15 | 3 | 3.0h |
 | 46 | [Agent browser: on by default, off per Agent, every click and type asks, the sign-in the Human types, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once](agent-browser.md) | 11 | 11 | 1.8h |
-| 47 | [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file](memory-tidy.md) | 12 | 8 | 3.1h |
+| 47 | [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file](memory-tidy.md) | 24 | 17 | 8.1h |
 | 48 | [Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention](turn-queue.md) | 11 | 11 | 2.8h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time

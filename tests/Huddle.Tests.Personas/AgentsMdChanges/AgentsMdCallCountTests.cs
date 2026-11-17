@@ -64,12 +64,11 @@ public sealed class AgentsMdCallCountTests : IDisposable
         {
             HelperRunner runner = new(this.process, new AdapterCatalog(this.options), prompts, budget, this.options, NullLogger<HelperRunner>.Instance, this.clock);
             HelperFeed helperFeed = new(this.feed, status, budget, new HelperRegistry([this.helper.Value]), settings, NullLogger<HelperFeed>.Instance);
-            return new HelperDispatcher(
+            return HelperDispatcherFactory.Create(
                 [new HelperInvoker<AgentsMdChangeInput, AgentsMdChangeVerdict>(this.helper.Value, runner, NullLogger.Instance)],
                 settings,
                 status,
                 this.options,
-                NullLogger<HelperDispatcher>.Instance,
                 this.clock,
                 helperFeed);
         });

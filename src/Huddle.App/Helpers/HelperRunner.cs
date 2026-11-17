@@ -52,14 +52,14 @@ internal sealed class HelperRunner(
         AdapterProfile? profile = settings.Adapter is null ? adapters.Default : adapters.Find(settings.Adapter);
         if (profile is null)
         {
-            return new HelperOutcome<TVerdict>.Failed($"The Adapter '{settings.Adapter}' is not configured. Pick another on this card.");
+            return new HelperOutcome<TVerdict>.Failed($"The Adapter '{settings.Adapter}' is not configured. Pick another on this card.", Started: false);
         }
 
         string workDir = Path.Combine(Path.GetFullPath(options.Value.DataDir), "helpers", "work");
         AgentProcessOptions? processOptions = AgentProcessOptionsFactory.TryCreate(profile, workDir, AppContext.BaseDirectory);
         if (processOptions is null)
         {
-            return new HelperOutcome<TVerdict>.Failed($"{profile.DisplayName} isn't installed on this computer.");
+            return new HelperOutcome<TVerdict>.Failed($"{profile.DisplayName} isn't installed on this computer.", Started: false);
         }
 
         HelperSessionRequest request = new(
@@ -140,7 +140,7 @@ internal sealed class HelperRunner(
     {
         if (!turn.ModelOffered)
         {
-            return new HelperOutcome<TVerdict>.Failed($"{profile.DisplayName} doesn't offer the model {settings.Model}. Pick another on this card.");
+            return new HelperOutcome<TVerdict>.Failed($"{profile.DisplayName} doesn't offer the model {settings.Model}. Pick another on this card.", Started: false);
         }
 
         string text = turn.Text;

@@ -84,7 +84,8 @@ internal sealed class DocHistoryRecorder
     /// <param name="helperActor">The Helper's actor name, such as <c>Team Memory (Helper)</c>.</param>
     /// <param name="kind">Whether the file was created or edited.</param>
     /// <param name="summary">One line, cut here to <c>Team:DocHistory:MaxSummaryLength</c>.</param>
-    internal void HelperWrote(LibraryPath file, string helperActor, DocChangeKind kind, string summary)
+    /// <param name="postToFeed"><see langword="false"/> when the Helper reports the write in a Feed item of its own, as Memory Tidy does for a whole pass.</param>
+    internal void HelperWrote(LibraryPath file, string helperActor, DocChangeKind kind, string summary, bool postToFeed = true)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(summary);
@@ -97,7 +98,7 @@ internal sealed class DocHistoryRecorder
         string line = max > 3 && summary.Length > max ? string.Concat(summary.AsSpan(0, max - 3), "...") : summary;
         try
         {
-            this.store.Append(file, new DocHistoryEntry(this.clock.GetUtcNow(), helperActor, DocActorKind.Helper, kind, line));
+            this.store.Append(file, new DocHistoryEntry(this.clock.GetUtcNow(), helperActor, DocActorKind.Helper, kind, line), postToFeed);
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
