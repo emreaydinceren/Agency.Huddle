@@ -2,7 +2,7 @@
 
 Prove that a Message an Agent owes is answered once whatever happens to Huddle between its post and the reply: a close, a kill, an Agent still connecting, a Restart; that no reply is ever posted twice; that a waiting `ask_human` card survives a restart; and that the Human can see and call off what waits. Spec: [Huddle.TurnQueue-Specifications.md](../../Huddle.TurnQueue-Specifications.md) (§14 lists the cases as TQ-M1 to TQ-M18; this page carries those built so far). Decision: [ADR-0091](../../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md).
 
-**13 tests** · 0 free · 13 paid · about 3.2 hours. Written 2026-11-17 for issues #617 (slices 0 and 1) and #618 (slice 2, TURNQUEUE-06 and -07). Run once, 2026-11-17, by an agent acting as the Human on Sonnet: the slice 0 and 1 cases on build `a3142a11` (9 Pass, about 0.5 USD) and TURNQUEUE-06 and -07 on build `3fd0745a` (2 Pass); see the [Run log](run-log.md). The Follow-up cases join this page with slice 3.
+**18 tests** · 0 free · 18 paid · about 4.3 hours. Written 2026-11-17 for issues #617 (slices 0 and 1) and #618 (slice 2, TURNQUEUE-06 and -07). Run once, 2026-11-17, by an agent acting as the Human on Sonnet: the slice 0 and 1 cases on build `a3142a11` (9 Pass, about 0.5 USD) and TURNQUEUE-06 and -07 on build `3fd0745a` (2 Pass); see the [Run log](run-log.md). TURNQUEUE-08 to -10, -15 and -16 were written with slice 3b; TURNQUEUE-11 was skipped by owner decision (2026-11-17).
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Every Agent is Sonnet or better, never Haiku, and the Chief of Staff is set to Sonnet / low before its first Turn. Each case is a few Turns, well under a dollar. Record each result in the [Run log](run-log.md).
 
@@ -17,9 +17,14 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 | TURNQUEUE-05 | TQ-M5 | Does a stopped Turn stay stopped across a restart while another Agent's waiting Mention is answered |
 | TURNQUEUE-06 | TQ-M6 | Do quick Human Messages in a one-to-one get one reply that answers them all |
 | TURNQUEUE-07 | TQ-M7 | Do quick Mentions in a group Room still get one reply each |
+| TURNQUEUE-08 | TQ-M8 | Does an Agent come back to the conversation with a Follow-up, shown in the Room and Scheduled |
+| TURNQUEUE-09 | TQ-M9 | Is the sixth Follow-up refused, and does the Agent say so instead of retrying |
+| TURNQUEUE-10 | TQ-M10 | Do an overdue Job and Follow-up each run once after a restart, marked late |
 | TURNQUEUE-11 | TQ-M11 | Does a Job due during a sleep run once on waking, on Windows and macOS |
 | TURNQUEUE-12 | TQ-M12 | Is a Mention posted while an Agent is still starting answered once it is up, with no restart line |
 | TURNQUEUE-13 | TQ-M13 | Does a Restart stop the running Turn and keep the Messages waiting behind it |
+| TURNQUEUE-15 | TQ-M15 | Does Cancel on the Room's row call a Follow-up off |
+| TURNQUEUE-16 | TQ-M16 | Does a Follow-up wait in a paused Room and run once after the Human speaks |
 | TURNQUEUE-17 | TQ-M17 | Does a paused Job stay quiet when it is resumed after its time |
 | TURNQUEUE-14 | TQ-M14 | Does the age limit and **Don't answer** keep old or refused Messages from coming back |
 | TURNQUEUE-18 | TQ-M18 | Is a waiting Mention held while its Room is paused and answered once the Human speaks |
@@ -202,6 +207,68 @@ Then `adapter: 'broken'` in the Agent's frontmatter makes it Offline, and removi
 
 - Nova answers each of the three Mentions in its own reply, three replies after the ping summary.
 
+### TURNQUEUE-08 — An Agent comes back to the conversation with a Follow-up 💰
+
+**Paid** · about 10 min
+
+*Proves U8: a Follow-up shows in the Room and in Scheduled, and when due Huddle Mentions the Agent in that Room, which carries on the conversation.*
+
+**Before you start**
+
+- Nova Online, in its one-to-one Room. About 0.05 USD.
+
+**Steps**
+
+1. Send: "Please check back with me in 2 minutes about whether I drank water. Set a Follow-up for it with your jobs tool."
+2. Read the Room's notices and the Scheduled view.
+3. Wait three minutes.
+
+**Pass if — all of these**
+
+- A row "⏰ Nova will follow up …: …" with **Cancel** appears in the Room, and Scheduled lists the Job as "For Nova · Follow-up in Nova · Next: …".
+- At its time Huddle posts `@Nova ⏰ Follow-up: <title>` in that Room (not a `⏰` Job Room), and Nova answers about the water.
+- The row is gone from the Room and from Scheduled.
+
+### TURNQUEUE-09 — The sixth Follow-up is refused, and the Agent says so 💰
+
+**Paid** · about 10 min
+
+*Proves the cap: at most five waiting Follow-ups per Agent, and the refusal reads as terminal.*
+
+**Before you start**
+
+- Nova Online, in its one-to-one Room. About 0.1 USD.
+
+**Steps**
+
+1. Send: "Set six separate Follow-ups with your jobs tool, one for each of the next six days at 09:00, titled Day 1 to Day 6."
+2. Read Nova's reply and the Scheduled view. Then delete the five Follow-ups (Scheduled, **Delete job…**, or ask Nova).
+
+**Pass if — all of these**
+
+- Five Follow-ups exist; the sixth is refused with "You already have 5 Follow-ups waiting, the most one Agent may have. …".
+- Nova reports the refusal and does not retry or set it another way.
+
+### TURNQUEUE-10 — An overdue Job and Follow-up run once after a restart 💰
+
+**Paid** · about 20 min
+
+*Proves U9 and §8.2 across a restart: each overdue run happens once, marked late.*
+
+**Before you start**
+
+- Nova Online. About 0.05 USD.
+
+**Steps**
+
+1. Ask Nova to set a Follow-up three minutes ahead. On the Scheduled page create a daily Job for Nova due in two minutes ("Name one fruit.").
+2. Close Huddle before either is due. Wait ten minutes. Start Huddle.
+
+**Pass if — all of these**
+
+- Within a minute of the start, the Job posts once into its Job Room with "(ran late; due …)" and the Follow-up posts once into Nova's Room with "(ran late; due …)"; Nova answers each once (the Turn Queue keeps them until Nova is Online).
+- Nothing posts twice; the Job's page reads "Ran late"; the Follow-up is gone from Scheduled.
+
 ### TURNQUEUE-11 — A Job due during a sleep runs once on waking 💰
 
 **Paid** · about 15 min
@@ -221,6 +288,48 @@ Then `adapter: 'broken'` in the Agent's frontmatter makes it Offline, and removi
 
 - The Job posts once within a minute of waking, reading `⏰ <title> (ran late; due …)`, and Nova answers once.
 - The Job page reads "Ran late" and its next run is tomorrow.
+
+### TURNQUEUE-15 — Cancel on the Room's Follow-up row 💰
+
+**Paid** · about 10 min
+
+*Proves the Human can call off a Follow-up from the Room.*
+
+**Before you start**
+
+- Nova Online, in its one-to-one Room. About 0.03 USD.
+
+**Steps**
+
+1. Ask Nova to set a Follow-up in three minutes ("check whether I stretched").
+2. Press **Cancel** on its row in the Room. Wait four minutes.
+
+**Pass if — all of these**
+
+- The row is gone from the Room and the Job from Scheduled at once, without a question.
+- Nothing posts at its time.
+
+### TURNQUEUE-16 — A Follow-up waits in a paused Room and runs once after the Human speaks 💰
+
+**Paid** · about 15 min
+
+*Proves D-26: a Follow-up due in a paused Room is not posted, the Room says why, and it runs once after the pause ends.*
+
+**Before you start**
+
+- Nova and Cleo in a group Room with you. Launch with `Team__AgentMessageBudget=2`. About 0.1 USD.
+
+**Steps**
+
+1. Ask Nova to set a Follow-up in this Room three minutes ahead ("check whether Cleo agreed").
+2. Spend the Room's Budget: "@Nova and @Cleo, each say one sentence about fruit." Wait until the Room pauses.
+3. Wait past the Follow-up's time. Read its row.
+4. Type "carry on" in the Room.
+
+**Pass if — all of these**
+
+- While paused nothing posts; the row reads "⏰ Nova will follow up: … (waiting: this Room is paused)".
+- Within a minute of typing, the Follow-up posts once, marked late, and Nova answers.
 
 ### TURNQUEUE-17 — A paused Job does not run late on resume 💰
 

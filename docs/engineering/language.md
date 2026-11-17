@@ -427,6 +427,13 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : Not the Room Session's in-memory work queue, which drives Turns and is fed from it at a Welcome.
 : *Avoid*: inbox, backlog, mailbox.
 
+**Follow-up**
+: A one-off **Job** an Agent sets for itself, with `jobs` `follow_up`, that posts into the Room it was set in when it is
+  due, Mentioning the Agent, so it comes back to that conversation
+  ([ADR-0093](../adr/0093-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md)). The Room shows it with Cancel.
+: Not **Following** (an Agent woken by every Message in a Room), and not a Task.
+: *Avoid*: reminder, check-in.
+
 **Folded Turn**
 : One Turn that answers several of the Human's Messages together: in a one-to-one Room, every ordinary Human
   Message queued when the Turn starts joins it, up to the first item that is not one

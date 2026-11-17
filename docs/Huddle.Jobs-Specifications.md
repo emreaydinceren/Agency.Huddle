@@ -19,6 +19,14 @@ Built 2026-11-02 on `feat/schedules`. Applies while `Team:Jobs:Enabled` is `true
 | **timezone** | An IANA or Windows id; absent means this machine's zone |
 | **by** | Who scheduled it, by Name |
 | **paused** | A paused Job never runs |
+| **room** | Only on a **Follow-up**: the Room it posts into instead of a Job Room. Legal only with a `once` timetable (`JobRules`); a section with `room:` and a repeating `when` is reported, not loaded |
+
+A **Follow-up** is a one-off Job an Agent sets for itself with `room:`. When due, Huddle posts `@Nova ⏰ Follow-up: <title>`
+and the instruction into that Room, which resumes the Agent's conversation there. It writes no `room_jobs` row, leaves an
+archived Room archived, waits while the Room is paused (and gives up after 24 hours of that), and is removed with a
+`job-gave-up` trace when its Room is gone or its Agent is no longer available. The design is the
+[Turn Queue spec](Huddle.TurnQueue-Specifications.md) §7 and
+[ADR-0093](adr/0093-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md).
 
 ## 2. Writing a timetable
 
@@ -122,6 +130,7 @@ Since 2026-11-17 the rule is the shared `DueCheck` ([Turn Queue spec](Huddle.Tur
 | `pause`, `resume` | `id` | |
 | `delete` | `id` | Its Room stays |
 | `run_now` | `id` | Runs it at once |
+| `follow_up` | `roomId` (a Room the caller is in), `when` (`in 30 minutes`, `in 2 hours`, `in 3 days`, or `once on … at …`), `title`, `instruction` | Sets a Follow-up for the caller only: a relative time is worked out in UTC and rounded up to the minute, at least a minute and at most 31 days ahead; at most `Team:Jobs:MaxFollowUpsPerAgent` (5) waiting per Agent; `target` is refused, and `update` can neither move it to another owner nor make it repeat |
 
 `target` is an Agent's Name or Alias, or the Human's Name, and defaults to the caller. Acting on a Job, or creating one, for
 an owner other than the caller is allowed in two cases: a manager may act for a member of a Team it manages (an Agent

@@ -7250,6 +7250,27 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-07
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `3fd0745a` | #618 | Group Room (Kai, Nova, Cleo). While Nova ran `ping -n 30` from a Mention, three Mentions of Nova were sent. After the ping summary Nova answered each in its own reply: Banana, Blue, Jupiter. No fold. |
 
+### TURNQUEUE-08 — An Agent comes back to the conversation with a Follow-up 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-08--an-agent-comes-back-to-the-conversation-with-a-follow-up-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-09 — The sixth Follow-up is refused, and the Agent says so 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-09--the-sixth-follow-up-is-refused-and-the-agent-says-so-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-10 — An overdue Job and Follow-up run once after a restart 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-10--an-overdue-job-and-follow-up-run-once-after-a-restart-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ### TURNQUEUE-11 — A Job due during a sleep runs once on waking 💰
 
 File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-11--a-job-due-during-a-sleep-runs-once-on-waking-)
@@ -7273,6 +7294,20 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-13
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `a3142a11` | #617 | Nova ran `ping -n 90`; two Messages queued; the notice read "Waiting for Nova: 2 Messages" with no Don't answer (Nova had a Draft). Editing Nova's Persona restarted it once the running tool returned (about 75 s; the cancel waits for the tool). The running row closed `stopped`; the restarted Nova answered 3 + 3 = 6 and Teal, once each; no restart line. |
+
+### TURNQUEUE-15 — Cancel on the Room's Follow-up row 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-15--cancel-on-the-rooms-follow-up-row-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-16 — A Follow-up waits in a paused Room and runs once after the Human speaks 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-16--a-follow-up-waits-in-a-paused-room-and-runs-once-after-the-human-speaks-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
 
 ### TURNQUEUE-17 — A paused Job does not run late on resume 💰
 
