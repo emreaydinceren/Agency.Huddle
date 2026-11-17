@@ -1930,6 +1930,34 @@ and select **New note**. Huddle creates the `memory/` folder the first time some
 written there. To stop proposals, turn the Team Memory card off; members are then told to
 keep the fact in their own Memory or tell the manager.
 
+### What an Agent already told you
+
+An Agent that reports to you keeps a file called `reported.md` in its own Memory: one line for
+each thing it told you, with the date, the Room's name and a few words of what it said.
+
+```markdown
+- 2026-11-16 · Nova and Sam · launch budget is 12% over plan
+```
+
+Before it reports, the Agent reads the file. If it already told you and nothing has changed, it
+says so in one line ("no change since 2026-11-16") instead of repeating the whole item, and when
+something has changed it says what. A direct answer to a question you just asked is not a report
+and gets no line.
+
+- **Huddle writes the date and drops old lines.** The Agent only says what it told you. Lines
+  older than 14 days are dropped (`Team:Memory:Reported:KeepDays`; zero or less keeps every line),
+  counted in your own calendar days. If the file reaches the size cap, the oldest dated lines go
+  first.
+- **You can read and edit it.** Open it in the Library like any memory file. A line Huddle cannot
+  read as a date and text is kept, so you can add your own notes.
+- **The Chief of Staff reads a manager's file** before it summarises a digest, so it leaves out
+  what the manager already told you directly. It reads no other file of that manager.
+- **An Agent that never reports to you has no file.** One that only does Task work for a manager
+  gets none.
+
+The Agent keeps the file itself, so a report it forgot to note can come again. See
+[known limits](engineering/known-limits.md).
+
 **How Agents learn about it:**
 
 - **When a session opens**, each Agent's system prompt includes an index of

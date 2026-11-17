@@ -159,6 +159,7 @@ the per-area tables below.
 | [Long-running Rooms: the experiment on the Chief of Staff's Room, recall after a fresh start, repeats and the hand-played flush](long-running-rooms.md) | [below](#long-running-rooms) |
 | [Second Brain: the use cases as a Human's checklist, raw uploads, Team Memory, AGENTS.md, prompts, archive and an old data folder](second-brain.md) | [below](#second-brain) |
 | [Second Brain from zero: three Teams hired by hand, documents ingested into memory, and a Development Team building an app](second-brain-zero.md) | [below](#second-brain-zero) |
+| [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum)](memory-tidy.md) | [below](#memory-tidy) |
 ---
 
 ## at-tagging
@@ -1397,3 +1398,18 @@ Agent browser: on by default, off per Agent, every click and type asks, the sign
 | [BROWSER-09](agent-browser.md#browser-09--work-modes-acceptedits-asks-a-mode-that-never-asks-has-no-server-) | 💰 | Pass | #551 | run 2026-11-16, `86eac5c2`, see the Run log |
 | [BROWSER-10](agent-browser.md#browser-10--the-tool-call-log-holds-the-playwright-calls-) | 💰 | Pass | #551 | run 2026-11-16, `86eac5c2`, see the Run log |
 | [BROWSER-11](agent-browser.md#browser-11--two-rooms-at-once-the-second-says-the-browser-is-in-use-) | 💰 | Pass | #551 | run 2026-11-16, `86eac5c2`, see the Run log |
+
+## memory-tidy
+
+Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum) — [area file](memory-tidy.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [REPORTED-01](memory-tidy.md#reported-01--a-report-in-a-one-to-one-room-starts-the-file-with-one-line-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-02](memory-tidy.md#reported-02--a-job-asking-for-an-unchanged-item-gets-one-line-and-no-new-entry-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-03](memory-tidy.md#reported-03--a-changed-fact-is-reported-as-a-change-on-a-new-line-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-04](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-05](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Active | #620 | not yet run by a person |
+| [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Active | #620 | not yet run by a person |

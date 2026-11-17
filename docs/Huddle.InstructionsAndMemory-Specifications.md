@@ -240,6 +240,13 @@ description: Teachers, the front office, and who to email about what. Read for a
 
 ### 4.2 The index
 
+> [!NOTE]
+> Since 2026-11-16 an Agent's own Memory may hold `reported.md`, the record of what the Agent told the
+> Human, kept through the `memory` tool's `append` and shown in the index like any other file. Its
+> line rule and the age rule are in
+> [Huddle.MemoryTidy-Specifications.md](Huddle.MemoryTidy-Specifications.md) §6 and
+> [ADR-0094](adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md). The index is unchanged.
+
 `MemoryIndex.SummaryFor` (shared by `TeamMemoryIndex`) changes in two ways:
 
 1. **A frontmatter `description` is used when present.**
@@ -351,6 +358,14 @@ The Agent never writes frontmatter by hand.
 > ([Huddle.TeamMemoryHelper-Specifications.md](Huddle.TeamMemoryHelper-Specifications.md),
 > [ADR-0073](adr/0073-members-propose-team-memory-and-a-helper-files-it.md)). Who may write with
 > the `memory` tool, below, is unchanged.
+
+> [!NOTE]
+> Since 2026-11-16 `folder` also takes `agent:<Name>`, for the Chief of Staff only: it reads or lists
+> the `reported.md` of a Team's manager and nothing else of that Agent. An `append` to the caller's own
+> `reported.md` follows the line rule of Memory Tidy
+> ([Huddle.MemoryTidy-Specifications.md](Huddle.MemoryTidy-Specifications.md) §6.3 and §6.4,
+> [ADR-0094](adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md)). The other folders and
+> the confinement rules below are unchanged.
 
 `folder` resolves to exactly one directory, or the call is refused:
 
@@ -464,12 +479,26 @@ document, shortened because the tool now enforces the file rules:
 
 > ## Memory
 > Your memory is the folder {{memoryPath}}. It belongs to you, not to any one Room: it survives
-> restarts, and every copy of you in your other Rooms reads the same folder. Use the {{memoryTool}}
-> tool for it.
+> restarts, and every copy of you in your other Rooms reads the same folder.
+> Read, write, change and delete memory files only with {{memoryTool}}, even when you know a file's path: never with your built-in Read, Write or Edit tools or a shell command. The tool checks that nobody changed a file since you read it, writes the description your index needs, and sends a deleted file to the Recycle Bin, where the Human can get it back; the built-in tools do none of that. Memory files are not documents: do not log changes to them. The index below is built from each file's description, so there is no MEMORY.md to keep.
 >
-> Save as you go. When you learn something durable (a decision, a correction, a preference, a fact
-> about the people or work you support), write it to the right topic file at once, not at the end.
-> Assume your context can reset at any moment: what is not written down is lost.
+> Save as you go. Write to the right topic file at once, not at the end.
+> Assume your context can reset at any moment: what is not written down is lost. When you
+> propose something (an idea, a plan, an option) and the Human takes it, turns it down or puts it
+> off, note the proposal and their answer in one topic file, and read that file before you
+> propose anything: a proposal you have forgotten making reads as new, and you will make it again.
+>
+> Keep a record of what you have told the Human, in the file reported.md in your memory. Before you
+> report to the Human (a result, a status, a decision or a warning, in any Room, including a Room a
+> Job runs in), read reported.md with {{memoryTool}}; if it does not exist, you have reported nothing
+> yet. Do not tell them again in full what is already there unless something has changed, and when it
+> has, say what changed. When a Job or the Human asks for an item you have already reported and
+> nothing has changed, do not leave it out: say so in one line, such as "no change since 2026-11-16",
+> and add no line for it. After you report something new, add one line with the append command: the
+> Room's name, then " · ", then what you told them in a few words. {{memoryTool}} sets the date,
+> starts the file when you have none, and drops lines older than {{reportedDays}} days. A direct
+> answer to a question the Human has just asked you is not a report and needs no line. If you never
+> report to the Human, keep no such file.
 >
 > One topic per file. Update a fact rather than adding a duplicate, and fix or replace what is no
 > longer true. Delete a file only when the Human asks you to. Give each file a description that
@@ -477,8 +506,9 @@ document, shortened because the tool now enforces the file rules:
 > for…", "Check before…"), in about 100 to 150 characters, with no facts and nothing sensitive in
 > it. When a file outgrows its description, update the description in the same step.
 >
-> Do not save what is true only for this conversation, or what you can easily look up again. If you
-> are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
+> Never save that something is missing, unknown or was never discussed: when you cannot find a fact, say
+> so in your reply and leave your memory as it is, because a later read would take the gap for the
+> truth. If you are unsure, if a conversation runs long, or after a restart, read the relevant files again: your
 > memory is the source of truth over what you think you remember.{{memoryChanges}} Do not claim to
 > remember what is not in your memory or in this conversation. Your memory now holds:
 > {{memoryIndex}}
@@ -490,6 +520,11 @@ The placeholders:
 - `{{memoryChanges}}` is `systemPrompt.memoryChanges` when `readsMemory` is true, else empty:
   " When a memory file changes, including when another copy of you writes it, the change is listed
   at the start of your next Turn in each Room."
+- `{{reportedDays}}` is `Team:Memory:Reported:KeepDays`, filled in by code, and optional: a Prompt that
+  leaves it out is valid.
+
+*Note, 2026-11-16.* The quoted text above is the default in `PromptCatalog` as of the `reported.md`
+slice of Memory Tidy; the paragraph about `reported.md` is that slice's addition.
 
 The sentence "Do not claim to remember…" is kept word for word; FC §6.15 says why it is there.
 

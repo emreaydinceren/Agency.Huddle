@@ -233,6 +233,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control, the one-time notice and the paid log checks.
 - [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control, the one-time notice and the paid log checks.
 - [Agent browser](manual-tests/agent-browser.md): the browser on by default and off per Agent, a JavaScript page, a sign-in the Human types, every click and type asking, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once (paid, Sonnet minimum).
+- [Memory Tidy](manual-tests/memory-tidy.md): the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum).
 - [Right sidebar](manual-tests/right-sidebar.md): the panels by Subject, Outline scrolling, collapse and focus.
 - [Persona lifecycle](manual-tests/persona-lifecycle.md): supervisor, work folders, health and restarts.
 - [The named pipe](manual-tests/pipe-external.md): external agents and the wire.

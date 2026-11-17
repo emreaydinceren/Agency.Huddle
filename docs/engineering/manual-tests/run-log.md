@@ -6997,3 +6997,59 @@ File: [`docs/engineering/manual-tests/agent-browser.md`](agent-browser.md#browse
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-16 | Pass | `86eac5c2` |  | Scout's browser open in its one-to-one Room, Scout invited to a second Room (Chief of Staff, Scout): "Error: Browser is already in use for C:\HuddleLane551\data\browser-profiles\Scout, use --isolated to run multiple instances of the same browser"; Scout said another of its Rooms probably has the browser open and offered to retry later. |
+
+### REPORTED-01 — A report in a one-to-one Room starts the file with one line 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-01--a-report-in-a-one-to-one-room-starts-the-file-with-one-line-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-02 — A Job asking for an unchanged item gets one line and no new entry 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-02--a-job-asking-for-an-unchanged-item-gets-one-line-and-no-new-entry-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-03 — A changed fact is reported as a change, on a new line 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-03--a-changed-fact-is-reported-as-a-change-on-a-new-line-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-04 — A plain question gets an answer and no line 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-05 — An Agent that never reports has no file 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-06 — The Chief of Staff reads the manager's file and leaves the item out 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-07 — An old line is dropped and a future line is kept 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### REPORTED-08 — A renamed manager is not found and the tool lists the managers 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
