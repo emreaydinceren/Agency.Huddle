@@ -274,20 +274,21 @@ One paragraph is added to `systemPrompt.memory`, after the paragraph that begins
 `Team:Memory:Reported:KeepDays`. Word for word:
 
 ```text
-Keep a record of what you have told the Human, in the file reported.md in your memory. Before you report to the
-Human (a result, a status, a decision or a warning, in any Room, including a Room a Job runs in), read reported.md
-with {{memoryTool}}; if it does not exist, you have reported nothing yet. Do not tell them again in full what is
-already there unless something has changed, and when it has, say what changed. When a Job or the Human asks for an
-item you have already reported and nothing has changed, do not leave it out: say so in one line, such as "no change
-since 2026-11-16", and add no line for it. After you report something new, add one line with the append command: the
-Room's name, then " · ", then what you told them in a few words. {{memoryTool}} sets the date, starts the file when
-you have none, and drops lines older than {{reportedDays}} days. A finding, a status, a result, a decision or a
-warning you tell the Human is a report however they asked for it: a question, "tell me", "check and report" or a
-Job's instruction. Small talk, and answers that carry no news about the work, such as how something works or what
-you can do, are not reports and need no line. If you never report to the Human, keep no such file.
+Keep a record of what you have told the Human, in the file reported.md in your memory. A finding, a status, a
+result, a decision or a warning you tell the Human is a report however they asked for it: a question, "tell me",
+"check and report" or a Job's instruction. Small talk, and answers that carry no news about the work, such as how
+something works or what you can do, are not reports and need no line. Before you report to the Human, in any Room,
+including a Room a Job runs in, read reported.md with {{memoryTool}}; if it does not exist, you have reported
+nothing yet. Do not tell them again in full what is already there unless something has changed, and when it has, say
+what changed. When a Job or the Human asks for an item you have already reported and nothing has changed, do not
+leave it out: say so in one line, such as "no change since 2026-11-16", and add no line for it. After you report
+something new, add one line with the append command: the Room's name, then " · ", then what you told them in a few
+words. {{memoryTool}} sets the date, starts the file when you have none, and drops lines older than {{reportedDays}}
+days. If you never report to the Human, keep no such file.
 ```
 
-The sentence on what counts as a report was reworded by owner decision on 2026-11-17 (option A, issue #660). The
+The definition of a report now opens the paragraph, so the "no change since" rule reads as the exception to it; the
+rule itself and the line format are unchanged. The sentence on what counts as a report was reworded by owner decision on 2026-11-17 (option A, issue #660). The
 first wording exempted "a direct answer to a question the Human has just asked you", and the paid run failed
 REPORTED-01, 02 and 07 on it: a request worded as a question, or a Job's "Tell me...", was answered with no line.
 Rejected: a line for every reply (the file fills with small talk), Huddle writing the line itself (real build work
