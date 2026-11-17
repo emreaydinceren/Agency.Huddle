@@ -299,8 +299,10 @@ public sealed class PersonaRunnerFileChangesTests
         var factory = new FakeAgentHostFactory();
         var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
         var persona = TestPersonas.Nova;
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory, tracker);
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
@@ -316,7 +318,11 @@ public sealed class PersonaRunnerFileChangesTests
 
         factory.Session.EnqueueFailure(new AgentException("session/prompt failed: refused"));
         await chat.PostAsync(roomId, KnownIds.Human, "fail please", ct: ct);
-        await Eventually.HistoryCountAsync(store, roomId, 3, ct);
+
+        // The refused Turn leaves no Message, so the history cannot say it is over: its own Human Message makes the count 3
+        // at once. Wait for the Degraded status it reports, because a second Message already waiting when the Turn starts
+        // folds into it (Turn Queue spec, section 6), the refusal takes both, and the third prompt never comes.
+        _ = await statuses.WaitForAsync(static history => history.Any(static status => status.State == PersonaState.Degraded), ct);
 
         factory.Session.EnqueueReply("ok again");
         await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
