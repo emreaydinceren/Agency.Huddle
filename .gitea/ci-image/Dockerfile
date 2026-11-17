@@ -6,7 +6,8 @@
 #
 #   docker build -t huddle-ci:11.0.100 .gitea/ci-image
 #
-# The tag must match the `image:` line in .gitea/workflows/ci-pr-local.yaml and ci-main-local.yaml,
+# The tag must match the two `image:` lines in .gitea/workflows/ci-shared.yaml (the one place the
+# PR and main workflows get their jobs from),
 # and the runner's config.yaml needs `force_pull: false` so it uses this local image instead of
 # trying to pull `huddle-ci` from a registry. No registry holds this image: build it on every
 # machine that runs these workflows.

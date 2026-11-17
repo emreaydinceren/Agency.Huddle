@@ -1,14 +1,12 @@
 name: CI (Pull Request)
 
-# Validation gate for every PR into main. The `validate` job here and the one in
-# ci-main-local.yaml are deliberately identical — diff the two files whenever you change
-# either, so a PR can never be greener than the merge that follows it.
+# Validation gate for every PR into main. The checks themselves live in ci-shared.yaml, which
+# ci-main-local.yaml calls too, so a PR can never be greener than the merge that follows it.
 #
-# Runs on the Windows desktop's Docker runner (label dotnet-10-local). That runner must give job
-# containers a RAM-backed /tmp or the suite takes 7 minutes instead of 40 seconds; see
-# agents/CIPipeline.md ("Local runner"). The workflow `name` is part of the required status check
-# ("CI (Pull Request) / validate (pull_request)") that branch protection waits for: renaming it
-# strands every PR on a check that never reports.
+# The required status check that branch protection waits for is built from THIS file's workflow
+# `name` and the job id below (`ci`), plus the called jobs' names. Renaming either strands every
+# PR on a check that never reports; read the exact text off a finished run, then update branch
+# protection in the same sitting. See agents/CIPipeline.md ("Required status check").
 
 on:
   pull_request:
@@ -16,112 +14,11 @@ on:
     paths-ignore:
       - 'docs/**'
 
+# One runner serves every workflow, so a superseded run is wasted queue time.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  secret-scan:
-    runs-on: dotnet-10-local
-    container:
-      # Built locally on the runner host from .gitea/ci-image/Dockerfile (the stock SDK image plus
-      # Node.js and gitleaks), so nothing is downloaded per run. Not in any registry: the runner's
-      # config.yaml needs `force_pull: false`. global.json requires 11.0.100 with
-      # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it, and a runner holding a
-      # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
-      # runs. Rebuild the image and bump this tag together with global.json — one decision.
-      image: huddle-ci:11.0.100
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      # No actions/checkout. It is a Node.js action, and it would have to run before the job
-      # container is usable; cloning by hand keeps the checkout independent of that.
-      - name: 📥 Checkout
-        env:
-          GIT_TOKEN: ${{ github.token }}
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
-          git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
-
-      - name: 🔎 Scan working tree for secrets
-        run: |
-          gitleaks dir . \
-            --config .gitleaks.toml \
-            --redact \
-            --no-banner \
-            --verbose
-
-  validate:
-    runs-on: dotnet-10-local
-    container:
-      # Built locally on the runner host from .gitea/ci-image/Dockerfile (the stock SDK image plus
-      # Node.js and gitleaks), so nothing is downloaded per run. Not in any registry: the runner's
-      # config.yaml needs `force_pull: false`. global.json requires 11.0.100 with
-      # rollForward=latestPatch, so only an 11.0.1xx SDK satisfies it, and a runner holding a
-      # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
-      # runs. Rebuild the image and bump this tag together with global.json — one decision.
-      image: huddle-ci:11.0.100
-    defaults:
-      run:
-        shell: bash
-
-    env:
-      # Pinned off, not merely left unset. The E2E/ folder of Huddle.Acp.Tests drives a real
-      # adapter against a real model and spends money; E2E.Enabled is `TEAM_E2E == "1"`.
-      # Writing "0" here means a runner-level environment variable can never switch it on by
-      # accident. Those 8 tests are expected to report as skipped in every CI run.
-      TEAM_E2E: "0"
-
-    steps:
-      - name: 📥 Checkout
-        env:
-          GIT_TOKEN: ${{ github.token }}
-        run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
-          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
-          git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
-          git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
-
-      # global.json pins SDK 11.0.100 with rollForward=latestPatch, so only an 11.0.1xx SDK
-      # satisfies it. A stale huddle-ci image built from an older SDK fails here with "Requested
-      # SDK version: 11.0.100 ... Install the [11.0.100] .NET SDK" — rebuild the image, don't
-      # debug the code.
-      - name: 📦 Restore dependencies
-        run: dotnet restore Huddle.slnx
-
-      - name: 🔒 Check for vulnerable dependencies
-        run: |
-          dotnet list Huddle.slnx package --vulnerable --include-transitive 2>&1 | tee vuln-scan.log
-          if grep -q "has the following vulnerable packages" vuln-scan.log; then
-            echo "::error::Vulnerable dependency detected — see log above. Bump the version in Directory.Packages.props (central package management is on, so the version lives only there)."
-            exit 1
-          fi
-
-      # Directory.Build.props sets TreatWarningsAsErrors, so this step is the style gate too.
-      - name: 🛠️ Build solution
-        run: dotnet build Huddle.slnx --configuration Release --no-restore
-
-      # The trailing `--` is required and is not a typo. Without it this SDK's Microsoft
-      # Testing Platform CLI exits 5 with "Zero tests ran", which reads as a no-op rather
-      # than a failure. There is deliberately no retry loop: this suite is offline and
-      # deterministic, so a retry would hide a real flake instead of surfacing it.
-      # Nothing is quarantined. The last two exclusions, DotAcpAgentSessionTests' event-ordering
-      # race, went on 2026-11-01, when the ACP client's dispatch barrier (WireOrderLedger) replaced
-      # the timing window that only made the race rarer; docs/engineering/known-limits.md has the
-      # history. Do not add a --filter-not-method line without a known-limits.md entry.
-      - name: 🧪 Run tests
-        run: |
-          dotnet test Huddle.slnx --configuration Release --no-build --
-
-      # Starts the Release build as a real child process, GETs /health over a real socket and
-      # prints PASS/FAIL. Deliberately not an xUnit test: every test in tests/Huddle.Tests.Hosted hosts
-      # the app in-process through TeamWebApplicationFactory, so none of them can fail when the
-      # composed app does not boot as a process - which is the only thing this step asserts.
-      # It builds nothing, so it must follow the build step. 120s rather than the script's 60s
-      # default: a cold start on a busy runner can be slow.
-      # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:11.0.100 (the base of huddle-ci) -
-      # PowerShell 7.7.0, installed as a global tool by the image (PowerShell.Linux.amd64 here).
-      - name: 🩺 Health endpoint smoke test
-        run: pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
+  ci:
+    uses: ./.gitea/workflows/ci-shared.yaml
