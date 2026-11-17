@@ -104,7 +104,7 @@ Put the time zone back when the case is done.
 
 **Paid** · about 5 min
 
-*Proves a direct answer to a question the Human just asked is not a report. Spec D-6.*
+*Proves an answer that carries no news about the work is not a report. Spec D-6 (reworded 2026-11-17, #660).*
 
 **Before you start**
 
@@ -122,7 +122,7 @@ Put the time zone back when the case is done.
 
 **Fail if — any of these**
 
-- A new line for the answer -> the paragraph does not tell her a direct answer is not a report.
+- A new line for the answer -> the paragraph does not tell her that an answer with no work news is not a report.
 
 ### REPORTED-05 — An Agent that never reports has no file 💰
 
@@ -195,7 +195,7 @@ Put the time zone back when the case is done.
    - <today plus 1 year> · Future Room · a note I wrote
    ```
 
-2. Have `Nova` report something new in a one-to-one Room (for example: `Tell me today's weather outlook in one sentence, as you know it.`).
+2. Have `Nova` report something new that she can find out on this computer, in a one-to-one Room (for example: `Tell me how much memory (RAM) this computer has.`). A request she cannot answer, such as the weather, carries no news and gets no line.
 3. Read the reply of her `memory` call and then `reported.md`.
 
 **Pass if — all of these**

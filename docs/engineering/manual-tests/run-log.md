@@ -7005,6 +7005,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Fail | `c00111ec` |  | By an agent acting as the Human, on Sonnet / low (Chief of Staff, Nova, Ada, Leo, Grant, Gwen, Gale; the Memory Tidy Helper on claude / sonnet / low, cap 20), lane :5620 (`C:\HuddleLane620`). REPORTED-01 to 07 and the first REPORTED-08 ran at `c00111ec`; every other case at `f03cfa66` (which adds the manager-rename fix). Spend for the whole run: 1.56 USD (Agents 1.341: Chief of Staff 0.438, Nova 0.383, Ada 0.164, Leo 0.136, Gale 0.221; Helpers 0.219: Memory Tidy 22 calls 0.218, NeedsHuman 0.001). As written ("Check the time zone ... and report it to me") Nova made one PowerShell call and no `memory` call: she said she treated it as a direct answer (D-6). Her Memory block holds the reported.md paragraph. Reworded as "give me a status report ... a report I can keep" she read reported.md (missing), appended, and the file had the fixed description and `- 2026-11-17 · Nova · Time zone report: …`; the tool replied "appended to reported.md …". The case's wording asks a question, so the D-6 exemption swallows it; the prompt's line between a report and a direct answer is the finding. |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660 on the reworded paragraph, by an agent acting as the Human, lane :5660 (`C:\HuddleLane660`), every Agent on Sonnet (Nova Sonnet / low; Chief of Staff, Lina/Ida, Ola and June Sonnet / default Effort). Spend for the whole re-run, four prompt iterations included: 2.20 USD (Chief of Staff 0.177, Nova 0.475, Ola 0.613, Lina/Ida 0.929, NeedsHuman 0.003). As written, Nova ran Get-TimeZone, read reported.md (missing) and appended `Nova · Time zone: Pacific Time (UTC-08:00), DST not in effect`; the file has the fixed description and one dated line. |
 
 ### REPORTED-02 — A Job asking for an unchanged item gets one line and no new entry 💰
 
@@ -7013,6 +7014,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Fail | `c00111ec` |  | Job "Time zone status", instruction as written ("Tell me the time zone…"): a full answer, no `memory` call, so no "no change since". Reworded as a status report she read reported.md but appended a second line ("… no change since earlier report"), where the case wants no new line. With a file-based instruction in REPORTED-03 ("Read …budget.txt and give me the launch budget status") the Job run did read reported.md and append. In a Job Room the Agent reads the instruction as a question asked, despite "including a Room a Job runs in". She first called `memory` with `command: view` (refused, retried with `read`). |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660, instruction as written ("Tell me the time zone…"), Job Room `⏰ Time zone status`: she called `memory` with `view` (refused), then `read`, and answered "No change since 2026-11-17. This computer is set to Pacific Time…", with no new line. On the first rewording (the definition after the no-change rule) the same Job appended a second "no change" line, so the definition was moved to open the paragraph. |
 
 ### REPORTED-03 — A changed fact is reported as a change, on a new line 💰
 
@@ -7021,6 +7023,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `f03cfa66` |  | Fact moved to a file (no system setting changed): `C:\HuddleLane620\facts\budget.txt`. Run 1: "12% over plan", appended `… · ⏰ Time zone status · Launch budget: 12% over plan …`. File changed to 20%, run 2: "20% over plan. This has changed since I last reported: it was 12% over." and a new line `… now 20% over plan (was 12%)`. Run 2 did not re-read reported.md. |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660, fact in `C:\HuddleLane660\facts\budget.txt`, asked as a question in the one-to-one Room ("What is the launch budget status?"): she read reported.md and appended. File changed to 25%, "Check the launch budget status again": "now says **25% over plan**, up from 12%" and a new line `… 25% over plan (was 12%)`. |
 
 ### REPORTED-04 — A plain question gets an answer and no line 💰
 
@@ -7029,6 +7032,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `c00111ec` |  | "What is two plus two?" → "Four.", no `memory` call, reported.md unchanged. |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660 on the final wording: "Two plus two is **4**.", no tool call, reported.md unchanged. |
 
 ### REPORTED-05 — An Agent that never reports has no file 💰
 
@@ -7037,6 +7041,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `c00111ec` |  | Ada filed LAUN-0001/0002 for Leo; Leo did 8 tool calls in two Task Rooms and closed both; no reported.md in Leo's Memory. |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660. It failed twice on the way and the prompt was fixed: on the first two rewordings Ola (Bookkeeper of Team `Shop`) appended a line after each Task Lina gave her, because their Room `Lina, Ola` has the Human as a member; a clause on Task comments alone did not stop her. With the final clause (work done for another Agent, even in a Room the Human is in, is not a report) Ola did SHOP-0007 and SHOP-0008 (comment, close) and kept no reported.md, and Lina kept none for checking them. |
 
 ### REPORTED-06 — The Chief of Staff reads the manager's file and leaves the item out 💰
 
@@ -7045,6 +7050,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `f03cfa66` |  | Team "Shop" (Small Business) with manager Grant. On a direct tell Grant wrote a topic file and did NOT append to reported.md; the line was added by hand to continue. Grant then appended his whole digest to reported.md, so both digest items read as told. The Chief of Staff called `memory` with `folder: agent:Grant`, `read`, `reported.md` and left both items out. The new-item-survives half is not shown by this run. (A first attempt on a Blank Team failed only because a Blank Team has no manager: "Managers today: none".) |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660. Lina, manager of `Shop` (Small Business), was told "Tell me that the launch date moved to 3 December." and appended a line. She posted a two-item digest (the launch date; the supplier price list arrives on Friday). The Chief of Staff called `memory` with `folder: agent:Lina`, `read`, left the launch date out as already told and kept the price list as the only new item, so the new-item-survives half passed too. |
 
 ### REPORTED-07 — An old line is dropped and a future line is kept 💰
 
@@ -7053,6 +7059,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Fail | `c00111ec` |  | As written ("Tell me today's weather outlook…") a direct answer and no append, so the old line stayed. Reworded as a status report: the reply ended `; dropped 1 line older than 14 days`, the 2026-10-28 line was gone, the 2027-11-17 line kept, a new dated line added. She appended without reading the file first. Same finding as REPORTED-01. |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660. Step 2 asked for a finding ("Tell me how much memory (RAM) this computer has."): she answered and appended, the reply ended `; dropped 1 line older than 14 days`, the 2026-10-28 line was gone, the 2027-11-17 line kept and a new dated line added. She again appended without reading first. The weather prompt as written got "I can't see live weather" and no line, which the new wording allows: an answer with no news about the work. |
 
 ### REPORTED-08 — A renamed manager is not found and the tool lists the managers 💰
 
@@ -7061,6 +7068,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `f03cfa66` |  | First run (`c00111ec`) failed: renaming the manager left `manager: 'Grant'` in `Teams\Shop\_team.md`, so `agent:Grant` answered "Grant has told the Human nothing directly." Fixed in `f03cfa66` (PersonaRenameCascade rewrites `manager:`). Redone: Gwen renamed to Gale, `_team.md` then read `manager: 'Gale'`; asked with the old Name, the tool answered "No Team's manager is named Gwen, so there is nothing to read. Managers today: Gale." and the Chief of Staff summarised the whole digest. |
+| 2026-11-17 | Pass | `65359c6b` | #660 | Re-run for #660. Lina renamed to Ida from her card (`_team.md` then read `manager: 'Ida'`). Asked with the old Name, the tool answered "No Team's manager is named Lina, so there is nothing to read. Managers today: Ida." and the Chief of Staff summarised the whole digest. |
 
 ### TIDYLINES-01 — A pass drops an old reported line and writes its list, with no call
 
