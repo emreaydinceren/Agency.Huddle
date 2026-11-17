@@ -50,6 +50,40 @@ public sealed class FollowUpsNoticeTests
         Assert.Equal("⏰ Nova will follow up: Check the build (waiting: this Room is paused)", cut.Find(".follow-ups-notice-text").TextContent.Trim());
     }
 
+    /// <summary>A paused Follow-up reads "(paused)" instead of a time.</summary>
+    [Fact]
+    public async Task PausedFollowUp_SaysPausedInsteadOfATime()
+    {
+        await using MudBunitContext ctx = new();
+        using Rig rig = Rig.Register(ctx);
+        Job job = rig.Add("r1", "Check the build", new TimeOnly(9, 30));
+        _ = rig.Store.Update(job with { Paused = true });
+
+        IRenderedComponent<FollowUpsNotice> cut = Rig.Render(ctx, paused: false);
+
+        Assert.Equal("⏰ Nova will follow up: Check the build (paused)", cut.Find(".follow-ups-notice-text").TextContent.Trim());
+    }
+
+    /// <summary>Disposing the notice lets go of the store's change event: a later change renders nothing and throws nothing.</summary>
+    [Fact]
+    public async Task Dispose_UnsubscribesFromTheJobStore()
+    {
+        await using MudBunitContext ctx = new();
+        using Rig rig = Rig.Register(ctx);
+        IRenderedComponent<FollowUpsNotice> cut = Rig.Render(ctx, paused: false);
+        int before = cut.RenderCount;
+        int handlersBefore = HandlerCount(rig.Store);
+
+        await ctx.DisposeComponentsOnDispatcherAsync();
+        int handlersAfter = HandlerCount(rig.Store);
+        _ = rig.Add("r1", "Later", new TimeOnly(9, 30));
+
+        Assert.Equal((1, 0, before), (handlersBefore, handlersAfter, cut.RenderCount));
+    }
+
+    private static int HandlerCount(JobStore store) =>
+        ((Delegate?)typeof(JobStore).GetField(nameof(JobStore.Changed), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(store))?.GetInvocationList().Length ?? 0;
+
     /// <summary>Cancel deletes the Job at once, without a dialog, and the row goes.</summary>
     [Fact]
     public async Task Cancel_DeletesTheJob_AndTheRowGoes()

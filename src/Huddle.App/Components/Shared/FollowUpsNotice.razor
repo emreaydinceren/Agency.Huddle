@@ -41,6 +41,11 @@
     private string TextOf(Job job)
     {
         string agent = job.Owner.AgentName ?? string.Empty;
+        if (job.Paused)
+        {
+            return $"⏰ {agent} will follow up: {job.Title} (paused)";
+        }
+
         if (this.RoomPaused)
         {
             return $"⏰ {agent} will follow up: {job.Title} (waiting: this Room is paused)";

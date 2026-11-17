@@ -45,7 +45,9 @@ internal sealed class JobsTool(
 
     private static readonly string[] Actions = ["create", "list", "update", "pause", "resume", "delete", "run_now", "follow_up"];
 
-    private static readonly string ActionList = string.Join(", ", Actions);
+    private const string TooSoon = "A Follow-up must be at least 1 minute ahead.";
+    private const string TooFar = "A Follow-up may be at most 31 days ahead.";
+    private static readonly string ActionList =string.Join(", ", Actions);
 
     /// <inheritdoc />
     public string Name => "jobs";
@@ -160,6 +162,12 @@ internal sealed class JobsTool(
 
     private async Task<string> FollowUpAsync(JsonObject arguments, CancellationToken ct)
     {
+        int cap = options.Value.Jobs.MaxFollowUpsPerAgent;
+        if (cap <= 0)
+        {
+            return "Follow-ups are switched off here. Say in the Room what you will check and let the Human remind you.";
+        }
+
         if (Read(arguments, "target") is not null)
         {
             return "A Follow-up is always for you; 'target' is not accepted.";
@@ -187,12 +195,6 @@ internal sealed class JobsTool(
             return refusal;
         }
 
-        int cap = options.Value.Jobs.MaxFollowUpsPerAgent;
-        if (cap <= 0)
-        {
-            return "Follow-ups are switched off here. Say in the Room what you will check and let the Human remind you.";
-        }
-
         if (store.Jobs.Count(job => job.RoomId is not null && job.Owner.IsAgent(personaName)) >= cap)
         {
             return string.Create(CultureInfo.InvariantCulture, $"You already have {cap} Follow-ups waiting, the most one Agent may have. Delete one with jobs delete, or say in the Room what you will check and let the Human remind you.");
@@ -209,8 +211,6 @@ internal sealed class JobsTool(
     /// <summary>Works out when a Follow-up is due: a relative time is UTC arithmetic from the clock, rounded up to the next whole minute; an absolute one is Jobs' own grammar.</summary>
     private bool TryResolveDue(string whenText, TimeZoneInfo zone, out DateTimeOffset due, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? refusal)
     {
-        const string TooSoon = "A Follow-up must be at least 1 minute ahead.";
-        const string TooFar = "A Follow-up may be at most 31 days ahead.";
         DateTimeOffset now = clock.GetUtcNow();
         due = now;
         refusal = null;
@@ -234,7 +234,7 @@ internal sealed class JobsTool(
 
                 long ticks = (now + (unit * amount)).Ticks;
                 due = new DateTimeOffset(ticks - (ticks % TimeSpan.TicksPerMinute) + (ticks % TimeSpan.TicksPerMinute > 0 ? TimeSpan.TicksPerMinute : 0), TimeSpan.Zero);
-                return CheckRange(now, due, TooSoon, TooFar, out refusal);
+                return CheckRange(now, due, out refusal);
             }
         }
 
@@ -250,6 +250,13 @@ internal sealed class JobsTool(
             return false;
         }
 
+        return CheckOnce(when, now, zone, out due, out refusal);
+    }
+
+    /// <summary>The one bound a Follow-up's one-off timetable obeys, for <c>follow_up</c> and <c>update</c> alike: at least 1 minute and at most 31 days ahead.</summary>
+    private static bool CheckOnce(JobRecurrence when, DateTimeOffset now, TimeZoneInfo zone, out DateTimeOffset due, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? refusal)
+    {
+        due = now;
         if (when.NextAfter(now, zone) is not { } next)
         {
             refusal = TooSoon;
@@ -257,19 +264,19 @@ internal sealed class JobsTool(
         }
 
         due = next;
-        return CheckRange(now, due, TooSoon, TooFar, out refusal);
+        return CheckRange(now, due, out refusal);
     }
 
-    private static bool CheckRange(DateTimeOffset now, DateTimeOffset due, string tooSoon, string tooFar, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? refusal)
+    private static bool CheckRange(DateTimeOffset now, DateTimeOffset due, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? refusal)
     {
         TimeSpan ahead = due - now;
         if (ahead < TimeSpan.FromMinutes(1))
         {
-            refusal = tooSoon;
+            refusal = TooSoon;
         }
         else
         {
-            refusal = ahead > TimeSpan.FromDays(31) ? tooFar : null;
+            refusal = ahead > TimeSpan.FromDays(31) ? TooFar : null;
         }
 
         return refusal is null;
@@ -313,6 +320,12 @@ internal sealed class JobsTool(
         if (zone is not null && !JobTimeZones.TryFind(zone, out _))
         {
             return JobTimeZones.Unknown(zone);
+        }
+
+        if (job.RoomId is not null && when.Cadence == JobCadence.Once && !ReferenceEquals(when, job.When)
+            && !CheckOnce(when, clock.GetUtcNow(), scheduler.ZoneOf(job with { TimeZoneId = zone }), out _, out string? rangeRefusal))
+        {
+            return rangeRefusal;
         }
 
         Job changed = job with

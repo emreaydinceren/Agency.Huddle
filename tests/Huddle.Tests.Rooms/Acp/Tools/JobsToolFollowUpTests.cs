@@ -209,7 +209,43 @@ public sealed class JobsToolFollowUpTests
         Assert.Empty(rig.Store.Jobs);
     }
 
-    /// <summary><c>update</c> cannot give a Follow-up a recurring timetable: <see cref="JobRules"/>' text is the answer.</summary>
+    /// <summary>With the cap at zero the switched-off text comes before any other check: a call missing its Room, title and time still gets it.</summary>
+    [Fact]
+    public async Task FollowUp_CapZero_AnswersBeforeAnyOtherValidation()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(Now, TimeZoneInfo.Utc, ct);
+        rig.Options.Value.Jobs.MaxFollowUpsPerAgent = 0;
+
+        string empty = await rig.Tool("Nova").InvokeAsync(new JsonObject { ["action"] = "follow_up" }, ct);
+        string target = await rig.Tool("Nova").InvokeAsync(new JsonObject { ["action"] = "follow_up", ["target"] = "Orion" }, ct);
+        string stranger = await rig.Tool("Cleo").InvokeAsync(Rig.Args(rig.Room.Id, "in 1 hour"), ct);
+
+        const string Off = "Follow-ups are switched off here. Say in the Room what you will check and let the Human remind you.";
+        Assert.Equal([Off, Off, Off], [empty, target, stranger]);
+    }
+
+    /// <summary><c>update</c> applies the same at-least-1-minute and at-most-31-days bounds <c>follow_up</c> does, and accepts a time inside them.</summary>
+    [Fact]
+    public async Task Update_AFollowUp_WhenOutsideTheBounds_IsRefused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(Now, TimeZoneInfo.Utc, ct);
+        _ = await rig.Tool("Nova").InvokeAsync(Rig.Args(rig.Room.Id, "in 1 hour"), ct);
+        Job job = Assert.Single(rig.Store.Jobs);
+
+        string past = await rig.Tool("Nova").InvokeAsync(new JsonObject { ["action"] = "update", ["id"] = job.Id, ["when"] = "once on 2026-11-02 at 08:00" }, ct);
+        string far = await rig.Tool("Nova").InvokeAsync(new JsonObject { ["action"] = "update", ["id"] = job.Id, ["when"] = "once on 2026-12-31 at 09:00" }, ct);
+        Job unchanged = Assert.Single(rig.Store.Jobs);
+        string fine = await rig.Tool("Nova").InvokeAsync(new JsonObject { ["action"] = "update", ["id"] = job.Id, ["when"] = "once on 2026-11-03 at 09:00" }, ct);
+
+        Assert.Equal(("A Follow-up must be at least 1 minute ahead.", "A Follow-up may be at most 31 days ahead."), (past, far));
+        Assert.Equal(job, unchanged);
+        Assert.Equal(JobRecurrence.Once(new DateOnly(2026, 11, 3), new TimeOnly(9, 0)), rig.Store.Find(job.Id)?.When);
+        Assert.NotEmpty(fine);
+    }
+
+    /// <summary><c>update</c> cannot give a Follow-up a recurring timetable:<see cref="JobRules"/>' text is the answer.</summary>
     [Fact]
     public async Task Update_AFollowUp_ToARecurringWhen_IsRefused()
     {

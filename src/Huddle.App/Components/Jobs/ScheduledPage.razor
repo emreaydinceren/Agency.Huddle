@@ -17,6 +17,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject TimeProvider Clock
+@inject ILogger<ScheduledPage> Logger
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading pa-4">
     @if (this.JobId is null)
@@ -116,7 +117,7 @@
 
     private TimeZoneInfo Zone => this.Clock.LocalTimeZone;
 
-    private readonly Dictionary<string, string> roomNames = new(StringComparer.Ordinal);
+    private Dictionary<string, string> roomNames = new(StringComparer.Ordinal);
 
     /// <inheritdoc />
     protected override async Task OnInitializedAsync()
@@ -128,11 +129,20 @@
     /// <summary>Unsubscribes from the store.</summary>
     public void Dispose() => this.Store.Changed -= this.OnJobsChanged;
 
-    private void OnJobsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, () => _ = this.ReloadAsync());
+    private void OnJobsChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, this.ReloadAsync);
 
     private async Task ReloadAsync()
     {
-        await this.LoadRoomNamesAsync();
+        try
+        {
+            await this.LoadRoomNamesAsync();
+        }
+        catch (Exception ex)
+        {
+            // A failed read of the Room names keeps the names shown so far; the page still repaints from the store.
+            this.Logger.LogWarning(ex, "Could not reload the Room names of the Scheduled page.");
+        }
+
         this.StateHasChanged();
     }
 
@@ -140,13 +150,16 @@
 
     private async Task LoadRoomNamesAsync()
     {
+        Dictionary<string, string> fresh = new(StringComparer.Ordinal);
         foreach (string roomId in this.Store.Jobs.Select(job => job.RoomId).OfType<string>().Distinct(StringComparer.Ordinal))
         {
-            if (!this.roomNames.ContainsKey(roomId) && await this.Directory.GetRoomAsync(roomId) is { } room)
+            if (await this.Directory.GetRoomAsync(roomId) is { } room)
             {
-                this.roomNames[roomId] = room.Name;
+                fresh[roomId] = room.Name;
             }
         }
+
+        this.roomNames = fresh;
     }
 
     private async Task NewAsync()

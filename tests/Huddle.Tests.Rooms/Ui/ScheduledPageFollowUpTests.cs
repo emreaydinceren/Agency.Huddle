@@ -51,6 +51,22 @@ public sealed class ScheduledPageFollowUpTests
         });
     }
 
+    /// <summary>A Room renamed after the page loaded shows its new name once the Job store changes: the names are read again, not cached for good.</summary>
+    [Fact]
+    public async Task List_RoomRenamed_ShowsTheNewNameAfterAStoreChange()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using MudBunitContext ctx = new();
+        using Rig rig = await Rig.CreateAsync(ctx, ct);
+        IRenderedComponent<ScheduledPage> cut = ctx.Render<ScheduledPage>();
+        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Ops · Next: Mon 2 Nov, 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
+
+        await rig.Team.RenameRoomAsync(rig.RoomId, "Platform", ct);
+        _ = rig.Store.Update(rig.Job with { Instruction = "Look again." });
+
+        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Platform · Next: Mon 2 Nov, 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
+    }
+
     private sealed class Rig : IDisposable
     {
         private readonly NeedsYouFixture fixture;
@@ -70,7 +86,9 @@ public sealed class ScheduledPageFollowUpTests
 
         public string RoomId { get; }
 
-        private JobStore Store { get; }
+        public SqliteTeamDirectory Team => this.fixture.Team;
+
+        public JobStore Store { get; }
 
         private JobScheduler Scheduler { get; }
 
