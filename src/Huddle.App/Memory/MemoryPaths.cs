@@ -139,6 +139,103 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
         return fullPath is not null;
     }
 
+    /// <summary>The path of the reported file of a Team's manager, for the Chief of Staff only. It names one file and never a folder, so nothing but a read can be built on it.</summary>
+    /// <param name="caller">The calling Persona's Name.</param>
+    /// <param name="agent">The Name after <c>agent:</c>, as passed.</param>
+    /// <param name="manager">The manager's Name as the Team catalog spells it, when one matched.</param>
+    /// <param name="path">The file's full path, when the caller may read it.</param>
+    /// <returns>Whether the caller is the Chief of Staff, the Name is a manager's, and no folder on the way is a junction or link.</returns>
+    public bool TryResolveReportedOf(string caller, string agent, [NotNullWhen(true)] out string? manager, [NotNullWhen(true)] out string? path)
+    {
+        bool found = this.ResolveReportedOf(caller, agent, out string? matched, out string? resolved) == ReportedLookup.Found;
+        manager = found ? matched : null;
+        path = found ? resolved : null;
+        return found;
+    }
+
+    /// <summary>
+    /// The same lookup as <see cref="TryResolveReportedOf"/>, saying which of the four cases it met. The folder is found by listing the
+    /// directories under the Agents root and taking the one named like the manager ignoring case, in its own spelling; the path is never
+    /// built from the argument or the catalog's spelling.
+    /// </summary>
+    /// <param name="caller">The calling Persona's Name.</param>
+    /// <param name="agent">The Name after <c>agent:</c>, as passed.</param>
+    /// <param name="manager">The manager's Name as the catalog spells it, when the Name is a manager's.</param>
+    /// <param name="path">The full path of the reported file, for <see cref="ReportedLookup.Found"/> only.</param>
+    /// <returns>What was found.</returns>
+    public ReportedLookup ResolveReportedOf(string caller, string agent, out string? manager, out string? path)
+    {
+        ArgumentNullException.ThrowIfNull(caller);
+        ArgumentNullException.ThrowIfNull(agent);
+
+        manager = null;
+        path = null;
+        if (!access.IsChiefOfStaff(caller))
+        {
+            return ReportedLookup.NotChiefOfStaff;
+        }
+
+        manager = access.FindManager(agent.Trim());
+        if (manager is null)
+        {
+            return ReportedLookup.NotManager;
+        }
+
+        path = this.ReportedPath(manager);
+        return path is null ? ReportedLookup.NoFile : ReportedLookup.Found;
+    }
+
+    /// <summary>The one safe place of a manager's reported file, or <see langword="null"/> when there is no folder or the way is not safe.</summary>
+    /// <param name="manager">The manager's Name as the catalog spells it.</param>
+    private string? ReportedPath(string manager)
+    {
+        string root = Path.GetFullPath(agentPaths.DefinitionsRoot);
+        string? folder = AgentFolderNamed(root, manager);
+        if (folder is null)
+        {
+            return null;
+        }
+
+        string agentFolder = Path.GetFullPath(agentPaths.AgentFolder(folder));
+        string workDir = Path.GetFullPath(agentPaths.WorkDir(folder));
+        string memory = Path.Combine(workDir, "memory");
+        string file = Path.GetFullPath(Path.Combine(memory, ReportedFile.FileName));
+        if (!SameFolder(Path.GetDirectoryName(agentFolder), root)
+            || !SameFolder(Path.GetDirectoryName(file), memory)
+            || !SameFolder(Path.GetDirectoryName(memory), workDir)
+            || !workDir.StartsWith(agentFolder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return TeamMemoryIndex.IsSkipped(agentFolder) || TeamMemoryIndex.IsSkipped(workDir) || TeamMemoryIndex.IsSkipped(memory) || TeamMemoryIndex.IsSkipped(file)
+            ? null
+            : file;
+    }
+
+    /// <summary>The name of the directory directly under <paramref name="root"/> that equals <paramref name="name"/> ignoring case, in its own spelling.</summary>
+    /// <param name="root">The Agents root.</param>
+    /// <param name="name">A manager's Name.</param>
+    private static string? AgentFolderNamed(string root, string name)
+    {
+        if (!Directory.Exists(root))
+        {
+            return null;
+        }
+
+        List<string> matches = [.. Directory.EnumerateDirectories(root)
+            .Select(static directory => Path.GetFileName(directory))
+            .Where(directory => string.Equals(directory, name, StringComparison.OrdinalIgnoreCase))];
+        matches.Sort(StringComparer.Ordinal);
+        return matches.Contains(name, StringComparer.Ordinal) ? name : matches.FirstOrDefault();
+    }
+
+    /// <summary>Whether two folder paths name the same folder, ignoring a trailing separator.</summary>
+    /// <param name="left">A folder path, or <see langword="null"/>.</param>
+    /// <param name="right">A folder path.</param>
+    private static bool SameFolder(string? left, string right) =>
+        left is not null && string.Equals(Path.TrimEndingDirectorySeparator(left), Path.TrimEndingDirectorySeparator(right), StringComparison.OrdinalIgnoreCase);
+
     /// <summary>
     /// The memory folder of a Team, or of one of its Projects, built from the catalog's spelling; <see langword="null"/> when the Team
     /// folder, the Project folder or the memory folder is a junction or link. The Team Memory index skips such a folder

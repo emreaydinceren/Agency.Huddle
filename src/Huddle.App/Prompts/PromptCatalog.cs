@@ -87,6 +87,7 @@ internal static class PromptCatalog
         ..BuildPart52(),
         ..BuildPart40(),
         ..BuildPart41(),
+        ..BuildPart61(),
         ..BuildPart42(),
         ..BuildPart43(),
         ..BuildPart44(),
@@ -2636,7 +2637,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryBadFile</c> to <c>systemPrompt.memoryReadFirst</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryBadFile</c> to <c>systemPrompt.memoryReportedOneLine</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart41() =>
     [
@@ -2684,6 +2685,39 @@ internal static class PromptCatalog
             Default: "One line for each thing you told the Human.",
             Placeholders: [],
             RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryAgentFolderRefusal</c> to <c>systemPrompt.memoryReadFirst</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart61() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryAgentFolderRefusal",
+            Label: "Memory another Agent's folder refused",
+            HelperText: "Said to the Chief of Staff when a call on an agent:<Name> folder is anything but a read or list of reported.md.",
+            Default: "In another Agent's folder you can only read reported.md.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedNone",
+            Label: "Memory reported.md of a manager, none",
+            HelperText: "Said to the Chief of Staff when a manager has no reported.md. Must keep {{name}}.",
+            Default: "{{name}} has told the Human nothing directly.",
+            Placeholders: ["{{name}}"],
+            RequiredPlaceholders: ["{{name}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedNoManager",
+            Label: "Memory reported.md, no such manager",
+            HelperText: "Said to the Chief of Staff when the Name after agent: is no Team's manager. Must keep {{name}} and {{managers}}.",
+            Default: "No Team's manager is named {{name}}, so there is nothing to read. Managers today: {{managers}}.",
+            Placeholders: ["{{name}}", "{{managers}}"],
+            RequiredPlaceholders: ["{{name}}", "{{managers}}"],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(

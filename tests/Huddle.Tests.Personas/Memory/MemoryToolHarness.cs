@@ -18,7 +18,7 @@ using Agency.Huddle.Tests.Teams;
 /// </summary>
 internal sealed class MemoryToolHarness : IDisposable
 {
-    private readonly TempDataDir dir = new();
+    private readonly TempDataDir dir;
     private readonly IOptions<TeamOptions> options;
     private readonly AgentPaths paths;
     private readonly MemoryFolderGate gate = new();
@@ -26,8 +26,10 @@ internal sealed class MemoryToolHarness : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="MemoryToolHarness"/> class.</summary>
     /// <param name="configure">Changes the options before the tools are built, or <see langword="null"/>.</param>
-    public MemoryToolHarness(Action<TeamOptions>? configure = null)
+    /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links and resolves them.</param>
+    public MemoryToolHarness(Action<TeamOptions>? configure = null, bool supportsReparsePoints = false)
     {
+        this.dir = new TempDataDir(supportsReparsePoints);
         this.options = this.dir.Options(configure);
         this.paths = new AgentPaths(this.options);
         this.Access = new TeamMemoryAccess(this.Catalog, name => this.chiefOfStaff.Contains(name));
@@ -54,6 +56,9 @@ internal sealed class MemoryToolHarness : IDisposable
 
     /// <summary>Who may read and write which Team folder.</summary>
     public TeamMemoryAccess Access { get; }
+
+    /// <summary>The Agents root folder, the one an <c>agent:</c> folder is found under.</summary>
+    public string AgentsRoot => Path.GetFullPath(this.paths.DefinitionsRoot);
 
     /// <summary>The Teams root folder.</summary>
     public string TeamsRoot => Path.GetFullPath(Path.Combine(this.dir.Path, this.options.Value.Teams.Dir));

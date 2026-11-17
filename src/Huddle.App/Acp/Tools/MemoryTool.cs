@@ -49,6 +49,8 @@ internal sealed class MemoryTool(
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "memory";
 
+    private const string AgentFolderPrefix = "agent:";
+
     private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
 
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
@@ -97,6 +99,11 @@ internal sealed class MemoryTool(
         if (request.Problem() is { } problem)
         {
             return this.Say("systemPrompt.memoryBadCommand", ("problem", problem));
+        }
+
+        if (AgentFolderName(request.Folder) is { } agent)
+        {
+            return await this.RunAgentFolderAsync(request, agent, cancellationToken).ConfigureAwait(false);
         }
 
         MemoryFolder? folder = this.paths.ResolveFolder(personaName, request.Folder);
@@ -198,7 +205,55 @@ internal sealed class MemoryTool(
         };
     }
 
-    /// <summary>The <c>folder</c> values the caller may use: its own, then each readable Team and each of that Team's Projects.</summary>
+    /// <summary>The Name after <c>agent:</c> in a <c>folder</c> argument, or <see langword="null"/> when the argument is not that form.</summary>
+    /// <param name="folder">The <c>folder</c> argument.</param>
+    private static string? AgentFolderName(string? folder)
+    {
+        string? trimmed = folder?.Trim();
+        return trimmed is not null && trimmed.StartsWith(AgentFolderPrefix, StringComparison.OrdinalIgnoreCase)
+            ? trimmed[AgentFolderPrefix.Length..].Trim()
+            : null;
+    }
+
+    /// <summary>
+    /// Answers a call whose <c>folder</c> is <c>agent:&lt;Name&gt;</c>: only the Chief of Staff, only <c>read</c> or <c>list</c>, only
+    /// <c>reported.md</c> of a Team's manager. The value never becomes a <see cref="MemoryFolder"/>, so no write can be built on it.
+    /// </summary>
+    /// <param name="request">The call.</param>
+    /// <param name="agent">The Name after <c>agent:</c>, as passed.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    private async Task<string> RunAgentFolderAsync(MemoryRequest request, string agent, CancellationToken cancellationToken)
+    {
+        if (!access.IsChiefOfStaff(personaName))
+        {
+            logger.LogWarning("Refused a memory call from '{Caller}': '{Folder}' is not a folder it may use.", personaName, request.Folder);
+            return this.Say("systemPrompt.memoryBadFolder", ("folder", request.Folder ?? string.Empty), ("folders", string.Join(", ", this.UsableFolders())));
+        }
+
+        bool listing = request.Command == "list";
+        if (!listing && !(request.Command == "read" && ReportedFile.IsName((request.File ?? string.Empty).Trim())))
+        {
+            return this.Say("systemPrompt.memoryAgentFolderRefusal");
+        }
+
+        ReportedLookup lookup = this.paths.ResolveReportedOf(personaName, agent, out string? manager, out string? path);
+        if (lookup == ReportedLookup.NotManager)
+        {
+            string managers = access.Managers() is { Count: > 0 } today ? string.Join(", ", today) : "none";
+            return this.Say("systemPrompt.memoryReportedNoManager", ("name", agent), ("managers", managers));
+        }
+
+        if (lookup != ReportedLookup.Found || path is null || !File.Exists(path))
+        {
+            return this.Say("systemPrompt.memoryReportedNone", ("name", manager ?? agent));
+        }
+
+        return listing
+            ? $"{ReportedFile.FileName} - {MemoryIndex.SummaryFor(path, warnings)}"
+            : await this.ReadAsync(ReportedFile.FileName, path, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The <c>folder</c> values the caller may use: its own, then each readable Team and each of that Team's Projects; for the Chief of Staff, each manager's reported file too.</summary>
     private List<string> UsableFolders()
     {
         List<string> folders = [MemoryPaths.OwnFolder, TeamNames.MemoryFolder];
@@ -206,6 +261,11 @@ internal sealed class MemoryTool(
         {
             folders.Add(team.Name);
             folders.AddRange(team.Projects.Select(project => $"{team.Name}/{project}"));
+        }
+
+        if (access.IsChiefOfStaff(personaName))
+        {
+            folders.AddRange(access.Managers().Select(static manager => $"{AgentFolderPrefix}{manager}"));
         }
 
         return folders;

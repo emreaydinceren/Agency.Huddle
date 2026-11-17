@@ -46,6 +46,25 @@ internal sealed class TeamMemoryAccess
     /// <returns>The Team, or <see langword="null"/> when there is none.</returns>
     public TeamSummary? Find(string team) => this.teams.Find(team);
 
+    /// <summary>Finds the Name of a Team's manager, ignoring case.</summary>
+    /// <param name="name">The Name as written.</param>
+    /// <returns>The Name as the Team catalog spells it, or <see langword="null"/> when no Team has that manager.</returns>
+    public string? FindManager(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        return this.Managers().FirstOrDefault(manager => string.Equals(manager, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>The Names of today's Team managers, each once, in the catalog's order.</summary>
+    /// <returns>The Names as the catalog spells them.</returns>
+    public IReadOnlyList<string> Managers() =>
+        [.. this.teams.Teams
+            .Select(static team => team.Manager)
+            .OfType<string>()
+            .Where(static manager => !string.IsNullOrWhiteSpace(manager))
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+
     /// <summary>Whether the Persona is the Chief of Staff.</summary>
     /// <param name="persona">The Persona's name.</param>
     public bool IsChiefOfStaff(string persona) => this.isChiefOfStaff(persona);
