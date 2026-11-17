@@ -7240,6 +7240,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-06
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `3fd0745a` | #618 | By an agent acting as the Human, Nova on Sonnet / low, lane :5617. While Nova ran `ping -n 30`, three Messages were sent ("can you also name a fruit", "and a colour", "and a planet"); the notice read "Waiting for Nova: 3 Messages". After the ping summary Nova posted exactly one reply covering all three ("Fruit: mango. Colour: teal. Planet: Saturn."); all three rows `replied`. |
 
 ### TURNQUEUE-07 — Quick Mentions in a group Room get one reply each 💰
 
@@ -7247,6 +7248,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-07
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `3fd0745a` | #618 | Group Room (Kai, Nova, Cleo). While Nova ran `ping -n 30` from a Mention, three Mentions of Nova were sent. After the ping summary Nova answered each in its own reply: Banana, Blue, Jupiter. No fold. |
 
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 

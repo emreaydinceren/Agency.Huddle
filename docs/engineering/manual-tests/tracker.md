@@ -1442,8 +1442,8 @@ Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice,
 | [TURNQUEUE-03](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-04](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-05](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
-| [TURNQUEUE-06](turn-queue.md#turnqueue-06--quick-messages-in-a-one-to-one-get-one-reply-) | 💰 | Active | #618 | not yet run |
-| [TURNQUEUE-07](turn-queue.md#turnqueue-07--quick-mentions-in-a-group-room-get-one-reply-each-) | 💰 | Active | #618 | not yet run |
+| [TURNQUEUE-06](turn-queue.md#turnqueue-06--quick-messages-in-a-one-to-one-get-one-reply-) | 💰 | Pass | #618 | run 2026-11-17, `3fd0745a`, see the Run log |
+| [TURNQUEUE-07](turn-queue.md#turnqueue-07--quick-mentions-in-a-group-room-get-one-reply-each-) | 💰 | Pass | #618 | run 2026-11-17, `3fd0745a`, see the Run log |
 | [TURNQUEUE-12](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-13](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-14](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
