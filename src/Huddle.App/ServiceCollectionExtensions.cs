@@ -62,7 +62,25 @@ public static class ServiceCollectionExtensions
             .AddStartupHostedServices()
             .AddBackgroundHostedServices()
             .AddHelperServices()
-            .AddFeatureModules();
+            .AddFeatureModules()
+            .AddMemoryTidyServices();
+    }
+
+    /// <summary>
+    /// Registers Memory Tidy (spec §6.7). Last in the chain, so the runner, which finishes the passes a stop left open, starts after every other hosted service.
+    /// </summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddMemoryTidyServices(this IServiceCollection services)
+    {
+        services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyStateStore>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyPass, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyPass>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRecovery>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>());
+        return services;
     }
 
     /// <summary>Registers every Feature Module's services, in the catalog's order.</summary>
