@@ -1684,8 +1684,8 @@ internal static class PromptCatalog
                 status, a result, a decision or a warning you tell the Human is a report however they asked for it:
                 a question, "tell me", "check and report" or a Job's instruction. Small talk, and answers that carry
                 no news about the work, such as how something works or what you can do, are not reports and need no
-                line. Neither is work on a Task, such as a comment, Evidence or closing it, even in the Task's Room,
-                nor a Message to another Agent. Before you report to the Human, in any Room, including a Room a
+                line. Neither is work you do for another Agent, such as a Task it gave you, or what you write to
+                another Agent, even in a Room the Human is in. Before you report to the Human, in any Room, including a Room a
                 Job runs in, read reported.md
                 with {{memoryTool}}; if it does not exist, you have reported nothing yet. Do not tell them again in
                 full what is already there unless something has changed, and when it has, say what changed. When a
