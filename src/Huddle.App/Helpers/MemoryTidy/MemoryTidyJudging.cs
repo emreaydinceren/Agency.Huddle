@@ -201,14 +201,16 @@ internal sealed class MemoryTidyJudging(
             return;
         }
 
+        int nextOffset = MemoryTidyInputBuilder.NextOffset(build.Offset, build.Shown, build.EligibleCount, build.AllFitted);
         store.PutState((state ?? new MemoryTidyState(candidate.Key)) with
         {
-            Fingerprint = after.FolderFingerprint,
+            // A folder larger than one call keeps no marker until the rotation has come round, so the next pass shows its next files.
+            Fingerprint = nextOffset <= build.Offset ? after.FolderFingerprint : null,
             TidiedUtc = this.clock.GetUtcNow(),
             Outcome = report.Summary ?? report.Error ?? "Judged",
             Failures = 0,
             FailedFingerprint = null,
-            Offset = MemoryTidyInputBuilder.NextOffset(build.Offset, build.Shown, build.EligibleCount, build.AllFitted),
+            Offset = nextOffset,
         });
     }
 

@@ -482,6 +482,31 @@ public sealed class MemoryTidyPassHelperTests
         Assert.DoesNotContain(rig.Feed.Posts, static post => post.SourceType == FeedSourceType.MemoryTidied);
     }
 
+    /// <summary>A folder needing three calls, unchanged, is judged on three successive passes, each showing the next file, and not on the fourth.</summary>
+    [Fact]
+    public async Task RunAsync_FolderLargerThanOneCall_IsJudgedUntilTheRotationComesRound()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TidyRig rig = Rig(team => team.Memory.Tidy.MaxInputChars = 130, "Nova");
+        Fill(rig, "Nova", 3);
+        int length = (await File.ReadAllTextAsync(Path.Combine(rig.MemoryDir("Nova"), "t0.md"), ct)).Length;
+        rig.Options.Value.Memory.Tidy.MaxInputChars = length + (length / 2);
+        rig.Process.Text = Nothing;
+        List<int?> offsets = [];
+        List<bool> marked = [];
+
+        for (int pass = 0; pass < 4; pass++)
+        {
+            _ = await rig.Pass.RunAsync(MemoryTidyStart.TidyNow, ct);
+            offsets.Add(rig.State.GetState(Key)?.Offset);
+            marked.Add(rig.State.GetState(Key)?.Fingerprint is not null);
+        }
+
+        Assert.Equal(3, rig.Process.Calls);
+        Assert.Equal([1, 2, 0, 0], offsets);
+        Assert.Equal([false, false, true, true], marked);
+    }
+
     /// <summary>A stop after the second step leaves the list with two applied steps and exactly one Feed item.</summary>
     [Fact]
     public async Task RunAsync_CancelledAfterTheSecondStep_ListsTwoAndPostsOneItem()
