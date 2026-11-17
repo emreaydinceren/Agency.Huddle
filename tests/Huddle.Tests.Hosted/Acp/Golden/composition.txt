@@ -9,6 +9,7 @@ Singleton Agency.Huddle.App.Acp.IAdapterProbeRunner -> Agency.Huddle.App.Acp.Ada
 Singleton Agency.Huddle.App.Acp.IAgentHostFactory -> factory Agency.Huddle.App.Acp.IAgentHostFactory
 Singleton Agency.Huddle.App.Acp.IMergeGate -> Agency.Huddle.App.Teams.ProcessMergeGate
 Singleton Agency.Huddle.App.Acp.IModelCatalog -> Agency.Huddle.App.Acp.ModelCatalogProbe
+Singleton Agency.Huddle.App.Acp.IOwedTurnPolicy -> Agency.Huddle.App.Acp.OwedTurnPolicy
 Singleton Agency.Huddle.App.Acp.PersonaCommands -> Agency.Huddle.App.Acp.PersonaCommands
 Singleton Agency.Huddle.App.Acp.PersonaHealth -> Agency.Huddle.App.Acp.PersonaHealth
 Singleton Agency.Huddle.App.Acp.PersonaPromptPreview -> Agency.Huddle.App.Acp.PersonaPromptPreview
@@ -165,9 +166,11 @@ Singleton Agency.Huddle.App.Services.ChatService -> factory Agency.Huddle.App.Se
 Singleton Agency.Huddle.App.Services.ContextFill -> Agency.Huddle.App.Services.ContextFill
 Singleton Agency.Huddle.App.Services.Drafts -> Agency.Huddle.App.Services.Drafts
 Singleton Agency.Huddle.App.Services.IMentionAliasSource -> factory Agency.Huddle.App.Services.IMentionAliasSource
+Singleton Agency.Huddle.App.Services.ITurnLedger -> factory Agency.Huddle.App.Services.ITurnLedger
 Singleton Agency.Huddle.App.Services.RoomEvents -> Agency.Huddle.App.Services.RoomEvents
 Singleton Agency.Huddle.App.Services.ToolCallLogWriter -> Agency.Huddle.App.Services.ToolCallLogWriter
 Singleton Agency.Huddle.App.Services.TurnActivity -> Agency.Huddle.App.Services.TurnActivity
+Singleton Agency.Huddle.App.Services.TurnQueue -> Agency.Huddle.App.Services.TurnQueue
 Scoped Agency.Huddle.App.Sidebar.PageCommandBus -> Agency.Huddle.App.Sidebar.PageCommandBus
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-detail order 5 Agency.Huddle.App.Components.Sidebar.TaskDetailPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel members order 10 Agency.Huddle.App.Components.Sidebar.MembersPanel

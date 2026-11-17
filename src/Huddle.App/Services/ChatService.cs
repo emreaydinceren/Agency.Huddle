@@ -80,6 +80,19 @@ public sealed partial class ChatService
     /// </summary>
     internal IFeedPublisher? FeedPublisher { get; set; }
 
+    /// <summary>
+    /// Works out which Agents owe a Turn for a Message about to be appended (Turn Queue spec §5.4). An optional settable
+    /// property for the same reason as <see cref="TeamCatalog"/>: the type is internal and the constructor public.
+    /// <see langword="null"/> records no owed Turns, which is the behaviour before the Turn Queue.
+    /// </summary>
+    internal Acp.IOwedTurnPolicy? OwedTurns { get; set; }
+
+    /// <summary>
+    /// Where the owed Turns are written before the append. Optional and settable like <see cref="OwedTurns"/>;
+    /// <see langword="null"/> records nothing.
+    /// </summary>
+    internal ITurnLedger? Ledger { get; set; }
+
     /// <summary>The number of uploaded files a delete of <paramref name="room"/> would send to the Recycle Bin.</summary>
     /// <param name="room">The Room about to be deleted.</param>
     /// <returns>The file count of both upload folders; 0 when none exist.</returns>
@@ -276,7 +289,7 @@ public sealed partial class ChatService
             // it granted. This semaphore is what makes read-decide-write atomic - the dictionary is
             // not. It is also what already keeps transcript order equal to event order, so counting
             // anywhere else would let the count describe no prefix of the Transcript.
-            var isAgent = sender is { Kind: UserKind.Agent };
+            BudgetSender budgetSender = ChatService.BudgetSenderOf(sender, asHuddle);
             var budget = this.CurrentBudget(roomId);
 
             if (sender is { Kind: UserKind.Agent } && budget.Exhausted)
@@ -290,13 +303,13 @@ public sealed partial class ChatService
                 ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
             var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot };
-            await this.store.AppendAsync(roomId, message, ct).ConfigureAwait(false);
+            await this.AppendRecordingOwedTurnsAsync(room, members, mentions, message, RoomBudgets.After(budget, budgetSender, this.agentMessageBudget), withheldFromAgentId, ct).ConfigureAwait(false);
 
             // Huddle is neither the Human nor an Agent: its Message spends no Budget, resets none and drops no waiting card (ADR-0065).
             if (!asHuddle)
             {
-                budget = this.SpendBudget(roomId, budget, isAgent);
-                this.DropWaitingCards(roomId, isAgent, withheldFromAgentId);
+                budget = this.SpendBudget(roomId, budget, budgetSender);
+                this.DropWaitingCards(roomId, budgetSender == BudgetSender.Agent, withheldFromAgentId);
             }
 
             this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId));
@@ -313,18 +326,115 @@ public sealed partial class ChatService
     /// </summary>
     /// <param name="roomId">The Room the Message was posted into.</param>
     /// <param name="budget">The Room's Budget before this Message.</param>
-    /// <param name="isAgent">Whether the sender is an Agent.</param>
+    /// <param name="sender">Who sent the Message.</param>
     /// <returns>The Room's Budget after this Message.</returns>
-    private RoomBudget SpendBudget(string roomId, RoomBudget budget, bool isAgent)
+    private RoomBudget SpendBudget(string roomId, RoomBudget budget, BudgetSender sender)
     {
-        // Only a Message that reached the Transcript spends Budget, so a failed append above
-        // leaves the count where it was. A Human Message resets both halves: any extension the
-        // Human granted expires with the run it was granted for.
-        budget = isAgent
-            ? budget with { Used = budget.Used + 1 }
-            : new RoomBudget(0, this.agentMessageBudget);
+        // Only a Message that reached the Transcript spends Budget, so a failed append leaves the
+        // count where it was. RoomBudgets.After is the one rule, shared with the owed-Turn policy.
+        budget = RoomBudgets.After(budget, sender, this.agentMessageBudget);
         this.budgets[roomId] = budget;
         return budget;
+    }
+
+    /// <summary>Which kind of sender a Message has, as far as the Budget is concerned.</summary>
+    /// <param name="sender">The sending Member, or <see langword="null"/> for Huddle.</param>
+    /// <param name="asHuddle">Whether Huddle itself wrote the Message.</param>
+    /// <returns>Huddle, an Agent or the Human.</returns>
+    private static BudgetSender BudgetSenderOf(User? sender, bool asHuddle)
+    {
+        if (asHuddle)
+        {
+            return BudgetSender.Huddle;
+        }
+
+        return sender is { Kind: UserKind.Agent } ? BudgetSender.Agent : BudgetSender.Human;
+    }
+
+    /// <summary>
+    /// Writes down who owes a Turn for the Message, then appends it (Turn Queue spec §5.4). Written first, so a crash between
+    /// the two leaves a row start-up removes rather than a Message nobody owes. A failed append takes the rows back out.
+    /// </summary>
+    /// <param name="room">The Room the Message is posted into.</param>
+    /// <param name="members">Every Member of the Room.</param>
+    /// <param name="mentions">Every Member the Message Mentions.</param>
+    /// <param name="message">The Message to append.</param>
+    /// <param name="budgetAfter">The Room's Budget once this Message is counted.</param>
+    /// <param name="withheldFromAgentId">The Agent the Message is withheld from, or <see langword="null"/>.</param>
+    /// <param name="ct">Cancels the append.</param>
+    private async Task AppendRecordingOwedTurnsAsync(
+        Room room,
+        IReadOnlyList<User> members,
+        IReadOnlyList<User> mentions,
+        ChatMessage message,
+        RoomBudget budgetAfter,
+        string? withheldFromAgentId,
+        CancellationToken ct)
+    {
+        this.RecordOwedTurns(room, members, mentions, message, budgetAfter, withheldFromAgentId);
+        try
+        {
+            await this.store.AppendAsync(room.Id, message, ct).ConfigureAwait(false);
+        }
+        catch
+        {
+            this.ForgetOwedTurns(message.Id);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Asks the policy who owes a Turn for the Message and records it. A failure is logged and swallowed: the Message is then
+    /// not owed, which is the behaviour before the Turn Queue, and the post goes on.
+    /// </summary>
+    /// <param name="room">The Room the Message is posted into.</param>
+    /// <param name="members">Every Member of the Room.</param>
+    /// <param name="mentions">Every Member the Message Mentions.</param>
+    /// <param name="message">The Message.</param>
+    /// <param name="budgetAfter">The Room's Budget once this Message is counted.</param>
+    /// <param name="withheldFromAgentId">The Agent the Message is withheld from, or <see langword="null"/>.</param>
+    private void RecordOwedTurns(
+        Room room,
+        IReadOnlyList<User> members,
+        IReadOnlyList<User> mentions,
+        ChatMessage message,
+        RoomBudget budgetAfter,
+        string? withheldFromAgentId)
+    {
+        if (this.OwedTurns is null || this.Ledger is null)
+        {
+            return;
+        }
+
+        try
+        {
+            bool fromHuddle = string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal);
+            IReadOnlyList<string> owed = this.OwedTurns.Owed(room, members, mentions, message.SenderId, budgetAfter, withheldFromAgentId, fromHuddle);
+            this.Ledger.Record(message, room.Id, owed);
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogError(ex, "Recording the owed Turns of message {MessageId} in room {RoomId} failed; the message is posted without them.", message.Id, room.Id);
+        }
+    }
+
+    /// <summary>Removes the rows of a Message whose append failed, logging a failure rather than hiding the append's own.</summary>
+    /// <param name="messageId">The Message.</param>
+    private void ForgetOwedTurns(string messageId)
+    {
+        if (this.Ledger is null)
+        {
+            return;
+        }
+
+        try
+        {
+            this.Ledger.Forget(messageId);
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogError(ex, "Forgetting the owed Turns of message {MessageId} failed after its append failed.", messageId);
+        }
     }
 
     /// <summary>
@@ -426,6 +536,7 @@ public sealed partial class ChatService
         // same one now. Published outside the semaphore: delivery reaches the pipe, and holding a
         // Room's post lock across that would block every other writer to the Room.
         var mentions = MentionParser.Parse(last.Text, members, this.aliasSource.Aliases);
+        this.RecordOwedTurns(room, members, mentions, last, extended, null);
         this.events.PublishMessageRedelivered(new MessagePostedEvent(room, last, members, mentions, extended));
         var redelivered = new RedeliveryFacts(members, mentions, last.SenderId);
         return new BudgetExtension(ExtendResult.Granted, extended, redelivered);

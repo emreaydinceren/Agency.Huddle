@@ -61,8 +61,36 @@ public static class ServiceCollectionExtensions
             .AddProbeAndRenameServices()
             .AddStartupHostedServices()
             .AddBackgroundHostedServices()
+            .AddTurnQueueServices()
             .AddHelperServices()
             .AddFeatureModules();
+    }
+
+    /// <summary>Builds the <see cref="ChatService"/>, then sets the properties its public constructor cannot take because their types are internal.</summary>
+    /// <param name="sp">The provider the service's dependencies come from.</param>
+    /// <returns>The service.</returns>
+    private static ChatService BuildChatService(IServiceProvider sp)
+    {
+        ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
+        service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
+        service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
+        service.LastCatchUp = sp.GetRequiredService<LastCatchUpStore>();
+        service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
+        service.OwedTurns = sp.GetRequiredService<IOwedTurnPolicy>();
+        service.Ledger = sp.GetRequiredService<ITurnLedger>();
+        return service;
+    }
+
+    /// <summary>Registers the Turn Queue: one singleton behind each interface a later task adds, and the owed-Turn policy ChatService asks at post time.</summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddTurnQueueServices(this IServiceCollection services)
+    {
+        services.AddSingleton<TurnQueueStore>();
+        services.AddSingleton<Services.TurnQueue>();
+        services.AddSingleton<ITurnLedger>(sp => sp.GetRequiredService<Services.TurnQueue>());
+        services.AddSingleton<IOwedTurnPolicy, OwedTurnPolicy>();
+        return services;
     }
 
     /// <summary>Registers every Feature Module's services, in the catalog's order.</summary>
@@ -288,15 +316,7 @@ public static class ServiceCollectionExtensions
         // A factory because ChatService.TeamCatalog is an internal settable property (ITeamCatalog is
         // internal, the constructor public); ITeamCatalog is registered further down and resolved lazily.
         // ActivatorUtilities fills the constructor, so a new constructor parameter needs no edit here.
-        services.AddSingleton(sp =>
-        {
-            ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
-            service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
-            service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
-            service.LastCatchUp = sp.GetRequiredService<LastCatchUpStore>();
-            service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
-            return service;
-        });
+        services.AddSingleton(BuildChatService);
         services.TryAddSingleton<ToolCallLogWriter>();
         services.AddSingleton<Drafts>();
 
@@ -956,7 +976,6 @@ public static class ServiceCollectionExtensions
         // Scheduled Jobs: definitions in each owner's schedule.md, firing state in team.db, run once a minute like the cadences above.
         services.AddSingleton<Agency.Huddle.App.Jobs.JobStore>();
         services.AddSingleton<JobStateStore>();
-        services.AddSingleton<TurnQueueStore>();
         services.AddSingleton<JobRoomStore>();
         services.AddSingleton<Agency.Huddle.App.Jobs.IJobRunner, Agency.Huddle.App.Jobs.JobRunner>();
         services.AddSingleton<Agency.Huddle.App.Jobs.JobScheduler>();
