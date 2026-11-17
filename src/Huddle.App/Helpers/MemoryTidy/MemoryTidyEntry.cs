@@ -67,6 +67,8 @@ internal abstract record MemoryTidyEntry
     /// <param name="Copies">The backup copies, relative to the pass folder.</param>
     /// <param name="RemovedTokens">The numbers, dates and links a rewrite removed.</param>
     /// <param name="LeftBehind">Files the step meant to remove and could not.</param>
+    /// <param name="CountsAsDrop"><see langword="true"/> for a rewrite that removed most of a file (A-6): the list counts it as dropped, not tidied.</param>
+    /// <param name="Note">Words for the list when the step changed nothing the Human would call a change, such as <c>it is fine as it is</c> for a description that was kept; <see langword="null"/> otherwise.</param>
     internal sealed record StepApplied(
         int Step,
         string FolderKey,
@@ -74,13 +76,20 @@ internal abstract record MemoryTidyEntry
         IReadOnlyList<string> Removed,
         IReadOnlyList<string> Copies,
         IReadOnlyList<string> RemovedTokens,
-        IReadOnlyList<string> LeftBehind) : MemoryTidyEntry;
+        IReadOnlyList<string> LeftBehind,
+        bool CountsAsDrop,
+        string? Note) : MemoryTidyEntry;
 
-    /// <summary>Written when a check or a memory rule refused the step.</summary>
+    /// <summary>
+    /// Written when a check or a memory rule refused the step. A refusal can come before any <see cref="StepStarted"/>, so it names the step itself.
+    /// </summary>
     /// <param name="Step">The step's number.</param>
     /// <param name="FolderKey">The folder key.</param>
+    /// <param name="Kind">The step's kind (describe, rewrite, merge, drop).</param>
+    /// <param name="Files">The names of the files the step named.</param>
+    /// <param name="Reason">The Helper's reason for the step.</param>
     /// <param name="Refusal">The refusal.</param>
-    internal sealed record StepRefused(int Step, string FolderKey, string Refusal) : MemoryTidyEntry;
+    internal sealed record StepRefused(int Step, string FolderKey, string Kind, IReadOnlyList<string> Files, string Reason, string Refusal) : MemoryTidyEntry;
 
     /// <summary>Written when a file had changed since it was shown (<c>Stale</c>).</summary>
     /// <param name="Step">The step's number.</param>

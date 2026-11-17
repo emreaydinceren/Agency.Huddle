@@ -52,8 +52,8 @@ public sealed class MemoryTidyJournalTests : IDisposable
             new MemoryTidyEntry.FolderJudged("agent:Nova"),
             new MemoryTidyEntry.FolderNotJudged("huddle", "failed twice"),
             new MemoryTidyEntry.StepStarted(1, "agent:Nova", "merge", files, "Same fact twice"),
-            new MemoryTidyEntry.StepApplied(1, "agent:Nova", ["pricing.md"], ["price-list.md"], ["Agents/Nova/pricing.md"], ["3", "2026-01-02"], ["old.md"]),
-            new MemoryTidyEntry.StepRefused(2, "agent:Nova", "A-4: a number was lost"),
+            new MemoryTidyEntry.StepApplied(1, "agent:Nova", ["pricing.md"], ["price-list.md"], ["Agents/Nova/pricing.md"], ["3", "2026-01-02"], ["old.md"], true, "kept the description: it is fine as it is"),
+            new MemoryTidyEntry.StepRefused(2, "agent:Nova", "rewrite", ["contacts.md"], "Tighten", "A-4: a number was lost"),
             new MemoryTidyEntry.StepSkipped(3, "agent:Nova", "notes.md"),
             new MemoryTidyEntry.StepFaulted(4, "agent:Nova", "other.md"),
             new MemoryTidyEntry.StepSettled(5, "agent:Nova", false, ["a.md"], ["a.md"]),
@@ -81,7 +81,11 @@ public sealed class MemoryTidyJournalTests : IDisposable
         Assert.Equal(["Agents/Nova/pricing.md"], applied.Copies);
         Assert.Equal(["3", "2026-01-02"], applied.RemovedTokens);
         Assert.Equal(["old.md"], applied.LeftBehind);
-        Assert.Equal(new MemoryTidyEntry.StepRefused(2, "agent:Nova", "A-4: a number was lost"), read[6]);
+        Assert.True(applied.CountsAsDrop);
+        Assert.Equal("kept the description: it is fine as it is", applied.Note);
+        MemoryTidyEntry.StepRefused refused = Assert.IsType<MemoryTidyEntry.StepRefused>(read[6]);
+        Assert.Equal((2, "agent:Nova", "rewrite", "Tighten", "A-4: a number was lost"), (refused.Step, refused.FolderKey, refused.Kind, refused.Reason, refused.Refusal));
+        Assert.Equal(["contacts.md"], refused.Files);
         Assert.Equal(new MemoryTidyEntry.StepSkipped(3, "agent:Nova", "notes.md"), read[7]);
         Assert.Equal(new MemoryTidyEntry.StepFaulted(4, "agent:Nova", "other.md"), read[8]);
         MemoryTidyEntry.StepSettled settled = Assert.IsType<MemoryTidyEntry.StepSettled>(read[9]);

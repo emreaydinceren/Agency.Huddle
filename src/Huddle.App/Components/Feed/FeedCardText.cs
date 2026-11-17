@@ -43,7 +43,7 @@ internal static class FeedCardText
     public static FeedBadge BadgeOf(FeedSourceType? type) => type switch
     {
         FeedSourceType.TaskNeedsYou => new("check", Icons.Material.Filled.Check, "Needs you"),
-        FeedSourceType.DocumentChanged or FeedSourceType.TeamMemoryNotFiled or FeedSourceType.AgentsMdChangeSkipped => new("document", Icons.Material.Filled.Description, "Document"),
+        FeedSourceType.DocumentChanged or FeedSourceType.TeamMemoryNotFiled or FeedSourceType.AgentsMdChangeSkipped or FeedSourceType.MemoryTidied => new("document", Icons.Material.Filled.Description, "Document"),
         FeedSourceType.TaskAssignedToYou => new("person", Icons.Material.Filled.Person, "Assigned to you"),
         FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused or FeedSourceType.RoomMentionHeld => new("gauge", Icons.Material.Filled.Speed, "Limit reached"),
         FeedSourceType.HelperFailing => new("alert", Icons.Material.Outlined.ErrorOutline, "Failing"),

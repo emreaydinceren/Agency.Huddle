@@ -44,6 +44,7 @@ internal static class FeedSourceTypes
         FeedSourceType.RoomMentionHeld => "room-mention-held",
         FeedSourceType.TeamRenameStuck => "team-rename-stuck",
         FeedSourceType.AgentBrowserChanged => "agent-browser-changed",
+        FeedSourceType.MemoryTidied => "memory-tidied",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 
