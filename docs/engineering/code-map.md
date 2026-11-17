@@ -390,6 +390,7 @@ order decides per Token, independently.
 | `Acp/Tools/ListTeamsTool.cs` (`list_teams`) | Lists every Team's card and how many Requests are open in each backlog. |
 | `Acp/Tools/JobsTool.cs` (`jobs`) | Creates, lists, changes, pauses, deletes and runs Jobs. Offered to every Persona while Jobs are on; only the Chief of Staff may act on another's Job. |
 | `Jobs/` | Scheduled Jobs: `JobRecurrence` (the `when` grammar and next-run rule), `JobDocument` (`schedule.md`), `JobStore` (every owner's file, watched), `JobScheduler` (the once-a-minute hosted service), `JobRunner` (the Job Room and the Huddle post). `Data/JobStateStore.cs` and `Data/JobRoomStore.cs` hold the firing state and the Room link. ADR-0074. |
+| `Scheduling/` | `DueCheck`, the one pure due-time rule (on time, run late once, skip, give up, retry a failure) built for `JobScheduler` and the Memory Tidy timer, over `DueState`, `DuePolicy`, `DueDecision` and `DueRunResult`. No clock, no store. Turn Queue spec §8.1. |
 | `Components/Jobs/` | The Scheduled view: `ScheduledNav` (the Sidebar), `ScheduledPage` (`/scheduled`, `/scheduled/{id}`), `JobEditorDialog` over the pure `JobForm`, and `JobText` for every word shown. |
 | `Acp/Tools/AddEvidenceTool.cs` (`add_evidence`) | Adds an Evidence entry to a Task's timeline, the input the gates and Proof read. |
 | `Acp/Tools/AddCommentTool.cs` (`add_comment`) | Adds a comment to a Task's timeline; offered to every Agent, like `add_evidence`. |
