@@ -87,7 +87,7 @@ public sealed class LibraryRootStoreTests
 
         var store = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
 
-        var pinned = store.Roots[6];
+        var pinned = store.Roots[7];
         Assert.Equal("huddle-docs", pinned.Id);
         Assert.Equal(LibraryRootKind.Pinned, pinned.Kind);
         Assert.Equal(Path.GetFullPath(docsPath), pinned.FullPath);

@@ -7054,6 +7054,33 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### TIDYLINES-01 — A pass drops an old reported line and writes its list, with no call
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-01--a-pass-drops-an-old-reported-line-and-writes-its-list-with-no-call)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TIDYLINES-02 — A pass stopped by closing Huddle finishes one list, and nothing is posted twice
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TIDYTIME-01 — An overdue pass runs once, about five minutes after the next start
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TIDYTIME-02 — A When value that is not weekly or daily schedules nothing
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
 ## Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention
 
 Back to [the manual test script](../manual-tests.md).

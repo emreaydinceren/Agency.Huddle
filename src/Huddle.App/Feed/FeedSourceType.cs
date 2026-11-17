@@ -107,4 +107,7 @@ public enum FeedSourceType
 
     /// <summary>The Human switched an Agent's browser on or off.</summary>
     AgentBrowserChanged,
+
+    /// <summary>Memory Tidy changed topic files in a pass: a Notification, because files changed without the Human being asked.</summary>
+    MemoryTidied,
 }

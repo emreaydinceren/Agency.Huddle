@@ -48,6 +48,7 @@ internal static class FeedPayloads
         FeedSourceType.AgentConnectorsChanged => typeof(AgentConnectorsPayload),
         FeedSourceType.TeamRenameStuck => typeof(TeamRenameStuckPayload),
         FeedSourceType.AgentBrowserChanged => typeof(AgentBrowserPayload),
+        FeedSourceType.MemoryTidied => typeof(MemoryTidiedPayload),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

@@ -1412,8 +1412,12 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 | [REPORTED-04](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-) | 💰 | Active | #620 | not yet run by a person |
 | [REPORTED-05](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-) | 💰 | Active | #620 | not yet run by a person |
 | [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Active | #620 | not yet run by a person |
+| [TIDYLINES-01](memory-tidy.md#tidylines-01--a-pass-drops-an-old-reported-line-and-writes-its-list-with-no-call) |  | Active | #621 | not yet run by a person |
+| [TIDYLINES-02](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice) |  | Active | #621 | not yet run by a person |
 | [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Active | #620 | not yet run by a person |
 | [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Active | #620 | not yet run by a person |
+| [TIDYTIME-01](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start) |  | Active | #621 | not yet run by a person |
+| [TIDYTIME-02](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing) |  | Active | #621 | not yet run by a person |
 
 ## turn-queue
 

@@ -303,6 +303,13 @@ public sealed class PersonaRenameCascadeTests
 
         harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
 
+        // Same as the registered-Agent sibling below: the move can land after Update returns, so wait for it.
+        await Eventually.UntilAsync(
+            () => harness.AvatarStore.Get("ghostprime").Background is not null,
+            ct,
+            TestBudgets.Slow,
+            TimeSpan.FromMilliseconds(20),
+            describe: () => "The Avatar never moved to 'ghostprime'");
         Assert.Equal("#4a154b", harness.AvatarStore.Get("ghostprime").Background);
         Assert.Equal(Avatar.None, harness.AvatarStore.Get("ghost"));
     }
@@ -321,6 +328,15 @@ public sealed class PersonaRenameCascadeTests
 
         harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
 
+        // Update publishes its index synchronously only when the rescan could read every definition file; a file held
+        // open for a moment (a scanner on the just-written one) makes it keep the old index and leave the rename to the
+        // watcher's debounce, so the move lands a moment after Update returns. Wait for what is asserted.
+        await Eventually.UntilAsync(
+            () => harness.AvatarStore.Get("echoprime").Background is not null,
+            ct,
+            TestBudgets.Slow,
+            TimeSpan.FromMilliseconds(20),
+            describe: () => "The Avatar never moved to 'echoprime'");
         Assert.Equal("#123456", harness.AvatarStore.Get("echoprime").Background);
         Assert.Equal(Avatar.None, harness.AvatarStore.Get("echo"));
     }

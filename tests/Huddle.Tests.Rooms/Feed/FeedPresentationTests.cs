@@ -241,6 +241,51 @@ public sealed class FeedPresentationTests
         Assert.Null(FeedSummary.TeamOf(paused.Payload));
     }
 
+    private static FeedItem Tidied(int tidied, int dropped, int folders, bool stopped = false, bool first = false) =>
+        Item(FeedSourceType.MemoryTidied, new MemoryTidiedPayload("MemoryTidy", "Memory Tidy", "C:/data/MemoryBackups/2026-11-22/changes.md", tidied, dropped, folders, stopped, first), true);
+
+    /// <summary>Memory Tidy's item reads as the §7 sentences: plural, singular, only tidied and only dropped.</summary>
+    [Theory]
+    [InlineData(4, 2, 3, "Memory Tidy tidied 4 topic files and dropped 2 in 3 Memory folders")]
+    [InlineData(1, 0, 1, "Memory Tidy tidied 1 topic file in 1 Memory folder")]
+    [InlineData(0, 1, 1, "Memory Tidy dropped 1 topic file in 1 Memory folder")]
+    [InlineData(2, 0, 2, "Memory Tidy tidied 2 topic files in 2 Memory folders")]
+    [InlineData(0, 3, 1, "Memory Tidy dropped 3 topic files in 1 Memory folder")]
+    [InlineData(1, 2, 1, "Memory Tidy tidied 1 topic file and dropped 2 in 1 Memory folder")]
+    public void Of_MemoryTidied_ReadsAsTheSpecSentences(int tidied, int dropped, int folders, string expected)
+    {
+        FeedSummaryLine line = FeedSummary.Of(Tidied(tidied, dropped, folders));
+
+        Assert.Equal(expected, Flatten(line));
+        Assert.Null(line.Context);
+        Assert.True(line.OmitActor);
+        Assert.Equal(new FeedSegment(FeedSegmentKind.Helper, "Memory Tidy", "MemoryTidy"), line.Segments[0]);
+    }
+
+    /// <summary>A pass that stopped early and the first pass ever each add their second line.</summary>
+    [Fact]
+    public void Of_MemoryTidied_StoppedAndFirst_AddTheSecondLine()
+    {
+        const string StoppedLine = "It stopped before it had looked at every folder.";
+        const string FirstLine = "It runs once a week and keeps a copy of everything it changes. You can turn it off in Settings › Helpers.";
+
+        Assert.Equal(StoppedLine, FeedSummary.Of(Tidied(1, 0, 1, stopped: true)).Context);
+        Assert.Equal(FirstLine, FeedSummary.Of(Tidied(1, 0, 1, first: true)).Context);
+        Assert.Equal(StoppedLine + " " + FirstLine, FeedSummary.Of(Tidied(1, 0, 1, stopped: true, first: true)).Context);
+    }
+
+    /// <summary>The item opens the pass's list as a document, sits in the Helpers Category and says Tidied in its status line.</summary>
+    [Fact]
+    public void MemoryTidied_TargetCategoryAndStatus()
+    {
+        FeedItem item = Tidied(4, 2, 3);
+
+        Assert.Equal(new FeedTarget(FeedTargetKind.Document, "C:/data/MemoryBackups/2026-11-22/changes.md"), FeedTarget.Of(item));
+        Assert.Equal(FeedCategory.Helpers, FeedCategories.Of(FeedSourceType.MemoryTidied));
+        Assert.Equal("document", FeedCardText.BadgeOf(FeedSourceType.MemoryTidied).Name);
+        Assert.StartsWith("Tidied ", FeedSummary.StatusOf(item, Utc)?.Text, StringComparison.Ordinal);
+    }
+
     /// <summary>A skipped AGENTS.md edit wears the document badge and is counted as "AGENTS.md files".</summary>
     [Fact]
     public void AgentsMdChangeSkipped_BadgeNounAndSummary()

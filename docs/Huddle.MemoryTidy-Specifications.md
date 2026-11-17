@@ -1,6 +1,6 @@
 # Huddle.MemoryTidy — Design Specification
 
-**Date:** 2026-11-16 · **Status:** Proposed, not built. Revised twice on 2026-11-16, after an independent review and its
+**Date:** 2026-11-16 · **Status:** Proposed; slices 1 to 3 built 2026-11-16 (slice 1 merged as PR #653, slice 2 as PR #654), the rest not built. Revised twice on 2026-11-16, after an independent review and its
 re-review; the owner settled every open question the same day (§10, [Appendix B](#appendix-b-review-response)) · **Issues:** #620 (every
 Agent keeps `reported.md`) and #621 (a weekly tidy-up of Memory), both decided by the owner 2026-11-16 ·
 **Decision records:** two to write with the build, ADR-0094 and ADR-0095 (0091 to 0093 are taken by the Turn Queue
@@ -11,6 +11,8 @@ specification, [Huddle.TurnQueue-Specifications.md](Huddle.TurnQueue-Specificati
 [ADR-0077](adr/0077-a-running-agent-hears-of-a-huddle-wide-fact-through-a-turn-hook.md) · **Vocabulary:**
 [language.md](engineering/language.md) (**Memory**, **Huddle-wide Memory**, **Helper**, **Verdict**, **Feed item**,
 **Notification**, **Job**, **Turn**)
+
+*2026-11-16: slices 1 and 2 are built (`reported.md`; the safe write, the backup, the journal, the list and the runner). The Links form of §6.13 was settled by the build.*
 
 This is the design for two things that keep an Agent's Memory useful over months:
 
@@ -590,6 +592,8 @@ DueState    DueCheck.AfterRun(DueState state, DueRunResult result, Func<DateTime
 // DueDecision: NotDue | FirstSight | Run(Late) | Skip | GiveUp, each of the last four carrying what to save
 // DueRunResult: Ran | Held | Failed
 ```
+
+As the build found it, the real signature is `DueCheck.AfterRun(DueState saved, DueState beforeRun, DueRunResult result)`, not the one cited above. The build followed the code.
 
 Each decision carries the whole `DueState` to save, and `CadenceService` is left out (Turn Queue §8.1). **Owner
 decision 2026-11-16: `DueCheck` and its tests land first, as their own PR, before Turn Queue slice 1**, so this
@@ -1259,9 +1263,9 @@ frontmatter. Turn Memory Tidy off in Settings > Helpers.
 ## Nova
 
 - **Merged** `price-list.md` into `pricing.md`: the same price list in two files.
-  Now: `C:\Huddle\Agents\Nova\work\memory\pricing.md`. Copies: [[Agents/Nova/pricing.md]], [[Agents/Nova/price-list.md]]
+  Now: [`pricing.md`](?library=agents/Nova/work/memory/pricing.md). Copies: [[Agents/Nova/pricing.md]], [[Agents/Nova/price-list.md]]
 - **Shortened** `launch-plan.md`: launch.md, written later, moves the launch to January. Removed: 2026-10-01.
-  Now: `C:\Huddle\Agents\Nova\work\memory\launch-plan.md`. Copy: [[Agents/Nova/launch-plan.md]]
+  Now: [`launch-plan.md`](?library=agents/Nova/work/memory/launch-plan.md). Copy: [[Agents/Nova/launch-plan.md]]
 - **Dropped** `old-venue.md`: the venue was cancelled, per venue.md. Copy: [[Agents/Nova/old-venue.md]]
 - **Not changed** `contacts.md`: the new text holds 5550142, which is not in the files it replaces
 - **Kept the description** of `team.md`: it is fine as it is
@@ -1289,13 +1293,12 @@ Not tidied: failed twice; it will be tried again when it changes.
   one.`
 - **Links.** The Library resolves a link only inside one root ([Library](Huddle.Library-Specifications.md) line
   325: "Links across roots are not resolved"). So a copy, which is in the same root as the list, is a wikilink by
-  its path from the root. The live file is in the Agents or Teams root, so it is written as its absolute path in a
-  code span. **That second form is not proven for a document.** The rule that links an absolute path is written for
-  chat Messages and names Windows paths and `file:` URLs (the same spec, lines 346-348); the document viewer does
-  use the same renderer (`Components/Library/LibraryDocument.razor:185`), but the renderer's path rule was not read
-  for this page. So the test of MT-11 **renders `changes.md` in the document viewer, with the temp folder's own
-  absolute path**, which on Linux CI is a POSIX path such as `/tmp/…`. If a POSIX path is not linked there, the form
-  changes in that task, to whatever the viewer does resolve, and this paragraph with it.
+  its path from the root. The live file is in the Agents or Teams root. **Built (slice 2, 2026-11-16):** the
+  document viewer (`LibraryDocument.razor`, which calls the `MarkdownRenderer.ToHtml` overload that has no library)
+  does not link an absolute path in a code span, on Windows or on Linux. So the live file is a Markdown link to the
+  Library's own href, ``[`pricing.md`](?library=agents/Nova/work/memory/pricing.md)``, made from the file's root id
+  and its path under the root (`MemoryTidyList.LibraryHref`). The absolute path in a code span stays only as the
+  fallback for a file no root holds. The MT-11 test (`MemoryTidyListLinksTests`) pins both forms.
 - The text is a template in code: it is interface copy for the Human, not model-facing text.
 
 **The Feed item.** `FeedSourceType` gains `MemoryTidied` (wire name `memory-tidied`), posted once per pass by

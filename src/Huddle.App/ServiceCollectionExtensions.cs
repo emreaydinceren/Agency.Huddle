@@ -63,7 +63,29 @@ public static class ServiceCollectionExtensions
             .AddBackgroundHostedServices()
             .AddTurnQueueServices()
             .AddHelperServices()
-            .AddFeatureModules();
+            .AddFeatureModules()
+            .AddMemoryTidyServices();
+    }
+
+    /// <summary>
+    /// Registers Memory Tidy (spec §6.7). Last in the chain, so the runner, which finishes the passes a stop left open, starts after every other hosted service.
+    /// </summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddMemoryTidyServices(this IServiceCollection services)
+    {
+        services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyStateStore>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyPass, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyPass>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRecovery>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>());
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner>(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>());
+        services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyScheduleStore>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler>());
+        return services;
     }
 
     /// <summary>Builds the <see cref="ChatService"/>, then sets the properties its public constructor cannot take because their types are internal.</summary>
