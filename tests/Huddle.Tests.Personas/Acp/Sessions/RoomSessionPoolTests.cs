@@ -400,7 +400,8 @@ public sealed class RoomSessionPoolTests
         var roomA = HumanRoom("room-a");
         var roomB = GroupRoom("room-b", "Room B");
 
-        await using var runner = CreateRunner(server, persona, factory);
+        // Cross-Room arrival order is the subject, so A1 and A2 must stay two Turns: folding is off.
+        await using var runner = CreateRunner(server, persona, factory, new AcpOptions { FoldOneToOne = false });
         await server.HandshakeAsync(runner, [roomA, roomB], ct);
 
         var log = new List<string>();

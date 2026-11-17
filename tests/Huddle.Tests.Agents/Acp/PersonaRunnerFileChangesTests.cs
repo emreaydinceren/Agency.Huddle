@@ -426,8 +426,12 @@ public sealed class PersonaRunnerFileChangesTests
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
+        // One Message at a time: three quick one-to-one Human Messages would fold into one Turn (Turn Queue spec, section 6),
+        // and this test needs three Turns.
         await chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
+        _ = await Eventually.HistoryCountAsync(store, roomId, 2, ct);
         await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
+        _ = await Eventually.HistoryCountAsync(store, roomId, 4, ct);
         await chat.PostAsync(roomId, KnownIds.Human, "three", ct: ct);
 
         var history = await Eventually.HistoryCountAsync(store, roomId, 6, ct);

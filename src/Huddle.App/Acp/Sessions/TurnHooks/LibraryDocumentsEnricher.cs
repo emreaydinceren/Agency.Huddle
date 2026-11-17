@@ -32,6 +32,7 @@ internal sealed class LibraryDocumentsEnricher(LibraryDocumentCollector collecto
         IReadOnlyList<string> texts =
         [
             item.Text,
+            .. item.Folded?.Skip(1).Select(folded => folded.Text) ?? [],
             .. item.MissedMessages.Select(missed => missed.Text),
             .. item.Transcript?.Messages.Select(message => message.Text) ?? [],
         ];

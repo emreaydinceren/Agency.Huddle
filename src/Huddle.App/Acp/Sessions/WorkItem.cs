@@ -38,6 +38,8 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// For a re-sent Turn on a session's first Turn (Turn Queue spec 5.8): the Messages posted after the triggering Message, read in the same
 /// Catch-up and shown under <c>turn.laterHeader</c> after the Message; <see langword="null"/> for every other Turn.
 /// </param>
+/// <param name="Foldable">Two Members, one of them the Human, the Human the sender, and not a Command, with <c>Team:Acp:FoldOneToOne</c> on: the item may be answered together with the ones queued directly behind it (Turn Queue spec, section 6).</param>
+/// <param name="Folded">The Messages a Folded Turn answers, oldest first, the trigger included; <see langword="null"/> for one Message.</param>
 /// <param name="Redelivery">Why the server sent the triggering Message a second time, or <see langword="null"/> for a first delivery; <see cref="Agency.Huddle.Contracts.Redelivery.CutOff"/> adds the cut-off note to the prompt.</param>
 internal sealed record WorkItem(
     string RoomId,
@@ -55,4 +57,6 @@ internal sealed record WorkItem(
     string? ReferencedItems = null,
     IReadOnlyList<string>? HookBlocks = null,
     Agency.Huddle.Contracts.Redelivery? Redelivery = null,
-    IReadOnlyList<Agency.Huddle.Contracts.ChatMessage>? LaterMessages = null);
+    IReadOnlyList<Agency.Huddle.Contracts.ChatMessage>? LaterMessages = null,
+    bool Foldable = false,
+    IReadOnlyList<FoldedMessage>? Folded = null);

@@ -7234,6 +7234,22 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-05
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `a3142a11` | #617 | Group Room (Kai, Nova, Cleo). One Message asked Nova and Cleo each to run a ping. Stop on Nova's Draft closed Nova's row `stopped`; Huddle was then killed while Cleo's Turn ran. On start: "Picked up after a restart. 1 Message waiting for Cleo." Cleo answered once; Nova's stopped Turn did not come back. |
 
+### TURNQUEUE-06 — Quick Messages in a one-to-one get one reply 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-06--quick-messages-in-a-one-to-one-get-one-reply-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `3fd0745a` | #618 | By an agent acting as the Human, Nova on Sonnet / low, lane :5617. While Nova ran `ping -n 30`, three Messages were sent ("can you also name a fruit", "and a colour", "and a planet"); the notice read "Waiting for Nova: 3 Messages". After the ping summary Nova posted exactly one reply covering all three ("Fruit: mango. Colour: teal. Planet: Saturn."); all three rows `replied`. |
+
+### TURNQUEUE-07 — Quick Mentions in a group Room get one reply each 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-07--quick-mentions-in-a-group-room-get-one-reply-each-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `3fd0745a` | #618 | Group Room (Kai, Nova, Cleo). While Nova ran `ping -n 30` from a Mention, three Mentions of Nova were sent. After the ping summary Nova answered each in its own reply: Banana, Blue, Jupiter. No fold. |
+
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 
 File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-)

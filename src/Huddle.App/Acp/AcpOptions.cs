@@ -208,4 +208,11 @@ public sealed class AcpOptions
     /// second default.
     /// </summary>
     public IReadOnlyList<string>? HiddenModes { get; set; }
+
+    /// <summary>
+    /// Whether Messages the Human sent in a one-to-one Room while a Turn was running are answered as one
+    /// Folded Turn when the next Turn starts (Turn Queue spec section 6), bound from <c>Team:Acp:FoldOneToOne</c>.
+    /// <see langword="false"/> runs one Turn per Message, as before.
+    /// </summary>
+    public bool FoldOneToOne { get; set; } = true;
 }

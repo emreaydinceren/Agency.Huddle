@@ -139,14 +139,14 @@ internal static class TurnPromptFramer
         if (item.Transcript is { Messages.Count: > 0 } transcript)
         {
             TurnPromptFramer.AppendTranscriptBlock(builder, room, transcript, prompts);
-            builder.Append(TurnPromptFramer.RenderMessage(prompts, room, item.SenderName, item.Text));
+            TurnPromptFramer.AppendTrigger(builder, room, item, prompts);
             return builder.ToString();
         }
 
         var ownPostLines = item.OwnPostLines ?? [];
         if (item.MissedMessages.Count == 0 && ownPostLines.Count == 0)
         {
-            builder.Append(TurnPromptFramer.RenderMessage(prompts, room, item.SenderName, item.Text));
+            TurnPromptFramer.AppendTrigger(builder, room, item, prompts);
             return builder.ToString();
         }
 
@@ -199,7 +199,35 @@ internal static class TurnPromptFramer
         }
 
         builder.Append('\n');
-        builder.Append(TurnPromptFramer.RenderMessage(prompts, room, item.SenderName, item.Text));
+        TurnPromptFramer.AppendTrigger(builder, room, item, prompts);
+    }
+
+    /// <summary>
+    /// Writes what the Turn answers: the folded block for two or more Messages (<c>turn.foldedHeader</c>, then one <c>turn.foldedLine</c> each),
+    /// otherwise the one <c>turn.message</c> line, byte for byte as before.
+    /// </summary>
+    /// <param name="builder">The prompt being built.</param>
+    /// <param name="room">The Room label.</param>
+    /// <param name="item">The item being prompted.</param>
+    /// <param name="prompts">Where the prompt templates come from.</param>
+    private static void AppendTrigger(StringBuilder builder, string room, WorkItem item, IPromptSource prompts)
+    {
+        if (item.Folded is not { Count: > 1 } folded)
+        {
+            builder.Append(TurnPromptFramer.RenderMessage(prompts, room, item.SenderName, item.Text));
+            return;
+        }
+
+        builder.Append(prompts.Render(
+            "turn.foldedHeader",
+            new Dictionary<string, string> { ["{{roomLabel}}"] = room, ["{{count}}"] = folded.Count.ToString(CultureInfo.InvariantCulture) }));
+        foreach (FoldedMessage message in folded)
+        {
+            builder.Append('\n');
+            builder.Append(prompts.Render(
+                "turn.foldedLine",
+                new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
+        }
     }
 
     /// <summary>

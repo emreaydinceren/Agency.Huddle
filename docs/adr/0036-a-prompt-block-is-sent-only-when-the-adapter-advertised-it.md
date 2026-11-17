@@ -5,6 +5,9 @@ date: 2026-10-01
 
 # A Prompt block is sent only when the Adapter advertised it, only from the Message that started the Turn
 
+> **Amended by [ADR-0092](0092-a-one-to-one-folds-waiting-messages.md).** A Folded Turn has several Messages that
+> started it; its blocks come from each of them, each path once.
+
 A Turn's prompt used to be one text block, and a Library file a Message names reached an Agent as a path
 line. An image cannot be handed to a model by a path alone, so a Turn can now carry **Prompt blocks**:
 an ACP `image` block for a named image and, for an Adapter with no file tools, a document's text as an

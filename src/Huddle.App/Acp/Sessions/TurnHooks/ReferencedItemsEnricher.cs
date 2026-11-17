@@ -41,8 +41,11 @@ internal sealed class ReferencedItemsEnricher(ReferenceExpander expander, Func<s
     public async Task<WorkItem> EnrichAsync(TurnEnriching turn, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(turn);
+        string triggerText = turn.Item.Folded is { Count: > 1 } folded
+            ? string.Join('\n', folded.Select(message => message.Text))
+            : turn.Item.Text;
         string? header = await expander
-            .ExpandAsync(turn.Item.Text, turn.Host?.Profile.UsesToolNamePrefix ?? true, isChiefOfStaff(turn.PersonaName), cancellationToken)
+            .ExpandAsync(triggerText, turn.Host?.Profile.UsesToolNamePrefix ?? true, isChiefOfStaff(turn.PersonaName), cancellationToken)
             .ConfigureAwait(false);
         return turn.Item with { ReferencedItems = header };
     }

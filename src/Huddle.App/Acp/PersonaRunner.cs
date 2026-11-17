@@ -864,6 +864,16 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
     }
 
+    /// <summary>
+    /// Whether an ordinary Message may be answered together with the Messages queued behind it (Turn Queue spec, section 6.2): two Members,
+    /// the Human the sender, and <c>Team:Acp:FoldOneToOne</c> on. A Command never reaches this: its item is built before.
+    /// </summary>
+    /// <param name="posted">The delivered Message.</param>
+    /// <param name="foldOneToOne">The <c>Team:Acp:FoldOneToOne</c> switch.</param>
+    /// <returns><see langword="true"/> for the Human's Message in a one-to-one Room with folding on.</returns>
+    internal static bool IsFoldable(MessagePosted posted, bool foldOneToOne) =>
+        foldOneToOne && posted.Members.Count == 2 && SenderIsHuman(posted);
+
     /// <summary>Queues the Turn for a Message the Persona decided to reply to, or its command prompt.</summary>
     /// <param name="posted">The delivered Message.</param>
     private void EnqueueReply(MessagePosted posted)
@@ -899,7 +909,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             TriggerMessageId: posted.Message.Id,
             OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null,
             Team: posted.Team,
-            Redelivery: posted.Redelivery);
+            Redelivery: posted.Redelivery,
+            Foldable: IsFoldable(posted, this.options.Acp.FoldOneToOne));
         var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
         // Never call the agent from the read loop: hand the item to the pool,

@@ -1191,8 +1191,67 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             return;
         }
 
-        await this.ProcessWorkItemAsync(head.Item, head.Sequence, ct).ConfigureAwait(false);
+        await this.ProcessWorkItemAsync(this.FoldBehind(head), head.Sequence, ct).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Folded Turns (Turn Queue spec, section 6): when the admitted head is Foldable, takes every item directly behind it in the same Room
+    /// that is also an ordinary Foldable Message above this Room's Stop mark, up to the first that is not, and returns one item that answers
+    /// them all. Runs after the lazy open, so a failed open drops the head alone.
+    /// </summary>
+    /// <param name="head">The admitted head, already dequeued.</param>
+    /// <returns>The head's own item when nothing folds in, otherwise an item that lists every folded Message, oldest first, and keeps the cut-off note when any of them is a cut-off re-send.</returns>
+    private WorkItem FoldBehind(QueuedWork head)
+    {
+        WorkItem first = head.Item;
+        if (!first.Foldable || first.Kind != WorkItemKind.Message || first.TriggerMessageId is null)
+        {
+            return first;
+        }
+
+        List<WorkItem> taken = [first];
+        lock (this.gate)
+        {
+            while (this.queue.Count > 0 && this.CanFoldIn(this.queue.Peek(), first.RoomId) && this.itemAvailable.Wait(0, this.runToken))
+            {
+                taken.Add(this.queue.Dequeue().Item);
+            }
+
+            foreach (WorkItem extra in taken.Skip(1))
+            {
+                this.RememberEndedTrigger(extra.TriggerMessageId);
+            }
+        }
+
+        if (taken.Count == 1)
+        {
+            return first;
+        }
+
+        List<CaughtUpMessage> missed = [.. taken.SelectMany(item => item.MissedMessages)];
+        List<string> postLines = [.. taken.SelectMany(item => item.OwnPostLines ?? [])];
+        bool anyCutOff = taken.Exists(item => item.Redelivery == Agency.Huddle.Contracts.Redelivery.CutOff);
+        return first with
+        {
+            Redelivery = anyCutOff ? Agency.Huddle.Contracts.Redelivery.CutOff : first.Redelivery,
+            MissedMessages = missed,
+            OwnPostLines = postLines.Count > 0 ? postLines : null,
+            Folded = [.. taken.Select(item => new FoldedMessage(item.TriggerMessageId ?? string.Empty, item.SenderName, item.Text, null))],
+        };
+    }
+
+    // Caller holds gate. Wait(0) is taken last: it consumes the count that Enqueue released for the item, and only an item that does fold may consume it.
+    private bool CanFoldIn(QueuedWork next, string roomId) =>
+        next.Item is { Foldable: true, Kind: WorkItemKind.Message, TriggerMessageId: not null }
+        && string.Equals(next.Item.RoomId, roomId, StringComparison.Ordinal)
+        && !this.IsStoppedAtOrBefore(roomId, next.Sequence);
+
+    /// <summary>The ids the server's rows for a Turn carry: every folded Message, oldest first, or the trigger alone.</summary>
+    /// <param name="item">The Turn's item.</param>
+    /// <param name="triggerId">The item's trigger id.</param>
+    /// <returns>The ids an ack or a reply names.</returns>
+    private static string[] TriggerIds(WorkItem item, string triggerId) =>
+        item.Folded is { Count: > 0 } folded ? [.. folded.Select(message => message.Id)] : [triggerId];
 
     /// <summary>
     /// Waits for the scheduler to admit <paramref name="head"/>; on shutdown withdraws it before
@@ -1721,7 +1780,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         try
         {
-            await this.owner.WriteAsync(new QueueAck(item.RoomId, [triggerId], kind, replyMessageId, outcome), ct).ConfigureAwait(false);
+            await this.owner.WriteAsync(new QueueAck(item.RoomId, TriggerIds(item, triggerId), kind, replyMessageId, outcome), ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
         {
@@ -1807,7 +1866,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         if (postText is not null)
         {
             await this.ReleaseHeldTailAsync(run, SilentReply.Strip(outcome.Text), ct).ConfigureAwait(false);
-            await this.owner.WriteAsync(new PostMessage(item.RoomId, run.MessageId, postText, InReplyTo: item.TriggerMessageId is { } triggerId ? [triggerId] : null), ct).ConfigureAwait(false);
+            await this.owner.WriteAsync(new PostMessage(item.RoomId, run.MessageId, postText, InReplyTo: item.TriggerMessageId is { } triggerId ? TriggerIds(item, triggerId) : null), ct).ConfigureAwait(false);
             run.ReplyPosted = true;
         }
 
@@ -2080,7 +2139,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             && run.Item.Kind != WorkItemKind.Command
             && !ct.IsCancellationRequested && (run.PromptReturned || run.Turn.SawActivity))
         {
-            var lastMessageId = run.ReplyPosted ? run.MessageId : run.Item.TriggerMessageId;
+            var lastMessageId = run.ReplyPosted ? run.MessageId : run.Item.Folded?[^1].Id ?? run.Item.TriggerMessageId;
 
             // The meter's latest reading rides along, so a restart can show it again before this
             // Room's session reopens. Read after the Turn's usage updates, which precede its outcome.
