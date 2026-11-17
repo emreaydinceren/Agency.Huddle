@@ -5,9 +5,12 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Teams;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
@@ -458,6 +461,82 @@ public sealed class PersonaRenameCascadeTests
         Assert.Null(harness.MemoryTidy.GetState("agent:echo"));
     }
 
+    /// <summary>The text of a Team's <c>_team.md</c> in the form the Team file writer composes, naming the given manager.</summary>
+    /// <param name="manager">The manager's Name.</param>
+    private static string TeamFileText(string manager) =>
+        new TeamFile(new VersionedRef("web", "1.2.0"), manager, null, "Ship the site", "Notes stay.\n").Compose();
+
+    /// <summary>Renaming a Team's manager rewrites <c>manager:</c> in its <c>_team.md</c> to the new Name, and every other line is left as it was.</summary>
+    [Fact]
+    public async Task Rename_TeamManager_RewritesManagerLine_AndKeepsTheRestOfTheFile()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        string original = TeamFileText("Grant");
+        using var harness = await CreateHarnessAsync(dir, ct, teamFiles: new Dictionary<string, string> { ["Alpha"] = original });
+        harness.PersonaStore.Add(TestPersonas.Identity("Grant", teams: ["Alpha"]), "You manage.");
+
+        harness.PersonaStore.Update("Grant", TestPersonas.FrontmatterText("Gwen", "You manage.", teams: ["Alpha"]), model: null, effort: null, workMode: null);
+
+        string path = Path.Combine(dir.Options().Value.DataDir, dir.Options().Value.Teams.Dir, "Alpha", "_team.md");
+        Assert.Equal(TeamFileText("Gwen"), await File.ReadAllTextAsync(path, ct));
+        Assert.NotEqual(original, TeamFileText("Gwen"));
+    }
+
+    /// <summary>The manager is rewritten with no Agent row at all (Adapters off), which is the case the cascade placement above the early return exists for.</summary>
+    [Fact]
+    public async Task Rename_TeamManager_WithNoAgentRow_StillRewritesManagerLine()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct, teamFiles: new Dictionary<string, string> { ["Alpha"] = TeamFileText("Grant") });
+        harness.PersonaStore.Add(TestPersonas.Identity("grant", teams: ["Alpha"]), "You manage.");
+        Assert.Null(harness.TeamDirectory.FindUserByName("grant"));
+
+        harness.PersonaStore.Update("grant", TestPersonas.FrontmatterText("gwen", "You manage.", teams: ["Alpha"]), model: null, effort: null, workMode: null);
+
+        string path = Path.Combine(dir.Options().Value.DataDir, dir.Options().Value.Teams.Dir, "Alpha", "_team.md");
+        Assert.Equal(TeamFileText("gwen"), await File.ReadAllTextAsync(path, ct));
+    }
+
+    /// <summary>A Team managed by someone else, and a rename of a Persona who manages nobody, leave every <c>_team.md</c> untouched.</summary>
+    [Fact]
+    public async Task Rename_NonManager_TouchesNoTeamFile()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        string original = TeamFileText("Grant");
+        using var harness = await CreateHarnessAsync(dir, ct, teamFiles: new Dictionary<string, string> { ["Alpha"] = original });
+        harness.PersonaStore.Add(TestPersonas.Identity("Grant", teams: ["Alpha"]), "You manage.");
+        harness.PersonaStore.Add(TestPersonas.Identity("Hana", teams: ["Alpha"]), "You help.");
+        string path = Path.Combine(dir.Options().Value.DataDir, dir.Options().Value.Teams.Dir, "Alpha", "_team.md");
+        DateTime before = File.GetLastWriteTimeUtc(path);
+
+        harness.PersonaStore.Update("Hana", TestPersonas.FrontmatterText("Hanna", "You help.", teams: ["Alpha"]), model: null, effort: null, workMode: null);
+
+        Assert.Equal(original, await File.ReadAllTextAsync(path, ct));
+        Assert.Equal(before, File.GetLastWriteTimeUtc(path));
+    }
+
+    /// <summary>After the manager's rename the Team catalog names the new manager at once, so Team Memory access follows the Name: the new Name is a manager, the old one is not.</summary>
+    [Fact]
+    public async Task Rename_TeamManager_TeamMemoryAccessFollowsTheNewName()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct, teamFiles: new Dictionary<string, string> { ["Alpha"] = TeamFileText("Grant") });
+        harness.PersonaStore.Add(TestPersonas.Identity("Grant", teams: ["Alpha"]), "You manage.");
+        TeamMemoryAccess access = TeamMemoryAccess.ForPersonas(harness.Catalog!, harness.PersonaStore);
+        Assert.Equal("Grant", access.FindManager("Grant"));
+
+        harness.PersonaStore.Update("Grant", TestPersonas.FrontmatterText("Gwen", "You manage.", teams: ["Alpha"]), model: null, effort: null, workMode: null);
+
+        Assert.Equal("Gwen", access.FindManager("Gwen"));
+        Assert.Null(access.FindManager("Grant"));
+        TeamSummary team = Assert.IsType<TeamSummary>(access.Find("Alpha"));
+        Assert.True(access.CanWrite("Gwen", team));
+    }
+
     /// <summary>Removing a Persona deletes its Memory Tidy state and file rows.</summary>
     [Fact]
     public async Task Removed_DeletesMemoryTidyRows()
@@ -879,8 +958,19 @@ public sealed class PersonaRenameCascadeTests
     /// <param name="ct">Cancels the Human seed and Team Directory initialisation.</param>
     /// <param name="cascadeLogger">A logger to observe the cascade's warnings, or <see langword="null"/> for a no-op logger.</param>
     /// <param name="timeProvider">Drives the Agent folder move's retry backoff, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</param>
-    private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null, TimeProvider? timeProvider = null)
+    /// <param name="teamFiles">Team name to <c>_team.md</c> text, written under the Teams root before the stores start; non-null also wires a real Team catalog and Team file writer into the cascade.</param>
+    private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null, TimeProvider? timeProvider = null, IReadOnlyDictionary<string, string>? teamFiles = null)
     {
+        if (teamFiles is not null)
+        {
+            foreach ((string team, string text) in teamFiles)
+            {
+                string folder = Path.Combine(dir.Options().Value.DataDir, dir.Options().Value.Teams.Dir, team);
+                Directory.CreateDirectory(folder);
+                await File.WriteAllTextAsync(Path.Combine(folder, "_team.md"), text, ct);
+            }
+        }
+
         var teamDirectory = await dir.CreateDirectoryAsync(ct);
 
         var personaStore = dir.CreatePersonaStore();
@@ -904,6 +994,16 @@ public sealed class PersonaRenameCascadeTests
         var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(dir.Options()), new RoomSpendStore(dir.Options()));
         var commands = new PersonaCommands(NullLogger<PersonaCommands>.Instance);
         var memoryTidy = new MemoryTidyStateStore(dir.Options());
+        TeamCatalog? catalog = teamFiles is null ? null : new TeamCatalog(personaStore, taskStore);
+        TeamFolderProvisioner? teamFolders = null;
+        if (catalog is not null)
+        {
+            AgentPaths paths = new(dir.Options());
+            LibraryRootStore roots = new(dir.Options(), paths, NullLogger<LibraryRootStore>.Instance);
+            LibraryPathResolver resolver = new(roots, dir.Options(), NullLogger<LibraryPathResolver>.Instance);
+            teamFolders = new TeamFolderProvisioner(personaStore, roots, resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog, taskStore);
+        }
+
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
@@ -920,7 +1020,9 @@ public sealed class PersonaRenameCascadeTests
             spend: spend,
             commands: commands,
             lastCatchUp: lastCatchUp,
-            memoryTidy: memoryTidy);
+            memoryTidy: memoryTidy,
+            teamFolders: teamFolders,
+            teams: catalog);
 
         await cascade.StartAsync(ct);
 
@@ -941,6 +1043,7 @@ public sealed class PersonaRenameCascadeTests
             FolderMoves = folderMoves,
             Spend = spend,
             Commands = commands,
+            Catalog = catalog,
         };
     }
 
@@ -1237,6 +1340,9 @@ public sealed class PersonaRenameCascadeTests
         /// <summary>The Memory Tidy state and file tables the cascade moves and deletes rows in.</summary>
         public required MemoryTidyStateStore MemoryTidy { get; init; }
 
+        /// <summary>The real Team catalog, or <see langword="null"/> when the harness was built without Team files.</summary>
+        public TeamCatalog? Catalog { get; init; }
+
         /// <summary>The <see cref="AgentFolderMoves"/> gate the cascade signals around an Agent folder move, so a test can await <see cref="AgentFolderMoves.WhenSettledAsync"/> the same way a host starting mid-rename would.</summary>
         public required AgentFolderMoves FolderMoves { get; init; }
 
@@ -1244,6 +1350,7 @@ public sealed class PersonaRenameCascadeTests
         public void Dispose()
         {
             this.Cascade.Dispose();
+            this.Catalog?.Dispose();
             this.TaskService.Dispose();
             this.TaskStore.Dispose();
             this.ViewStore.Dispose();
