@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Questions;
 
@@ -24,6 +25,7 @@ public sealed class QuestionStore
         static card => card.Id,
         static card => card.AskerAgentId);
 
+    private readonly Lock gate = new();
     private readonly RoomEvents events;
     private readonly WaitingQuestionStore? persisted;
     private readonly ILogger logger;
@@ -43,7 +45,7 @@ public sealed class QuestionStore
     {
         this.events = events;
         this.persisted = persisted;
-        this.logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<QuestionStore>.Instance;
+        this.logger = logger ?? NullLogger<QuestionStore>.Instance;
 
         if (persisted is not null)
         {
@@ -69,11 +71,18 @@ public sealed class QuestionStore
     /// <returns>What happened, and, only when refused, the card that was already waiting.</returns>
     internal PendingPut<PendingQuestions> TryPut(PendingQuestions pending)
     {
-        PendingPut<PendingQuestions> put = this.cards.TryPut(pending);
+        PendingPut<PendingQuestions> put;
+        lock (this.gate)
+        {
+            put = this.cards.TryPut(pending);
+            if (put.Result is not PendingPutResult.Refused)
+            {
+                this.Persist(static (store, card) => store.Put(card), pending);
+            }
+        }
 
         if (put.Result is not PendingPutResult.Refused)
         {
-            this.Persist(static (store, card) => store.Put(card), pending);
             this.events.PublishQuestionsChanged(pending.RoomId);
         }
 
@@ -91,11 +100,18 @@ public sealed class QuestionStore
     /// <returns>The removed card, or <see langword="null"/> when nothing matched.</returns>
     internal PendingQuestions? TryTake(string roomId, string id)
     {
-        PendingQuestions? taken = this.cards.TryTake(roomId, id);
+        PendingQuestions? taken;
+        lock (this.gate)
+        {
+            taken = this.cards.TryTake(roomId, id);
+            if (taken is not null)
+            {
+                this.Persist(static (store, room) => store.Delete(room), roomId);
+            }
+        }
 
         if (taken is not null)
         {
-            this.Persist(static (store, room) => store.Delete(room), roomId);
             this.events.PublishQuestionsChanged(roomId);
         }
 
@@ -110,11 +126,18 @@ public sealed class QuestionStore
     /// <returns><see langword="true"/> when a card was removed.</returns>
     internal bool Drop(string roomId)
     {
-        bool removed = this.cards.Drop(roomId);
+        bool removed;
+        lock (this.gate)
+        {
+            removed = this.cards.Drop(roomId);
+            if (removed)
+            {
+                this.Persist(static (store, room) => store.Delete(room), roomId);
+            }
+        }
 
         if (removed)
         {
-            this.Persist(static (store, room) => store.Delete(room), roomId);
             this.events.PublishQuestionsChanged(roomId);
         }
 
@@ -132,7 +155,7 @@ public sealed class QuestionStore
                 _ = this.cards.TryPut(card);
             }
         }
-        catch (SqliteException ex)
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
         {
             this.logger.LogWarning(ex, "Could not load the waiting Question cards; starting without them.");
         }
@@ -153,7 +176,7 @@ public sealed class QuestionStore
         {
             write(this.persisted, argument);
         }
-        catch (SqliteException ex)
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
         {
             this.logger.LogWarning(ex, "Could not update the stored Question card; the waiting card is kept in memory only.");
         }

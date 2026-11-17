@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Agency.Huddle.App.Questions;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Data;
@@ -27,7 +28,7 @@ internal sealed class WaitingQuestionStore
 
     private static readonly JsonSerializerOptions Json = new()
     {
-        Converters = { new JsonStringEnumConverter() },
+        Converters = { new JsonStringEnumConverter(allowIntegerValues: false) },
     };
 
     private readonly string connectionString;
@@ -40,7 +41,7 @@ internal sealed class WaitingQuestionStore
     {
         ArgumentNullException.ThrowIfNull(options);
         this.connectionString = SqliteTable.Open(options.Value, DdlCreateWaitingQuestions);
-        this.logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<WaitingQuestionStore>.Instance;
+        this.logger = logger ?? NullLogger<WaitingQuestionStore>.Instance;
     }
 
     /// <summary>Stores a Room's waiting card, replacing the row that was there.</summary>
@@ -83,39 +84,78 @@ internal sealed class WaitingQuestionStore
         _ = command.ExecuteNonQuery();
     }
 
-    /// <summary>Reads every stored card. A row that cannot be parsed is skipped and logged.</summary>
+    /// <summary>
+    /// Reads every stored card. Rows for a Room that no longer exists or is archived are deleted first (when this
+    /// database has the Room tables), and a row that cannot be parsed is logged once, skipped and deleted.
+    /// </summary>
     /// <returns>One card per readable row.</returns>
     public IReadOnlyList<PendingQuestions> LoadAll()
     {
         List<PendingQuestions> cards = [];
+        List<string> corrupt = [];
 
         using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
-        using SqliteCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT room_id, card_id, asker_agent_id, asker_name, questions_json, asked_utc FROM waiting_questions;";
-        using SqliteDataReader reader = command.ExecuteReader();
-        while (reader.Read())
+        DeleteStaleRooms(connection);
+        using (SqliteCommand command = connection.CreateCommand())
         {
-            string roomId = reader.GetString(0);
-            try
+            command.CommandText = "SELECT room_id, card_id, asker_agent_id, asker_name, questions_json, asked_utc FROM waiting_questions;";
+            using SqliteDataReader reader = command.ExecuteReader();
+            while (reader.Read())
             {
-                List<Question>? questions = JsonSerializer.Deserialize<List<Question>>(reader.GetString(4), Json);
-                if (questions is null or { Count: 0 })
-                {
-                    throw new JsonException("The stored Questions are empty.");
-                }
-
-                DateTimeOffset asked = DateTimeOffset.Parse(
-                    reader.GetString(5),
-                    CultureInfo.InvariantCulture,
-                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
-                cards.Add(new PendingQuestions(reader.GetString(1), roomId, reader.GetString(2), reader.GetString(3), questions, asked));
-            }
-            catch (Exception ex) when (ex is JsonException or FormatException or NotSupportedException)
-            {
-                this.logger.LogWarning(ex, "Skipping the stored Question card for room {RoomId}: it cannot be read.", roomId);
+                this.ReadRow(reader, cards, corrupt);
             }
         }
 
+        foreach (string roomId in corrupt)
+        {
+            using SqliteCommand delete = connection.CreateCommand();
+            delete.CommandText = "DELETE FROM waiting_questions WHERE room_id = $room;";
+            _ = delete.Parameters.AddWithValue("$room", roomId);
+            _ = delete.ExecuteNonQuery();
+        }
+
         return cards;
+    }
+
+    private static void DeleteStaleRooms(SqliteConnection connection)
+    {
+        using SqliteCommand probe = connection.CreateCommand();
+        probe.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('rooms', 'archived_rooms');";
+        if (Convert.ToInt32(probe.ExecuteScalar(), CultureInfo.InvariantCulture) != 2)
+        {
+            return;
+        }
+
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = """
+            DELETE FROM waiting_questions
+            WHERE room_id NOT IN (SELECT id FROM rooms) OR room_id IN (SELECT room_id FROM archived_rooms);
+            """;
+        _ = command.ExecuteNonQuery();
+    }
+
+    private void ReadRow(SqliteDataReader reader, List<PendingQuestions> cards, List<string> corrupt)
+    {
+        string roomId = reader.GetString(0);
+        try
+        {
+            List<Question?>? stored = JsonSerializer.Deserialize<List<Question?>>(reader.GetString(4), Json);
+            if (stored is null or { Count: 0 } || stored.Exists(static q => q is null || q.Text is null || q.Options is null))
+            {
+                throw new JsonException("The stored Questions are empty or incomplete.");
+            }
+
+            List<Question> questions = [.. stored.OfType<Question>()];
+            DateTimeOffset asked = DateTimeOffset.Parse(
+                reader.GetString(5),
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+            cards.Add(new PendingQuestions(reader.GetString(1), roomId, reader.GetString(2), reader.GetString(3), questions, asked));
+        }
+        catch (Exception ex) when (ex is JsonException or FormatException or NotSupportedException)
+        {
+            this.logger.LogWarning(ex, "Dropping the stored Question card for room {RoomId}: it cannot be read.", roomId);
+            corrupt.Add(roomId);
+        }
     }
 }
