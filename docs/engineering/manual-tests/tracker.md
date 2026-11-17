@@ -1406,16 +1406,16 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [REPORTED-01](memory-tidy.md#reported-01--a-report-in-a-one-to-one-room-starts-the-file-with-one-line-) | 💰 | Fail |  | run 2026-11-17, `c00111ec`, see the Run log |
-| [REPORTED-02](memory-tidy.md#reported-02--a-job-asking-for-an-unchanged-item-gets-one-line-and-no-new-entry-) | 💰 | Fail |  | run 2026-11-17, `c00111ec`, see the Run log |
-| [REPORTED-03](memory-tidy.md#reported-03--a-changed-fact-is-reported-as-a-change-on-a-new-line-) | 💰 | Pass | #620 | run 2026-11-17, `f03cfa66`, see the Run log |
-| [REPORTED-04](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-) | 💰 | Pass | #620 | run 2026-11-17, `c00111ec`, see the Run log |
-| [REPORTED-05](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-) | 💰 | Pass | #620 | run 2026-11-17, `c00111ec`, see the Run log |
-| [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Pass | #620 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [REPORTED-01](memory-tidy.md#reported-01--a-report-in-a-one-to-one-room-starts-the-file-with-one-line-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
+| [REPORTED-02](memory-tidy.md#reported-02--a-job-asking-for-an-unchanged-item-gets-one-line-and-no-new-entry-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
+| [REPORTED-03](memory-tidy.md#reported-03--a-changed-fact-is-reported-as-a-change-on-a-new-line-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
+| [REPORTED-04](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
+| [REPORTED-05](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
+| [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
 | [TIDYLINES-01](memory-tidy.md#tidylines-01--a-pass-drops-an-old-reported-line-and-writes-its-list-with-no-call) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
 | [TIDYLINES-02](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
-| [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Fail |  | run 2026-11-17, `c00111ec`, see the Run log |
-| [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Pass | #620 | run 2026-11-17, `f03cfa66` (first run at `c00111ec` failed, fixed), see the Run log |
+| [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
+| [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Pass | #660 | re-run 2026-11-17, `65359c6b` (#660), see the Run log |
 | [TIDYTIME-01](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
 | [TIDYTIME-02](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
 | [MEMTIDY-01](memory-tidy.md#memtidy-01--a-seeded-folder-is-tidied-with-a-copy-a-list-and-one-notification-) | 💰 | Fail |  | run 2026-11-17, `f03cfa66`, see the Run log |
