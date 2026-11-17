@@ -4,7 +4,7 @@
 #
 #   sh installer/tests/smoke.sh <release-dir> [KEEP_SANDBOX=1 in the environment keeps the sandbox]
 #
-# <release-dir> holds huddle-osx-arm64.tar.gz / huddle-osx-x64.tar.gz and SHA256SUMS. It is built
+# <release-dir> holds huddle-osx-arm64.tar.gz and SHA256SUMS (Apple Silicon only). It is built
 # with installer/build-release.sh when the archive for this Mac is missing (dotnet publish, a few
 # minutes). The release is installed into a temp sandbox: HOME points into it, so the real
 # ~/Applications and ~/.local/bin are never touched; --install-root and --data-root are under it too.
@@ -350,7 +350,7 @@ trap 'exit 143' TERM
 # ---- setup ----------------------------------------------------------------------------------
 
 # Same decision as install.sh (prereq_check_cpu): a Rosetta terminal on Apple Silicon reports x86_64,
-# so sysctl hw.optional.arm64 = 1 wins, otherwise uname -m decides.
+# so sysctl hw.optional.arm64 = 1 wins, otherwise uname -m decides. Intel Macs are not supported.
 translated=""
 if command -v sysctl >/dev/null 2>&1; then
     translated=$(sysctl -n hw.optional.arm64 2>/dev/null || true)
@@ -360,7 +360,6 @@ if [ "$translated" = "1" ]; then
 else
     case $(uname -m) in
         arm64) RID=osx-arm64 ;;
-        x86_64) RID=osx-x64 ;;
         *)
             echo "FAIL: unsupported CPU $(uname -m)"
             exit 1

@@ -332,10 +332,24 @@ test_prereq_arch_selects_runtime_id() {
     host_arch() { printf 'arm64\n'; }
     run_check "$stubs"
     t_assert_eq "osx-arm64" "$HOST_RID" "arm64"
+    t_assert_contains "$(print_prerequisites)" "[ok] CPU" "arm64 is supported"
+}
+
+# Intel Macs are not supported: an x86_64 shell that sysctl does not place on Apple Silicon fails the
+# CPU check and picks no build.
+test_prereq_intel_mac_fails() {
+    good_seams
+    stubs=$(make_stub_dir curl tar sha256sum codesign xattr)
     host_arch() { printf 'x86_64\n'; }
     run_check "$stubs"
-    t_assert_eq "osx-x64" "$HOST_RID" "x86_64 without sysctl"
-    t_assert_contains "$(print_prerequisites)" "[ok] CPU" "x86_64 is supported"
+    t_assert_eq "" "$HOST_RID" "x86_64 without sysctl"
+    t_assert_contains "$(print_prerequisites)" "[!!] CPU" "x86_64 without sysctl fails"
+    t_assert_contains "$(print_prerequisites)" "Apple Silicon (M1 or later)" "the fix names Apple Silicon"
+    t_assert_eq "1" "$PREREQ_FAILED" "failure count"
+    add_sysctl_stub "$stubs" 0
+    run_check "$stubs"
+    t_assert_eq "" "$HOST_RID" "sysctl says Intel"
+    t_assert_contains "$(print_prerequisites)" "[!!] CPU" "sysctl says Intel fails"
 }
 
 test_prereq_rosetta_shell_selects_arm64() {
@@ -345,10 +359,7 @@ test_prereq_rosetta_shell_selects_arm64() {
     add_sysctl_stub "$stubs" 1
     run_check "$stubs"
     t_assert_eq "osx-arm64" "$HOST_RID" "Rosetta shell on Apple Silicon"
-    rm -f "$stubs/sysctl"
-    add_sysctl_stub "$stubs" 0
-    run_check "$stubs"
-    t_assert_eq "osx-x64" "$HOST_RID" "sysctl says Intel"
+    t_assert_contains "$(print_prerequisites)" "[ok] CPU" "Rosetta shell passes"
 }
 
 test_prereq_unsupported_cpu_fails() {
@@ -639,7 +650,7 @@ test_file_sha256_without_tool_fails_with_message() {
 # Writes a SHA256SUMS fixture. $1 is the line ending ("\n" or "\r\n").
 write_sums() {
     printf '%s  huddle-osx-arm64.tar.gz%b' "$A_SHA" "$2" >"$1"
-    printf '%s  huddle-osx-x64.tar.gz%b' "$(printf '%064d' 0 | tr 0 B)" "$2" >>"$1"
+    printf '%s  huddle-win-arm64.zip%b' "$(printf '%064d' 0 | tr 0 B)" "$2" >>"$1"
     printf '%s *install.sh%b' "$B_SHA" "$2" >>"$1"
     printf '%b' "$2" >>"$1"
     printf 'this is not a hash line%b' "$2" >>"$1"
@@ -652,7 +663,7 @@ test_parse_sums_and_expected_hash() {
     write_sums "$DL/SHA256SUMS" '\n'
     parse_sums "$DL/SHA256SUMS"
     t_assert_eq "$A_SHA" "$(expected_hash huddle-osx-arm64.tar.gz)" "plain line"
-    t_assert_eq "$B_SHA" "$(expected_hash huddle-osx-x64.tar.gz)" "upper-case hash is lower-cased"
+    t_assert_eq "$B_SHA" "$(expected_hash huddle-win-arm64.zip)" "upper-case hash is lower-cased"
     t_assert_eq "$B_SHA" "$(expected_hash install.sh)" "binary-mode star prefix is dropped"
     t_assert_eq "$A_SHA" "$(expected_hash "my file.txt")" "a name with a space"
     rc=0
@@ -1994,17 +2005,6 @@ test_install_node_rejects_an_archive_without_npm() {
     t_assert_no_file "$INSTALL_ROOT/node.staging" "staging folder removed"
 }
 
-test_install_node_arch_x64_fetches_the_darwin_x64_name() {
-    nd_setup
-    HOST_RID=osx-x64
-    nd_build_node v24.21.0 x64
-    rm -f "$AP/nodebase/node-v24.21.0-darwin-arm64.tar.gz"
-    nd_run
-    t_assert_eq "0" "$NDRC" "x64 install succeeded: $NDOUT"
-    t_assert_file "$AP/data dir/cache/node-v24.21.0-darwin-x64.tar.gz" "the x64 tarball was cached"
-    t_assert_file "$INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js" "npm-cli.js under node/"
-}
-
 test_install_node_unknown_arch_fails() {
     nd_setup
     nd_build_node v24.21.0 arm64
@@ -2013,6 +2013,11 @@ test_install_node_unknown_arch_fails() {
     t_assert_eq "1" "$NDRC" "no HOST_RID fails"
     t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED"
     t_assert_no_file "$INSTALL_ROOT/node" "nothing was installed"
+    HOST_RID=osx-x64
+    nd_run
+    t_assert_eq "1" "$NDRC" "the Intel rid fails"
+    t_assert_contains "$NDOUT" "Apple Silicon (M1 or later)" "the fix names Apple Silicon"
+    t_assert_no_file "$INSTALL_ROOT/node" "nothing was installed for Intel"
 }
 
 test_install_node_needs_a_node_version_in_release_info() {
@@ -2449,7 +2454,7 @@ mn_build_release() {
     cp "$AP_ARCHIVE" "$MN_BASE/huddle-osx-arm64.tar.gz"
     mn_hash=$(file_sha256 "$MN_BASE/huddle-osx-arm64.tar.gz")
     {
-        printf '%s  huddle-osx-x64.tar.gz\n' "$MN_ZERO"
+        printf '%s  huddle-win-arm64.zip\n' "$MN_ZERO"
         printf '%s  huddle-win-x64.zip\n' "$MN_ZERO"
         printf '%s  huddle-osx-arm64.tar.gz\n' "$mn_hash"
     } >"$MN_BASE/SHA256SUMS"
@@ -2898,12 +2903,10 @@ test_release_lock_only_removes_a_lock_this_run_took() {
     t_assert_eq "0" "$LOCK_HELD" "LOCK_HELD after release"
 }
 
-test_claude_path_follows_the_host_arch() {
+test_claude_path_is_the_arm64_binary() {
     mn_setup
     HOST_RID=osx-arm64
     t_assert_eq "$INSTALL_ROOT/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude" "$(claude_path)" "arm64"
-    HOST_RID=osx-x64
-    t_assert_eq "$INSTALL_ROOT/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64/claude" "$(claude_path)" "x64"
 }
 
 test_claude_auth_status_seam_returns_the_exit_code_and_discards_output() {
@@ -2992,7 +2995,6 @@ t_run test_install_node_fresh_install_never_stops_the_app
 t_run test_install_node_survivor_aborts_the_upgrade_untouched
 t_run test_install_node_rejects_a_tampered_tarball
 t_run test_install_node_rejects_an_archive_without_npm
-t_run test_install_node_arch_x64_fetches_the_darwin_x64_name
 t_run test_install_node_unknown_arch_fails
 t_run test_install_node_needs_a_node_version_in_release_info
 t_run test_install_node_keeps_the_release_sums
@@ -3111,6 +3113,7 @@ t_run test_prereq_all_good
 t_run test_prereq_old_macos_fails_with_fix
 t_run test_prereq_unreadable_macos_fails
 t_run test_prereq_arch_selects_runtime_id
+t_run test_prereq_intel_mac_fails
 t_run test_prereq_rosetta_shell_selects_arm64
 t_run test_prereq_unsupported_cpu_fails
 t_run test_prereq_missing_tool_fails
@@ -3704,7 +3707,7 @@ t_run test_main_uninstall_works_when_prerequisites_are_unmet
 t_run test_main_entry_paths_direct_and_piped
 t_run test_main_entry_path_installs_the_trap_and_sourcing_does_not
 t_run test_release_lock_only_removes_a_lock_this_run_took
-t_run test_claude_path_follows_the_host_arch
+t_run test_claude_path_is_the_arm64_binary
 t_run test_claude_auth_status_seam_returns_the_exit_code_and_discards_output
 t_run test_run_open_and_is_interactive_seams
 

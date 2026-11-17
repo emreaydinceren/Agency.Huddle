@@ -15,7 +15,7 @@ irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/ins
 ```
 
 ```sh
-# macOS (Apple Silicon or Intel); Linux is not supported
+# macOS on Apple Silicon; Intel Macs and Linux are not supported
 curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.sh | sh
 ```
 
@@ -53,7 +53,7 @@ at once, not just the first.
 | Check | What it requires |
 | --- | --- |
 | OS version | Windows build >= 17763 (Windows 10 1809); macOS major >= 15 |
-| CPU | x86_64 (AMD64) or ARM64; each gets its own native build (`win-x64`, `win-arm64`, `osx-x64`, `osx-arm64`) |
+| CPU | Windows: x86_64 (AMD64) or ARM64, each with its own native build (`win-x64`, `win-arm64`). macOS: Apple Silicon only (`osx-arm64`); an Intel Mac fails this check |
 | Tools | PowerShell >= 5.1 and `tar.exe` (Windows); `curl`, `tar`, `shasum` or `sha256sum`, `codesign`, `xattr` (macOS) |
 | Disk space | >= 2048 MB free on the InstallRoot drive and DataRoot drive |
 | Write access | InstallRoot parent and DataRoot must be creatable |
@@ -187,8 +187,9 @@ and binds it again on the next start, falling back to a free port when it is bus
 (`Team:Gateway:Bind` other than `loopback`) on an installed copy still needs `Team:Gateway:Port`; without it the copy
 starts loopback-only and says why. `AllowedHosts` stays `localhost;127.0.0.1`, and the gateway adds the hosts it needs.
 
-On macOS the installer picks `osx-arm64` or `osx-x64` from the real CPU, including from a
-Rosetta shell on Apple Silicon.
+On macOS the installer installs `osx-arm64`, including from a Rosetta shell on Apple Silicon
+(`sysctl hw.optional.arm64` decides). Intel Macs are not supported: the CPU check fails and
+nothing is downloaded.
 
 On Windows it picks `win-arm64` on an ARM64 PC and `win-x64` everywhere else, and downloads the
 Node build of the same CPU, so npm installs the matching Claude binary
@@ -239,7 +240,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps
 
 `smoke.ps1` tests the build `install.ps1` picks for the PC it runs on (`huddle-win-arm64.zip` on
 ARM64, `huddle-win-x64.zip` otherwise) and fails if the installed `release-info.json` names another.
-`smoke.sh` does the same with `osx-arm64` and `osx-x64`.
+`smoke.sh` does the same with `osx-arm64`, and fails on an Intel Mac.
 
 ```sh
 # macOS
@@ -327,12 +328,12 @@ product version and its `AssemblyInformationalVersion` carry it as well as `rele
 The `Release` workflow (`.github/workflows/release.yaml`) runs these jobs in order:
 
 1. `version`: checks the run is from `main` and decides the version as above.
-2. `build`: `installer/build-release.sh` for `win-x64`, `win-arm64`, `osx-arm64` and `osx-x64`,
-   all cross-built on Linux.
+2. `build`: `installer/build-release.sh` for `win-x64`, `win-arm64` and `osx-arm64`, all
+   cross-built on Linux. There is no `osx-x64` build: Intel Macs are not supported.
 3. `assemble`: copies `install.ps1` and `install.sh` with `__HUDDLE_REPO__` replaced by the
    repository name (and fails if the placeholder is still there), writes `SHA256SUMS`, and
    records build provenance for every file.
-4. Four smoke jobs, each installing the assembled release for real on a hosted runner of its own
+4. Three smoke jobs, each installing the assembled release for real on a hosted runner of its own
    CPU and running the whole life cycle (`installer/tests/smoke.ps1`, `smoke.sh`):
 
    | Job | Runner | Build it installs |
@@ -340,13 +341,12 @@ The `Release` workflow (`.github/workflows/release.yaml`) runs these jobs in ord
    | `smoke-windows` | `windows-latest` | `win-x64` |
    | `smoke-windows-arm64` | `windows-11-arm` (public preview) | `win-arm64` |
    | `smoke-macos` | `macos-latest` | `osx-arm64` |
-   | `smoke-macos-intel` | `macos-15-intel` | `osx-x64` |
 
-5. `publish`: only if all four smoke jobs pass, creates the release and its tag `v<version>` from
+5. `publish`: only if all three smoke jobs pass, creates the release and its tag `v<version>` from
    the exact commit that was built, and refuses a version that already exists.
 
 Release files: `huddle-win-x64.zip`, `huddle-win-arm64.zip`, `huddle-osx-arm64.tar.gz`,
-`huddle-osx-x64.tar.gz`, `install.ps1`, `install.sh`, `SHA256SUMS`. Each archive holds `app/` (self-contained .NET),
+`install.ps1`, `install.sh`, `SHA256SUMS`. Each archive holds `app/` (self-contained .NET),
 `tools/acp/package.json` and `package-lock.json`, and `release-info.json` (schema, version,
 RID, Node version). Node and the Claude adapter are **not** in the archive: the installer
 fetches the pinned Node and runs `npm ci` on the user's machine.
@@ -357,8 +357,8 @@ fetches the pinned Node and runs `npm ci` on the user's machine.
 - M2: a clean Windows account. Done against a mock release on 2026-11-15 (see
   [A mock release on a clean machine](#a-mock-release-on-a-clean-machine)); repeat it with the first real release.
 - M3: an Apple Silicon Mac. Done against a mock release on 2026-11-15; repeat it with the first
-  real release. The Intel build is smoke-tested in CI (`smoke-macos-intel`), and so is the native
-  ARM64 Windows build (`smoke-windows-arm64`); neither has been tried on real hardware.
+  real release. The native ARM64 Windows build is smoke-tested in CI (`smoke-windows-arm64`)
+  but has not been tried on real hardware.
 - M4: behind a corporate proxy.
 - M5: a real Claude sign-in and one Turn (spends money). Done on Windows and on the Apple Silicon Mac
   with the same mock releases.

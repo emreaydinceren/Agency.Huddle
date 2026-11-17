@@ -11,9 +11,10 @@ name: Release
 # (--target "$GITHUB_SHA").
 #
 # This file reaches GitHub only through the sync, so it cannot be exercised before the first one.
-# Jobs: version -> build (matrix: win-x64, win-arm64, osx-arm64, osx-x64) -> assemble ->
-# smoke-windows + smoke-windows-arm64 + smoke-macos + smoke-macos-intel -> publish. Each build is
-# installed for real on a runner of its own CPU, and the release exists only after all four pass.
+# Jobs: version -> build (matrix: win-x64, win-arm64, osx-arm64) -> assemble ->
+# smoke-windows + smoke-windows-arm64 + smoke-macos -> publish. Each build is installed for real
+# on a runner of its own CPU, and the release exists only after all three pass. Intel Macs are not
+# supported, so there is no osx-x64 build.
 # No signing steps and no secrets other than github.token.
 # Every third-party action is pinned to a full commit SHA with its tag in a trailing comment.
 
@@ -85,7 +86,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        rid: [win-x64, win-arm64, osx-arm64, osx-x64]
+        rid: [win-x64, win-arm64, osx-arm64]
     env:
       VERSION: ${{ needs.version.outputs.version }}
     steps:
@@ -145,7 +146,7 @@ jobs:
           done
 
       - name: Write checksums
-        run: sh installer/make-sums.sh dist huddle-win-x64.zip huddle-win-arm64.zip huddle-osx-arm64.tar.gz huddle-osx-x64.tar.gz install.ps1 install.sh
+        run: sh installer/make-sums.sh dist huddle-win-x64.zip huddle-win-arm64.zip huddle-osx-arm64.tar.gz install.ps1 install.sh
 
       - name: List release files
         run: ls -l dist
@@ -229,27 +230,8 @@ jobs:
       - name: Smoke test
         run: sh installer/tests/smoke.sh dist
 
-  # The same smoke test on an Intel Mac runner, so it installs and runs the osx-x64 build.
-  smoke-macos-intel:
-    needs: assemble
-    runs-on: macos-15-intel
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-
-      - name: Download release files
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: release-dist
-          path: dist
-
-      - name: Smoke test
-        run: sh installer/tests/smoke.sh dist
-
   publish:
-    needs: [version, smoke-windows, smoke-windows-arm64, smoke-macos, smoke-macos-intel]
+    needs: [version, smoke-windows, smoke-windows-arm64, smoke-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
