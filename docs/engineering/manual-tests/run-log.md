@@ -7053,3 +7053,70 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+## Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention
+
+Back to [the manual test script](../manual-tests.md).
+
+### TURNQUEUE-01 — A Turn cut off by a normal close runs again once 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-01--a-turn-cut-off-by-a-normal-close-runs-again-once-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-02 — After a kill, the re-run checks its earlier work 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-02--after-a-kill-the-re-run-checks-its-earlier-work-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-03 — A kill right after a reply never brings a second reply 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-04 — A waiting Question survives a restart 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-05 — A stopped Turn stays stopped across a restart 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-13 — A Restart stops the running Turn and keeps what waits 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-14 — The age limit and Don't answer 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-18 — A waiting Mention is held while its Room is paused 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |

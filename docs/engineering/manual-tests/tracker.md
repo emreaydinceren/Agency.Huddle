@@ -160,6 +160,7 @@ the per-area tables below.
 | [Second Brain: the use cases as a Human's checklist, raw uploads, Team Memory, AGENTS.md, prompts, archive and an old data folder](second-brain.md) | [below](#second-brain) |
 | [Second Brain from zero: three Teams hired by hand, documents ingested into memory, and a Development Team building an app](second-brain-zero.md) | [below](#second-brain-zero) |
 | [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum)](memory-tidy.md) | [below](#memory-tidy) |
+| [Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, the age limit and Don't answer (paid, Sonnet minimum)](turn-queue.md) | [below](#turn-queue) |
 ---
 
 ## at-tagging
@@ -1413,3 +1414,19 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 | [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Active | #620 | not yet run by a person |
 | [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Active | #620 | not yet run by a person |
 | [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Active | #620 | not yet run by a person |
+
+## turn-queue
+
+Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention (paid, Sonnet minimum) — [area file](turn-queue.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [TURNQUEUE-01](turn-queue.md#turnqueue-01--a-turn-cut-off-by-a-normal-close-runs-again-once-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-02](turn-queue.md#turnqueue-02--after-a-kill-the-re-run-checks-its-earlier-work-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-03](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-04](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-05](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-12](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-13](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-14](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-18](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-) | 💰 | Active | #617 | not yet run |

@@ -697,7 +697,30 @@ the name and no longer wake anyone.
 
 **Restart** deletes `room-sessions/<Name>.json` and restarts the Agent. Every
 Room then starts a fresh conversation, with catch-up from the transcript. Use it
-when an Agent seems confused.
+when an Agent seems confused. A Turn the Agent was in the middle of stops; the
+Messages waiting behind it are answered by the restarted Agent.
+
+### After Huddle restarts
+
+A Message you sent that an Agent had not answered yet is not lost when Huddle
+closes, crashes or the computer restarts. On the next start the Agent answers it
+once it is online, and the Room shows a line, "Picked up after a restart.", that
+says what is waiting and for whom. A Turn that was cut off half way runs once
+more, and the Agent is told to check what it had already done. A reply is never
+posted twice.
+
+A Message older than a day (`Team:TurnQueue:ResumeWithin`) is not picked up,
+and the line says so ("Not picked up after a restart: …"). A Turn you stopped
+stays stopped.
+
+While Messages wait for an Agent that is offline, or for a Room that has used its
+Budget, the Room shows "Waiting for Nova: 2 Messages". Press **Don't answer** on
+that row to call them off before they spend anything. Where the Agent is already
+answering, its **Stop** button does the same for what waits behind it. A Room
+whose Budget is spent answers its waiting Messages once you press **Continue** or
+type in the Room.
+
+A Question an Agent asked with option buttons is still waiting after a restart.
 
 ### Editing the file by hand
 

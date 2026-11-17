@@ -471,11 +471,23 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   Narrowed 2026-09-13: a *Persona that failed to start* for either reason now says
   which, on its tile. The model **picker** is still the ambiguous surface.
 - **What a Draft does not survive.** It is in memory, per process, so a restart
-  loses every Turn in flight and the Room shows only what had been posted. Its
+  loses the streamed text of every Turn in flight. The Turn itself is not lost: the
+  Turn Queue runs it again once on the next start, led by a cut-off note
+  ([ADR-0091](../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md)). Its
   text is capped at 256 KB; past that it stops growing rather than truncating what
   is already there. Both are deliberate — it is a Singleton holding model output
   for the life of the process, and an Agent killed without a clean disconnect
   never sends the terminator that would clear it.
+- **What the Turn Queue does not cover** ([Turn Queue spec](../Huddle.TurnQueue-Specifications.md) §13).
+  A crash in the instant between the runner writing `Started` and the server committing it re-runs that Turn
+  as merely waiting, without the cut-off note (E-14). A form waiting when Huddle stops is part of its Turn and
+  is asked again by the re-run, not kept (D-28). Follows and the Task in hand are in memory and are not
+  restored, so a re-sent Task wake-up files a new Task under the Room's Project (E-4). A cut-off Turn that had
+  already used `post_message` may answer the Human a second time; the cut-off note asks the Agent to check,
+  nothing enforces it (E-15). A tool a cut-off Turn started can outlive Huddle (spike S-0: the Adapter dies with
+  Huddle, its shell does not), so the re-run may overlap it; the note says so. The Room Budget lives in memory
+  and starts at zero at every start, so a Message held for a paused Room is answered after a restart without
+  waiting for Continue.
 - **A waiting Proposal does not survive a restart, and the proposer is not told.**
   `ProposalStore` holds at most one Proposal per Room in memory, like a Draft, so a
   restart loses it and its card. The Agent that proposed is still waiting for an

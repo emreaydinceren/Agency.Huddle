@@ -5,6 +5,10 @@ date: 2026-09-10
 
 # In a Direct Room a Bot answers every Message, without a Mention
 
+> **Amended by [ADR-0091](0091-a-rooms-waiting-turns-are-kept-in-team-db.md).** Its restart limitation is gone: a
+> Message posted while the Agent's runner is not connected, or waiting when Huddle stops, is kept in the Turn Queue
+> and answered once the Agent connects.
+
 ADR-0003 established mention-gated replies: a Bot answers only when Mentioned,
 which is what prevents Bot-to-Bot reply storms in a Group Room. That
 convention is now partially superseded. In a Direct Room — exactly two

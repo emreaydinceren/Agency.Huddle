@@ -1,9 +1,10 @@
 # Huddle.TurnQueue — Design Specification
 
-**Date:** 2026-11-16, revised the same day after an independent review · **Status:** Proposed, not built; the
-owner has settled every open question (§10); one question for the ACP effort's owner remains, answered by a spike (§11) · **Issues:** #617 (durable queue), #618 (folded
-Turns), #619 (follow-ups and overdue runs) · **Decision records:** none yet; slices 1, 2 and 3 write ADR-0091,
-ADR-0092 and ADR-0093 (§12) · **Amends, when built:**
+**Date:** 2026-11-16, revised the same day after an independent review · **Status:** `DueCheck` built 2026-11-16
+(PR #652); spike S-0 run 2026-11-16 (Appendix B); slices 0 and 1 built 2026-11-17 (#617); slices 2 and 3 not built
+· **Issues:** #617 (durable queue), #618 (folded
+Turns), #619 (follow-ups and overdue runs) · **Decision records:** [ADR-0091](adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md)
+(slices 0 and 1); slices 2 and 3 write ADR-0092 and ADR-0093 (§12) · **Amends, when built:**
 [ADR-0004](adr/0004-direct-rooms-reply-without-mention.md) (its restart limitation),
 [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) (a waiting card is lost),
 [ADR-0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) (blocks from the one trigger),
@@ -386,10 +387,13 @@ take them. A delivery whose Message id is already queued or running in that runn
 never become a second Turn.
 
 **The cut-off note.** A Turn built from a `CutOff` delivery gets `turn.cutOffNote` before the Message. Its wording
-is fixed after the spike (S-0), which shows whether the resumed session still holds the cut-off half:
+was fixed after the spike (S-0, Appendix B): the resumed session does hold the cut-off half, and a tool the Turn
+started can outlive Huddle:
 
-> Huddle stopped while you were answering the Message below, and this is a second try. Anything you did before
-> it stopped (a file, a Task, a post in this or another Room) may already be done: check before you do it again.
+> Huddle stopped while you were answering the Message below, and this is a second try. Your conversation may show
+> what you had started: a tool call that had not returned may have finished, may have stopped partway, or may still
+> be running. Anything you did before it stopped (a file, a Task, a post in this or another Room) may already be done:
+> check before you do it again.
 
 **Which crash leaves a gap.** `PersonaRunner` runs in the Huddle process, so a crash takes runner and server
 together. The window left is between the runner writing `started` into the pipe and the server committing it: a
@@ -966,7 +970,7 @@ The restart line, the waiting notice and the late Job wording are interface copy
 
 | # | Question | Options | Recommendation |
 | --- | --- | --- | --- |
-| ACP-1 | **For the ACP effort's owner, answered by spike S-0 before slice 1.** Does `session/resume` of a Claude Code conversation cut off in the middle of a tool call resume cleanly, and does the Adapter's process die with Huddle? | If resume fails with not-found, Huddle opens a fresh session with Catch-up (RS E-1); another failure, Huddle's two-failures rule closes and forgets it (RS §6.8) | No change requested. If S-0 shows a third outcome, the owner may want `Huddle.Acp` to map it to `AgentSessionNotFoundException` |
+| ACP-1 | **For the ACP effort's owner, answered by spike S-0 before slice 1.** Does `session/resume` of a Claude Code conversation cut off in the middle of a tool call resume cleanly, and does the Adapter's process die with Huddle? | If resume fails with not-found, Huddle opens a fresh session with Catch-up (RS E-1); another failure, Huddle's two-failures rule closes and forgets it (RS §6.8) | No change requested. If S-0 shows a third outcome, the owner may want `Huddle.Acp` to map it to `AgentSessionNotFoundException`. **Answered 2026-11-16 by S-0: it resumes cleanly; the Adapter dies with Huddle but a tool's shell can outlive it (Appendix B). No change needed in `Huddle.Acp`** |
 
 ---
 
@@ -1178,6 +1182,18 @@ Each task is one commit: failing tests, then the code, then a green `dotnet buil
 | V-2 | After a kill mid-tool-call, does `session/resume` of that Room's session succeed, and does the resumed conversation hold the cut-off Turn's half? | **Spike S-0, before slice 1**, with `TraceWire`; record the result here and hand it to the ACP effort's owner (ACP-1) |
 | V-3 | Does the Adapter's process die with Huddle on a kill, or can a Turn's tools keep running and overlap the re-run? | **Spike S-0**: `Get-Process node` after the kill |
 | V-4 | Does the `PeriodicTimer` on `TimeProvider.System` fire within a minute of waking, on Windows and on macOS? | TQ-M11 on each, or "not verified on macOS" |
+
+**Spike S-0, run 2026-11-16** on Windows, build `3c58f9d0` (published), `claude-agent-acp` from `tools/acp`, Nova on
+Sonnet / low, lane `C:\HuddleLane617`. Claude Code's own shell tool refuses a foreground `Start-Sleep` of two minutes
+and tells the model to run it in the background, so the long call was `ping -n 150 127.0.0.1` in the foreground.
+Huddle was killed (`Stop-Process -Force`) twelve seconds into that call, with the Turn running and nothing posted.
+
+| # | Answer |
+| --- | --- |
+| V-2 | **Yes, cleanly.** On the next start Huddle sent `session/resume` for the Room, with no warning or error. Asked without tools what it last started, Nova named the exact command, said the session ended before the tool call returned and that it had no output. The resumed conversation holds the cut-off half. ACP-1 needs no change in `Huddle.Acp` |
+| V-3 | **The Adapter dies with Huddle; the tool does not.** The Adapter's `node` process and its `claude.exe` were gone four seconds after the kill. The tool's own shell (`cmd` → `pwsh` → `PING`) survived as an orphan and finished two minutes later, writing its whole output. So a re-run can overlap a tool still running; the cut-off note says so |
+
+Spend for the spike: 0.19 USD (the Chief of Staff's Greeting 0.11, Nova 0.09).
 
 ## Appendix C. Review response
 

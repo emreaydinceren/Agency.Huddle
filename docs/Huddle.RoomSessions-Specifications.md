@@ -199,6 +199,12 @@ PersonaRenameCascade ─► RoomSessionStore.Rename / Remove
 
 ### 6.1 `RoomSession`
 
+> [!NOTE]
+> **Turn Queue (ADR-0091, 2026-11-17).** The Room Session now reports each Turn with `QueueAck`: `Started` with the
+> minted reply id just before the prompt, `Finished` with an outcome for a Turn that posts nothing or an item it
+> drains unrun, and nothing when its run token is cancelled. The reply's `PostMessage.InReplyTo` names the Turn's
+> trigger, which is what closes the server's row ([Turn Queue spec](Huddle.TurnQueue-Specifications.md) §5.5).
+
 One per Room the Agent has work in. It is what the whole runner is today: a queue with one
 consumer, an `ActiveTurn`, an event reader over its own `IAgentSession.Events`, the idle watchdog
 and `lastUsed`. `ProcessWorkItemAsync`, `WatchForAdapterSilenceAsync`, `RunEventReaderAsync` and
@@ -392,6 +398,15 @@ Nova: 1. Ribeira riverside hotel … 2. Foz beach apartment … 3. Boavista flat
 A resumed session gets `turn.transcriptResumedHeader` instead, with only the Messages after its
 stored `LastMessageId`.
 
+> [!NOTE]
+> **Turn Queue (ADR-0091, 2026-11-17).** A Turn re-sent after a restart or a Welcome (`MessagePosted.Redelivery`) is
+> late by definition, so on a session's first Turn it reads its Catch-up **to the end of the Transcript**: its
+> `ReadTranscript` names the Turn's own minted reply id as `BeforeMessageId`, an id not in the Transcript, which the
+> server reads to the end. The prompt shows what came after the Message under `turn.laterHeader`, leaves out this
+> Agent's other waiting triggers, and keeps both blocks within one Catch-up token budget. A `CutOff` re-send is led
+> by `turn.cutOffNote` ([Turn Queue spec](Huddle.TurnQueue-Specifications.md) §5.7, §5.8). D-7's "before the
+> trigger" still holds for every Turn that is not re-sent.
+
 ### 6.6 `RoomSessionStore`
 
 One file per Agent under `{DataDir}/room-sessions/`, keyed by **Name**, like `file-state/`:
@@ -412,7 +427,9 @@ public sealed record RoomSessionEntry(
 - `Get`, `Put`, `Forget(name, roomId)`; `ForgetAll(name)` for Restart and Persona changes;
   `Prune(name, liveRoomIds)`; `Rename(oldName, newName)`; `Remove(name)`.
 - **Written at Turn end** whenever the prompt was sent, whether the Turn completed, stopped or
-  failed (§6.1 says which id is `LastMessageId`).
+  failed (§6.1 says which id is `LastMessageId`). A Turn cut off by Huddle closing has no entry for that
+  Turn (the run token is cancelled), so the next start resumes the session from the last entry and re-sends the
+  cut-off Message through the Turn Queue (ADR-0091).
 - **Pruned at start** against `Welcome.Rooms` (`Messages.cs:84`), the Rooms the Agent is a Member
   of. Nothing else tells the runner a Room was deleted: `ChatService.DeleteRoomAsync`
   (`ChatService.cs:528-551`) informs no pipe client.
