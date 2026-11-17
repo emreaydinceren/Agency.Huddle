@@ -229,6 +229,7 @@ internal static class SystemPromptComposer
     /// Whether the session passes the browser server to the Agent. <see langword="false"/> leaves the output byte-identical to a call without it;
     /// <see langword="true"/> adds <c>systemPrompt.browser</c> after the other tool paragraphs.
     /// </param>
+    /// <param name="reportedDays">How many days the memory tool keeps a line of <c>reported.md</c>; filled into <c>{{reportedDays}}</c> of the Memory block.</param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -257,16 +258,17 @@ internal static class SystemPromptComposer
         OutputsSnapshot? outputs = null,
         IReadOnlyList<(string Team, string Path)>? workspaces = null,
         IReadOnlyList<(string Scope, string Level)>? needsYou = null,
-        bool browser = false)
+        bool browser = false,
+        int reportedDays = MemoryReportedOptions.DefaultKeepDays)
     {
         IReadOnlyList<PromptPart> parts = ComposeParts(
-            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces, needsYou, browser);
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces, needsYou, browser, reportedDays);
 
         return string.Join("\n\n", parts.Select(static part => part.Text));
     }
 
     /// <summary>
-    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?, IReadOnlyList{ValueTuple{string, string}}?, bool)"/>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?, IReadOnlyList{ValueTuple{string, string}}?, bool, int)"/>
     /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
     /// </summary>
     /// <param name="persona">The Persona whose text and name are spliced in.</param>
@@ -288,6 +290,7 @@ internal static class SystemPromptComposer
     /// <param name="workspaces">The <c>(team, path)</c> of each Team with a readable workspace, in the Persona's <c>teams</c> order, or <see langword="null"/> for none; each adds one <c>systemPrompt.secondBrainWorkspace</c> part after the Second Brain summary.</param>
     /// <param name="needsYou">The <c>(scope, level)</c> of each of the Persona's Teams and Projects, or <see langword="null"/> or empty for none; it adds <c>systemPrompt.needsYou</c> after the outputs index.</param>
     /// <param name="browser">Whether the session passes the browser server; it adds <c>systemPrompt.browser</c> after the other tool paragraphs.</param>
+    /// <param name="reportedDays">How many days the memory tool keeps a line of <c>reported.md</c>; filled into <c>{{reportedDays}}</c> of the Memory block.</param>
     /// <returns>The labelled parts in prompt order.</returns>
     internal static IReadOnlyList<PromptPart> ComposeParts(
         Persona persona,
@@ -308,7 +311,8 @@ internal static class SystemPromptComposer
         OutputsSnapshot? outputs = null,
         IReadOnlyList<(string Team, string Path)>? workspaces = null,
         IReadOnlyList<(string Scope, string Level)>? needsYou = null,
-        bool browser = false)
+        bool browser = false,
+        int reportedDays = MemoryReportedOptions.DefaultKeepDays)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -340,7 +344,7 @@ internal static class SystemPromptComposer
 
         AddSkillsPart(parts, prompts, skills, readSkillToolName);
 
-        AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings, huddleMemory);
+        AddMemoryParts(parts, prompts, memory, teamMemory, toolNames, memoryChangesListed, warnings, huddleMemory, reportedDays);
         AddOutputsPart(parts, prompts, outputs);
         AddNeedsYouPart(parts, prompts, needsYou);
 
@@ -501,6 +505,7 @@ internal static class SystemPromptComposer
     /// <param name="memoryChangesListed">Whether a memory file's change reaches the Agent as a File Change at its next Turn.</param>
     /// <param name="warnings">Warns once about an old-style Team Memory override; <see langword="null"/> warns of nothing.</param>
     /// <param name="huddleMemory">The Huddle-wide Memory index, added between the two; <see langword="null"/> for none.</param>
+    /// <param name="reportedDays">How many days a line of <c>reported.md</c> is kept; filled into the Memory block.</param>
     private static void AddMemoryParts(
         List<PromptPart> parts,
         IPromptSource prompts,
@@ -509,7 +514,8 @@ internal static class SystemPromptComposer
         IReadOnlyList<string> toolNames,
         bool memoryChangesListed,
         MemoryWarnings? warnings,
-        MemorySnapshot? huddleMemory)
+        MemorySnapshot? huddleMemory,
+        int reportedDays)
     {
         string memoryToolName = FindMemoryTool(toolNames);
         if (memory is not null)
@@ -517,7 +523,7 @@ internal static class SystemPromptComposer
             parts.Add(new PromptPart(
                 "Memory",
                 new PromptPartSource.Index("memory", memory.Entries.Count),
-                BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed)));
+                BuildMemoryBlock(prompts, memory, memoryToolName, memoryChangesListed, reportedDays)));
         }
 
         AddHuddleMemoryPart(parts, prompts, huddleMemory);
@@ -783,7 +789,8 @@ internal static class SystemPromptComposer
     /// <param name="memory">The Agent's Memory index for this session.</param>
     /// <param name="memoryToolName">The memory tool's name, already carrying the Adapter's prefix.</param>
     /// <param name="memoryChangesListed">Whether to add <c>systemPrompt.memoryChanges</c>; it names File Changes, which only some Adapters get.</param>
-    private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory, string memoryToolName, bool memoryChangesListed)
+    /// <param name="reportedDays">How many days a line of <c>reported.md</c> is kept; filled into <c>{{reportedDays}}</c>.</param>
+    private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory, string memoryToolName, bool memoryChangesListed, int reportedDays)
     {
         return prompts.Render(
             "systemPrompt.memory",
@@ -793,6 +800,7 @@ internal static class SystemPromptComposer
                 ["{{memoryIndex}}"] = RenderMemoryIndex(prompts, memory),
                 ["{{memoryTool}}"] = memoryToolName,
                 ["{{memoryChanges}}"] = memoryChangesListed ? prompts.Render("systemPrompt.memoryChanges", new Dictionary<string, string>()) : string.Empty,
+                ["{{reportedDays}}"] = reportedDays.ToString(CultureInfo.InvariantCulture),
             });
     }
 

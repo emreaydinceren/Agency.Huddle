@@ -145,7 +145,6 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         InstallMergeGateHook(workDir, this.options.DataDir, this.serviceProvider.GetService<IMergeGate>(), this.logger);
 
         DotAcpAgentHost innerHost = await this.StartInnerHostAsync(processOptions, toolServer, cancellationToken).ConfigureAwait(false);
-
         Func<RoleBlockInput?> roleBlock = this.CreateRoleBlock(parsed, skillResolution);
         SessionPromptSources sources = this.CreatePromptSources(toolSet.Prompts);
 
@@ -175,7 +174,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.workModePolicy,
             roleBlock,
             sources,
-            agentMeta.BrowserPassed);
+            agentMeta.BrowserPassed,
+            this.options.Memory.Reported.KeepDays);
     }
 
     /// <summary>What <see cref="BuildAgentMeta"/> decided for one session start.</summary>
@@ -862,7 +862,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             outputs: inputs.Outputs,
             workspaces: inputs.Workspaces,
             needsYou: inputs.NeedsYou,
-            browser: browser);
+            browser: browser,
+            reportedDays: this.options.Memory.Reported.KeepDays);
         return (parts, profile.Id);
     }
 }
