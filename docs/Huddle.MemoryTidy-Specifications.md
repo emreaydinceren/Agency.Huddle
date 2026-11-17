@@ -277,7 +277,8 @@ One paragraph is added to `systemPrompt.memory`, after the paragraph that begins
 Keep a record of what you have told the Human, in the file reported.md in your memory. A finding, a status, a
 result, a decision or a warning you tell the Human is a report however they asked for it: a question, "tell me",
 "check and report" or a Job's instruction. Small talk, and answers that carry no news about the work, such as how
-something works or what you can do, are not reports and need no line. Before you report to the Human, in any Room,
+something works or what you can do, are not reports and need no line, and neither does a comment on a Task or a
+Message to another Agent: neither is told to the Human. Before you report to the Human, in any Room,
 including a Room a Job runs in, read reported.md with {{memoryTool}}; if it does not exist, you have reported
 nothing yet. Do not tell them again in full what is already there unless something has changed, and when it has, say
 what changed. When a Job or the Human asks for an item you have already reported and nothing has changed, do not
