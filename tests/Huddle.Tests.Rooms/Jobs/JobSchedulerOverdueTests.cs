@@ -5,7 +5,9 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Elicitation;
 using Agency.Huddle.Tests.Factories;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -24,6 +26,7 @@ public sealed class JobSchedulerOverdueTests : IDisposable
     private readonly ScriptedRunner runner = new();
     private readonly RecordingNotice notice = new();
     private readonly ManualTimeProvider clock = new(Monday0800, TimeZoneInfo.Utc);
+    private readonly RecordingLogger<JobScheduler> log = new();
     private readonly JobScheduler scheduler;
 
     /// <summary>Seeds the Agent Nova and opens the stores over it.</summary>
@@ -34,7 +37,7 @@ public sealed class JobSchedulerOverdueTests : IDisposable
         this.personas = this.options.CreatePersonaStore();
         this.store = new JobStore(this.personas, this.options, NullLogger<JobStore>.Instance);
         this.states = new JobStateStore(this.options);
-        this.scheduler = new JobScheduler(this.store, this.states, this.runner, this.options, NullLogger<JobScheduler>.Instance, this.notice, this.clock);
+        this.scheduler = new JobScheduler(this.store, this.states, this.runner, this.options, this.log, this.notice, this.clock);
     }
 
     /// <inheritdoc />
@@ -382,6 +385,78 @@ public sealed class JobSchedulerOverdueTests : IDisposable
         Assert.Equal([(DateTimeOffset?)null], this.runner.LateDues);
     }
 
+    /// <summary>A one-off paused past its time keeps its stored due time, so on resume it runs late instead of being NotDue forever.</summary>
+    [Fact]
+    public async Task Paused_OneOffPastItsTime_KeepsItsDueTimeAndRunsLateOnResume()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Job job = this.Add(JobRecurrence.Once(new DateOnly(2026, 11, 2), new TimeOnly(9, 0)));
+        await this.scheduler.TickAsync(ct);
+        Assert.True(this.store.Update(job with { Paused = true }));
+
+        this.clock.UtcNow = Monday0800.AddHours(3);
+        await this.scheduler.TickAsync(ct);
+        Assert.Equal(Monday0800.AddHours(1), this.states.Get(job.Id)?.NextRunUtc);
+
+        Assert.True(this.store.Update(job with { Paused = false }));
+        await this.scheduler.TickAsync(ct);
+
+        Assert.Equal([Monday0800.AddHours(1)], this.runner.LateDues);
+        Assert.Null(this.store.Find(job.Id));
+    }
+
+    /// <summary>A note that throws still lets the one-off be deleted, and the failure is logged.</summary>
+    [Fact]
+    public async Task GiveUp_NoteThrows_StillDeletesAndLogs()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Job job = this.Add(JobRecurrence.Once(new DateOnly(2026, 11, 2), new TimeOnly(9, 0)));
+        await this.scheduler.TickAsync(ct);
+        this.notice.Throws = true;
+
+        this.clock.UtcNow = Monday0800.AddHours(26);
+        await this.scheduler.TickAsync(ct);
+
+        Assert.Null(this.store.Find(job.Id));
+        Assert.Contains(this.log.Entries, entry => entry.Level == LogLevel.Warning && entry.Exception is InvalidOperationException);
+    }
+
+    /// <summary>The note is written before the one-off is deleted, so a removal is never silent.</summary>
+    [Fact]
+    public async Task GiveUp_NotesBeforeItDeletes()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Job job = this.Add(JobRecurrence.Once(new DateOnly(2026, 11, 2), new TimeOnly(9, 0)));
+        await this.scheduler.TickAsync(ct);
+        bool? stillStoredWhenNoted = null;
+        this.notice.OnNote = () => stillStoredWhenNoted = this.store.Find(job.Id) is not null;
+
+        this.clock.UtcNow = Monday0800.AddHours(26);
+        await this.scheduler.TickAsync(ct);
+
+        Assert.True(stillStoredWhenNoted);
+    }
+
+    /// <summary>While the post is in flight the stored last outcome is still the previous run's, not a Delivered the run has not earned.</summary>
+    [Fact]
+    public async Task Run_KeepsThePreviousOutcomeUntilThePostEnds()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        Job job = this.Add(JobRecurrence.Daily(new TimeOnly(9, 0)));
+        await this.scheduler.TickAsync(ct);
+        this.runner.Script.Enqueue(JobOutcome.BudgetSpent);
+        this.clock.UtcNow = Monday0800.AddHours(1).AddSeconds(10);
+        await this.scheduler.TickAsync(ct);
+        JobOutcome? duringPost = null;
+        this.runner.OnRun = _ => duringPost = this.states.Get(job.Id)?.LastOutcome;
+
+        this.clock.UtcNow = Monday0800.AddHours(25).AddSeconds(10);
+        await this.scheduler.TickAsync(ct);
+
+        Assert.Equal(JobOutcome.BudgetSpent, duringPost);
+        Assert.Equal(JobOutcome.Delivered, this.states.Get(job.Id)?.LastOutcome);
+    }
+
     /// <summary>With RunOverdue off a run missed by more than the grace is skipped to the next run, as before.</summary>
     [Fact]
     public async Task RunOverdueFalse_RestoresTheSkip()
@@ -470,8 +545,20 @@ public sealed class JobSchedulerOverdueTests : IDisposable
     {
         public List<(string JobId, string Reason)> Notes { get; } = [];
 
+        /// <summary>Makes every note throw, as a Feed or chat failure would.</summary>
+        public bool Throws { get; set; }
+
+        /// <summary>Called as a note starts.</summary>
+        public Action? OnNote { get; set; }
+
         public Task NoteAsync(Job job, string reason, CancellationToken ct)
         {
+            this.OnNote?.Invoke();
+            if (this.Throws)
+            {
+                throw new InvalidOperationException("The note failed.");
+            }
+
             this.Notes.Add((job.Id, reason));
             return Task.CompletedTask;
         }

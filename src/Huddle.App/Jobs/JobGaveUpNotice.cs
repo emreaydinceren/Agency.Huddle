@@ -47,6 +47,15 @@ internal sealed class JobGaveUpNotice(
     private async Task PostLineAsync(string agentName, string? roomId, string title, string reason, CancellationToken ct)
     {
         string? target = roomId;
+        if (target is not null)
+        {
+            IReadOnlyList<User> members = await directory.GetRoomMembersAsync(target, ct).ConfigureAwait(false);
+            if (!members.Any(member => string.Equals(member.Name, agentName, StringComparison.OrdinalIgnoreCase)))
+            {
+                target = null;
+            }
+        }
+
         if (target is null)
         {
             User? agent = await directory.FindUserByNameAsync(agentName, ct).ConfigureAwait(false);

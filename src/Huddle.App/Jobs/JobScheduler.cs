@@ -238,6 +238,12 @@ internal sealed partial class JobScheduler(
     {
         JobState? stored = states.Get(job.Id);
         DateTimeOffset? next = job.When.NextAfter(now, this.ZoneOf(job));
+        if (next is null)
+        {
+            // A one-off whose time has passed keeps its due time: on resume the overdue rule judges it (runs late, or gives up with a trace).
+            return;
+        }
+
         if (stored is not null && string.Equals(stored.WhenKey, KeyOf(job), StringComparison.Ordinal) && stored.NextRunUtc == next)
         {
             return;
@@ -273,7 +279,7 @@ internal sealed partial class JobScheduler(
             : new DueState(run.Save.WhenKey, due, 0, before?.EverRan ?? false);
 
         // Saved before the post (ADR-0042): a restart in the middle of a run never runs it twice.
-        this.Save(job, stored, run.Save, now, run.Late ? JobOutcome.DeliveredLate : JobOutcome.Delivered);
+        this.Save(job, stored, run.Save, now, null);
         JobOutcome outcome = await this.PostAsync(job, now, lateDue, ct).ConfigureAwait(false);
         (JobOutcome shown, DueRunResult result) = Classify(outcome, oneOff, run.Late);
         this.Save(job, stored, DueCheck.AfterRun(run.Save, beforeRun, result), now, shown);
@@ -318,8 +324,17 @@ internal sealed partial class JobScheduler(
 
     private async Task RemoveWithTraceAsync(Job job, string reason, CancellationToken ct)
     {
+        try
+        {
+            await gaveUp.NoteAsync(job, reason, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // The trace is a courtesy: a Feed or chat failure must not keep a one-off that can never run.
+            LogNoteFailed(logger, ex, job.Id);
+        }
+
         _ = this.Delete(job.Id);
-        await gaveUp.NoteAsync(job, reason, ct).ConfigureAwait(false);
     }
 
     private static string Describe(TimeSpan span)
@@ -336,6 +351,9 @@ internal sealed partial class JobScheduler(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Job {JobId} could not be checked.")]
     private static partial void LogTickFailed(ILogger logger, Exception exception, string jobId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The trace for removed Job {JobId} could not be written; it is removed anyway.")]
+    private static partial void LogNoteFailed(ILogger logger, Exception exception, string jobId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "Job pass failed.")]
     private static partial void LogPassFailed(ILogger logger, Exception exception);

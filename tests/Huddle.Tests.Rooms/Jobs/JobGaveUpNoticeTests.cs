@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Jobs;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.Tests.Feed;
 using Agency.Huddle.Tests.NeedsYou;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -85,6 +86,26 @@ public sealed class JobGaveUpNoticeTests
         await notice.NoteAsync(Draft(JobOwner.Agent("Nova")), "its Room is gone", ct);
 
         Assert.Equal("⏰ Nova's Job \"Digest\" did not run: its Room is gone.", Assert.Single(await fixture.Transcript.ReadAllAsync(oneToOne.Id, ct)).Text);
+    }
+
+    /// <summary>A Job Room that still exists but no longer has the Agent as a Member gets no line: it goes to the Agent's one-to-one (spec 7.5).</summary>
+    [Fact]
+    public async Task AgentJob_AgentLeftTheJobRoom_LineGoesToTheOneToOne()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        RecordingFeedPublisher feed = new();
+        using NeedsYouFixture fixture = await NeedsYouFixture.CreateAsync(ct, feed);
+        User nova = await fixture.AddAgentAsync("Nova", ct);
+        JobRoomStore rooms = new(fixture.Directory.Options());
+        Room jobRoom = await fixture.Team.CreateRoomAsync("⏰ Digest", [KnownIds.Human], ct);
+        rooms.Set("job-1", jobRoom.Id);
+        Room oneToOne = await fixture.Team.CreateRoomAsync("Nova", [KnownIds.Human, nova.Id], ct);
+        JobGaveUpNotice notice = new(feed, rooms, fixture.Team, fixture.Service, NullLogger<JobGaveUpNotice>.Instance);
+
+        await notice.NoteAsync(Draft(JobOwner.Agent("Nova")), "it failed three times", ct);
+
+        Assert.Empty(await fixture.Transcript.ReadAllAsync(jobRoom.Id, ct));
+        Assert.Equal("⏰ Nova's Job \"Digest\" did not run: it failed three times.", Assert.Single(await fixture.Transcript.ReadAllAsync(oneToOne.Id, ct)).Text);
     }
 
     private static Job Draft(JobOwner owner) =>

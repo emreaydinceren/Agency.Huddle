@@ -78,6 +78,23 @@ public sealed class JobEditorDialogTests : IDisposable
         Assert.Empty(cut.FindAll(".job-editor-day-of-month"));
     }
 
+    /// <summary>Saving a new Job from the dialog seeds its state row at once, so a one-off due inside the minute is not lost.</summary>
+    [Fact]
+    public async Task SavingANewJob_SeedsItsStateAtOnce()
+    {
+        await using MudBunitContext ctx = this.NewContext();
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder => { });
+        IDialogService dialogs = ctx.Services.GetRequiredService<IDialogService>();
+        await cut.InvokeAsync(() => dialogs.ShowAsync<JobEditorDialog>("New job", new DialogParameters<JobEditorDialog>(), JobEditorDialog.Options));
+        cut.Find(".job-editor-title input").Input("Bills");
+        cut.Find(".job-editor-instruction textarea").Input("Check.");
+
+        await cut.InvokeAsync(() => cut.Find(".job-editor-save").Click());
+
+        Job job = Assert.Single(this.store.Jobs);
+        Assert.NotNull(this.states.Get(job.Id));
+    }
+
     private Job Add(JobRecurrence when) =>
         this.store.Add(new Job(string.Empty, JobOwner.Agent("Nova"), "Bills", "Check.", when, "UTC", "You", false));
 

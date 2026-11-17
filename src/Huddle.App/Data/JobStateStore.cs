@@ -74,8 +74,10 @@ internal sealed class JobStateStore
                 ever_ran = excluded.ever_ran;
             """;
         _ = command.Parameters.AddWithValue("$id", jobId);
-        _ = command.Parameters.AddWithValue("$failed", failedTries.ToString(CultureInfo.InvariantCulture));
-        _ = command.Parameters.AddWithValue("$ran", everRan ? "1" : "0");
+#pragma warning disable HAA0601 // AddWithValue takes object, so boxing the integers cannot be avoided.
+        _ = command.Parameters.AddWithValue("$failed", failedTries);
+        _ = command.Parameters.AddWithValue("$ran", everRan ? 1 : 0);
+#pragma warning restore HAA0601
         _ = command.ExecuteNonQuery();
     }
 

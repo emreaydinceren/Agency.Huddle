@@ -71,6 +71,17 @@ public sealed class JobsToolTests : IDisposable
         Assert.Equal($"Scheduled {job.Id} \"Digest\" for Nova: daily at 09:00. It runs next on Mon 2 Nov 2026 at 09:00 (UTC).", answer);
     }
 
+    /// <summary>A Job created through the tool has its state row at once, so a one-off due inside the minute is not lost.</summary>
+    [Fact]
+    public async Task Create_SeedsTheJobStateAtOnce()
+    {
+        _ = await this.Tool("Nova").InvokeAsync(Create(), TestContext.Current.CancellationToken);
+
+        Job job = Assert.Single(this.store.Jobs);
+        JobState? state = new JobStateStore(this.options).Get(job.Id);
+        Assert.Equal(new DateTimeOffset(2026, 11, 2, 9, 0, 0, TimeSpan.Zero), state?.NextRunUtc);
+    }
+
     /// <summary>An Agent that is not the Chief of Staff may not schedule for another Agent or for the Human.</summary>
     /// <param name="target">The other target.</param>
     [Theory]
