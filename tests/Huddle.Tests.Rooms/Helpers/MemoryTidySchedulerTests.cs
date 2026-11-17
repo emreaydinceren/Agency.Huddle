@@ -321,6 +321,8 @@ public sealed class MemoryTidySchedulerTests : IDisposable
     /// <summary>A runner that records what it was asked and answers from <see cref="Next"/> or with a busy null.</summary>
     private sealed class FakeRunner : IMemoryTidyRunner
     {
+        private Action? changed;
+
         /// <summary>What every <c>TryStart</c> was asked.</summary>
         public List<MemoryTidyStart> Starts { get; } = [];
 
@@ -329,6 +331,16 @@ public sealed class MemoryTidySchedulerTests : IDisposable
 
         /// <summary>The pass's end; Done by default.</summary>
         public Task<MemoryTidyPassEnd> Next { get; set; } = Task.FromResult(MemoryTidyPassEnd.Done);
+
+        /// <inheritdoc />
+        public event Action? Changed
+        {
+            add => this.changed += value;
+            remove => this.changed -= value;
+        }
+
+        /// <inheritdoc />
+        public bool IsRunning => false;
 
         /// <inheritdoc />
         public Task<MemoryTidyPassEnd>? TryStart(MemoryTidyStart start)

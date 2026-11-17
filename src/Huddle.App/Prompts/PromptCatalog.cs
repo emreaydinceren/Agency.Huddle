@@ -73,7 +73,7 @@ internal static class PromptCatalog
         ..BuildPart24(),
         ..BuildPart25(),
         ..BuildPart26(),
-        ..BuildPart27(),
+        ..BuildPart27(), ..BuildMemoryTidySentenceParts(),
         ..BuildPart49(),
         ..BuildPart28(),
         ..BuildPart29(),
@@ -1612,7 +1612,8 @@ internal static class PromptCatalog
                 "{{memoryChanges}} is the sentence about changes arriving at the start of a Turn, which is " +
                 "empty for an Agent that cannot read files. {{reportedDays}} is the number of days the " +
                 "memory tool keeps a line of reported.md (Team:Memory:Reported:KeepDays), filled in by the " +
-                "application and optional.",
+                "application and optional. {{memoryTidy}} is the sentence about the weekly Memory Tidy, " +
+                "empty when that Helper is off, and optional.",
             Default:
                 """
                 ## Memory
@@ -1639,7 +1640,7 @@ internal static class PromptCatalog
                 report to the Human, keep no such file.
 
                 One topic per file. Update a fact rather than adding a duplicate, and fix or replace what is no
-                longer true. Delete a file only when the Human asks you to. Give each file a description that
+                longer true. Delete a file only when the Human asks you to.{{memoryTidy}} Give each file a description that
                 names the specific people, projects, places or events inside and says when to read it ("Read
                 for…", "Check before…"), in about 100 to 150 characters, with no facts and nothing sensitive in
                 it. When a file outgrows its description, update the description in the same step.
@@ -1651,8 +1652,25 @@ internal static class PromptCatalog
                 remember what is not in your memory or in this conversation. Your memory now holds:
                 {{memoryIndex}}
                 """,
-            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}", "{{memoryTool}}", "{{memoryChanges}}", "{{reportedDays}}"],
+            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}", "{{memoryTool}}", "{{memoryChanges}}", "{{reportedDays}}", "{{memoryTidy}}"],
             RequiredPlaceholders: ["{{memoryPath}}", "{{memoryIndex}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds the <c>systemPrompt.memoryTidy</c> sentence the Memory block adds while the Memory Tidy Helper is on.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildMemoryTidySentenceParts() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryTidy",
+            Label: "Memory tidy sentence",
+            HelperText:
+                "Inserted where {{memoryTidy}} stands in the Memory block, only while the Memory Tidy Helper " +
+                "is on as the session starts. Keep the leading space: it joins onto the sentence before it.",
+            Default:
+                " Huddle tidies your own memory folder about once a week: it may merge two files on one topic, shorten a file, fix a broken description or remove a file that is out of date. It is not meant to add anything, and it keeps a copy the Human can restore. If a file you expect is gone, use the list command: what it held may now be in another file. If a file must never be changed, tell the Human: they can mark it. Huddle never changes the lines of reported.md except to drop old ones.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
     ];
 

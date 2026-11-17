@@ -6,6 +6,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Contracts;
+using Microsoft.Data.Sqlite;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -57,6 +58,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="spend">Moves a renamed Persona's display-only Spend, and forgets a removed Persona's — the Turn detail spec, section 6.6.</param>
 /// <param name="lastCatchUp">Moves a renamed Persona's catch-up records and notes, and deletes a removed Persona's.</param>
 /// <param name="commands">Moves a renamed Persona's offered Adapter commands, and forgets a removed Persona's — the Commands spec, section 6.3.</param>
+/// <param name="memoryTidy">Moves a renamed Agent's Memory Tidy marker, failure count and days to its new key, and deletes a removed Agent's rows — the Memory Tidy spec, section 6.5.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
@@ -72,7 +74,8 @@ internal sealed partial class PersonaRenameCascade(
     AgentFolderMoves folderMoves,
     PersonaSpend spend,
     PersonaCommands commands,
-    LastCatchUpStore lastCatchUp) : IHostedService, IDisposable
+    LastCatchUpStore lastCatchUp,
+    MemoryTidyStateStore? memoryTidy = null) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -229,6 +232,9 @@ internal sealed partial class PersonaRenameCascade(
         this.RenamePersonaScopedState(renamed);
         this.RenameTaskAndViewReferences(renamed);
 
+        // Per Agent Name like Spend, and a folder is tidied whether or not an Agent row exists: ABOVE the "no Agent row" early return.
+        this.MoveMemoryTidyRows(renamed.OldName, renamed.NewName);
+
         // corrections-B2 item 18: ABOVE the "no Agent row" early return below, same reasoning as the
         // Avatar/file-state/Room-Session/Task/View moves above it - the Agent folder exists (once
         // any Work Dir has ever been created inside it, or a definition file placed there) whether or
@@ -378,6 +384,8 @@ internal sealed partial class PersonaRenameCascade(
         avatars.Remove(removed.Name);
         spend.Forget(removed.Name);
         commands.Forget(removed.Name);
+
+        this.DeleteMemoryTidyRows(removed.Name);
 
         try
         {
@@ -702,6 +710,43 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that deleting a removed Persona's Room Session state failed.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove Room Session state for '{Name}'.")]
     private static partial void LogRoomSessionsRemoveFailed(ILogger logger, string name, Exception exception);
+
+    /// <summary>Moves a renamed Agent's Memory Tidy state and file rows to its new key; a failed write is logged, never allowed to stop the cascade.</summary>
+    /// <param name="oldName">The Name before.</param>
+    /// <param name="newName">The Name after.</param>
+    private void MoveMemoryTidyRows(string oldName, string newName)
+    {
+        try
+        {
+            memoryTidy?.RenameFolder("agent:" + oldName, "agent:" + newName);
+        }
+        catch (SqliteException ex)
+        {
+            LogMemoryTidyMoveFailed(logger, oldName, newName, ex);
+        }
+    }
+
+    /// <summary>Deletes a removed Agent's Memory Tidy state and file rows; a failed write is logged.</summary>
+    /// <param name="name">The removed Agent's Name.</param>
+    private void DeleteMemoryTidyRows(string name)
+    {
+        try
+        {
+            memoryTidy?.DeleteFolder("agent:" + name);
+        }
+        catch (SqliteException ex)
+        {
+            LogMemoryTidyRemoveFailed(logger, name, ex);
+        }
+    }
+
+    /// <summary>Logs that moving a renamed Agent's Memory Tidy rows failed. The rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move Memory Tidy rows for '{OldName}' to '{NewName}'.")]
+    private static partial void LogMemoryTidyMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that deleting a removed Agent's Memory Tidy rows failed. The removal proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not delete Memory Tidy rows for '{Name}'.")]
+    private static partial void LogMemoryTidyRemoveFailed(ILogger logger, string name, Exception exception);
 
     /// <summary>Logs that moving a renamed Persona's catch-up records failed. The rename proceeds regardless.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move catch-up records for '{OldName}' to '{NewName}'.")]

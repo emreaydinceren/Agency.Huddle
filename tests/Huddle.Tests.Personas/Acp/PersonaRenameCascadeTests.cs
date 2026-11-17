@@ -415,6 +415,66 @@ public sealed class PersonaRenameCascadeTests
         Assert.Empty(harness.Commands.Get("echo"));
     }
 
+    /// <summary>
+    /// A rename moves a Persona's Memory Tidy state and file rows to the new key even when no Agent has registered under the old Name
+    /// (Adapters off): pins the placement above the "no Agent row" early return. The moved rows equal the old ones apart from the key,
+    /// so the folder's stored fingerprint still matches and the Agent is not judged again for the rename alone.
+    /// </summary>
+    [Fact]
+    public async Task Rename_MovesMemoryTidyRows_EvenWhenNoAgentRowExists()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("ghost"), "Nobody has ever started this one.");
+        MemoryTidyState state = new("agent:ghost", "fp-1", new DateTimeOffset(2026, 11, 1, 3, 0, 0, TimeSpan.Zero), "tidied", 2, "fp-0", 3);
+        MemoryTidyFileRow file = new("agent:ghost", "notes.md", "v1", new DateOnly(2026, 11, 1));
+        harness.MemoryTidy.PutState(state);
+        harness.MemoryTidy.PutFile(file);
+
+        harness.PersonaStore.Update("ghost", TestPersonas.FrontmatterText("ghostprime", "Nobody has ever started this one."), model: null, effort: null, workMode: null);
+
+        Assert.Equal(state with { FolderKey = "agent:ghostprime" }, harness.MemoryTidy.GetState("agent:ghostprime"));
+        Assert.Equal([file with { FolderKey = "agent:ghostprime" }], harness.MemoryTidy.GetFiles("agent:ghostprime"));
+        Assert.Null(harness.MemoryTidy.GetState("agent:ghost"));
+        Assert.Empty(harness.MemoryTidy.GetFiles("agent:ghost"));
+    }
+
+    /// <summary>A rename of an Agent that has a registered row also moves its Memory Tidy rows.</summary>
+    [Fact]
+    public async Task Rename_RegisteredAgent_MovesMemoryTidyRows()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        _ = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
+        harness.MemoryTidy.PutState(new MemoryTidyState("agent:echo", "fp-1"));
+
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
+
+        Assert.Equal("fp-1", harness.MemoryTidy.GetState("agent:echoprime")?.Fingerprint);
+        Assert.Null(harness.MemoryTidy.GetState("agent:echo"));
+    }
+
+    /// <summary>Removing a Persona deletes its Memory Tidy state and file rows.</summary>
+    [Fact]
+    public async Task Removed_DeletesMemoryTidyRows()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        harness.MemoryTidy.PutState(new MemoryTidyState("agent:echo", "fp-1"));
+        harness.MemoryTidy.PutFile(new MemoryTidyFileRow("agent:echo", "notes.md", "v1", new DateOnly(2026, 11, 1)));
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Null(harness.MemoryTidy.GetState("agent:echo"));
+        Assert.Empty(harness.MemoryTidy.GetFiles("agent:echo"));
+    }
+
     /// <summary>Removing a Persona forgets its Spend, so a new Persona that takes the Name starts from zero.</summary>
     [Fact]
     public async Task Removed_ForgetsSpend()
@@ -843,6 +903,7 @@ public sealed class PersonaRenameCascadeTests
         var folderMoves = new AgentFolderMoves();
         var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(dir.Options()), new RoomSpendStore(dir.Options()));
         var commands = new PersonaCommands(NullLogger<PersonaCommands>.Instance);
+        var memoryTidy = new MemoryTidyStateStore(dir.Options());
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
@@ -858,7 +919,8 @@ public sealed class PersonaRenameCascadeTests
             folderMoves: folderMoves,
             spend: spend,
             commands: commands,
-            lastCatchUp: lastCatchUp);
+            lastCatchUp: lastCatchUp,
+            memoryTidy: memoryTidy);
 
         await cascade.StartAsync(ct);
 
@@ -871,6 +933,7 @@ public sealed class PersonaRenameCascadeTests
             FileState = fileState,
             RoomSessions = roomSessions,
             LastCatchUp = lastCatchUp,
+            MemoryTidy = memoryTidy,
             TaskStore = taskStore,
             TaskService = taskService,
             ViewStore = viewStore,
@@ -1170,6 +1233,9 @@ public sealed class PersonaRenameCascadeTests
 
         /// <summary>The <see cref="PersonaCommands"/> table the cascade renames and forgets entries in.</summary>
         public required PersonaCommands Commands { get; init; }
+
+        /// <summary>The Memory Tidy state and file tables the cascade moves and deletes rows in.</summary>
+        public required MemoryTidyStateStore MemoryTidy { get; init; }
 
         /// <summary>The <see cref="AgentFolderMoves"/> gate the cascade signals around an Agent folder move, so a test can await <see cref="AgentFolderMoves.WhenSettledAsync"/> the same way a host starting mid-rename would.</summary>
         public required AgentFolderMoves FolderMoves { get; init; }

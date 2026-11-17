@@ -177,6 +177,8 @@ public static class ServiceCollectionExtensions
     private static void AddMemoryTidyHelper(IServiceCollection services)
     {
         services.AddSingleton<MemoryTidyHelper>();
+        services.AddSingleton<IHelperCardSection, MemoryTidyCardSectionRegistration>();
+        services.AddSingleton<MemoryTidyLastPassReader>();
         services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<MemoryTidyHelper>());
         services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<MemoryTidyInput, MemoryTidyVerdict>(
             sp.GetRequiredService<MemoryTidyHelper>(),

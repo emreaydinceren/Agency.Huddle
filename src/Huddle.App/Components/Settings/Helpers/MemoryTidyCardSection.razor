@@ -1,0 +1,93 @@
+@*
+    The extra section of the Memory Tidy card (wireframe G9a, Memory Tidy spec §6.16): one line with the next and the last pass, the
+    Tidy now button and a link to the newest list. Drawn by HelperCard through DynamicComponent, from the IHelperCardSection registered
+    for Memory Tidy. The runner raises Changed on its own thread, so the repaint goes through InvokeAsync.
+*@
+
+@implements IDisposable
+@using Agency.Huddle.App.Helpers.MemoryTidy
+@using Agency.Huddle.App.Library
+@inject IMemoryTidyRunner Runner
+@inject MemoryTidyLastPassReader LastPassReader
+@inject LibraryPathResolver LibraryResolver
+@inject IServiceProvider Services
+@inject TimeProvider Clock
+
+<div class="memory-tidy-section mb-3" data-helper="@this.HelperId">
+    @if (this.Line.Length > 0)
+    {
+        <MudText Typo="Typo.body2" Class="memory-tidy-line">@this.Line</MudText>
+    }
+
+    <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center" Class="mt-2">
+        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="memory-tidy-now"
+                   Disabled="@this.Runner.IsRunning" OnClick="this.OnTidyNow">
+            @(this.Runner.IsRunning ? MemoryTidyCardCopy.PassRunning : MemoryTidyCardCopy.TidyNow)
+        </MudButton>
+        @if (this.ListHref is { } href)
+        {
+            <MudLink Href="@href" Class="memory-tidy-list">@MemoryTidyCardCopy.OpenList</MudLink>
+        }
+    </MudStack>
+
+    @if (this.refused)
+    {
+        <MudText Typo="Typo.caption" Class="mud-text-secondary memory-tidy-refused" role="status">@MemoryTidyCardCopy.PassRunning</MudText>
+    }
+</div>
+
+@code {
+    private MemoryTidyLastPass? last;
+    private bool refused;
+
+    /// <summary>The id of the Helper this section belongs to.</summary>
+    [Parameter]
+    public string HelperId { get; set; } = string.Empty;
+
+    private string Line
+    {
+        get
+        {
+            List<string> parts = [];
+            if (this.Services.GetService(typeof(MemoryTidyScheduler)) is MemoryTidyScheduler { NextRun: { } next })
+            {
+                parts.Add(MemoryTidyCardCopy.NextPass(TimeZoneInfo.ConvertTime(next, this.Clock.LocalTimeZone)));
+            }
+
+            if (this.last is not null)
+            {
+                DateTimeOffset at = TimeZoneInfo.ConvertTime(this.last.At, this.Clock.LocalTimeZone);
+                parts.Add(MemoryTidyCardCopy.LastPass(at, this.last.Counts.Tidied, this.last.Counts.Dropped));
+            }
+
+            return MemoryTidyCardCopy.Line(parts);
+        }
+    }
+
+    /// <summary>The Library address of the newest list, or <see langword="null"/> when there is none or it is under no Library root.</summary>
+    private string? ListHref =>
+        this.last?.ListPath is { } path && this.LibraryResolver.TryResolveAbsolute(path, out LibraryPath? resolved)
+            ? $"/library?root={Uri.EscapeDataString(resolved.Root.Id)}&path={Uri.EscapeDataString(resolved.RelativePath)}"
+            : null;
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        this.last = this.LastPassReader.Find();
+        this.Runner.Changed += this.OnRunnerChanged;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => this.Runner.Changed -= this.OnRunnerChanged;
+
+    private void OnRunnerChanged() => _ = this.InvokeAsync(() =>
+    {
+        this.last = this.LastPassReader.Find();
+        this.StateHasChanged();
+    });
+
+    private void OnTidyNow()
+    {
+        this.refused = this.Runner.TryStart(MemoryTidyStart.TidyNow) is null;
+    }
+}
