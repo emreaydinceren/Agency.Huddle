@@ -390,7 +390,9 @@ internal sealed class MemoryTool(
         string file = request.File ?? string.Empty;
         if (folder.Label == MemoryPaths.OwnFolder && folder.Team is null && !folder.HuddleWide && ReportedFile.IsName(file))
         {
-            return await this.AppendReportedAsync(request, folder, path, cancellationToken).ConfigureAwait(false);
+            // The file's own spelling, so REPORTED.md on a case-sensitive file system appends to reported.md rather than starting a twin.
+            string reported = MemoryPaths.FilePath(folder, ReportedFile.FileName) ?? path;
+            return await this.AppendReportedAsync(request, folder, reported, cancellationToken).ConfigureAwait(false);
         }
 
         byte[]? current = await ReadIfExistsAsync(path, cancellationToken).ConfigureAwait(false);

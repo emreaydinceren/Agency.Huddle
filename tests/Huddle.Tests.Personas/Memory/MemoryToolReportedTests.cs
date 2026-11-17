@@ -28,11 +28,10 @@ public sealed class MemoryToolReportedTests
 
         string result = await Run(harness, "Nova and Sam · launch budget is 12% over plan", ct);
 
-        string text = await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "reported.md"), ct);
-        Assert.StartsWith("appended to reported.md (version ", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("dropped", result, StringComparison.Ordinal);
-        Assert.Equal(DefaultDescription, MemoryFileRules.DescriptionOf(text));
-        Assert.EndsWith("\n" + Line + "\n", text, StringComparison.Ordinal);
+        byte[] bytes = await File.ReadAllBytesAsync(Path.Combine(harness.MemoryDir(), "reported.md"), ct);
+        Assert.Equal(Appended(bytes), result);
+        Assert.Equal(Head + Line + "\n", Encoding.UTF8.GetString(bytes));
+        Assert.Equal(DefaultDescription, MemoryFileRules.DescriptionOf(Encoding.UTF8.GetString(bytes)));
     }
 
     /// <summary>A Prompt override that fails the description rule falls back to the default text and logs one Warning per tool instance.</summary>
@@ -100,7 +99,7 @@ public sealed class MemoryToolReportedTests
         _ = await Run(harness, "Nova · one", ct);
 
         string text = await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "reported.md"), ct);
-        Assert.EndsWith("- 2026-12-03 · Nova · one\n", text, StringComparison.Ordinal);
+        Assert.Equal(Head + "- 2026-12-03 · Nova · one\n", text);
     }
 
     /// <summary>Several lines are refused with the one-line sentence and nothing is written, whether the file exists or not.</summary>
@@ -143,8 +142,8 @@ public sealed class MemoryToolReportedTests
 
         string result = await Run(harness, "Nova and Sam · launch budget is 12% over plan", ct);
 
-        Assert.EndsWith(suffix, result, StringComparison.Ordinal);
         Assert.Equal(Head + "- 2026-11-02 · Nova · boundary day\n" + Line + "\n", await File.ReadAllTextAsync(path, ct));
+        Assert.Equal(Appended(await File.ReadAllBytesAsync(path, ct), suffix), result);
     }
 
     /// <summary>KeepDays zero turns the age drop off through the option.</summary>
@@ -176,8 +175,8 @@ public sealed class MemoryToolReportedTests
 
         string result = await Run(harness, "Nova and Sam · launch budget is 12% over plan", ct);
 
-        Assert.EndsWith("; dropped 2 of the oldest lines to make room", result, StringComparison.Ordinal);
         Assert.Equal(Head + lines[2] + note + lines[3] + lines[4] + Line + "\n", await File.ReadAllTextAsync(path, ct));
+        Assert.Equal(Appended(await File.ReadAllBytesAsync(path, ct), "; dropped 2 of the oldest lines to make room"), result);
     }
 
     /// <summary>One line that alone is over the cap is refused with the too-large sentence and the file is left as it was.</summary>
@@ -199,8 +198,8 @@ public sealed class MemoryToolReportedTests
 
         string result = await Run(harness, "Nova and Sam · launch budget is 12% over plan", ct);
 
-        Assert.StartsWith("reported.md would be ", result, StringComparison.Ordinal);
-        Assert.Contains($"over the limit of {cap}", result, StringComparison.Ordinal);
+        int size = Encoding.UTF8.GetByteCount(Head + Line + "\n");
+        Assert.Equal($"reported.md would be {size} bytes, over the limit of {cap}. Split it into topics, each in its own file.", result);
         Assert.Equal(fileExists, File.Exists(path));
         Assert.Equal(fileExists ? existing : null, fileExists ? await File.ReadAllTextAsync(path, ct) : null);
     }
@@ -219,9 +218,8 @@ public sealed class MemoryToolReportedTests
         string missing = await harness.RunAsAsync("Ada", MemoryToolHarness.Args("append", ("folder", "Growth"), ("file", "other.md"), ("text", "x")), ct);
         string result = await harness.RunAsAsync("Ada", MemoryToolHarness.Args("append", ("folder", "Growth"), ("file", "reported.md"), ("text", "- 2026-01-02 · Ada · two\nand a second line")), ct);
 
-        Assert.StartsWith("appended to reported.md", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("dropped", result, StringComparison.Ordinal);
         Assert.Equal(existing + "- 2026-01-02 · Ada · two\nand a second line\n", await File.ReadAllTextAsync(path, ct));
+        Assert.Equal(Appended(await File.ReadAllBytesAsync(path, ct)), result);
         Assert.DoesNotContain("appended", missing, StringComparison.Ordinal);
         Assert.False(File.Exists(Path.Combine(teamDir, "other.md")));
     }
@@ -264,10 +262,13 @@ public sealed class MemoryToolReportedTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using MemoryToolHarness harness = new();
 
+        _ = await harness.RunAsync(MemoryToolHarness.Args("append", ("file", "reported.md"), ("text", "Nova · first")), ct);
+
         _ = await harness.RunAsync(MemoryToolHarness.Args("append", ("file", "REPORTED.md"), ("text", "- 2026-01-02 · Nova · one")), ct);
 
-        string text = await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "REPORTED.md"), ct);
-        Assert.EndsWith("- 2026-11-16 · Nova · one\n", text, StringComparison.Ordinal);
+        string text = await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "reported.md"), ct);
+        Assert.Equal(Head + "- 2026-11-16 · Nova · first\n- 2026-11-16 · Nova · one\n", text);
+        Assert.Single(Directory.GetFiles(harness.MemoryDir(), "*.md"));
     }
 
     /// <summary>A write of reported.md treats it as any file: the text is kept as given.</summary>
@@ -282,6 +283,12 @@ public sealed class MemoryToolReportedTests
         string text = await File.ReadAllTextAsync(Path.Combine(harness.MemoryDir(), "reported.md"), ct);
         Assert.Equal(Head + "- 2020-01-01 · Nova · as written\ntwo\n", text);
     }
+
+    /// <summary>The reply of a successful append to reported.md (spec §7): the verb, the version of the bytes now on disk, the file's description and any suffix.</summary>
+    /// <param name="bytes">The file's bytes after the append.</param>
+    /// <param name="suffix">The drop suffix, or empty.</param>
+    private static string Appended(byte[] bytes, string suffix = "") =>
+        $"appended to reported.md (version {MemoryVersion.Of(bytes)}); description: {DefaultDescription}{suffix}";
 
     private static Task<string> Run(MemoryToolHarness harness, string text, CancellationToken cancellationToken) =>
         harness.RunAsync(MemoryToolHarness.Args("append", ("file", "reported.md"), ("text", text)), cancellationToken);

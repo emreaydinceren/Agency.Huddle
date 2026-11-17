@@ -36,12 +36,11 @@ public sealed class MemoryToolAgentFolderTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using MemoryToolHarness harness = Build();
-        _ = MemoryToolHarness.Put(harness.MemoryDir("Ada"), "reported.md", Reported);
+        string path = MemoryToolHarness.Put(harness.MemoryDir("Ada"), "reported.md", Reported);
 
         string result = await harness.RunAsAsync("Chief", ReadReported("agent:Ada"), ct);
 
-        Assert.StartsWith(Reported, result, StringComparison.Ordinal);
-        Assert.Contains("version: ", result, StringComparison.Ordinal);
+        Assert.Equal(Reported + "\nversion: " + MemoryVersion.Of(await File.ReadAllBytesAsync(path, ct)), result);
     }
 
     /// <summary>A manager with a folder but no reported.md has told the Human nothing directly.</summary>
@@ -148,8 +147,7 @@ public sealed class MemoryToolAgentFolderTests
         string listed = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("list", ("folder", "agent:Ada")), ct);
         string none = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("list", ("folder", "agent:Bo")), ct);
 
-        Assert.StartsWith("reported.md - What I have already told the Human", listed, StringComparison.Ordinal);
-        Assert.DoesNotContain("other.md", listed, StringComparison.Ordinal);
+        Assert.Equal("reported.md - What I have already told the Human, by date and Room.", listed);
         Assert.Equal("Bo" + Nothing, none);
     }
 
@@ -165,8 +163,7 @@ public sealed class MemoryToolAgentFolderTests
 
         string result = await harness.RunAsAsync(caller, ReadReported("agent:Ada"), ct);
 
-        Assert.StartsWith("'agent:Ada' is not a Memory folder you can use.", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("agent:Bo", result, StringComparison.Ordinal);
+        Assert.Equal("'agent:Ada' is not a Memory folder you can use. Use one of: me, memory, Growth.", result);
         Assert.NotEmpty(harness.Logger.AtExactly(LogLevel.Warning));
     }
 
@@ -184,8 +181,7 @@ public sealed class MemoryToolAgentFolderTests
 
         string result = await harness.RunAsAsync("Chief", ReadReported(folder), ct);
 
-        Assert.Contains("so there is nothing to read", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("version: ", result, StringComparison.Ordinal);
+        Assert.Equal($"No Team's manager is named {folder["agent:".Length..]}, so there is nothing to read. Managers today: Ada, Bo.", result);
     }
 
     /// <summary>The prefix and the Name match ignoring case, and the answer carries the catalog's spelling.</summary>
@@ -194,13 +190,13 @@ public sealed class MemoryToolAgentFolderTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using MemoryToolHarness harness = Build();
-        _ = MemoryToolHarness.Put(harness.MemoryDir("Ada"), "reported.md", Reported);
+        string path = MemoryToolHarness.Put(harness.MemoryDir("Ada"), "reported.md", Reported);
         Directory.CreateDirectory(harness.MemoryDir("Bo"));
 
         string read = await harness.RunAsAsync("Chief", ReadReported("AGENT:aDa"), ct);
         string none = await harness.RunAsAsync("Chief", ReadReported("Agent:bo"), ct);
 
-        Assert.StartsWith(Reported, read, StringComparison.Ordinal);
+        Assert.Equal(Reported + "\nversion: " + MemoryVersion.Of(await File.ReadAllBytesAsync(path, ct)), read);
         Assert.Equal("Bo" + Nothing, none);
     }
 
@@ -218,7 +214,7 @@ public sealed class MemoryToolAgentFolderTests
         Assert.Equal("ada", manager);
         Assert.Equal(expected, path);
         Assert.NotNull(path);
-        Assert.Contains(Path.DirectorySeparatorChar + "Ada" + Path.DirectorySeparatorChar, path, StringComparison.Ordinal);
+        Assert.Equal("Ada", Path.GetRelativePath(harness.AgentsRoot, path).Split(Path.DirectorySeparatorChar)[0]);
     }
 
     /// <summary>A manager spelled <c>..</c> or holding a separator finds no folder and is answered as having told nothing.</summary>
@@ -313,8 +309,8 @@ public sealed class MemoryToolAgentFolderTests
         string member = await harness.RunAsAsync("Leo", MemoryToolHarness.Args("list"), ct);
         string manager = await harness.RunAsAsync("Ada", MemoryToolHarness.Args("list"), ct);
 
-        Assert.Contains("agent:Ada, agent:Bo", chief, StringComparison.Ordinal);
-        Assert.DoesNotContain("agent:", member, StringComparison.Ordinal);
-        Assert.DoesNotContain("agent:", manager, StringComparison.Ordinal);
+        Assert.Equal("folders you may use: me, memory, Growth, Ops, agent:Ada, agent:Bo", chief.Split('\n')[^1]);
+        Assert.Equal("folders you may use: me, memory, Growth", member.Split('\n')[^1]);
+        Assert.Equal("folders you may use: me, memory, Growth", manager.Split('\n')[^1]);
     }
 }
