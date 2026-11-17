@@ -435,6 +435,31 @@ public sealed class SqliteTeamDirectoryTests
         Assert.Equal(0, count);
     }
 
+    /// <summary>Deleting a Room removes that Room's Turn Queue rows, of any status, and keeps another Room's.</summary>
+    [Fact]
+    public async Task DeleteRoom_RemovesItsTurnQueueRows()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var other = await directory.CreateRoomAsync("other", [KnownIds.Human, echo.Id], ct);
+        TurnQueueStore queue = new(dir.Options());
+        DateTimeOffset now = new(2026, 11, 16, 8, 0, 0, TimeSpan.Zero);
+        _ = queue.Record(echo.Id, "m1", room.Id, now, now);
+        _ = queue.Record(echo.Id, "m2", room.Id, now, now);
+        _ = queue.Finish(echo.Id, room.Id, ["m2"], TurnQueueOutcome.Silent, now);
+        _ = queue.Record(echo.Id, "m3", other.Id, now, now);
+
+        await directory.DeleteRoomAsync(room.Id, ct);
+
+        Assert.Empty(queue.OpenIn(room.Id));
+        Assert.Equal(0, queue.PruneDoneBefore(now.AddDays(1)));
+        Assert.Equal("m3", Assert.Single(queue.OpenIn(other.Id)).MessageId);
+    }
+
     /// <summary>Deleting a Room that does not exist is a silent no-op, matching RenameRoomAsync.</summary>
     [Fact]
     public async Task DeleteRoom_UnknownId_DoesNotThrow()

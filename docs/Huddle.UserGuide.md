@@ -170,7 +170,7 @@ Each row shows an icon for every reason, the Room's name, and who asked and when
 
 A Room leaves the list when you **post in it**, or when you press the check (✓) on its row. Opening a Room does not clear it, so you can read a Room and come back to it later. The check hides the Room until something new makes it wait again; it does not answer the Question or Form behind it. Pressing **Continue** on a paused Room clears only the paused reason. When nothing is waiting, the card is not drawn.
 
-The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question or Form that was waiting is gone, and so is any dismissal.
+The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question that was waiting is listed again, with its card still in the Room; a Form that was waiting is gone, and so is any dismissal.
 
 **Tasks waiting for your decision** are listed too, after the Rooms and under the same count. A Task row shows its id and title with "Waiting on you · Proof 4/4", and opens the **Needs you** page at that Task. A Task is listed while it is under the [Human gate](#the-human-gate), in the Needs you status, and not yet accepted. It has no check (✓): it leaves the list only when you decide, or when its status changes. These rows are read from the Task files, so a restart loses none of them.
 
@@ -697,7 +697,30 @@ the name and no longer wake anyone.
 
 **Restart** deletes `room-sessions/<Name>.json` and restarts the Agent. Every
 Room then starts a fresh conversation, with catch-up from the transcript. Use it
-when an Agent seems confused.
+when an Agent seems confused. A Turn the Agent was in the middle of stops; the
+Messages waiting behind it are answered by the restarted Agent.
+
+### After Huddle restarts
+
+A Message you sent that an Agent had not answered yet is not lost when Huddle
+closes, crashes or the computer restarts. On the next start the Agent answers it
+once it is online, and the Room shows a line, "Picked up after a restart.", that
+says what is waiting and for whom. A Turn that was cut off half way runs once
+more, and the Agent is told to check what it had already done. A reply is never
+posted twice.
+
+A Message older than a day (`Team:TurnQueue:ResumeWithin`) is not picked up,
+and the line says so ("Not picked up after a restart: …"). A Turn you stopped
+stays stopped.
+
+While Messages wait for an Agent that is offline, or for a Room that has used its
+Budget, the Room shows "Waiting for Nova: 2 Messages". Press **Don't answer** on
+that row to call them off before they spend anything. Where the Agent is already
+answering, its **Stop** button does the same for what waits behind it. A Room
+whose Budget is spent answers its waiting Messages once you press **Continue** or
+type in the Room.
+
+A Question an Agent asked with option buttons is still waiting after a restart.
 
 ### Editing the file by hand
 

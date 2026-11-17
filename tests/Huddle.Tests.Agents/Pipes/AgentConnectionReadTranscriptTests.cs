@@ -69,6 +69,23 @@ public sealed class AgentConnectionReadTranscriptTests
         Assert.Equal(0, tail.Omitted);
     }
 
+    /// <summary>
+    /// A re-sent Turn relies on this (Turn Queue spec, section 5.8): a <see cref="ReadTranscript.BeforeMessageId"/> that is its own
+    /// not-yet-posted reply id reads everything after <see cref="ReadTranscript.AfterMessageId"/> to the end.
+    /// </summary>
+    [Fact]
+    public async Task Read_AfterM2BeforeIdNotInTranscript_ReadsEverythingAfterM2ToTheEnd()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+        await using Scenario scenario = await Scenario.StartAsync(cts);
+
+        TranscriptTail tail = await scenario.ReadAsync("r1", "m2", "reply-not-posted-yet", 20, ct);
+
+        Assert.Equal(["m3", "m4", "m5", "m6"], tail.Messages.Select(m => m.Id));
+        Assert.Equal(0, tail.Omitted);
+    }
+
     /// <summary>A <see cref="ReadTranscript.AfterMessageId"/> not present in the Transcript is treated as <see langword="null"/> (plan-settled: the spec is silent; the latest Messages are the safe reading).</summary>
     [Fact]
     public async Task Read_AfterIdNotInTranscript_TreatedAsNull()

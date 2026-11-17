@@ -83,6 +83,12 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   rule directly above. The real cost of a new `ErrorCodes` value is quieter: a
   client that does not know the code degrades to a generic failure, so a refused
   post can look to an old Agent Host like a Message that simply vanished.
+  **The same holds client to server** (Turn Queue, ADR-0091): a nullable property on a
+  client-to-server record (`Hello.DurableQueue`, `PostMessage.InReplyTo`) and a new
+  client-to-server type (`QueueAck`) are additive, because an external client omits
+  them and `ProtocolJson` omits a null property. The version stays 3. Every id taken
+  from the wire this way is checked with `NameRules.IsValidId` and applied only to the
+  sending Agent's rows in the named Room; an invalid id is dropped, never trusted.
 - **A `Logging:LogLevel` key is a namespace prefix, so the 2026-09-12 namespace
   rename moved it and the `Team:` config root did not.** `ILogger<T>` takes its
   category from `typeof(T).FullName`, so the filters now read `"Agency.Huddle"`.

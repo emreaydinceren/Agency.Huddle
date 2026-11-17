@@ -100,6 +100,19 @@ internal static class PromptCatalog
         ..BuildPart50(),
         ..BuildPart53(),
         ..BuildAgentsMdNoticeParts(),
+        ..BuildLaterHeaderPart(),
+    ];
+
+    /// <summary>Builds <c>turn.laterHeader</c>: the line that introduces what was posted after a late Turn's Message (Turn Queue spec 5.8).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildLaterHeaderPart() =>
+    [
+        new PromptDefinition(
+            Key: "turn.laterHeader",
+            Label: "Late Turn: what was posted after the Message",
+            HelperText: "Put after the Message of a Turn that waited a long time (after Huddle restarted), before the Messages posted since. It is used only for such a Turn.",
+            Default: "Posted after that Message, while it waited:",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds slices 33 to 39 in catalog order, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
@@ -126,6 +139,17 @@ internal static class PromptCatalog
             HelperText: "One new fact. {{name}} is the file name.",
             Default: "- New: {{name}}",
             Placeholders: ["{{name}}"], RequiredPlaceholders: ["{{name}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.cutOffNote",
+            Label: "Second try after Huddle stopped: cut-off note",
+            HelperText: "Put before the Message of a Turn that Huddle's stop cut off and is now trying a second time. It is used only for that second try.",
+            Default:
+                "Huddle stopped while you were answering the Message below, and this is a second try. " +
+                "Your conversation may show what you had started: a tool call that had not returned may have finished, " +
+                "may have stopped partway, or may still be running. Anything you did before it stopped " +
+                "(a file, a Task, a post in this or another Room) may already be done: check before you do it again.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
 
         new PromptDefinition(
             Key: "turn.huddleMemoryChanged",

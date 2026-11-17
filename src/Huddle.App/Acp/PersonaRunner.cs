@@ -436,7 +436,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private async Task<Welcome> RegisterAsync(JsonLineStream jsonLineStream, CancellationToken cancellationToken)
     {
         var description = BuildDescription(this.persona.Text);
-        await jsonLineStream.WriteAsync(new Hello(this.persona.Name, description), cancellationToken).ConfigureAwait(false);
+        await jsonLineStream.WriteAsync(new Hello(this.persona.Name, description, DurableQueue: true), cancellationToken).ConfigureAwait(false);
 
         var welcomeMessage = await jsonLineStream.ReadAsync(cancellationToken).ConfigureAwait(false);
         if (welcomeMessage is not Welcome welcome)
@@ -725,18 +725,16 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // that Room regardless of which ReplyDecision it gets (RS §9 E-7).
         this.knownRoomNames[posted.RoomId] = posted.RoomName;
 
-        // A Human Message ends the unattended run, so the token Budget starts over with
-        // it. The per-Room Budget resets server-side on the very same Message; this one
-        // is per Persona, because one session spans every Room the Agent is in.
-        if (SenderIsHuman(posted))
+        // A new Human Message ends the unattended run, so the per-Persona token Budget starts over (a re-sent one does not).
+        if (SenderIsHuman(posted) && posted.Redelivery is null)
         {
-            Interlocked.Exchange(ref this.tokensConsumed, 0);
-
-            // Clears whatever Degraded state the spent token Budget reported - the only
-            // thing this specific signal is documented to clear (T4.3).
-            this.RaiseStatusChanged(PersonaState.Online, null);
+            this.ResetTokenBudget();
         }
 
+        if (this.TryRouteRedelivery(posted))
+        {
+            return;
+        }
         var following = this.agentId is not null && this.roomFollows.IsFollowing(this.agentId, posted.RoomId);
         switch (ReplyGate.Decide(
             posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following, string.Equals(posted.Message.SenderId, KnownIds.Huddle, StringComparison.Ordinal)))
@@ -761,6 +759,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 }
 
                 this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
+                this.ReportDeclined(posted);
                 break;
 
             case ReplyDecision.BudgetExhausted:
@@ -775,7 +774,93 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                     posted.RoomId,
                     posted.Budget);
 #pragma warning restore HAA0601
+                this.ReportDeclined(posted);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Tells the server the Reply Gate declined a delivery, so a row it queued for it closes as declined (Turn Queue spec,
+    /// section 5.5). Sent for every declined delivery: the server ignores an id it holds no row for. Nothing is sent once
+    /// the run token is cancelled, and a write that fails is logged and dropped; it never reaches the read loop.
+    /// </summary>
+    /// <param name="posted">The declined delivery.</param>
+    private void ReportDeclined(MessagePosted posted)
+    {
+        CancellationToken runToken = this.runCts.Token;
+        if (runToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        QueueAck ack = new(posted.RoomId, [posted.Message.Id], QueueAckKind.Finished, Outcome: QueueOutcome.Declined);
+        _ = this.WriteDeclinedAckAsync(ack, runToken);
+    }
+
+    /// <summary>Starts the per-Persona token Budget over after a Human Message, and clears the Degraded state a spent one reported (T4.3).</summary>
+    private void ResetTokenBudget()
+    {
+        Interlocked.Exchange(ref this.tokensConsumed, 0);
+        this.RaiseStatusChanged(PersonaState.Online, null);
+    }
+
+    /// <summary>
+    /// Routes a Message the server sends again. It was owed a Turn when it was first sent, so Mention, Member count and following are not
+    /// asked again (a rename or a new Member would wrongly drop it); only a spent Budget holds it (Turn Queue spec, section 5.8).
+    /// </summary>
+    /// <param name="posted">The delivery.</param>
+    /// <returns><see langword="true"/> when it was a re-sent one and has been routed; <see langword="false"/> for an ordinary delivery.</returns>
+    private bool TryRouteRedelivery(MessagePosted posted)
+    {
+        if (posted.Redelivery is null)
+        {
+            return false;
+        }
+
+        // A Message already queued or running here sends nothing: its own Turn acks it (spec 5.8), and a Held would park its row.
+        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id, posted.Redelivery is not null) == true)
+        {
+            return true;
+        }
+
+        if (ReplyGate.BudgetSpent(posted.AgentMessagesSinceHuman, posted.Budget))
+        {
+            this.ReportHeld(posted);
+        }
+        else
+        {
+            this.EnqueueReply(posted);
+        }
+
+        return true;
+    }
+
+    /// <summary>Tells the server a re-sent delivery is held because the Room's Budget is spent: its row stays waiting (spec 5.8).</summary>
+    /// <param name="posted">The held delivery.</param>
+    private void ReportHeld(MessagePosted posted)
+    {
+        CancellationToken runToken = this.runCts.Token;
+        if (!runToken.IsCancellationRequested)
+        {
+            _ = this.WriteDeclinedAckAsync(new QueueAck(posted.RoomId, [posted.Message.Id], QueueAckKind.Held), runToken);
+        }
+    }
+
+    /// <summary>Writes one decline ack, swallowing a failed write with a debug log.</summary>
+    /// <param name="ack">The ack to write.</param>
+    /// <param name="runToken">The runner's own run token.</param>
+    private async Task WriteDeclinedAckAsync(QueueAck ack, CancellationToken runToken)
+    {
+        try
+        {
+            await ((IRoomSessionOwner)this).WriteAsync(ack, runToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug(ex, "Persona '{PersonaName}' could not report a declined delivery in room {RoomId}.", this.persona.Name, ack.RoomId);
+            }
         }
     }
 
@@ -793,6 +878,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             return;
         }
 
+        // A Message already queued or running here is ignored before anything is drained, so the ignored
+        // duplicate takes no Catch-up or own-post lines with it (RoomSession.Enqueue is the backstop).
+        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id, posted.Redelivery is not null) == true)
+        {
+            return;
+        }
+
         var missed = this.TakeCatchUp(posted.RoomId);
 
         // D27, RS §6.7, finding P-22: drained here, in the read loop, beside
@@ -806,7 +898,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed,
             TriggerMessageId: posted.Message.Id,
             OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null,
-            Team: posted.Team);
+            Team: posted.Team,
+            Redelivery: posted.Redelivery);
         var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
         // Never call the agent from the read loop: hand the item to the pool,

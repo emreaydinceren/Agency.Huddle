@@ -45,7 +45,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(195,PromptCatalog.All.Count);
+        Assert.Equal(197,PromptCatalog.All.Count);
     }
 
     /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>

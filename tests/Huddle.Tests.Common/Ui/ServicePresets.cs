@@ -94,6 +94,10 @@ internal static class ServicePresets
         typeof(ElicitationStore),
         typeof(ElicitationService),
 
+        // Chat.razor stops a Draft's Agent through ITurnControl and renders WaitingNotice (C14), which reads ITurnQueueView.
+        typeof(Agency.Huddle.App.Services.ITurnControl),
+        typeof(Agency.Huddle.App.Services.ITurnQueueView),
+
         // Chat.razor draws a Team Room's Team avatar in its header, read from the Team catalog.
         typeof(ITeamCatalog),
 

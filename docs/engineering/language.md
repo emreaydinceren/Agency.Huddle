@@ -418,6 +418,15 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   means shutdown; see [Rules](rules.md) for the two traps that tell them apart.
 : *Avoid*: request, exchange, round.
 
+**Turn Queue**
+: The Turns an Agent owes, kept in `team.db` (`turn_queue`): one row per Agent and Message, written by the
+  server when the Message is posted, from the Reply Gate's answer at that moment. A row is done when a reply
+  that names it reaches the Transcript, or the Agent's Turn ends with nothing to post. It is what lets a Message
+  waiting at a restart, a crash or an Agent still connecting be answered, once
+  ([ADR-0091](../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md)).
+: Not the Room Session's in-memory work queue, which drives Turns and is fed from it at a Welcome.
+: *Avoid*: inbox, backlog, mailbox.
+
 **Plan**
 : An Agent's own checklist for one Turn, replaced whole each time it changes. Each line is a
   **Plan entry** with a status and a priority. Private to the Turn: unshared, unassigned and never

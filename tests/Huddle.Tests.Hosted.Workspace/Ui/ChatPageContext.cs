@@ -60,6 +60,10 @@ internal static class ChatPageContext
         ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Teams.ITeamCatalog>());
         ctx.Services.AddSingleton(source.GetRequiredService<FreshStartNotes>());
         ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Acp.Sessions.LastCatchUpStore>());
+
+        // Chat stops a Draft's Agent through ITurnControl and renders WaitingNotice, which reads ITurnQueueView.
+        ctx.Services.AddSingleton(source.GetRequiredService<ITurnControl>());
+        ctx.Services.AddSingleton(source.GetRequiredService<ITurnQueueView>());
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton(new TabService());

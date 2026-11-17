@@ -114,6 +114,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private CancellationTokenSource? eventReaderCts;
     private ActiveTurn? activeTurn;
 
+    // The triggering Message id of the item admitted and not yet released, so a re-sent delivery of it is ignored; guarded by gate.
+    private string? runningTriggerId;
+
+    // The triggering Message ids of the last Turns that ended, oldest first, so the queue's re-send of a Message that already ran
+    // (it arrives beside the live re-delivery of the same Message) is not run twice; guarded by gate.
+    private readonly Queue<string> endedTriggerIds = new();
+    private readonly HashSet<string> endedTriggerSet = new(StringComparer.Ordinal);
+
     // Numbers each Adapter notice so its Turn-activity row has an id no tool call can carry. Touched
     // only from the single-threaded event reader.
     private long noticeSequence;
@@ -291,6 +299,53 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <summary>The models the open session advertises, or empty while <see cref="RoomSessionState.Closed"/>.</summary>
     internal IReadOnlyList<AgentModelOption> Models => this.session?.Models ?? [];
 
+    /// <summary>Whether a Turn for this Message is queued or running here, so a re-sent delivery of it can be ignored before anything is drained for it.</summary>
+    /// <param name="messageId">The Message id.</param>
+    /// <param name="resent"><see langword="true"/> for a delivery the server sends again: a Message whose Turn already ended counts as present too.</param>
+    /// <returns><see langword="true"/> when it is already queued or running.</returns>
+    internal bool HasMessage(string messageId, bool resent = false)
+    {
+        lock (this.gate)
+        {
+            return this.HasMessageLocked(messageId, resent);
+        }
+    }
+
+    // Caller holds gate.
+    private bool HasMessageLocked(string messageId, bool resent) =>
+        string.Equals(messageId, this.runningTriggerId, StringComparison.Ordinal)
+        || (resent && this.endedTriggerSet.Contains(messageId))
+        || this.queue.Any(queued => string.Equals(queued.Item.TriggerMessageId, messageId, StringComparison.Ordinal));
+
+    // Caller holds gate.
+    private void RememberEndedTrigger(string? triggerId)
+    {
+        if (triggerId is null || !this.endedTriggerSet.Add(triggerId))
+        {
+            return;
+        }
+
+        this.endedTriggerIds.Enqueue(triggerId);
+        if (this.endedTriggerIds.Count > 64)
+        {
+            _ = this.endedTriggerSet.Remove(this.endedTriggerIds.Dequeue());
+        }
+    }
+
+    /// <summary>The trigger ids of the Turns queued behind the running one in a Room, so a late Turn's later block can leave them out (Turn Queue spec 5.8).</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <returns>The ids, possibly none.</returns>
+    private List<string> QueuedTriggerIds(string roomId)
+    {
+        lock (this.gate)
+        {
+            return [.. this.queue
+                .Where(queued => string.Equals(queued.Item.RoomId, roomId, StringComparison.Ordinal))
+                .Select(queued => queued.Item.TriggerMessageId)
+                .OfType<string>()];
+        }
+    }
+
     /// <summary>Queues a Turn built by the read loop, with its Catch-up already taken.</summary>
     /// <param name="item">The Turn to run, with its sequence number.</param>
     internal void Enqueue(QueuedWork item)
@@ -299,6 +354,14 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         lock (this.gate)
         {
+            // A Message already queued or running here is not run twice: a re-sent delivery of it is ignored, with no ack, because
+            // the Turn that is queued or running will ack it (Turn Queue spec, section 5.8).
+            if (item.Item.TriggerMessageId is { } trigger && this.HasMessageLocked(trigger, item.Item.Redelivery is not null))
+            {
+                // Backstop: EnqueueReply checks first, so nothing was drained for this one; a race between check and here is not lost context in practice.
+                return;
+            }
+
             this.queue.Enqueue(item);
 
             // RS §6.1 ticket protocol rule 1: offered exactly once, by whoever makes it the head. An
@@ -1101,6 +1164,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             // Queued in this Room at or before its last Stop: drain it without spending
             // anything, rather than working through a backlog the Human already asked to
             // clear for that Room. A different Room's queue is unaffected (finding P-6).
+            await this.SendAckAsync(head.Item, QueueAckKind.Finished, null, QueueOutcome.Dropped, ct).ConfigureAwait(false);
             return;
         }
 
@@ -1110,6 +1174,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         if (this.owner.TokenBudgetSpent)
         {
             this.owner.ReportTokenBudgetSpent();
+            await this.SendAckAsync(head.Item, QueueAckKind.Finished, null, QueueOutcome.Dropped, ct).ConfigureAwait(false);
             return;
         }
 
@@ -1154,7 +1219,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     {
         lock (this.gate)
         {
-            this.queue.Dequeue();
+            this.runningTriggerId = this.queue.Dequeue().Item.TriggerMessageId;
             this.running = true;
             this.state = this.state == RoomSessionState.Idle ? RoomSessionState.Busy : this.state;
         }
@@ -1178,6 +1243,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            await this.SendAckAsync(head.Item, QueueAckKind.Finished, null, QueueOutcome.Failed, ct).ConfigureAwait(false);
             await this.HandleLazyOpenFailureAsync(head, ex).ConfigureAwait(false);
             return false;
         }
@@ -1228,6 +1294,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         lock (this.gate)
         {
             this.running = false;
+            this.RememberEndedTrigger(this.runningTriggerId);
+            this.runningTriggerId = null;
             this.state = this.state == RoomSessionState.Busy ? RoomSessionState.Idle : this.state;
             this.lastActivity = this.time.GetUtcNow();
 
@@ -1310,9 +1378,21 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         // The token-Budget check (D22 correction 11) runs in the consumer, before this method is
         // ever called - and before this session opens - so an item drained for a spent Budget never
         // pays for opening a session it will not prompt.
-        TurnRun? run = await this.PrepareAndPublishAsync(item, sequence, ct).ConfigureAwait(false);
+        TurnRun? run;
+        try
+        {
+            run = await this.PrepareAndPublishAsync(item, sequence, ct).ConfigureAwait(false);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested)
+        {
+            // Nothing was prompted: the server's row closes as failed, then the exception goes on to the consumer's own handling.
+            await this.SendAckAsync(item, QueueAckKind.Finished, null, QueueOutcome.Failed, ct).ConfigureAwait(false);
+            throw;
+        }
+
         if (run is null)
         {
+            await this.SendAckAsync(item, QueueAckKind.Finished, null, QueueOutcome.Dropped, ct).ConfigureAwait(false);
             return;
         }
 
@@ -1372,7 +1452,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 return null;
             }
 
-            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, ct).ConfigureAwait(false);
+            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, messageId, this.QueuedTriggerIds(item.RoomId), ct).ConfigureAwait(false);
             if (this.enrichers is not null)
             {
                 item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);
@@ -1604,6 +1684,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
         catch (AgentDisconnectedException ex)
         {
+            run.Failed = true;
             this.owner.ReportOffline("The Adapter process disconnected.");
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
@@ -1616,8 +1697,70 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             // refusing, and Offline would be a claim this runner cannot support.
             this.owner.ReportTurnFailure(run.Item.RoomName, RoomSession.DescribeTurnFailure(ex));
             run.RoomFailureThisTurn = true;
+            run.Failed = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
+    }
+
+    /// <summary>
+    /// Sends one <see cref="QueueAck"/> for the item's trigger Message (Turn Queue spec, section 5.5). Nothing is sent for an
+    /// item with no trigger Message (the Greeting) or once the run token is cancelled: the server decides what becomes of a
+    /// row then. A write that fails is logged at Debug and dropped, so an ack never breaks a Turn or the consumer loop.
+    /// </summary>
+    /// <param name="item">The item whose Turn the ack is about.</param>
+    /// <param name="kind">Whether the Turn started or finished.</param>
+    /// <param name="replyMessageId">The reply's id for a <see cref="QueueAckKind.Started"/> ack, otherwise <see langword="null"/>.</param>
+    /// <param name="outcome">How the Turn ended, for a <see cref="QueueAckKind.Finished"/> ack, otherwise <see langword="null"/>.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task SendAckAsync(WorkItem item, QueueAckKind kind, string? replyMessageId, QueueOutcome? outcome, CancellationToken ct)
+    {
+        if (item.TriggerMessageId is not { } triggerId || ct.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.owner.WriteAsync(new QueueAck(item.RoomId, [triggerId], kind, replyMessageId, outcome), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug(ex, "Persona '{PersonaName}' could not send a queue ack for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reports a Turn that ended with nothing posted: Failed for a failure or a timeout, Stopped for a Stop, otherwise Silent
+    /// (<c>NO_REPLY</c>, a refusal, an empty reply). A Turn that posted its reply sends nothing: the reply's
+    /// <c>InReplyTo</c> closes the row.
+    /// </summary>
+    /// <param name="run">The Turn that ended.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task ReportUnpostedTurnAsync(TurnRun run, CancellationToken ct)
+    {
+        if (run.ReplyPosted)
+        {
+            return;
+        }
+
+        QueueOutcome outcome;
+        if (run.Failed)
+        {
+            outcome = QueueOutcome.Failed;
+        }
+        else if (run.Turn.StopRequested || run.EndReason == StopReason.Cancelled)
+        {
+            outcome = QueueOutcome.Stopped;
+        }
+        else
+        {
+            outcome = QueueOutcome.Silent;
+        }
+
+        await this.SendAckAsync(run.Item, QueueAckKind.Finished, null, outcome, ct).ConfigureAwait(false);
     }
 
     /// <summary>The reason a failed Turn reports: the Human's sign-in instruction for an authentication failure, the exception text otherwise.</summary>
@@ -1636,6 +1779,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 CultureInfo.InvariantCulture,
                 $"the Adapter sent nothing for {run.IdleBound.TotalSeconds} seconds, so the Turn was abandoned and cancelled"));
         run.RoomFailureThisTurn = true;
+        run.Failed = true;
 #pragma warning disable HAA0601 // Boxing a value-type log argument is the cost of ILogger params object[]; accepted together with HAA0101.
         this.logger.LogWarning(
             "Persona '{PersonaName}' turn in room {RoomId} was abandoned after {IdleBoundSeconds} seconds of silence.",
@@ -1652,16 +1796,18 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     {
         WorkItem item = run.Item;
         var prompt = TurnPromptFramer.BuildPrompt(item, this.prompts);
+        await this.SendAckAsync(item, QueueAckKind.Started, run.MessageId, null, ct).ConfigureAwait(false);
         await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, TurnPromptFramer.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
         run.PromptReturned = true;
         var outcome = await run.Completion.Task.WaitAsync(run.TurnCancellation.Token).ConfigureAwait(false);
+        run.EndReason = outcome.Reason;
 
         string? postText = RoomSession.ResolvePostText(run, outcome);
 
         if (postText is not null)
         {
             await this.ReleaseHeldTailAsync(run, SilentReply.Strip(outcome.Text), ct).ConfigureAwait(false);
-            await this.owner.WriteAsync(new PostMessage(item.RoomId, run.MessageId, postText), ct).ConfigureAwait(false);
+            await this.owner.WriteAsync(new PostMessage(item.RoomId, run.MessageId, postText, InReplyTo: item.TriggerMessageId is { } triggerId ? [triggerId] : null), ct).ConfigureAwait(false);
             run.ReplyPosted = true;
         }
 
@@ -1841,6 +1987,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
 
         await this.WriteFinalDeltaAsync(run, ct).ConfigureAwait(false);
+        await this.ReportUnpostedTurnAsync(run, ct).ConfigureAwait(false);
         await this.RunAfterHooksAsync(run, ct).ConfigureAwait(false);
         this.StoreSessionEntry(run, ct);
 
@@ -2012,6 +2159,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         /// <summary>Gets or sets whether a reply was posted for this Turn.</summary>
         public bool ReplyPosted { get; set; }
+
+        /// <summary>Gets or sets whether the Turn failed, timed out or lost its Adapter, so its queue row closes as failed.</summary>
+        public bool Failed { get; set; }
+
+        /// <summary>Gets or sets how the Adapter ended the Turn, or <see langword="null"/> when no outcome arrived.</summary>
+        public StopReason? EndReason { get; set; }
 
         /// <summary>
         /// Gets or sets whether this Turn's own failure/timeout catch clauses latched a failure (D26,

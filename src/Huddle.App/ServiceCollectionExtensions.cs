@@ -61,6 +61,7 @@ public static class ServiceCollectionExtensions
             .AddProbeAndRenameServices()
             .AddStartupHostedServices()
             .AddBackgroundHostedServices()
+            .AddTurnQueueServices()
             .AddHelperServices()
             .AddFeatureModules()
             .AddMemoryTidyServices();
@@ -84,6 +85,39 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyScheduleStore>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler>();
         services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler>());
+        return services;
+    }
+
+    /// <summary>Builds the <see cref="ChatService"/>, then sets the properties its public constructor cannot take because their types are internal.</summary>
+    /// <param name="sp">The provider the service's dependencies come from.</param>
+    /// <returns>The service.</returns>
+    private static ChatService BuildChatService(IServiceProvider sp)
+    {
+        ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
+        service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
+        service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
+        service.LastCatchUp = sp.GetRequiredService<LastCatchUpStore>();
+        service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
+        service.OwedTurns = sp.GetRequiredService<IOwedTurnPolicy>();
+        service.Ledger = sp.GetRequiredService<ITurnLedger>();
+        return service;
+    }
+
+    /// <summary>Registers the Turn Queue: one singleton behind each interface a later task adds, and the owed-Turn policy ChatService asks at post time.</summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddTurnQueueServices(this IServiceCollection services)
+    {
+        services.AddSingleton<TurnQueueStore>();
+        services.AddSingleton<Services.TurnQueue>();
+        services.AddSingleton<ITurnLedger>(sp => sp.GetRequiredService<Services.TurnQueue>());
+        services.AddSingleton<ITurnAcks>(sp => sp.GetRequiredService<Services.TurnQueue>());
+        services.AddSingleton<ITurnQueueControl>(sp => sp.GetRequiredService<Services.TurnQueue>());
+        services.AddSingleton<IOwedTurnPolicy, OwedTurnPolicy>();
+        services.AddSingleton<Services.PersonaExists>(static sp => name => sp.GetRequiredService<Acp.PersonaStore>().Get(name) is not null);
+        services.AddSingleton<Services.TurnRedelivery>();
+        services.AddSingleton<ITurnControl, Services.TurnControl>();
+        services.AddSingleton<ITurnQueueView, Services.TurnQueueView>();
         return services;
     }
 
@@ -310,15 +344,7 @@ public static class ServiceCollectionExtensions
         // A factory because ChatService.TeamCatalog is an internal settable property (ITeamCatalog is
         // internal, the constructor public); ITeamCatalog is registered further down and resolved lazily.
         // ActivatorUtilities fills the constructor, so a new constructor parameter needs no edit here.
-        services.AddSingleton(sp =>
-        {
-            ChatService service = ActivatorUtilities.CreateInstance<ChatService>(sp);
-            service.TeamCatalog = sp.GetRequiredService<ITeamCatalog>();
-            service.UploadFolders = sp.GetRequiredService<Uploads.IRoomUploadFolders>();
-            service.LastCatchUp = sp.GetRequiredService<LastCatchUpStore>();
-            service.FeedPublisher = sp.GetService<Feed.IFeedPublisher>();
-            return service;
-        });
+        services.AddSingleton(BuildChatService);
         services.TryAddSingleton<ToolCallLogWriter>();
         services.AddSingleton<Drafts>();
 
@@ -537,7 +563,11 @@ public static class ServiceCollectionExtensions
         // No interface, same reasoning as ProposalStore: a leaf singleton whose only dependency,
         // RoomEvents, is registered at the top of this method. ChatService takes it, so it must exist
         // before ChatService does, and it takes nothing back.
-        services.AddSingleton<QuestionStore>();
+        services.AddSingleton<WaitingQuestionStore>();
+        services.AddSingleton(static provider => new QuestionStore(
+            provider.GetRequiredService<RoomEvents>(),
+            provider.GetRequiredService<WaitingQuestionStore>(),
+            provider.GetService<ILogger<QuestionStore>>()));
 
         // No interface, same reasoning as ProposalService: nothing needs to substitute it, and its
         // dependencies (QuestionStore, ChatService, ITeamDirectory) are all singletons registered above.
@@ -923,6 +953,18 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<Agency.Huddle.App.SecondBrain.RetiredFileScanService>();
         services.AddHostedService<Agency.Huddle.App.SecondBrain.DefaultAgentsMdService>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
+
+        // After DataInitializer (the Team and its Rooms exist) and before PipeServer, so no Agent has connected and no
+        // poster can have written a row yet, and before TaskTriggerService, CadenceService and JobScheduler, which can post at start-up.
+        services.AddHostedService(static sp => new Services.TurnQueueRecovery(
+            sp.GetRequiredService<TurnQueueStore>(),
+            sp.GetRequiredService<ITeamDirectory>(),
+            sp.GetRequiredService<IChatStore>(),
+            sp.GetRequiredService<Services.ChatService>(),
+            name => sp.GetRequiredService<Acp.PersonaStore>().Get(name) is not null,
+            sp.GetRequiredService<IOptions<TeamOptions>>(),
+            sp.GetRequiredService<ILogger<Services.TurnQueueRecovery>>(),
+            sp.GetService<TimeProvider>()));
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
 

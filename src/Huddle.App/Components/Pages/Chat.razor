@@ -14,6 +14,7 @@
 @inject ChatService ChatService
 @inject Drafts Drafts
 @inject IAgentGateway Gateway
+@inject ITurnControl TurnControl
 @inject PersonaHealth Health
 @inject RoomFollows Follows
 @inject NavigationManager Navigation
@@ -167,6 +168,10 @@ else
            component with its own RoomEvents subscription, and the same leading-@ RoomId rule as
            ProposalCard and QuestionCard - a missing @ passes the literal text and fails only on screen. *@
         <ElicitationCard RoomId="@this.room.Id" />
+        @* Messages waiting for an Agent that is busy, offline or held (Turn Queue spec §5.9, C14). A component with its own
+           RoomEvents subscription, and the same leading-@ RoomId rule as the cards above. The Agents with a Draft are passed in:
+           a Draft has its own Stop, so those rows offer no Don't answer. *@
+        <WaitingNotice RoomId="@this.room.Id" AgentIdsWithDraft="@this.drafts.Select(static draft => draft.AgentId).ToHashSet(StringComparer.Ordinal)" />
         @* One note per Agent that started this Room's session afresh (Spec LR-R21), kept by FreshStartNotes
            and written through to disk (correction C12), so it outlives a restart. Rendered inline rather
            than as a component for the same reason every other strip on this page is: a string Parameter
@@ -882,6 +887,7 @@ else
             return;
         }
 
-        await Task.WhenAll(agentIds.Select(agentId => this.Gateway.StopTurnAsync(agentId, roomId)));
+        // Through TurnControl, not the gateway: it closes the Agent's waiting and running Turn Queue rows first (spec §5.9).
+        await Task.WhenAll(agentIds.Select(agentId => this.TurnControl.StopAsync(agentId, roomId, CancellationToken.None)));
     }
 }

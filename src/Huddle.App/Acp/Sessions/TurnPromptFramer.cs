@@ -72,6 +72,29 @@ internal static class TurnPromptFramer
 
     private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
     {
+        string framed = TurnPromptFramer.BuildFramedPromptBody(item, prompts);
+        if (item.LaterMessages is not { Count: > 0 } later)
+        {
+            return framed;
+        }
+
+        // Turn Queue spec 5.8: what was posted after the trigger while the Turn waited follows the Message, rendered as Catch-up lines are.
+        StringBuilder builder = new(framed);
+        builder.Append("\n\n");
+        builder.Append(prompts.Render("turn.laterHeader", new Dictionary<string, string>()));
+        foreach (var message in later)
+        {
+            builder.Append('\n');
+            builder.Append(prompts.Render(
+                "turn.catchUpLine",
+                new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string BuildFramedPromptBody(WorkItem item, IPromptSource prompts)
+    {
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
         // in a turn carries it: without this they reach only Rooms the Agent created itself.
@@ -107,6 +130,8 @@ internal static class TurnPromptFramer
             builder.Append("\n\n");
         }
 
+        TurnPromptFramer.AppendCutOffNote(builder, item, prompts);
+
         // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
         // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or
         // this Room's first Turn ever has nothing before the trigger) falls through to today's
@@ -128,6 +153,22 @@ internal static class TurnPromptFramer
         TurnPromptFramer.AppendCatchUpAndMessage(builder, room, item, ownPostLines, prompts);
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Turn Queue spec 5.7: writes the cut-off note and a blank line, but only for a second try after Huddle stopped mid-Turn, so every
+    /// other prompt stays byte-identical.
+    /// </summary>
+    /// <param name="builder">The prompt being built.</param>
+    /// <param name="item">The item being prompted.</param>
+    /// <param name="prompts">Where the prompt templates come from.</param>
+    private static void AppendCutOffNote(StringBuilder builder, WorkItem item, IPromptSource prompts)
+    {
+        if (item.Redelivery == Agency.Huddle.Contracts.Redelivery.CutOff)
+        {
+            builder.Append(prompts.Render("turn.cutOffNote", new Dictionary<string, string>()));
+            builder.Append("\n\n");
+        }
     }
 
     /// <summary>Writes the Catch-up block (missed Messages and own posts) and then the triggering Message.</summary>

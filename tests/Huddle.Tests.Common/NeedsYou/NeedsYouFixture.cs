@@ -19,13 +19,15 @@ internal sealed class NeedsYouFixture : IDisposable
 {
     private readonly TempDataDir dir;
 
-    private NeedsYouFixture(TempDataDir dir, Agency.Huddle.App.Feed.IFeedPublisher? feed)
+    private NeedsYouFixture(TempDataDir dir, Agency.Huddle.App.Feed.IFeedPublisher? feed, bool persistQuestions)
     {
         this.dir = dir;
         this.Events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         this.Team = dir.CreateDirectory();
         this.Transcript = dir.CreateChatStore();
-        this.Questions = new QuestionStore(this.Events);
+        this.Questions = persistQuestions
+            ? new QuestionStore(this.Events, new Agency.Huddle.App.Data.WaitingQuestionStore(dir.Options()))
+            : new QuestionStore(this.Events);
         this.Forms = new ElicitationStore(this.Events);
         this.Clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 12, 9, 0, 0, TimeSpan.Zero));
         this.Service = new ChatService(
@@ -72,10 +74,11 @@ internal sealed class NeedsYouFixture : IDisposable
     /// <summary>Builds and initialises a fixture.</summary>
     /// <param name="ct">Cancels the directory's initialisation.</param>
     /// <param name="feed">Receives the tracker's Feed items; <see langword="null"/> posts nothing.</param>
+    /// <param name="persistQuestions"><see langword="true"/> to keep Question cards in <c>team.db</c> too (Turn Queue spec §5a).</param>
     /// <returns>A fixture the caller disposes.</returns>
-    public static async Task<NeedsYouFixture> CreateAsync(CancellationToken ct, Agency.Huddle.App.Feed.IFeedPublisher? feed = null)
+    public static async Task<NeedsYouFixture> CreateAsync(CancellationToken ct, Agency.Huddle.App.Feed.IFeedPublisher? feed = null, bool persistQuestions = false)
     {
-        NeedsYouFixture fixture = new(new TempDataDir(), feed);
+        NeedsYouFixture fixture = new(new TempDataDir(), feed, persistQuestions);
         await fixture.Team.InitializeAsync("You", ct);
         return fixture;
     }

@@ -380,6 +380,66 @@ public sealed class RoomSessionTurnHookTests
         }
     }
 
+    /// <summary>An exception while the Turn is prepared, before the prompt, is reported as Finished(Failed) and never as Started.</summary>
+    [Fact]
+    public async Task FailureBeforePrompt_SendsFinishedFailed()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        FakeRoomSessionOwner owner = new()
+        {
+            WriteFault = message => message is MessageDelta ? new InvalidOperationException("draft write exploded") : null,
+        };
+        await using RoomSessionHarness harness = Build(owner, session, new RecordingHook());
+
+        harness.Room.Enqueue(new QueuedWork(1, MessageItem("go")));
+        await Eventually.UntilAsync(() => owner.Written.OfType<QueueAck>().Any(), ct, timeout: TestBudgets.Standard);
+
+        QueueAck ack = Assert.Single(owner.Written.OfType<QueueAck>());
+        Assert.Equal(QueueAckKind.Finished, ack.Kind);
+        Assert.Equal(QueueOutcome.Failed, ack.Outcome);
+        Assert.Empty(session.Prompts);
+    }
+
+    /// <summary>A Stop that lands while the Before hooks run drops the item unrun and reports it as Finished(Dropped).</summary>
+    [Fact]
+    public async Task StopDuringBeforeHooks_SendsFinishedDropped()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TaskCompletionSource entered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        RecordingHook hook = new()
+        {
+            BeforeGate = async token =>
+            {
+                entered.TrySetResult();
+                await release.Task.WaitAsync(token);
+            },
+        };
+        FakeAgentSession session = new();
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = Build(owner, session, hook);
+
+        try
+        {
+            harness.Room.Enqueue(new QueuedWork(1, MessageItem("hold me")));
+            await entered.Task.WaitAsync(TestBudgets.Standard, ct);
+            await harness.Room.StopAsync(RoomId, 1, ct);
+        }
+        finally
+        {
+            release.TrySetResult();
+        }
+
+        await Eventually.UntilAsync(() => owner.Written.OfType<QueueAck>().Any(), ct, timeout: TestBudgets.Standard);
+
+        QueueAck ack = Assert.Single(owner.Written.OfType<QueueAck>());
+        Assert.Equal(QueueAckKind.Finished, ack.Kind);
+        Assert.Equal(QueueOutcome.Dropped, ack.Outcome);
+        Assert.Equal(["trig-hold me"], ack.MessageIds);
+        Assert.Empty(session.Prompts);
+    }
+
     /// <summary>A resume hands Opening the stored state of the hook and the reason Resumed.</summary>
     [Fact]
     public async Task Resume_PassesTheEntrysState_WithReasonResumed()

@@ -360,4 +360,113 @@ public sealed class ProtocolJsonTests
         Assert.DoesNotContain("\"team\"", json, StringComparison.Ordinal);
         Assert.Null(result.Team);
     }
+
+    /// <summary>A Started ack carries the reply id and no outcome, and reads back.</summary>
+    [Fact]
+    public void QueueAck_Started_PinsTheJson()
+    {
+        string json = ProtocolJson.Serialize(new QueueAck("r1", ["m1", "m2"], QueueAckKind.Started, "reply-1"));
+
+        Assert.Equal("{\"type\":\"queueAck\",\"roomId\":\"r1\",\"messageIds\":[\"m1\",\"m2\"],\"kind\":\"started\",\"replyMessageId\":\"reply-1\",\"version\":3}", json);
+        QueueAck back = Assert.IsType<QueueAck>(ProtocolJson.Deserialize(json));
+        Assert.Equal(["m1", "m2"], back.MessageIds);
+        Assert.Equal(QueueAckKind.Started, back.Kind);
+        Assert.Equal("reply-1", back.ReplyMessageId);
+        Assert.Null(back.Outcome);
+    }
+
+    /// <summary>A Finished ack carries the outcome and no reply id, and reads back.</summary>
+    [Fact]
+    public void QueueAck_Finished_PinsTheJson()
+    {
+        string json = ProtocolJson.Serialize(new QueueAck("r1", ["m1"], QueueAckKind.Finished, null, QueueOutcome.Declined));
+
+        Assert.Equal("{\"type\":\"queueAck\",\"roomId\":\"r1\",\"messageIds\":[\"m1\"],\"kind\":\"finished\",\"outcome\":\"declined\",\"version\":3}", json);
+        QueueAck back = Assert.IsType<QueueAck>(ProtocolJson.Deserialize(json));
+        Assert.Equal(QueueAckKind.Finished, back.Kind);
+        Assert.Equal(QueueOutcome.Declined, back.Outcome);
+        Assert.Null(back.ReplyMessageId);
+    }
+
+    /// <summary>A Held ack carries neither a reply id nor an outcome, and reads back.</summary>
+    [Fact]
+    public void QueueAck_Held_PinsTheJson()
+    {
+        string json = ProtocolJson.Serialize(new QueueAck("r1", ["m1"], QueueAckKind.Held));
+
+        Assert.Equal("{\"type\":\"queueAck\",\"roomId\":\"r1\",\"messageIds\":[\"m1\"],\"kind\":\"held\",\"version\":3}", json);
+        QueueAck back = Assert.IsType<QueueAck>(ProtocolJson.Deserialize(json));
+        Assert.Equal(QueueAckKind.Held, back.Kind);
+        Assert.Null(back.ReplyMessageId);
+        Assert.Null(back.Outcome);
+    }
+
+    /// <summary>Every outcome name is camelCase on the wire.</summary>
+    [Fact]
+    public void QueueAck_EveryOutcome_IsCamelCase()
+    {
+        foreach (QueueOutcome outcome in Enum.GetValues<QueueOutcome>())
+        {
+            string json = ProtocolJson.Serialize(new QueueAck("r1", ["m1"], QueueAckKind.Finished, null, outcome));
+            string expected = char.ToLowerInvariant(outcome.ToString()[0]) + outcome.ToString()[1..];
+
+            Assert.Equal(expected, WireString(json, "outcome"));
+            Assert.Equal(outcome, Assert.IsType<QueueAck>(ProtocolJson.Deserialize(json)).Outcome);
+        }
+    }
+
+    /// <summary>Hello writes <c>durableQueue</c> only when set, and a Hello without it reads as null.</summary>
+    [Fact]
+    public void Hello_DurableQueue_WithAndWithout()
+    {
+        string with = ProtocolJson.Serialize(new Hello("x", null, true));
+        string without = ProtocolJson.Serialize(new Hello("x", null));
+
+        Assert.Equal("{\"type\":\"hello\",\"name\":\"x\",\"durableQueue\":true,\"version\":3}", with);
+        Assert.Equal("{\"type\":\"hello\",\"name\":\"x\",\"version\":3}", without);
+        Assert.True(Assert.IsType<Hello>(ProtocolJson.Deserialize(with)).DurableQueue);
+        Assert.Null(Assert.IsType<Hello>(ProtocolJson.Deserialize(without)).DurableQueue);
+    }
+
+    /// <summary>MessagePosted writes <c>redelivery</c> only when set, and a line without it reads as null.</summary>
+    [Fact]
+    public void MessagePosted_Redelivery_WithAndWithout()
+    {
+        ChatMessage chatMessage = new("m1", DateTimeOffset.UnixEpoch, "human", "You", "hi");
+        string with = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", chatMessage, true, [], [], 0, 0, null, Redelivery.CutOff));
+        string waiting = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", chatMessage, true, [], [], 0, 0, null, Redelivery.Waiting));
+        string without = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", chatMessage, true, [], [], 0, 0));
+
+        Assert.Equal("cutOff", WireString(with, "redelivery"));
+        Assert.Equal("waiting", WireString(waiting, "redelivery"));
+        Assert.DoesNotContain("redelivery", without, StringComparison.Ordinal);
+        Assert.Equal(Redelivery.CutOff, Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(with)).Redelivery);
+        Assert.Null(Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(without)).Redelivery);
+    }
+
+    /// <summary>PostMessage writes <c>inReplyTo</c> only when set, and a line without it reads as null.</summary>
+    [Fact]
+    public void PostMessage_InReplyTo_WithAndWithout()
+    {
+        string with = ProtocolJson.Serialize(new PostMessage("r1", "m9", "hi", ["m1", "m2"]));
+        string without = ProtocolJson.Serialize(new PostMessage("r1", "m9", "hi"));
+
+        Assert.Equal("{\"type\":\"postMessage\",\"roomId\":\"r1\",\"messageId\":\"m9\",\"text\":\"hi\",\"inReplyTo\":[\"m1\",\"m2\"],\"version\":3}", with);
+        Assert.DoesNotContain("inReplyTo", without, StringComparison.Ordinal);
+        Assert.Equal(["m1", "m2"], Assert.IsType<PostMessage>(ProtocolJson.Deserialize(with)).InReplyTo);
+        Assert.Null(Assert.IsType<PostMessage>(ProtocolJson.Deserialize(without)).InReplyTo);
+    }
+
+    private static string? WireString(string json, string property)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        return document.RootElement.GetProperty(property).GetString();
+    }
+
+    /// <summary>The additions do not bump the protocol version.</summary>
+    [Fact]
+    public void ProtocolVersion_StaysThree()
+    {
+        Assert.Equal(3, ProtocolVersion.Current);
+    }
 }

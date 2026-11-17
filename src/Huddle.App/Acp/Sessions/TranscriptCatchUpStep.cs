@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// D24, RS §6.5: the first Turn after any open of one <see cref="RoomSession"/> reads the Room's Transcript and
 /// owes the fresh-start note. One instance per session, with no lock: it runs on the session's consumer exactly as
 /// the fields it owns did on <see cref="RoomSession"/> (the open that calls <see cref="MarkOpened"/> happens-before
-/// the consumer's <see cref="AddAsync"/>, which is the only place the flag is consulted and cleared).
+/// the consumer's <c>AddAsync</c>, which is the only place the flag is consulted and cleared).
 /// </summary>
 internal sealed class TranscriptCatchUpStep
 {
@@ -103,9 +103,23 @@ internal sealed class TranscriptCatchUpStep
     /// <param name="freshStartNotePending">Whether the session owes a fresh-start note on its first ordinary Turn.</param>
     /// <param name="ct">The run's own cancellation token.</param>
     /// <returns>The item, with its Transcript Catch-up set when one was read.</returns>
-    public async Task<WorkItem> AddAsync(WorkItem item, bool freshStartNotePending, CancellationToken ct)
+    public Task<WorkItem> AddAsync(WorkItem item, bool freshStartNotePending, CancellationToken ct) =>
+        this.AddAsync(item, freshStartNotePending, null, [], ct);
+
+    /// <summary>
+    /// The same step as the shorter overload, for a Turn whose own reply id is known and whose Room Session knows which of this Agent's
+    /// other Turns wait behind it.
+    /// </summary>
+    /// <param name="item">The item about to be prompted.</param>
+    /// <param name="freshStartNotePending">Whether the session owes a fresh-start note on its first ordinary Turn.</param>
+    /// <param name="replyId">The id minted for this Turn's reply, which is not in the Transcript yet.</param>
+    /// <param name="waitingTriggerIds">The ids of this Agent's other Turns queued behind this one in the Room.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>The item, with its Transcript Catch-up set when one was read.</returns>
+    public async Task<WorkItem> AddAsync(WorkItem item, bool freshStartNotePending, string? replyId, IReadOnlyCollection<string> waitingTriggerIds, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(waitingTriggerIds);
 
         if (this.firstTurnPending && item.Kind != WorkItemKind.Command)
         {
@@ -118,21 +132,10 @@ internal sealed class TranscriptCatchUpStep
             if (this.roomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
             {
                 SessionSettings settings = this.sessionSettings?.Current ?? new SessionSettings(this.options.TranscriptCatchUpMessages, this.options.TranscriptCatchUpTokens);
-                TranscriptTail? tail = null;
-                try
-                {
-                    tail = await this.owner.ReadTranscriptAsync(
-                        item.RoomId,
-                        this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
-                        triggerId,
-                        settings.CatchUpMessages,
-                        ct).ConfigureAwait(false);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    this.logger.LogWarning(
-                        ex, "Persona '{PersonaName}' Transcript read for room {RoomId} failed.", this.owner.PersonaName, item.RoomId);
-                }
+                // Turn Queue spec 5.8: a re-sent Turn is late by definition, so it reads to the end of the Transcript. Its own reply id is
+                // not in the Transcript yet, and the server reads to the end for an id it does not find.
+                string? lateReplyId = item.Redelivery is not null ? replyId : null;
+                TranscriptTail? tail = await this.ReadTailAsync(item.RoomId, lateReplyId ?? triggerId, settings, ct).ConfigureAwait(false);
 
                 if (tail is not null)
                 {
@@ -141,10 +144,23 @@ internal sealed class TranscriptCatchUpStep
                     // whether or not it turned out to hold any Messages. A refused or timed-out read
                     // (RS §9 E-3, tail null) leaves OwnPostLines untouched, so they still render
                     // through the ordinary catch-up path below.
+                    // One token budget covers both blocks: the later block (what a late Turn must not miss) is trimmed first and the
+                    // before-block gets what is left.
+                    IReadOnlyList<ChatMessage>? later = null;
+                    int budget = settings.CatchUpTokens;
+                    if (lateReplyId is not null)
+                    {
+                        (tail, IReadOnlyList<ChatMessage> laterAll) = TranscriptCatchUpStep.SplitAtTrigger(tail, triggerId, waitingTriggerIds);
+                        CatchUpTrimResult laterResult = CatchUpTrim.Apply(laterAll, this.isOwn, budget, this.options.CatchUpKeepOwnMessages);
+                        later = laterResult.Kept;
+                        budget = Math.Max(0, budget - laterResult.EstimatedTokens);
+                    }
+
                     item = item with
                     {
-                        Transcript = this.BuildCatchUp(tail, settings),
+                        Transcript = this.BuildCatchUp(tail, settings, budget),
                         OwnPostLines = null,
+                        LaterMessages = later,
                     };
                 }
                 else if (this.noteOwed is not null)
@@ -157,16 +173,72 @@ internal sealed class TranscriptCatchUpStep
         return item;
     }
 
+    /// <summary>Reads the Room's Transcript up to <paramref name="beforeId"/>; a failed read is logged and answers <see langword="null"/>.</summary>
+    /// <param name="roomIdToRead">The Room to read.</param>
+    /// <param name="beforeId">The id to stop before.</param>
+    /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    /// <returns>The tail, or <see langword="null"/> when the read was refused, timed out or failed.</returns>
+    private async Task<TranscriptTail?> ReadTailAsync(string roomIdToRead, string beforeId, SessionSettings settings, CancellationToken ct)
+    {
+        try
+        {
+            return await this.owner.ReadTranscriptAsync(
+                roomIdToRead,
+                this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
+                beforeId,
+                settings.CatchUpMessages,
+                ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(
+                ex, "Persona '{PersonaName}' Transcript read for room {RoomId} failed.", this.owner.PersonaName, roomIdToRead);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Splits a read-to-the-end tail at the Turn's trigger: the Messages before it stay the Catch-up, the trigger is dropped (it is the
+    /// Message), and those after it become the later Messages, less this Agent's other waiting triggers (spec 5.8).
+    /// </summary>
+    /// <param name="tail">The tail read to the end of the Transcript.</param>
+    /// <param name="triggerId">The Turn's triggering Message id.</param>
+    /// <param name="waitingTriggerIds">The ids of this Agent's other Turns queued behind this one in the Room.</param>
+    /// <returns>The tail of the Messages before the trigger, and the Messages after it.</returns>
+    private static (TranscriptTail Before, IReadOnlyList<ChatMessage> Later) SplitAtTrigger(
+        TranscriptTail tail, string triggerId, IReadOnlyCollection<string> waitingTriggerIds)
+    {
+        int index = -1;
+        for (int i = 0; i < tail.Messages.Count; i++)
+        {
+            if (string.Equals(tail.Messages[i].Id, triggerId, StringComparison.Ordinal))
+            {
+                index = i;
+                break;
+            }
+        }
+
+        if (index < 0)
+        {
+            return (tail, []);
+        }
+
+        List<ChatMessage> later = [.. tail.Messages.Skip(index + 1).Where(message => !waitingTriggerIds.Contains(message.Id, StringComparer.Ordinal))];
+        return (tail with { Messages = [.. tail.Messages.Take(index)] }, later);
+    }
+
     /// <summary>Trims a Transcript tail to the token budget (LR-R11) and counts what the trim dropped on top of the tail's own omitted count.</summary>
     /// <param name="tail">The tail the owner returned.</param>
     /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
+    /// <param name="budgetTokens">The token budget for this block when less than the settings' whole budget is left; <see langword="null"/> for all of it.</param>
     /// <returns>The catch-up for the Turn.</returns>
-    public TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
+    public TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings, int? budgetTokens = null)
     {
         ArgumentNullException.ThrowIfNull(tail);
         ArgumentNullException.ThrowIfNull(settings);
 
-        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.isOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
+        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.isOwn, budgetTokens ?? settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
         if (this.noteOwed is not null)
         {
             this.noteOwed = this.noteOwed with { MessageCount = result.Kept.Count, EstimatedTokens = result.EstimatedTokens };

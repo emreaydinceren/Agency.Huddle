@@ -29,6 +29,16 @@ internal sealed class PendingByRoom<T>(Func<T, string> roomOf, Func<T, string> i
         }
     }
 
+    /// <summary>Returns every pending item, one per Room.</summary>
+    /// <returns>A snapshot taken under the lock; later changes do not alter it.</returns>
+    public IReadOnlyList<T> All()
+    {
+        lock (this.gate)
+        {
+            return [.. this.items.Values];
+        }
+    }
+
     /// <summary>Stores <paramref name="item"/> unless another owner's item is already pending in its Room.</summary>
     /// <param name="item">The item to store.</param>
     /// <returns>What happened, and, only when refused, the item that was already pending.</returns>

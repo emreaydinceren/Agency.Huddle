@@ -124,7 +124,7 @@ meant. Fixed options make both cheap, and make the answer unambiguous.
 | Q10 | A `rank_priorities` Question: Cost / Speed / Quality | The card lists the three with up and down buttons; **Send** posts `1. Speed · 2. Cost · 3. Quality` |
 | Q11 | The Human taps an option while Coach's Turn is still streaming | The options are disabled until Coach's Turn ends, so Coach's framing Message is posted before the answer |
 | Q12 | Two browser tabs answer the same card | The first wins. The second finds nothing, posts nothing, and its card disappears |
-| Q13 | The app restarts with a card waiting | The card is lost. Coach is not told; the Human types the answer instead |
+| Q13 | The app restarts with a card waiting | The card is still there, and its Needs You row with it; the answer wakes Coach, whose Room Session resumes (Turn Queue spec §5a, 2026-11-16) |
 
 ---
 
@@ -134,7 +134,6 @@ meant. Fixed options make both cheap, and make the answer unambiguous.
 | --- | --- |
 | **Asking another Agent** | Agents already read Messages. Options exist to save a person typing; an Agent gains nothing from them |
 | **A free-text "Other" option on the card** | The composer is the Other. Typing a Message is always available and drops the card (Q4) |
-| **Persisting a card across restarts** | In memory, like a Proposal or a Budget. A restart losing it is acceptable because the Human can type the answer |
 | **Changing an answer after sending it** | The answer is a Message, and a Transcript is append-only (ADR-0002). The Human sends a correction as another Message |
 | **Expiring a card after a period** | V1 keeps it until it is answered, dismissed, replaced or dropped |
 | **Images, descriptions or icons on an option** | Short labels only. The Agent's framing Message carries any explanation |
@@ -414,7 +413,7 @@ belonged to may be too.
 | Replaced | `QuestionStore.TryPut`, same asker | The new card replaces the old |
 | **Any other Human Message in the Room** | `ChatService.PostAsync`, after the Message is appended, when the sender is the Human | `QuestionStore.Drop(roomId)` |
 | Room Archived or deleted | `ChatService.SetRoomArchivedAsync(…, true)`, `DeleteRoomAsync` | `QuestionStore.Drop(roomId)` |
-| App restart | — | Lost, by design |
+| App restart | `QuestionStore`'s constructor, from `waiting_questions` | Kept: every drop above deletes the row in the same call, and the cards are loaded at start-up (Turn Queue spec §5a) |
 
 **A typed Human Message drops the card** because it *is* the answer the asker will act on: in a
 Room of two it wakes the asker at once. A card left on screen afterwards invites a second,
@@ -648,14 +647,14 @@ which shares the watchdog pause above and nothing else.
 
 | State | Where | Survives restart |
 | --- | --- | --- |
-| A waiting card | `QuestionStore`, memory | No |
+| A waiting card | `QuestionStore`, memory, written through to `waiting_questions` in `team.db` (`Data/WaitingQuestionStore.cs`) | Yes, since 2026-11-16 (Turn Queue spec §5a) |
 | The answer | The Room's Transcript, as a Message | Yes |
 | The framing | The Room's Transcript, as the asker's Message | Yes |
 | The tool description | `PromptCatalog`, overridable in `prompts.json` | Yes |
 
-No table, no file and no column. The Questions themselves reach the Transcript only inside the
-answer, so a card that was dismissed or lost leaves no trace but the framing Message. That is
-accepted.
+One sibling table, `waiting_questions`, one row per Room, holding only the card that is waiting. The
+Questions themselves reach the Transcript only inside the answer, so a card that was dismissed leaves
+no trace but the framing Message. That is accepted.
 
 ---
 

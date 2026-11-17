@@ -79,7 +79,7 @@ internal static class RoomReplyResolver
             }
         }
 
-        List<User> recipients = FindRecipients(members, senderId, reachableAgentIds);
+        List<User> recipients = RoomRecipients.Find(members, senderId, reachableAgentIds);
         if (recipients.Count == 0)
         {
             return RoomReply.NoRecipients;
@@ -99,19 +99,5 @@ internal static class RoomReplyResolver
         }
 
         return decisions.All(d => d == ReplyDecision.BudgetExhausted) ? RoomReply.Paused : RoomReply.ContextOnly;
-    }
-
-    private static List<User> FindRecipients(IReadOnlyList<User> members, string senderId, IReadOnlySet<string> reachableAgentIds)
-    {
-        List<User> recipients = [];
-        foreach (User member in members)
-        {
-            if (MessagePostedEvent.IsRecipient(member, senderId) && reachableAgentIds.Contains(member.Id))
-            {
-                recipients.Add(member);
-            }
-        }
-
-        return recipients;
     }
 }

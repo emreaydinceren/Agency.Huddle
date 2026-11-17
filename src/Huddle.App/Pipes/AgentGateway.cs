@@ -146,22 +146,38 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
                 continue;
             }
 
-            var payload = new MessagePosted(
-                e.Room.Id,
-                e.Room.Name,
-                e.Message,
-                e.Mentions.Any(m => m.Id == member.Id),
-                e.Mentions.Select(ToMemberInfo).ToList(),
-                e.Members.Select(ToMemberInfo).ToList(),
-                e.Budget.Used,
-                e.Budget.Granted,
-                e.Room.Team);
+            var payload = ToPayload(e, member.Id);
 
             sends.Add(this.SendSafeAsync(connection, payload, ct));
         }
 
         await Task.WhenAll(sends).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public Task DeliverToAsync(string agentId, MessagePostedEvent e, Redelivery redelivery, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        return this.connections.TryGetValue(agentId, out var connection)
+            ? this.SendSafeAsync(connection, ToPayload(e, agentId) with { Redelivery = redelivery }, ct)
+            : Task.CompletedTask;
+    }
+
+    /// <summary>The one place a <see cref="MessagePosted"/> is built, for a live delivery and a re-delivery alike.</summary>
+    /// <param name="e">The Message with its Room's Members, Mentions and Budget.</param>
+    /// <param name="memberId">The Agent it is built for.</param>
+    private static MessagePosted ToPayload(MessagePostedEvent e, string memberId) =>
+        new(
+            e.Room.Id,
+            e.Room.Name,
+            e.Message,
+            e.Mentions.Any(m => m.Id == memberId),
+            e.Mentions.Select(ToMemberInfo).ToList(),
+            e.Members.Select(ToMemberInfo).ToList(),
+            e.Budget.Used,
+            e.Budget.Granted,
+            e.Room.Team);
 
     public Task CloseAllAsync()
     {

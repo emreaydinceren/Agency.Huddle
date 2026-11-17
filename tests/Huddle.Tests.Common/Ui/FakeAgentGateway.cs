@@ -32,6 +32,16 @@ internal sealed class FakeAgentGateway : IAgentGateway
         return Task.CompletedTask;
     }
 
+    /// <summary>Every <see cref="DeliverToAsync"/> call, in the order received, for a test to assert against.</summary>
+    public List<(string AgentId, string MessageId, Agency.Huddle.Contracts.Redelivery Redelivery)> DeliverToCalls { get; } = [];
+
+    /// <summary>Records the call in <see cref="DeliverToCalls"/>; sends nothing.</summary>
+    public Task DeliverToAsync(string agentId, Agency.Huddle.App.Services.MessagePostedEvent e, Agency.Huddle.Contracts.Redelivery redelivery, CancellationToken ct)
+    {
+        this.DeliverToCalls.Add((agentId, e.Message.Id, redelivery));
+        return Task.CompletedTask;
+    }
+
     /// <summary>Every <see cref="StartAfreshAsync"/> call, in the order received, for a test to assert against.</summary>
     public List<(string AgentId, string RoomId)> StartAfreshCalls { get; } = [];
 
