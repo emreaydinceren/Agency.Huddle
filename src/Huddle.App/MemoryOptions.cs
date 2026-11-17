@@ -11,4 +11,7 @@ public sealed class MemoryOptions
 
     /// <summary>The most characters a <c>propose_team_memory</c> why may have. Zero or less means no cap.</summary>
     public int MaxProposalWhyChars { get; set; } = 300;
+
+    /// <summary>The <c>reported.md</c> file of an Agent's own Memory, bound from <c>Team:Memory:Reported</c>.</summary>
+    public MemoryReportedOptions Reported { get; set; } = new();
 }

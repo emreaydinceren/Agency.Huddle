@@ -26,6 +26,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **An idle Agent does not hear of an `AGENTS.md` change until its next Turn.** Huddle adds the notice to a Turn and starts
   none of its own, so an Agent that is not asked anything keeps its old rules in mind. It hears at its next Turn in each Room
   ([ADR-0076](../adr/0076-a-running-agent-hears-of-an-agents-md-change-through-a-turn-hook.md)).
+- **The Agent keeps `reported.md`, so a report it forgot to note can repeat ([ADR-0094](../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md)).** The Memory Prompt asks for one line after each report, and nothing checks that the Agent adds it. An item it did not note reads as new at its next report. Huddle writes the file from no Message.
+- **Two Rooms of one Agent can report the same thing at once.** Each Room reads `reported.md` before it reports, and neither sees the line the other is about to add, so both say it in full and the file gets two lines. The next report sees both.
+- **The Room in a `reported.md` line is the Agent's word.** The tool checks that a line has one line of text, not that the Room named is real or is the Room the Agent spoke in. A wrong Room name misleads only the reader of the file.
+- **A date the Agent writes in `reported.md` is replaced.** The `memory` tool always sets the date of an appended line, so an Agent cannot back-date or post-date one. A line the Human writes by hand keeps its date, including one in the future, which age never drops.
 - **An automatic compaction does not make an Agent hear the notices again.** Huddle cannot see it (the entry above), so
   after one the Agent may have lost a notice it was told. Only `/compact` re-tells every notice since the session began.
   The file is still the truth, and a new session reads it afresh.

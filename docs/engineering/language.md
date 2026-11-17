@@ -728,6 +728,15 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `Team Memory (Helper)` with the proposer's Name in the file's History. See
   [ADR-0073](../adr/0073-members-propose-team-memory-and-a-helper-files-it.md).
 
+**Reported file**
+: `reported.md` in an Agent's own Memory: one line, `- yyyy-MM-dd · <Room> · <what>`, for each
+  thing the Agent told the Human. The `memory` tool writes the date, starts the file and drops
+  lines older than `Team:Memory:Reported:KeepDays`; the Agent reads it before it reports, and the
+  Chief of Staff reads a Team manager's through `agent:<Name>`. Special only in an Agent's own
+  Memory: elsewhere `reported.md` is an ordinary topic file. See
+  [ADR-0094](../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md).
+: *Avoid*: report log, status file, sent file.
+
 **`AGENTS.md` Changes Helper**
 : The third Helper. It reads one edit to an `AGENTS.md` file, as the old text, the new
   text and a comparison, and lists the rules added, changed or removed, each with a

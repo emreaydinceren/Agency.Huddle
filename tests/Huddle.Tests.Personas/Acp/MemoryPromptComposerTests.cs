@@ -2,6 +2,7 @@ namespace Agency.Huddle.Tests.Acp;
 
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
@@ -108,5 +109,47 @@ public sealed class MemoryPromptComposerTests
             new Persona("Nova", "You are Nova."), prompts, "mcp__team__get_help", ["mcp__team__get_help"], [], string.Empty, Memory, SessionScope.Shared);
 
         Assert.Contains($"OLD {MemoryDir} - dentist.md - Dentist visits", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+    }
+
+    /// <summary>The Memory block holds the reported.md paragraph, names the tool with its prefix and fills in the day count handed to the composer.</summary>
+    [Fact]
+    public void Memory_HoldsTheReportedParagraph_WithToolNameAndDaysFilledIn()
+    {
+        string actual = SystemPromptComposer.Compose(
+            new Persona("Nova", "You are Nova."),
+            new FakePromptSource(),
+            "mcp__team__get_help",
+            ["mcp__team__get_help", "mcp__team__memory"],
+            [],
+            string.Empty,
+            Memory,
+            SessionScope.Shared,
+            reportedDays: 9).ReplaceLineEndings(" ");
+
+        Assert.Contains("Keep a record of what you have told the Human, in the file reported.md in your memory.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("read reported.md with mcp__team__memory; if it does not exist", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("such as \"no change since 2026-11-16\", and add no line for it.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("mcp__team__memory sets the date, starts the file when you have none, and drops lines older than 9 days.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.DoesNotContain("{{reportedDays}}", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>With no day count handed over, the paragraph names the default of 14 days.</summary>
+    [Fact]
+    public void Memory_WithoutADayCount_NamesTheDefault()
+    {
+        string actual = Compose(["mcp__team__get_help", "mcp__team__memory"], SessionScope.Shared, memoryChangesListed: true).ReplaceLineEndings(" ");
+
+        Assert.Contains("drops lines older than 14 days.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+    }
+
+    /// <summary>An override of the Memory prompt that never mentions the optional day count still validates and renders.</summary>
+    [Fact]
+    public void Override_WithoutReportedDays_ValidatesWithNoError()
+    {
+        PromptDefinition definition = PromptCatalog.Get("systemPrompt.memory");
+
+        IReadOnlyList<PromptIssue> issues = PromptValidator.Validate(definition, "OLD {{memoryPath}} {{memoryIndex}}");
+
+        Assert.DoesNotContain(issues, issue => issue.Severity == PromptIssueSeverity.Error);
     }
 }

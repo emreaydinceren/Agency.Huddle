@@ -18,7 +18,7 @@ using Agency.Huddle.Tests.Teams;
 /// </summary>
 internal sealed class MemoryToolHarness : IDisposable
 {
-    private readonly TempDataDir dir = new();
+    private readonly TempDataDir dir;
     private readonly IOptions<TeamOptions> options;
     private readonly AgentPaths paths;
     private readonly MemoryFolderGate gate = new();
@@ -26,8 +26,10 @@ internal sealed class MemoryToolHarness : IDisposable
 
     /// <summary>Initializes a new instance of the <see cref="MemoryToolHarness"/> class.</summary>
     /// <param name="configure">Changes the options before the tools are built, or <see langword="null"/>.</param>
-    public MemoryToolHarness(Action<TeamOptions>? configure = null)
+    /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates directory links and resolves them.</param>
+    public MemoryToolHarness(Action<TeamOptions>? configure = null, bool supportsReparsePoints = false)
     {
+        this.dir = new TempDataDir(supportsReparsePoints);
         this.options = this.dir.Options(configure);
         this.paths = new AgentPaths(this.options);
         this.Access = new TeamMemoryAccess(this.Catalog, name => this.chiefOfStaff.Contains(name));
@@ -40,6 +42,12 @@ internal sealed class MemoryToolHarness : IDisposable
     /// <summary>The Teams the tool sees; set <see cref="FakeTeamCatalog.Teams"/> before a call.</summary>
     public FakeTeamCatalog Catalog { get; } = new();
 
+    /// <summary>The clock every tool of this harness reads; fixed at 2026-11-16 noon UTC in a UTC zone until a test moves it.</summary>
+    public ManualTimeProvider Clock { get; } = new(new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+
+    /// <summary>The Prompts every tool of this harness renders: catalog defaults until a test overrides one.</summary>
+    public FakePromptSource Prompts { get; } = new();
+
     /// <summary>The Recycle Bin a <c>delete</c> sends to.</summary>
     public RecordingRecycleBin Bin { get; } = new();
 
@@ -48,6 +56,9 @@ internal sealed class MemoryToolHarness : IDisposable
 
     /// <summary>Who may read and write which Team folder.</summary>
     public TeamMemoryAccess Access { get; }
+
+    /// <summary>The Agents root folder, the one an <c>agent:</c> folder is found under.</summary>
+    public string AgentsRoot => Path.GetFullPath(this.paths.DefinitionsRoot);
 
     /// <summary>The Teams root folder.</summary>
     public string TeamsRoot => Path.GetFullPath(Path.Combine(this.dir.Path, this.options.Value.Teams.Dir));
@@ -72,7 +83,7 @@ internal sealed class MemoryToolHarness : IDisposable
     /// <summary>Builds the tool for a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>
     public MemoryTool ToolFor(string persona = "Nova") =>
-        new(persona, this.paths, this.Access, this.gate, this.Bin, new FakePromptSource(), this.options, new MemoryWarnings(NullLogger<MemoryWarnings>.Instance), this.Logger, this.Renames);
+        new(persona, this.paths, this.Access, this.gate, this.Bin, this.Prompts, this.options, new MemoryWarnings(NullLogger<MemoryWarnings>.Instance), this.Logger, this.Renames, this.Clock);
 
     /// <summary>Runs one command as a caller.</summary>
     /// <param name="persona">The calling Persona's name.</param>

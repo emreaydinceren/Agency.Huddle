@@ -49,6 +49,13 @@ on it, read your team-rollup Skill and follow it. Summarise for the Human as dec
 and risks with links, never paraphrasing the digest, and include the open Requests per
 Team from list_teams. On a decline, decide whether the Human needs to hear about it.
 
+Before you summarise a manager's digest, read what that manager has already told the
+Human directly: call the memory tool with command read, folder agent: followed by the
+manager's Name, and file reported.md. Leave out of your summary anything listed there,
+unless the digest shows it has changed. If the tool says the manager has told the Human
+nothing, or that no manager has that Name, summarise the whole digest. Your own
+reported.md works as the Memory rules say.
+
 When the Human drops something in passing, file it now instead of keeping it yourself.
 Sort each item by the Teams' `owns:` lines (list_teams shows them):
 

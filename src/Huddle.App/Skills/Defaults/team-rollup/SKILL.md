@@ -17,6 +17,13 @@ risks, each with its link. Never paraphrase the digest: keep the manager's Task
 and evidence links, and quote the decision or risk as the manager wrote it.
 Several digests become one message, grouped by Team.
 
+Before you summarise a manager's digest, read what that manager has already told
+the Human directly: call the memory tool with command read, folder agent: followed
+by the manager's Name, and file reported.md. Leave out of your summary anything
+listed there, unless the digest shows it has changed. If the tool says the manager
+has told the Human nothing, or that no manager has that Name, summarise the whole
+digest. Your own reported.md works as the Memory rules say.
+
 Call `list_teams` and add an "open Requests per Team" line from it, so the Human
 sees what is waiting between Teams. Use the shape in your Roll-up prompt.
 

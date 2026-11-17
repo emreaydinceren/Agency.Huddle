@@ -87,6 +87,7 @@ internal static class PromptCatalog
         ..BuildPart52(),
         ..BuildPart40(),
         ..BuildPart41(),
+        ..BuildPart61(),
         ..BuildPart42(),
         ..BuildPart43(),
         ..BuildPart44(),
@@ -1608,7 +1609,9 @@ internal static class PromptCatalog
                 "its memory is, and without the second it is told nothing of what it already remembers. " +
                 "{{memoryTool}} is the memory tool's name, filled in by the application, and " +
                 "{{memoryChanges}} is the sentence about changes arriving at the start of a Turn, which is " +
-                "empty for an Agent that cannot read files.",
+                "empty for an Agent that cannot read files. {{reportedDays}} is the number of days the " +
+                "memory tool keeps a line of reported.md (Team:Memory:Reported:KeepDays), filled in by the " +
+                "application and optional.",
             Default:
                 """
                 ## Memory
@@ -1621,6 +1624,18 @@ internal static class PromptCatalog
                 propose something (an idea, a plan, an option) and the Human takes it, turns it down or puts it
                 off, note the proposal and their answer in one topic file, and read that file before you
                 propose anything: a proposal you have forgotten making reads as new, and you will make it again.
+
+                Keep a record of what you have told the Human, in the file reported.md in your memory. Before you
+                report to the Human (a result, a status, a decision or a warning, in any Room, including a Room a
+                Job runs in), read reported.md with {{memoryTool}}; if it does not exist, you have reported nothing
+                yet. Do not tell them again in full what is already there unless something has changed, and when it
+                has, say what changed. When a Job or the Human asks for an item you have already reported and
+                nothing has changed, do not leave it out: say so in one line, such as "no change since 2026-11-16",
+                and add no line for it. After you report something new, add one line with the append command: the
+                Room's name, then " · ", then what you told them in a few words. {{memoryTool}} sets the date,
+                starts the file when you have none, and drops lines older than {{reportedDays}} days. A direct
+                answer to a question the Human has just asked you is not a report and needs no line. If you never
+                report to the Human, keep no such file.
 
                 One topic per file. Update a fact rather than adding a duplicate, and fix or replace what is no
                 longer true. Delete a file only when the Human asks you to. Give each file a description that
@@ -1635,7 +1650,7 @@ internal static class PromptCatalog
                 remember what is not in your memory or in this conversation. Your memory now holds:
                 {{memoryIndex}}
                 """,
-            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}", "{{memoryTool}}", "{{memoryChanges}}"],
+            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}", "{{memoryTool}}", "{{memoryChanges}}", "{{reportedDays}}"],
             RequiredPlaceholders: ["{{memoryPath}}", "{{memoryIndex}}"],
             Timing: PromptTiming.NextSession),
     ];
@@ -2636,7 +2651,7 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
     ];
 
-    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryBadFile</c> to <c>systemPrompt.memoryReadFirst</c>.</summary>
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryBadFile</c> to <c>systemPrompt.memoryReportedOneLine</c>.</summary>
     /// <returns>The prompt definitions of this slice, in catalog order.</returns>
     private static PromptDefinition[] BuildPart41() =>
     [
@@ -2666,6 +2681,57 @@ internal static class PromptCatalog
             Default: "{{file}} would be {{size}} bytes, over the limit of {{max}}. Split it into topics, each in its own file.",
             Placeholders: ["{{file}}", "{{size}}", "{{max}}"],
             RequiredPlaceholders: ["{{file}}", "{{size}}", "{{max}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedDescription",
+            Label: "Memory reported.md description",
+            HelperText: "The description the memory tool gives reported.md when it starts the file on the first append. One line of 20 to 200 characters; a text that breaks that rule is replaced by the default.",
+            Default: "What I have already told the Human, by date and Room. Read before reporting so nothing is said twice.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedOneLine",
+            Label: "Memory reported.md, one line each",
+            HelperText: "Said when an append to reported.md holds more than one line, or none.",
+            Default: "One line for each thing you told the Human.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>systemPrompt.memoryAgentFolderRefusal</c> to <c>systemPrompt.memoryReadFirst</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart61() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.memoryAgentFolderRefusal",
+            Label: "Memory agent folder refused",
+            HelperText: "Said to the Chief of Staff when a call on an agent:<Name> folder is anything but a read or list of reported.md.",
+            Default: "In another Agent's folder you can only read reported.md.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedNone",
+            Label: "Memory reported.md of a manager, none",
+            HelperText: "Said to the Chief of Staff when a manager has no reported.md. Must keep {{name}}.",
+            Default: "{{name}} has told the Human nothing directly.",
+            Placeholders: ["{{name}}"],
+            RequiredPlaceholders: ["{{name}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryReportedNoManager",
+            Label: "Memory reported.md, no such manager",
+            HelperText: "Said to the Chief of Staff when the Name after agent: is no Team's manager. Must keep {{name}} and {{managers}}.",
+            Default: "No Team's manager is named {{name}}, so there is nothing to read. Managers today: {{managers}}.",
+            Placeholders: ["{{name}}", "{{managers}}"],
+            RequiredPlaceholders: ["{{name}}", "{{managers}}"],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(

@@ -140,7 +140,7 @@ public sealed class MemoryToolTeamTests
         string listed = await harness.RunAsAsync("Chief", MemoryToolHarness.Args("list"), ct);
 
         Assert.Equal(Written("cross-team.md", "Decision."), written);
-        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir("Chief")}\nfolders you may use: me, memory, Dev, Dev/Apollo, Hidden, Ops", listed);
+        Assert.Equal($"Nothing yet.\nfolder: {harness.MemoryDir("Chief")}\nfolders you may use: me, memory, Dev, Dev/Apollo, Hidden, Ops, agent:Ada, agent:Zed", listed);
     }
 
     /// <summary>A Team with no manager is written by an Agent only through the Chief of Staff; a member is told the Human writes it.</summary>
