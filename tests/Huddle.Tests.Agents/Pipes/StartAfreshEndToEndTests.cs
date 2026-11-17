@@ -63,6 +63,13 @@ public sealed class StartAfreshEndToEndTests
                 () => roomSessions.Get("nova", roomA) is not null && roomSessions.Get("nova", roomB) is not null,
                 ct,
                 timeout: TestBudgets.Standard);
+
+            // The runner stores a session entry after it has written the Turn's acks and its reply, but the server applies
+            // them on its own thread. Leaving before it did drops the connection with the Turn still open in the durable
+            // queue, and the next Welcome rightly sends it again: a Turn in the other Room that rewrites its entry.
+            // Wait until the queue holds nothing for this Agent, so the first run ends cleanly (Turn Queue spec, section 5.4).
+            TurnQueueStore queue = fixture.Services.GetRequiredService<TurnQueueStore>();
+            await Eventually.UntilAsync(() => queue.Open(agentId).Count == 0, ct, timeout: TestBudgets.Standard);
         }
 
         string oldSessionA = roomSessions.Get("nova", roomA)!.SessionId;
