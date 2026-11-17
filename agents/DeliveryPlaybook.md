@@ -275,6 +275,17 @@ storage layout before shipping.
   CRLF (`git show` emits LF, which otherwise conflicts on every line). Finish with `git diff`
   showing only their hunks.
 
+## Keeping CI and lanes green when owners run in parallel
+
+Each of these came back several times in the Turn Queue and Memory Tidy deliveries (#617-#621),
+which ran two owners side by side. Put all three in every owner brief.
+
+| Rule | Why |
+| --- | --- |
+| A fake e-mail address in a spec, doc or test uses `@example.com` only. Build a mixed-case or unusual address at run time, never as a literal. Before every push, run `gitleaks dir . --config .gitleaks.toml --redact --no-banner` and clear what it finds | `secret-scan` went red three times (runs 1630, 1666, 1677) on placeholder addresses under `generic-personal-email`; each one cost a red PR or a red `main` and a fix commit |
+| A red `main` run after a green PR is a flaky test to fix now, before the next merge: read the failing test in the CI log, root-cause it, and grep for the same shape. Never re-run past it, and never merge another PR onto a red `main` | `main` went red five times in one day (runs 1681, 1683, 1688, 1691, 1697), each after its PR had passed. All five failures were in `Huddle.Tests.Agents`, the timing tests that fail under Linux load (fixed by #663 and the wait in `StartAfreshEndToEndTests`) |
+| When two lanes use the browser pane, each owner opens its own tab (`tabs_create`), passes its `tabId` on every call, and checks `location.port` is its lane's port before any click, type or post | The pane is shared: the two owners navigated each other's tab, and one paid-case post was interrupted halfway |
+
 ## Knowing the Windows and shell traps
 
 | Trap | Workaround |
