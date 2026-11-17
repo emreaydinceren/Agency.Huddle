@@ -7264,6 +7264,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-08
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `be865921` | #619 | By an agent acting as the Human, Nova on Sonnet / low, lane :5617. Nova set `job-bda41d` (`- room:` its one-to-one, once at 13:32). The Room showed "⏰ Nova will follow up Tue 17 Nov, 13:32: Ask if you drank water" with Cancel; Scheduled listed "For Nova · Follow-up in Nova · Next: Tue 17 Nov, 13:32". At 13:32:12 Huddle posted `@Nova ⏰ Follow-up: Ask if you drank water` in that Room (no Job Room) and Nova asked "Did you drink water?"; the Job left `schedule.md` and the row went. |
 
 ### TURNQUEUE-09 — The sixth Follow-up is refused, and the Agent says so 💰
 
@@ -7271,6 +7272,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-09
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `be865921` | #619 | Asked for six Follow-ups: five were set (Day 1 to Day 5), the sixth was refused with "You already have 5 Follow-ups waiting, the most one Agent may have. Delete one with jobs delete, or say in the Room what you will check and let the Human remind you." Nova reported the refusal, did not retry and asked which to drop. The five were then cancelled from the Room's rows. |
 
 ### TURNQUEUE-10 — An overdue Job and Follow-up run once after a restart 💰
 
@@ -7278,6 +7280,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-10
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `be865921` | #619 | Nova set a daily Job "Veg check" at 13:47 and a Follow-up at 13:49; Huddle was closed at 13:44:57 and started at 13:59:00. At 13:59:09 the Job posted once in its Job Room as `@Nova ⏰ Veg check (ran late; due Tue 13:47)` and the Follow-up once in Nova's Room as `@Nova ⏰ Follow-up: Ask about lunch (ran late; due Tue 13:49)`; Nova (still connecting at the post) answered each once (Carrot; Did you have lunch?). The Follow-up left `schedule.md`. A first attempt restarted too early by mistake; it ran on time and also showed a cut-off Turn re-run that found both already set and did not set them twice. |
 
 ### TURNQUEUE-11 — A Job due during a sleep runs once on waking 💰
 
@@ -7309,6 +7312,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-15
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `be865921` | #619 | Nova set a Follow-up for 13:37 ("⏰ Nova will follow up Tue 17 Nov, 13:37: Ask if you stretched"); Cancel removed the row and the Job at once, with no dialog; nothing posted at 13:37 (checked at 13:38:30). |
 
 ### TURNQUEUE-16 — A Follow-up waits in a paused Room and runs once after the Human speaks 💰
 
@@ -7316,6 +7320,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-16
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `be865921` | #619 | Budget 2, group Room (Kai, Nova, Cleo). Nova set a Follow-up in that Room for 14:05; Nova and Cleo then spent the Budget. Past 14:05 nothing posted and the row read "⏰ Nova will follow up: Check whether Cleo agreed (waiting: this Room is paused)". After typing "carry on" at 14:06:27 the Follow-up posted once at 14:06:59 and Nova answered. It was within the two-minute grace, so it was not marked late. |
 
 ### TURNQUEUE-17 — A paused Job does not run late on resume 💰
 
