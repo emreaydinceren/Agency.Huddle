@@ -353,6 +353,10 @@ whether Claude Code loads ancestor `CLAUDE.md` files into a Persona. Both turn o
 
 ## 5. Catch-up by budget (phase 1)
 
+> [!NOTE]
+> **Folded Turns (ADR-0092, 2026-11-17).** A one-to-one Turn that folds several Human Messages carries them as a
+> folded block after Catch-up. The block is not Catch-up: the Catch-up budget never trims it.
+
 ### 5.1 Where it changes
 
 `RoomSession` reads `this.options.TranscriptCatchUpMessages` at the first-Turn Transcript read.

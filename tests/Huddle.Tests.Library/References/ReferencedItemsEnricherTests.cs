@@ -52,4 +52,26 @@ public sealed class ReferencedItemsEnricherTests
         Assert.Equal(!chiefOfStaff, enriched.ReferencedItems.Contains(Limit, StringComparison.Ordinal));
         Assert.Equal(chiefOfStaff, enriched.ReferencedItems.Contains("with mcp__team__search:", StringComparison.Ordinal));
     }
+
+    /// <summary>A Room referenced only in the second Message of a Folded Turn still gets its Referenced items header.</summary>
+    [Fact]
+    public async Task ForPersonas_ReferenceInALaterFoldedMessage_GetsTheHeader()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using PersonaStore personas = new(
+            new AgentPaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()),
+            NullLogger<PersonaStore>.Instance);
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct);
+        Room room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, fixture.Nova.Id], ct);
+        ReferencedItemsEnricher enricher = ReferencedItemsEnricher.ForPersonas(
+            new ReferenceExpander(fixture.Resolver(), new FakePromptSource(), TestOptions.Create()), personas);
+        string second = $"see [Launch](/rooms/{room.Id})";
+        WorkItem item = new("room-1", "Room 1", "Human", "hello", [], TriggerMessageId: "t1", Foldable: true,
+            Folded: [new FoldedMessage("t1", "Human", "hello", null), new FoldedMessage("t2", "Human", second, null)]);
+
+        WorkItem enriched = await enricher.EnrichAsync(new TurnEnriching(item, "Nova", null), ct);
+
+        Assert.NotNull(enriched.ReferencedItems);
+    }
 }

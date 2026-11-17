@@ -406,6 +406,10 @@ stored `LastMessageId`.
 > Agent's other waiting triggers, and keeps both blocks within one Catch-up token budget. A `CutOff` re-send is led
 > by `turn.cutOffNote` ([Turn Queue spec](Huddle.TurnQueue-Specifications.md) §5.7, §5.8). D-7's "before the
 > trigger" still holds for every Turn that is not re-sent.
+>
+> **Folded Turns (ADR-0092, 2026-11-17).** In a one-to-one Room the Human's Messages queued when a Turn starts fold
+> into that Turn. Its trigger is the first of them, so Catch-up still ends before it; Messages two to *n* are the
+> folded block, not Catch-up, and `CatchUpTrim` never trims them. Principle 4 and D-7 hold in group Rooms only.
 
 ### 6.6 `RoomSessionStore`
 

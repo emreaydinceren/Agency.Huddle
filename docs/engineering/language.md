@@ -427,6 +427,12 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : Not the Room Session's in-memory work queue, which drives Turns and is fed from it at a Welcome.
 : *Avoid*: inbox, backlog, mailbox.
 
+**Folded Turn**
+: One Turn that answers several of the Human's Messages together: in a one-to-one Room, every ordinary Human
+  Message queued when the Turn starts joins it, up to the first item that is not one
+  ([ADR-0092](../adr/0092-a-one-to-one-folds-waiting-messages.md)). Never in a group Room.
+: *Avoid*: batch, merged Turn, combined message.
+
 **Plan**
 : An Agent's own checklist for one Turn, replaced whole each time it changes. Each line is a
   **Plan entry** with a status and a priority. Private to the Turn: unshared, unassigned and never

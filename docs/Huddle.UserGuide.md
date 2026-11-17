@@ -700,6 +700,13 @@ Room then starts a fresh conversation, with catch-up from the transcript. Use it
 when an Agent seems confused. A Turn the Agent was in the middle of stops; the
 Messages waiting behind it are answered by the restarted Agent.
 
+### Several quick Messages get one reply
+
+In an Agent's one-to-one Room, if you send several Messages while the Agent is
+still answering, it answers all of them together in its next reply, once,
+instead of one reply per Message. In a Room with more Agents each Mention is
+still answered on its own.
+
 ### After Huddle restarts
 
 A Message you sent that an Agent had not answered yet is not lost when Huddle

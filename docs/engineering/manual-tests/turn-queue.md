@@ -2,7 +2,7 @@
 
 Prove that a Message an Agent owes is answered once whatever happens to Huddle between its post and the reply: a close, a kill, an Agent still connecting, a Restart; that no reply is ever posted twice; that a waiting `ask_human` card survives a restart; and that the Human can see and call off what waits. Spec: [Huddle.TurnQueue-Specifications.md](../../Huddle.TurnQueue-Specifications.md) (§14 lists the cases as TQ-M1 to TQ-M18; this page carries those built so far). Decision: [ADR-0091](../../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md).
 
-**9 tests** · 0 free · 9 paid · about 2.4 hours. Written 2026-11-17 for issue #617 (slices 0 and 1) and **run once, 2026-11-17, build `a3142a11`**, by an agent acting as the Human on Sonnet: 9 Pass (see the [Run log](run-log.md)); slices 0 and 1 together cost about 0.5 USD. The Folded Turn and Follow-up cases join this page with slices 2 and 3.
+**11 tests** · 0 free · 11 paid · about 2.8 hours. Written 2026-11-17 for issues #617 (slices 0 and 1) and #618 (slice 2, TURNQUEUE-06 and -07). The slice 0 and 1 cases were **run once, 2026-11-17, build `a3142a11`**, by an agent acting as the Human on Sonnet: 9 Pass (see the [Run log](run-log.md)); they cost about 0.5 USD. The Follow-up cases join this page with slice 3.
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Every Agent is Sonnet or better, never Haiku, and the Chief of Staff is set to Sonnet / low before its first Turn. Each case is a few Turns, well under a dollar. Record each result in the [Run log](run-log.md).
 
@@ -15,6 +15,8 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 | TURNQUEUE-03 | TQ-M3 | Does a kill right after a reply never produce a second reply |
 | TURNQUEUE-04 | TQ-M4 | Does a waiting `ask_human` card, and its Needs You row, survive a restart, and does the answer resume the asker |
 | TURNQUEUE-05 | TQ-M5 | Does a stopped Turn stay stopped across a restart while another Agent's waiting Mention is answered |
+| TURNQUEUE-06 | TQ-M6 | Do quick Human Messages in a one-to-one get one reply that answers them all |
+| TURNQUEUE-07 | TQ-M7 | Do quick Mentions in a group Room still get one reply each |
 | TURNQUEUE-12 | TQ-M12 | Is a Mention posted while an Agent is still starting answered once it is up, with no restart line |
 | TURNQUEUE-13 | TQ-M13 | Does a Restart stop the running Turn and keep the Messages waiting behind it |
 | TURNQUEUE-14 | TQ-M14 | Does the age limit and **Don't answer** keep old or refused Messages from coming back |
@@ -158,6 +160,45 @@ Then `adapter: 'broken'` in the Agent's frontmatter makes it Offline, and removi
 
 - Cleo answers once after the start (or had already answered once).
 - Nova's stopped Turn does not come back; its row is `done` / `stopped`.
+
+### TURNQUEUE-06 — Quick Messages in a one-to-one get one reply 💰
+
+**Paid** · about 10 min
+
+*Proves U6 and slice 2: the Human's Messages queued while Nova is busy are answered together, in one Turn.*
+
+**Before you start**
+
+- Nova Online, in its one-to-one Room. `Team:Acp:FoldOneToOne` at its default (`true`). About 0.05 USD.
+
+**Steps**
+
+1. Send: "Run `ping -n 30 127.0.0.1` in the foreground and summarise it."
+2. While it runs, send three short Messages: "can you also name a fruit", "and a colour", "and a planet".
+
+**Pass if — all of these**
+
+- After the ping summary, Nova posts exactly one reply that answers all three.
+- `turn_queue` shows the three rows `done` / `replied`.
+
+### TURNQUEUE-07 — Quick Mentions in a group Room get one reply each 💰
+
+**Paid** · about 10 min
+
+*Proves U7: a group Room never folds; each Mention is its own Turn.*
+
+**Before you start**
+
+- Nova and Cleo in a group Room with you. About 0.05 USD.
+
+**Steps**
+
+1. Send: "@Nova run `ping -n 30 127.0.0.1` in the foreground and summarise it."
+2. While it runs, send "@Nova name a fruit", "@Nova name a colour" and "@Nova name a planet" as three Messages.
+
+**Pass if — all of these**
+
+- Nova answers each of the three Mentions in its own reply, three replies after the ping summary.
 
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 

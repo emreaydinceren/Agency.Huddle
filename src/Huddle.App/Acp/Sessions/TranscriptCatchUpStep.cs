@@ -150,7 +150,8 @@ internal sealed class TranscriptCatchUpStep
                     int budget = settings.CatchUpTokens;
                     if (lateReplyId is not null)
                     {
-                        (tail, IReadOnlyList<ChatMessage> laterAll) = TranscriptCatchUpStep.SplitAtTrigger(tail, triggerId, waitingTriggerIds);
+                        (tail, IReadOnlyList<ChatMessage> laterAll) = TranscriptCatchUpStep.SplitAtTrigger(
+                            tail, triggerId, [.. waitingTriggerIds, .. item.Folded?.Select(folded => folded.Id) ?? []]);
                         CatchUpTrimResult laterResult = CatchUpTrim.Apply(laterAll, this.isOwn, budget, this.options.CatchUpKeepOwnMessages);
                         later = laterResult.Kept;
                         budget = Math.Max(0, budget - laterResult.EstimatedTokens);

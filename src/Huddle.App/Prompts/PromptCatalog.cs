@@ -100,7 +100,30 @@ internal static class PromptCatalog
         ..BuildPart50(),
         ..BuildPart53(),
         ..BuildAgentsMdNoticeParts(),
-        ..BuildLaterHeaderPart(),
+        ..BuildTurnQueueParts(),
+    ];
+
+    /// <summary>Builds the Turn Queue prompts, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
+    /// <returns>The prompt definitions of the Turn Queue slices, in catalog order.</returns>
+    private static PromptDefinition[] BuildTurnQueueParts() => [.. BuildLaterHeaderPart(), .. BuildFoldedPart()];
+
+    /// <summary>Builds <c>turn.foldedHeader</c> and <c>turn.foldedLine</c>: how a Folded Turn shows the Messages it answers together (Turn Queue spec 6.4).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildFoldedPart() =>
+    [
+        new PromptDefinition(
+            Key: "turn.foldedHeader",
+            Label: "Folded Turn: header",
+            HelperText: "Opens a Turn that answers several Messages the Human sent while the Agent was busy in a one-to-one Room. It is used only for two or more Messages; one Message uses the Message prompt.",
+            Default: "{{roomLabel}} Since your last reply the Human sent {{count}} Messages. Answer them together, once:",
+            Placeholders: ["{{roomLabel}}", "{{count}}"], RequiredPlaceholders: ["{{roomLabel}}", "{{count}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.foldedLine",
+            Label: "Folded Turn: one Message",
+            HelperText: "One line per Message under the Folded Turn header, oldest first.",
+            Default: "{{sender}}: {{text}}",
+            Placeholders: ["{{sender}}", "{{text}}"], RequiredPlaceholders: ["{{sender}}", "{{text}}"], Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds <c>turn.laterHeader</c>: the line that introduces what was posted after a late Turn's Message (Turn Queue spec 5.8).</summary>

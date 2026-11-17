@@ -7125,6 +7125,20 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-05
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `a3142a11` | #617 | Group Room (Kai, Nova, Cleo). One Message asked Nova and Cleo each to run a ping. Stop on Nova's Draft closed Nova's row `stopped`; Huddle was then killed while Cleo's Turn ran. On start: "Picked up after a restart. 1 Message waiting for Cleo." Cleo answered once; Nova's stopped Turn did not come back. |
 
+### TURNQUEUE-06 — Quick Messages in a one-to-one get one reply 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-06--quick-messages-in-a-one-to-one-get-one-reply-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TURNQUEUE-07 — Quick Mentions in a group Room get one reply each 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-07--quick-mentions-in-a-group-room-get-one-reply-each-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
 
 File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-)

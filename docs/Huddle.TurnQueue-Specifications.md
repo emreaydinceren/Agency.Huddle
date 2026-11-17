@@ -1,10 +1,10 @@
 # Huddle.TurnQueue — Design Specification
 
 **Date:** 2026-11-16, revised the same day after an independent review · **Status:** `DueCheck` built 2026-11-16
-(PR #652); spike S-0 run 2026-11-16 (Appendix B); slices 0 and 1 built 2026-11-17 (#617); slices 2 and 3 not built
+(PR #652); spike S-0 run 2026-11-16 (Appendix B); slices 0 and 1 built 2026-11-17 (#617, PR #656); slice 2 built 2026-11-17 (#618); slice 3 not built
 · **Issues:** #617 (durable queue), #618 (folded
 Turns), #619 (follow-ups and overdue runs) · **Decision records:** [ADR-0091](adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md)
-(slices 0 and 1); slices 2 and 3 write ADR-0092 and ADR-0093 (§12) · **Amends, when built:**
+(slices 0 and 1), [ADR-0092](adr/0092-a-one-to-one-folds-waiting-messages.md) (slice 2); slice 3 writes ADR-0093 (§12) · **Amends, when built:**
 [ADR-0004](adr/0004-direct-rooms-reply-without-mention.md) (its restart limitation),
 [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) (a waiting card is lost),
 [ADR-0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) (blocks from the one trigger),
