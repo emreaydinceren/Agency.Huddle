@@ -742,11 +742,12 @@ Follow-up: the point of #619.
 
 ### 8.1 `DueCheck`: the shared due-time function
 
-`JobScheduler` and the Memory Tidy timer (branch `spec/memory-tidy`, `docs/Huddle.MemoryTidy-Specifications.md`
-§6.7, commit `7940b3f9`) both decide "is it due, does it run late once, is it skipped, is a failure retried", one in
+`JobScheduler` and the Memory Tidy timer ([Huddle.MemoryTidy-Specifications.md](Huddle.MemoryTidy-Specifications.md)
+§6.7) both decide "is it due, does it run late once, is it skipped, is a failure retried", one in
 code and one in its design. Slice 3a extracts that into one pure function, fed the caller's `TimeProvider` reading,
-which both call; neither keeps its own copy. **Slice 3a creates `src/Huddle.App/Scheduling/`; Memory Tidy's timer
-slice waits for it** and then consumes `DueCheck` instead of writing its own next-run logic.
+which both call; neither keeps its own copy. **`DueCheck` and its tests land first, as
+their own PR before slice 1 (owner, 2026-11-16), creating `src/Huddle.App/Scheduling/`; slice 3a then moves
+`JobScheduler` onto it, and Memory Tidy's timer slice waits only for that first PR** and then consumes `DueCheck` instead of writing its own next-run logic.
 
 **`CadenceService` is left alone** (D-36, ADR-0042 unchanged). Three things in it have no place in `DueCheck`: a
 failed or refused post puts the previous state back and retries on every tick with no limit

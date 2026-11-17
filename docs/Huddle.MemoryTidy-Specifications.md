@@ -4,7 +4,7 @@
 re-review; the owner settled every open question the same day (§10, [Appendix B](#appendix-b-review-response)) · **Issues:** #620 (every
 Agent keeps `reported.md`) and #621 (a weekly tidy-up of Memory), both decided by the owner 2026-11-16 ·
 **Decision records:** two to write with the build, ADR-0094 and ADR-0095 (0091 to 0093 are taken by the Turn Queue
-specification on `spec/durable-inbox`); they amend
+specification, [Huddle.TurnQueue-Specifications.md](Huddle.TurnQueue-Specifications.md)); they amend
 [ADR-0071](adr/0071-memory-is-written-through-the-memory-tool-and-team-memory-by-its-manager.md) and build on
 [ADR-0064](adr/0064-a-helper-judges-an-event-and-the-app-applies-its-verdict.md),
 [ADR-0073](adr/0073-members-propose-team-memory-and-a-helper-files-it.md) and
@@ -577,8 +577,8 @@ first tick is five minutes after start-up, so a pass does not compete with Agent
 
 **It holds no due-time rule of its own.** `JobScheduler.TickJobAsync` (`JobScheduler.cs:157-207`) carries "first
 sight, a changed timetable, save the next run before firing, what to do when late" today. The Turn Queue
-specification (branch `spec/durable-inbox`, `docs/Huddle.TurnQueue-Specifications.md` §8.1 at `68867b57`) extracts
-that in its slice 3a into one pure function, `DueCheck`, in `src/Huddle.App/Scheduling/`, namespace
+specification ([Huddle.TurnQueue-Specifications.md](Huddle.TurnQueue-Specifications.md) §8.1) extracts
+that into one pure function, `DueCheck`, in `src/Huddle.App/Scheduling/`, namespace
 `Agency.Huddle.App.Scheduling`. Its consumers are `JobScheduler` and this timer. This design **consumes it and
 changes nothing in it**:
 
@@ -591,9 +591,9 @@ DueState    DueCheck.AfterRun(DueState state, DueRunResult result, Func<DateTime
 // DueRunResult: Ran | Held | Failed
 ```
 
-At `68867b57` each decision carries `SaveNext`, the next run alone, and that page still names `CadenceService` as a
-third consumer. It is being revised so that each decision carries the whole `DueState` to save and `CadenceService`
-is left out. This scheduler is written against that form: **it stores what the decision carries, and works out no
+Each decision carries the whole `DueState` to save, and `CadenceService` is left out (Turn Queue §8.1). **Owner
+decision 2026-11-16: `DueCheck` and its tests land first, as their own PR, before Turn Queue slice 1**, so this
+design's timer slice waits for nothing. This scheduler **stores what the decision carries, and works out no
 state itself.** `DueCheck` is pure and touches no store; the scheduler reads the row, calls it, and writes the row.
 
 **The call for the weekly pass.**
@@ -664,10 +664,9 @@ deleted. A continuation that meets the cap again writes a new `resume` row for t
   the parser cannot read, is logged as an Error at start-up and no pass is scheduled.
 - **The card's "Next pass"** is the `weekly` row's next run, so it is shown only once this slice is built.
 
-**What the dependency is.** Turn Queue slice 3a is built after that page's slice 1, with slice 1's switch on. So
-this slice waits for **Turn Queue slices 1 and 3a**. `DueCheck` itself is a pure function with its own table-driven
-tests and needs nothing from slice 1; the owner may let it and its tests land first, on their own, which would
-remove the wait. Nothing else on this page depends on that specification.
+**What the dependency is.** This slice waits only for `DueCheck`. `DueCheck` is a pure function with its own
+table-driven tests and needs nothing from Turn Queue slice 1, so **the owner decided (2026-11-16) that it and its
+tests land first, on their own, before Turn Queue slice 1**. Nothing else on this page depends on that specification.
 
 #### Awaiting a call: `HelperJudge`
 
@@ -1634,11 +1633,9 @@ section. One question stays for the ACP effort, as a question and not a request 
 | --- | --- | --- | --- |
 | Q-ACP-1 | In `Huddle.Acp`'s process hosting, is there any limit on the length of a Helper session's answer, or an idle timeout shorter than 180 seconds? | The largest answer so far was a Team Memory Verdict of one file. `AdapterProcessHelperRunner` cuts nothing that this design's author found | The answer is capped at 40,000 characters of `text` and checked in `Validate`. If a lower limit exists, lower `Team:Memory:Tidy:MaxAnswerChars`; nothing in `Huddle.Acp` changes for this |
 
-**One dependency on another specification:** slice 3 (§11) consumes `DueCheck`, which Turn Queue slice 3a brings,
-and that slice is built after Turn Queue slice 1 with its switch on. So **Memory Tidy slice 3 waits for Turn Queue
-slices 1 and 3a.** `DueCheck` is pure, with table-driven tests of its own, and needs nothing from slice 1: **the
-owner may let `DueCheck` and its tests land first, by themselves, which would remove the wait.** That is the one
-thing left for the owner to choose, and it is a choice of order, not of design. Until slice 3 is built, slices 1, 2,
+**One dependency on another specification:** slice 3 (§11) consumes `DueCheck`. **The owner decided (2026-11-16)
+that `DueCheck` and its tests land first, by themselves, before Turn Queue slice 1**, so Memory Tidy slice 3 waits
+only for that small PR. Until slice 3 is built, slices 1, 2,
 4 and 5 ship as they are: `MemoryTidyRunner` runs every pass, started by **Tidy now** or `RunAtStart`, and a pass
 that meets the cap is not gone on with by itself.
 
@@ -1652,7 +1649,7 @@ Each slice ships alone and leaves `main` working. Only slice 3 depends on anythi
 | --- | --- | --- | --- | --- |
 | **1. `reported.md`** | The Memory Prompt paragraph; `ReportedFile`; the tool's four behaviours (§6.3); the `agent:<Name>` single-file read (§6.4); the Chief of Staff's text and the `team-rollup` Skill; `Team:Memory:Reported:KeepDays` | Nothing | None beyond the Agent's own two tool calls | ADR-0094 (*an Agent keeps a record of what it told the Human*); [Instructions and Memory](Huddle.InstructionsAndMemory-Specifications.md) (a note at §4.2 and §5.3, and §6.1's quoted Prompt brought up to the code); EngineeringGuide (the key); User Guide (Memory: "What an Agent already told you"); [language.md](engineering/language.md) (**Reported file**); [known-limits.md](engineering/known-limits.md) (the Agent keeps it, so a report it forgot to note can repeat; two Rooms of one Agent can report the same thing at once; the Room in a line is the Agent's word; a date the Agent writes is replaced); [code-map.md](engineering/code-map.md); manual page with REPORTED-01 to 08 and its tracker rows; [Index.md](Index.md) |
 | **2. The safe write, the backup, the journal, the list and the runner** | `MemoryWriter.ReplaceAndRemoveAsync` and `PruneReportedAsync`; the Memory backups root, out of search, with guarded retention; `MemoryTidyJournal`, `MemoryTidyList`, `MemoryTidyRecovery`; `MemoryTidyStateStore` with both state tables in their full shape; `MemoryPaths.OwnFolderOf`; `MemoryTidyPass` doing only §6.6 (old `reported.md` lines); **`MemoryTidyRunner`**, with `Team:Memory:Tidy:RunAtStart` as its only trigger for now | Slice 1 (`ReportedFile`) | None | EngineeringGuide (`RunAtStart`, `KeepBackupDays`, the root's key); User Guide (Library: Memory backups); wireframes.md (the new root in the Library's root list); known-limits.md (no one-click restore; a crash between the Feed item and the journal's last line posts twice; no pass runs by itself until the timetable is built); code-map.md; manual TIDYLINES-01 and 02 |
-| **3. The timetable** | `MemoryTidyScheduler` over `DueCheck`, consumed unchanged; `memory_tidy_schedule`; `Team:Memory:Tidy:When`; overdue once; the `resume` row and the continuation after the cap; the card's `Next pass` when the card exists | **Turn Queue slices 1 and 3a**, or `DueCheck` alone if the owner lets it land first (§10); and slice 2 | None | EngineeringGuide (`When`); User Guide (when it runs, that a round can take several days and raise several Notifications); the Turn Queue page (Memory Tidy listed as a consumer at this page's commit); manual TIDYTIME-01 and 02, and MEMTIDY-12 once slice 4 is also built |
+| **3. The timetable** | `MemoryTidyScheduler` over `DueCheck`, consumed unchanged; `memory_tidy_schedule`; `Team:Memory:Tidy:When`; overdue once; the `resume` row and the continuation after the cap; the card's `Next pass` when the card exists | `DueCheck`, which lands first on its own (owner, 2026-11-16; §10); and slice 2 | None | EngineeringGuide (`When`); User Guide (when it runs, that a round can take several days and raise several Notifications); the Turn Queue page (Memory Tidy listed as a consumer at this page's commit); manual TIDYTIME-01 and 02, and MEMTIDY-12 once slice 4 is also built |
 | **4. The Helper, for Agents' own Memory** | `HelperJudge` and the cache opt-out; the input builder with `tidy: keep`, days and the offset; the Verdict, the steps, both levels of refusal and the tokens; `ApplyAsync`; eligibility, the marker and the failure count; the `MemoryTidied` Feed item; the History entries; the tidy sentence in the Memory Prompt; the card section and **Tidy now**, which asks the runner; `PersonaRenameCascade`; `HelperOutcome.Failed.Started` and `HelperRunReport.CallRan` | Slice 2. Not slice 3: without it a pass is started by **Tidy now**, and one that meets the cap is not gone on with by itself | One call per eligible folder per week | ADR-0095 (*a Helper tidies Memory weekly and Huddle keeps a copy*; amends ADR-0071's delete rule; records why this is not the background summariser Long-Running Rooms rejected, and what the checks do and do not stop); [Helpers](Huddle.Helpers-Specifications.md) (`HelperJudge`, the cache opt-out, the card section); [Feed](Huddle.Feed-Specifications.md) (the source type); [Long-Running Rooms](Huddle.LongRunningRooms-Specifications.md) (a dated note at the "Dreaming: No" row pointing here); EngineeringGuide (the remaining keys, `Team:Helpers:MemoryTidy`); User Guide (Helpers: Memory Tidy, the list, undoing a change, `tidy: keep`, what it does not check); language.md (**Memory Tidy**, **Memory Tidy Helper**, **Memory backup**); known-limits.md (a number as a word, a name and a "not" are unchecked; text can move between files of one folder; a restored file can be dropped again without `tidy: keep`; a file can be halved once a pass, week after week; where a file has no working description, text from its body can become one; the tidy sentence is fixed at session start; Team Memory is not tidied); wireframes.md (`G9a` and its section); code-map.md; manual MEMTIDY-01 to 10, with the first week's refusal counts recorded; Index.md (status) |
 | **5. Huddle-wide Memory** | The `huddle` folder in the pass, descriptions locked; the merge record; `turn.huddleMemoryMerged` in `HuddleMemoryTurnHook` | Slice 4 | One more call a week at most | ADR-0095 (a paragraph); ADR-0077's page gets a dated note; User Guide; manual MEMTIDY-11 |
 | **6. Restore, optional** | A Restore action per line of a pass's list | Slice 4 | None | Its own short spec section, wireframes.md, User Guide |
