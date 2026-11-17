@@ -15,6 +15,7 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
     private readonly ILogger<TurnQueue> logger;
     private readonly IHostApplicationLifetime lifetime;
     private readonly TimeProvider timeProvider;
+    private readonly RoomEvents? events;
 
     /// <summary>Creates the queue over its store.</summary>
     /// <param name="store">The <c>turn_queue</c> tables.</param>
@@ -22,9 +23,16 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
     /// <param name="logger">Receives diagnostics.</param>
     /// <param name="lifetime">Tells <see cref="CloseRunning"/> whether the host is stopping.</param>
     /// <param name="timeProvider">The clock; <see langword="null"/> uses <see cref="TimeProvider.System"/>.</param>
+    /// <param name="events">Told when a Room's open rows change; <see langword="null"/> tells nobody.</param>
     public TurnQueue(
-        TurnQueueStore store, IOptions<TeamOptions> options, ILogger<TurnQueue> logger, IHostApplicationLifetime lifetime, TimeProvider? timeProvider = null)
+        TurnQueueStore store,
+        IOptions<TeamOptions> options,
+        ILogger<TurnQueue> logger,
+        IHostApplicationLifetime lifetime,
+        TimeProvider? timeProvider = null,
+        RoomEvents? events = null)
     {
+        this.events = events;
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(logger);
@@ -69,9 +77,11 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         {
             case QueueAckKind.Started when ack.ReplyMessageId is { } replyId:
                 this.store.Started(agentId, ack.RoomId, ack.MessageIds, replyId, connectionId, now, now);
+                this.Changed(ack.RoomId);
                 break;
             case QueueAckKind.Finished:
                 _ = this.store.Finish(agentId, ack.RoomId, ack.MessageIds, ToStored(ack.Outcome), now);
+                this.Changed(ack.RoomId);
                 break;
             default:
                 // Held changes nothing: the rows stay waiting. A Started without a reply id cannot name its Turn.
@@ -87,6 +97,7 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         if (this.options.Value.TurnQueue.Enabled)
         {
             _ = this.store.MarkReplied(agentId, roomId, inReplyTo, this.timeProvider.GetUtcNow());
+            this.Changed(roomId);
         }
     }
 
@@ -98,6 +109,7 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         if (this.options.Value.TurnQueue.Enabled)
         {
             _ = this.store.Finish(agentId, roomId, inReplyTo, TurnQueueOutcome.Failed, this.timeProvider.GetUtcNow());
+            this.Changed(roomId);
         }
     }
 
@@ -112,7 +124,12 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
             return;
         }
 
+        IReadOnlyList<string> rooms = this.store.RunningRoomsOf(connectionId);
         _ = this.store.CloseRunning(connectionId, TurnQueueOutcome.Stopped, this.timeProvider.GetUtcNow());
+        foreach (string roomId in rooms)
+        {
+            this.Changed(roomId);
+        }
     }
 
     /// <inheritdoc />
@@ -127,6 +144,7 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         }
 
         List<WaitingTurn> kept = [];
+        HashSet<string> expiredIn = new(StringComparer.Ordinal);
         foreach (TurnQueueRow row in this.store.Open(agentId))
         {
             if (row.Status != TurnQueueStatus.Waiting)
@@ -137,17 +155,31 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
             if (IsTooOld(row.PostedUtc, now, limits.ResumeWithin))
             {
                 this.store.Set(row.Seq, TurnQueueStatus.Done, TurnQueueOutcome.Expired, now);
+                _ = expiredIn.Add(row.RoomId);
                 continue;
             }
 
             kept.Add(new WaitingTurn(row, row.Attempts >= 1));
         }
 
+        foreach (string roomId in expiredIn)
+        {
+            this.Changed(roomId);
+        }
+
         return kept;
     }
 
     /// <inheritdoc />
-    public void CloseGone(long seq, DateTimeOffset now) => this.store.Set(seq, TurnQueueStatus.Done, TurnQueueOutcome.Gone, now);
+    public void CloseGone(long seq, DateTimeOffset now)
+    {
+        string? roomId = this.store.RoomOf(seq);
+        this.store.Set(seq, TurnQueueStatus.Done, TurnQueueOutcome.Gone, now);
+        if (roomId is not null)
+        {
+            this.Changed(roomId);
+        }
+    }
 
     /// <inheritdoc />
     public bool IsSubscribed(string agentId)
@@ -155,6 +187,47 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
         return this.store.Subscribers().Contains(agentId);
     }
+
+    /// <inheritdoc />
+    public void CloseForStop(string agentId, string roomId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        if (!this.options.Value.TurnQueue.Enabled)
+        {
+            return;
+        }
+
+        // The bound is read once, here: a Message recorded while the stop is in flight is a new Turn the Human has not stopped.
+        long maxSeq = this.store.MaxSeq(agentId, roomId);
+        _ = this.store.CloseUpTo(agentId, roomId, maxSeq, TurnQueueOutcome.Stopped, this.timeProvider.GetUtcNow());
+        this.Changed(roomId);
+    }
+
+    /// <inheritdoc />
+    public void CloseForAgent(string agentId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+
+        // The subscription goes even while the queue is switched off, like the flag it mirrors in SetSubscribed.
+        this.store.Unsubscribe(agentId);
+        if (!this.options.Value.TurnQueue.Enabled)
+        {
+            return;
+        }
+
+        List<string> rooms = [.. this.store.Open(agentId).Select(static row => row.RoomId).Distinct(StringComparer.Ordinal)];
+        _ = this.store.CloseForAgent(agentId, TurnQueueOutcome.Gone, this.timeProvider.GetUtcNow());
+        foreach (string roomId in rooms)
+        {
+            this.Changed(roomId);
+        }
+    }
+
+    /// <summary>Tells the Room view that the open rows of a Room changed. Called only outside any lock.</summary>
+    /// <param name="roomId">The Room.</param>
+    private void Changed(string roomId) => this.events?.PublishTurnQueueChanged(roomId);
 
     /// <summary>The one age rule: a Message older than <paramref name="resumeWithin"/> is not handed out; zero or less means no limit.</summary>
     /// <param name="postedUtc">The Message's own time.</param>
@@ -187,12 +260,19 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
 
         IReadOnlySet<string> subscribers = this.store.Subscribers();
         DateTimeOffset now = this.timeProvider.GetUtcNow();
+        bool recorded = false;
         foreach (string agentId in owedAgentIds)
         {
             if (subscribers.Contains(agentId))
             {
                 _ = this.store.Record(agentId, message.Id, roomId, message.Timestamp, now);
+                recorded = true;
             }
+        }
+
+        if (recorded)
+        {
+            this.Changed(roomId);
         }
     }
 

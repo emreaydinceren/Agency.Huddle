@@ -73,6 +73,12 @@ public sealed class RoomEvents
     /// </summary>
     public event Action<string>? ElicitationsChanged;
 
+    /// <summary>
+    /// The open Turn Queue rows of a Room changed - one was recorded, started, finished or closed. Carries the Room id, not the rows, for
+    /// the same reason <see cref="QuestionsChanged"/> does: the waiting notice rereads the counts.
+    /// </summary>
+    public event Action<string>? TurnQueueChanged;
+
     public void PublishMessagePosted(MessagePostedEvent e)
     {
         this.Publish(this.MessagePosted, e, nameof(this.MessagePosted));
@@ -142,6 +148,13 @@ public sealed class RoomEvents
     internal void PublishElicitationsChanged(string roomId)
     {
         this.PublishRoomId(this.ElicitationsChanged, roomId, nameof(this.ElicitationsChanged));
+    }
+
+    /// <summary>Publishes <see cref="TurnQueueChanged"/> for <paramref name="roomId"/>, after any lock is released.</summary>
+    /// <param name="roomId">The Room whose open Turn Queue rows changed.</param>
+    internal void PublishTurnQueueChanged(string roomId)
+    {
+        this.PublishRoomId(this.TurnQueueChanged, roomId, nameof(this.TurnQueueChanged));
     }
 
     private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)

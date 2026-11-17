@@ -656,7 +656,7 @@ internal sealed class AgentConnection
 
         var transcript = await this.chatStore.ReadAllAsync(read.RoomId, ct).ConfigureAwait(false);
 
-        var beforeIndex = IndexOf(transcript, read.BeforeMessageId);
+        var beforeIndex = IndexOf(transcript, read.BeforeMessageId); // An id not in the Transcript reads to the end; a re-sent Turn relies on it (Turn Queue spec 5.8).
         var end = beforeIndex >= 0 ? beforeIndex : transcript.Count;
         var afterIndex = read.AfterMessageId is null ? -1 : IndexOf(transcript, read.AfterMessageId);
         var start = afterIndex >= 0 && afterIndex < end ? afterIndex + 1 : 0;

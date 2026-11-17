@@ -72,6 +72,29 @@ internal static class TurnPromptFramer
 
     private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
     {
+        string framed = TurnPromptFramer.BuildFramedPromptBody(item, prompts);
+        if (item.LaterMessages is not { Count: > 0 } later)
+        {
+            return framed;
+        }
+
+        // Turn Queue spec 5.8: what was posted after the trigger while the Turn waited follows the Message, rendered as Catch-up lines are.
+        StringBuilder builder = new(framed);
+        builder.Append("\n\n");
+        builder.Append(prompts.Render("turn.laterHeader", new Dictionary<string, string>()));
+        foreach (var message in later)
+        {
+            builder.Append('\n');
+            builder.Append(prompts.Render(
+                "turn.catchUpLine",
+                new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
+        }
+
+        return builder.ToString();
+    }
+
+    private static string BuildFramedPromptBody(WorkItem item, IPromptSource prompts)
+    {
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
         // in a turn carries it: without this they reach only Rooms the Agent created itself.

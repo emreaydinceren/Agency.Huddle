@@ -226,6 +226,39 @@ internal sealed class TurnQueueStore
         return Convert.ToInt64(command.ExecuteScalar(), CultureInfo.InvariantCulture);
     }
 
+    /// <summary>The Rooms in which a connection has <c>running</c> rows, so a close can tell each one.</summary>
+    /// <param name="connectionId">The connection.</param>
+    /// <returns>The distinct Room ids.</returns>
+    public IReadOnlyList<string> RunningRoomsOf(string connectionId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
+
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT DISTINCT room_id FROM turn_queue WHERE connection_id = $connection AND status = 'running';";
+        _ = command.Parameters.AddWithValue("$connection", connectionId);
+        List<string> rooms = [];
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            rooms.Add(reader.GetString(0));
+        }
+
+        return rooms;
+    }
+
+    /// <summary>The Room of one row.</summary>
+    /// <param name="seq">The row.</param>
+    /// <returns>The Room id, or <see langword="null"/> when there is no such row.</returns>
+    public string? RoomOf(long seq)
+    {
+        using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText = "SELECT room_id FROM turn_queue WHERE seq = $seq;";
+        _ = command.Parameters.AddWithValue("$seq", seq);
+        return command.ExecuteScalar() as string;
+    }
+
     /// <summary>Closes the open rows of one Agent in one Room up to a <c>seq</c>; later rows stay open.</summary>
     /// <param name="agentId">The Agent.</param>
     /// <param name="roomId">The Room.</param>

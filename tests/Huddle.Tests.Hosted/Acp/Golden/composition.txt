@@ -167,8 +167,10 @@ Singleton Agency.Huddle.App.Services.ContextFill -> Agency.Huddle.App.Services.C
 Singleton Agency.Huddle.App.Services.Drafts -> Agency.Huddle.App.Services.Drafts
 Singleton Agency.Huddle.App.Services.IMentionAliasSource -> factory Agency.Huddle.App.Services.IMentionAliasSource
 Singleton Agency.Huddle.App.Services.ITurnAcks -> factory Agency.Huddle.App.Services.ITurnAcks
+Singleton Agency.Huddle.App.Services.ITurnControl -> Agency.Huddle.App.Services.TurnControl
 Singleton Agency.Huddle.App.Services.ITurnLedger -> factory Agency.Huddle.App.Services.ITurnLedger
 Singleton Agency.Huddle.App.Services.ITurnQueueControl -> factory Agency.Huddle.App.Services.ITurnQueueControl
+Singleton Agency.Huddle.App.Services.ITurnQueueView -> Agency.Huddle.App.Services.TurnQueueView
 Singleton Agency.Huddle.App.Services.RoomEvents -> Agency.Huddle.App.Services.RoomEvents
 Singleton Agency.Huddle.App.Services.ToolCallLogWriter -> Agency.Huddle.App.Services.ToolCallLogWriter
 Singleton Agency.Huddle.App.Services.TurnActivity -> Agency.Huddle.App.Services.TurnActivity

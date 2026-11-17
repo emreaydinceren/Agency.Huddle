@@ -54,6 +54,21 @@
                 continue;
             }
 
+            @* The line Huddle posts after a restart (C4c, Turn Queue spec §5.11): a slim system row, the first sentence in the summary, the rest in the detail. *@
+            @if (fromHuddle && MessageDisplay.TryParseRestartLine(message.Text, out var pickedUp, out var restartDetail))
+            {
+                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
+                    <summary>
+                        <MudIcon Icon="@Icons.Material.Outlined.RestartAlt" Size="Size.Small" />
+                        <span class="system-row-text">@(pickedUp ? RestartLine.Prefix : RestartLine.NotPickedUpPrefix)</span>
+                        <span class="system-row-time">@time</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
+                    </summary>
+                    <div class="system-row-detail">@restartDetail</div>
+                </details>
+                continue;
+            }
+
             @if (!fromHuddle)
             {
                 @* The Human's own Message needs no avatar or name to say who wrote it: its side of the

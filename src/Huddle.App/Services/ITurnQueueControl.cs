@@ -25,4 +25,16 @@ internal interface ITurnQueueControl
     /// <param name="agentId">The Agent.</param>
     /// <returns><see langword="true"/> when the Agent is subscribed.</returns>
     bool IsSubscribed(string agentId);
+
+    /// <summary>
+    /// Closes as <c>stopped</c> the Agent's <c>waiting</c> and <c>running</c> rows in a Room whose <c>seq</c> is at most the highest at the
+    /// moment of the call, so a Message recorded after the Stop stays open (spec §5.9).
+    /// </summary>
+    /// <param name="agentId">The Agent.</param>
+    /// <param name="roomId">The Room.</param>
+    void CloseForStop(string agentId, string roomId);
+
+    /// <summary>Closes every open row of an Agent as <c>gone</c> and drops its durable-queue subscription: the Agent was removed (spec §5.7).</summary>
+    /// <param name="agentId">The Agent.</param>
+    void CloseForAgent(string agentId);
 }

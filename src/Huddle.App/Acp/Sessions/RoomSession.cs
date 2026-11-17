@@ -306,6 +306,20 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
     }
 
+    /// <summary>The trigger ids of the Turns queued behind the running one in a Room, so a late Turn's later block can leave them out (Turn Queue spec 5.8).</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <returns>The ids, possibly none.</returns>
+    private List<string> QueuedTriggerIds(string roomId)
+    {
+        lock (this.gate)
+        {
+            return [.. this.queue
+                .Where(queued => string.Equals(queued.Item.RoomId, roomId, StringComparison.Ordinal))
+                .Select(queued => queued.Item.TriggerMessageId)
+                .OfType<string>()];
+        }
+    }
+
     /// <summary>Queues a Turn built by the read loop, with its Catch-up already taken.</summary>
     /// <param name="item">The Turn to run, with its sequence number.</param>
     internal void Enqueue(QueuedWork item)
@@ -1413,7 +1427,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 return null;
             }
 
-            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, ct).ConfigureAwait(false);
+            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, messageId, this.QueuedTriggerIds(item.RoomId), ct).ConfigureAwait(false);
             if (this.enrichers is not null)
             {
                 item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);

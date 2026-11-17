@@ -1,0 +1,88 @@
+@*
+    C14 (Turn Queue spec §5.9): one dense Info row per Agent that has Messages waiting in this Room and is not
+    on its current Turn. Counts come from ITurnQueueView; the row follows RoomEvents.TurnQueueChanged and
+    never changes a row itself. "Don't answer" stops the Agent's waiting Turns through ITurnControl and is
+    offered only when the Agent has no Draft in this Room: a Draft already carries its own Stop button.
+    The page passes the Agents that have a Draft, so this component holds no second copy of the Drafts.
+*@
+@implements IDisposable
+
+@inject RoomEvents Events
+@inject ITurnQueueView View
+@inject ITurnControl Control
+
+@foreach (WaitingCount waiting in this.counts)
+{
+    string agentId = waiting.AgentId;
+    @* MudAlert renders no role by default - verified against the rendered markup, not assumed - so role="status" is added explicitly, per rules.md. *@
+    <MudAlert Severity="Severity.Info" Dense="true" Class="waiting-notice room-notice-column" role="status">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <span class="waiting-notice-text">@WaitingNotice.Text(waiting)</span>
+            @if (!this.AgentIdsWithDraft.Contains(agentId))
+            {
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.StopAsync(agentId))">Don't answer</MudButton>
+            }
+        </MudStack>
+    </MudAlert>
+}
+
+@code {
+    private IReadOnlyList<WaitingCount> counts = [];
+
+    /// <summary>The Room whose waiting Messages are shown. A string Parameter: pass it with a leading @, or the literal text is passed.</summary>
+    [Parameter]
+    public string RoomId { get; set; } = string.Empty;
+
+    /// <summary>The Agents that have a Draft in this Room; their row has no Don't answer button.</summary>
+    [Parameter]
+    public IReadOnlySet<string> AgentIdsWithDraft { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        this.counts = await this.View.WaitingInAsync(this.RoomId, CancellationToken.None);
+    }
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Events.TurnQueueChanged += this.OnTurnQueueChanged;
+    }
+
+    /// <summary>The row's text: how many Messages wait, and for what when the Room's Budget holds them.</summary>
+    /// <param name="waiting">The Agent's count.</param>
+    private static string Text(WaitingCount waiting)
+    {
+        string text = $"Waiting for {waiting.AgentName}: {waiting.Count} {(waiting.Count == 1 ? "Message" : "Messages")}";
+        return waiting.Held ? text + ", until this Room's Budget is continued" : text;
+    }
+
+    /// <summary>Rereads the counts when this Room's rows changed.</summary>
+    /// <param name="roomId">The Room whose rows changed.</param>
+    private void OnTurnQueueChanged(string roomId)
+    {
+        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
+        {
+            this.counts = await this.View.WaitingInAsync(this.RoomId, CancellationToken.None);
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Stops the Agent's waiting Turns in this Room.</summary>
+    /// <param name="agentId">The Agent.</param>
+    private async Task StopAsync(string agentId)
+    {
+        await this.Control.StopAsync(agentId, this.RoomId, CancellationToken.None);
+    }
+
+    /// <summary>Lets go of <see cref="RoomEvents.TurnQueueChanged"/>.</summary>
+    public void Dispose()
+    {
+        this.Events.TurnQueueChanged -= this.OnTurnQueueChanged;
+    }
+}

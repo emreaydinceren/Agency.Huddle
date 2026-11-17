@@ -140,6 +140,31 @@ public sealed class ChatPageTests
         cut.WaitForAssertion(() => Assert.Equal((agent.Id, room.Id), Assert.Single(factory.FakeAgentGateway.StopTurnCalls)), TimeSpan.FromSeconds(10));
     }
 
+    /// <summary>Turn Queue spec §5.9: the Draft's Stop goes through <see cref="TurnControl"/>, so the Agent's waiting rows in the Room close as stopped as well.</summary>
+    [Fact]
+    public async Task Chat_DraftStop_AlsoClosesTheAgentsWaitingTurnQueueRows()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, drafts) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+        drafts.Append(Guid.CreateVersion7().ToString("N"), room.Id, agent.Id, agent.Name, string.Empty);
+        App.Data.TurnQueueStore queue = factory.Services.GetRequiredService<App.Data.TurnQueueStore>();
+        queue.Subscribe(agent.Id);
+        _ = queue.Record(agent.Id, "waiting-1", room.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+        await cut.InvokeAsync(() => cut.Find("button.draft-stop").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(queue.Open(agent.Id)), TimeSpan.FromSeconds(10));
+    }
+
     /// <summary>
     /// The Room header offers a Rename control seeded from the Room's current name. Rendered through
     /// <see cref="MudBunitContext"/> rather than a plain HTTP GET: the control sits behind a click
