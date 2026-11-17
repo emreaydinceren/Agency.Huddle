@@ -59,7 +59,7 @@ public sealed class HelperCardTests : IDisposable
             team.Acp.Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node", Args = ["a.js"], UsesToolNamePrefix = false }];
         });
         HelperSettingsResolver resolver = new(this.settingsStore, options, NullLogger<HelperSettingsResolver>.Instance);
-        HelperDispatcher dispatcher = new([], resolver, this.statusStore, options, NullLogger<HelperDispatcher>.Instance, this.clock);
+        HelperDispatcher dispatcher = HelperDispatcherFactory.Create([], resolver, this.statusStore, options, this.clock);
         HelperRegistry registry = new([this.helper]);
         this.helperFeed = new HelperFeed(this.feed, this.statusStore, this.budget, registry, resolver, NullLogger<HelperFeed>.Instance);
 

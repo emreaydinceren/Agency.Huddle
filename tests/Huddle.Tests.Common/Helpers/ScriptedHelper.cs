@@ -43,6 +43,9 @@ internal sealed class ScriptedHelper : IHelperAgent<string, ScriptedVerdict>
     /// <inheritdoc/>
     public HelperDefaults Defaults { get; }
 
+    /// <summary>Whether the invoker may reuse its Verdicts; a test sets it to <see langword="false"/> to prove the opt-out.</summary>
+    public bool CachesVerdicts { get; set; } = true;
+
     /// <inheritdoc/>
     public JsonTypeInfo<ScriptedVerdict> VerdictType => ScriptedVerdictJson.Default.ScriptedVerdict;
 

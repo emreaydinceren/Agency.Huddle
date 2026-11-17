@@ -16,7 +16,8 @@ internal abstract record HelperOutcome<TVerdict>
 
     /// <summary>The call could not run or did not finish.</summary>
     /// <param name="Reason">Why, in words for the card.</param>
-    public sealed record Failed(string Reason) : HelperOutcome<TVerdict>;
+    /// <param name="Started">Whether the adapter process was started; <see langword="false"/> for a failure before it (not configured, not installed, Model not offered).</param>
+    public sealed record Failed(string Reason, bool Started = true) : HelperOutcome<TVerdict>;
 
     /// <summary>The budget refused before any process started.</summary>
     public sealed record OverBudget : HelperOutcome<TVerdict>;

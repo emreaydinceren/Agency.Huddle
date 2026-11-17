@@ -159,6 +159,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HelperRegistry>();
         services.AddSingleton<HelperFeed>();
 
+        services.AddSingleton<HelperJudge>();
         services.AddSingleton<HelperDispatcher>();
         services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
         services.AddHostedService<AgentsMdWatcher>();

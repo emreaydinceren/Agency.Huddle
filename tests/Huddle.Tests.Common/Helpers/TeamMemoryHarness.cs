@@ -68,12 +68,11 @@ internal sealed class TeamMemoryHarness : IDisposable
             this.Options,
             NullLogger<HelperRunner>.Instance,
             this.Clock);
-        this.dispatcher = new HelperDispatcher(
+        this.dispatcher = HelperDispatcherFactory.Create(
             [new HelperInvoker<TeamMemoryInput, TeamMemoryVerdict>(this.Helper, runner, NullLogger.Instance)],
             this.Settings,
             this.Status,
             this.Options,
-            NullLogger<HelperDispatcher>.Instance,
             this.Clock);
     }
 

@@ -17,4 +17,11 @@ internal interface IHelperAgent
 
     /// <summary>The code defaults, before appsettings and the Human's choice.</summary>
     HelperDefaults Defaults { get; }
+
+    /// <summary>
+    /// Whether <see cref="HelperInvoker{TInput, TVerdict}"/> keeps this Helper's Verdicts by content and reuses them. A Helper whose
+    /// Verdicts are large, or whose callers already avoid a second call, answers <see langword="false"/>: the cache is then
+    /// neither read nor filled.
+    /// </summary>
+    bool CachesVerdicts => true;
 }

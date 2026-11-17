@@ -1,6 +1,4 @@
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
-using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Helpers;
 
@@ -18,12 +16,9 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     private readonly Dictionary<string, Pending> pending = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IHelperInvoker> invokers = new(StringComparer.OrdinalIgnoreCase);
     private readonly HelperSettingsResolver settings;
-    private readonly HelperStatusStore status;
-    private readonly IOptions<TeamOptions> options;
+    private readonly HelperJudge judge;
     private readonly ILogger<HelperDispatcher> logger;
     private readonly TimeProvider clock;
-    private readonly HelperFeed? feed;
-    private readonly SemaphoreSlim concurrency;
     private readonly StopSignal stopping = new();
     private bool stopped;
     private bool disposed;
@@ -32,19 +27,15 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     /// <summary>Creates the dispatcher over the registered invokers.</summary>
     /// <param name="invokers">One per registered Helper.</param>
     /// <param name="settings">Resolves each Helper's settings at each fire.</param>
-    /// <param name="status">Where the card's last run and last error live.</param>
-    /// <param name="options">The bound options: <c>Acp.Enabled</c> and <c>HelperConcurrency</c>.</param>
+    /// <param name="judge">The one judge: it applies the gates and the concurrency limit and stores each result.</param>
     /// <param name="logger">Records each failure.</param>
     /// <param name="timeProvider">The clock; <see cref="TimeProvider.System"/> when <see langword="null"/>.</param>
-    /// <param name="feed">Tells the Feed when a Helper pauses or keeps failing; <see langword="null"/> reports nothing.</param>
     public HelperDispatcher(
         IEnumerable<IHelperInvoker> invokers,
         HelperSettingsResolver settings,
-        HelperStatusStore status,
-        IOptions<TeamOptions> options,
+        HelperJudge judge,
         ILogger<HelperDispatcher> logger,
-        TimeProvider? timeProvider = null,
-        HelperFeed? feed = null)
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(invokers);
         foreach (IHelperInvoker invoker in invokers)
@@ -52,13 +43,12 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
             this.invokers.Add(invoker.Helper.Id.Value, invoker);
         }
 
+        ArgumentNullException.ThrowIfNull(judge);
         this.settings = settings;
-        this.status = status;
-        this.options = options;
+        this.judge = judge;
         this.logger = logger;
         this.clock = timeProvider ?? TimeProvider.System;
-        this.feed = feed;
-        this.concurrency = new SemaphoreSlim(Math.Max(1, options.Value.HelperConcurrency));
+        this.judge.StatusChanged += this.ForwardStatusChanged;
     }
 
     /// <summary>Raised after a judgement ends and its result is stored, so the card can repaint. May be raised on any thread.</summary>
@@ -168,7 +158,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
             this.stopping.Dispose();
         }
 
-        this.concurrency.Dispose();
+        this.judge.StatusChanged -= this.ForwardStatusChanged;
     }
 
     /// <summary>Starts or restarts the key's wait, never past <see cref="MaxWaitMultiple"/> times the Helper's wait from the first save. Called with the gate held.</summary>
@@ -239,7 +229,7 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
     {
         try
         {
-            await this.JudgeAsync(entry, input).ConfigureAwait(false);
+            _ = await this.judge.JudgeAsync(entry.Invoker.Helper.Id, entry.Key, input, this.stopping.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (this.stopping.IsStopped)
         {
@@ -247,10 +237,9 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         }
         catch (Exception ex)
         {
-            // A Helper must never take the dispatcher down (Policy 4): any failure from the stores or ApplyAsync is logged and
-            // shown on the card, and the Task stays as the Agent saved it.
-            this.logger.LogWarning(ex, "Helper {HelperId} failed for {Key}.", entry.Invoker.Helper.Id.Value, entry.Key);
-            this.TryRecordFailure(entry.Invoker.Helper.Id, ex.Message);
+            // The judge never throws for a failed call; this is the last guard, so a fault in the judge itself cannot take the
+            // dispatcher down (Policy 4).
+            this.logger.LogWarning(ex, "Helper {HelperId} could not be judged for {Key}.", entry.Invoker.Helper.Id.Value, entry.Key);
         }
         finally
         {
@@ -271,66 +260,9 @@ internal sealed class HelperDispatcher : IHostedService, IDisposable
         }
     }
 
-    /// <summary>Applies the gates, runs the Helper under the concurrency limit, and stores the result.</summary>
-    private async Task JudgeAsync(Pending entry, object input)
-    {
-        IHelperAgent helper = entry.Invoker.Helper;
-        HelperSettings effective = this.settings.For(helper);
-        if (!effective.Enabled || !this.options.Value.Acp.Enabled)
-        {
-            return;
-        }
-
-        CancellationToken ct = this.stopping.Token;
-        await this.concurrency.WaitAsync(ct).ConfigureAwait(false);
-        try
-        {
-            HelperRunReport report = await entry.Invoker.ExecuteAsync(entry.Key, input, effective, ct).ConfigureAwait(false);
-            DateTimeOffset at = this.clock.GetUtcNow();
-            switch (report.Kind)
-            {
-                case HelperRunKind.Applied:
-                    this.status.RecordSuccess(helper.Id, at, report.Summary ?? "Done");
-                    this.feed?.Ran(helper, HelperRunKind.Applied, this.status.Get(helper.Id));
-                    break;
-                case HelperRunKind.Failed:
-                    HelperStatus failed = this.status.RecordFailure(helper.Id, at, report.Error ?? "The Helper failed.");
-                    this.feed?.Ran(helper, HelperRunKind.Failed, failed);
-                    break;
-                case HelperRunKind.OverBudget:
-                    this.feed?.Paused(helper, effective);
-                    break;
-                default:
-                    break;
-            }
-        }
-        finally
-        {
-            _ = this.concurrency.Release();
-        }
-
+    /// <summary>Passes the judge's event on, so a judgement asked for directly repaints the card too.</summary>
+    private void ForwardStatusChanged() =>
         EventRaise.Isolated(this.StatusChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged)));
-    }
-
-    /// <summary>Stores a failure without letting a store error escape the fire path.</summary>
-    private void TryRecordFailure(HelperId id, string message)
-    {
-        try
-        {
-            HelperStatus failed = this.status.RecordFailure(id, this.clock.GetUtcNow(), message);
-            if (this.feed is not null && this.invokers.TryGetValue(id.Value, out IHelperInvoker? invoker))
-            {
-                this.feed.Ran(invoker.Helper, HelperRunKind.Failed, failed);
-            }
-
-            EventRaise.Isolated(this.StatusChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged)));
-        }
-        catch (Exception ex)
-        {
-            // The store itself failed (a locked database, say): there is nowhere left to report to, so log it and carry on.
-            this.logger.LogWarning(ex, "Helper {HelperId} could not record its failure.", id.Value);
-        }
-    }
 
     /// <summary>One key's wait and run state. Touched only with the dispatcher's gate held.</summary>
     private sealed class Pending(IHelperInvoker invoker, string key)

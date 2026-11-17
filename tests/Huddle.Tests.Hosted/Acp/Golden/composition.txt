@@ -92,6 +92,7 @@ Singleton Agency.Huddle.App.Helpers.AgentsMdChange.AgentsMdChangeHelper -> Agenc
 Singleton Agency.Huddle.App.Helpers.HelperBudget -> Agency.Huddle.App.Helpers.HelperBudget
 Singleton Agency.Huddle.App.Helpers.HelperDispatcher -> Agency.Huddle.App.Helpers.HelperDispatcher
 Singleton Agency.Huddle.App.Helpers.HelperFeed -> Agency.Huddle.App.Helpers.HelperFeed
+Singleton Agency.Huddle.App.Helpers.HelperJudge -> Agency.Huddle.App.Helpers.HelperJudge
 Singleton Agency.Huddle.App.Helpers.HelperRegistry -> Agency.Huddle.App.Helpers.HelperRegistry
 Singleton Agency.Huddle.App.Helpers.HelperRunner -> Agency.Huddle.App.Helpers.HelperRunner
 Singleton Agency.Huddle.App.Helpers.HelperSettingsResolver -> Agency.Huddle.App.Helpers.HelperSettingsResolver
