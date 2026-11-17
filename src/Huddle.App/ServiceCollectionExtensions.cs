@@ -515,7 +515,11 @@ public static class ServiceCollectionExtensions
         // No interface, same reasoning as ProposalStore: a leaf singleton whose only dependency,
         // RoomEvents, is registered at the top of this method. ChatService takes it, so it must exist
         // before ChatService does, and it takes nothing back.
-        services.AddSingleton<QuestionStore>();
+        services.AddSingleton<WaitingQuestionStore>();
+        services.AddSingleton(static provider => new QuestionStore(
+            provider.GetRequiredService<RoomEvents>(),
+            provider.GetRequiredService<WaitingQuestionStore>(),
+            provider.GetService<ILogger<QuestionStore>>()));
 
         // No interface, same reasoning as ProposalService: nothing needs to substitute it, and its
         // dependencies (QuestionStore, ChatService, ITeamDirectory) are all singletons registered above.

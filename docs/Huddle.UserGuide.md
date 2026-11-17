@@ -170,7 +170,7 @@ Each row shows an icon for every reason, the Room's name, and who asked and when
 
 A Room leaves the list when you **post in it**, or when you press the check (✓) on its row. Opening a Room does not clear it, so you can read a Room and come back to it later. The check hides the Room until something new makes it wait again; it does not answer the Question or Form behind it. Pressing **Continue** on a paused Room clears only the paused reason. When nothing is waiting, the card is not drawn.
 
-The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question or Form that was waiting is gone, and so is any dismissal.
+The list lives in memory. After a restart, Rooms with an unanswered mention (within the last 50 Messages) are listed again; a Question that was waiting is listed again, with its card still in the Room; a Form that was waiting is gone, and so is any dismissal.
 
 **Tasks waiting for your decision** are listed too, after the Rooms and under the same count. A Task row shows its id and title with "Waiting on you · Proof 4/4", and opens the **Needs you** page at that Task. A Task is listed while it is under the [Human gate](#the-human-gate), in the Needs you status, and not yet accepted. It has no check (✓): it leaves the list only when you decide, or when its status changes. These rows are read from the Task files, so a restart loses none of them.
 
