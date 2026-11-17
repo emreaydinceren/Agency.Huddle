@@ -257,6 +257,7 @@ pins the pairing and is unit-tested for every value.
 | `HelperPaused` | `helper-paused` | `HelperFeed` | Yes | `helper:<id>` | `HelperPausedPayload(HelperId, Name, DailyCap, Granted)` |
 | `HelperFailing` | `helper-failing` | `HelperFeed` | Yes | `helper:<id>` | `HelperFailingPayload(HelperId, Name, Failures, LastError)` |
 | `AgentsMdChangeSkipped` | `agents-md-change-skipped` | `AgentsMdChangeHelper` | No | `helper:<id>` | `AgentsMdChangeSkippedPayload(HelperId, Name, Path, Reason)` |
+| `MemoryTidied` | `memory-tidied` | `MemoryTidyFinisher` | Yes | The pass's `changes.md` (a Library document) | `MemoryTidiedPayload(HelperId, Name, Path, Tidied, Dropped, Folders, Stopped, First)` |
 | `AgentConnectorsChanged` | `agent-connectors-changed` | `PersonaStore` | No | The Agent's name | `AgentConnectorsPayload(Name, On)` |
 | `AgentBrowserChanged` | `agent-browser-changed` | `PersonaStore` | No | The Agent's name | `AgentBrowserPayload(Name, On)` |
 | `TaskProceeded` | `task-proceeded` | `TaskService` (through `TaskFeedRules`) | No | Task id | `TaskProceededPayload(Id, Title, Team, Scope)` |
@@ -593,7 +594,7 @@ Category, and in Needs you only while it is an unresolved Notification:
 | Documents | `Documents` | `documents` | `document-changed` |
 | Rooms | `Rooms` | `rooms` | `room-mention`, `room-question`, `room-form`, `room-budget`, `room-created`, `room-joined`, `room-archived` |
 | Gates | `Gates` | `gates` | `task-gate-on`, `task-needs-you`, `gate-decision-due` |
-| Helpers | `Helpers` | `helpers` | `helper-paused`, `helper-failing` |
+| Helpers | `Helpers` | `helpers` | `helper-paused`, `helper-failing`, `memory-tidied` |
 
 A new source type must be added to exactly one of the five type segments in the same change
 (a unit test walks `FeedSourceType` and fails on an unassigned value). The counts cover the
@@ -813,6 +814,7 @@ opens from the expanded card's Open button and from each chip.
 | `document-changed` | `created`, `edited`, `reviewed` or `objected to` `{Document}` · `<summary>` when there is one | — |
 | `helper-paused` | `paused {Helper}: its daily cap of <n> calls is reached` · `Agents' Tasks are not judged until you continue or the day ends` (actor: Huddle) | `Paused <hh:mm> · Continue is on the Helper's card` |
 | `helper-failing` | `{Helper} failed <n> times in a row` · `<last error>` (actor: Huddle) | `Since <hh:mm> · Tasks are not being judged` |
+| `memory-tidied` | `{Memory Tidy} tidied 4 topic files and dropped 2 in 3 Memory folders` (actor: Huddle; the counts are `MemoryTidyCounts.Sentence`) | `open the list to see what changed`; when the pass stopped early, `It stopped before it had looked at every folder.`; on the first pass that changed anything, `It runs once a week and keeps a copy of everything it changes. You can turn it off in Settings › Helpers.` A click opens the pass's `changes.md` in the Library ([Memory Tidy](Huddle.MemoryTidy-Specifications.md) §6.13, [ADR-0095](adr/0095-a-helper-tidies-memory-weekly-and-huddle-keeps-a-copy.md)) |
 | Unreadable item | `Something happened` | — |
 
 A resolved Notification's status line keeps its first fact and ends `· done <hh:mm>` (from

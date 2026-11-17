@@ -5,6 +5,8 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Helpers;
+using Agency.Huddle.App.Helpers.MemoryTidy;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Modules;
 using Agency.Huddle.App.Prompts;
@@ -175,7 +177,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             roleBlock,
             sources,
             agentMeta.BrowserPassed,
-            this.options.Memory.Reported.KeepDays);
+            this.options.Memory.Reported.KeepDays, this.MemoryTidyOn);
     }
 
     /// <summary>What <see cref="BuildAgentMeta"/> decided for one session start.</summary>
@@ -493,6 +495,18 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private bool ReadsMemory(AdapterProfile profile)
     {
         return this.options.FileChanges.Enabled && profile.ReadsFiles;
+    }
+
+    /// <summary>
+    /// Whether the Memory Tidy Helper is switched on right now (<c>Team:Helpers:MemoryTidy</c> over the Human's card row), read each time a
+    /// session starts so the Memory block carries its sentence only while the Helper is on.
+    /// </summary>
+    /// <returns><see langword="true"/> when the Helper is registered and enabled.</returns>
+    private bool MemoryTidyOn()
+    {
+        MemoryTidyHelper? helper = this.serviceProvider.GetService<MemoryTidyHelper>();
+        HelperSettingsResolver? settings = this.serviceProvider.GetService<HelperSettingsResolver>();
+        return helper is not null && settings is not null && settings.For(helper).Enabled;
     }
 
     /// <summary>
@@ -863,7 +877,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             workspaces: inputs.Workspaces,
             needsYou: inputs.NeedsYou,
             browser: browser,
-            reportedDays: this.options.Memory.Reported.KeepDays);
+            reportedDays: this.options.Memory.Reported.KeepDays,
+            memoryTidy: this.MemoryTidyOn());
         return (parts, profile.Id);
     }
 }

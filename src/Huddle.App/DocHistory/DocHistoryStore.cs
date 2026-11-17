@@ -94,7 +94,8 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
     /// </summary>
     /// <param name="file">The document.</param>
     /// <param name="entry">The entry to add.</param>
-    internal void Append(LibraryPath file, DocHistoryEntry entry)
+    /// <param name="postToFeed"><see langword="false"/> for a writer that posts its own Feed item and would otherwise be followed by one per file.</param>
+    internal void Append(LibraryPath file, DocHistoryEntry entry, bool postToFeed = true)
     {
         ArgumentNullException.ThrowIfNull(file);
         ArgumentNullException.ThrowIfNull(entry);
@@ -118,7 +119,11 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
         }
 
         EventRaise.Isolated(this.Changed, file, ex => logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
-        PostToFeed(file, entry);
+
+        if (postToFeed)
+        {
+            PostToFeed(file, entry);
+        }
     }
 
     /// <summary>

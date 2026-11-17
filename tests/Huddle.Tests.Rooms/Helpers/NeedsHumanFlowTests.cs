@@ -56,12 +56,11 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
             this.harness.Options,
             NullLogger<HelperRunner>.Instance,
             this.clock);
-        this.dispatcher = new HelperDispatcher(
+        this.dispatcher = HelperDispatcherFactory.Create(
             [new HelperInvoker<NeedsHumanInput, NeedsHumanVerdict>(this.helper, runner, NullLogger.Instance)],
             resolver,
             this.status,
             this.harness.Options,
-            NullLogger<HelperDispatcher>.Instance,
             this.clock);
         this.trigger = new NeedsHumanTrigger(this.harness.Events, this.dispatcher, this.overrides, NullLogger<NeedsHumanTrigger>.Instance);
     }
@@ -356,12 +355,11 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     [Fact]
     public async Task TriggerFailure_DoesNotReachTheSaver()
     {
-        HelperDispatcher noHelpers = new(
+        HelperDispatcher noHelpers = HelperDispatcherFactory.Create(
             [],
             new HelperSettingsResolver(this.settingsStore, this.harness.Options, NullLogger<HelperSettingsResolver>.Instance),
             this.status,
             this.harness.Options,
-            NullLogger<HelperDispatcher>.Instance,
             this.clock);
         NeedsHumanTrigger broken = new(this.harness.Events, noHelpers, this.overrides, NullLogger<NeedsHumanTrigger>.Instance);
         await this.trigger.StopAsync(TestContext.Current.CancellationToken);

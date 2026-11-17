@@ -59,7 +59,7 @@ public sealed class HelperCardTests : IDisposable
             team.Acp.Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node", Args = ["a.js"], UsesToolNamePrefix = false }];
         });
         HelperSettingsResolver resolver = new(this.settingsStore, options, NullLogger<HelperSettingsResolver>.Instance);
-        HelperDispatcher dispatcher = new([], resolver, this.statusStore, options, NullLogger<HelperDispatcher>.Instance, this.clock);
+        HelperDispatcher dispatcher = HelperDispatcherFactory.Create([], resolver, this.statusStore, options, this.clock);
         HelperRegistry registry = new([this.helper]);
         this.helperFeed = new HelperFeed(this.feed, this.statusStore, this.budget, registry, resolver, NullLogger<HelperFeed>.Instance);
 
@@ -316,5 +316,57 @@ public sealed class HelperCardTests : IDisposable
         panel.Render();
 
         Assert.Single(ctx.Module(JsModule.Scroll).Invocations["intoView"]);
+    }
+
+    /// <summary>A Helper with a registered card section shows it under the description, and the section is given the Helper's id.</summary>
+    [Fact]
+    public async Task Card_WithARegisteredSection_RendersItUnderTheDescription()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+        ctx.Services.AddSingleton<IHelperCardSection>(new StubSectionRegistration(new HelperId("NeedsHuman")));
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
+
+        Assert.Equal("stub-section NeedsHuman", cut.Find(".stub-section").TextContent.Trim());
+        Assert.Equal("stub-section", cut.Find(".helper-card p.mud-text-secondary").NextElementSibling?.ClassName);
+    }
+
+    /// <summary>A Helper with no registered section, or whose section belongs to another Helper, shows none.</summary>
+    [Fact]
+    public async Task Card_WithoutASectionForItsHelper_RendersNone()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+        ctx.Services.AddSingleton<IHelperCardSection>(new StubSectionRegistration(new HelperId("SomeoneElse")));
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
+
+        Assert.Empty(cut.FindAll(".stub-section"));
+    }
+
+    /// <summary>A card section registered for one Helper id.</summary>
+    /// <param name="Helper">The Helper whose card shows the section.</param>
+    private sealed record StubSectionRegistration(HelperId Helper) : IHelperCardSection
+    {
+        /// <inheritdoc />
+        public Type Component => typeof(StubSection);
+    }
+
+    /// <summary>The section a test registers: one element naming the Helper id it was given.</summary>
+    private sealed class StubSection : ComponentBase
+    {
+        /// <summary>The Helper id the card passes.</summary>
+        [Parameter]
+        public string HelperId { get; set; } = string.Empty;
+
+        /// <inheritdoc />
+        protected override void BuildRenderTree(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "stub-section");
+            builder.AddContent(2, "stub-section " + this.HelperId);
+            builder.CloseElement();
+        }
     }
 }

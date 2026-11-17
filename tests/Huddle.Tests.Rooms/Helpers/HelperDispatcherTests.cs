@@ -49,12 +49,11 @@ public sealed class HelperDispatcherTests : IDisposable
         HelperStatusStore status = new(options);
         HelperSettingsResolver resolver = new(settings, options, NullLogger<HelperSettingsResolver>.Instance);
         HelperFeed helperFeed = new(this.feed, status, new HelperBudget(usage, this.clock), new HelperRegistry([this.helper]), resolver, NullLogger<HelperFeed>.Instance);
-        HelperDispatcher dispatcher = new(
+        HelperDispatcher dispatcher = HelperDispatcherFactory.Create(
             [new HelperInvoker<string, ScriptedVerdict>(this.helper, runner, NullLogger.Instance)],
             resolver,
             status,
             options,
-            NullLogger<HelperDispatcher>.Instance,
             this.clock,
             helperFeed);
         return (dispatcher, status, settings, usage);

@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
@@ -20,7 +21,8 @@ namespace Agency.Huddle.App.Acp.Sessions.TurnHooks;
 /// <param name="options">Locates the Teams root.</param>
 /// <param name="prompts">Supplies the block's wording.</param>
 /// <param name="logger">Receives the warnings for a file or folder that cannot be read and for a state that cannot be parsed.</param>
-internal sealed class HuddleMemoryTurnHook(IOptions<TeamOptions> options, IPromptSource prompts, ILogger<HuddleMemoryTurnHook> logger)
+/// <param name="merges">Says which removed file a Memory Tidy merge moved into another; without it every removed file is announced as removed.</param>
+internal sealed class HuddleMemoryTurnHook(IOptions<TeamOptions> options, IPromptSource prompts, ILogger<HuddleMemoryTurnHook> logger, MemoryTidyMergeStore? merges = null)
     : TurnHook<IReadOnlyDictionary<string, string>>
 {
     /// <summary>The most files one block lists; the rest follow at the next Turn.</summary>
@@ -234,6 +236,13 @@ internal sealed class HuddleMemoryTurnHook(IOptions<TeamOptions> options, IPromp
             };
 
             builder.Append('\n');
+            if (kind == FactChange.Deleted && merges?.FindInto(name) is { } into)
+            {
+                // A merge moved the fact: it is still true, in the file the merge kept.
+                builder.Append(prompts.Render("turn.huddleMemoryMerged", new Dictionary<string, string> { ["{{into}}"] = into, ["{{name}}"] = name }));
+                continue;
+            }
+
             builder.Append(prompts.Render(key, new Dictionary<string, string> { ["{{name}}"] = name }));
             if (kind != FactChange.Deleted && now[name].Description is { } description)
             {

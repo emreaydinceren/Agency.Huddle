@@ -13,6 +13,7 @@ using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.AgentsMdChange;
+using Agency.Huddle.App.Helpers.MemoryTidy;
 using Agency.Huddle.App.Helpers.NeedsHuman;
 using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.HiringPool;
@@ -75,7 +76,10 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddMemoryTidyServices(this IServiceCollection services)
     {
         services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyStateStore>();
+        services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyMergeStore>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyInputBuilder>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyJudging>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyPass, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyPass>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRecovery>();
@@ -190,15 +194,31 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<AgentsMdChangeHelper>(),
             sp.GetRequiredService<HelperRunner>(),
             sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<AgentsMdChangeInput, AgentsMdChangeVerdict>>()));
+        AddMemoryTidyHelper(services);
         services.AddSingleton<HelperRegistry>();
         services.AddSingleton<HelperFeed>();
 
+        services.AddSingleton<HelperJudge>();
         services.AddSingleton<HelperDispatcher>();
         services.AddHostedService(static sp => sp.GetRequiredService<HelperDispatcher>());
         services.AddHostedService<AgentsMdWatcher>();
         services.AddSingleton<NeedsHumanTrigger>();
         services.AddHostedService(static sp => sp.GetRequiredService<NeedsHumanTrigger>());
         return services;
+    }
+
+    /// <summary>Registers the Memory Tidy Helper and its invoker, after the other Helpers so the Helpers tab keeps its order.</summary>
+    /// <param name="services">The collection to add to.</param>
+    private static void AddMemoryTidyHelper(IServiceCollection services)
+    {
+        services.AddSingleton<MemoryTidyHelper>();
+        services.AddSingleton<IHelperCardSection, MemoryTidyCardSectionRegistration>();
+        services.AddSingleton<MemoryTidyLastPassReader>();
+        services.AddSingleton<IHelperAgent>(static sp => sp.GetRequiredService<MemoryTidyHelper>());
+        services.AddSingleton<IHelperInvoker>(static sp => new HelperInvoker<MemoryTidyInput, MemoryTidyVerdict>(
+            sp.GetRequiredService<MemoryTidyHelper>(),
+            sp.GetRequiredService<HelperRunner>(),
+            sp.GetRequiredService<ILoggerFactory>().CreateLogger<HelperInvoker<MemoryTidyInput, MemoryTidyVerdict>>()));
     }
 
     /// <summary>

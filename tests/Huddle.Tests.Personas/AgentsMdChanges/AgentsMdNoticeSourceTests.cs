@@ -5,6 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Helpers;
 using Agency.Huddle.Tests.Waiting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -732,7 +733,7 @@ public sealed class AgentsMdNoticeSourceTests : IDisposable
         FiringTimeProvider clock = new();
         HelperBudget budget = new(new HelperUsageStore(options), clock);
         WaitHelper helper = new(helperEnabled);
-        HelperDispatcher dispatcher = new([new NoopInvoker(helper)], settings, new HelperStatusStore(options), options, NullLogger<HelperDispatcher>.Instance, new FiringTimeProvider());
+        HelperDispatcher dispatcher = HelperDispatcherFactory.Create([new NoopInvoker(helper)], settings, new HelperStatusStore(options), options, new FiringTimeProvider());
         this.owned.Add(dispatcher);
         AgentsMdLedger ledger = new(() => dispatcherFails ? throw new InvalidOperationException("The queue is down.") : dispatcher, () => helper, settings, budget, options, NullLogger<AgentsMdLedger>.Instance, clock);
         AgentsMdNoticeSource source = new(ledger, new AgentsMdNoticeRenderer(new FakePromptSource(), options.Value.AgentsMd), options.Value.AgentsMd, NullLogger<AgentsMdNoticeSource>.Instance);

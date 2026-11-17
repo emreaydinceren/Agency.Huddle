@@ -2,6 +2,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.DocHistory;
+using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.MemoryTidy;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
@@ -9,6 +12,7 @@ using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
 using Agency.Huddle.Tests.Feed;
+using Agency.Huddle.Tests.Helpers;
 using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Memory;
@@ -48,7 +52,12 @@ internal sealed class TidyRig : IDisposable
     private TidyRig(Action<TeamOptions>? configure, bool supportsReparsePoints, string[] agents)
     {
         this.dir = new TempDataDir(supportsReparsePoints);
-        this.Options = this.dir.Options(configure);
+        this.Options = this.dir.Options(team =>
+        {
+            team.Acp.Enabled = true;
+            team.Acp.Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node", Args = ["adapter.js"], UsesToolNamePrefix = false }];
+            configure?.Invoke(team);
+        });
         foreach (string agent in agents)
         {
             PersonaSupervisorTestSupport.WritePersonaFile(this.Options, agent);
@@ -63,7 +72,26 @@ internal sealed class TidyRig : IDisposable
         LibraryRootStore roots = new(this.Options, this.Paths, NullLogger<LibraryRootStore>.Instance);
         LibraryPathResolver resolver = new(roots, this.Options, NullLogger<LibraryPathResolver>.Instance);
         this.Finisher = new MemoryTidyFinisher(memoryPaths, resolver, this.Feed, this.Backups, this.Options);
-        this.Pass = new MemoryTidyPass(this.Personas, memoryPaths, this.Writer, this.Backups, this.Finisher, this.Options, NullLogger<MemoryTidyPass>.Instance, this.Clock);
+        this.State = new MemoryTidyStateStore(this.Options);
+        DocHistoryRecorder recorder = new(new DocHistoryStore(this.Options, NullLogger<DocHistoryStore>.Instance, this.Feed), this.Options, NullLogger<DocHistoryRecorder>.Instance);
+        this.Settings = new HelperSettingsResolver(new HelperSettingsStore(this.Options), this.Options, NullLogger<HelperSettingsResolver>.Instance);
+        this.Status = new HelperStatusStore(this.Options);
+        this.Budget = new HelperBudget(new HelperUsageStore(this.Options), this.Clock);
+        this.Merges = new MemoryTidyMergeStore(this.Options, this.Clock);
+        MemoryTidyHelper helper = new(memoryPaths, this.Writer, recorder, resolver, this.State, this.Merges, this.Settings, NullLogger<MemoryTidyHelper>.Instance);
+        HelperRunner runner = new(this.Process, new AdapterCatalog(this.Options), new FakePromptSource(), this.Budget, this.Options, NullLogger<HelperRunner>.Instance, this.Clock);
+        HelperFeed helperFeed = new(this.Feed, this.Status, this.Budget, new HelperRegistry([helper]), this.Settings, NullLogger<HelperFeed>.Instance);
+        this.Judge = new HelperJudge(
+            [new HelperInvoker<MemoryTidyInput, MemoryTidyVerdict>(helper, runner, NullLogger.Instance)],
+            this.Settings,
+            this.Status,
+            this.Options,
+            NullLogger<HelperJudge>.Instance,
+            this.Clock,
+            helperFeed);
+        MemoryTidyInputBuilder builder = new(this.State, this.Options, this.Clock);
+        MemoryTidyJudging judging = new(this.Personas, memoryPaths, builder, this.State, this.Judge, helper, this.Settings, this.Budget, this.Options, this.Clock);
+        this.Pass = new MemoryTidyPass(this.Personas, memoryPaths, this.Writer, this.Backups, this.Finisher, judging, this.Options, NullLogger<MemoryTidyPass>.Instance, this.Clock);
         this.Recovery = new MemoryTidyRecovery(this.Backups, this.Finisher, NullLogger<MemoryTidyRecovery>.Instance);
     }
 
@@ -96,6 +124,39 @@ internal sealed class TidyRig : IDisposable
 
     /// <summary>Settles, lists, posts and finishes a pass.</summary>
     public MemoryTidyFinisher Finisher { get; }
+
+    /// <summary>The fake adapter process the Helper's calls go to; set its handler to script an answer, a timeout or a failure.</summary>
+    public FakeHelperProcessRunner Process { get; } = new();
+
+    /// <summary>What Memory Tidy remembers between passes.</summary>
+    public MemoryTidyStateStore State { get; }
+
+    /// <summary>Which Huddle-wide files a merge removed.</summary>
+    public MemoryTidyMergeStore Merges { get; }
+
+    /// <summary>The path of Huddle-wide Memory.</summary>
+    public string HuddleDir => Path.Combine(this.dir.Path, "Teams", "memory");
+
+    /// <summary>Writes a file into Huddle-wide Memory.</summary>
+    /// <param name="file">The file name.</param>
+    /// <param name="text">The whole text.</param>
+    public void SeedHuddle(string file, string text)
+    {
+        Directory.CreateDirectory(this.HuddleDir);
+        File.WriteAllText(Path.Combine(this.HuddleDir, file), text);
+    }
+
+    /// <summary>Resolves the Helper's effective settings.</summary>
+    public HelperSettingsResolver Settings { get; }
+
+    /// <summary>The card's last result and error.</summary>
+    public HelperStatusStore Status { get; }
+
+    /// <summary>The Helper's daily cap.</summary>
+    public HelperBudget Budget { get; }
+
+    /// <summary>The judge the pass shares with the dispatcher.</summary>
+    public HelperJudge Judge { get; }
 
     /// <summary>The pass under test.</summary>
     public MemoryTidyPass Pass { get; }
@@ -143,6 +204,7 @@ internal sealed class TidyRig : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+        this.Judge.Dispose();
         this.Personas.Dispose();
         this.gate.Dispose();
         this.dir.Dispose();

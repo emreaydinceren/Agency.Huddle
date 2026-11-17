@@ -746,6 +746,28 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   [ADR-0094](../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md).
 : *Avoid*: report log, status file, sent file.
 
+**Memory Tidy**
+: The weekly pass over Memory. For each Agent's own Memory folder that changed and holds enough
+  files, the **Memory Tidy Helper** may merge two files, shorten one, fix a missing description or
+  drop a file that is out of date. It never creates a file. Huddle checks each step, copies the
+  file to the **Memory backup** first, and writes a list of every change. It starts on a timetable
+  or by **Tidy now** on the Helper's card. See
+  [ADR-0095](../adr/0095-a-helper-tidies-memory-weekly-and-huddle-keeps-a-copy.md).
+: *Avoid*: dreaming, consolidation, cleanup job.
+
+**Memory Tidy Helper**
+: The fourth **Helper**. It reads one Memory folder and answers with a **Verdict** of steps:
+  merge, rewrite, describe or drop. Huddle refuses a step that adds a number, a date, a link or an
+  address, that grows a file, or that loses one of those in a merge, and applies the rest. It
+  defaults to `sonnet` at low Effort. In code, `MemoryTidyHelper`.
+
+**Memory backup**
+: The copy Huddle makes of a Memory file before Memory Tidy changes or removes it. Copies sit in the
+  read-only **Memory backups** Library root, one dated folder per pass, beside that pass's
+  `changes.md` list. The Human restores a file by copying its text back by hand. Pass folders older
+  than `Team:Memory:Tidy:KeepBackupDays` (90) are deleted when a pass starts.
+: *Avoid*: archive (that is `memory/archive/`, old topics kept on purpose), trash.
+
 **`AGENTS.md` Changes Helper**
 : The third Helper. It reads one edit to an `AGENTS.md` file, as the old text, the new
   text and a comparison, and lists the rules added, changed or removed, each with a

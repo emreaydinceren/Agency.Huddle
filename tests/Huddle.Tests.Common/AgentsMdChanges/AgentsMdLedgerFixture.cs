@@ -3,6 +3,7 @@ using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -25,7 +26,7 @@ public sealed class AgentsMdLedgerFixture : IDisposable
         HelperSettingsResolver settings = new(new HelperSettingsStore(this.Options), this.Options, NullLogger<HelperSettingsResolver>.Instance);
         HelperBudget budget = new(new HelperUsageStore(this.Options), this.clock);
         StandInHelper helper = new();
-        this.dispatcher = new HelperDispatcher([], settings, new HelperStatusStore(this.Options), this.Options, NullLogger<HelperDispatcher>.Instance, this.clock);
+        this.dispatcher = HelperDispatcherFactory.Create([], settings, new HelperStatusStore(this.Options), this.Options, this.clock);
         this.Ledger = new AgentsMdLedger(() => this.dispatcher, () => helper, settings, budget, this.Options, NullLogger<AgentsMdLedger>.Instance, this.clock);
     }
 

@@ -33,38 +33,43 @@ internal sealed class HelperInvoker<TInput, TVerdict>(IHelperAgent<TInput, TVerd
         }
 
         string fingerprint = helper.Fingerprint(typed);
-        if (this.TryGetCached(fingerprint, out TVerdict? cached))
+        bool caches = helper.CachesVerdicts;
+        if (caches && this.TryGetCached(fingerprint, out TVerdict? cached))
         {
-            return await this.ApplyAsync(key, typed, cached, cancellationToken).ConfigureAwait(false);
+            return await this.ApplyAsync(key, typed, cached, false, cancellationToken).ConfigureAwait(false);
         }
 
         HelperOutcome<TVerdict> outcome = await runner.RunAsync(helper, settings, typed, cancellationToken).ConfigureAwait(false);
         switch (outcome)
         {
             case HelperOutcome<TVerdict>.Ok ok:
-                this.Remember(fingerprint, ok.Verdict);
-                return await this.ApplyAsync(key, typed, ok.Verdict, cancellationToken).ConfigureAwait(false);
+                if (caches)
+                {
+                    this.Remember(fingerprint, ok.Verdict);
+                }
+
+                return await this.ApplyAsync(key, typed, ok.Verdict, true, cancellationToken).ConfigureAwait(false);
             case HelperOutcome<TVerdict>.Unparseable unparseable:
                 logger.LogWarning("Helper {HelperId} gave an unreadable answer for {Key}: {Problem}. Text: {Text}", helper.Id.Value, key, unparseable.Problem, unparseable.Text);
                 return new HelperRunReport(HelperRunKind.Failed, Error: $"The answer wasn't the JSON the prompt asks for ({unparseable.Problem})");
             case HelperOutcome<TVerdict>.Failed failed:
                 logger.LogWarning("Helper {HelperId} failed for {Key}: {Reason}", helper.Id.Value, key, failed.Reason);
-                return new HelperRunReport(HelperRunKind.Failed, Error: failed.Reason);
+                return new HelperRunReport(HelperRunKind.Failed, Error: failed.Reason, CallRan: failed.Started);
             default:
                 return HelperRunReport.OverBudget;
         }
     }
 
     /// <summary>Applies a Verdict and maps what the Helper did to a report.</summary>
-    private async Task<HelperRunReport> ApplyAsync(string key, TInput input, TVerdict verdict, CancellationToken cancellationToken)
+    private async Task<HelperRunReport> ApplyAsync(string key, TInput input, TVerdict verdict, bool callRan, CancellationToken cancellationToken)
     {
         HelperApplied applied = await helper.ApplyAsync(key, input, verdict, cancellationToken).ConfigureAwait(false);
         return applied switch
         {
-            HelperApplied.Changed changed => new HelperRunReport(HelperRunKind.Applied, changed.Summary),
-            HelperApplied.Dropped dropped => new HelperRunReport(HelperRunKind.Applied, $"Dropped a stale verdict for {key}: {dropped.Why}"),
-            HelperApplied.Refused refused => new HelperRunReport(HelperRunKind.Failed, Error: refused.Message),
-            _ => new HelperRunReport(HelperRunKind.Applied, $"Judged {key}: no change"),
+            HelperApplied.Changed changed => new HelperRunReport(HelperRunKind.Applied, changed.Summary, CallRan: callRan),
+            HelperApplied.Dropped dropped => new HelperRunReport(HelperRunKind.Applied, $"Dropped a stale verdict for {key}: {dropped.Why}", CallRan: callRan),
+            HelperApplied.Refused refused => new HelperRunReport(HelperRunKind.Failed, Error: refused.Message, CallRan: callRan),
+            _ => new HelperRunReport(HelperRunKind.Applied, $"Judged {key}: no change", CallRan: callRan),
         };
     }
 

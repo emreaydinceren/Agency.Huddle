@@ -1402,22 +1402,34 @@ Agent browser: on by default, off per Agent, every click and type asks, the sign
 
 ## memory-tidy
 
-Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum) — [area file](memory-tidy.md)
+Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum; run 2026-11-17: 20 Pass, 4 Fail, 1 Owed half) — [area file](memory-tidy.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [REPORTED-01](memory-tidy.md#reported-01--a-report-in-a-one-to-one-room-starts-the-file-with-one-line-) | 💰 | Active | #620 | not yet run by a person |
-| [REPORTED-02](memory-tidy.md#reported-02--a-job-asking-for-an-unchanged-item-gets-one-line-and-no-new-entry-) | 💰 | Active | #620 | not yet run by a person |
-| [REPORTED-03](memory-tidy.md#reported-03--a-changed-fact-is-reported-as-a-change-on-a-new-line-) | 💰 | Active | #620 | not yet run by a person |
-| [REPORTED-04](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-) | 💰 | Active | #620 | not yet run by a person |
-| [REPORTED-05](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-) | 💰 | Active | #620 | not yet run by a person |
-| [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Active | #620 | not yet run by a person |
-| [TIDYLINES-01](memory-tidy.md#tidylines-01--a-pass-drops-an-old-reported-line-and-writes-its-list-with-no-call) |  | Active | #621 | not yet run by a person |
-| [TIDYLINES-02](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice) |  | Active | #621 | not yet run by a person |
-| [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Active | #620 | not yet run by a person |
-| [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Active | #620 | not yet run by a person |
-| [TIDYTIME-01](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start) |  | Active | #621 | not yet run by a person |
-| [TIDYTIME-02](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing) |  | Active | #621 | not yet run by a person |
+| [REPORTED-01](memory-tidy.md#reported-01--a-report-in-a-one-to-one-room-starts-the-file-with-one-line-) | 💰 | Fail |  | run 2026-11-17, `c00111ec`, see the Run log |
+| [REPORTED-02](memory-tidy.md#reported-02--a-job-asking-for-an-unchanged-item-gets-one-line-and-no-new-entry-) | 💰 | Fail |  | run 2026-11-17, `c00111ec`, see the Run log |
+| [REPORTED-03](memory-tidy.md#reported-03--a-changed-fact-is-reported-as-a-change-on-a-new-line-) | 💰 | Pass | #620 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [REPORTED-04](memory-tidy.md#reported-04--a-plain-question-gets-an-answer-and-no-line-) | 💰 | Pass | #620 | run 2026-11-17, `c00111ec`, see the Run log |
+| [REPORTED-05](memory-tidy.md#reported-05--an-agent-that-never-reports-has-no-file-) | 💰 | Pass | #620 | run 2026-11-17, `c00111ec`, see the Run log |
+| [REPORTED-06](memory-tidy.md#reported-06--the-chief-of-staff-reads-the-managers-file-and-leaves-the-item-out-) | 💰 | Pass | #620 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [TIDYLINES-01](memory-tidy.md#tidylines-01--a-pass-drops-an-old-reported-line-and-writes-its-list-with-no-call) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [TIDYLINES-02](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Fail |  | run 2026-11-17, `c00111ec`, see the Run log |
+| [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Pass | #620 | run 2026-11-17, `f03cfa66` (first run at `c00111ec` failed, fixed), see the Run log |
+| [TIDYTIME-01](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [TIDYTIME-02](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-01](memory-tidy.md#memtidy-01--a-seeded-folder-is-tidied-with-a-copy-a-list-and-one-notification-) | 💰 | Fail |  | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-02](memory-tidy.md#memtidy-02--a-second-tidy-now-at-once-makes-no-call) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-03](memory-tidy.md#memtidy-03--a-small-folder-is-not-judged) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-04](memory-tidy.md#memtidy-04--a-planted-link-is-not-written-into-any-file-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-05](memory-tidy.md#memtidy-05--a-file-that-claims-to-replace-another-does-not-get-it-dropped-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-06](memory-tidy.md#memtidy-06--a-qualifier-survives-a-rewrite-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-07](memory-tidy.md#memtidy-07--a-restored-file-is-back-and-tidy-keep-protects-it) |  | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-08](memory-tidy.md#memtidy-08--an-older-session-hears-of-the-change-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-09](memory-tidy.md#memtidy-09--a-daily-cap-of-1-leaves-the-other-folders-eligible-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-10](memory-tidy.md#memtidy-10--closing-huddle-in-the-middle-of-a-pass-lists-what-was-done-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-11](memory-tidy.md#memtidy-11--a-file-merged-away-in-huddle-wide-memory-is-now-in-the-kept-one-and-no-description-changed-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
+| [MEMTIDY-12](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-) | 💰 | Partial | #621 | run 2026-11-17, `f03cfa66`, the Timetable pass met the cap and wrote the resume row; the continuation after midnight is owed, see the Run log |
 
 ## turn-queue
 

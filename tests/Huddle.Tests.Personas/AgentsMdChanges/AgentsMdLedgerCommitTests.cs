@@ -6,6 +6,7 @@ using Agency.Huddle.App.AgentsMdChanges;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Helpers;
 using Agency.Huddle.Tests.Waiting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,7 @@ public sealed class AgentsMdLedgerCommitTests : IDisposable
         HelperSettingsResolver settings = new(new HelperSettingsStore(options), options, NullLogger<HelperSettingsResolver>.Instance);
         HelperBudget budget = new(new HelperUsageStore(options), this.clock);
         this.invoker = new RecordingInvoker(this.helper);
-        this.dispatcher = new HelperDispatcher([this.invoker], settings, new HelperStatusStore(options), options, NullLogger<HelperDispatcher>.Instance, this.clock);
+        this.dispatcher = HelperDispatcherFactory.Create([this.invoker], settings, new HelperStatusStore(options), options, this.clock);
         this.ledger = new AgentsMdLedger(() => this.dispatcher, () => this.helper, settings, budget, options, NullLogger<AgentsMdLedger>.Instance, this.clock);
     }
 

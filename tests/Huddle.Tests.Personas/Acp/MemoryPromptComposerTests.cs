@@ -142,6 +142,50 @@ public sealed class MemoryPromptComposerTests
         Assert.Contains("drops lines older than 14 days.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
     }
 
+    /// <summary>With the Memory Tidy Helper on, the tidy sentence follows "Delete a file only when the Human asks you to." and joins onto the next sentence with one space.</summary>
+    [Fact]
+    public void MemoryTidyOn_AddsTheTidySentenceAfterTheDeleteSentence()
+    {
+        string actual = SystemPromptComposer.Compose(
+            new Persona("Nova", "You are Nova."),
+            new FakePromptSource(),
+            "mcp__team__get_help",
+            ["mcp__team__get_help", "mcp__team__memory"],
+            [],
+            string.Empty,
+            Memory,
+            SessionScope.Shared,
+            memoryTidy: true).ReplaceLineEndings(" ");
+
+        Assert.Contains("Delete a file only when the Human asks you to. Huddle tidies your own memory folder about once a week:", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("Huddle never changes the lines of reported.md except to drop old ones. Give each file a description", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.DoesNotContain("{{memoryTidy}}", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>With the Helper off, the Memory block holds no tidy sentence and the delete sentence joins straight onto the next one.</summary>
+    [Fact]
+    public void MemoryTidyOff_LeavesTheTidySentenceOut()
+    {
+        string actual = Compose(["mcp__team__get_help", "mcp__team__memory"], SessionScope.Shared, memoryChangesListed: true).ReplaceLineEndings(" ");
+
+        Assert.DoesNotContain("Huddle tidies", actual, StringComparison.Ordinal);
+        Assert.Contains("Delete a file only when the Human asks you to. Give each file a description", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.DoesNotContain("{{memoryTidy}}", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>An override of the Memory prompt without the optional tidy placeholder validates with no error.</summary>
+    [Fact]
+    public void Override_WithoutMemoryTidy_ValidatesWithNoError()
+    {
+        PromptDefinition definition = PromptCatalog.Get("systemPrompt.memory");
+
+        IReadOnlyList<PromptIssue> issues = PromptValidator.Validate(definition, "OLD {{memoryPath}} {{memoryIndex}}");
+
+        Assert.DoesNotContain(issues, issue => issue.Severity == PromptIssueSeverity.Error);
+        Assert.Contains("{{memoryTidy}}", definition.Placeholders);
+        Assert.DoesNotContain("{{memoryTidy}}", definition.RequiredPlaceholders);
+    }
+
     /// <summary>An override of the Memory prompt that never mentions the optional day count still validates and renders.</summary>
     [Fact]
     public void Override_WithoutReportedDays_ValidatesWithNoError()

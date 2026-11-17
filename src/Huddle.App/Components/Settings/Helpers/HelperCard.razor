@@ -17,6 +17,7 @@
 @inject HelperDispatcher Dispatcher
 @inject HelperFeed HelperFeed
 @inject TimeProvider Clock
+@inject IEnumerable<IHelperCardSection> Sections
 
 @if (this.helper is not null)
 {
@@ -26,6 +27,11 @@
             <StatusChip Color="@this.Chip.Color" Icon="@this.Chip.Icon" Class="helper-card-chip">@this.Chip.Text</StatusChip>
         </div>
         <MudText Typo="Typo.body2" Class="mud-text-secondary mb-3">@this.helper.Description</MudText>
+
+        @if (this.Section is { } section)
+        {
+            <DynamicComponent Type="@section.Component" Parameters="@(new Dictionary<string, object> { [nameof(this.HelperId)] = this.helper.Id.Value })" />
+        }
 
         <MudSwitch T="bool" Value="@this.enabled" ValueChanged="this.OnEnabledChanged" Disabled="@(!this.AdaptersOn)"
                    Color="Color.Primary" Label="@HelpersCopy.SwitchLabel" />
@@ -101,6 +107,9 @@
 
     /// <inheritdoc/>
     public void Dispose() => this.Dispatcher.StatusChanged -= this.OnStatusChanged;
+
+    /// <summary>The extra section registered for this card's Helper, or <see langword="null"/> when its Helper brings none.</summary>
+    private IHelperCardSection? Section => this.Sections.FirstOrDefault(section => this.helper is not null && section.Helper == this.helper.Id);
 
     private bool IsPaused => this.baseline.Enabled && this.helper is not null && this.Budget.IsPaused(this.helper.Id, this.baseline.DailyCap);
 

@@ -2460,8 +2460,9 @@ The root is read-only, and Global Search and the Agents' `search` tool leave it 
 A pass folder is deleted after 90 days (`Team:Memory:Tidy:KeepBackupDays`). There is no
 Restore button yet: to undo a change, open the copy and put its text back by hand.
 
-The Memory Tidy Helper is not on yet. Today a pass only drops the lines older than 14
-days from each Agent's `reported.md`, with no model call.
+What a pass does to each Agent's Memory is the **Memory Tidy** Helper's work: see
+[Memory Tidy](#memory-tidy). Dropping the lines older than 14 days from each Agent's
+`reported.md` needs no model call.
 
 **When a pass runs.** A pass runs on its own by `Team:Memory:Tidy:When`, which is
 `weekly on sun at 03:00` unless you change it, in your computer's time zone. Only
@@ -2752,6 +2753,32 @@ On **Settings › Helpers** each Helper has a card:
 | **Save**, **Reset to defaults** | **Save** keeps your choices. **Reset to defaults** goes back to `Team:Helpers:<Id>` in the configuration, then to the built-in defaults. |
 
 The third Helper is **AGENTS.md Changes**. When you edit an `AGENTS.md`, it reads the old and new text and lists the rules added, changed or removed, so the Agents that follow the file can be told at their next Turn. It starts on Claude, Haiku, low effort, with a **Daily cap** of 20. Its card is like the others. It never blocks a Turn for more than 30 seconds: past that, the Agent gets the changed lines instead. When it calls an edit not meaningful, and the edit is small (200 changed characters or fewer), no Agent is told. The Feed lists that skip as **AGENTS.md Changes didn't tell Agents about `<path>`: `<reason>`**, in the Helpers Category. If you disagree, say the rule to an Agent, or restart it from its card.
+
+#### Memory Tidy
+
+The fourth Helper is **Memory Tidy**. About once a week (`Team:Memory:Tidy:When`, Sunday at 03:00 unless you change it) it looks at each Agent's own Memory folder. It skips a folder that has fewer than 10 topic files, or that has not changed since its last pass. For the others it may merge two files on one topic, shorten a file, give a file a missing description, or remove a file that is out of date. It is told to add nothing and it never creates a file. It starts on Claude, Sonnet, low effort, with a **Daily cap** of 20 calls. A pass makes one call for each folder it looks at, so it costs a few calls a week for a usual team.
+
+- **A copy comes first.** Before Huddle changes or removes a file, it copies the file to the **Memory backups** root (see [Memory backups](#memory-backups)). A copy that cannot be written stops that change.
+- **You get a list.** When a pass changes a topic file, the Feed raises one Notification, "Memory Tidy tidied 4 topic files and dropped 2 in 3 Memory folders", and clicking it opens the pass's `changes.md`. The list names each change, the files involved, why, and anything Huddle refused. For a shortened file it shows the numbers, dates, links and addresses the new text no longer holds.
+- **Undoing a change is by hand.** Open the copy in the Memory backups root, copy its text, and paste it into the file in the Agent's Memory folder in the Library (or create the file again). There is no Restore button yet. The Agent's next Turn lists the file as a changed file.
+- **`tidy: keep` protects a file.** Add the line `tidy: keep` to the file's frontmatter (the block between the `---` lines at the top, beside `description`) and the Helper never sees or changes it. A file you put back by hand is judged again unless you add this line. Agents do not add it: if a file must never be changed, you mark it.
+- **Huddle-wide Memory is tidied too.** After the Agents' folders the pass looks at Huddle-wide Memory (`Teams/memory`), with every description left as it is: a merge or rewrite that would change or break a description is refused. Its copies are in the pass's `Huddle` folder. A running Agent is told a file a merge removed is "Now in" the file that kept it, not that it is no longer true.
+- **`reported.md` and `MEMORY.md` are never shown to the Helper.** Only the old lines of `reported.md` are dropped, as before.
+- **It never blocks work.** If the call fails or times out, Memory stays as it was. It pauses at its daily cap like any Helper; **Continue** on its card allows more calls for the day.
+
+What Huddle checks, and what it does not. Huddle refuses a change that adds a number, a date, a link or an e-mail address that the files did not hold, a merge that loses one of them, a rewrite that makes a file longer, and a description that does not need to change. A rewrite that removes more than half a file counts as a drop, and a pass may drop at most 3 files from one folder (`Team:Memory:Tidy:MaxDropsPerFolder`). A refused change is left out and listed; the others still happen.
+
+**What it does not check:** a number written as a word ("three" for 3), a month name, a person's name, or a "not" or "never" that reverses a sentence. A reworded file can change meaning without any of these changing. Read the list, and compare with the copy when a file matters. A merge can also move text into another file of the same folder.
+
+The card on **Settings › Helpers** has one extra section for this Helper:
+
+| Control | What it does |
+| --- | --- |
+| The line above the buttons | "Next pass: Sunday 03:00 · Last pass: 22 Nov, tidied 4, dropped 2". Each part shows only when it is known. |
+| **Tidy now** | Starts a pass at once. It is disabled and reads "A pass is running" while a pass runs. Pressing it while the Helper is paused at its daily cap raises the "paused" Notification. |
+| **Open the last list** | Opens the newest pass's `changes.md` in the Library. |
+
+Turn the Helper **Off** on its card and no folder is looked at. Set `Team:Memory:Tidy:MaxDropsPerFolder` to 0 and it can drop nothing.
 
 Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false; the tab says so and the cards are read only. A call costs a fraction of a cent on Haiku: at the cap of 50 a day, about 12 cents. Needs Human's wake-up of the assignee, when it turns the gate on, is a full Turn on that Agent's own model and is usually the larger cost; it happens at most once per Task. The wake-up is posted by **Huddle**, shown in the Room as a muted line, and the **Feed** tells you when a Helper pauses or keeps failing.
 

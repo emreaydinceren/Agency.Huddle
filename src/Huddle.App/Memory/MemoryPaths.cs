@@ -128,6 +128,18 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
             : new MemoryFolder(memory, OwnFolder, null);
     }
 
+    /// <summary>
+    /// Huddle-wide Memory for Huddle itself (Memory Tidy spec §6.5), built from the reserved name and never from a caller's argument; refused
+    /// when the Teams root or the folder is a junction or link, as <see cref="ResolveFolder"/> refuses it. The folder need not exist yet.
+    /// </summary>
+    /// <param name="folder">The folder, labelled with the reserved name, when it resolves.</param>
+    /// <returns>Whether the folder resolved.</returns>
+    public bool TryResolveHuddleWide([NotNullWhen(true)] out MemoryFolder? folder)
+    {
+        folder = this.HuddleWide();
+        return folder is not null;
+    }
+
     /// <summary>The folders Huddle may write for <paramref name="team"/>: the Team's own, then each Project's, in the catalog's order.</summary>
     /// <param name="team">The Team.</param>
     /// <returns>The folders; empty when the Team has no folder.</returns>

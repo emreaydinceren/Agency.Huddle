@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp.Sessions.TurnHooks;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -20,9 +21,13 @@ public sealed class HuddleMemoryTurnHookTests : IDisposable
 
     private readonly TempDataDir dir = new();
     private readonly Dictionary<string, Dictionary<string, string?>> states = new(StringComparer.Ordinal);
+    private readonly ManualTimeProvider clock = new(new DateTimeOffset(2026, 11, 16, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+    private MemoryTidyMergeStore? merges;
 
     /// <inheritdoc />
     public void Dispose() => this.dir.Dispose();
+
+    private MemoryTidyMergeStore Merges => this.merges ??= new MemoryTidyMergeStore(this.dir.Options(), this.clock);
 
     private string TeamsRoot => Path.Combine(this.dir.Path, "Teams");
 
@@ -462,6 +467,53 @@ public sealed class HuddleMemoryTurnHookTests : IDisposable
         Assert.NotNull(block);
     }
 
+    /// <summary>A file a Memory Tidy merge removed is announced with the file it went into, not as no longer true.</summary>
+    [Fact]
+    public async Task Before_FileRemovedByAMerge_IsAnnouncedAsNowInTheKeptFile()
+    {
+        HuddleMemoryTurnHookTests.Write(this.MemoryDir, "ship.md", "Shipping.\n");
+        HuddleMemoryTurnHookTests.Write(this.MemoryDir, "price.md", "Price.\n");
+        await this.OpenAsync("r1");
+        File.Delete(Path.Combine(this.MemoryDir, "ship.md"));
+        this.Merges.Record("ship.md", "price.md");
+
+        string? block = await this.TurnAsync("r1");
+
+        Assert.NotNull(block);
+        Assert.EndsWith("\n- Now in price.md: ship.md", block, StringComparison.Ordinal);
+        Assert.DoesNotContain("no longer true", block, StringComparison.Ordinal);
+    }
+
+    /// <summary>A file that was dropped, with no merge record, is still announced as removed and no longer true.</summary>
+    [Fact]
+    public async Task Before_DroppedFile_IsStillAnnouncedAsRemoved()
+    {
+        HuddleMemoryTurnHookTests.Write(this.MemoryDir, "ship.md", "Shipping.\n");
+        await this.OpenAsync("r1");
+        File.Delete(Path.Combine(this.MemoryDir, "ship.md"));
+
+        string? block = await this.TurnAsync("r1");
+
+        Assert.NotNull(block);
+        Assert.EndsWith("\n- Removed, no longer true: ship.md", block, StringComparison.Ordinal);
+    }
+
+    /// <summary>A merge record older than 30 days is ignored, so the removed file is announced as removed again.</summary>
+    [Fact]
+    public async Task Before_MergeRecordOlderThanThirtyDays_FallsBackToRemoved()
+    {
+        HuddleMemoryTurnHookTests.Write(this.MemoryDir, "ship.md", "Shipping.\n");
+        await this.OpenAsync("r1");
+        File.Delete(Path.Combine(this.MemoryDir, "ship.md"));
+        this.Merges.Record("ship.md", "price.md");
+        this.clock.Advance(TimeSpan.FromDays(30) + TimeSpan.FromMinutes(1));
+
+        string? block = await this.TurnAsync("r1");
+
+        Assert.NotNull(block);
+        Assert.EndsWith("\n- Removed, no longer true: ship.md", block, StringComparison.Ordinal);
+    }
+
     private static void Write(string folder, string name, string text)
     {
         Directory.CreateDirectory(folder);
@@ -482,7 +534,7 @@ public sealed class HuddleMemoryTurnHookTests : IDisposable
     private TurnHookPipeline Pipeline() =>
         TurnHookPipeline.ForPersona(
             Scope,
-            [new HuddleMemoryTurnHook(this.dir.Options(), new FakePromptSource(), NullLogger<HuddleMemoryTurnHook>.Instance)],
+            [new HuddleMemoryTurnHook(this.dir.Options(), new FakePromptSource(), NullLogger<HuddleMemoryTurnHook>.Instance, this.Merges)],
             NullLogger.Instance);
 
     private Task OpenAsync(string room) =>

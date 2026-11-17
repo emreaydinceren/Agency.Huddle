@@ -353,6 +353,28 @@ fingerprints. It is keyed by content, not by key, so two Tasks with the same tex
 swallowing is safe (a Helper must never take the dispatcher down, Policy 4). `StopAsync` cancels
 the timers and the runs in flight; pending inputs are dropped.
 
+#### 6.3a `HelperJudge`, the cache opt-out and `CallRan` (2026-11-16)
+
+*Added with Memory Tidy slice 4 ([spec](Huddle.MemoryTidy-Specifications.md) §6.7 and §6.9).*
+
+- **`HelperJudge` is the one judge.** The body of the dispatcher's old private `JudgeAsync` lives in `HelperJudge`
+  (`Helpers/HelperJudge.cs`), a singleton. It runs one judgement now: the enabled and Adapters-on gates, the
+  concurrency limit, the card status and the Feed health items. `HelperDispatcher` keeps the per-key wait and the
+  latest-input rule and calls the judge. Memory Tidy's pass calls the same instance and awaits the result with
+  `JudgeAsync`. Both share one `Team:HelperConcurrency` limit, because there is one semaphore.
+- **It never throws for a failed call.** An exception from a store or `ApplyAsync` is logged, recorded on the card
+  and returned as a failed report. Only the caller's own cancellation is rethrown.
+- **`StatusChanged`.** The dispatcher forwards the judge's event, so a judgement the pass asked for repaints the
+  card as a queued one does.
+- **`IHelperAgent.CachesVerdicts`** is a default interface member that answers `true`. A Helper that answers `false`
+  neither reads nor fills the Verdict cache in `HelperInvoker`. Memory Tidy answers `false`: its Verdict holds whole
+  files, and its folder fingerprint already stops a second call on unchanged content.
+- **`HelperRunReport.CallRan`** says whether an adapter process was started for the judgement. It is `false` when
+  the budget refused, when a cached Verdict was applied, and when the Adapter was not configured or did not offer the
+  Model (`HelperOutcome.Failed.Started` is `false` for those). A caller that counts failures of one input counts a
+  failed report only when `CallRan` is `true`. The Memory Tidy pass uses it so that a call the budget refused is not
+  "failed twice".
+
 ### 6.4 Spending
 
 **What is counted.** One call is one adapter process started for a Helper. It is counted when the
@@ -495,6 +517,10 @@ read only. One **`HelperCard.razor` (`G9a`)** follows per registered Helper, in 
 - **Paused:** a Warning notice "Paused — daily cap reached" with the button
   **Continue (+10 today)**, the same shape as the Task panel's wake-budget "Allow 10 more".
 - **Actions:** **Save** (writes the row) and **Reset to defaults** (deletes it).
+- **An optional section (2026-11-16).** A Helper may bring an extra section under the description. It registers an
+  `IHelperCardSection` in DI (`Helper`, the `HelperId` it belongs to, and `Component`, the component to draw, which
+  takes one string parameter `HelperId`). `HelperCard` draws the registered component with `DynamicComponent`, so no
+  Helper is special-cased in the card. Memory Tidy is the first: `MemoryTidyCardSection.razor`, wireframe `G9a1`.
 
 The card re-reads the usage and status stores when the dispatcher raises
 `HelperDispatcher.StatusChanged` (marshalled with `RendererDispatch.Repaint`).

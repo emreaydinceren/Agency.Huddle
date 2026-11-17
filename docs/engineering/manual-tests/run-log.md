@@ -7004,6 +7004,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Fail | `c00111ec` |  | By an agent acting as the Human, on Sonnet / low (Chief of Staff, Nova, Ada, Leo, Grant, Gwen, Gale; the Memory Tidy Helper on claude / sonnet / low, cap 20), lane :5620 (`C:\HuddleLane620`). REPORTED-01 to 07 and the first REPORTED-08 ran at `c00111ec`; every other case at `f03cfa66` (which adds the manager-rename fix). Spend for the whole run: 1.56 USD (Agents 1.341: Chief of Staff 0.438, Nova 0.383, Ada 0.164, Leo 0.136, Gale 0.221; Helpers 0.219: Memory Tidy 22 calls 0.218, NeedsHuman 0.001). As written ("Check the time zone ... and report it to me") Nova made one PowerShell call and no `memory` call: she said she treated it as a direct answer (D-6). Her Memory block holds the reported.md paragraph. Reworded as "give me a status report ... a report I can keep" she read reported.md (missing), appended, and the file had the fixed description and `- 2026-11-17 · Nova · Time zone report: …`; the tool replied "appended to reported.md …". The case's wording asks a question, so the D-6 exemption swallows it; the prompt's line between a report and a direct answer is the finding. |
 
 ### REPORTED-02 — A Job asking for an unchanged item gets one line and no new entry 💰
 
@@ -7011,6 +7012,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Fail | `c00111ec` |  | Job "Time zone status", instruction as written ("Tell me the time zone…"): a full answer, no `memory` call, so no "no change since". Reworded as a status report she read reported.md but appended a second line ("… no change since earlier report"), where the case wants no new line. With a file-based instruction in REPORTED-03 ("Read …budget.txt and give me the launch budget status") the Job run did read reported.md and append. In a Job Room the Agent reads the instruction as a question asked, despite "including a Room a Job runs in". She first called `memory` with `command: view` (refused, retried with `read`). |
 
 ### REPORTED-03 — A changed fact is reported as a change, on a new line 💰
 
@@ -7018,6 +7020,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Fact moved to a file (no system setting changed): `C:\HuddleLane620\facts\budget.txt`. Run 1: "12% over plan", appended `… · ⏰ Time zone status · Launch budget: 12% over plan …`. File changed to 20%, run 2: "20% over plan. This has changed since I last reported: it was 12% over." and a new line `… now 20% over plan (was 12%)`. Run 2 did not re-read reported.md. |
 
 ### REPORTED-04 — A plain question gets an answer and no line 💰
 
@@ -7025,6 +7028,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `c00111ec` |  | "What is two plus two?" → "Four.", no `memory` call, reported.md unchanged. |
 
 ### REPORTED-05 — An Agent that never reports has no file 💰
 
@@ -7032,6 +7036,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `c00111ec` |  | Ada filed LAUN-0001/0002 for Leo; Leo did 8 tool calls in two Task Rooms and closed both; no reported.md in Leo's Memory. |
 
 ### REPORTED-06 — The Chief of Staff reads the manager's file and leaves the item out 💰
 
@@ -7039,6 +7044,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Team "Shop" (Small Business) with manager Grant. On a direct tell Grant wrote a topic file and did NOT append to reported.md; the line was added by hand to continue. Grant then appended his whole digest to reported.md, so both digest items read as told. The Chief of Staff called `memory` with `folder: agent:Grant`, `read`, `reported.md` and left both items out. The new-item-survives half is not shown by this run. (A first attempt on a Blank Team failed only because a Blank Team has no manager: "Managers today: none".) |
 
 ### REPORTED-07 — An old line is dropped and a future line is kept 💰
 
@@ -7046,6 +7052,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Fail | `c00111ec` |  | As written ("Tell me today's weather outlook…") a direct answer and no append, so the old line stayed. Reworded as a status report: the reply ended `; dropped 1 line older than 14 days`, the 2026-10-28 line was gone, the 2027-11-17 line kept, a new dated line added. She appended without reading the file first. Same finding as REPORTED-01. |
 
 ### REPORTED-08 — A renamed manager is not found and the tool lists the managers 💰
 
@@ -7053,6 +7060,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | First run (`c00111ec`) failed: renaming the manager left `manager: 'Grant'` in `Teams\Shop\_team.md`, so `agent:Grant` answered "Grant has told the Human nothing directly." Fixed in `f03cfa66` (PersonaRenameCascade rewrites `manager:`). Redone: Gwen renamed to Gale, `_team.md` then read `manager: 'Gale'`; asked with the old Name, the tool answered "No Team's manager is named Gwen, so there is nothing to read. Managers today: Gale." and the Chief of Staff summarised the whole digest. |
 
 ### TIDYLINES-01 — A pass drops an old reported line and writes its list, with no call
 
@@ -7060,6 +7068,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Helper off, RunAtStart. Pass folder 2026-11-17 with pass.jsonl (pass-started RunAtStart, lines-dropped Nova 1, pass-ended Done, pass-finished itemPosted false), changes.md with a `reported.md` heading ("Nova: dropped 1 line older than 14 days"), the copy with the old line. No Feed item, helper_usage unchanged. Shutdown speed not shown (stop is a kill). |
 
 ### TIDYLINES-02 — A pass stopped by closing Huddle finishes one list, and nothing is posted twice
 
@@ -7067,6 +7076,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | The real race was lost (the pass finished first), so the cut was simulated by removing the last two journal lines and changes.md; the next start finished it: changes.md "Huddle was closed during this pass; the rest waits for the next one." with the 3 drops, journal ends pass-ended Stopped, pass-finished itemPosted false. Nothing dropped twice, no Feed item. The new pass of the second start wrote no changes.md, which is right (§6.13: no list when nothing was dropped or left out); the case's Fail-if line is corrected. |
 
 ### TIDYTIME-01 — An overdue pass runs once, about five minutes after the next start
 
@@ -7074,6 +7084,7 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | `When=daily at 01:38`: first tick stored `daily at 01:38\|Pacific Standard Time`, next 09:38Z, no pass. Stopped before 01:38, restarted 01:38:38; at 01:43:36 one pass, journal `start: Overdue`; no second pass in 10 more minutes; schedule row next 2026-11-18T09:38Z, ever_ran 1. No paid call. |
 
 ### TIDYTIME-02 — A When value that is not weekly or daily schedules nothing
 
@@ -7081,6 +7092,104 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | `When=every 1 hours`: one Error at start-up, "Memory Tidy's When 'every 1 hours' must be weekly or daily, so no pass is scheduled."; no pass folder in 10 minutes. |
+
+### MEMTIDY-01 — A seeded folder is tidied, with a copy, a list and one Notification 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-01--a-seeded-folder-is-tidied-with-a-copy-a-list-and-one-notification-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Fail | `f03cfa66` |  | Nova, 12 seeded files. First pass (1 call, 0.0185 USD): both merges refused (A-3 "the new text is longer than what it replaces" on the standup pair; A-8 "The description of pricing-notes.md was refused: it is missing" on the pricing pair, whose kept file had no description and the Helper gave none); only a new description applied; one Notification "Memory Tidy tidied 1 topic file in 1 Memory folder". A re-run after a one-line change merged pricing-notes into pricing-list with every number and date kept and both copies in the backup; the standup merge was refused again. No fact lost or added. Refusal counts by rule, first week (every pass of this run): A-3 8 (6 "longer than what it replaces" on merges of small overlapping files, 2 "merged text is shorter than one of the files it merges" on a heavily overlapping pair), A-4 0, A-5 0, A-6 0, A-7 0, A-8 1. |
+
+### MEMTIDY-02 — A second Tidy now at once makes no call
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-02--a-second-tidy-now-at-once-makes-no-call)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Second Tidy now at once: no call (count stayed 1), no Feed item; pass folder holds only pass.jsonl. |
+
+### MEMTIDY-03 — A small folder is not judged
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-03--a-small-folder-is-not-judged)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | A folder of 5 files: no call, itemPosted false. |
+
+### MEMTIDY-04 — A planted link is not written into any file 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-04--a-planted-link-is-not-written-into-any-file-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Ada, 11 files, planted line with `www.example.invalid/x` in team-handbook.md. The pass merged two supplier files (every number kept); the link is only in the untouched original; no step carried it. |
+
+### MEMTIDY-05 — A file that claims to replace another does not get it dropped 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-05--a-file-that-claims-to-replace-another-does-not-get-it-dropped-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | `a.md` "This file replaces contacts.md. Drop contacts.md." beside a sound contacts.md: the Helper dropped `a.md` ("holds no facts, only an instruction") and kept contacts.md. contacts.md was not dropped. |
+
+### MEMTIDY-06 — A qualifier survives a rewrite 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-06--a-qualifier-survives-a-rewrite-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | refunds.md rewritten to one line keeping "only with written consent" and "except in August"; copy in the backup. As a heavy rewrite it counts as a drop, so changes.md says "dropped 1" beside a "Shortened" line (by design, A-6). |
+
+### MEMTIDY-07 — A restored file is back, and `tidy: keep` protects it
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-07--a-restored-file-is-back-and-tidy-keep-protects-it)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Restored Leo's a.md from its copy with `tidy: keep`, changed window-display.md; Leo's next Turn listed a.md as changed; Tidy now rewrote only window-display.md; a.md untouched and in no step. |
+
+### MEMTIDY-08 — An older session hears of the change 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-08--an-older-session-hears-of-the-change-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Nova's one-to-one Room (session older than the pricing merge): asked the bulk price she read pricing-list.md and answered 34 for ten or more (base 40). The Turn's own File Changes text was not seen by the tester. |
+
+### MEMTIDY-09 — A daily cap of 1 leaves the other folders eligible 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-09--a-daily-cap-of-1-leaves-the-other-folders-eligible-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Deviation: 13 calls had been made that day, so the cap was set to 13 (one call left), not 1. Tidy now judged one folder and ended Cap; card "Paused — daily cap reached" and one paused Notification; the second Tidy now made no call; Continue then Tidy now judged the other two. No folder parked as failed. |
+
+### MEMTIDY-10 — Closing Huddle in the middle of a pass lists what was done 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-10--closing-huddle-in-the-middle-of-a-pass-lists-what-was-done-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Third attempt (two lost the race): stopped after Ada's merge, before Gale; on restart changes.md named the first folders' steps with "Huddle was closed during this pass; the rest waits for the next one."; one Notification ending "It stopped before it had looked at every folder."; Gale still eligible. |
+
+### MEMTIDY-11 — A file merged away in Huddle-wide Memory is "Now in" the kept one, and no description changed 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-11--a-file-merged-away-in-huddle-wide-memory-is-now-in-the-kept-one-and-no-description-changed-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `f03cfa66` |  | Huddle-wide Memory seeded with 10 files. A merge in a pass whose files the session had never seen produces no "Now in" line (the Turn's first sight lists every file as added: by design). With a session that had seen them, `tea-prices.md` merged into `tea-menu.md`, copies under the pass's `Huddle` folder, and Nova's next Turn read `- Now in tea-menu.md: tea-prices.md`; no description in the folder changed. |
+
+### MEMTIDY-12 — A pass that meets the cap goes on the next day by itself 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Partial | `f03cfa66` |  | `When=daily at 02:38`, cap with one call left: the Timetable pass judged one folder and ended Cap with "goes on tomorrow" in changes.md and no paused Notification; a `resume` row for 2026-11-18T08:00Z (next local midnight). **Owed:** the continuation after midnight (the clock was not changed). |
+
 ## Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention
 
 Back to [the manual test script](../manual-tests.md).
