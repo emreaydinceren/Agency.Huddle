@@ -7279,6 +7279,7 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-17
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `74e606fb` | #619 | By an agent acting as the Human, lane :5617, slice 3a build. A daily Job for Nova was paused on the Scheduled page before its 11:40 time and resumed at 11:42:46; nothing was posted in the two minutes after, and the Job's next run stayed tomorrow at 19:40 UTC (11:40 local). No spend: the Job never ran. |
 
 ### TURNQUEUE-14 — The age limit and Don't answer 💰
 
