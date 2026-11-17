@@ -108,7 +108,7 @@ Cleo is the Chief of Staff. Ada manages Research. Nova is an Agent with a one-to
 | U-1 | On Monday, in her one-to-one Room, Nova tells the Human the launch budget is 12% over | Nova reads `reported.md` (it does not exist: nothing reported), reports, then appends `Nova and Sam · launch budget is 12% over plan`. The file now holds `- 2026-11-16 · Nova and Sam · launch budget is 12% over plan` |
 | U-2 | On Tuesday the digest Job runs in the Job Room `⏰ Morning digest`. Its instruction asks for the budget status. The budget is still 12% over | Nova reads `reported.md`, sees Monday's line, and says it in one line: "Budget: no change since 2026-11-16." She does not leave it out, and appends no line for it. What is new she reports in full, with one line each |
 | U-3 | On Wednesday the budget is 20% over | Something changed, so Nova reports it and says what changed ("up from 12% on Monday"), then appends a line |
-| U-4 | The Human asks Nova "what is the budget?" in the one-to-one Room | Nova answers. A direct answer to a question just asked is not a report: no read, no line |
+| U-4 | The Human asks Nova "what is the budget?" in the one-to-one Room | The budget status is work news, so it is a report however it was asked (D-6, reworded 2026-11-17, #660): Nova reads `reported.md`, answers, and appends a line when it is new. Asked "how does the budget sheet work?", she explains with no line |
 | U-5 | Ada posts a digest. Cleo is woken to summarise it | Cleo reads `reported.md` with folder `agent:Ada`, leaves out what Ada already told the Human directly, and summarises the rest |
 | U-6 | Nova's `reported.md` holds a line dated 20 days ago | The next `append` drops it. If Nova never appends again, the weekly pass drops it |
 | U-7 | Leo never reports to the Human | Leo has no `reported.md`, and nothing creates one |
@@ -281,9 +281,17 @@ already there unless something has changed, and when it has, say what changed. W
 item you have already reported and nothing has changed, do not leave it out: say so in one line, such as "no change
 since 2026-11-16", and add no line for it. After you report something new, add one line with the append command: the
 Room's name, then " · ", then what you told them in a few words. {{memoryTool}} sets the date, starts the file when
-you have none, and drops lines older than {{reportedDays}} days. A direct answer to a question the Human has just
-asked you is not a report and needs no line. If you never report to the Human, keep no such file.
+you have none, and drops lines older than {{reportedDays}} days. A finding, a status, a result, a decision or a
+warning you tell the Human is a report however they asked for it: a question, "tell me", "check and report" or a
+Job's instruction. Small talk, and answers that carry no news about the work, such as how something works or what
+you can do, are not reports and need no line. If you never report to the Human, keep no such file.
 ```
+
+The sentence on what counts as a report was reworded by owner decision on 2026-11-17 (option A, issue #660). The
+first wording exempted "a direct answer to a question the Human has just asked you", and the paid run failed
+REPORTED-01, 02 and 07 on it: a request worded as a question, or a Job's "Tell me...", was answered with no line.
+Rejected: a line for every reply (the file fills with small talk), Huddle writing the line itself (real build work
+and generic text; a possible follow-up if this wording is not enough), and leaving the wording as it was.
 
 Notes for the builder:
 
@@ -1398,8 +1406,8 @@ about 18,000 tokens in and 10,000 out, and a usual folder is far smaller (§6.8)
 files, one that did not change, and one that failed twice unchanged cost nothing. Three failed calls in a row end
 the pass. The Adapter's reported cost is added to the Helper's usage as for every Helper (`HelperBudget.RecordCost`,
 `HelperBudget.cs:82`) and shown on the card. Dropping `reported.md` lines costs nothing. The `reported.md` habit
-itself costs each reporting Turn one `read` and, when something is new, one `append`, which is why a direct answer
-is not a report (D-6).
+itself costs each reporting Turn one `read` and, when something is new, one `append`, which is why small talk and
+explanations with no work news are not reports (D-6).
 
 **Model** (decision D-21). The three Helpers today default to `haiku` at low Effort. This Helper rewrites the
 Agent's own words, where a weak model loses a qualifier quietly; the checks catch added and lost tokens, not a
@@ -1578,7 +1586,7 @@ interleave" and A-9), not a manual case.
 | D-3 | The tool always sets the date, starts the file, drops old lines and makes room at the size cap on `append` (owner, 2026-11-16) | The Agent writing all of it (no date is given to Agents, `append` refuses a missing file, and free-form lines cannot be aged reliably); keeping a date the Agent wrote (a future date is never dropped); Huddle writing the file from Messages (#620 decision 2) |
 | D-4 | A line is date, Room name, what, separated by ` · `; unreadable lines are kept; the rule lives in one class, `ReportedFile` | A table or JSON (harder for a model to append to and for the Human to read); the rule inside `MemoryFileRules` (that class is about names and descriptions) |
 | D-5 | The Chief of Staff reads a **manager's** `reported.md` through `agent:<Name>`, built as a single-file read that never makes a `MemoryFolder` (owner, 2026-11-16) | A folder for another Agent (writable by default, `MemoryTool.cs:210-226`); reading by path with a built-in tool (the Memory Prompt forbids it); copying the manager's lines into the digest wake-up (Huddle would be writing into a Message); any Agent's file, or managers reading members' (not asked for) |
-| D-6 | A report is something the Agent brings; a direct answer to a question just asked is not one. An item already reported and unchanged is said in one line as "no change since", never left out (owner, 2026-11-16) | Recording every statement (two tool calls on nearly every Turn of a one-to-one Room); going silent (a status Job would look broken) |
+| D-6 | A report is any finding, status, result, decision or warning told to the Human, however the request was worded (a question, "tell me", "check and report", a Job's instruction); small talk and explanations with no work news are not. An item already reported and unchanged is said in one line as "no change since", never left out (owner, 2026-11-16; reworded 2026-11-17, option A, #660: the first wording exempted a direct answer to a question, and Agents kept no line for questions) | Recording every statement (two tool calls on nearly every Turn of a one-to-one Room); going silent (a status Job would look broken) |
 | D-7 | Memory Tidy is a Helper that sees one folder and returns actions | The Agent's own Turn (owner decision; a Turn has a Room, a Budget and context that can carry planted text); a weekly Job running a Skill (a Job is an Agent's Turn) |
 | D-8 | Four steps: merge, rewrite, describe, drop, parsed once into a closed set of types. No create, no move | A free-form "new set of files" (it could add files, and Huddle could not check each change against its source); switching on the action word in six places |
 | D-9 | A hosted timer of its own; the pass awaits each folder through `HelperJudge` | A built-in Job (a Job has an owner, a Room and an Agent's Turn); a timetable inside the dispatcher (it should not learn about weekdays); a second, awaited door on the dispatcher (it would stop being only the queue); `Enqueue` with a completion signal (a failed call never reaches `ApplyAsync`) |
@@ -1616,7 +1624,7 @@ answer and where it went, for the record.
 | # | Question | Settled as | Decision |
 | --- | --- | --- | --- |
 | OQ-1 | Does the `memory` tool help with `reported.md`? | Yes. It always sets the date and makes room at the size cap | D-3 |
-| OQ-2 | What counts as "telling the Human"? | A report, not a direct answer; an unchanged item asked for again is "no change since" | D-6 |
+| OQ-2 | What counts as "telling the Human"? | Any finding, status, result, decision or warning, however it was asked for; not small talk or a plain explanation. An unchanged item asked for again is "no change since" | D-6 |
 | OQ-3 | Who reads another Agent's `reported.md`? | The Chief of Staff, a manager's only, as a single-file read | D-5 |
 | OQ-4 | Default model? | `sonnet`, low Effort. The paid `haiku` comparison is dropped | D-21 |
 | OQ-5 | Ships on? | On, drops included, with loss bounded | D-22, D-27 |

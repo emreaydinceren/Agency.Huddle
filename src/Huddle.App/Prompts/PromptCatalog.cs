@@ -1688,9 +1688,11 @@ internal static class PromptCatalog
                 nothing has changed, do not leave it out: say so in one line, such as "no change since 2026-11-16",
                 and add no line for it. After you report something new, add one line with the append command: the
                 Room's name, then " · ", then what you told them in a few words. {{memoryTool}} sets the date,
-                starts the file when you have none, and drops lines older than {{reportedDays}} days. A direct
-                answer to a question the Human has just asked you is not a report and needs no line. If you never
-                report to the Human, keep no such file.
+                starts the file when you have none, and drops lines older than {{reportedDays}} days. A finding, a
+                status, a result, a decision or a warning you tell the Human is a report however they asked for it:
+                a question, "tell me", "check and report" or a Job's instruction. Small talk, and answers that carry
+                no news about the work, such as how something works or what you can do, are not reports and need no
+                line. If you never report to the Human, keep no such file.
 
                 One topic per file. Update a fact rather than adding a duplicate, and fix or replace what is no
                 longer true. Delete a file only when the Human asks you to.{{memoryTidy}} Give each file a description that
