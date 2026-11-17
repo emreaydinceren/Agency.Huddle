@@ -144,17 +144,23 @@ internal sealed class TranscriptCatchUpStep
                     // whether or not it turned out to hold any Messages. A refused or timed-out read
                     // (RS §9 E-3, tail null) leaves OwnPostLines untouched, so they still render
                     // through the ordinary catch-up path below.
+                    // One token budget covers both blocks: the later block (what a late Turn must not miss) is trimmed first and the
+                    // before-block gets what is left.
                     IReadOnlyList<ChatMessage>? later = null;
+                    int budget = settings.CatchUpTokens;
                     if (lateReplyId is not null)
                     {
-                        (tail, later) = TranscriptCatchUpStep.SplitAtTrigger(tail, triggerId, waitingTriggerIds);
+                        (tail, IReadOnlyList<ChatMessage> laterAll) = TranscriptCatchUpStep.SplitAtTrigger(tail, triggerId, waitingTriggerIds);
+                        CatchUpTrimResult laterResult = CatchUpTrim.Apply(laterAll, this.isOwn, budget, this.options.CatchUpKeepOwnMessages);
+                        later = laterResult.Kept;
+                        budget = Math.Max(0, budget - laterResult.EstimatedTokens);
                     }
 
                     item = item with
                     {
-                        Transcript = this.BuildCatchUp(tail, settings),
+                        Transcript = this.BuildCatchUp(tail, settings, budget),
                         OwnPostLines = null,
-                        LaterMessages = later is null ? null : CatchUpTrim.Apply(later, this.isOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages).Kept,
+                        LaterMessages = later,
                     };
                 }
                 else if (this.noteOwed is not null)
@@ -225,13 +231,14 @@ internal sealed class TranscriptCatchUpStep
     /// <summary>Trims a Transcript tail to the token budget (LR-R11) and counts what the trim dropped on top of the tail's own omitted count.</summary>
     /// <param name="tail">The tail the owner returned.</param>
     /// <param name="settings">The settings snapshot that set the Message cap for this read.</param>
+    /// <param name="budgetTokens">The token budget for this block when less than the settings' whole budget is left; <see langword="null"/> for all of it.</param>
     /// <returns>The catch-up for the Turn.</returns>
-    public TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings)
+    public TranscriptCatchUp BuildCatchUp(TranscriptTail tail, SessionSettings settings, int? budgetTokens = null)
     {
         ArgumentNullException.ThrowIfNull(tail);
         ArgumentNullException.ThrowIfNull(settings);
 
-        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.isOwn, settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
+        CatchUpTrimResult result = CatchUpTrim.Apply(tail.Messages, this.isOwn, budgetTokens ?? settings.CatchUpTokens, this.options.CatchUpKeepOwnMessages);
         if (this.noteOwed is not null)
         {
             this.noteOwed = this.noteOwed with { MessageCount = result.Kept.Count, EstimatedTokens = result.EstimatedTokens };

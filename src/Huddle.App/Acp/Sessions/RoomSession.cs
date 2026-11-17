@@ -1698,7 +1698,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         {
             await this.owner.WriteAsync(new QueueAck(item.RoomId, [triggerId], kind, replyMessageId, outcome), ct).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
         {
             if (this.logger.IsEnabled(LogLevel.Debug))
             {

@@ -725,10 +725,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // that Room regardless of which ReplyDecision it gets (RS §9 E-7).
         this.knownRoomNames[posted.RoomId] = posted.RoomName;
 
-        // A Human Message ends the unattended run, so the token Budget starts over with
-        // it. The per-Room Budget resets server-side on the very same Message; this one
-        // is per Persona, because one session spans every Room the Agent is in.
-        if (SenderIsHuman(posted))
+        // A new Human Message ends the unattended run, so the per-Persona token Budget starts over (a re-sent one does not).
+        if (SenderIsHuman(posted) && posted.Redelivery is null)
         {
             this.ResetTokenBudget();
         }
@@ -817,6 +815,12 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         if (posted.Redelivery is null)
         {
             return false;
+        }
+
+        // A Message already queued or running here sends nothing: its own Turn acks it (spec 5.8), and a Held would park its row.
+        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id) == true)
+        {
+            return true;
         }
 
         if (ReplyGate.BudgetSpent(posted.AgentMessagesSinceHuman, posted.Budget))

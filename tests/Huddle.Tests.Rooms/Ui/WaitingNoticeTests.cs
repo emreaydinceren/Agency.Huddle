@@ -93,6 +93,22 @@ public sealed class WaitingNoticeTests
         cut.WaitForAssertion(() => Assert.Equal("Waiting for Nova: 1 Message", cut.Find(".waiting-notice-text").TextContent.Trim()));
     }
 
+    /// <summary>A re-render with an equal Draft set (the page builds a new set each render) does not read the store again; a changed set does.</summary>
+    [Fact]
+    public async Task ReRenderWithAnEqualDraftSet_DoesNotCallTheViewAgain()
+    {
+        await using MudBunitContext ctx = new();
+        Rig rig = Rig.Register(ctx, new WaitingCount("a1", "Nova", 2, false));
+        IRenderedComponent<WaitingNotice> cut = Rig.Render(ctx, ["a1"]);
+        int afterFirstRender = rig.View.Calls;
+
+        cut.Render(parameters => parameters.Add(p => p.RoomId, "r1").Add(p => p.AgentIdsWithDraft, new HashSet<string> { "a1" }));
+        int afterEqualSet = rig.View.Calls;
+        cut.Render(parameters => parameters.Add(p => p.RoomId, "r1").Add(p => p.AgentIdsWithDraft, new HashSet<string>()));
+
+        Assert.Equal((1, 1, 2), (afterFirstRender, afterEqualSet, rig.View.Calls));
+    }
+
     /// <summary>Disposing the component removes its subscription to the Turn Queue event, per rules.md.</summary>
     [Fact]
     public async Task Dispose_UnsubscribesFromTurnQueueChanged()
@@ -121,7 +137,13 @@ public sealed class WaitingNoticeTests
     {
         public IReadOnlyList<WaitingCount> Counts { get; set; } = [];
 
-        public Task<IReadOnlyList<WaitingCount>> WaitingInAsync(string roomId, CancellationToken ct) => Task.FromResult(this.Counts);
+        public int Calls { get; private set; }
+
+        public Task<IReadOnlyList<WaitingCount>> WaitingInAsync(string roomId, CancellationToken ct)
+        {
+            this.Calls++;
+            return Task.FromResult(this.Counts);
+        }
     }
 
     /// <summary>A fake control that records each Stop.</summary>

@@ -104,6 +104,31 @@ public sealed class LateTurnCatchUpTests
         Assert.Equal(["g3"], Ids(result.LaterMessages));
     }
 
+    /// <summary>The before block and the later block share one token budget: each fits alone, together they stay within it, and the later block keeps priority.</summary>
+    [Fact]
+    public async Task AddAsync_Redelivery_BothBlocksShareOneTokenBudget()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string mid = new('x', 120);
+        List<ChatMessage> all =
+        [
+            Msg("b1", "Ana", mid), Msg("b2", "Ana", mid), TriggerMessage, Msg("g1", "Cleo", mid), Msg("g2", "Cleo", mid),
+        ];
+        FakeRoomSessionOwner owner = new()
+        {
+            ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(new TranscriptTail("fake", roomId, all, 0)),
+        };
+        TranscriptCatchUpStep step = new(
+            owner, new AcpOptions { TranscriptCatchUpTokens = 100 }, null, null, new FakePromptSource(), NullLogger.Instance, RoomId, static _ => false);
+        step.MarkOpened(resumed: false, resumedAfterId: null);
+
+        WorkItem result = await step.AddAsync(Item(Redelivery.Waiting), false, ReplyId, [], ct);
+
+        int combined = (result.Transcript?.Messages ?? []).Concat(result.LaterMessages ?? []).Sum(TokenEstimate.OfMessage);
+        Assert.InRange(combined, 1, 100);
+        Assert.Equal(["g1", "g2"], Ids(result.LaterMessages));
+    }
+
     /// <summary>The prompt shows before-trigger Messages as Catch-up, the trigger once, then the later block under its header.</summary>
     [Fact]
     public void BuildPrompt_Redelivery_ShowsTheLaterBlockAfterTheMessage()

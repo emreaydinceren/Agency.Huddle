@@ -113,11 +113,105 @@ public sealed class PersonaRunnerRedeliveryTests
 
         await server.SendAsync(original, ct);
         await server.SendAsync(original, ct);
-        await server.SendAsync(Posted("marker", Redelivery.Waiting), ct);
-        _ = await server.ReceiveUntilAsync<PostMessage>(null, ct);
-        _ = await server.ReceiveUntilAsync<PostMessage>(null, ct);
+        MessagePosted marker = Posted("marker", Redelivery.Waiting);
+        await server.SendAsync(marker, ct);
+        _ = await server.ReceiveUntilAsync<PostMessage>(reply => reply.InReplyTo?.Contains(marker.Message.Id) == true, ct);
 
         Assert.Equal(2, server.Received.OfType<QueueAck>().Count(ack => ack.Kind == QueueAckKind.Started));
+        Assert.Equal(2, factory.Host.Sessions.SelectMany(session => session.Prompts).Count());
+    }
+
+    /// <summary>A re-sent Waiting delivery under a spent Budget also writes Held, not only a cut-off one.</summary>
+    [Fact]
+    public async Task Redelivery_WaitingAndBudgetSpent_WritesHeld()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using var server = new PipeRunnerServer("runner-redelivery-tests");
+        await using var runner = CreateRunner(server, new FakeAgentHostFactory());
+        await server.HandshakeAsync(runner, [GroupRoom], ct);
+        MessagePosted posted = Posted("hello", Redelivery.Waiting, agentMessagesSinceHuman: 3, budget: 3);
+
+        await server.SendAsync(posted, ct);
+        QueueAck ack = await server.ReceiveUntilAsync<QueueAck>(null, ct);
+
+        Assert.Equal((QueueAckKind.Held, GroupRoom.Id), (ack.Kind, ack.RoomId));
+        Assert.Equal([posted.Message.Id], ack.MessageIds);
+    }
+
+    /// <summary>A re-sent Message is not a new Human turn, so it neither resets the token Budget nor clears a Degraded state.</summary>
+    [Fact]
+    public async Task Redelivery_FromAHuman_DoesNotResetTheTokenBudget()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using var server = new PipeRunnerServer("runner-redelivery-tests");
+        await using var runner = CreateRunner(server, new FakeAgentHostFactory());
+        await server.HandshakeAsync(runner, [GroupRoom], ct);
+        List<PersonaStatus> seen = [];
+        runner.StatusChanged += status =>
+        {
+            lock (seen)
+            {
+                seen.Add(status);
+            }
+        };
+
+        await server.SendAsync(Posted("re-sent", Redelivery.Waiting, agentMessagesSinceHuman: 3, budget: 3), ct);
+        _ = await server.ReceiveUntilAsync<QueueAck>(ack => ack.Kind == QueueAckKind.Held, ct);
+        await server.SendAsync(Posted("fresh", null, agentMessagesSinceHuman: 3, budget: 3), ct);
+        _ = await server.ReceiveUntilAsync<QueueAck>(ack => ack.Kind == QueueAckKind.Finished, ct);
+
+        PersonaStatus only;
+        lock (seen)
+        {
+            only = Assert.Single(seen);
+        }
+
+        Assert.Equal(PersonaState.Online, only.State);
+    }
+
+    /// <summary>A re-sent duplicate of a running Message under a spent Budget writes no Held: the running Turn acks it.</summary>
+    [Fact]
+    public async Task Redelivery_DuplicateOfARunningMessageUnderSpentBudget_WritesNoHeld()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using var server = new PipeRunnerServer("runner-redelivery-tests");
+        FakeAgentHostFactory factory = new() { SessionPerRoom = true };
+        await using var runner = CreateRunner(server, factory);
+        await server.HandshakeAsync(runner, [GroupRoom], ct);
+        Assert.NotNull(factory.Host);
+        factory.Host.OnOpen = session => session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(500), "first");
+        MessagePosted original = Posted("hello", Redelivery.Waiting);
+
+        await server.SendAsync(original, ct);
+        _ = await server.ReceiveUntilAsync<QueueAck>(ack => ack.Kind == QueueAckKind.Started, ct);
+        await server.SendAsync(original with { AgentMessagesSinceHuman = 3, Budget = 3 }, ct);
+        _ = await server.ReceiveUntilAsync<PostMessage>(null, ct);
+
+        Assert.DoesNotContain(server.Received.OfType<QueueAck>(), ack => ack.Kind == QueueAckKind.Held);
+    }
+
+    /// <summary>A re-sent delivery after the run token is cancelled sends no Held.</summary>
+    [Fact]
+    public async Task Redelivery_AfterTheRunnerIsStopped_SendsNoHeld()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using var server = new PipeRunnerServer("runner-redelivery-tests");
+        PersonaRunner runner = CreateRunner(server, new FakeAgentHostFactory());
+        await server.HandshakeAsync(runner, [GroupRoom], ct);
+        await runner.DisposeAsync();
+
+        try
+        {
+            await server.SendAsync(Posted("late", Redelivery.Waiting, agentMessagesSinceHuman: 3, budget: 3), ct);
+        }
+        catch (IOException)
+        {
+            // The runner closed its end of the pipe: nothing can answer, which is the point of the test.
+        }
+
+        await Task.Delay(TestBudgets.Short, ct);
+
+        Assert.DoesNotContain(server.Received.OfType<QueueAck>(), ack => ack.Kind == QueueAckKind.Held);
     }
 
     /// <summary>An ignored duplicate drains nothing: the Catch-up line that arrived before it still shows in the next Turn's prompt.</summary>

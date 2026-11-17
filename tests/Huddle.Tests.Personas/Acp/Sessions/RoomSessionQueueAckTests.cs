@@ -64,6 +64,23 @@ public sealed class RoomSessionQueueAckTests
         Assert.True(owner.Written.ToList().IndexOf(started) < owner.Written.ToList().IndexOf(reply));
     }
 
+    /// <summary>An ack write that throws <see cref="InvalidOperationException"/> never fails the Turn: the reply still posts.</summary>
+    [Fact]
+    public async Task AckWriteFault_InvalidOperation_DoesNotFailTheTurn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReply("hi there");
+        FakeRoomSessionOwner owner = new() { WriteFault = message => message is QueueAck ? new InvalidOperationException("pipe not connected") : null };
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova });
+
+        harness.Room.Enqueue(new QueuedWork(1, MessageItem()));
+        await WaitForFinalDeltaAsync(owner, ct);
+
+        Assert.Single(owner.Written.OfType<PostMessage>());
+        Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportLoopEnded));
+    }
+
     /// <summary>A Turn whose reply is only the silent token sends Finished(Silent) and posts nothing.</summary>
     [Fact]
     public async Task SilentReply_SendsFinishedSilent()

@@ -28,6 +28,8 @@
 
 @code {
     private IReadOnlyList<WaitingCount> counts = [];
+    private string? readRoomId;
+    private HashSet<string> readDraftAgentIds = new(StringComparer.Ordinal);
 
     /// <summary>The Room whose waiting Messages are shown. A string Parameter: pass it with a leading @, or the literal text is passed.</summary>
     [Parameter]
@@ -40,6 +42,16 @@
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
+        // The page passes a new set on every render, so the store is read again only when the Room changed or the set's contents did.
+        if (this.readRoomId is not null
+            && string.Equals(this.readRoomId, this.RoomId, StringComparison.Ordinal)
+            && this.readDraftAgentIds.SetEquals(this.AgentIdsWithDraft))
+        {
+            return;
+        }
+
+        this.readRoomId = this.RoomId;
+        this.readDraftAgentIds = new HashSet<string>(this.AgentIdsWithDraft, StringComparer.Ordinal);
         this.counts = await this.View.WaitingInAsync(this.RoomId, CancellationToken.None);
     }
 
