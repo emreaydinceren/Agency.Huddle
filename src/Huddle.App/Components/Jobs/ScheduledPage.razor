@@ -11,6 +11,7 @@
 @inject JobStore Store
 @inject JobScheduler Scheduler
 @inject JobRoomStore JobRooms
+@inject ITeamDirectory Directory
 @inject IHumanIdentity Human
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -48,7 +49,14 @@
                                      Icon="@(job.Paused ? Icons.Material.Outlined.PauseCircle : Icons.Material.Outlined.Schedule)" IconSize="Size.Small">
                             <MudText Typo="Typo.subtitle1" Class="card-title scheduled-row-title">@job.Title</MudText>
                             <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                                For @JobText.OwnerName(job.Owner, this.Human.Name) · @job.When.Describe()@(JobText.RowNextRun(job, this.Scheduler.NextRunOf(job), this.Zone, this.Clock) is { } next ? " · " + next : string.Empty)
+                                @if (job.RoomId is { } followUpRoom)
+                                {
+                                    @JobText.FollowUpRow(JobText.OwnerName(job.Owner, this.Human.Name), this.RoomName(followUpRoom), JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone, this.Clock))
+                                }
+                                else
+                                {
+                                    @("For " + JobText.OwnerName(job.Owner, this.Human.Name) + " · " + job.When.Describe() + (JobText.RowNextRun(job, this.Scheduler.NextRunOf(job), this.Zone, this.Clock) is { } next ? " · " + next : string.Empty))
+                                }
                             </MudText>
                         </MudListItem>
                     }
@@ -75,6 +83,10 @@
         </PageHeader>
 
         <MudStack Spacing="2" Class="scheduled-detail">
+            @if (job.RoomId is { } followUpRoom)
+            {
+                <MudText Typo="Typo.body2" Class="scheduled-follow-up-room">@JobText.FollowUpRoomLabel <MudLink Href="@($"/rooms/{followUpRoom}")">@this.RoomName(followUpRoom)</MudLink></MudText>
+            }
             <MudText Typo="Typo.body2" Class="scheduled-next">@JobText.NextRun(job, this.Scheduler.NextRunOf(job), this.Zone, this.Clock)</MudText>
             @if (this.Scheduler.StateOf(job) is { } state && JobText.LastRun(state.LastRunUtc, state.LastOutcome, this.Zone, this.Clock) is { } last)
             {
@@ -104,13 +116,38 @@
 
     private TimeZoneInfo Zone => this.Clock.LocalTimeZone;
 
+    private readonly Dictionary<string, string> roomNames = new(StringComparer.Ordinal);
+
     /// <inheritdoc />
-    protected override void OnInitialized() => this.Store.Changed += this.OnJobsChanged;
+    protected override async Task OnInitializedAsync()
+    {
+        this.Store.Changed += this.OnJobsChanged;
+        await this.LoadRoomNamesAsync();
+    }
 
     /// <summary>Unsubscribes from the store.</summary>
     public void Dispose() => this.Store.Changed -= this.OnJobsChanged;
 
-    private void OnJobsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+    private void OnJobsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, () => _ = this.ReloadAsync());
+
+    private async Task ReloadAsync()
+    {
+        await this.LoadRoomNamesAsync();
+        this.StateHasChanged();
+    }
+
+    private string RoomName(string roomId) => this.roomNames.GetValueOrDefault(roomId, roomId);
+
+    private async Task LoadRoomNamesAsync()
+    {
+        foreach (string roomId in this.Store.Jobs.Select(job => job.RoomId).OfType<string>().Distinct(StringComparer.Ordinal))
+        {
+            if (!this.roomNames.ContainsKey(roomId) && await this.Directory.GetRoomAsync(roomId) is { } room)
+            {
+                this.roomNames[roomId] = room.Name;
+            }
+        }
+    }
 
     private async Task NewAsync()
     {

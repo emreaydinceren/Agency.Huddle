@@ -127,6 +127,19 @@ public sealed partial class PromptCatalogTests
         Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
+    /// <summary>The Follow-up sentences (Turn Queue spec §7.3) are in the jobs description and the promised-work paragraph, and carry no tool prefix.</summary>
+    /// <param name="key">The Prompt that carries the sentence.</param>
+    [Theory]
+    [InlineData("tool.jobs.description")]
+    [InlineData("systemPrompt.promisedWork")]
+    public void FollowUpSentences_NameTheActionAndCarryNoToolPrefix(string key)
+    {
+        string text = PromptCatalog.Get(key).Default;
+
+        Assert.Contains("follow_up", text, StringComparison.Ordinal); // contains-ok: pins that the sentence names the action Agents must call.
+        Assert.DoesNotContain("mcp__team__", text, StringComparison.Ordinal);
+    }
+
     /// <summary>Task 64 (OR-3): the digest asks for links to Tasks and evidence, a decisions and risks list, at most 15 lines, and names the Chief of Staff roll-up.</summary>
     [Fact]
     public void DigestPrompt_LinksEvidenceAndNamesTheChiefOfStaffRollUp()

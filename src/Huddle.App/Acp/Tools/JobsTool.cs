@@ -2,10 +2,13 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Agents;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Teams;
+using Microsoft.Extensions.Options;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -19,6 +22,10 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="teams">Tells which Teams a manager manages and who belongs to them.</param>
 /// <param name="human">The Human's current Name, accepted as a target.</param>
 /// <param name="prompts">Supplies the description.</param>
+/// <param name="directory">Says whether the caller is a Member of a Follow-up's Room and names the Room.</param>
+/// <param name="feed">Takes the Follow-up's Feed item.</param>
+/// <param name="options">Holds the cap on Follow-ups per Agent.</param>
+/// <param name="clock">The clock a relative Follow-up time is worked out from.</param>
 /// <param name="personaName">The calling Persona's Name.</param>
 internal sealed class JobsTool(
     JobStore store,
@@ -27,12 +34,16 @@ internal sealed class JobsTool(
     ITeamCatalog teams,
     IHumanIdentity human,
     IPromptSource prompts,
+    ITeamDirectory directory,
+    IFeedPublisher feed,
+    IOptions<TeamOptions> options,
+    TimeProvider clock,
     string personaName) : IAppTool
 {
     /// <summary>Said when a Persona other than the Chief of Staff acts on a Job that is not its own.</summary>
     internal const string Refusal = "You can schedule Jobs for yourself and for members of a Team you manage. Ask the Chief of Staff to schedule one for anyone else or for the Human.";
 
-    private static readonly string[] Actions = ["create", "list", "update", "pause", "resume", "delete", "run_now"];
+    private static readonly string[] Actions = ["create", "list", "update", "pause", "resume", "delete", "run_now", "follow_up"];
 
     private static readonly string ActionList = string.Join(", ", Actions);
 
@@ -50,6 +61,7 @@ internal sealed class JobsTool(
         {
             ["action"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray([.. Actions.Select(action => JsonValue.Create(action))]) },
             ["id"] = Text("The Job's id, for every action but create and list."),
+            ["roomId"] = Text("For follow_up: the id of the Room you are in and will come back to."),
             ["target"] = Text("Who the Job is for: an Agent's Name or Alias, or the Human's Name. Defaults to you."),
             ["title"] = Text("A short title; it names the Job's Room."),
             ["instruction"] = Text("What to do when the Job runs; posted into its Room."),
@@ -68,6 +80,11 @@ internal sealed class JobsTool(
         if (string.Equals(action, "create", StringComparison.Ordinal))
         {
             return this.Create(arguments);
+        }
+
+        if (string.Equals(action, "follow_up", StringComparison.Ordinal))
+        {
+            return await this.FollowUpAsync(arguments, cancellationToken).ConfigureAwait(false);
         }
 
         if (string.Equals(action, "list", StringComparison.Ordinal))
@@ -141,9 +158,131 @@ internal sealed class JobsTool(
         return $"Scheduled {job.Id} \"{job.Title}\" for {this.NameOf(job.Owner)}: {job.When}. {this.NextRunText(job)}";
     }
 
+    private async Task<string> FollowUpAsync(JsonObject arguments, CancellationToken ct)
+    {
+        if (Read(arguments, "target") is not null)
+        {
+            return "A Follow-up is always for you; 'target' is not accepted.";
+        }
+
+        string? roomId = Read(arguments, "roomId");
+        string? title = Read(arguments, "title");
+        string? instruction = Read(arguments, "instruction");
+        string? whenText = Read(arguments, "when");
+        if (roomId is null || title is null || instruction is null || whenText is null)
+        {
+            return "A Follow-up needs a 'roomId', a 'title', an 'instruction' and a 'when'.";
+        }
+
+        Room? room = await directory.GetRoomAsync(roomId, ct).ConfigureAwait(false);
+        IReadOnlyList<User> members = room is null ? [] : await directory.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
+        if (room is null || !members.Any(member => string.Equals(member.Name, personaName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return $"You are not a Member of Room '{roomId}'. A Follow-up can only come back to a Room you are in.";
+        }
+
+        TimeZoneInfo zone = scheduler.ZoneOf(Job.FollowUp(string.Empty, personaName, roomId, title, instruction, DateOnly.MinValue, TimeOnly.MinValue));
+        if (!this.TryResolveDue(whenText, zone, out DateTimeOffset due, out string? refusal))
+        {
+            return refusal;
+        }
+
+        int cap = options.Value.Jobs.MaxFollowUpsPerAgent;
+        if (cap <= 0)
+        {
+            return "Follow-ups are switched off here. Say in the Room what you will check and let the Human remind you.";
+        }
+
+        if (store.Jobs.Count(job => job.RoomId is not null && job.Owner.IsAgent(personaName)) >= cap)
+        {
+            return string.Create(CultureInfo.InvariantCulture, $"You already have {cap} Follow-ups waiting, the most one Agent may have. Delete one with jobs delete, or say in the Room what you will check and let the Human remind you.");
+        }
+
+        DateTime local = TimeZoneInfo.ConvertTime(due, zone).DateTime;
+        Job job = store.Add(Job.FollowUp(string.Empty, personaName, roomId, title, instruction, DateOnly.FromDateTime(local), TimeOnly.FromDateTime(local)));
+        scheduler.Seed(job);
+        string when = local.ToString("ddd d MMM yyyy 'at' HH:mm", CultureInfo.InvariantCulture);
+        feed.Post(new FeedMessage(FeedSourceType.JobFollowUpSet, job.Id, new FeedActor(FeedActorKind.Agent, personaName), false, new JobFollowUpSetPayload(job.Id, personaName, title, roomId, room.Name, when)));
+        return $"Set {job.Id} \"{title}\": you will come back to {room.Name} on {when}.";
+    }
+
+    /// <summary>Works out when a Follow-up is due: a relative time is UTC arithmetic from the clock, rounded up to the next whole minute; an absolute one is Jobs' own grammar.</summary>
+    private bool TryResolveDue(string whenText, TimeZoneInfo zone, out DateTimeOffset due, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? refusal)
+    {
+        const string TooSoon = "A Follow-up must be at least 1 minute ahead.";
+        const string TooFar = "A Follow-up may be at most 31 days ahead.";
+        DateTimeOffset now = clock.GetUtcNow();
+        due = now;
+        refusal = null;
+        string[] parts = whenText.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 3 && string.Equals(parts[0], "in", StringComparison.OrdinalIgnoreCase) && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int amount))
+        {
+            TimeSpan unit = parts[2].TrimEnd('s', 'S').ToUpperInvariant() switch
+            {
+                "MINUTE" => TimeSpan.FromMinutes(1),
+                "HOUR" => TimeSpan.FromHours(1),
+                "DAY" => TimeSpan.FromDays(1),
+                _ => TimeSpan.Zero,
+            };
+            if (unit != TimeSpan.Zero)
+            {
+                if (amount > 100_000)
+                {
+                    refusal = TooFar;
+                    return false;
+                }
+
+                long ticks = (now + (unit * amount)).Ticks;
+                due = new DateTimeOffset(ticks - (ticks % TimeSpan.TicksPerMinute) + (ticks % TimeSpan.TicksPerMinute > 0 ? TimeSpan.TicksPerMinute : 0), TimeSpan.Zero);
+                return CheckRange(now, due, TooSoon, TooFar, out refusal);
+            }
+        }
+
+        if (!JobRecurrence.TryParse(whenText, out JobRecurrence? when, out string? error))
+        {
+            refusal = error;
+            return false;
+        }
+
+        if (when.Cadence != JobCadence.Once)
+        {
+            refusal = JobRules.FollowUpRunsOnce;
+            return false;
+        }
+
+        if (when.NextAfter(now, zone) is not { } next)
+        {
+            refusal = TooSoon;
+            return false;
+        }
+
+        due = next;
+        return CheckRange(now, due, TooSoon, TooFar, out refusal);
+    }
+
+    private static bool CheckRange(DateTimeOffset now, DateTimeOffset due, string tooSoon, string tooFar, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? refusal)
+    {
+        TimeSpan ahead = due - now;
+        if (ahead < TimeSpan.FromMinutes(1))
+        {
+            refusal = tooSoon;
+        }
+        else
+        {
+            refusal = ahead > TimeSpan.FromDays(31) ? tooFar : null;
+        }
+
+        return refusal is null;
+    }
+
     private string Update(Job job, JsonObject arguments)
     {
         JobOwner owner = job.Owner;
+        if (job.RoomId is not null && Read(arguments, "target") is not null)
+        {
+            return "A Follow-up cannot move to another owner.";
+        }
+
         if (Read(arguments, "target") is { } target)
         {
             if (!this.TryResolveTarget(target, out JobOwner? moved, out string? refusal))
@@ -184,6 +323,11 @@ internal sealed class JobsTool(
             When = when,
             TimeZoneId = zone,
         };
+        if (JobRules.Check(changed) is { } ruleRefusal)
+        {
+            return ruleRefusal;
+        }
+
         _ = store.Update(changed);
         return $"Updated {changed.Id} \"{changed.Title}\" for {this.NameOf(changed.Owner)}: {changed.When}. {this.NextRunText(changed)}";
     }

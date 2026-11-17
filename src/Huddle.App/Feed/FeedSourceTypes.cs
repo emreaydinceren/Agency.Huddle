@@ -46,6 +46,7 @@ internal static class FeedSourceTypes
         FeedSourceType.AgentBrowserChanged => "agent-browser-changed",
         FeedSourceType.MemoryTidied => "memory-tidied",
         FeedSourceType.JobGaveUp => "job-gave-up",
+        FeedSourceType.JobFollowUpSet => "job-follow-up-set",
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

@@ -60,6 +60,7 @@ internal static class FeedSummary
                 OmitActor: true),
             MemoryTidiedPayload p => new([HelperChip(p.HelperId, p.Name), Text(MemoryTidiedText(p))], MemoryTidiedContext(p), OmitActor: true),
             JobGaveUpPayload p => new([Strong(p.Title), Text(" did not run: " + p.Reason)], null, OmitActor: true),
+            JobFollowUpSetPayload p => new([Strong(p.AgentName), Text(" set a Follow-up in "), RoomChip(p.RoomId, p.RoomName), Text(" for " + p.When)], null, OmitActor: true),
             PairingRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" wants to use Huddle")], null, OmitActor: true),
             AdminRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" asks for admin access")], null, OmitActor: true),
             DevicePairedPayload p => new([DeviceChip(p.DeviceName), Text(" was paired")], null, OmitActor: true),
@@ -156,7 +157,7 @@ internal static class FeedSummary
         FeedSourceType.AgentsMdChangeSkipped => "AGENTS.md files",
         FeedSourceType.MemoryTidied => "Memory Tidy lists",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob or FeedSourceType.RoomMentionHeld or FeedSourceType.JobGaveUp
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob or FeedSourceType.RoomMentionHeld or FeedSourceType.JobGaveUp or FeedSourceType.JobFollowUpSet
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };

@@ -14,4 +14,7 @@ public sealed class JobsOptions
 
     /// <summary>How late a one-off may still run; a later one is removed with a Feed item instead of posting. Default one day.</summary>
     public TimeSpan OverdueOneOffWithin { get; set; } = TimeSpan.FromDays(1);
+
+    /// <summary>The most Follow-ups one Agent may have waiting, paused ones included. Default 5; zero means Agents cannot set Follow-ups.</summary>
+    public int MaxFollowUpsPerAgent { get; set; } = 5;
 }

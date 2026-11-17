@@ -394,7 +394,7 @@ internal static class PromptCatalog
                 "not an ending, so arrange a way back or do it now (#362). Takes no placeholders.",
             Default:
                 """
-                "I'm doing X" is a progress line, not an ending: take the next action in the same Turn. A correction changes the task, so apply it and carry on rather than stopping at an apology. Promise later work only when you have arranged a way back: a Task, a Job or a Mention. If there is none, do it now or name the blocker. Come back with the result or the blocker without being asked.
+                "I'm doing X" is a progress line, not an ending: take the next action in the same Turn. A correction changes the task, so apply it and carry on rather than stopping at an apology. Promise later work only when you have arranged a way back: a Task, a Job, a Follow-up (the jobs tool's action 'follow_up', for when you tell the Human you will come back to something in a Room) or a Mention. If there is none, do it now or name the blocker. Come back with the result or the blocker without being asked.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -3255,7 +3255,7 @@ internal static class PromptCatalog
                 "timetable. Takes no placeholders.",
             Default:
                 """
-                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. You may schedule for yourself; a manager may also schedule for the members of its Team, and the Chief of Staff may also schedule for any other Agent or for the Human, by passing 'target'. Schedule exactly what was approved. If you can't, because of who it is for or when it runs, don't pick something close: say what you can't do and ask. A Job's title must match its schedule.
+                Schedules Jobs: an instruction that runs on a timetable. When a Job runs, Huddle posts its instruction into the Job's own Room and you take a Turn there. Use action 'create' with a title, an instruction and a 'when'; 'list' shows your Jobs; 'update', 'pause', 'resume', 'delete' and 'run_now' take the Job's id. When you tell the Human you will come back to something in a Room, use action 'follow_up' with the Room's 'roomId', a 'title', an 'instruction' and a 'when' such as 'in 30 minutes' or 'once on 2026-11-17 at 09:00': it runs once, in that Room, for you only. You may schedule for yourself; a manager may also schedule for the members of its Team, and the Chief of Staff may also schedule for any other Agent or for the Human, by passing 'target'. Schedule exactly what was approved. If you can't, because of who it is for or when it runs, don't pick something close: say what you can't do and ask. A Job's title must match its schedule.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

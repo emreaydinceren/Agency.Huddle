@@ -98,6 +98,10 @@ internal static class ServicePresets
         typeof(Agency.Huddle.App.Services.ITurnControl),
         typeof(Agency.Huddle.App.Services.ITurnQueueView),
 
+        // Chat.razor renders FollowUpsNotice (C13), which reads the Job store and cancels through the scheduler.
+        typeof(Agency.Huddle.App.Jobs.JobStore),
+        typeof(Agency.Huddle.App.Jobs.JobScheduler),
+
         // Chat.razor draws a Team Room's Team avatar in its header, read from the Team catalog.
         typeof(ITeamCatalog),
 

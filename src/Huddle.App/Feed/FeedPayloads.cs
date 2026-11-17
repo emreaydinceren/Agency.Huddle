@@ -50,6 +50,7 @@ internal static class FeedPayloads
         FeedSourceType.AgentBrowserChanged => typeof(AgentBrowserPayload),
         FeedSourceType.MemoryTidied => typeof(MemoryTidiedPayload),
         FeedSourceType.JobGaveUp => typeof(JobGaveUpPayload),
+        FeedSourceType.JobFollowUpSet => typeof(JobFollowUpSetPayload),
         _ => throw new ArgumentOutOfRangeException(nameof(type)),
     };
 

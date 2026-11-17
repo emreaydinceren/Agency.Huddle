@@ -64,6 +64,9 @@ internal static class ChatPageContext
         // Chat stops a Draft's Agent through ITurnControl and renders WaitingNotice, which reads ITurnQueueView.
         ctx.Services.AddSingleton(source.GetRequiredService<ITurnControl>());
         ctx.Services.AddSingleton(source.GetRequiredService<ITurnQueueView>());
+        // Chat renders FollowUpsNotice (C13), which reads the Job store and cancels through the scheduler.
+        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Jobs.JobStore>());
+        ctx.Services.AddSingleton(source.GetRequiredService<Agency.Huddle.App.Jobs.JobScheduler>());
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
         ctx.Services.AddSingleton(new TabService());

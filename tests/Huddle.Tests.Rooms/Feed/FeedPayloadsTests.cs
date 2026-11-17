@@ -66,6 +66,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.AgentBrowserChanged, "agent-browser-changed"),
             (FeedSourceType.MemoryTidied, "memory-tidied"),
             (FeedSourceType.JobGaveUp, "job-gave-up"),
+            (FeedSourceType.JobFollowUpSet, "job-follow-up-set"),
         ];
 
         Assert.Equal(AllTypes.Length, expected.Length);
@@ -261,6 +262,7 @@ public sealed class FeedPayloadsTests
             (FeedSourceType.AgentBrowserChanged, FeedCategory.SecondBrain),
             (FeedSourceType.MemoryTidied, FeedCategory.Helpers),
             (FeedSourceType.JobGaveUp, FeedCategory.Rooms),
+            (FeedSourceType.JobFollowUpSet, FeedCategory.Rooms),
         ];
 
         Assert.All(expected, row => Assert.Equal(row.Category, FeedCategories.Of(row.Type)));

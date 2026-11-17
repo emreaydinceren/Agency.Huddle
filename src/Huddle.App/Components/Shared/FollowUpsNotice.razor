@@ -1,0 +1,57 @@
+@*
+    C13 (Turn Queue spec §7.5): one dense Info row per Follow-up waiting in this Room, with Cancel, which deletes the Job
+    without asking. Follows JobStore.Changed, so a Follow-up that has run or been cancelled is gone; the subscription is
+    dropped in Dispose (rules.md). The page passes whether the Room is paused, so this component holds no second copy of the Budget.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Components.Jobs
+@using Agency.Huddle.App.Jobs
+
+@inject JobStore Store
+@inject JobScheduler Scheduler
+@inject TimeProvider Clock
+
+@foreach (Job job in this.Store.Jobs.Where(found => found.RoomId is not null && string.Equals(found.RoomId, this.RoomId, StringComparison.Ordinal)))
+{
+    string id = job.Id;
+    @* MudAlert renders no role by default, so role="status" is added explicitly, per rules.md. *@
+    <MudAlert Severity="Severity.Info" Dense="true" Class="follow-ups-notice room-notice-column" role="status">
+        <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+            <span class="follow-ups-notice-text">@this.TextOf(job)</span>
+            <MudButton Size="Size.Small" Variant="Variant.Text" Class="follow-ups-notice-cancel" OnClick="@(() => this.Cancel(id))">Cancel</MudButton>
+        </MudStack>
+    </MudAlert>
+}
+
+@code {
+    /// <summary>The Room whose Follow-ups are shown. A string Parameter: pass it with a leading @, or the literal text is passed.</summary>
+    [Parameter]
+    public string RoomId { get; set; } = string.Empty;
+
+    /// <summary>Whether the Room is paused (its Budget is spent), so a Follow-up there waits.</summary>
+    [Parameter]
+    public bool RoomPaused { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => this.Store.Changed += this.OnJobsChanged;
+
+    /// <summary>Lets go of <see cref="JobStore.Changed"/>.</summary>
+    public void Dispose() => this.Store.Changed -= this.OnJobsChanged;
+
+    private string TextOf(Job job)
+    {
+        string agent = job.Owner.AgentName ?? string.Empty;
+        if (this.RoomPaused)
+        {
+            return $"⏰ {agent} will follow up: {job.Title} (waiting: this Room is paused)";
+        }
+
+        return this.Scheduler.NextRunOf(job) is { } next
+            ? $"⏰ {agent} will follow up {JobText.Moment(next, this.Clock.LocalTimeZone, this.Clock)}: {job.Title}"
+            : $"⏰ {agent} will follow up: {job.Title}";
+    }
+
+    private void Cancel(string jobId) => _ = this.Scheduler.Delete(jobId);
+
+    private void OnJobsChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
+}

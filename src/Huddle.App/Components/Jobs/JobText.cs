@@ -30,6 +30,16 @@ internal static class JobText
         return $"{when.Describe()} has no run after now.";
     }
 
+    /// <summary>The detail view's label before a Follow-up's Room link.</summary>
+    public const string FollowUpRoomLabel = "Follow-up in";
+
+    /// <summary>The list row of a Follow-up.</summary>
+    /// <param name="owner">Its Agent.</param>
+    /// <param name="roomName">Its Room's name.</param>
+    /// <param name="next">The next-run text.</param>
+    /// <returns>The row.</returns>
+    public static string FollowUpRow(string owner, string roomName, string next) => "For " + owner + " · Follow-up in " + roomName + " · " + next;
+
     /// <summary>Who a Job is for, by Name.</summary>
     /// <param name="owner">The owner.</param>
     /// <param name="humanName">The Human's current Name.</param>
