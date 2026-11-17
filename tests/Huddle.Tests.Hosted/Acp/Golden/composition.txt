@@ -60,6 +60,7 @@ Singleton Agency.Huddle.App.Data.IChatStore -> Agency.Huddle.App.Data.FileChatSt
 Singleton Agency.Huddle.App.Data.ITeamDirectory -> Agency.Huddle.App.Data.SqliteTeamDirectory
 Singleton Agency.Huddle.App.Data.JobRoomStore -> Agency.Huddle.App.Data.JobRoomStore
 Singleton Agency.Huddle.App.Data.JobStateStore -> Agency.Huddle.App.Data.JobStateStore
+Singleton Agency.Huddle.App.Data.MemoryTidyScheduleStore -> Agency.Huddle.App.Data.MemoryTidyScheduleStore
 Singleton Agency.Huddle.App.Data.MemoryTidyStateStore -> Agency.Huddle.App.Data.MemoryTidyStateStore
 Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Data.NeedsHumanOverrideStore
 Singleton Agency.Huddle.App.Data.NeedsYouCapStore -> Agency.Huddle.App.Data.NeedsYouCapStore
@@ -103,9 +104,11 @@ Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.
 Singleton Agency.Huddle.App.Helpers.IHelperProcessRunner -> Agency.Huddle.App.Acp.AdapterProcessHelperRunner
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyPass -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyPass
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRecovery
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner -> factory Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler
 Singleton Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper -> Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper
 Singleton Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger -> Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger
 Singleton Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryHelper -> Agency.Huddle.App.Helpers.TeamMemory.TeamMemoryHelper
@@ -302,6 +305,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agent
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanTrigger
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.DocHistory.DocHistoryLibraryListener
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler
 Singleton Microsoft.Extensions.Options.IConfigureOptions`1[Agency.Huddle.App.TeamOptions] -> instance Microsoft.Extensions.Options.NamedConfigureFromConfigurationOptions`1[Agency.Huddle.App.TeamOptions]
 Singleton Microsoft.Extensions.Options.IOptionsChangeTokenSource`1[Agency.Huddle.App.TeamOptions] -> instance Microsoft.Extensions.Options.ConfigurationChangeTokenSource`1[Agency.Huddle.App.TeamOptions]
 Singleton Microsoft.Extensions.Options.IPostConfigureOptions`1[Agency.Huddle.App.TeamOptions] -> instance Microsoft.Extensions.Options.PostConfigureOptions`1[Agency.Huddle.App.TeamOptions]
