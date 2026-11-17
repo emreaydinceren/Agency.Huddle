@@ -52,7 +52,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.RenderWithPopovers(RenderPanel);
 
         Assert.Equal(
-            ["Teams", "Agents", "Raw", "Archive", "Prompts", "Skill Sources", "Docs"],
+            ["Teams", "Agents", "Raw", "Archive", "Prompts", "Memory backups", "Skill Sources", "Docs"],
             cut.FindAll(".library-panel-root-row td:first-child").Select(e => e.TextContent.Trim()));
     }
 
@@ -121,7 +121,7 @@ public sealed class LibraryPanelTests
 
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
         cut.WaitForAssertion(() => Assert.Equal(
-            ["Teams", "Agents", "Raw", "Archive", "Prompts", "Skill Sources", "Notes"],
+            ["Teams", "Agents", "Raw", "Archive", "Prompts", "Memory backups", "Skill Sources", "Notes"],
             cut.FindAll(".library-panel-root-row td:first-child").Select(e => e.TextContent.Trim())));
     }
 
@@ -291,8 +291,8 @@ public sealed class LibraryPanelTests
         await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").ChangeAsync(true));
 
         LibraryRootStore reloaded = new(fixture.Options, fixture.Paths, NullLogger<LibraryRootStore>.Instance);
-        Assert.Equal(["agents", "raw", "archive", "prompts", "skill-sources"], reloaded.VisibleRoots.Select(r => r.Id));
-        Assert.Equal(["teams", "agents", "raw", "archive", "prompts", "skill-sources"], reloaded.Roots.Select(r => r.Id));
+        Assert.Equal(["agents", "raw", "archive", "prompts", "memory-backups", "skill-sources"], reloaded.VisibleRoots.Select(r => r.Id));
+        Assert.Equal(["teams", "agents", "raw", "archive", "prompts", "memory-backups", "skill-sources"], reloaded.Roots.Select(r => r.Id));
     }
 
     /// <summary>The panel re-renders when <see cref="LibraryRootStore.RootsChanged"/> fires from outside it (e.g. another tab or window saving a pinned root).</summary>

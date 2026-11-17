@@ -110,6 +110,24 @@ internal sealed class MemoryPaths(AgentPaths agentPaths, TeamMemoryAccess access
         return folder is not null;
     }
 
+    /// <summary>
+    /// A Persona's own memory folder for Huddle itself (Memory Tidy spec §6.5), built from <see cref="AgentPaths"/> and never from a caller's
+    /// argument; <see langword="null"/> when the Agent's folder, its Work Dir or its <c>memory</c> folder is a junction or link. The folder
+    /// need not exist yet.
+    /// </summary>
+    /// <param name="personaName">The Persona's Name as the catalog spells it.</param>
+    /// <returns>The folder, labelled <c>me</c>, or <see langword="null"/> when a folder on the way is a junction or link.</returns>
+    public MemoryFolder? OwnFolderOf(string personaName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(personaName);
+
+        string workDir = agentPaths.WorkDir(personaName);
+        string memory = Path.Combine(workDir, "memory");
+        return TeamMemoryIndex.IsSkipped(agentPaths.AgentFolder(personaName)) || TeamMemoryIndex.IsSkipped(workDir) || TeamMemoryIndex.IsSkipped(memory)
+            ? null
+            : new MemoryFolder(memory, OwnFolder, null);
+    }
+
     /// <summary>The folders Huddle may write for <paramref name="team"/>: the Team's own, then each Project's, in the catalog's order.</summary>
     /// <param name="team">The Team.</param>
     /// <returns>The folders; empty when the Team has no folder.</returns>

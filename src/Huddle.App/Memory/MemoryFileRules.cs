@@ -238,7 +238,26 @@ internal static partial class MemoryFileRules
     /// <summary>The lines of a <c>---</c> block other than its <c>description</c> key and that key's continuation lines.</summary>
     /// <param name="blockText">The block's text, between its marker lines.</param>
     /// <returns>The kept lines, each ending in a line feed, or <see langword="null"/> when there are none.</returns>
-    private static string? OtherKeysOf(string blockText)
+    private static string? OtherKeysOf(string blockText) => KeyLinesOf(blockText, wantDescription: false);
+
+    /// <summary>
+    /// A file's <c>description</c> key lines exactly as they are on disk (the key line and its continuation lines), so a rewrite that
+    /// keeps the description does not re-quote or unfold it.
+    /// </summary>
+    /// <param name="fileText">The file's text.</param>
+    /// <returns>The lines, each ending in a line feed, or <see langword="null"/> when the file has no YAML frontmatter with a description key.</returns>
+    public static string? DescriptionLinesOf(string fileText)
+    {
+        ArgumentNullException.ThrowIfNull(fileText);
+
+        NoteFrontmatterBlock block = NoteFrontmatter.Locate(fileText);
+        return block.Text is null || block.Form != NoteFrontmatterForm.Yaml ? null : KeyLinesOf(block.Text, wantDescription: true);
+    }
+
+    /// <summary>The lines of a <c>---</c> block that belong to the <c>description</c> key, or to every other key.</summary>
+    /// <param name="blockText">The block's text, between its marker lines.</param>
+    /// <param name="wantDescription"><see langword="true"/> for the description's lines, <see langword="false"/> for all the others.</param>
+    private static string? KeyLinesOf(string blockText, bool wantDescription)
     {
         StringBuilder kept = new();
         bool inDescription = false;
@@ -249,7 +268,7 @@ internal static partial class MemoryFileRules
                 inDescription = DescriptionKeyLine().IsMatch(line);
             }
 
-            if (!inDescription && line.Length > 0)
+            if (inDescription == wantDescription && line.Length > 0)
             {
                 _ = kept.Append(line).Append('\n');
             }

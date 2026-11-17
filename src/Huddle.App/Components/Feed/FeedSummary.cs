@@ -1,5 +1,6 @@
 using System.Globalization;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Helpers.MemoryTidy;
 
 namespace Agency.Huddle.App.Components.Feed;
 
@@ -57,6 +58,7 @@ internal static class FeedSummary
                 [HelperChip(p.HelperId, p.Name), Text(" didn't tell Agents about "), Text(p.Path), Text(": " + p.Reason)],
                 null,
                 OmitActor: true),
+            MemoryTidiedPayload p => new([HelperChip(p.HelperId, p.Name), Text(MemoryTidiedText(p))], MemoryTidiedContext(p), OmitActor: true),
             PairingRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" wants to use Huddle")], null, OmitActor: true),
             AdminRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" asks for admin access")], null, OmitActor: true),
             DevicePairedPayload p => new([DeviceChip(p.DeviceName), Text(" was paired")], null, OmitActor: true),
@@ -90,6 +92,7 @@ internal static class FeedSummary
         {
             FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused or FeedSourceType.RoomMentionHeld => "Paused ",
             FeedSourceType.HelperFailing => "Since ",
+            FeedSourceType.MemoryTidied => "Tidied ",
             _ => "Asked ",
         } + Clock(item.At, zone);
         if (item.ResolvedAt is { } resolvedAt)
@@ -108,6 +111,7 @@ internal static class FeedSummary
             HelperPausedPayload => " · Continue is on the Helper's card",
             TaskWakesPausedPayload or RoomMentionHeldPayload => " · after a restart, Wake is on this card",
             HelperFailingPayload => " · Tasks are not being judged",
+            MemoryTidiedPayload => " · open the list to see what changed",
             _ => " · waiting for you",
         });
     }
@@ -147,11 +151,23 @@ internal static class FeedSummary
         FeedSourceType.HelperPaused or FeedSourceType.HelperFailing => "Helpers",
         FeedSourceType.TeamMemoryNotFiled => "proposals",
         FeedSourceType.AgentsMdChangeSkipped => "AGENTS.md files",
+        FeedSourceType.MemoryTidied => "Memory Tidy lists",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
         FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob or FeedSourceType.RoomMentionHeld
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };
+
+    /// <summary>What Memory Tidy did, after its name: <c> tidied 4 topic files and dropped 2 in 3 Memory folders</c>; the same words as the pass's list.</summary>
+    private static string MemoryTidiedText(MemoryTidiedPayload p) => " " + new MemoryTidyCounts(p.Tidied, p.Dropped, p.Folders).Sentence();
+
+    private static string? MemoryTidiedContext(MemoryTidiedPayload p)
+    {
+        string stopped = p.Stopped ? "It stopped before it had looked at every folder." : string.Empty;
+        string first = p.First ? "It runs once a week and keeps a copy of everything it changes. You can turn it off in Settings › Helpers." : string.Empty;
+        string both = stopped.Length > 0 && first.Length > 0 ? stopped + " " + first : stopped + first;
+        return both.Length > 0 ? both : null;
+    }
 
     private static string DeviceEnded(string action) => action switch
     {

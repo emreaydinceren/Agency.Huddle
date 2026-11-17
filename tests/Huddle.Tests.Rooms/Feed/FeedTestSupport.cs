@@ -76,6 +76,7 @@ internal static class FeedTestSupport
         FeedSourceType.BuiltinAgentUpdateAvailable => new BuiltinAgentUpdatePayload(team, "An update exists for " + team),
         FeedSourceType.AgentConnectorsChanged => new AgentConnectorsPayload("Nova", true),
         FeedSourceType.AgentBrowserChanged => new AgentBrowserPayload("Nova", false),
+        FeedSourceType.MemoryTidied => new MemoryTidiedPayload("MemoryTidy", "Memory Tidy", "C:/data/MemoryBackups/2026-11-22/changes.md", 4, 2, 3, false, false),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 
@@ -89,7 +90,7 @@ internal static class FeedTestSupport
     {
         bool notify = type is FeedSourceType.TaskNeedsYou or FeedSourceType.TaskAssignedToYou or FeedSourceType.RequestAwaitsYou
             or FeedSourceType.GateDecisionDue or FeedSourceType.RoomMention or FeedSourceType.RoomQuestion
-            or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.HelperFailing;
+            or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.HelperFailing or FeedSourceType.MemoryTidied;
         return new FeedMessage(type, target, Agent(actor), notify, SamplePayload(type, team));
     }
 

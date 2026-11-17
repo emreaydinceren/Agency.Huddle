@@ -1,8 +1,8 @@
 # Memory Tidy
 
-Prove, with real models, that an Agent keeps `reported.md` in its own Memory, that it reads the file before it reports and does not tell the Human the same thing twice, that the `memory` tool writes the date and drops old lines, and that the Chief of Staff reads a manager's file before it summarises a digest. Spec: [Huddle.MemoryTidy-Specifications.md](../../Huddle.MemoryTidy-Specifications.md) (§8.2 lists these cases). Decision: [ADR-0094](../../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md). Later slices of the spec add cases to this page.
+Prove, with real models, that an Agent keeps `reported.md` in its own Memory, that it reads the file before it reports and does not tell the Human the same thing twice, that the `memory` tool writes the date and drops old lines, and that the Chief of Staff reads a manager's file before it summarises a digest. Two free cases (TIDYLINES) prove slice 2's pass of the old lines, its Memory backups folder and its list. Spec: [Huddle.MemoryTidy-Specifications.md](../../Huddle.MemoryTidy-Specifications.md) (§8.2 lists these cases). Decision: [ADR-0094](../../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md). Later slices of the spec add cases to this page.
 
-**8 tests** · 0 free · 8 paid · about 2.2 hours. Written 2026-11-16 for issue #620, slice 1. **Not yet run by a person.**
+**10 tests** · 2 free · 8 paid · about 2.6 hours. REPORTED-01 to 08 were written 2026-11-16 for issue #620, slice 1; TIDYLINES-01 and 02 the same day for issue #621, slice 2. **Not yet run by a person.**
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Use Sonnet or better for each Agent, never Haiku. Set the models and read them back in `persona_models` before the first case, and watch the spend from the manager's side. Ask the owner first, and record each result in the [Run log](run-log.md).
 
@@ -233,3 +233,66 @@ Put the time zone back when the case is done.
 
 - The call reads another Agent's file -> `agent:<Name>` resolved something it must not.
 - The Chief of Staff stops with no summary.
+
+### TIDYLINES-01 — A pass drops an old reported line and writes its list, with no call
+
+**Free** · about 10 min
+
+*Proves that slice 2's pass, started by `RunAtStart`, drops the old line of an Agent's `reported.md` with no model call, keeps a copy and lists the change in `changes.md`, and posts no Feed item. Spec §6.6, §6.12, §6.13.*
+
+**Before you start**
+
+- This case spends nothing: use [`P-LAUNCH-FREE`](common.md#p-launch-free) on a fresh data folder, with `$env:Team__Memory__Tidy__RunAtStart = 'true'` set in `T-A` before the launch line. `RunAtStart` is for tests and this page, not for daily use.
+- An Agent `Nova` exists ([`P-NEW-PERSONA`](common.md#p-new-persona)), and `<data>\Agents\Nova\work\memory\reported.md` holds one line dated 20 days before today and one dated today. Write them by hand with the app stopped, in the form of [REPORTED-07](#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-).
+
+**Steps**
+
+1. Start the app and wait about 40 seconds. The pass starts 30 seconds after start-up.
+2. Open the **Memory backups** root in the Library. Open today's folder, then `changes.md`.
+3. Read `<data>\Agents\Nova\work\memory\reported.md` ([`O-FILE`](common.md#o-file)).
+4. Open the Feed and the Helpers panel in Settings.
+5. Stop the app with [`P-STOP`](common.md#p-stop), timing how long the prompt takes to return.
+
+**Pass if — all of these**
+
+- Today's folder in **Memory backups** (named `yyyy-MM-dd`) holds `pass.jsonl`, `changes.md` and a copy of `reported.md` as it was before the pass, with the old line in it.
+- `changes.md` has a `reported.md` heading and says Nova dropped 1 line older than 14 days. The link to the live file opens it in the Library.
+- The live `reported.md` has lost the old line and keeps today's.
+- The Feed has no Memory Tidy item, and no Helper in the Helpers panel shows a new call.
+- Searching for words from the old line finds nothing in the **Memory backups** root.
+- The app stops as fast as it does with no pass.
+
+**Fail if — any of these**
+
+- No folder appears after a minute -> `RunAtStart` was not read: check the spelling `Team__Memory__Tidy__RunAtStart`.
+- The old line is still in the live file, or the copy is missing.
+- A Feed item or a call appears.
+- The link to the live file does nothing, or shows the absolute path as plain text while the file is in a root.
+
+### TIDYLINES-02 — A pass stopped by closing Huddle finishes one list, and nothing is posted twice
+
+**Free** · about 15 min
+
+*Proves that a pass cut short by a stop is finished at the next start: one finished list, no second item. Spec §6.12.*
+
+**Before you start**
+
+- Set up as TIDYLINES-01, with several Agents each holding an old line (the more Agents, the longer the pass), and TIDYLINES-01 has passed. Delete today's folder in `<data>\MemoryBackups\` first, with the app stopped. The pass is short, so this is a race; repeat it up to three times.
+
+**Steps**
+
+1. Start the app with `RunAtStart` on. Watch `<data>\MemoryBackups\`. As soon as today's folder appears, stop the app with `Ctrl+C` in `T-A`.
+2. Start the app again, with `RunAtStart` still on, and wait for the second pass.
+3. Open the **Memory backups** root and read each folder's `changes.md`, then the Feed.
+
+**Pass if — all of these**
+
+- Every pass folder has a `changes.md` that says what its pass did, and no folder has two.
+- Every old line is gone from its live file, and nothing is dropped twice.
+- The Feed holds no more than one Memory Tidy item per pass that changed a topic file. Slice 2 changes none, so it holds none.
+
+**Fail if — any of these**
+
+- A pass folder has no `changes.md` after the second start -> recovery did not finish it.
+- The Feed holds two items for one pass.
+- The app does not stop.

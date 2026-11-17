@@ -54,7 +54,7 @@ internal sealed class LibrarySearchProvider(
 
         // Under Reference a folder or a backtick path is excluded during the walk, so it never uses up the hit cap before a file can.
         Predicate<LibraryEntry> isExcluded = entry => IsExcluded(entry, teamsRoot) || (reference && !IsReferenceable(entry));
-        List<LibraryRoot> visible = [.. this.roots.VisibleRoots];
+        List<LibraryRoot> visible = [.. this.roots.VisibleRoots.Where(static root => root.Kind != LibraryRootKind.MemoryBackups)];
         LibraryTextSearchResult?[] perRoot = new LibraryTextSearchResult?[visible.Count];
         ParallelOptions parallel = new()
         {
