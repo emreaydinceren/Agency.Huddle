@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Components.Shared;
 
@@ -45,6 +46,32 @@ internal static partial class MessageDisplay
 
         info = new TaskWakeInfo(match.Groups["id"].Value, match.Groups["title"].Value, match.Groups["actor"].Value, changes);
         return true;
+    }
+
+    /// <summary>Reads <paramref name="text"/> as the restart line Huddle posts after a start.</summary>
+    /// <param name="text">The Message text.</param>
+    /// <param name="pickedUp">Whether the line says Messages were picked up.</param>
+    /// <param name="detail">The text after the first sentence.</param>
+    /// <returns>Whether <paramref name="text"/> is a restart line.</returns>
+    internal static bool TryParseRestartLine(string text, out bool pickedUp, out string detail)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        pickedUp = text.StartsWith(RestartLine.Prefix, StringComparison.Ordinal);
+        if (pickedUp)
+        {
+            detail = text[RestartLine.Prefix.Length..].Trim();
+            return true;
+        }
+
+        if (text.StartsWith(RestartLine.NotPickedUpPrefix, StringComparison.Ordinal))
+        {
+            detail = text[RestartLine.NotPickedUpPrefix.Length..].Trim();
+            return true;
+        }
+
+        detail = string.Empty;
+        return false;
     }
 
     /// <summary>The local calendar day <paramref name="timestamp"/> falls on.</summary>

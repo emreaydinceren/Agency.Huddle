@@ -287,6 +287,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.RetiredFileScanService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.DefaultAgentsMdService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Profile.HumanRenameCascade
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Services.TurnQueueRecovery
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Pipes.PipeServer
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Demo.DemoAgentHost
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agents.ConnectorsNoticeDecider

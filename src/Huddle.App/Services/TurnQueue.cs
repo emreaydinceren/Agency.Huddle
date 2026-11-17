@@ -115,6 +115,44 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         _ = this.store.CloseRunning(connectionId, TurnQueueOutcome.Stopped, this.timeProvider.GetUtcNow());
     }
 
+    /// <inheritdoc />
+    public IReadOnlyList<WaitingTurn> TakeWaiting(string agentId, DateTimeOffset now)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+
+        TurnQueueOptions limits = this.options.Value.TurnQueue;
+        if (!limits.Enabled)
+        {
+            return [];
+        }
+
+        List<WaitingTurn> kept = [];
+        foreach (TurnQueueRow row in this.store.Open(agentId))
+        {
+            if (row.Status != TurnQueueStatus.Waiting)
+            {
+                continue;
+            }
+
+            if (IsTooOld(row.PostedUtc, now, limits.ResumeWithin))
+            {
+                this.store.Set(row.Seq, TurnQueueStatus.Done, TurnQueueOutcome.Expired, now);
+                continue;
+            }
+
+            kept.Add(new WaitingTurn(row, row.Attempts >= 1));
+        }
+
+        return kept;
+    }
+
+    /// <summary>The one age rule: a Message older than <paramref name="resumeWithin"/> is not handed out; zero or less means no limit.</summary>
+    /// <param name="postedUtc">The Message's own time.</param>
+    /// <param name="now">The current time.</param>
+    /// <param name="resumeWithin">The limit.</param>
+    internal static bool IsTooOld(DateTimeOffset postedUtc, DateTimeOffset now, TimeSpan resumeWithin) =>
+        resumeWithin > TimeSpan.Zero && now - postedUtc > resumeWithin;
+
     /// <summary>Maps the outcome a client reports to the stored one; a Finished ack without an outcome counts as a failed Turn.</summary>
     /// <param name="outcome">The wire outcome.</param>
     private static TurnQueueOutcome ToStored(QueueOutcome? outcome) => outcome switch

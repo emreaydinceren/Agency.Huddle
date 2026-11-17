@@ -89,6 +89,7 @@ public sealed class ServiceCollectionExtensionsTests
             .Build();
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(new Agency.Huddle.Tests.Desktop.FakeLifetime());
         services.AddTeamServices(configuration);
         using var provider = services.BuildServiceProvider();
 
@@ -104,6 +105,7 @@ public sealed class ServiceCollectionExtensionsTests
             .Build();
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(new Agency.Huddle.Tests.Desktop.FakeLifetime());
         services.AddTeamServices(configuration);
         return services.BuildServiceProvider();
     }
@@ -119,6 +121,7 @@ public sealed class ServiceCollectionExtensionsTests
             .Build();
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(new Agency.Huddle.Tests.Desktop.FakeLifetime());
         services.AddTeamServices(configuration);
         services.AddSingleton<ITeamCatalog>(new Teams.FakeTeamCatalog { Teams = [new TeamSummary("Marketing", [], [], false)] });
         using ServiceProvider provider = services.BuildServiceProvider();
@@ -182,6 +185,7 @@ public sealed class ServiceCollectionExtensionsTests
             .Build();
         var services = new ServiceCollection();
         services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(new Agency.Huddle.Tests.Desktop.FakeLifetime());
 
         // Blazor Server supplies the circuit's IJSRuntime in the app; the circuit handlers include JsModulePreloader, which needs it.
         services.AddScoped<Microsoft.JSInterop.IJSRuntime, Agency.Huddle.Tests.Ui.FakeModuleRuntime>();
@@ -295,6 +299,7 @@ public sealed class ServiceCollectionExtensionsTests
             .Build();
         ServiceCollection services = new();
         services.AddLogging();
+        services.AddSingleton<Microsoft.Extensions.Hosting.IHostApplicationLifetime>(new Agency.Huddle.Tests.Desktop.FakeLifetime());
         services.AddTeamServices(configuration);
 
         await using ServiceProvider provider = services.BuildServiceProvider();

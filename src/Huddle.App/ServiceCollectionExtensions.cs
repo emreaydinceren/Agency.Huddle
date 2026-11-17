@@ -927,6 +927,18 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<Agency.Huddle.App.SecondBrain.RetiredFileScanService>();
         services.AddHostedService<Agency.Huddle.App.SecondBrain.DefaultAgentsMdService>();
         services.AddHostedService(sp => sp.GetRequiredService<HumanRenameCascade>());
+
+        // After DataInitializer (the Team and its Rooms exist) and before PipeServer, so no Agent has connected and no
+        // poster can have written a row yet, and before TaskTriggerService, CadenceService and JobScheduler, which can post at start-up.
+        services.AddHostedService(static sp => new Services.TurnQueueRecovery(
+            sp.GetRequiredService<TurnQueueStore>(),
+            sp.GetRequiredService<ITeamDirectory>(),
+            sp.GetRequiredService<IChatStore>(),
+            sp.GetRequiredService<Services.ChatService>(),
+            name => sp.GetRequiredService<Acp.PersonaStore>().Get(name) is not null,
+            sp.GetRequiredService<IOptions<TeamOptions>>(),
+            sp.GetRequiredService<ILogger<Services.TurnQueueRecovery>>(),
+            sp.GetService<TimeProvider>()));
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
 
