@@ -146,6 +146,16 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         return kept;
     }
 
+    /// <inheritdoc />
+    public void CloseGone(long seq, DateTimeOffset now) => this.store.Set(seq, TurnQueueStatus.Done, TurnQueueOutcome.Gone, now);
+
+    /// <inheritdoc />
+    public bool IsSubscribed(string agentId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        return this.store.Subscribers().Contains(agentId);
+    }
+
     /// <summary>The one age rule: a Message older than <paramref name="resumeWithin"/> is not handed out; zero or less means no limit.</summary>
     /// <param name="postedUtc">The Message's own time.</param>
     /// <param name="now">The current time.</param>

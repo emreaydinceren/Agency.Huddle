@@ -291,6 +291,7 @@ public sealed partial class ChatService
             // anywhere else would let the count describe no prefix of the Transcript.
             BudgetSender budgetSender = ChatService.BudgetSenderOf(sender, asHuddle);
             var budget = this.CurrentBudget(roomId);
+            bool humanEndedPause = budgetSender == BudgetSender.Human && budget.Exhausted;
 
             if (sender is { Kind: UserKind.Agent } && budget.Exhausted)
             {
@@ -312,12 +313,26 @@ public sealed partial class ChatService
                 this.DropWaitingCards(roomId, budgetSender == BudgetSender.Agent, withheldFromAgentId);
             }
 
-            this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId));
+            this.PublishPosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId), humanEndedPause);
             return message;
         }
         finally
         {
             semaphore.Release();
+        }
+    }
+
+    /// <summary>Publishes a posted Message and, after it, the end of the Room's pause when the Human's Message ended one.</summary>
+    /// <param name="posted">The posted Message.</param>
+    /// <param name="humanEndedPause">Whether the Room was spent and the Human spoke in it.</param>
+    private void PublishPosted(MessagePostedEvent posted, bool humanEndedPause)
+    {
+        this.events.PublishMessagePosted(posted);
+
+        // After the Message itself, so a held Turn re-sent for the Room follows the live delivery rather than racing it.
+        if (humanEndedPause)
+        {
+            this.events.PublishBudgetUnpaused(posted.Room.Id);
         }
     }
 
@@ -538,6 +553,7 @@ public sealed partial class ChatService
         var mentions = MentionParser.Parse(last.Text, members, this.aliasSource.Aliases);
         this.RecordOwedTurns(room, members, mentions, last, extended, null);
         this.events.PublishMessageRedelivered(new MessagePostedEvent(room, last, members, mentions, extended));
+        this.events.PublishBudgetUnpaused(roomId);
         var redelivered = new RedeliveryFacts(members, mentions, last.SenderId);
         return new BudgetExtension(ExtendResult.Granted, extended, redelivered);
     }

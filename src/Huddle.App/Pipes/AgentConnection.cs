@@ -28,6 +28,7 @@ internal sealed class AgentConnection
     private readonly FreshStartNotes freshStartNotes;
     private readonly ITurnAcks acks;
     private readonly ITurnQueueControl control;
+    private readonly TurnRedelivery redelivery;
     private readonly ILogger<AgentConnection> logger;
     private readonly TimeProvider clock;
 
@@ -68,9 +69,12 @@ internal sealed class AgentConnection
         FreshStartNotes freshStartNotes,
         ITurnAcks acks,
         ITurnQueueControl control,
+        TurnRedelivery redelivery,
         ILogger<AgentConnection> logger,
         TimeProvider? timeProvider = null)
     {
+        ArgumentNullException.ThrowIfNull(redelivery);
+        this.redelivery = redelivery;
         ArgumentNullException.ThrowIfNull(freshStartNotes);
         ArgumentNullException.ThrowIfNull(acks);
         ArgumentNullException.ThrowIfNull(control);
@@ -247,6 +251,12 @@ internal sealed class AgentConnection
         var welcome = await this.BuildWelcomeAsync(user, ct).ConfigureAwait(false);
         this.handshakeStep = $"writing the Welcome for '{hello.Name}'";
         await lineStream.WriteAsync(welcome, ct).ConfigureAwait(false);
+        if (hello.DurableQueue == true)
+        {
+            // Sent after the Welcome (SendAsync waits for it) and never awaited: the read loop must start at once.
+            _ = this.RedeliverWaitingAsync(user.Id, ct);
+        }
+
         this.welcomed = true;
         this.welcomeSent.TrySetResult();
         return true;
@@ -457,6 +467,25 @@ internal sealed class AgentConnection
     /// <param name="ids">The ids as received.</param>
     private static List<string> ValidIds(IReadOnlyList<string>? ids) =>
         ids is null ? [] : [.. ids.Where(id => NameRules.IsValidId(id))];
+
+    /// <summary>Sends the Turns this Agent still owes after its Welcome; a failure is logged and ends only this task.</summary>
+    /// <param name="agentId">The Agent that connected.</param>
+    /// <param name="ct">The connection's token.</param>
+    private async Task RedeliverWaitingAsync(string agentId, CancellationToken ct)
+    {
+        try
+        {
+            await this.redelivery.SendWaitingAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The connection or the host ended first; nothing is owed to a closed pipe.
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogError(ex, "Re-delivering the waiting Turns failed on connection {ConnectionId}.", this.ConnectionId);
+        }
+    }
 
     /// <summary>
     /// Runs a call into the Turn Queue so that a failing store is logged and never ends the connection: the general catch in

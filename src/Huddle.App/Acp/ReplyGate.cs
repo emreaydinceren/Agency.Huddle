@@ -54,7 +54,7 @@ internal static class ReplyGate
     {
         // >= rather than >: the count includes the Message just received, so a reply to it would be
         // the Budget-plus-first. ChatService compares the same way, so the two agree by construction.
-        if (budget > 0 && agentMessagesSinceHuman >= budget)
+        if (ReplyGate.BudgetSpent(agentMessagesSinceHuman, budget))
         {
             return ReplyDecision.BudgetExhausted;
         }
@@ -66,4 +66,14 @@ internal static class ReplyGate
 
         return memberCount <= 2 || mentioned || following ? ReplyDecision.Reply : ReplyDecision.CatchUp;
     }
+
+    /// <summary>
+    /// Whether the Room's Budget is spent: the one test <see cref="Decide"/> makes first, shared with a re-sent Message, which skips every other rule
+    /// but this one. The count includes the Message just received, so equal means spent.
+    /// </summary>
+    /// <param name="agentMessagesSinceHuman">Agent-authored Messages the Room has taken since the Human last spoke.</param>
+    /// <param name="budget">How many the Room allows; zero or less means uncapped.</param>
+    /// <returns><see langword="true"/> when no further Turn may start.</returns>
+    internal static bool BudgetSpent(int agentMessagesSinceHuman, int budget) =>
+        budget > 0 && agentMessagesSinceHuman >= budget;
 }

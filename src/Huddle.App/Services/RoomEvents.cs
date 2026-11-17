@@ -38,6 +38,12 @@ public sealed class RoomEvents
     public event Action<string>? DraftChanged;
 
     /// <summary>
+    /// A Room's pause on its agent-message Budget ended: the Human extended it with Continue, or the Human spoke in a Room that was
+    /// spent. Carries the Room id. <c>TurnRedelivery</c> subscribes, to send the Turns held for the Room again (Turn Queue spec, section 5.4).
+    /// </summary>
+    public event Action<string>? BudgetUnpaused;
+
+    /// <summary>
     /// A Room's pending <c>Proposal</c> changed - one was stored, replaced, taken (Approved or
     /// Declined), or dropped (archived, deleted, or restarted). Carries the Room id, not the
     /// Proposal itself, for the same reason <see cref="DraftChanged"/> does: a subscriber re-reads
@@ -85,6 +91,13 @@ public sealed class RoomEvents
     public void PublishRoomsChanged()
     {
         EventRaise.Isolated(this.RoomsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RoomsChanged)));
+    }
+
+    /// <summary>Publishes <see cref="BudgetUnpaused"/> for <paramref name="roomId"/>.</summary>
+    /// <param name="roomId">The Room whose pause ended.</param>
+    public void PublishBudgetUnpaused(string roomId)
+    {
+        this.PublishRoomId(this.BudgetUnpaused, roomId, nameof(this.BudgetUnpaused));
     }
 
     /// <summary>Publishes <see cref="DraftChanged"/> for <paramref name="roomId"/>.</summary>

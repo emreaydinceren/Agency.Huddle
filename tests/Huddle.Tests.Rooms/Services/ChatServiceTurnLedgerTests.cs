@@ -146,6 +146,56 @@ public sealed class ChatServiceTurnLedgerTests
         Assert.Equal(3, harness.Queue.OpenIn(harness.Room.Id).Count);
     }
 
+    /// <summary>Continue on a spent Room raises <see cref="RoomEvents.BudgetUnpaused"/> once, for that Room.</summary>
+    [Fact]
+    public async Task ExtendBudget_RaisesBudgetUnpausedOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = await Harness.CreateAsync(ct);
+        await harness.ExhaustBudgetAsync(ct);
+        List<string> raised = [];
+        harness.Events.BudgetUnpaused += raised.Add;
+
+        _ = await harness.Chat.ExtendBudgetAsync(harness.Room.Id, ct);
+        _ = await harness.Chat.ExtendBudgetAsync(harness.Room.Id, ct);
+
+        Assert.Equal([harness.Room.Id], raised);
+    }
+
+    /// <summary>The Human speaking in a spent Room raises <see cref="RoomEvents.BudgetUnpaused"/> once.</summary>
+    [Fact]
+    public async Task HumanPost_InASpentRoom_RaisesBudgetUnpausedOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = await Harness.CreateAsync(ct);
+        await harness.ExhaustBudgetAsync(ct);
+        List<string> raised = [];
+        harness.Events.BudgetUnpaused += raised.Add;
+
+        _ = await harness.Chat.PostAsync(harness.Room.Id, KnownIds.Human, "go on", ct: ct);
+        _ = await harness.Chat.PostAsync(harness.Room.Id, KnownIds.Human, "and again", ct: ct);
+
+        Assert.Equal([harness.Room.Id], raised);
+    }
+
+    /// <summary>A post into an unpaused Room, an Agent's post and Huddle's post raise nothing.</summary>
+    [Fact]
+    public async Task OtherPosts_DoNotRaiseBudgetUnpaused()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Harness harness = await Harness.CreateAsync(ct);
+        List<string> raised = [];
+        harness.Events.BudgetUnpaused += raised.Add;
+
+        _ = await harness.Chat.PostAsync(harness.Room.Id, KnownIds.Human, "hello", ct: ct);
+        _ = await harness.Chat.PostAsync(harness.Room.Id, harness.Nova.Id, "hi", ct: ct);
+        await harness.ExhaustBudgetAsync(ct);
+        raised.Clear();
+        _ = await harness.Chat.PostAsHuddleAsync(harness.Room.Id, "note", ct);
+
+        Assert.Empty(raised);
+    }
+
     private sealed class ThrowingLedger : ITurnLedger
     {
         public void Record(ChatMessage message, string roomId, IReadOnlyList<string> owedAgentIds) => throw new InvalidDataException("ledger down");
@@ -192,6 +242,7 @@ public sealed class ChatServiceTurnLedgerTests
                 ? this.Transcript
                 : new HookedStore(this.Transcript, roomId => onAppend(this.Queue, roomId));
             RoomEvents events = new(NullLogger<RoomEvents>.Instance);
+            this.Events = events;
             this.Chat = new ChatService(
                 this.Team,
                 store,
@@ -215,6 +266,8 @@ public sealed class ChatServiceTurnLedgerTests
         public TurnQueueStore Queue { get; }
 
         public ChatService Chat { get; }
+
+        public RoomEvents Events { get; }
 
         public User Nova { get; }
 

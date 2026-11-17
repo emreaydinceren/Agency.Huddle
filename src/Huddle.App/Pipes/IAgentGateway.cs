@@ -20,6 +20,16 @@ public interface IAgentGateway
     /// <param name="cancellationToken">Cancels the send.</param>
     Task StartAfreshAsync(string agentId, string roomId, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Sends one Message to one Agent's connection a second time, marked with why (Turn Queue spec, section 5.7). The payload is built by
+    /// the same code as a live delivery. An Agent that is not connected is a silent no-op.
+    /// </summary>
+    /// <param name="agentId">The Agent to send to.</param>
+    /// <param name="e">The Message with the Room's current Members, Mentions and Budget.</param>
+    /// <param name="redelivery">Why the Message is sent again.</param>
+    /// <param name="ct">Cancels the send.</param>
+    Task DeliverToAsync(string agentId, Services.MessagePostedEvent e, Contracts.Redelivery redelivery, CancellationToken ct);
+
     /// <summary>Raised when any Agent connects or disconnects.</summary>
     event Action? PresenceChanged;
 }

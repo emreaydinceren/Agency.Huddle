@@ -34,6 +34,7 @@ namespace Agency.Huddle.App.Acp.Sessions;
 /// <param name="Team">The Team the Room is scoped to, or <see langword="null"/> for a root Room; it names the Team in the Room label.</param>
 /// <param name="ReferencedItems">The Referenced items header built from the triggering Message's references (spec section 9.1), or <see langword="null"/> when there is none; it follows the Library documents block.</param>
 /// <param name="HookBlocks">The prompt blocks the Turn's hooks produced, in hook order, or <see langword="null"/> when there are none; each is followed by a blank line and they lead the framed prompt, and File Changes is one of them.</param>
+/// <param name="Redelivery">Why the server sent the triggering Message a second time, or <see langword="null"/> for a first delivery; <see cref="Agency.Huddle.Contracts.Redelivery.CutOff"/> adds the cut-off note to the prompt.</param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -48,4 +49,5 @@ internal sealed record WorkItem(
     AdapterCommandCall? Command = null,
     string? Team = null,
     string? ReferencedItems = null,
-    IReadOnlyList<string>? HookBlocks = null);
+    IReadOnlyList<string>? HookBlocks = null,
+    Agency.Huddle.Contracts.Redelivery? Redelivery = null);

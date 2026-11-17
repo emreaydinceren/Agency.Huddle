@@ -114,6 +114,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private CancellationTokenSource? eventReaderCts;
     private ActiveTurn? activeTurn;
 
+    // The triggering Message id of the item admitted and not yet released, so a re-sent delivery of it is ignored; guarded by gate.
+    private string? runningTriggerId;
+
     // Numbers each Adapter notice so its Turn-activity row has an id no tool call can carry. Touched
     // only from the single-threaded event reader.
     private long noticeSequence;
@@ -291,6 +294,18 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <summary>The models the open session advertises, or empty while <see cref="RoomSessionState.Closed"/>.</summary>
     internal IReadOnlyList<AgentModelOption> Models => this.session?.Models ?? [];
 
+    /// <summary>Whether a Turn for this Message is queued or running here, so a re-sent delivery of it can be ignored before anything is drained for it.</summary>
+    /// <param name="messageId">The Message id.</param>
+    /// <returns><see langword="true"/> when it is already queued or running.</returns>
+    internal bool HasMessage(string messageId)
+    {
+        lock (this.gate)
+        {
+            return string.Equals(messageId, this.runningTriggerId, StringComparison.Ordinal)
+                || this.queue.Any(queued => string.Equals(queued.Item.TriggerMessageId, messageId, StringComparison.Ordinal));
+        }
+    }
+
     /// <summary>Queues a Turn built by the read loop, with its Catch-up already taken.</summary>
     /// <param name="item">The Turn to run, with its sequence number.</param>
     internal void Enqueue(QueuedWork item)
@@ -299,6 +314,16 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         lock (this.gate)
         {
+            // A Message already queued or running here is not run twice: a re-sent delivery of it is ignored, with no ack, because
+            // the Turn that is queued or running will ack it (Turn Queue spec, section 5.8).
+            if (item.Item.TriggerMessageId is { } trigger
+                && (string.Equals(trigger, this.runningTriggerId, StringComparison.Ordinal)
+                    || this.queue.Any(queued => string.Equals(queued.Item.TriggerMessageId, trigger, StringComparison.Ordinal))))
+            {
+                // Backstop: EnqueueReply checks first, so nothing was drained for this one; a race between check and here is not lost context in practice.
+                return;
+            }
+
             this.queue.Enqueue(item);
 
             // RS §6.1 ticket protocol rule 1: offered exactly once, by whoever makes it the head. An
@@ -1156,7 +1181,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     {
         lock (this.gate)
         {
-            this.queue.Dequeue();
+            this.runningTriggerId = this.queue.Dequeue().Item.TriggerMessageId;
             this.running = true;
             this.state = this.state == RoomSessionState.Idle ? RoomSessionState.Busy : this.state;
         }
@@ -1231,6 +1256,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         lock (this.gate)
         {
             this.running = false;
+            this.runningTriggerId = null;
             this.state = this.state == RoomSessionState.Busy ? RoomSessionState.Idle : this.state;
             this.lastActivity = this.time.GetUtcNow();
 

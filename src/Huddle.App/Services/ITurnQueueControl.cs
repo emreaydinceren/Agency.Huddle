@@ -15,4 +15,14 @@ internal interface ITurnQueueControl
     /// <param name="now">The current time, from the injected clock.</param>
     /// <returns>The <c>waiting</c> rows left; empty when the queue is switched off.</returns>
     IReadOnlyList<WaitingTurn> TakeWaiting(string agentId, DateTimeOffset now);
+
+    /// <summary>Closes one row as <c>gone</c>: its Agent is no longer a Member of the Room (spec §5.7).</summary>
+    /// <param name="seq">The row.</param>
+    /// <param name="now">The current time, from the injected clock.</param>
+    void CloseGone(long seq, DateTimeOffset now);
+
+    /// <summary>Whether the Agent's current connection keeps a durable queue.</summary>
+    /// <param name="agentId">The Agent.</param>
+    /// <returns><see langword="true"/> when the Agent is subscribed.</returns>
+    bool IsSubscribed(string agentId);
 }

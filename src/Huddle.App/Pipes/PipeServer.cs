@@ -22,6 +22,7 @@ internal sealed class PipeServer : BackgroundService
     private readonly FreshStartNotes freshStartNotes;
     private readonly ITurnAcks acks;
     private readonly ITurnQueueControl control;
+    private readonly TurnRedelivery redelivery;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PipeServer> logger;
 
@@ -36,8 +37,11 @@ internal sealed class PipeServer : BackgroundService
         FreshStartNotes freshStartNotes,
         ITurnAcks acks,
         ITurnQueueControl control,
+        TurnRedelivery redelivery,
         ILoggerFactory loggerFactory)
     {
+        ArgumentNullException.ThrowIfNull(redelivery);
+        this.redelivery = redelivery;
         ArgumentNullException.ThrowIfNull(freshStartNotes);
         ArgumentNullException.ThrowIfNull(acks);
         ArgumentNullException.ThrowIfNull(control);
@@ -89,6 +93,7 @@ internal sealed class PipeServer : BackgroundService
             this.freshStartNotes,
             this.acks,
             this.control,
+            this.redelivery,
             this.loggerFactory.CreateLogger<AgentConnection>());
         _ = connection.RunAsync(stoppingToken);
     }
