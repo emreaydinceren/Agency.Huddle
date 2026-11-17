@@ -15,7 +15,7 @@ internal sealed class MemoryTidyRunner(
     IMemoryTidyRecovery recovery,
     IOptions<TeamOptions> options,
     ILogger<MemoryTidyRunner> logger,
-    TimeProvider? timeProvider = null) : BackgroundService
+    TimeProvider? timeProvider = null) : BackgroundService, IMemoryTidyRunner
 {
     /// <summary>How long after start-up <c>RunAtStart</c> waits.</summary>
     internal static readonly TimeSpan RunAtStartDelay = TimeSpan.FromSeconds(30);

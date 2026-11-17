@@ -749,6 +749,8 @@ which both call; neither keeps its own copy. **`DueCheck` and its tests land fir
 their own PR before slice 1 (owner, 2026-11-16), creating `src/Huddle.App/Scheduling/`; slice 3a then moves
 `JobScheduler` onto it, and Memory Tidy's timer slice waits only for that first PR** and then consumes `DueCheck` instead of writing its own next-run logic.
 
+*Note, 2026-11-16:* Memory Tidy's `MemoryTidyScheduler` now consumes `DueCheck` unchanged (commit `eab85b55`).
+
 **`CadenceService` is left alone** (D-36, ADR-0042 unchanged). Three things in it have no place in `DueCheck`: a
 failed or refused post puts the previous state back and retries on every tick with no limit
 (`src/Huddle.App/Teams/CadenceService.cs:173-187`), where `MaxFailedTries` would give up; a clock that moved backwards

@@ -2438,8 +2438,20 @@ A pass folder is deleted after 90 days (`Team:Memory:Tidy:KeepBackupDays`). Ther
 Restore button yet: to undo a change, open the copy and put its text back by hand.
 
 The Memory Tidy Helper is not on yet. Today a pass only drops the lines older than 14
-days from each Agent's `reported.md`, with no model call, and a pass runs only when
-`Team:Memory:Tidy:RunAtStart` is set.
+days from each Agent's `reported.md`, with no model call.
+
+**When a pass runs.** A pass runs on its own by `Team:Memory:Tidy:When`, which is
+`weekly on sun at 03:00` unless you change it, in your computer's time zone. Only
+`weekly` and `daily` work: any other value is logged as an error at start-up and no pass
+is scheduled. Huddle reads the value at start-up, so a change needs a restart.
+
+- If Huddle was closed or the computer asleep at the time, the pass runs once when it is
+  back, about five minutes after start. If the regular time is less than an hour away, it
+  waits for that.
+- If a pass stops at the Helper's daily cap, it goes on at the start of the next day.
+  One weekly round can therefore take several days and raise several Notifications.
+- A pass that failed is not tried again: the next regular time is used. Closing Huddle
+  during a pass does not restart it.
 
 ### Reading and editing notes
 

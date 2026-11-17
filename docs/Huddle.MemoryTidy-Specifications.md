@@ -1,6 +1,6 @@
 # Huddle.MemoryTidy — Design Specification
 
-**Date:** 2026-11-16 · **Status:** Proposed; slices 1 and 2 built 2026-11-16, the rest not built. Revised twice on 2026-11-16, after an independent review and its
+**Date:** 2026-11-16 · **Status:** Proposed; slices 1 to 3 built 2026-11-16 (slice 1 merged as PR #653, slice 2 as PR #654), the rest not built. Revised twice on 2026-11-16, after an independent review and its
 re-review; the owner settled every open question the same day (§10, [Appendix B](#appendix-b-review-response)) · **Issues:** #620 (every
 Agent keeps `reported.md`) and #621 (a weekly tidy-up of Memory), both decided by the owner 2026-11-16 ·
 **Decision records:** two to write with the build, ADR-0094 and ADR-0095 (0091 to 0093 are taken by the Turn Queue
@@ -592,6 +592,8 @@ DueState    DueCheck.AfterRun(DueState state, DueRunResult result, Func<DateTime
 // DueDecision: NotDue | FirstSight | Run(Late) | Skip | GiveUp, each of the last four carrying what to save
 // DueRunResult: Ran | Held | Failed
 ```
+
+As the build found it, the real signature is `DueCheck.AfterRun(DueState saved, DueState beforeRun, DueRunResult result)`, not the one cited above. The build followed the code.
 
 Each decision carries the whole `DueState` to save, and `CadenceService` is left out (Turn Queue §8.1). **Owner
 decision 2026-11-16: `DueCheck` and its tests land first, as their own PR, before Turn Queue slice 1**, so this

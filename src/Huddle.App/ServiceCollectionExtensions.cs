@@ -80,6 +80,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery, Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRecovery>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>();
         services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>());
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner>(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner>());
+        services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyScheduleStore>();
+        services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler>();
+        services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler>());
         return services;
     }
 
