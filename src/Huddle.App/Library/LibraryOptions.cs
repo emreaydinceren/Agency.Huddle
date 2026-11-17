@@ -68,6 +68,9 @@ public sealed class LibraryOptions
     /// <summary>The Archive root folder under <c>DataDir</c>, per Spec §6.9 and §7.4 (<c>Team:Library:Archive:Dir</c>).</summary>
     public LibraryArchiveOptions Archive { get; set; } = new();
 
+    /// <summary>The Memory backups root folder under <c>DataDir</c> (<c>Team:Library:MemoryBackups:Dir</c>).</summary>
+    public LibraryMemoryBackupsOptions MemoryBackups { get; set; } = new();
+
     /// <summary>The Prompt override folder under <c>DataDir</c>, per Spec §6.6 and §7.4 (<c>Team:Library:Prompts:Dir</c>).</summary>
     public LibraryPromptsOptions Prompts { get; set; } = new();
 }

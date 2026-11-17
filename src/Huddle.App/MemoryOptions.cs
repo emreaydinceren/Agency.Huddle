@@ -14,4 +14,7 @@ public sealed class MemoryOptions
 
     /// <summary>The <c>reported.md</c> file of an Agent's own Memory, bound from <c>Team:Memory:Reported</c>.</summary>
     public MemoryReportedOptions Reported { get; set; } = new();
+
+    /// <summary>The Memory Tidy pass, bound from <c>Team:Memory:Tidy</c>.</summary>
+    public MemoryTidyOptions Tidy { get; set; } = new();
 }

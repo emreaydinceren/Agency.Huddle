@@ -26,4 +26,7 @@ public enum LibraryRootKind
 
     /// <summary>A Team's workspace folder: writable and derived from the Team, so it is never saved as a pinned root and is not offered for removal.</summary>
     Workspace,
+
+    /// <summary>The Memory backups root, where each Memory Tidy pass keeps the files it changed and its journal; read only and left out of every search.</summary>
+    MemoryBackups,
 }

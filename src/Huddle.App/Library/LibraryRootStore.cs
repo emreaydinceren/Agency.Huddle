@@ -42,6 +42,7 @@ internal sealed class LibraryRootStore
     private const string RawRootId = "raw";
     private const string ArchiveRootId = "archive";
     private const string PromptsRootId = "prompts";
+    private const string MemoryBackupsRootId = "memory-backups";
     private const int MaxSlugLength = 64;
 
     private readonly IOptions<TeamOptions> options;
@@ -183,9 +184,10 @@ internal sealed class LibraryRootStore
             && !string.Equals(builtInId, RawRootId, StringComparison.Ordinal)
             && !string.Equals(builtInId, ArchiveRootId, StringComparison.Ordinal)
             && !string.Equals(builtInId, PromptsRootId, StringComparison.Ordinal)
+            && !string.Equals(builtInId, MemoryBackupsRootId, StringComparison.Ordinal)
             && !string.Equals(builtInId, SkillSourcesRootId, StringComparison.Ordinal))
         {
-            throw new ArgumentException("Only a built-in Library root ('teams', 'agents', 'raw', 'archive', 'prompts' or 'skill-sources') can be hidden.", nameof(builtInId));
+            throw new ArgumentException("Only a built-in Library root ('teams', 'agents', 'raw', 'archive', 'prompts', 'memory-backups' or 'skill-sources') can be hidden.", nameof(builtInId));
         }
 
         lock (this.writeGate)
@@ -264,7 +266,7 @@ internal sealed class LibraryRootStore
 
         string baseSlug = collapsed.Length == 0 ? "root" : collapsed;
 
-        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, AgentsRootId, RawRootId, ArchiveRootId, PromptsRootId, SkillSourcesRootId };
+        HashSet<string> takenSlugs = new(taken, StringComparer.Ordinal) { TeamsRootId, AgentsRootId, RawRootId, ArchiveRootId, PromptsRootId, MemoryBackupsRootId, SkillSourcesRootId };
         if (!takenSlugs.Contains(baseSlug))
         {
             return baseSlug;
@@ -426,6 +428,7 @@ internal sealed class LibraryRootStore
         string rawRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Raw.Dir));
         string archiveRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Archive.Dir));
         string promptsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.Prompts.Dir));
+        string memoryBackupsRoot = Path.GetFullPath(Path.Combine(dataDir, options.Value.Library.MemoryBackups.Dir));
 
         List<LibraryRoot> roots =
         [
@@ -434,6 +437,7 @@ internal sealed class LibraryRootStore
             new LibraryRoot(RawRootId, "Raw", rawRoot, LibraryRootKind.Raw),
             new LibraryRoot(ArchiveRootId, "Archive", archiveRoot, LibraryRootKind.Archive, ReadOnly: true),
             new LibraryRoot(PromptsRootId, "Prompts", promptsRoot, LibraryRootKind.Prompts),
+            new LibraryRoot(MemoryBackupsRootId, "Memory backups", memoryBackupsRoot, LibraryRootKind.MemoryBackups, ReadOnly: true),
             new LibraryRoot(SkillSourcesRootId, "Skill Sources", TrimTrailingSeparator(Path.GetFullPath(skillSourcesDir)), LibraryRootKind.SkillSources, ReadOnly: true),
         ];
 
