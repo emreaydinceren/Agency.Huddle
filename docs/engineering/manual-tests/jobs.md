@@ -58,7 +58,10 @@ in the file afterwards.
 **Free** · about 10 min
 
 1. Create a Job for Ada, Repeats **Every day**, at a time three minutes from now. Stop the app before that time.
-2. Relaunch five minutes after it.
+2. Relaunch five minutes after it, with `Team__Jobs__RunOverdue=false`.
+
+Since the Turn Queue's slice 3a (#619, ADR-0093) a missed run runs once late by default; this test pins the old skip, which
+`Team:Jobs:RunOverdue=false` keeps. The run-late behaviour is TURNQUEUE-10 and -17 on [turn-queue.md](turn-queue.md).
 
 **Expect**: nothing is posted for the missed time; the Job's page says it runs next tomorrow at that time.
 

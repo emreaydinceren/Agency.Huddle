@@ -5,6 +5,10 @@ date: 2026-11-02
 
 # A Job is Markdown in its owner's folder and runs in its own Room
 
+> **Amended by [ADR-0093](0093-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md).** A run missed while
+> Huddle was stopped or asleep now runs once, marked late, instead of being skipped; a Follow-up runs in the Room it was
+> set in, not a Job Room.
+
 A **Job** is an instruction that runs on a timetable for the Human or an Agent: "every weekday at 09:00, summarise
 yesterday". This record fixes where a Job is kept, where it runs and what happens when Huddle was not running at the time.
 The design is [Huddle.Jobs-Specifications.md](../Huddle.Jobs-Specifications.md). The word is *Job*, not *schedule* or
