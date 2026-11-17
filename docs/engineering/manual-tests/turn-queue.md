@@ -2,7 +2,7 @@
 
 Prove that a Message an Agent owes is answered once whatever happens to Huddle between its post and the reply: a close, a kill, an Agent still connecting, a Restart; that no reply is ever posted twice; that a waiting `ask_human` card survives a restart; and that the Human can see and call off what waits. Spec: [Huddle.TurnQueue-Specifications.md](../../Huddle.TurnQueue-Specifications.md) (§14 lists the cases as TQ-M1 to TQ-M18; this page carries those built so far). Decision: [ADR-0091](../../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md).
 
-**9 tests** · 0 free · 9 paid · about 2.4 hours. Written 2026-11-17 for issue #617 (slices 0 and 1); the Folded Turn and Follow-up cases join this page with slices 2 and 3.
+**9 tests** · 0 free · 9 paid · about 2.4 hours. Written 2026-11-17 for issue #617 (slices 0 and 1) and **run once, 2026-11-17, build `a3142a11`**, by an agent acting as the Human on Sonnet: 9 Pass (see the [Run log](run-log.md)); slices 0 and 1 together cost about 0.5 USD. The Folded Turn and Follow-up cases join this page with slices 2 and 3.
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Every Agent is Sonnet or better, never Haiku, and the Chief of Staff is set to Sonnet / low before its first Turn. Each case is a few Turns, well under a dollar. Record each result in the [Run log](run-log.md).
 
@@ -33,6 +33,18 @@ Run [`P-BUILD`](common.md#p-build), then start a paid lane as [`P-LAUNCH-PAID`](
 | `Team:Acp:AdapterPath` | The `dist/index.js` of the `claude-agent-acp` under `tools/acp`, when the build runs from a checkout or a publish folder |
 
 Remove `ANTHROPIC_*`, `CLAUDE_CODE_*` and `CLAUDECODE` from the environment before the launch, and confirm `claude auth status` says `loggedIn: true`. The cast is **Nova** and **Cleo**, two scratch Agents on Sonnet / low, and **Coach** for TURNQUEUE-04. "Close Huddle" means stopping the process normally (Ctrl+C, or `Stop-Process` without `-Force`); "kill" means `Stop-Process -Force`, as Task Manager's End task does.
+
+**Making an Agent Offline.** TURNQUEUE-14 and -18 need an Agent that is not connected while Huddle runs. An unknown `adapter:` id falls back to the default Adapter, so configure a second Adapter Profile that cannot start and point the Agent at it. Set these before the launch (the first entry repeats the stock Claude profile, which a configured list replaces):
+
+```powershell
+$env:Team__Acp__Adapters__0__Id = 'claude'; $env:Team__Acp__Adapters__0__Command = 'node'
+$env:Team__Acp__Adapters__0__AdapterPath = '<repo>\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'
+$env:Team__Acp__Adapters__0__IsolateUserSettings = 'true'; $env:Team__Acp__Adapters__0__SessionPerRoom = 'true'
+$env:Team__Acp__Adapters__0__PromptBlocks = 'true'; $env:Team__Acp__Adapters__0__Commands__0 = 'compact'
+$env:Team__Acp__Adapters__1__Id = 'broken'; $env:Team__Acp__Adapters__1__Command = 'C:\no-such-adapter.exe'
+```
+
+Then `adapter: 'broken'` in the Agent's frontmatter makes it Offline, and removing the line brings it back. "Close Huddle" can be done from a script by sending the process Ctrl+C (`AttachConsole` + `GenerateConsoleCtrlEvent`); a close while a tool runs waits for that tool to return.
 
 **Reading the evidence.** The rows are in `team.db`, table `turn_queue` (`status`, `outcome`, `attempts`, `reply_message_id`); read them with [`O-DB`](common.md#o-db). The prompt each Turn was sent is in the Agent's tool-call and session logs, or in [`O-LOG`](common.md#o-log) with `Team__Acp__TraceWire` set for that case only (the trace holds a bearer token: delete the file afterwards). Count replies in the Room's Transcript file, `<DataDir>\rooms\<roomId>.jsonl`.
 
@@ -162,6 +174,8 @@ Remove `ANTHROPIC_*`, `CLAUDE_CODE_*` and `CLAUDECODE` from the environment befo
 1. Start Huddle and open the group Room at once.
 2. Before Nova's tile reads Online, send "@Nova what is the capital of France?"
 
+The window after an app start is short, often shorter than the page's own start. A Persona edit opens the same window (Nova reads `Starting` for a few seconds while it restarts), and the 2026-11-17 run used that: edit Nova's text, and send the Mention while its tile reads `Starting`.
+
 **Pass if — all of these**
 
 - Nova answers once, after it comes Online.
@@ -201,7 +215,7 @@ Remove `ANTHROPIC_*`, `CLAUDE_CODE_*` and `CLAUDECODE` from the environment befo
 
 **Steps**
 
-1. Make Nova Offline: add `adapter: 'offline'` (an Adapter id that does not exist) to the frontmatter of `<DataDir>\Agents\Nova\Nova.md`. Send Nova one Message. Close Huddle, remove the `adapter:` line, wait three minutes and start Huddle.
+1. Make Nova Offline (Setup, "Making an Agent Offline"). Send Nova one Message. Close Huddle, remove the `adapter:` line, wait three minutes and start Huddle.
 2. Make Nova Offline again the same way. Send Nova two Messages, and press **Don't answer** on the waiting notice.
 3. Remove the `adapter:` line again (Nova restarts and comes Online), then restart Huddle.
 
@@ -224,7 +238,7 @@ Remove `ANTHROPIC_*`, `CLAUDE_CODE_*` and `CLAUDECODE` from the environment befo
 
 **Steps**
 
-1. Make Nova Offline: add `adapter: 'offline'` (an Adapter id that does not exist) to the frontmatter of `<DataDir>\Agents\Nova\Nova.md`.
+1. Make Nova Offline (Setup, "Making an Agent Offline").
 2. Send: "@Cleo ask @Nova to name a fruit, then talk with @Kai about fruit until you are stopped." Wait until the Room pauses (the Budget prompt shows).
 3. Remove the `adapter:` line from Nova's file. Nova restarts and comes Online.
 4. Read the waiting notice. Then type "carry on" in the Room instead of pressing Continue.

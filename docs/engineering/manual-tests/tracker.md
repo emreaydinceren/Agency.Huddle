@@ -1421,12 +1421,12 @@ Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice,
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [TURNQUEUE-01](turn-queue.md#turnqueue-01--a-turn-cut-off-by-a-normal-close-runs-again-once-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-02](turn-queue.md#turnqueue-02--after-a-kill-the-re-run-checks-its-earlier-work-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-03](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-04](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-05](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-12](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-13](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-14](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-) | 💰 | Active | #617 | not yet run |
-| [TURNQUEUE-18](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-) | 💰 | Active | #617 | not yet run |
+| [TURNQUEUE-01](turn-queue.md#turnqueue-01--a-turn-cut-off-by-a-normal-close-runs-again-once-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-02](turn-queue.md#turnqueue-02--after-a-kill-the-re-run-checks-its-earlier-work-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-03](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-04](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-05](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-12](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-13](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-14](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-18](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
