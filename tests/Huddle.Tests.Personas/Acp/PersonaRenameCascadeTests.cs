@@ -569,6 +569,53 @@ public sealed class PersonaRenameCascadeTests
         Assert.Empty(harness.Spend.Get("echo"));
     }
 
+    /// <summary>Turn Queue spec §5.7: removing a Persona closes its Agent's open rows as gone and drops its subscription, and leaves another Agent's rows alone.</summary>
+    [Fact]
+    public async Task Remove_ClosesTheAgentsOpenTurnQueueRowsAsGoneAndUnsubscribesIt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        User? echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
+        User? other = await harness.TeamDirectory.UpsertAgentUserAsync("other", null, ct);
+        Assert.NotNull(echo);
+        Assert.NotNull(other);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        harness.QueueStore.Subscribe(echo.Id);
+        harness.QueueStore.Subscribe(other.Id);
+        _ = harness.QueueStore.Record(echo.Id, "m1", "r1", now, now);
+        _ = harness.QueueStore.Record(other.Id, "m2", "r1", now, now);
+
+        harness.PersonaStore.Remove("echo");
+
+        TurnQueueRowSnapshot closed = TurnQueueRows.Find(dir.Path, echo.Id, "r1", "m1");
+        Assert.Equal(("done", "gone"), (closed.Status, closed.Outcome));
+        Assert.Equal("waiting", TurnQueueRows.Find(dir.Path, other.Id, "r1", "m2").Status);
+        Assert.Equal([other.Id], harness.QueueStore.Subscribers().ToArray());
+    }
+
+    /// <summary>Turn Queue spec §5.9: renaming a Persona is not a removal, so its Agent's open rows stay open and its subscription stays.</summary>
+    [Fact]
+    public async Task Rename_LeavesTheAgentsOpenTurnQueueRowsOpen()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        User? echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        harness.QueueStore.Subscribe(echo.Id);
+        _ = harness.QueueStore.Record(echo.Id, "m1", "r1", now, now);
+
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+
+        Assert.NotNull(harness.TeamDirectory.FindUserByName("echoprime"));
+        Assert.Equal("waiting", TurnQueueRows.Find(dir.Path, echo.Id, "r1", "m1").Status);
+        Assert.Equal([echo.Id], harness.QueueStore.Subscribers().ToArray());
+    }
+
     /// <summary>Removing a Persona deletes both its Avatar's JSON key and its image file from disk.</summary>
     [Fact]
     public async Task Remove_DeletesTheAvatarKeyAndItsImageFile()
@@ -993,6 +1040,8 @@ public sealed class PersonaRenameCascadeTests
         var folderMoves = new AgentFolderMoves();
         var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance, new PersonaSpendStore(dir.Options()), new RoomSpendStore(dir.Options()));
         var commands = new PersonaCommands(NullLogger<PersonaCommands>.Instance);
+        var queueStore = new TurnQueueStore(dir.Options());
+        var turnQueue = new TurnQueue(queueStore, dir.Options(), NullLogger<TurnQueue>.Instance, new Agency.Huddle.Tests.Desktop.FakeLifetime());
         var memoryTidy = new MemoryTidyStateStore(dir.Options());
         TeamCatalog? catalog = teamFiles is null ? null : new TeamCatalog(personaStore, taskStore);
         TeamFolderProvisioner? teamFolders = null;
@@ -1020,6 +1069,7 @@ public sealed class PersonaRenameCascadeTests
             spend: spend,
             commands: commands,
             lastCatchUp: lastCatchUp,
+            turnQueue: turnQueue,
             memoryTidy: memoryTidy,
             teamFolders: teamFolders,
             teams: catalog);
@@ -1044,6 +1094,7 @@ public sealed class PersonaRenameCascadeTests
             Spend = spend,
             Commands = commands,
             Catalog = catalog,
+            QueueStore = queueStore,
         };
     }
 
@@ -1314,6 +1365,8 @@ public sealed class PersonaRenameCascadeTests
         public required PersonaStore PersonaStore { get; init; }
 
         public required RoomEvents RoomEvents { get; init; }
+
+        public required TurnQueueStore QueueStore { get; init; }
 
         public required AvatarStore AvatarStore { get; init; }
 

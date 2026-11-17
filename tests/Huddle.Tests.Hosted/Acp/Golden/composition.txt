@@ -9,6 +9,7 @@ Singleton Agency.Huddle.App.Acp.IAdapterProbeRunner -> Agency.Huddle.App.Acp.Ada
 Singleton Agency.Huddle.App.Acp.IAgentHostFactory -> factory Agency.Huddle.App.Acp.IAgentHostFactory
 Singleton Agency.Huddle.App.Acp.IMergeGate -> Agency.Huddle.App.Teams.ProcessMergeGate
 Singleton Agency.Huddle.App.Acp.IModelCatalog -> Agency.Huddle.App.Acp.ModelCatalogProbe
+Singleton Agency.Huddle.App.Acp.IOwedTurnPolicy -> Agency.Huddle.App.Acp.OwedTurnPolicy
 Singleton Agency.Huddle.App.Acp.PersonaCommands -> Agency.Huddle.App.Acp.PersonaCommands
 Singleton Agency.Huddle.App.Acp.PersonaHealth -> Agency.Huddle.App.Acp.PersonaHealth
 Singleton Agency.Huddle.App.Acp.PersonaPromptPreview -> Agency.Huddle.App.Acp.PersonaPromptPreview
@@ -77,6 +78,8 @@ Singleton Agency.Huddle.App.Data.RawBaselineStore -> Agency.Huddle.App.Data.RawB
 Singleton Agency.Huddle.App.Data.RoomSpendStore -> Agency.Huddle.App.Data.RoomSpendStore
 Singleton Agency.Huddle.App.Data.ScopeIdStore -> Agency.Huddle.App.Data.ScopeIdStore
 Singleton Agency.Huddle.App.Data.TaskScopeStore -> Agency.Huddle.App.Data.TaskScopeStore
+Singleton Agency.Huddle.App.Data.TurnQueueStore -> Agency.Huddle.App.Data.TurnQueueStore
+Singleton Agency.Huddle.App.Data.WaitingQuestionStore -> Agency.Huddle.App.Data.WaitingQuestionStore
 Singleton Agency.Huddle.App.DocHistory.DocHistoryLibraryListener -> Agency.Huddle.App.DocHistory.DocHistoryLibraryListener
 Singleton Agency.Huddle.App.DocHistory.DocHistoryRecorder -> Agency.Huddle.App.DocHistory.DocHistoryRecorder
 Singleton Agency.Huddle.App.DocHistory.DocHistoryStore -> Agency.Huddle.App.DocHistory.DocHistoryStore
@@ -162,7 +165,7 @@ Singleton Agency.Huddle.App.Profile.IHumanIdentity -> factory Agency.Huddle.App.
 Singleton Agency.Huddle.App.Prompts.IPromptSource -> factory Agency.Huddle.App.Prompts.IPromptSource
 Singleton Agency.Huddle.App.Prompts.PromptStore -> Agency.Huddle.App.Prompts.PromptStore
 Singleton Agency.Huddle.App.Questions.QuestionService -> Agency.Huddle.App.Questions.QuestionService
-Singleton Agency.Huddle.App.Questions.QuestionStore -> Agency.Huddle.App.Questions.QuestionStore
+Singleton Agency.Huddle.App.Questions.QuestionStore -> factory Agency.Huddle.App.Questions.QuestionStore
 Singleton Agency.Huddle.App.References.IReferenceSnapshotter -> Agency.Huddle.App.References.ReferenceSnapshotter
 Singleton Agency.Huddle.App.References.ReferenceExpander -> Agency.Huddle.App.References.ReferenceExpander
 Singleton Agency.Huddle.App.References.ReferenceResolver -> Agency.Huddle.App.References.ReferenceResolver
@@ -181,9 +184,17 @@ Singleton Agency.Huddle.App.Services.ChatService -> factory Agency.Huddle.App.Se
 Singleton Agency.Huddle.App.Services.ContextFill -> Agency.Huddle.App.Services.ContextFill
 Singleton Agency.Huddle.App.Services.Drafts -> Agency.Huddle.App.Services.Drafts
 Singleton Agency.Huddle.App.Services.IMentionAliasSource -> factory Agency.Huddle.App.Services.IMentionAliasSource
+Singleton Agency.Huddle.App.Services.ITurnAcks -> factory Agency.Huddle.App.Services.ITurnAcks
+Singleton Agency.Huddle.App.Services.ITurnControl -> Agency.Huddle.App.Services.TurnControl
+Singleton Agency.Huddle.App.Services.ITurnLedger -> factory Agency.Huddle.App.Services.ITurnLedger
+Singleton Agency.Huddle.App.Services.ITurnQueueControl -> factory Agency.Huddle.App.Services.ITurnQueueControl
+Singleton Agency.Huddle.App.Services.ITurnQueueView -> Agency.Huddle.App.Services.TurnQueueView
+Singleton Agency.Huddle.App.Services.PersonaExists -> factory Agency.Huddle.App.Services.PersonaExists
 Singleton Agency.Huddle.App.Services.RoomEvents -> Agency.Huddle.App.Services.RoomEvents
 Singleton Agency.Huddle.App.Services.ToolCallLogWriter -> Agency.Huddle.App.Services.ToolCallLogWriter
 Singleton Agency.Huddle.App.Services.TurnActivity -> Agency.Huddle.App.Services.TurnActivity
+Singleton Agency.Huddle.App.Services.TurnQueue -> Agency.Huddle.App.Services.TurnQueue
+Singleton Agency.Huddle.App.Services.TurnRedelivery -> Agency.Huddle.App.Services.TurnRedelivery
 Scoped Agency.Huddle.App.Sidebar.PageCommandBus -> Agency.Huddle.App.Sidebar.PageCommandBus
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-detail order 5 Agency.Huddle.App.Components.Sidebar.TaskDetailPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel members order 10 Agency.Huddle.App.Components.Sidebar.MembersPanel
@@ -298,6 +309,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.RetiredFileScanService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.DefaultAgentsMdService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Profile.HumanRenameCascade
+Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Services.TurnQueueRecovery
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Pipes.PipeServer
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Demo.DemoAgentHost
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agents.ConnectorsNoticeDecider

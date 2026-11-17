@@ -5,6 +5,9 @@ date: 2026-09-22
 
 # An Agent asks the Human with a Question, and the answer is a Message
 
+> **Amended by [ADR-0091](0091-a-rooms-waiting-turns-are-kept-in-team-db.md).** A waiting card survives a restart:
+> it is kept in `waiting_questions` in `team.db` and every drop deletes its row.
+
 A **Question** is one multiple-choice question an Agent puts to the Human with the App Tool
 `ask_human`. One to three are shown together on one card in the Room, as options the Human
 taps. The answer is posted as an ordinary Message from the Human that Mentions the asker. The

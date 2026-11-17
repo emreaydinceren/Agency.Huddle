@@ -160,6 +160,7 @@ the per-area tables below.
 | [Second Brain: the use cases as a Human's checklist, raw uploads, Team Memory, AGENTS.md, prompts, archive and an old data folder](second-brain.md) | [below](#second-brain) |
 | [Second Brain from zero: three Teams hired by hand, documents ingested into memory, and a Development Team building an app](second-brain-zero.md) | [below](#second-brain-zero) |
 | [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum)](memory-tidy.md) | [below](#memory-tidy) |
+| [Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, the age limit and Don't answer (paid, Sonnet minimum)](turn-queue.md) | [below](#turn-queue) |
 ---
 
 ## at-tagging
@@ -1429,3 +1430,19 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 | [MEMTIDY-10](memory-tidy.md#memtidy-10--closing-huddle-in-the-middle-of-a-pass-lists-what-was-done-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
 | [MEMTIDY-11](memory-tidy.md#memtidy-11--a-file-merged-away-in-huddle-wide-memory-is-now-in-the-kept-one-and-no-description-changed-) | 💰 | Pass | #621 | run 2026-11-17, `f03cfa66`, see the Run log |
 | [MEMTIDY-12](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-) | 💰 | Partial | #621 | run 2026-11-17, `f03cfa66`, the Timetable pass met the cap and wrote the resume row; the continuation after midnight is owed, see the Run log |
+
+## turn-queue
+
+Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention (paid, Sonnet minimum) — [area file](turn-queue.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [TURNQUEUE-01](turn-queue.md#turnqueue-01--a-turn-cut-off-by-a-normal-close-runs-again-once-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-02](turn-queue.md#turnqueue-02--after-a-kill-the-re-run-checks-its-earlier-work-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-03](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-04](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-05](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-12](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-13](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-14](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-18](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |

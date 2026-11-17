@@ -1,4 +1,7 @@
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Agency.Huddle.App.Questions;
 
@@ -10,13 +13,49 @@ namespace Agency.Huddle.App.Questions;
 /// singleton: it depends only on <see cref="RoomEvents"/>, so <see cref="ChatService"/> can call it
 /// without a cycle.
 /// </summary>
-/// <param name="events">The hub <see cref="RoomEvents.QuestionsChanged"/> is raised on.</param>
-public sealed class QuestionStore(RoomEvents events)
+/// <remarks>
+/// With a <see cref="WaitingQuestionStore"/> every stored card is also written to <c>team.db</c> and every
+/// removal deletes its row, and the cards found there are loaded when the store is built (Turn Queue spec §5a).
+/// A database failure is logged and never fails the in-memory operation.
+/// </remarks>
+public sealed class QuestionStore
 {
     private readonly PendingByRoom<PendingQuestions> cards = new(
         static card => card.RoomId,
         static card => card.Id,
         static card => card.AskerAgentId);
+
+    private readonly Lock gate = new();
+    private readonly RoomEvents events;
+    private readonly WaitingQuestionStore? persisted;
+    private readonly ILogger logger;
+
+    /// <summary>Creates a store that keeps its cards in memory only.</summary>
+    /// <param name="events">The hub <see cref="RoomEvents.QuestionsChanged"/> is raised on.</param>
+    public QuestionStore(RoomEvents events)
+        : this(events, null)
+    {
+    }
+
+    /// <summary>Creates a store that writes through to <paramref name="persisted"/> and loads its rows now.</summary>
+    /// <param name="events">The hub <see cref="RoomEvents.QuestionsChanged"/> is raised on.</param>
+    /// <param name="persisted">The table the cards survive in; <see langword="null"/> keeps them in memory only.</param>
+    /// <param name="logger">Receives a failed database call; <see langword="null"/> logs nothing.</param>
+    internal QuestionStore(RoomEvents events, WaitingQuestionStore? persisted, ILogger<QuestionStore>? logger = null)
+    {
+        this.events = events;
+        this.persisted = persisted;
+        this.logger = logger ?? NullLogger<QuestionStore>.Instance;
+
+        if (persisted is not null)
+        {
+            this.Load(persisted);
+        }
+    }
+
+    /// <summary>Returns every waiting card, one per Room.</summary>
+    /// <returns>A snapshot; later changes do not alter it.</returns>
+    internal IReadOnlyList<PendingQuestions> All() => this.cards.All();
 
     /// <summary>Returns the card waiting in <paramref name="roomId"/>, or <see langword="null"/> when none is.</summary>
     /// <param name="roomId">The Room to look up.</param>
@@ -32,11 +71,19 @@ public sealed class QuestionStore(RoomEvents events)
     /// <returns>What happened, and, only when refused, the card that was already waiting.</returns>
     internal PendingPut<PendingQuestions> TryPut(PendingQuestions pending)
     {
-        PendingPut<PendingQuestions> put = this.cards.TryPut(pending);
+        PendingPut<PendingQuestions> put;
+        lock (this.gate)
+        {
+            put = this.cards.TryPut(pending);
+            if (put.Result is not PendingPutResult.Refused)
+            {
+                this.Persist(static (store, card) => store.Put(card), pending);
+            }
+        }
 
         if (put.Result is not PendingPutResult.Refused)
         {
-            events.PublishQuestionsChanged(pending.RoomId);
+            this.events.PublishQuestionsChanged(pending.RoomId);
         }
 
         return put;
@@ -53,11 +100,19 @@ public sealed class QuestionStore(RoomEvents events)
     /// <returns>The removed card, or <see langword="null"/> when nothing matched.</returns>
     internal PendingQuestions? TryTake(string roomId, string id)
     {
-        PendingQuestions? taken = this.cards.TryTake(roomId, id);
+        PendingQuestions? taken;
+        lock (this.gate)
+        {
+            taken = this.cards.TryTake(roomId, id);
+            if (taken is not null)
+            {
+                this.Persist(static (store, room) => store.Delete(room), roomId);
+            }
+        }
 
         if (taken is not null)
         {
-            events.PublishQuestionsChanged(roomId);
+            this.events.PublishQuestionsChanged(roomId);
         }
 
         return taken;
@@ -71,13 +126,59 @@ public sealed class QuestionStore(RoomEvents events)
     /// <returns><see langword="true"/> when a card was removed.</returns>
     internal bool Drop(string roomId)
     {
-        bool removed = this.cards.Drop(roomId);
+        bool removed;
+        lock (this.gate)
+        {
+            removed = this.cards.Drop(roomId);
+            if (removed)
+            {
+                this.Persist(static (store, room) => store.Delete(room), roomId);
+            }
+        }
 
         if (removed)
         {
-            events.PublishQuestionsChanged(roomId);
+            this.events.PublishQuestionsChanged(roomId);
         }
 
         return removed;
+    }
+
+    /// <summary>Loads every stored card into memory. A row for a Room that already holds a card is ignored.</summary>
+    /// <param name="store">The table to read.</param>
+    private void Load(WaitingQuestionStore store)
+    {
+        try
+        {
+            foreach (PendingQuestions card in store.LoadAll())
+            {
+                _ = this.cards.TryPut(card);
+            }
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "Could not load the waiting Question cards; starting without them.");
+        }
+    }
+
+    /// <summary>Runs one write against the table, logging a database failure so the in-memory change stands.</summary>
+    /// <typeparam name="TArg">What the write needs.</typeparam>
+    /// <param name="write">The write.</param>
+    /// <param name="argument">Passed to <paramref name="write"/>.</param>
+    private void Persist<TArg>(Action<WaitingQuestionStore, TArg> write, TArg argument)
+    {
+        if (this.persisted is null)
+        {
+            return;
+        }
+
+        try
+        {
+            write(this.persisted, argument);
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "Could not update the stored Question card; the waiting card is kept in memory only.");
+        }
     }
 }

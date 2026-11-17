@@ -5,6 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
+using Microsoft.Data.Sqlite;
 
 namespace Agency.Huddle.App.Pipes;
 
@@ -25,6 +26,9 @@ internal sealed class AgentConnection
     private readonly Drafts drafts;
     private readonly RoomEvents roomEvents;
     private readonly FreshStartNotes freshStartNotes;
+    private readonly ITurnAcks acks;
+    private readonly ITurnQueueControl control;
+    private readonly TurnRedelivery redelivery;
     private readonly ILogger<AgentConnection> logger;
     private readonly TimeProvider clock;
 
@@ -63,11 +67,20 @@ internal sealed class AgentConnection
         Drafts drafts,
         RoomEvents roomEvents,
         FreshStartNotes freshStartNotes,
+        ITurnAcks acks,
+        ITurnQueueControl control,
+        TurnRedelivery redelivery,
         ILogger<AgentConnection> logger,
         TimeProvider? timeProvider = null)
     {
+        ArgumentNullException.ThrowIfNull(redelivery);
+        this.redelivery = redelivery;
         ArgumentNullException.ThrowIfNull(freshStartNotes);
+        ArgumentNullException.ThrowIfNull(acks);
+        ArgumentNullException.ThrowIfNull(control);
         this.freshStartNotes = freshStartNotes;
+        this.acks = acks;
+        this.control = control;
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
@@ -146,9 +159,22 @@ internal sealed class AgentConnection
             // the disposed pipe and fails quietly in SendAsync, instead of waiting forever.
             this.welcomeSent.TrySetResult();
             this.gateway.Unregister(this);
+            this.CloseRunningTurns();
             this.LogDisconnect();
 
             await this.pipe.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Closes the rows this connection started, once an Agent was registered. Not in <c>AgentGateway.Unregister</c>: a stale
+    /// connection unregisters after its replacement registered, and this closes only the rows this connection's own id started (spec §5.6).
+    /// </summary>
+    private void CloseRunningTurns()
+    {
+        if (this.Agent is not null)
+        {
+            this.GuardQueue(() => this.control.CloseRunning(this.ConnectionId), "closing the running Turns of an ended connection");
         }
     }
 
@@ -218,12 +244,19 @@ internal sealed class AgentConnection
 
         this.Agent = user;
         await this.chat.EnsureRoomForAsync(user, FeedActor.Huddle, ct).ConfigureAwait(false);
+        this.GuardQueue(() => this.acks.SetSubscribed(user.Id, hello.DurableQueue == true), "recording the Hello's durable queue flag");
         this.gateway.Register(this);
 
         this.handshakeStep = $"building the Welcome for '{hello.Name}'";
         var welcome = await this.BuildWelcomeAsync(user, ct).ConfigureAwait(false);
         this.handshakeStep = $"writing the Welcome for '{hello.Name}'";
         await lineStream.WriteAsync(welcome, ct).ConfigureAwait(false);
+        if (hello.DurableQueue == true)
+        {
+            // Sent after the Welcome (SendAsync waits for it) and never awaited: the read loop must start at once.
+            _ = this.RedeliverWaitingAsync(user.Id, ct);
+        }
+
         this.welcomed = true;
         this.welcomeSent.TrySetResult();
         return true;
@@ -349,6 +382,9 @@ internal sealed class AgentConnection
                 case ReadTranscript read:
                 await this.HandleReadTranscriptAsync(lineStream, read, ct).ConfigureAwait(false);
                 break;
+                case QueueAck ack:
+                await this.HandleQueueAckAsync(lineStream, ack, ct).ConfigureAwait(false);
+                break;
                 default:
                 await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Unexpected message type."), ct).ConfigureAwait(false);
                 break;
@@ -364,14 +400,27 @@ internal sealed class AgentConnection
             return;
         }
 
+        User agent = this.Agent ?? throw new InvalidOperationException("A PostMessage was handled before the handshake set the Agent.");
+        string agentId = agent.Id;
+        List<string> inReplyTo = ValidIds(post.InReplyTo);
         try
         {
-            await this.chat.PostAsync(post.RoomId, this.Agent!.Id, post.Text, post.MessageId, ct).ConfigureAwait(false);
+            await this.chat.PostAsync(post.RoomId, agentId, post.Text, post.MessageId, ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
+            if (inReplyTo.Count > 0)
+            {
+                this.GuardQueue(() => this.acks.MarkRefused(agentId, post.RoomId, inReplyTo), "closing the Turns of a refused reply");
+            }
+
             await lineStream.WriteAsync(new ProtocolError(ex.Code, ex.Message, post.MessageId), ct).ConfigureAwait(false);
             return;
+        }
+
+        if (inReplyTo.Count > 0)
+        {
+            this.GuardQueue(() => this.acks.MarkReplied(agentId, post.RoomId, inReplyTo), "closing the Turns a reply answers");
         }
 
         // The real Message now exists under this id, so the Draft that led up to it is gone the
@@ -380,6 +429,79 @@ internal sealed class AgentConnection
         {
             this.drafts.Complete(post.MessageId);
             this.roomEvents.PublishDraftChanged(post.RoomId);
+        }
+    }
+
+    /// <summary>
+    /// Applies a <see cref="QueueAck"/>: refuses a Room the Agent is not a Member of exactly as <see cref="ReadTranscript"/> does,
+    /// drops every id that is not a valid id, and hands what is left to the Turn Queue.
+    /// </summary>
+    private async Task HandleQueueAckAsync(JsonLineStream lineStream, QueueAck ack, CancellationToken ct)
+    {
+        if (this.Agent is not { } agent)
+        {
+            return;
+        }
+
+        // The first Message id stands in as the error's related id; the Room id when the ack names none.
+        string related = ack.MessageIds is [string first, ..] ? first : ack.RoomId;
+        var membershipError = await this.ResolveMembershipErrorAsync(ack.RoomId, related, ct).ConfigureAwait(false);
+        if (membershipError is not null)
+        {
+            await lineStream.WriteAsync(membershipError, ct).ConfigureAwait(false);
+            return;
+        }
+
+        List<string> ids = ValidIds(ack.MessageIds);
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        string? replyId = NameRules.IsValidId(ack.ReplyMessageId) ? ack.ReplyMessageId : null;
+        QueueAck clean = ack with { MessageIds = ids, ReplyMessageId = replyId };
+        this.GuardQueue(() => this.acks.Apply(this.ConnectionId, agent.Id, clean), "applying a queue ack");
+    }
+
+    /// <summary>The ids of <paramref name="ids"/> that pass <see cref="NameRules.IsValidId"/>, in order; empty for <see langword="null"/>.</summary>
+    /// <param name="ids">The ids as received.</param>
+    private static List<string> ValidIds(IReadOnlyList<string>? ids) =>
+        ids is null ? [] : [.. ids.Where(id => NameRules.IsValidId(id))];
+
+    /// <summary>Sends the Turns this Agent still owes after its Welcome; a failure is logged and ends only this task.</summary>
+    /// <param name="agentId">The Agent that connected.</param>
+    /// <param name="ct">The connection's token.</param>
+    private async Task RedeliverWaitingAsync(string agentId, CancellationToken ct)
+    {
+        try
+        {
+            await this.redelivery.SendWaitingAsync(agentId, ct).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The connection or the host ended first; nothing is owed to a closed pipe.
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogError(ex, "Re-delivering the waiting Turns failed on connection {ConnectionId}.", this.ConnectionId);
+        }
+    }
+
+    /// <summary>
+    /// Runs a call into the Turn Queue so that a failing store is logged and never ends the connection: the general catch in
+    /// <see cref="RunAsync"/> would close it (spec §5.5).
+    /// </summary>
+    /// <param name="call">The call.</param>
+    /// <param name="what">What the call was for, for the log.</param>
+    private void GuardQueue(Action call, string what)
+    {
+        try
+        {
+            call();
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            this.logger.LogError(ex, "The Turn Queue failed while {What} on connection {ConnectionId}.", what, this.ConnectionId);
         }
     }
 
@@ -534,7 +656,7 @@ internal sealed class AgentConnection
 
         var transcript = await this.chatStore.ReadAllAsync(read.RoomId, ct).ConfigureAwait(false);
 
-        var beforeIndex = IndexOf(transcript, read.BeforeMessageId);
+        var beforeIndex = IndexOf(transcript, read.BeforeMessageId); // An id not in the Transcript reads to the end; a re-sent Turn relies on it (Turn Queue spec 5.8).
         var end = beforeIndex >= 0 ? beforeIndex : transcript.Count;
         var afterIndex = read.AfterMessageId is null ? -1 : IndexOf(transcript, read.AfterMessageId);
         var start = afterIndex >= 0 && afterIndex < end ? afterIndex + 1 : 0;

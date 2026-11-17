@@ -30,6 +30,11 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Data/PersonaEffortStore.cs` | One row per Persona: its chosen Effort. A separate table again, for the same reason `PersonaModelStore` is — see [Rules](rules.md). Synchronous, same reason. |
 | `Data/PersonaWorkModeStore.cs` | One row per Persona: its chosen Work Mode, the id of a mode its Adapter advertises. A separate table (`persona_work_modes`) again, a mirror of `PersonaEffortStore` — see [Rules](rules.md). `Set` with null or blank deletes the row, because null means the Adapter's own mode. Synchronous, same reason. |
 | `Pipes/PipeServer.cs` | Accepts pipe connections. Hosted service. |
+| `Data/TurnQueueStore.cs`, `Services/TurnQueue.cs` | The Turn Queue (ADR-0091): the `turn_queue` and `turn_queue_agents` tables, and the one writer of them, behind `ITurnLedger` (`ChatService`), `ITurnAcks` (`AgentConnection`) and `ITurnQueueControl` (lifecycle). `TurnQueueView` is the read-only `ITurnQueueView` for the UI. |
+| `Acp/OwedTurnPolicy.cs`, `Acp/RoomRecipients.cs`, `Services/RoomBudgets.cs` | Who owes a Turn for a posted Message, decided once in `ChatService.PostCoreAsync`, sharing the recipient loop with `RoomReplyResolver` and the Budget arithmetic with `SpendBudget`. |
+| `Services/TurnQueueRecovery.cs`, `Services/RestartLine.cs` | The start-up pass, before `PipeServer`: reconcile rows against the Transcript, re-queue a cut-off Turn once, apply the age rule, prune, post the restart line (`C4c`). |
+| `Services/TurnRedelivery.cs`, `Services/TurnControl.cs` | Re-sends waiting Messages after a Welcome and on `BudgetUnpaused` through `AgentGateway.DeliverToAsync`; Stop and **Don't answer** close rows by `seq` before the gateway Stop. |
+| `Data/WaitingQuestionStore.cs` | Keeps a waiting `ask_human` card across a restart; `QuestionStore` writes through to it and loads it. |
 | `Pipes/AgentGateway.cs` | Bridges `RoomEvents` to connected Agents. Fills `Members` on every `messagePosted`. |
 | `Components/Pages/Chat.razor` | The Room view. |
 | `Components/Pages/Agents.razor` | The Persona library UI, at `/agents`. Agent tiles grouped by Team with a Team filter, the rejected-file list above them; owns the open card's state. |

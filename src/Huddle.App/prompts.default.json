@@ -197,5 +197,7 @@
   "turn.teamRenamed": "Team '{{oldName}}' is now called '{{newName}}'. Its folder moved from `Teams/{{oldName}}` to `Teams/{{newName}}`.\nEarlier Messages and your own notes use the old name and old paths; use the new ones from now on, and\nupdate your own memory notes if they name the old Team.",
   "turn.projectRenamed": "Project '{{team}}/{{oldProject}}' is now called '{{team}}/{{newProject}}'. Its folder moved from `Teams/{{team}}/{{oldProject}}` to `Teams/{{team}}/{{newProject}}`.\nEarlier Messages and your own notes use the old name and old paths; use the new ones from now on, and\nupdate your own memory notes if they name the old Project.",
   "room.teamRenamed": "This Team was renamed from **{{oldName}}** to **{{newName}}**.",
-  "room.projectRenamed": "Project **{{oldProject}}** was renamed to **{{newProject}}**."
+  "room.projectRenamed": "Project **{{oldProject}}** was renamed to **{{newProject}}**.",
+  "turn.laterHeader": "Posted after that Message, while it waited:",
+  "turn.cutOffNote": "Huddle stopped while you were answering the Message below, and this is a second try. Your conversation may show what you had started: a tool call that had not returned may have finished, may have stopped partway, or may still be running. Anything you did before it stopped (a file, a Task, a post in this or another Room) may already be done: check before you do it again."
 }

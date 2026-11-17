@@ -60,6 +60,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="spend">Moves a renamed Persona's display-only Spend, and forgets a removed Persona's — the Turn detail spec, section 6.6.</param>
 /// <param name="lastCatchUp">Moves a renamed Persona's catch-up records and notes, and deletes a removed Persona's.</param>
 /// <param name="commands">Moves a renamed Persona's offered Adapter commands, and forgets a removed Persona's — the Commands spec, section 6.3.</param>
+/// <param name="turnQueue">Closes a removed Agent's open Turn Queue rows as gone and drops its subscription — Turn Queue spec §5.7.</param>
 /// <param name="memoryTidy">Moves a renamed Agent's Memory Tidy marker, failure count and days to its new key, and deletes a removed Agent's rows — the Memory Tidy spec, section 6.5.</param>
 /// <param name="teamFolders">Rewrites <c>manager:</c> in the <c>_team.md</c> of every Team the renamed Persona manages, so the Team keeps naming a Persona that exists.</param>
 /// <param name="teams">Finds the Teams the renamed Persona manages.</param>
@@ -79,6 +80,7 @@ internal sealed partial class PersonaRenameCascade(
     PersonaSpend spend,
     PersonaCommands commands,
     LastCatchUpStore lastCatchUp,
+    ITurnQueueControl turnQueue,
     MemoryTidyStateStore? memoryTidy = null,
     ITeamFolders? teamFolders = null,
     ITeamCatalog? teams = null) : IHostedService, IDisposable
@@ -392,6 +394,7 @@ internal sealed partial class PersonaRenameCascade(
     private void OnPersonaRemoved(PersonaRemoved removed)
     {
         avatars.Remove(removed.Name);
+        this.CloseTurnQueueOfRemovedAgent(removed.Name);
         spend.Forget(removed.Name);
         commands.Forget(removed.Name);
 
@@ -436,6 +439,27 @@ internal sealed partial class PersonaRenameCascade(
         {
             // The Agent's host is still stopping, so its browser may hold the folder for a moment: the first try runs now, the rest retry briefly.
             _ = this.DeleteBrowserProfileWithRetryAsync(agentPaths.BrowserProfile(removed.Name), removed.Name);
+        }
+    }
+
+    /// <summary>
+    /// Closes the removed Persona's open Turn Queue rows as gone and drops its subscription (Turn Queue spec §5.7). Runs with the Avatar
+    /// delete, above everything that can fail, and needs no Agent row of its own: an Agent that never registered owes no Turns, so the
+    /// lookup finding nobody is the normal case, and a rename's old Name no longer names anyone by the time its removal arrives.
+    /// </summary>
+    /// <param name="name">The Name of the Persona that no longer exists.</param>
+    private void CloseTurnQueueOfRemovedAgent(string name)
+    {
+        try
+        {
+            if (teamDirectory.FindUserByName(name) is { Kind: UserKind.Agent } agent)
+            {
+                turnQueue.CloseForAgent(agent.Id);
+            }
+        }
+        catch (Microsoft.Data.Sqlite.SqliteException ex)
+        {
+            logger.LogWarning(ex, "Closing the Turn Queue rows of the removed Agent {AgentName} failed; they are closed when its Turns next come due.", name);
         }
     }
 

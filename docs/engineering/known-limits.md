@@ -485,34 +485,37 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   Narrowed 2026-09-13: a *Persona that failed to start* for either reason now says
   which, on its tile. The model **picker** is still the ambiguous surface.
 - **What a Draft does not survive.** It is in memory, per process, so a restart
-  loses every Turn in flight and the Room shows only what had been posted. Its
+  loses the streamed text of every Turn in flight. The Turn itself is not lost: the
+  Turn Queue runs it again once on the next start, led by a cut-off note
+  ([ADR-0091](../adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md)). Its
   text is capped at 256 KB; past that it stops growing rather than truncating what
   is already there. Both are deliberate — it is a Singleton holding model output
   for the life of the process, and an Agent killed without a clean disconnect
   never sends the terminator that would clear it.
+- **What the Turn Queue does not cover** ([Turn Queue spec](../Huddle.TurnQueue-Specifications.md) §13).
+  A crash in the instant between the runner writing `Started` and the server committing it re-runs that Turn
+  as merely waiting, without the cut-off note (E-14). A form waiting when Huddle stops is part of its Turn and
+  is asked again by the re-run, not kept (D-28). Follows and the Task in hand are in memory and are not
+  restored, so a re-sent Task wake-up files a new Task under the Room's Project (E-4). A cut-off Turn that had
+  already used `post_message` may answer the Human a second time; the cut-off note asks the Agent to check,
+  nothing enforces it (E-15). A tool a cut-off Turn started can outlive Huddle (spike S-0: the Adapter dies with
+  Huddle, its shell does not), so the re-run may overlap it; the note says so. The Room Budget lives in memory
+  and starts at zero at every start, so a Message held for a paused Room is answered after a restart without
+  waiting for Continue.
 - **A waiting Proposal does not survive a restart, and the proposer is not told.**
   `ProposalStore` holds at most one Proposal per Room in memory, like a Draft, so a
   restart loses it and its card. The Agent that proposed is still waiting for an
   outcome Message that never comes; the Human has to ask again. Archiving or
   deleting the Room drops it on purpose. Deliberate for V1: persisting it would
   mean a table and a recovery path for a card the Human can recreate by asking.
-- **A waiting Question does not survive a restart, and the asker is not told.**
-  `QuestionStore` holds at most one card per Room in memory, like a Proposal, so a
-  restart loses it. The Agent that asked ended its Turn and is still waiting for an
-  answer Message that never comes; the Human types the answer instead. Archiving or
-  deleting the Room, and any typed Human Message in it, drop the card on purpose.
-  Deliberate for V1: persisting it would mean a table and a recovery path for a card
-  the Human can answer by typing. Since 2026-10-01 `ask_human` is no longer the only way a Claude
-  Agent asks: Huddle advertises `elicitation.form` (`Acp:AdvertiseElicitation`), so the Adapter's
-  built-in `AskUserQuestion` works too, as the next entry describes
-  ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8, §6.8a).
 - **A waiting form holds its Turn, and its Persona's slot, until it ends.** ACP `elicitation/create`
   (Claude's `AskUserQuestion`, the retry-after-refusal dialog, an MCP server's form) keeps the asker's Turn
   open while the `ElicitationCard` waits, unlike `ask_human`. The idle watchdog is paused for the wait, so a
   forgotten card is not reported as a hung Adapter, and `Acp:UserInputTimeoutSeconds` (default 600) ends it:
   the request is answered cancelled and the card goes. With `Acp:MaxConcurrentTurns` at its default of 1 the
   Persona's Turns in its other Rooms queue behind the card for that long. A restart loses the card and the
-  Turn with it. Answering a form never wakes the asker (the answer is a Message withheld from it); the
+  Turn with it, because the request belongs to the Adapter process; an `ask_human` card, which holds no
+  request, is kept in `team.db` instead ([Turn Queue spec](../Huddle.TurnQueue-Specifications.md) §5a). Answering a form never wakes the asker (the answer is a Message withheld from it); the
   accepted leaks are that another Agent that follows the Room still wakes, that the asker's own token
   Budget is not reset by the Human's answer, and that on resume the asker's catch-up may include the answer as
   context. A schema the card cannot show faithfully (a nested object, an array of objects, `$ref`/`allOf`, a type

@@ -64,6 +64,12 @@ internal sealed class NeedsYouTracker
         events.QuestionsChanged += this.OnQuestionsChanged;
         events.ElicitationsChanged += this.OnElicitationsChanged;
         events.RoomsChanged += this.OnRoomsChanged;
+
+        // Cards loaded from the database raised no event, so mirror them now (Turn Queue spec §5a).
+        foreach (PendingQuestions card in questions.All())
+        {
+            this.OnQuestionsChanged(card.RoomId);
+        }
     }
 
     /// <summary>The visible entries changed: one appeared, went away or differs. Raised outside the lock.</summary>

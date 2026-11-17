@@ -15,6 +15,7 @@ namespace Agency.Huddle.Contracts;
 [JsonDerivedType(typeof(TranscriptTail), "transcriptTail")]
 [JsonDerivedType(typeof(StartAfresh), "startAfresh")]
 [JsonDerivedType(typeof(FreshStartNote), "freshStartNote")]
+[JsonDerivedType(typeof(QueueAck), "queueAck")]
 public abstract record ProtocolMessage
 {
     public int Version { get; init; } = ProtocolVersion.Current;

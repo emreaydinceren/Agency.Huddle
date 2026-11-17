@@ -86,10 +86,18 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     /// <summary>Every <see cref="AgentModelOption"/> list <see cref="ReportModels"/> has been called with, in call order.</summary>
     public List<IReadOnlyList<AgentModelOption>> ReportedModels { get; } = [];
 
+    /// <summary>When set, picks an exception <see cref="WriteAsync"/> throws for a given Envelope instead of recording it; <see langword="null"/> from the delegate lets the write through.</summary>
+    public Func<ProtocolMessage, Exception?>? WriteFault { get; set; }
+
     /// <inheritdoc />
     public Task WriteAsync(ProtocolMessage message, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(message);
+
+        if (this.WriteFault?.Invoke(message) is { } fault)
+        {
+            throw fault;
+        }
 
         lock (this.gate)
         {

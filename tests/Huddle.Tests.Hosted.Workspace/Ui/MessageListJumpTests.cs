@@ -64,6 +64,23 @@ public sealed class MessageListJumpTests
         }
     }
 
+    /// <summary>Turn Queue spec §5.11 (<c>C4c</c>): the restart line Huddle posts is a system row, the first sentence in the summary and the rest in the detail.</summary>
+    [Fact]
+    public async Task RestartLine_IsDrawnAsASystemRowWithSummaryAndDetail()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = MessageListJumpTests.NewContext(factory);
+        ChatMessage line = new("m-r", DateTimeOffset.UtcNow, Agency.Huddle.App.Data.KnownIds.Huddle, "Huddle", "Picked up after a restart. 2 waiting for Nova, 1 for Kai. Not picked up: 1 for Juno, older than 7 days.");
+
+        IRenderedComponent<MessageList> cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, [line])
+            .Add(p => p.HumanIds, [MessageListJumpTests.HumanId]));
+
+        Assert.Equal("Picked up after a restart.", cut.Find("details.system-row[data-message-id='m-r'] .system-row-text").TextContent.Trim());
+        Assert.Equal("2 waiting for Nova, 1 for Kai. Not picked up: 1 for Juno, older than 7 days.", cut.Find("details.system-row[data-message-id='m-r'] .system-row-detail").TextContent.Trim());
+        Assert.NotEmpty(cut.FindAll("details.system-row svg"));
+    }
+
     /// <summary>A Human bubble, an Agent row and the task-wake system row each carry <c>data-message-id</c> and <c>tabindex="-1"</c> (GS-T22).</summary>
     [Fact]
     public async Task Rows_CarryDataMessageId()

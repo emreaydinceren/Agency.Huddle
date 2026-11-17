@@ -38,6 +38,19 @@ public sealed class RoomEvents
     public event Action<string>? DraftChanged;
 
     /// <summary>
+    /// A Room's pause on its agent-message Budget ended: the Human extended it with Continue, or the Human spoke in a Room that was
+    /// spent. Carries the Room id. <c>TurnRedelivery</c> subscribes, to send the Turns held for the Room again (Turn Queue spec, section 5.4).
+    /// </summary>
+    public event Action<string>? BudgetUnpaused;
+
+    /// <summary>
+    /// Raised with <see cref="BudgetUnpaused"/>, and carrying the id of the Message delivered live along with the unpause (the Human's own
+    /// post, or the re-delivered last Message), so a held re-send skips it: it already runs one Turn from the live delivery. The id is
+    /// <see langword="null"/> when no Message went live with it.
+    /// </summary>
+    public event Action<string, string?>? BudgetUnpausedWith;
+
+    /// <summary>
     /// A Room's pending <c>Proposal</c> changed - one was stored, replaced, taken (Approved or
     /// Declined), or dropped (archived, deleted, or restarted). Carries the Room id, not the
     /// Proposal itself, for the same reason <see cref="DraftChanged"/> does: a subscriber re-reads
@@ -67,6 +80,12 @@ public sealed class RoomEvents
     /// </summary>
     public event Action<string>? ElicitationsChanged;
 
+    /// <summary>
+    /// The open Turn Queue rows of a Room changed - one was recorded, started, finished or closed. Carries the Room id, not the rows, for
+    /// the same reason <see cref="QuestionsChanged"/> does: the waiting notice rereads the counts.
+    /// </summary>
+    public event Action<string>? TurnQueueChanged;
+
     public void PublishMessagePosted(MessagePostedEvent e)
     {
         this.Publish(this.MessagePosted, e, nameof(this.MessagePosted));
@@ -85,6 +104,31 @@ public sealed class RoomEvents
     public void PublishRoomsChanged()
     {
         EventRaise.Isolated(this.RoomsChanged, ex => this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RoomsChanged)));
+    }
+
+    /// <summary>Publishes <see cref="BudgetUnpaused"/> for <paramref name="roomId"/>.</summary>
+    /// <param name="roomId">The Room whose pause ended.</param>
+    /// <param name="liveMessageId">The Message delivered live with the unpause, if any.</param>
+    public void PublishBudgetUnpaused(string roomId, string? liveMessageId = null)
+    {
+        this.PublishRoomId(this.BudgetUnpaused, roomId, nameof(this.BudgetUnpaused));
+        Action<string, string?>? handlers = this.BudgetUnpausedWith;
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (Action<string, string?> handler in handlers.GetInvocationList().Cast<Action<string, string?>>())
+        {
+            try
+            {
+                handler(roomId, liveMessageId);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.BudgetUnpausedWith));
+            }
+        }
     }
 
     /// <summary>Publishes <see cref="DraftChanged"/> for <paramref name="roomId"/>.</summary>
@@ -129,6 +173,13 @@ public sealed class RoomEvents
     internal void PublishElicitationsChanged(string roomId)
     {
         this.PublishRoomId(this.ElicitationsChanged, roomId, nameof(this.ElicitationsChanged));
+    }
+
+    /// <summary>Publishes <see cref="TurnQueueChanged"/> for <paramref name="roomId"/>, after any lock is released.</summary>
+    /// <param name="roomId">The Room whose open Turn Queue rows changed.</param>
+    internal void PublishTurnQueueChanged(string roomId)
+    {
+        this.PublishRoomId(this.TurnQueueChanged, roomId, nameof(this.TurnQueueChanged));
     }
 
     private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)

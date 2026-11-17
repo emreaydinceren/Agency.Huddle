@@ -7189,3 +7189,79 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-12
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Partial | `f03cfa66` |  | `When=daily at 02:38`, cap with one call left: the Timetable pass judged one folder and ended Cap with "goes on tomorrow" in changes.md and no paused Notification; a `resume` row for 2026-11-18T08:00Z (next local midnight). **Owed:** the continuation after midnight (the clock was not changed). |
+
+## Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention
+
+Back to [the manual test script](../manual-tests.md).
+
+### TURNQUEUE-01 — A Turn cut off by a normal close runs again once 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-01--a-turn-cut-off-by-a-normal-close-runs-again-once-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | By an agent acting as the Human, Nova on Sonnet / low, lane :5617. Nova ran `ping -n 90` in the foreground; a second Message ("what is 2 + 2?") waited; Huddle closed with Ctrl+C (the shutdown waited about 75 s for the running tool, as before this change). On start the Room read "Picked up after a restart. 2 Messages waiting for Nova.", the re-sent prompt carried `turn.cutOffNote` (wire trace), Nova said the ping had already finished and did not run it again, then answered 2 + 2 = 4. One reply per Message; rows `replied` with attempts 2 and 1. |
+
+### TURNQUEUE-02 — After a kill, the re-run checks its earlier work 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-02--after-a-kill-the-re-run-checks-its-earlier-work-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Nova wrote `notes/a.md` (`hello`) and started `ping -n 60`; Huddle was killed (`Stop-Process -Force`). On start: "Picked up after a restart. 1 Message waiting for Nova." Nova's one reply said the file write had succeeded before the restart and it did not write it again; it re-ran the ping because a repeat is harmless. The file still holds one line. Row `replied`, attempts 2. |
+
+### TURNQUEUE-03 — A kill right after a reply never brings a second reply 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-03--a-kill-right-after-a-reply-never-brings-a-second-reply-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Five tries of "Reply with the single word ok.", each with Huddle killed by a watcher 0.5 to 6 s after Nova's `ok` reached the Transcript, then started again. No try produced a second reply or a restart line; all five rows `replied` with attempts 1. |
+
+### TURNQUEUE-04 — A waiting Question survives a restart 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-04--a-waiting-question-survives-a-restart-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Coach (Sonnet / low) asked two option Questions with `ask_human`; `waiting_questions` held one row. Huddle closed with Ctrl+C and started: the card was back with both Questions and their options, and Needs You listed Coach. Tapping Build muscle and 4 days posted the answer; the row was deleted and Coach replied with a 4-day upper/lower plan. The trace shows `session/resume` at the start. |
+
+### TURNQUEUE-05 — A stopped Turn stays stopped across a restart 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Group Room (Kai, Nova, Cleo). One Message asked Nova and Cleo each to run a ping. Stop on Nova's Draft closed Nova's row `stopped`; Huddle was then killed while Cleo's Turn ran. On start: "Picked up after a restart. 1 Message waiting for Cleo." Cleo answered once; Nova's stopped Turn did not come back. |
+
+### TURNQUEUE-12 — A Mention while an Agent is starting is answered, with no line 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Deviation: the Mention was posted while Nova was Starting after a Persona edit (a Restart), not after an app start: the app-start window was shorter than the page's own start in two tries. The page read Nova as `Starting` when "@Nova name one planet" was sent; Nova answered "Mars" 6 s later, once, and no restart line was posted. |
+
+### TURNQUEUE-13 — A Restart stops the running Turn and keeps what waits 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Nova ran `ping -n 90`; two Messages queued; the notice read "Waiting for Nova: 2 Messages" with no Don't answer (Nova had a Draft). Editing Nova's Persona restarted it once the running tool returned (about 75 s; the cancel waits for the tool). The running row closed `stopped`; the restarted Nova answered 3 + 3 = 6 and Teal, once each; no restart line. |
+
+### TURNQUEUE-14 — The age limit and Don't answer 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Nova was made Offline with an Adapter Profile that cannot start (`adapter: 'broken'` in its file, a second profile configured by environment), not the page's `'offline'` id: an unknown id falls back to the default Adapter. Step 1 with `ResumeWithin` 2 minutes: the Room read "Not picked up after a restart: 1 Message for Nova that waited more than 2 minutes." and Nova never answered. Step 2: the notice read "Waiting for Nova: 2 Messages" with Don't answer; after the press both rows were `stopped` and nothing came back after a restart. |
+
+### TURNQUEUE-18 — A waiting Mention is held while its Room is paused 💰
+
+File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `a3142a11` | #617 | Budget 3, Nova Offline as in TURNQUEUE-14. Cleo Mentioned Nova and the Room paused after Kai and Cleo spent the Budget. Bringing Nova back re-sent both of its waiting Mentions, which it held: the notice read "Waiting for Nova: 2 Messages, until this Room's Budget is continued" with Don't answer. Typing "carry on" (not Continue) released them; Nova answered both, once each. |
