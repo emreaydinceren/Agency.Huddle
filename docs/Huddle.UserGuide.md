@@ -1971,8 +1971,9 @@ each thing it told you, with the date, the Room's name and a few words of what i
 
 Before it reports, the Agent reads the file. If it already told you and nothing has changed, it
 says so in one line ("no change since 2026-11-16") instead of repeating the whole item, and when
-something has changed it says what. A direct answer to a question you just asked is not a report
-and gets no line.
+something has changed it says what. Any finding, status, result, decision or warning counts,
+however you asked for it, including a question or a Job's "tell me". Small talk, and explanations
+such as how something works, get no line.
 
 - **Huddle writes the date and drops old lines.** The Agent only says what it told you. Lines
   older than 14 days are dropped (`Team:Memory:Reported:KeepDays`; zero or less keeps every line),
