@@ -143,6 +143,13 @@ internal static class PromptCatalog
             Placeholders: ["{{name}}"], RequiredPlaceholders: ["{{name}}"], Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.huddleMemoryMerged",
+            Label: "Huddle-wide fact change: merged file",
+            HelperText: "One fact whose file Memory Tidy merged into another, so the fact moved and is still true. {{into}} is the file it is now in; {{name}} is the file that went.",
+            Default: "- Now in {{into}}: {{name}}",
+            Placeholders: ["{{into}}", "{{name}}"], RequiredPlaceholders: ["{{into}}", "{{name}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.huddleMemoryDescription",
             Label: "Huddle-wide fact change: description",
             HelperText: "Follows a file name when the file has a description. {{description}} is its one-line description.",

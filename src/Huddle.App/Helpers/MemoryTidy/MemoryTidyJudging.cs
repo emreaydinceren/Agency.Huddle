@@ -95,7 +95,7 @@ internal sealed class MemoryTidyJudging(
         }
     }
 
-    /// <summary>The Agents' own folders, never-tidied first, then the longest ago; Huddle-wide Memory joins here in a later slice.</summary>
+    /// <summary>Every Agent's own folder and Huddle-wide Memory, never-tidied first, then the longest ago; among folders never tidied the Agents come first.</summary>
     private List<Candidate> Candidates()
     {
         List<Candidate> candidates = [];
@@ -106,6 +106,11 @@ internal sealed class MemoryTidyJudging(
                 string key = MemoryTidyInputBuilder.AgentKeyPrefix + name;
                 candidates.Add(new Candidate(key, "the Agent " + name, folder, store.GetState(key)?.TidiedUtc ?? DateTimeOffset.MinValue));
             }
+        }
+
+        if (paths.TryResolveHuddleWide(out MemoryFolder? huddle))
+        {
+            candidates.Add(new Candidate(MemoryTidyInputBuilder.HuddleKey, "every Agent (Huddle-wide Memory)", huddle, store.GetState(MemoryTidyInputBuilder.HuddleKey)?.TidiedUtc ?? DateTimeOffset.MinValue));
         }
 
         return [.. candidates.OrderBy(static candidate => candidate.Tidied).ThenBy(static candidate => candidate.Key, StringComparer.Ordinal)];

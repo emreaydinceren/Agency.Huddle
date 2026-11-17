@@ -75,6 +75,7 @@ public static class ServiceCollectionExtensions
     private static IServiceCollection AddMemoryTidyServices(this IServiceCollection services)
     {
         services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyStateStore>();
+        services.AddSingleton<Agency.Huddle.App.Data.MemoryTidyMergeStore>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyInputBuilder>();
         services.AddSingleton<Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyJudging>();

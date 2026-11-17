@@ -35,12 +35,7 @@ internal static class MemoryTidyPrompt
     /// <param name="input">The input.</param>
     internal static string Render(MemoryTidyInput input)
     {
-        string text = PromptCatalog.Get("helper.memoryTidy.folder").Default;
-        foreach ((string token, string value) in Values(input))
-        {
-            text = text.Replace(token, value, StringComparison.Ordinal);
-        }
-
-        return text;
+        // One pass, as the Prompt source renders: a value holding {{files}} is copied as written, never read as a placeholder.
+        return PromptRenderer.Render(PromptCatalog.Get("helper.memoryTidy.folder").Default, Values(input));
     }
 }

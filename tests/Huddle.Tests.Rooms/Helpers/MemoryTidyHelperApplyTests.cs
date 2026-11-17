@@ -296,19 +296,17 @@ public sealed class MemoryTidyHelperApplyTests
         Assert.Equal(string.Empty, harness.JournalText());
     }
 
-    /// <summary>Huddle-wide Memory is a later slice: its key is answered with no change and nothing is journaled.</summary>
+    /// <summary>The <c>huddle</c> key is applied to Huddle-wide Memory and never to an Agent's own folder, whatever folder the input was built over.</summary>
     [Fact]
-    public async Task HuddleKey_IsNoChangeForNow()
+    public async Task HuddleKey_NeverWritesAnAgentsFolder()
     {
         using MemoryTidyApplyHarness harness = new();
         harness.Put("a.md", Good, "Alpha is 1.");
         MemoryTidyInput input = harness.Input() with { FolderKey = "huddle" };
 
-        HelperApplied applied = await harness.Helper.ApplyAsync("huddle", input, new MemoryTidyVerdict([Drop("a.md")]), TestContext.Current.CancellationToken);
+        _ = await harness.Helper.ApplyAsync("huddle", input, new MemoryTidyVerdict([Drop("a.md")]), TestContext.Current.CancellationToken);
 
-        Assert.IsType<HelperApplied.NoChange>(applied);
         Assert.True(File.Exists(harness.PathOf("a.md")));
-        Assert.Equal(string.Empty, harness.JournalText());
     }
 
     /// <summary>The journal has <c>FolderJudged</c>, then <c>StepStarted</c> before and the outcome after each step, and no entry holds a step's text or description.</summary>

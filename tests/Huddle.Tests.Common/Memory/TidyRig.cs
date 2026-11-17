@@ -77,7 +77,8 @@ internal sealed class TidyRig : IDisposable
         this.Settings = new HelperSettingsResolver(new HelperSettingsStore(this.Options), this.Options, NullLogger<HelperSettingsResolver>.Instance);
         this.Status = new HelperStatusStore(this.Options);
         this.Budget = new HelperBudget(new HelperUsageStore(this.Options), this.Clock);
-        MemoryTidyHelper helper = new(memoryPaths, this.Writer, recorder, resolver, this.State, this.Settings, NullLogger<MemoryTidyHelper>.Instance);
+        this.Merges = new MemoryTidyMergeStore(this.Options, this.Clock);
+        MemoryTidyHelper helper = new(memoryPaths, this.Writer, recorder, resolver, this.State, this.Merges, this.Settings, NullLogger<MemoryTidyHelper>.Instance);
         HelperRunner runner = new(this.Process, new AdapterCatalog(this.Options), new FakePromptSource(), this.Budget, this.Options, NullLogger<HelperRunner>.Instance, this.Clock);
         HelperFeed helperFeed = new(this.Feed, this.Status, this.Budget, new HelperRegistry([helper]), this.Settings, NullLogger<HelperFeed>.Instance);
         this.Judge = new HelperJudge(
@@ -129,6 +130,21 @@ internal sealed class TidyRig : IDisposable
 
     /// <summary>What Memory Tidy remembers between passes.</summary>
     public MemoryTidyStateStore State { get; }
+
+    /// <summary>Which Huddle-wide files a merge removed.</summary>
+    public MemoryTidyMergeStore Merges { get; }
+
+    /// <summary>The path of Huddle-wide Memory.</summary>
+    public string HuddleDir => Path.Combine(this.dir.Path, "Teams", "memory");
+
+    /// <summary>Writes a file into Huddle-wide Memory.</summary>
+    /// <param name="file">The file name.</param>
+    /// <param name="text">The whole text.</param>
+    public void SeedHuddle(string file, string text)
+    {
+        Directory.CreateDirectory(this.HuddleDir);
+        File.WriteAllText(Path.Combine(this.HuddleDir, file), text);
+    }
 
     /// <summary>Resolves the Helper's effective settings.</summary>
     public HelperSettingsResolver Settings { get; }

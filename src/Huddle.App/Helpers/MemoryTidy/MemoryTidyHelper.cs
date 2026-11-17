@@ -16,6 +16,7 @@ namespace Agency.Huddle.App.Helpers.MemoryTidy;
 /// <param name="history">Records each written file in its History.</param>
 /// <param name="resolver">Finds a written file in the Library, for its History.</param>
 /// <param name="store">Holds the day each file was written.</param>
+/// <param name="merges">Records each Huddle-wide file a merge removed, so a running Agent hears the fact moved.</param>
 /// <param name="settings">Tells whether the Helper has been turned off since the call started.</param>
 /// <param name="logger">Records each fault.</param>
 internal sealed class MemoryTidyHelper(
@@ -24,6 +25,7 @@ internal sealed class MemoryTidyHelper(
     DocHistoryRecorder history,
     LibraryPathResolver resolver,
     MemoryTidyStateStore store,
+    MemoryTidyMergeStore merges,
     HelperSettingsResolver settings,
     ILogger<MemoryTidyHelper> logger)
     : IHelperAgent<MemoryTidyInput, MemoryTidyVerdict>
@@ -87,7 +89,7 @@ internal sealed class MemoryTidyHelper(
 
         if (this.FolderOf(input.FolderKey) is not { } folder)
         {
-            // Huddle-wide Memory is a later slice, and an Agent's folder behind a junction is never written.
+            // A folder behind a junction or link, Agent's own or Huddle-wide, is never written.
             return new HelperApplied.NoChange();
         }
 
@@ -150,6 +152,11 @@ internal sealed class MemoryTidyHelper(
 
     private MemoryFolder? FolderOf(string folderKey)
     {
+        if (string.Equals(folderKey, MemoryTidyInputBuilder.HuddleKey, StringComparison.Ordinal))
+        {
+            return paths.TryResolveHuddleWide(out MemoryFolder? huddle) ? huddle : null;
+        }
+
         if (!folderKey.StartsWith(MemoryTidyInputBuilder.AgentKeyPrefix, StringComparison.Ordinal))
         {
             return null;
@@ -248,12 +255,17 @@ internal sealed class MemoryTidyHelper(
         foreach (string file in removed.Except(leftBehind, StringComparer.Ordinal))
         {
             days.Removed(file);
+            if (step is MemoryTidyStep.Merge && string.Equals(input.FolderKey, MemoryTidyInputBuilder.HuddleKey, StringComparison.Ordinal))
+            {
+                // A merged-away Huddle-wide file is not "no longer true": the fact moved into the kept file (spec §6.14).
+                merges.Record(file, kept.File);
+            }
         }
     }
 
     /// <summary>For a rewrite, the checked tokens of the old body that the new text no longer holds.</summary>
     private static string[] RemovedTokensOf(MemoryTidyStep step, MemoryTidyFile kept) => step is MemoryTidyStep.Rewrite rewrite
-        ? [.. MemoryTidyTokens.NotIn(MemoryTidyChecks.BodyOf(kept.Text), rewrite.Text).Select(static token => token.Text)]
+        ? [.. MemoryTidyTokens.NotIn(MemoryTidyChecks.BodyOf(kept.Text), rewrite.Text).Select(static token => token.Quoted)]
         : [];
 
     private void Record(MemoryFolder folder, string file, MemoryTidyStep step, MemoryTidyCheck check)

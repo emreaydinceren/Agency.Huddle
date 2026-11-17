@@ -60,6 +60,7 @@ Singleton Agency.Huddle.App.Data.IChatStore -> Agency.Huddle.App.Data.FileChatSt
 Singleton Agency.Huddle.App.Data.ITeamDirectory -> Agency.Huddle.App.Data.SqliteTeamDirectory
 Singleton Agency.Huddle.App.Data.JobRoomStore -> Agency.Huddle.App.Data.JobRoomStore
 Singleton Agency.Huddle.App.Data.JobStateStore -> Agency.Huddle.App.Data.JobStateStore
+Singleton Agency.Huddle.App.Data.MemoryTidyMergeStore -> Agency.Huddle.App.Data.MemoryTidyMergeStore
 Singleton Agency.Huddle.App.Data.MemoryTidyScheduleStore -> Agency.Huddle.App.Data.MemoryTidyScheduleStore
 Singleton Agency.Huddle.App.Data.MemoryTidyStateStore -> Agency.Huddle.App.Data.MemoryTidyStateStore
 Singleton Agency.Huddle.App.Data.NeedsHumanOverrideStore -> Agency.Huddle.App.Data.NeedsHumanOverrideStore

@@ -191,6 +191,7 @@
   "turn.huddleMemoryAdded": "- New: {{name}}",
   "turn.huddleMemoryChanged": "- Changed: {{name}}",
   "turn.huddleMemoryDeleted": "- Removed, no longer true: {{name}}",
+  "turn.huddleMemoryMerged": "- Now in {{into}}: {{name}}",
   "turn.huddleMemoryDescription": ": The file says: \"{{description}}\"",
   "turn.huddleMemoryMore": "…and {{count}} more; they follow at your next Turn.",
   "turn.teamRenamed": "Team '{{oldName}}' is now called '{{newName}}'. Its folder moved from `Teams/{{oldName}}` to `Teams/{{newName}}`.\nEarlier Messages and your own notes use the old name and old paths; use the new ones from now on, and\nupdate your own memory notes if they name the old Team.",

@@ -28,11 +28,14 @@ internal sealed class MemoryTidyApplyHarness : IDisposable
     private readonly MemoryFolderGate gate = new();
     private readonly ManualTimeProvider clock = new(new DateTimeOffset(2026, 11, 22, 12, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
     private readonly MemoryTidyInputBuilder builder;
+    private readonly bool huddle;
 
     /// <summary>Wires the install.</summary>
     /// <param name="configure">Changes the options before anything is built, or <see langword="null"/>.</param>
-    public MemoryTidyApplyHarness(Action<TeamOptions>? configure = null)
+    /// <param name="huddle"><see langword="true"/> to make Huddle-wide Memory the folder, with copies under <c>Huddle</c>, instead of Nova's own.</param>
+    public MemoryTidyApplyHarness(Action<TeamOptions>? configure = null, bool huddle = false)
     {
+        this.huddle = huddle;
         this.Options = this.dir.Options(team =>
         {
             team.Acp.Enabled = true;
@@ -41,7 +44,7 @@ internal sealed class MemoryTidyApplyHarness : IDisposable
         TeamMemoryAccess access = new(new FakeTeamCatalog(), static _ => false);
         AgentPaths agentPaths = new(this.Options);
         MemoryPaths paths = new(agentPaths, access, this.Options);
-        this.Folder = paths.OwnFolderOf("Nova") ?? throw new InvalidOperationException("Nova's folder resolved to nothing.");
+        this.Folder = ResolveFolder(paths, huddle);
         _ = Directory.CreateDirectory(this.Folder.Path);
 
         DocHistoryStore historyStore = new(this.Options, NullLogger<DocHistoryStore>.Instance, this.Feed);
@@ -50,19 +53,34 @@ internal sealed class MemoryTidyApplyHarness : IDisposable
         this.Resolver = new LibraryPathResolver(new LibraryRootStore(this.Options, agentPaths, NullLogger<LibraryRootStore>.Instance), this.Options, NullLogger<LibraryPathResolver>.Instance);
         this.SettingsStore = new HelperSettingsStore(this.Options);
         this.Store = new MemoryTidyStateStore(this.Options);
+        this.Merges = new MemoryTidyMergeStore(this.Options, this.clock);
         this.builder = new MemoryTidyInputBuilder(this.Store, this.Options, this.clock);
         this.PassFolder = Path.Combine(this.dir.Path, "pass");
         _ = Directory.CreateDirectory(this.PassFolder);
-        this.BackupFolder = Path.Combine(this.PassFolder, "Agents", "Nova");
+        this.BackupFolder = huddle ? Path.Combine(this.PassFolder, "Huddle") : Path.Combine(this.PassFolder, "Agents", "Nova");
         this.Helper = new MemoryTidyHelper(
             paths,
             new MemoryWriter(this.gate, this.Options),
             recorder,
             this.Resolver,
             this.Store,
+            this.Merges,
             new HelperSettingsResolver(this.SettingsStore, this.Options, NullLogger<HelperSettingsResolver>.Instance),
             NullLogger<MemoryTidyHelper>.Instance);
     }
+
+    private static MemoryFolder ResolveFolder(MemoryPaths paths, bool huddle)
+    {
+        if (!huddle)
+        {
+            return paths.OwnFolderOf("Nova") ?? throw new InvalidOperationException("Nova's folder resolved to nothing.");
+        }
+
+        return paths.TryResolveHuddleWide(out MemoryFolder? wide) ? wide : throw new InvalidOperationException("Huddle-wide Memory resolved to nothing.");
+    }
+
+    /// <summary>The key of the folder under test: Nova's, or <c>huddle</c>.</summary>
+    public string FolderKey => this.huddle ? "huddle" : Key;
 
     /// <summary>The options of this install.</summary>
     public IOptions<TeamOptions> Options { get; }
@@ -84,6 +102,9 @@ internal sealed class MemoryTidyApplyHarness : IDisposable
 
     /// <summary>The day rows.</summary>
     public MemoryTidyStateStore Store { get; }
+
+    /// <summary>The record of Huddle-wide merges.</summary>
+    public MemoryTidyMergeStore Merges { get; }
 
     /// <summary>The pass folder; the journal is <c>pass.jsonl</c> in it.</summary>
     public string PassFolder { get; }
@@ -117,7 +138,8 @@ internal sealed class MemoryTidyApplyHarness : IDisposable
     public MemoryTidyInput Input(string? backupFolder = null)
     {
         MemoryTidyPassContext context = new("2026-11-22", backupFolder ?? this.BackupFolder, new MemoryTidyJournal(this.PassFolder));
-        return this.builder.Build(this.Folder, Key, "the Agent Nova", new DateOnly(2026, 11, 22), context)?.Input
+        string owner = this.huddle ? "every Agent (Huddle-wide Memory)" : "the Agent Nova";
+        return this.builder.Build(this.Folder, this.FolderKey, owner, new DateOnly(2026, 11, 22), context)?.Input
             ?? throw new InvalidOperationException("The folder could not be read.");
     }
 
@@ -125,7 +147,7 @@ internal sealed class MemoryTidyApplyHarness : IDisposable
     /// <param name="input">The input.</param>
     /// <param name="actions">The actions, in order.</param>
     public Task<HelperApplied> ApplyAsync(MemoryTidyInput input, params MemoryTidyAction[] actions) =>
-        this.Helper.ApplyAsync(Key, input, new MemoryTidyVerdict(actions), TestContext.Current.CancellationToken);
+        this.Helper.ApplyAsync(this.FolderKey, input, new MemoryTidyVerdict(actions), TestContext.Current.CancellationToken);
 
     /// <summary>The journal's entries, oldest first; empty when there is no journal.</summary>
     public List<MemoryTidyEntry> Entries() => [.. this.JournalText().Split('\n', StringSplitOptions.RemoveEmptyEntries)

@@ -58,7 +58,7 @@ internal static class MemoryTidyChecks
         files = [];
         foreach (string name in step.Sources)
         {
-            MemoryTidyFile? found = input.Files.FirstOrDefault(file => string.Equals(file.File, name, StringComparison.OrdinalIgnoreCase));
+            MemoryTidyFile? found = FileNamed(input.Files, name);
             if (found is null)
             {
                 return $"it names {name}, which it was not shown";
@@ -68,6 +68,22 @@ internal static class MemoryTidyChecks
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// The file named exactly, else the one file that matches ignoring case; <see langword="null"/> when none matches or two differ only by case and
+    /// neither is the name given, since the step could mean either.
+    /// </summary>
+    private static MemoryTidyFile? FileNamed(IReadOnlyList<MemoryTidyFile> files, string name)
+    {
+        MemoryTidyFile? exact = files.FirstOrDefault(file => string.Equals(file.File, name, StringComparison.Ordinal));
+        if (exact is not null)
+        {
+            return exact;
+        }
+
+        List<MemoryTidyFile> loose = [.. files.Where(file => string.Equals(file.File, name, StringComparison.OrdinalIgnoreCase))];
+        return loose.Count == 1 ? loose[0] : null;
     }
 
     /// <summary>A-2: a merge folds in at least one file, and not the one it keeps.</summary>
@@ -120,7 +136,7 @@ internal static class MemoryTidyChecks
         {
             if (written is not null && MemoryTidyTokens.NotIn(written, sources) is [{ } token, ..])
             {
-                return $"the new text holds {token.Text}, which is not in the files it replaces";
+                return $"the new text holds {token.Quoted}, which is not in the files it replaces";
             }
         }
 
@@ -139,7 +155,7 @@ internal static class MemoryTidyChecks
         {
             if (MemoryTidyTokens.NotIn(BodyOf(file.Text), merge.Text) is [{ } token, ..])
             {
-                return $"the merged text leaves out {token.Text} from {file.File}";
+                return $"the merged text leaves out {token.Quoted} from {file.File}";
             }
         }
 
