@@ -23,7 +23,8 @@ before the Teams change added 91 tests. Treat a changed total as something to *c
 not something to fear; see [Known failure modes](#known-failure-modes).
 
 This page covers validation only. There is no packaging, publishing, or release step yet;
-when one arrives it belongs in a new job in `ci-main-local.yaml`, not inside `validate`.
+when one arrives it belongs in a new job in `ci-main-local.yaml` (`needs: ci`), not inside the
+shared `validate`.
 
 ## Topology
 
@@ -52,23 +53,20 @@ together, or not at all.
 
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
-| `.gitea/workflows/ci-pr-local.yaml` | `pull_request` into `main` | `secret-scan`, `validate` |
-| `.gitea/workflows/ci-main-local.yaml` | `push` to `main` | `secret-scan`, `validate` |
+| `.gitea/workflows/ci-pr-local.yaml` | `pull_request` into `main` | `ci` (calls `ci-shared.yaml`) |
+| `.gitea/workflows/ci-main-local.yaml` | `push` to `main` | `ci` (calls `ci-shared.yaml`) |
+| `.gitea/workflows/ci-shared.yaml` | `workflow_call` only; never runs alone | `secret-scan`, `validate` |
+| `.gitea/workflows/ci-docs.yaml` | `pull_request` and `push` touching `docs/**` or `README.md` | `docs` |
 
-Both skip runs whose changes are confined to `docs/**`. A docs-only PR therefore produces
-**no run at all** — if you make these checks required in branch protection, such a PR will
-sit with a permanently pending check.
+The checks are defined once, in `ci-shared.yaml`; the PR and main workflows are thin callers that
+differ only in trigger and `concurrency`. There is no second copy to keep in step, so the old
+`diff` of the two `jobs:` blocks is gone. Change a step in `ci-shared.yaml` and both gates change.
 
-The two files' job definitions are byte-identical by construction. Keep them that way:
-
-```bash
-diff <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-pr-local.yaml) \
-     <(sed -n '/^jobs:/,$p' .gitea/workflows/ci-main-local.yaml)
-```
-
-```text
-(no output — the jobs match)
-```
+`ci-pr-local.yaml` and `ci-main-local.yaml` skip runs whose changes are confined to `docs/**`. A
+docs-only PR therefore produces **no run of those two** — if you make their checks required in
+branch protection, such a PR will sit with a permanently pending check. `ci-docs.yaml` is the
+opposite filter: it runs `agents/scripts/Check-DocIndex.ps1` when docs change, and is deliberately
+not a required check, for the same reason in reverse.
 
 ### What validate does
 
@@ -235,8 +233,12 @@ move (1642) waited for a runner that was gone; it now runs on `dotnet-10-local` 
 The consequence is that **CI is only as available as that desktop.** With the PC off, or Docker Desktop
 stopped, `validate` stays queued and the required check never reports. See the failure-mode table.
 
-The required status check on `main` is `CI (Pull Request) / validate (pull_request)`. Its text is
-the workflow `name:` plus the job name, so renaming either strands every PR.
+The required status check on `main` is built from the caller workflow's `name:` (`CI (Pull Request)`),
+its job id (`ci`) and the called job's name (`validate`), so renaming any of them strands every PR.
+Before `ci-shared.yaml` existed it was `CI (Pull Request) / validate (pull_request)`; with the
+reusable workflow the text is longer and Gitea decides the exact form, so **read it off the first
+finished run's commit status** and put that string in branch protection, replacing the old one. Until
+that is done the old check never reports.
 
 The runner is not in the repo. It is a `gitea/act_runner` container (`huddle-local-runner`) defined
 by a `compose.yaml` and a `config.yaml` in `C:\Users\user\gitea-runner\`, registered to this repo only
