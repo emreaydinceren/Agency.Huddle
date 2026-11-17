@@ -13,7 +13,7 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
     private readonly TurnQueueStore store;
     private readonly IOptions<TeamOptions> options;
     private readonly ILogger<TurnQueue> logger;
-    private readonly IHostApplicationLifetime lifetime;
+    private readonly IHostApplicationLifetime? lifetime;
     private readonly TimeProvider timeProvider;
     private readonly RoomEvents? events;
 
@@ -21,14 +21,14 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
     /// <param name="store">The <c>turn_queue</c> tables.</param>
     /// <param name="options">Supplies <c>Team:TurnQueue:Enabled</c>.</param>
     /// <param name="logger">Receives diagnostics.</param>
-    /// <param name="lifetime">Tells <see cref="CloseRunning"/> whether the host is stopping.</param>
+    /// <param name="lifetime">Tells <see cref="CloseRunning"/> whether the host is stopping; <see langword="null"/> (a container with no host) means it never is.</param>
     /// <param name="timeProvider">The clock; <see langword="null"/> uses <see cref="TimeProvider.System"/>.</param>
     /// <param name="events">Told when a Room's open rows change; <see langword="null"/> tells nobody.</param>
     public TurnQueue(
         TurnQueueStore store,
         IOptions<TeamOptions> options,
         ILogger<TurnQueue> logger,
-        IHostApplicationLifetime lifetime,
+        IHostApplicationLifetime? lifetime = null,
         TimeProvider? timeProvider = null,
         RoomEvents? events = null)
     {
@@ -36,7 +36,6 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(logger);
-        ArgumentNullException.ThrowIfNull(lifetime);
         this.store = store;
         this.options = options;
         this.logger = logger;
@@ -119,7 +118,7 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
 
         // A host that is going down drops its connections too; those Turns were not stopped, they are resumed by the next start (spec §5.6).
-        if (!this.options.Value.TurnQueue.Enabled || this.lifetime.ApplicationStopping.IsCancellationRequested)
+        if (!this.options.Value.TurnQueue.Enabled || this.lifetime?.ApplicationStopping.IsCancellationRequested == true)
         {
             return;
         }

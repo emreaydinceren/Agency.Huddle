@@ -177,12 +177,16 @@ public sealed class PersonaRunnerTests
         var firstFactory = new FakeAgentHostFactory();
         await using var firstRunner = CreateHost(fixture, persona, firstFactory);
         await firstRunner.StartAsync(ct);
-        var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
+        var (agentId, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "Chief of Staff", ct);
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
         await Eventually.HistoryCountAsync(store, roomId, 1, ct);
+
+        // The first runner's "hi" Turn must have ended (its row closed) before the stop: a Turn cut off by the stop is re-sent to the next runner.
+        var queueStore = fixture.Services.GetRequiredService<TurnQueueStore>();
+        await Eventually.UntilAsync(() => queueStore.Open(agentId).Count == 0, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
         await firstRunner.StopAsync();
 
         var secondFactory = new FakeAgentHostFactory();
@@ -229,6 +233,10 @@ public sealed class PersonaRunnerTests
         var store = fixture.Services.GetRequiredService<IChatStore>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
         await Eventually.HistoryCountAsync(store, roomId, 1, ct);
+
+        // The first runner's "hi" Turn must have ended (its row closed) before the stop: a Turn cut off by the stop is re-sent to the next runner.
+        var queueStore = fixture.Services.GetRequiredService<TurnQueueStore>();
+        await Eventually.UntilAsync(() => queueStore.Open(agentId).Count == 0, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
 
         await using var friend = await fixture.ConnectClientAsync(ct);
         await friend.WriteAsync(new Hello("friend", null), ct);
@@ -3526,8 +3534,10 @@ public sealed class PersonaRunnerTests
     private sealed class FakePersonaServer : IAsyncDisposable
     {
         private readonly NamedPipeServerStream pipe;
+        private readonly System.Threading.Channels.Channel<ProtocolMessage?> inbox = System.Threading.Channels.Channel.CreateUnbounded<ProtocolMessage?>();
 
         private JsonLineStream? stream;
+        private Task? pump;
 
         /// <summary>Creates the server-side pipe instance, unconnected, under a unique per-test name.</summary>
         public FakePersonaServer()
@@ -3557,6 +3567,10 @@ public sealed class PersonaRunnerTests
             await lineStream.WriteAsync(new Welcome("agent-1", hello.Name, []), ct);
 
             await startTask;
+
+            // The pipe has no buffer, so every write the runner makes (a queue ack before the prompt included) needs a
+            // reader on this end, or the Turn stalls; the pump is that reader and hands the envelopes to the test in order.
+            this.pump = this.PumpAsync(lineStream);
         }
 
         /// <summary>Writes one envelope to the connected runner.</summary>
@@ -3574,16 +3588,45 @@ public sealed class PersonaRunnerTests
         public async Task<T> ReceiveAsync<T>(CancellationToken ct)
             where T : ProtocolMessage
         {
-            var message = await this.stream!.ReadAsync(ct);
+            var message = await this.ReceiveRawAsync(ct);
             return Assert.IsType<T>(message);
         }
 
         /// <summary>Reads the next envelope the runner writes, without asserting its type.</summary>
         /// <param name="ct">Cancels the read.</param>
         /// <returns>The envelope, or <see langword="null"/> at end of stream.</returns>
-        public Task<ProtocolMessage?> ReceiveRawAsync(CancellationToken ct)
+        public async Task<ProtocolMessage?> ReceiveRawAsync(CancellationToken ct)
         {
-            return this.stream!.ReadAsync(ct);
+            while (true)
+            {
+                var message = await this.inbox.Reader.ReadAsync(ct);
+
+                // A queue ack is the server's bookkeeping, not what these tests are about: they read the Turn's own envelopes.
+                if (message is not QueueAck)
+                {
+                    return message;
+                }
+            }
+        }
+
+        private async Task PumpAsync(JsonLineStream lineStream)
+        {
+            try
+            {
+                while (await lineStream.ReadAsync(CancellationToken.None) is { } message)
+                {
+                    this.inbox.Writer.TryWrite(message);
+                }
+            }
+            catch (Exception ex) when (ex is IOException or ObjectDisposedException or OperationCanceledException)
+            {
+                // The runner or the test closed the pipe.
+            }
+            finally
+            {
+                this.inbox.Writer.TryWrite(null);
+                this.inbox.Writer.TryComplete();
+            }
         }
 
         /// <summary>Disposes the line stream if the handshake reached it, otherwise the bare pipe.</summary>
@@ -3592,6 +3635,10 @@ public sealed class PersonaRunnerTests
             if (this.stream is not null)
             {
                 await this.stream.DisposeAsync();
+                if (this.pump is not null)
+                {
+                    await this.pump;
+                }
             }
             else
             {

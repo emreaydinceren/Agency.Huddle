@@ -818,7 +818,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
 
         // A Message already queued or running here sends nothing: its own Turn acks it (spec 5.8), and a Held would park its row.
-        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id) == true)
+        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id, posted.Redelivery is not null) == true)
         {
             return true;
         }
@@ -880,7 +880,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         // A Message already queued or running here is ignored before anything is drained, so the ignored
         // duplicate takes no Catch-up or own-post lines with it (RoomSession.Enqueue is the backstop).
-        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id) == true)
+        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id, posted.Redelivery is not null) == true)
         {
             return;
         }

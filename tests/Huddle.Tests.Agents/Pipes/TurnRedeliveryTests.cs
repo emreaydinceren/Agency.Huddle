@@ -236,6 +236,40 @@ public sealed class TurnRedeliveryTests
         Assert.Equal(Redelivery.Waiting, again.Redelivery);
     }
 
+    /// <summary>After Continue, the re-delivered last Message reaches the client exactly once: the held re-send leaves out the Message that went live with the unpause.</summary>
+    [Fact]
+    public async Task Held_AfterContinue_TheRedeliveredMessageIsDeliveredOnce()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
+        CancellationToken ct = cts.Token;
+        await using Scenario scenario = await Scenario.StartAsync(new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, cts);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome rio = await scenario.ConnectAsync("Rio", durable: false, ct);
+        Room room = await scenario.Chat.CreateRoomForAsync([nova.AgentId, rio.AgentId], ct);
+        _ = await scenario.Chat.PostAsync(room.Id, KnownIds.Human, "@Nova @Rio held", ct: ct);
+        _ = await scenario.ReadAsync("Nova", ct);
+        _ = await scenario.Chat.PostAsync(room.Id, rio.AgentId, "@Nova framing", ct: ct);
+        _ = await scenario.ReadAsync("Nova", ct);
+        Assert.True(scenario.Chat.GetBudget(room.Id).Exhausted);
+
+        BudgetExtension extension = await scenario.Chat.ExtendBudgetAsync(room.Id, ct);
+        Assert.Equal(ExtendResult.Granted, extension.Result);
+        _ = await scenario.Chat.PostAsync(room.Id, KnownIds.Human, "@Nova probe", ct: ct);
+
+        List<MessagePosted> arrived = [];
+        while (true)
+        {
+            MessagePosted next = await scenario.ReadAsync("Nova", ct);
+            arrived.Add(next);
+            if (string.Equals(next.Message.Text, "@Nova probe", StringComparison.Ordinal))
+            {
+                break;
+            }
+        }
+
+        Assert.Single(arrived, delivery => string.Equals(delivery.Message.Text, "@Nova framing", StringComparison.Ordinal));
+    }
+
     /// <summary>A started host with raw clients connected by key.</summary>
     private sealed class Scenario : IAsyncDisposable
     {

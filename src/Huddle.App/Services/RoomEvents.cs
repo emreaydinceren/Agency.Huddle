@@ -44,6 +44,13 @@ public sealed class RoomEvents
     public event Action<string>? BudgetUnpaused;
 
     /// <summary>
+    /// Raised with <see cref="BudgetUnpaused"/>, and carrying the id of the Message delivered live along with the unpause (the Human's own
+    /// post, or the re-delivered last Message), so a held re-send skips it: it already runs one Turn from the live delivery. The id is
+    /// <see langword="null"/> when no Message went live with it.
+    /// </summary>
+    public event Action<string, string?>? BudgetUnpausedWith;
+
+    /// <summary>
     /// A Room's pending <c>Proposal</c> changed - one was stored, replaced, taken (Approved or
     /// Declined), or dropped (archived, deleted, or restarted). Carries the Room id, not the
     /// Proposal itself, for the same reason <see cref="DraftChanged"/> does: a subscriber re-reads
@@ -101,9 +108,27 @@ public sealed class RoomEvents
 
     /// <summary>Publishes <see cref="BudgetUnpaused"/> for <paramref name="roomId"/>.</summary>
     /// <param name="roomId">The Room whose pause ended.</param>
-    public void PublishBudgetUnpaused(string roomId)
+    /// <param name="liveMessageId">The Message delivered live with the unpause, if any.</param>
+    public void PublishBudgetUnpaused(string roomId, string? liveMessageId = null)
     {
         this.PublishRoomId(this.BudgetUnpaused, roomId, nameof(this.BudgetUnpaused));
+        Action<string, string?>? handlers = this.BudgetUnpausedWith;
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (Action<string, string?> handler in handlers.GetInvocationList().Cast<Action<string, string?>>())
+        {
+            try
+            {
+                handler(roomId, liveMessageId);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.BudgetUnpausedWith));
+            }
+        }
     }
 
     /// <summary>Publishes <see cref="DraftChanged"/> for <paramref name="roomId"/>.</summary>

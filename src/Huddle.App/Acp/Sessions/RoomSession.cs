@@ -117,6 +117,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     // The triggering Message id of the item admitted and not yet released, so a re-sent delivery of it is ignored; guarded by gate.
     private string? runningTriggerId;
 
+    // The triggering Message ids of the last Turns that ended, oldest first, so the queue's re-send of a Message that already ran
+    // (it arrives beside the live re-delivery of the same Message) is not run twice; guarded by gate.
+    private readonly Queue<string> endedTriggerIds = new();
+    private readonly HashSet<string> endedTriggerSet = new(StringComparer.Ordinal);
+
     // Numbers each Adapter notice so its Turn-activity row has an id no tool call can carry. Touched
     // only from the single-threaded event reader.
     private long noticeSequence;
@@ -296,13 +301,34 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
     /// <summary>Whether a Turn for this Message is queued or running here, so a re-sent delivery of it can be ignored before anything is drained for it.</summary>
     /// <param name="messageId">The Message id.</param>
+    /// <param name="resent"><see langword="true"/> for a delivery the server sends again: a Message whose Turn already ended counts as present too.</param>
     /// <returns><see langword="true"/> when it is already queued or running.</returns>
-    internal bool HasMessage(string messageId)
+    internal bool HasMessage(string messageId, bool resent = false)
     {
         lock (this.gate)
         {
-            return string.Equals(messageId, this.runningTriggerId, StringComparison.Ordinal)
-                || this.queue.Any(queued => string.Equals(queued.Item.TriggerMessageId, messageId, StringComparison.Ordinal));
+            return this.HasMessageLocked(messageId, resent);
+        }
+    }
+
+    // Caller holds gate.
+    private bool HasMessageLocked(string messageId, bool resent) =>
+        string.Equals(messageId, this.runningTriggerId, StringComparison.Ordinal)
+        || (resent && this.endedTriggerSet.Contains(messageId))
+        || this.queue.Any(queued => string.Equals(queued.Item.TriggerMessageId, messageId, StringComparison.Ordinal));
+
+    // Caller holds gate.
+    private void RememberEndedTrigger(string? triggerId)
+    {
+        if (triggerId is null || !this.endedTriggerSet.Add(triggerId))
+        {
+            return;
+        }
+
+        this.endedTriggerIds.Enqueue(triggerId);
+        if (this.endedTriggerIds.Count > 64)
+        {
+            _ = this.endedTriggerSet.Remove(this.endedTriggerIds.Dequeue());
         }
     }
 
@@ -330,9 +356,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         {
             // A Message already queued or running here is not run twice: a re-sent delivery of it is ignored, with no ack, because
             // the Turn that is queued or running will ack it (Turn Queue spec, section 5.8).
-            if (item.Item.TriggerMessageId is { } trigger
-                && (string.Equals(trigger, this.runningTriggerId, StringComparison.Ordinal)
-                    || this.queue.Any(queued => string.Equals(queued.Item.TriggerMessageId, trigger, StringComparison.Ordinal))))
+            if (item.Item.TriggerMessageId is { } trigger && this.HasMessageLocked(trigger, item.Item.Redelivery is not null))
             {
                 // Backstop: EnqueueReply checks first, so nothing was drained for this one; a race between check and here is not lost context in practice.
                 return;
@@ -1270,6 +1294,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         lock (this.gate)
         {
             this.running = false;
+            this.RememberEndedTrigger(this.runningTriggerId);
             this.runningTriggerId = null;
             this.state = this.state == RoomSessionState.Busy ? RoomSessionState.Idle : this.state;
             this.lastActivity = this.time.GetUtcNow();

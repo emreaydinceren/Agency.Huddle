@@ -332,7 +332,7 @@ public sealed partial class ChatService
         // After the Message itself, so a held Turn re-sent for the Room follows the live delivery rather than racing it.
         if (humanEndedPause)
         {
-            this.events.PublishBudgetUnpaused(posted.Room.Id);
+            this.events.PublishBudgetUnpaused(posted.Room.Id, posted.Message.Id);
         }
     }
 
@@ -553,7 +553,7 @@ public sealed partial class ChatService
         var mentions = MentionParser.Parse(last.Text, members, this.aliasSource.Aliases);
         this.RecordOwedTurns(room, members, mentions, last, extended, null);
         this.events.PublishMessageRedelivered(new MessagePostedEvent(room, last, members, mentions, extended));
-        this.events.PublishBudgetUnpaused(roomId);
+        this.events.PublishBudgetUnpaused(roomId, last.Id);
         var redelivered = new RedeliveryFacts(members, mentions, last.SenderId);
         return new BudgetExtension(ExtendResult.Granted, extended, redelivered);
     }
