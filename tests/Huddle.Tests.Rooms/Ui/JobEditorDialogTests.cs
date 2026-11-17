@@ -86,7 +86,7 @@ public sealed class JobEditorDialogTests : IDisposable
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(this.personas);
         ctx.Services.AddSingleton(this.store);
-        ctx.Services.AddSingleton(new JobScheduler(this.store, this.states, new NoRunner(), this.options, NullLogger<JobScheduler>.Instance));
+        ctx.Services.AddSingleton(new JobScheduler(this.store, this.states, new NoRunner(), this.options, NullLogger<JobScheduler>.Instance, new Agency.Huddle.Tests.Jobs.NoJobNotice()));
         ctx.Services.AddSingleton<IHumanIdentity>(new ConfiguredHumanIdentity("You"));
         ctx.Services.AddSingleton(TimeProvider.System);
         return ctx;
@@ -105,6 +105,6 @@ public sealed class JobEditorDialogTests : IDisposable
     private sealed class NoRunner : IJobRunner
     {
         /// <inheritdoc />
-        public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, CancellationToken ct) => Task.FromResult(JobOutcome.Delivered);
+        public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, DateTimeOffset? lateDue, CancellationToken ct) => Task.FromResult(JobOutcome.Delivered);
     }
 }

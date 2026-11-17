@@ -188,7 +188,9 @@
             }
             else
             {
-                id = this.Store.Add(new Job(string.Empty, this.Owner(), this.title.Trim(), this.instruction.Trim(), when, zoneId, this.Human.Name, false)).Id;
+                Job added = this.Store.Add(new Job(string.Empty, this.Owner(), this.title.Trim(), this.instruction.Trim(), when, zoneId, this.Human.Name, false));
+                this.Scheduler.Seed(added);
+                id = added.Id;
             }
 
             this.Dialog?.Close(DialogResult.Ok(id));

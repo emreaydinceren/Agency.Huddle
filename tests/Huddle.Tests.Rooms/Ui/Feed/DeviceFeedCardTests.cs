@@ -86,6 +86,19 @@ public sealed class DeviceFeedCardTests
         Assert.Empty(Render(ctx, activity).FindAll(".feed-pill"));
     }
 
+    /// <summary>The status line under a Human's give-up trace says it was missed and removed without running.</summary>
+    [Fact]
+    public void StatusOf_JobGaveUp_SaysItWasRemovedWithoutRunning()
+    {
+        FeedItem item = Item(FeedSourceType.JobGaveUp, new JobGaveUpPayload("job-1", "Digest", "it failed three times", null), notify: true);
+
+        FeedStatusLine? line = FeedSummary.StatusOf(item, TimeZoneInfo.Utc);
+
+        string missed = item.At.ToUniversalTime().ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture);
+        Assert.NotNull(line);
+        Assert.Equal($"Missed {missed} · it was removed without running", line.Text);
+    }
+
     /// <summary>The status line under a pairing request says who has to act; once resolved it says when it was done.</summary>
     [Fact]
     public void StatusOf_PairingRequest_WaitsForYouThenDone()

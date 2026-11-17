@@ -30,6 +30,7 @@ internal sealed record FeedTarget(FeedTargetKind Kind, string Id)
             RoomCreatedPayload p => new(FeedTargetKind.Room, p.RoomId),
             RoomJoinedPayload p => new(FeedTargetKind.Room, p.RoomId),
             RoomArchivedPayload p => new(FeedTargetKind.Room, p.RoomId),
+            JobGaveUpPayload { RoomId: { } roomId } => new(FeedTargetKind.Room, roomId),
             DocumentChangedPayload p => new(FeedTargetKind.Document, p.Path),
             MemoryTidiedPayload p => new(FeedTargetKind.Document, p.Path),
             HelperPausedPayload p => new(FeedTargetKind.Helper, p.HelperId),

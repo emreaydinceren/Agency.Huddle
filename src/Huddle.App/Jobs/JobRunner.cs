@@ -1,3 +1,4 @@
+using System.Globalization;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.NeedsYou;
 using Agency.Huddle.App.Services;
@@ -27,7 +28,10 @@ internal sealed partial class JobRunner(
     public const string Mark = "⏰";
 
     /// <inheritdoc />
-    public async Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, CancellationToken ct)
+    public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, CancellationToken ct) => this.RunAsync(job, ranAt, null, ct);
+
+    /// <inheritdoc />
+    public async Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, DateTimeOffset? lateDue, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(job);
 
@@ -50,22 +54,25 @@ internal sealed partial class JobRunner(
             return JobOutcome.BudgetSpent;
         }
 
-        _ = await chat.PostAsHuddleAsync(room.Id, TextOf(job, agent), ct).ConfigureAwait(false);
+        _ = await chat.PostAsHuddleAsync(room.Id, TextOf(job, agent, lateDue), ct).ConfigureAwait(false);
         if (agent is null)
         {
             needsYou.MarkJob(room, ranAt);
         }
 
         LogRan(logger, job.Id, room.Id);
-        return JobOutcome.Delivered;
+        return lateDue is null ? JobOutcome.Delivered : JobOutcome.DeliveredLate;
     }
 
-    /// <summary>The Message a run posts: the Agent's Mention when it is for an Agent, the mark and title, then the instruction.</summary>
+    /// <summary>The Message a run posts: the Agent's Mention when it is for an Agent, the mark and title (with "ran late; due Mon 09:00" when late), then the instruction.</summary>
     /// <param name="job">The Job.</param>
     /// <param name="agent">The Agent it is for, or <see langword="null"/> for the Human.</param>
+    /// <param name="lateDue">When it was due, already in the zone to show, or <see langword="null"/> for a run on time.</param>
     /// <returns>The text.</returns>
-    internal static string TextOf(Job job, User? agent) =>
-        (agent is null ? string.Empty : "@" + agent.Name + " ") + Mark + " " + job.Title + "\n\n" + job.Instruction;
+    internal static string TextOf(Job job, User? agent, DateTimeOffset? lateDue = null) =>
+        (agent is null ? string.Empty : "@" + agent.Name + " ") + Mark + " " + job.Title
+        + (lateDue is { } due ? " (ran late; due " + due.ToString("ddd HH:mm", CultureInfo.InvariantCulture) + ")" : string.Empty)
+        + "\n\n" + job.Instruction;
 
     /// <summary>The name a new Job Room takes.</summary>
     /// <param name="job">The Job.</param>

@@ -48,7 +48,7 @@ public sealed class JobsToolTests : IDisposable
         this.personas = this.options.CreatePersonaStore();
         this.store = new JobStore(this.personas, this.options, NullLogger<JobStore>.Instance);
         ManualTimeProvider clock = new(new DateTimeOffset(2026, 11, 2, 8, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
-        this.scheduler = new JobScheduler(this.store, new JobStateStore(this.options), this.runner, this.options, NullLogger<JobScheduler>.Instance, clock);
+        this.scheduler = new JobScheduler(this.store, new JobStateStore(this.options), this.runner, this.options, NullLogger<JobScheduler>.Instance, new Agency.Huddle.Tests.Jobs.NoJobNotice(), clock);
     }
 
     /// <inheritdoc />
@@ -252,7 +252,7 @@ public sealed class JobsToolTests : IDisposable
     [Theory]
     [InlineData("Delivered", "Ran {id} \"Digest\": its instruction is posted in its Room.")]
     [InlineData("BudgetSpent", "{id} did not run: its Room's Budget is spent until the Human continues it.")]
-    [InlineData("NoAgent", "{id} did not run: Nova has never come online.")]
+    [InlineData("NoAgent", "{id} did not run: Nova is not available.")]
     [InlineData("Failed", "{id} did not run.")]
     public async Task RunNow_SaysWhatTheRunDid(string outcome, string expected)
     {
@@ -336,6 +336,6 @@ public sealed class JobsToolTests : IDisposable
     {
         public JobOutcome Outcome { get; set; } = JobOutcome.Delivered;
 
-        public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, CancellationToken ct) => Task.FromResult(this.Outcome);
+        public Task<JobOutcome> RunAsync(Job job, DateTimeOffset ranAt, DateTimeOffset? lateDue, CancellationToken ct) => Task.FromResult(this.Outcome);
     }
 }

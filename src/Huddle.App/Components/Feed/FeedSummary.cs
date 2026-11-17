@@ -59,6 +59,7 @@ internal static class FeedSummary
                 null,
                 OmitActor: true),
             MemoryTidiedPayload p => new([HelperChip(p.HelperId, p.Name), Text(MemoryTidiedText(p))], MemoryTidiedContext(p), OmitActor: true),
+            JobGaveUpPayload p => new([Strong(p.Title), Text(" did not run: " + p.Reason)], null, OmitActor: true),
             PairingRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" wants to use Huddle")], null, OmitActor: true),
             AdminRequestedPayload p => new([DeviceChip(p.DeviceName), Text(" asks for admin access")], null, OmitActor: true),
             DevicePairedPayload p => new([DeviceChip(p.DeviceName), Text(" was paired")], null, OmitActor: true),
@@ -93,6 +94,7 @@ internal static class FeedSummary
             FeedSourceType.RoomBudget or FeedSourceType.HelperPaused or FeedSourceType.TaskWakesPaused or FeedSourceType.RoomMentionHeld => "Paused ",
             FeedSourceType.HelperFailing => "Since ",
             FeedSourceType.MemoryTidied => "Tidied ",
+            FeedSourceType.JobGaveUp => "Missed ",
             _ => "Asked ",
         } + Clock(item.At, zone);
         if (item.ResolvedAt is { } resolvedAt)
@@ -112,6 +114,7 @@ internal static class FeedSummary
             TaskWakesPausedPayload or RoomMentionHeldPayload => " · after a restart, Wake is on this card",
             HelperFailingPayload => " · Tasks are not being judged",
             MemoryTidiedPayload => " · open the list to see what changed",
+            JobGaveUpPayload => " · it was removed without running",
             _ => " · waiting for you",
         });
     }
@@ -153,7 +156,7 @@ internal static class FeedSummary
         FeedSourceType.AgentsMdChangeSkipped => "AGENTS.md files",
         FeedSourceType.MemoryTidied => "Memory Tidy lists",
         FeedSourceType.PairingRequested or FeedSourceType.AdminRequested or FeedSourceType.DevicePaired or FeedSourceType.DeviceRevoked => "devices",
-        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob or FeedSourceType.RoomMentionHeld
+        FeedSourceType.RoomMention or FeedSourceType.RoomQuestion or FeedSourceType.RoomForm or FeedSourceType.RoomBudget or FeedSourceType.RoomJob or FeedSourceType.RoomMentionHeld or FeedSourceType.JobGaveUp
             or FeedSourceType.RoomCreated or FeedSourceType.RoomJoined or FeedSourceType.RoomArchived => "Rooms",
         _ => "items",
     };

@@ -1038,6 +1038,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<JobStateStore>();
         services.AddSingleton<JobRoomStore>();
         services.AddSingleton<Agency.Huddle.App.Jobs.IJobRunner, Agency.Huddle.App.Jobs.JobRunner>();
+        services.AddSingleton<Agency.Huddle.App.Jobs.IJobGaveUpNotice, Agency.Huddle.App.Jobs.JobGaveUpNotice>();
         services.AddSingleton<Agency.Huddle.App.Jobs.JobScheduler>();
         services.AddHostedService(sp => sp.GetRequiredService<Agency.Huddle.App.Jobs.JobScheduler>());
 

@@ -94,7 +94,10 @@ internal static class JobText
         return outcome switch
         {
             JobOutcome.BudgetSpent => when + ": not posted, the Room's Budget is spent",
-            JobOutcome.NoAgent => when + ": not posted, the Agent has never come online",
+            JobOutcome.NoAgent => when + ": not posted, its Agent is no longer available",
+            JobOutcome.NoRoom => when + ": not posted, its Room is gone",
+            JobOutcome.Held => when + ": not posted, trying again",
+            JobOutcome.DeliveredLate => when + ": Ran late",
             JobOutcome.Failed => when + ": failed, trying again",
             _ => when,
         };
@@ -106,9 +109,9 @@ internal static class JobText
     /// <returns>The message.</returns>
     public static string RanNow(string title, JobOutcome? outcome) => outcome switch
     {
-        JobOutcome.Delivered => $"\"{title}\" ran.",
+        JobOutcome.Delivered or JobOutcome.DeliveredLate => $"\"{title}\" ran.",
         JobOutcome.BudgetSpent => $"\"{title}\" did not run: its Room's Budget is spent.",
-        JobOutcome.NoAgent => $"\"{title}\" did not run: its Agent has never come online.",
+        JobOutcome.NoAgent => $"\"{title}\" did not run: its Agent is no longer available.",
         null => $"\"{title}\" no longer exists.",
         _ => $"\"{title}\" did not run.",
     };
