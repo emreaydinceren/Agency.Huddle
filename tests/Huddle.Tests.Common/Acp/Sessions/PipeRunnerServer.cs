@@ -45,6 +45,9 @@ internal sealed class PipeRunnerServer : IAsyncDisposable
     /// <summary>When true, every <see cref="ReadTranscript"/> is answered with a refusal instead of an empty tail.</summary>
     public bool RefuseTranscriptReads { get; init; }
 
+    /// <summary>The Hello the runner sent at its handshake, or <see langword="null"/> before <see cref="HandshakeAsync"/> has read it.</summary>
+    public Hello? Hello { get; private set; }
+
     /// <summary>A snapshot of every envelope the runner sent so far, in order; empty when the server was built with <c>recordReceived: false</c>.</summary>
     public IReadOnlyList<ProtocolMessage> Received
     {
@@ -73,6 +76,7 @@ internal sealed class PipeRunnerServer : IAsyncDisposable
         this.stream = lineStream;
 
         Hello hello = Assert.IsType<Hello>(await lineStream.ReadAsync(ct));
+        this.Hello = hello;
         await lineStream.WriteAsync(new Welcome("agent-1", hello.Name, rooms), ct);
 
         await startTask;

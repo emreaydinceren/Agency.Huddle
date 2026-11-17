@@ -436,7 +436,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private async Task<Welcome> RegisterAsync(JsonLineStream jsonLineStream, CancellationToken cancellationToken)
     {
         var description = BuildDescription(this.persona.Text);
-        await jsonLineStream.WriteAsync(new Hello(this.persona.Name, description), cancellationToken).ConfigureAwait(false);
+        await jsonLineStream.WriteAsync(new Hello(this.persona.Name, description, DurableQueue: true), cancellationToken).ConfigureAwait(false);
 
         var welcomeMessage = await jsonLineStream.ReadAsync(cancellationToken).ConfigureAwait(false);
         if (welcomeMessage is not Welcome welcome)
@@ -761,6 +761,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                 }
 
                 this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
+                this.ReportDeclined(posted);
                 break;
 
             case ReplyDecision.BudgetExhausted:
@@ -775,7 +776,44 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                     posted.RoomId,
                     posted.Budget);
 #pragma warning restore HAA0601
+                this.ReportDeclined(posted);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Tells the server the Reply Gate declined a delivery, so a row it queued for it closes as declined (Turn Queue spec,
+    /// section 5.5). Sent for every declined delivery: the server ignores an id it holds no row for. Nothing is sent once
+    /// the run token is cancelled, and a write that fails is logged and dropped; it never reaches the read loop.
+    /// </summary>
+    /// <param name="posted">The declined delivery.</param>
+    private void ReportDeclined(MessagePosted posted)
+    {
+        CancellationToken runToken = this.runCts.Token;
+        if (runToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        QueueAck ack = new(posted.RoomId, [posted.Message.Id], QueueAckKind.Finished, Outcome: QueueOutcome.Declined);
+        _ = this.WriteDeclinedAckAsync(ack, runToken);
+    }
+
+    /// <summary>Writes one decline ack, swallowing a failed write with a debug log.</summary>
+    /// <param name="ack">The ack to write.</param>
+    /// <param name="runToken">The runner's own run token.</param>
+    private async Task WriteDeclinedAckAsync(QueueAck ack, CancellationToken runToken)
+    {
+        try
+        {
+            await ((IRoomSessionOwner)this).WriteAsync(ack, runToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException or OperationCanceledException)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug(ex, "Persona '{PersonaName}' could not report a declined delivery in room {RoomId}.", this.persona.Name, ack.RoomId);
+            }
         }
     }
 
