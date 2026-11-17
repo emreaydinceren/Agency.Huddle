@@ -700,6 +700,14 @@ Room then starts a fresh conversation, with catch-up from the transcript. Use it
 when an Agent seems confused. A Turn the Agent was in the middle of stops; the
 Messages waiting behind it are answered by the restarted Agent.
 
+### When an Agent says it will come back to you
+
+When an Agent tells you it will check something later ("I'll look at the build in an hour"), it can set a
+**Follow-up**. The Room then shows a row such as "⏰ Nova will follow up Mon 16 Nov, 15:40: Check the build", with
+**Cancel**. At that time Huddle mentions the Agent in that Room and it carries on the conversation. Follow-ups are also
+listed under **Scheduled**, where **Delete job…** cancels one. A Follow-up due while the Room is paused waits until you
+type or press **Continue**; if the pause lasts more than a day it is dropped, and the Feed says so.
+
 ### Several quick Messages get one reply
 
 In an Agent's one-to-one Room, if you send several Messages while the Agent is

@@ -95,6 +95,37 @@ public sealed class JobEditorDialogTests : IDisposable
         Assert.NotNull(this.states.Get(job.Id));
     }
 
+    /// <summary>Editing a Follow-up keeps its owner fixed: the For picker is disabled.</summary>
+    [Fact]
+    public async Task FollowUp_OwnerPickerIsDisabled()
+    {
+        Job job = this.AddFollowUp();
+        await using MudBunitContext ctx = this.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = await OpenAsync(ctx, job.Id);
+
+        Assert.True(cut.Find(".job-editor-target input").HasAttribute("disabled"));
+    }
+
+    /// <summary>Giving a Follow-up a recurring timetable is refused inline with <see cref="JobRules"/>' text, and nothing is saved.</summary>
+    [Fact]
+    public async Task FollowUp_MadeRecurring_IsRefusedInline_AndNotSaved()
+    {
+        Job job = this.AddFollowUp();
+        await using MudBunitContext ctx = this.NewContext();
+        IRenderedComponent<ContainerFragment> cut = await OpenAsync(ctx, job.Id);
+        await AgentProfileCardTestSupport.OpenSelectAsync(cut, "Repeats");
+        await AgentProfileCardTestSupport.ClickSelectItemAsync(cut, "Every day");
+
+        cut.Find(".job-editor-save").Click();
+
+        Assert.Equal("A Follow-up runs once; delete it and create a Job instead", cut.Find(".job-editor-error").TextContent.Trim());
+        Assert.Equal(job, this.store.Find(job.Id));
+    }
+
+    private Job AddFollowUp() =>
+        this.store.Add(Job.FollowUp(string.Empty, "Nova", "room-1", "Check the build", "Look.", new DateOnly(2030, 1, 2), new TimeOnly(9, 30), "UTC"));
+
     private Job Add(JobRecurrence when) =>
         this.store.Add(new Job(string.Empty, JobOwner.Agent("Nova"), "Bills", "Check.", when, "UTC", "You", false));
 

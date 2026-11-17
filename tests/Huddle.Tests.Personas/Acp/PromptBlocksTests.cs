@@ -34,7 +34,7 @@ public sealed class PromptBlocksTests
         string text = Assert.Single(Compose(["mcp__team__get_help"]), p => p.Source is PromptPartSource.Prompt { Key: "systemPrompt.promisedWork" }).Text;
 
         Assert.Contains("is a progress line, not an ending", text, StringComparison.Ordinal); // contains-ok: one clause of a short paragraph; the whole text is pinned by the goldens.
-        Assert.Contains("a Task, a Job or a Mention", text, StringComparison.Ordinal); // contains-ok: names the ways back; the whole text is pinned by the goldens.
+        Assert.Contains("a Task, a Job, a Follow-up (the jobs tool's action 'follow_up'", text, StringComparison.Ordinal); // contains-ok: names the ways back; the whole text is pinned by the goldens.
         Assert.DoesNotContain("{{", text, StringComparison.Ordinal);
     }
 

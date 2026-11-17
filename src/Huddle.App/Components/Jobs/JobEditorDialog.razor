@@ -21,7 +21,7 @@
                 <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="job-editor-error">@this.error</MudAlert>
             }
             <MudSelect T="string" Label="For" Variant="Variant.Outlined" Margin="Margin.Dense" Class="job-editor-target"
-                       Value="this.target" ValueChanged="this.OnTargetChanged">
+                       Disabled="this.followUp" Value="this.target" ValueChanged="this.OnTargetChanged">
                 <MudSelectItem T="string" Value="@HumanKey">@this.Human.Name (you)</MudSelectItem>
                 @foreach (string name in this.agentNames)
                 {
@@ -114,6 +114,7 @@
     private string instruction = string.Empty;
     private string zone = string.Empty;
     private string? error;
+    private bool followUp;
 
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
@@ -133,6 +134,7 @@
         this.zone = JobTimeZones.IdOf(this.Clock.LocalTimeZone);
         if (this.JobId is not null && this.Store.Find(this.JobId) is { } job)
         {
+            this.followUp = job.RoomId is not null;
             this.target = job.Owner.AgentName is { } name ? AgentKey + name : HumanKey;
             this.title = job.Title;
             this.instruction = job.Instruction;
@@ -183,12 +185,26 @@
             string id;
             if (this.JobId is not null && this.Store.Find(this.JobId) is { } current)
             {
-                _ = this.Store.Update(current with { Owner = this.Owner(), Title = this.title.Trim(), Instruction = this.instruction.Trim(), When = when, TimeZoneId = zoneId });
+                Job changed = current with { Owner = this.followUp ? current.Owner : this.Owner(), Title = this.title.Trim(), Instruction = this.instruction.Trim(), When = when, TimeZoneId = zoneId };
+                if (JobRules.Check(changed) is { } refusal)
+                {
+                    this.error = refusal;
+                    return;
+                }
+
+                _ = this.Store.Update(changed);
                 id = current.Id;
             }
             else
             {
-                Job added = this.Store.Add(new Job(string.Empty, this.Owner(), this.title.Trim(), this.instruction.Trim(), when, zoneId, this.Human.Name, false));
+                Job candidate = new(string.Empty, this.Owner(), this.title.Trim(), this.instruction.Trim(), when, zoneId, this.Human.Name, false);
+                if (JobRules.Check(candidate) is { } refusal)
+                {
+                    this.error = refusal;
+                    return;
+                }
+
+                Job added = this.Store.Add(candidate);
                 this.Scheduler.Seed(added);
                 id = added.Id;
             }

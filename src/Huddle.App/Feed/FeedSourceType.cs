@@ -113,4 +113,7 @@ public enum FeedSourceType
 
     /// <summary>A one-off Job was removed without posting (its Room or Agent is gone, it was too late, or its retries ran out): a Notification for a Human's, Activity for an Agent's.</summary>
     JobGaveUp,
+
+    /// <summary>An Agent set a Follow-up in a Room: an Activity item.</summary>
+    JobFollowUpSet,
 }

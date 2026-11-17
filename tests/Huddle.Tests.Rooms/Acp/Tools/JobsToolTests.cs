@@ -26,6 +26,8 @@ public sealed class JobsToolTests : IDisposable
     private readonly JobScheduler scheduler;
     private readonly NullRunner runner = new();
     private readonly FakeTeamCatalog catalog = new();
+    private readonly ManualTimeProvider clock;
+    private readonly SqliteTeamDirectory directory;
 
     /// <summary>Seeds Nova and Orion, and Cleo as the Chief of Staff.</summary>
     public JobsToolTests()
@@ -47,8 +49,9 @@ public sealed class JobsToolTests : IDisposable
         ];
         this.personas = this.options.CreatePersonaStore();
         this.store = new JobStore(this.personas, this.options, NullLogger<JobStore>.Instance);
-        ManualTimeProvider clock = new(new DateTimeOffset(2026, 11, 2, 8, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
-        this.scheduler = new JobScheduler(this.store, new JobStateStore(this.options), this.runner, this.options, NullLogger<JobScheduler>.Instance, new Agency.Huddle.Tests.Jobs.NoJobNotice(), clock);
+        this.clock = new(new DateTimeOffset(2026, 11, 2, 8, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc);
+        this.directory = new SqliteTeamDirectory(this.options);
+        this.scheduler = new JobScheduler(this.store, new JobStateStore(this.options), this.runner, this.options, NullLogger<JobScheduler>.Instance, new Agency.Huddle.Tests.Jobs.NoJobNotice(), this.clock);
     }
 
     /// <inheritdoc />
@@ -253,7 +256,7 @@ public sealed class JobsToolTests : IDisposable
         Assert.Equal("A new Job needs a 'title', an 'instruction' and a 'when'.", await tool.InvokeAsync(Args("create", ("when", "daily at 09:00")), ct));
         Assert.Equal("No Agent and not the Human is called 'Ghost'. Call list_agents to see the Agents.", await tool.InvokeAsync(Create("Ghost"), ct));
         Assert.Equal("No Job has the id 'job-x'. Call jobs with action 'list' to see yours.", await tool.InvokeAsync(Args("pause", ("id", "job-x")), ct));
-        Assert.Equal("'snooze' is not an action; use create, list, update, pause, resume, delete, run_now.", await tool.InvokeAsync(Args("snooze"), ct));
+        Assert.Equal("'snooze' is not an action; use create, list, update, pause, resume, delete, run_now, follow_up.", await tool.InvokeAsync(Args("snooze"), ct));
         Assert.Empty(this.store.Jobs);
     }
 
@@ -337,7 +340,8 @@ public sealed class JobsToolTests : IDisposable
         ServiceCollection services = new();
         _ = services.AddSingleton(this.store).AddSingleton(this.scheduler).AddSingleton(this.personas);
         _ = services.AddSingleton<IHumanIdentity>(new ConfiguredHumanIdentity("You")).AddSingleton<IPromptSource>(new FakePromptSource());
-        _ = services.AddSingleton<ITeamCatalog>(this.catalog);
+        _ = services.AddSingleton<ITeamCatalog>(this.catalog).AddSingleton(this.options).AddSingleton<TimeProvider>(this.clock);
+        _ = services.AddSingleton<Agency.Huddle.App.Feed.IFeedPublisher>(new Agency.Huddle.Tests.Feed.RecordingFeedPublisher()).AddSingleton<ITeamDirectory>(this.directory);
         using ServiceProvider provider = services.BuildServiceProvider();
         return ActivatorUtilities.CreateInstance<JobsTool>(provider, persona);
     }

@@ -15,12 +15,14 @@ namespace Agency.Huddle.App.Jobs;
 /// <param name="directory">Finds the Room, the Agent and the Human.</param>
 /// <param name="chat">Posts the Huddle line.</param>
 /// <param name="logger">Records a line that could not be posted.</param>
+/// <param name="personaExists">Says whether an Agent's Persona is still there; a Follow-up of a removed one leaves no line. Defaults to every Persona being there.</param>
 internal sealed class JobGaveUpNotice(
     IFeedPublisher feed,
     JobRoomStore jobRooms,
     ITeamDirectory directory,
     ChatService chat,
-    ILogger<JobGaveUpNotice> logger) : IJobGaveUpNotice
+    ILogger<JobGaveUpNotice> logger,
+    PersonaExists? personaExists = null) : IJobGaveUpNotice
 {
     /// <inheritdoc />
     public async Task NoteAsync(Job job, string reason, CancellationToken ct)
@@ -29,7 +31,8 @@ internal sealed class JobGaveUpNotice(
         ArgumentNullException.ThrowIfNull(reason);
 
         string? agentName = job.Owner.AgentName;
-        string? roomId = jobRooms.RoomOf(job.Id);
+        bool followUp = job.RoomId is not null;
+        string? roomId = job.RoomId ?? jobRooms.RoomOf(job.Id);
         if (roomId is not null && await directory.GetRoomAsync(roomId, ct).ConfigureAwait(false) is null)
         {
             roomId = null;
@@ -37,15 +40,16 @@ internal sealed class JobGaveUpNotice(
 
         FeedActor actor = agentName is null ? FeedActor.Huddle : new FeedActor(FeedActorKind.Agent, agentName);
         feed.Post(new FeedMessage(FeedSourceType.JobGaveUp, job.Id, actor, agentName is null, new JobGaveUpPayload(job.Id, job.Title, reason, roomId)));
-        if (agentName is not null)
+        if (agentName is not null && !(followUp && personaExists is { } exists && !exists(agentName)))
         {
-            await this.PostLineAsync(agentName, roomId, job.Title, reason, ct).ConfigureAwait(false);
+            await this.PostLineAsync(agentName, roomId, job, reason, ct).ConfigureAwait(false);
         }
     }
 
     /// <summary>The line the Agent reads on its next Turn there: its Job Room, else its one-to-one with the Human (none when the Agent is gone).</summary>
-    private async Task PostLineAsync(string agentName, string? roomId, string title, string reason, CancellationToken ct)
+    private async Task PostLineAsync(string agentName, string? roomId, Job job, string reason, CancellationToken ct)
     {
+        string title = job.Title;
         string? target = roomId;
         if (target is not null)
         {
@@ -72,7 +76,7 @@ internal sealed class JobGaveUpNotice(
 
         try
         {
-            _ = await chat.PostAsHuddleAsync(target, LineOf(agentName, title, reason), ct).ConfigureAwait(false);
+            _ = await chat.PostAsHuddleAsync(target, LineOf(agentName, title, reason, job.RoomId is not null), ct).ConfigureAwait(false);
         }
         catch (ChatException ex)
         {
@@ -84,7 +88,8 @@ internal sealed class JobGaveUpNotice(
     /// <param name="agentName">The Agent's name.</param>
     /// <param name="title">The Job's title.</param>
     /// <param name="reason">Why it did not run.</param>
+    /// <param name="followUp"><see langword="true"/> to call it the Agent's Follow-up rather than Job.</param>
     /// <returns>The text.</returns>
-    internal static string LineOf(string agentName, string title, string reason) =>
-        JobRunner.Mark + " " + agentName + "'s Job \"" + title + "\" did not run: " + reason + ".";
+    internal static string LineOf(string agentName, string title, string reason, bool followUp = false) =>
+        JobRunner.Mark + " " + agentName + "'s " + (followUp ? "Follow-up" : "Job") + " \"" + title + "\" did not run: " + reason + ".";
 }

@@ -1,7 +1,7 @@
 # Huddle.TurnQueue — Design Specification
 
 **Date:** 2026-11-16, revised the same day after an independent review · **Status:** `DueCheck` built 2026-11-16
-(PR #652); spike S-0 run 2026-11-16 (Appendix B); slices 0 and 1 built 2026-11-17 (#617, PR #656); slice 2 built 2026-11-17 (#618, PR #658); slice 3a (overdue Jobs) built 2026-11-17; slice 3b (Follow-ups) not built
+(PR #652); spike S-0 run 2026-11-16 (Appendix B); slices 0 and 1 built 2026-11-17 (#617, PR #656); slice 2 built 2026-11-17 (#618, PR #658); slice 3a (overdue Jobs) built 2026-11-17 (PR #665); slice 3b (Follow-ups) built 2026-11-17
 · **Issues:** #617 (durable queue), #618 (folded
 Turns), #619 (follow-ups and overdue runs) · **Decision records:** [ADR-0091](adr/0091-a-rooms-waiting-turns-are-kept-in-team-db.md)
 (slices 0 and 1), [ADR-0092](adr/0092-a-one-to-one-folds-waiting-messages.md) (slice 2), [ADR-0093](adr/0093-a-follow-up-is-a-job-in-its-room-and-an-overdue-job-runs-once.md) (slice 3) · **Amends, when built:**

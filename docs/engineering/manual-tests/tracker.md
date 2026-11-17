@@ -1444,9 +1444,14 @@ Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice,
 | [TURNQUEUE-05](turn-queue.md#turnqueue-05--a-stopped-turn-stays-stopped-across-a-restart-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-06](turn-queue.md#turnqueue-06--quick-messages-in-a-one-to-one-get-one-reply-) | 💰 | Pass | #618 | run 2026-11-17, `3fd0745a`, see the Run log |
 | [TURNQUEUE-07](turn-queue.md#turnqueue-07--quick-mentions-in-a-group-room-get-one-reply-each-) | 💰 | Pass | #618 | run 2026-11-17, `3fd0745a`, see the Run log |
-| [TURNQUEUE-11](turn-queue.md#turnqueue-11--a-job-due-during-a-sleep-runs-once-on-waking-) | 💰 | Active | #619 | owed: needs the Human to sleep the computer (and macOS, or "not verified on macOS") |
+| [TURNQUEUE-08](turn-queue.md#turnqueue-08--an-agent-comes-back-to-the-conversation-with-a-follow-up-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
+| [TURNQUEUE-09](turn-queue.md#turnqueue-09--the-sixth-follow-up-is-refused-and-the-agent-says-so-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
+| [TURNQUEUE-10](turn-queue.md#turnqueue-10--an-overdue-job-and-follow-up-run-once-after-a-restart-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
+| [TURNQUEUE-11](turn-queue.md#turnqueue-11--a-job-due-during-a-sleep-runs-once-on-waking-) | 💰 | Active | #619 | Skipped (owner decision 2026-11-17); not counted against #619 |
 | [TURNQUEUE-12](turn-queue.md#turnqueue-12--a-mention-while-an-agent-is-starting-is-answered-with-no-line-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-13](turn-queue.md#turnqueue-13--a-restart-stops-the-running-turn-and-keeps-what-waits-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
 | [TURNQUEUE-17](turn-queue.md#turnqueue-17--a-paused-job-does-not-run-late-on-resume-) | 💰 | Pass | #619 | run 2026-11-17, `74e606fb`, see the Run log |
 | [TURNQUEUE-14](turn-queue.md#turnqueue-14--the-age-limit-and-dont-answer-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+| [TURNQUEUE-15](turn-queue.md#turnqueue-15--cancel-on-the-rooms-follow-up-row-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
+| [TURNQUEUE-16](turn-queue.md#turnqueue-16--a-follow-up-waits-in-a-paused-room-and-runs-once-after-the-human-speaks-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
 | [TURNQUEUE-18](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |

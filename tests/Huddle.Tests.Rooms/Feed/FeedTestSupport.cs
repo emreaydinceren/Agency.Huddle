@@ -78,6 +78,7 @@ internal static class FeedTestSupport
         FeedSourceType.AgentBrowserChanged => new AgentBrowserPayload("Nova", false),
         FeedSourceType.MemoryTidied => new MemoryTidiedPayload("MemoryTidy", "Memory Tidy", "C:/data/MemoryBackups/2026-11-22/changes.md", 4, 2, 3, false, false),
         FeedSourceType.JobGaveUp => new JobGaveUpPayload("job-1", "Digest", "its Room is gone", "room-1"),
+        FeedSourceType.JobFollowUpSet => new JobFollowUpSetPayload("job-1", "Nova", "Check the build", "room-1", "Ops", "Mon 2 Nov 2026 at 08:30"),
         _ => throw new ArgumentOutOfRangeException(nameof(type), type, null),
     };
 
