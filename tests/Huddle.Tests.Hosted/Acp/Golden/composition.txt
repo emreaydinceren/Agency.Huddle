@@ -99,6 +99,8 @@ Singleton Agency.Huddle.App.Helpers.HelperSettingsResolver -> Agency.Huddle.App.
 Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
 Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
 Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperAgent -> factory Agency.Huddle.App.Helpers.IHelperAgent
+Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
 Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
 Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
 Singleton Agency.Huddle.App.Helpers.IHelperInvoker -> factory Agency.Huddle.App.Helpers.IHelperInvoker
@@ -108,6 +110,9 @@ Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRecovery -> Agency.Hud
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner -> factory Agency.Huddle.App.Helpers.MemoryTidy.IMemoryTidyRunner
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyBackups
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyFinisher
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyHelper -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyHelper
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyInputBuilder -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyInputBuilder
+Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyJudging -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyJudging
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyRunner
 Singleton Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler -> Agency.Huddle.App.Helpers.MemoryTidy.MemoryTidyScheduler
 Singleton Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper -> Agency.Huddle.App.Helpers.NeedsHuman.NeedsHumanHelper

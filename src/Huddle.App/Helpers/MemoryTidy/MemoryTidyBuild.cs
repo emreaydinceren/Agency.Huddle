@@ -7,4 +7,5 @@ namespace Agency.Huddle.App.Helpers.MemoryTidy;
 /// <param name="EligibleCount">How many files are eligible for full view (topic files not marked <c>tidy: keep</c>).</param>
 /// <param name="FolderFingerprint">The folder's fingerprint (§6.5) at the moment the files were read.</param>
 /// <param name="Offset">The offset this input started at.</param>
-internal sealed record MemoryTidyBuild(MemoryTidyInput Input, int Shown, bool AllFitted, int EligibleCount, string FolderFingerprint, int Offset);
+/// <param name="TopicCount">How many topic files the folder holds, kept ones included: what <c>MinFiles</c> is compared with.</param>
+internal sealed record MemoryTidyBuild(MemoryTidyInput Input, int Shown, bool AllFitted, int EligibleCount, string FolderFingerprint, int Offset, int TopicCount);

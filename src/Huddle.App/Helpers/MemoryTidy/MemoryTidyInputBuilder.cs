@@ -53,7 +53,7 @@ internal sealed class MemoryTidyInputBuilder(MemoryTidyStateStore store, IOption
         List<MemoryTidyFile> shown = Select(eligible, offset, tidy.MaxInputChars);
         MemoryTidyLimits limits = new(tidy.MaxActions, tidy.MaxDropsPerFolder, tidy.MaxAnswerChars, string.Equals(folderKey, HuddleKey, StringComparison.Ordinal));
         MemoryTidyInput input = new(folderKey, owner, today, IndexLines(topics), shown, limits, context);
-        return new MemoryTidyBuild(input, shown.Count, shown.Count == eligible.Count, eligible.Count, FolderFingerprint(topics.Select(static topic => (topic.Name, topic.Version))), offset);
+        return new MemoryTidyBuild(input, shown.Count, shown.Count == eligible.Count, eligible.Count, FolderFingerprint(topics.Select(static topic => (topic.Name, topic.Version))), offset, topics.Count);
     }
 
     /// <summary>Where the next call starts: zero when every eligible file fitted, otherwise moved on by the number shown, wrapping at the end.</summary>

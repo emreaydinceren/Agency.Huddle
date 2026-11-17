@@ -9,7 +9,7 @@ namespace Agency.Huddle.App.Helpers.MemoryTidy;
 
 /// <summary>
 /// One Memory Tidy pass (Memory Tidy spec §6.7). It makes the pass folder, deletes the backups past their retention, and for every Persona in the
-/// catalog, running or not, drops the <c>reported.md</c> lines older than <c>KeepDays</c> (§6.6) with no model call. Whatever happens, the pass's
+/// catalog, running or not, drops the <c>reported.md</c> lines older than <c>KeepDays</c> (§6.6) with no model call, then has the Helper judge each Agent's own folder (§6.5, <see cref="MemoryTidyJudging"/>). Whatever happens, the pass's
 /// <c>finally</c> finishes the list under its own ten-second token, so a stopped pass still has its <c>changes.md</c>.
 /// </summary>
 /// <param name="personas">The catalog; every Persona's own folder is looked at.</param>
@@ -17,6 +17,7 @@ namespace Agency.Huddle.App.Helpers.MemoryTidy;
 /// <param name="writer">Applies the prune, copying the file first.</param>
 /// <param name="backups">Makes the pass folder and deletes the old ones.</param>
 /// <param name="finisher">Settles open steps, writes the list, posts the item and finishes the pass.</param>
+/// <param name="judging">Asks the Helper about each Agent's own folder after the <c>reported.md</c> step.</param>
 /// <param name="options">Supplies <c>KeepDays</c>.</param>
 /// <param name="logger">Reports a prune that failed and a finish that could not run.</param>
 /// <param name="timeProvider">The clock; the system clock when <see langword="null"/>.</param>
@@ -26,6 +27,7 @@ internal sealed class MemoryTidyPass(
     MemoryWriter writer,
     MemoryTidyBackups backups,
     MemoryTidyFinisher finisher,
+    MemoryTidyJudging judging,
     IOptions<TeamOptions> options,
     ILogger<MemoryTidyPass> logger,
     TimeProvider? timeProvider = null) : IMemoryTidyPass
@@ -53,7 +55,8 @@ internal sealed class MemoryTidyPass(
         (string id, string folder) = backups.CreatePassFolder();
         MemoryTidyJournal journal = new(folder);
         journal.Append(new MemoryTidyEntry.PassStarted(id, this.clock.GetUtcNow(), start));
-        MemoryTidyPassEnd end = MemoryTidyPassEnd.Done;
+        // Threw until the loop says otherwise: an exception that is not a stop leaves it so for the finally, and the exception goes on to the caller.
+        MemoryTidyPassEnd end = MemoryTidyPassEnd.Threw;
         try
         {
             if (this.AfterStartedForTests is { } hook)
@@ -63,15 +66,11 @@ internal sealed class MemoryTidyPass(
 
             _ = backups.DeleteOld();
             await this.DropOldReportedLinesAsync(folder, journal, cancellationToken).ConfigureAwait(false);
+            end = await judging.RunAsync(start, folder, journal, cancellationToken).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             end = MemoryTidyPassEnd.Stopped;
-        }
-        catch (Exception)
-        {
-            end = MemoryTidyPassEnd.Threw;
-            throw;
         }
         finally
         {
