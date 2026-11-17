@@ -7053,3 +7053,17 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#reported-0
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+### TIDYLINES-01 — A pass drops an old reported line and writes its list, with no call
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-01--a-pass-drops-an-old-reported-line-and-writes-its-list-with-no-call)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TIDYLINES-02 — A pass stopped by closing Huddle finishes one list, and nothing is posted twice
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |

@@ -2415,6 +2415,7 @@ A **root** is a top-level folder shown in the Library:
 | **Raw** | `Raw/`: files attached in Rooms outside a Team, one folder per Room. |
 | **Archive** | `Archive/`: archived Teams and Projects. Read-only. |
 | **Prompts** | `Prompts/`: one file per prompt you changed. |
+| **Memory backups** | `MemoryBackups/`: what each Memory Tidy pass changed. Read-only. See [Memory backups](#memory-backups). |
 | **Skill Sources** | The Skill Sources folder. Read-only. |
 | Pinned folders | Any folder on your machine you add with **Add folder** or in **Settings › Library**. |
 
@@ -2422,6 +2423,23 @@ Pinned folders are saved in `library-roots.json` in the data root. The file is
 created the first time you add, remove or hide a root. **Reset pinned folders**
 deletes it and goes back to the configured list (`Team:Library:Roots`). Hand
 edits to `library-roots.json` are only read at startup.
+
+### Memory backups
+
+The **Memory backups** root holds one folder per Memory Tidy pass, named by its day
+(`2026-11-16`, or `2026-11-16-2` for a second pass that day). A pass folder has:
+
+- the copies of every memory file the pass changed, as they were before;
+- `pass.jsonl`, the pass's journal;
+- `changes.md`, the list of what the pass did. Open it to read it.
+
+The root is read-only, and Global Search and the Agents' `search` tool leave it out.
+A pass folder is deleted after 90 days (`Team:Memory:Tidy:KeepBackupDays`). There is no
+Restore button yet: to undo a change, open the copy and put its text back by hand.
+
+The Memory Tidy Helper is not on yet. Today a pass only drops the lines older than 14
+days from each Agent's `reported.md`, with no model call, and a pass runs only when
+`Team:Memory:Tidy:RunAtStart` is set.
 
 ### Reading and editing notes
 
