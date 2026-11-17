@@ -1,6 +1,6 @@
 # Huddle.MemoryTidy — Design Specification
 
-**Date:** 2026-11-16 · **Status:** Proposed; slices 1 to 4 built 2026-11-16 (slices 1 to 3 merged as PRs #653, #654 and #655; slice 4 on `feat/memtidy-helper`, with [ADR-0095](adr/0095-a-helper-tidies-memory-weekly-and-huddle-keeps-a-copy.md)), the rest not built. Revised twice on 2026-11-16, after an independent review and its
+**Date:** 2026-11-16 · **Status:** Proposed; slices 1 to 5 built 2026-11-16 and 2026-11-17 (slices 1 to 3 merged as PRs #653, #654 and #655; slices 4 and 5 on `feat/memtidy-helper`, with [ADR-0095](adr/0095-a-helper-tidies-memory-weekly-and-huddle-keeps-a-copy.md)), slice 6 (Restore) not built: it is a non-goal of this build (§3, a one-click Restore, by hand first, D-23). Revised twice on 2026-11-16, after an independent review and its
 re-review; the owner settled every open question the same day (§10, [Appendix B](#appendix-b-review-response)) · **Issues:** #620 (every
 Agent keeps `reported.md`) and #621 (a weekly tidy-up of Memory), both decided by the owner 2026-11-16 ·
 **Decision records:** two to write with the build, ADR-0094 and ADR-0095 (0091 to 0093 are taken by the Turn Queue

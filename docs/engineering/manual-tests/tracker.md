@@ -1427,4 +1427,5 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 | [MEMTIDY-08](memory-tidy.md#memtidy-08--an-older-session-hears-of-the-change-) | 💰 | Active | #621 | not yet run by a person |
 | [MEMTIDY-09](memory-tidy.md#memtidy-09--a-daily-cap-of-1-leaves-the-other-folders-eligible-) | 💰 | Active | #621 | not yet run by a person |
 | [MEMTIDY-10](memory-tidy.md#memtidy-10--closing-huddle-in-the-middle-of-a-pass-lists-what-was-done-) | 💰 | Active | #621 | not yet run by a person |
+| [MEMTIDY-11](memory-tidy.md#memtidy-11--a-file-merged-away-in-huddle-wide-memory-is-now-in-the-kept-one-and-no-description-changed-) | 💰 | Active | #621 | not yet run by a person |
 | [MEMTIDY-12](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-) | 💰 | Active | #621 | not yet run by a person |

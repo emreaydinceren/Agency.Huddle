@@ -2,7 +2,7 @@
 
 Prove, with real models, that an Agent keeps `reported.md` in its own Memory, that it reads the file before it reports and does not tell the Human the same thing twice, that the `memory` tool writes the date and drops old lines, and that the Chief of Staff reads a manager's file before it summarises a digest. Two free cases (TIDYLINES) prove slice 2's pass of the old lines, its Memory backups folder and its list. Eleven cases (MEMTIDY) prove slice 4's Memory Tidy Helper: its changes, its checks, its copy and list, and its card. Spec: [Huddle.MemoryTidy-Specifications.md](../../Huddle.MemoryTidy-Specifications.md) (§8.2 lists these cases). Decision: [ADR-0094](../../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md). Later slices of the spec add cases to this page.
 
-**23 tests** · 7 free · 16 paid · about 7.6 hours. REPORTED-01 to 08 were written 2026-11-16 for issue #620, slice 1; TIDYLINES-01 and 02 the same day for issue #621, slice 2; TIDYTIME-01 and 02 the same day for #621, slice 3; MEMTIDY-01 to 10 and 12 the same day for #621, slice 4 (MEMTIDY-11 belongs to slice 5). **Not yet run by a person.**
+**24 tests** · 7 free · 17 paid · about 8.1 hours. REPORTED-01 to 08 were written 2026-11-16 for issue #620, slice 1; TIDYLINES-01 and 02 the same day for issue #621, slice 2; TIDYTIME-01 and 02 the same day for #621, slice 3; MEMTIDY-01 to 10 and 12 the same day for #621, slice 4; MEMTIDY-11 the next day, slice 5. **Not yet run by a person.**
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Use Sonnet or better for each Agent, never Haiku. Set the models and read them back in `persona_models` before the first case, and watch the spend from the manager's side. Ask the owner first, and record each result in the [Run log](run-log.md).
 
@@ -644,6 +644,35 @@ Slice 4 adds the Helper that tidies each Agent's own Memory. These cases (MEMTID
 
 - No list, or the first folder's changes are missing from it.
 - Two Notifications for the pass.
+
+### MEMTIDY-11 — A file merged away in Huddle-wide Memory is "Now in" the kept one, and no description changed 💰
+
+**Paid** · about 30 min
+
+*Proves the pass tidies Huddle-wide Memory with descriptions locked, and that a running Agent is told a merged-away file moved. Spec §6.14, ADR-0095.*
+
+**Before you start**
+
+- Huddle-wide Memory (`Teams/memory`) holds 10 topic files, two of them on one topic (for example `kestrel-prices.md` and `kestrel-bulk.md`). Note every file's `description`.
+- `Nova` has a Room whose session started before the pass.
+
+**Steps**
+
+1. On **Settings › Helpers**, press **Tidy now** on the Memory Tidy card. Wait for the Notification and open its list.
+2. Read the files in `Teams/memory` and compare each `description` with your note. Read the pass folder's `Huddle` folder.
+3. In `Nova`'s older Room send her any Message. Read the start of her Turn ([`O-TOOLCALLS`](common.md#o-toolcalls)).
+
+**Pass if — all of these**
+
+- The list has a merge in Huddle-wide Memory, and the pass folder's `Huddle` folder holds a copy of each file it changed.
+- No `description` in `Teams/memory` differs from your note.
+- `Nova`'s Turn lists the merged-away file as `- Now in <kept file>: <name>`, not as removed and no longer true.
+
+**Fail if — any of these**
+
+- A description in the folder changed.
+- The Turn says the removed file is no longer true, though the fact is in the kept file.
+- No copy in the `Huddle` folder.
 
 ### MEMTIDY-12 — A pass that meets the cap goes on the next day by itself 💰
 

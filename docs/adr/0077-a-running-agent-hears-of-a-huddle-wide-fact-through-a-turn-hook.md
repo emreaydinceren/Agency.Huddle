@@ -39,3 +39,10 @@ Known small cost: the own-write signal (`Touched`) comes from `PersonaSupervisor
 `tracker?.MemoryPaths`, so with File Changes off, or on an Adapter with no read tool, the Chief of Staff hears its own Memory
 Tool write once at its next Turn. Decoupling it needs the supervisor to take `MemoryPaths` itself and changes a pinned plan
 test (`PersonaSupervisorFileChangesTests`: no paths while File Changes is off), so it is left for a decision of its own.
+
+## Note, 2026-11-17: a merged-away file is "Now in"
+
+When Memory Tidy merges one Huddle-wide file into another, the removed file is recorded for 30 days
+(`MemoryTidyMergeStore`). The hook then announces it as `- Now in <into>: <name>` (Prompt `turn.huddleMemoryMerged`)
+instead of "Removed, no longer true", since the fact is still true. A file the tidy dropped is still announced as removed.
+See [ADR-0095](0095-a-helper-tidies-memory-weekly-and-huddle-keeps-a-copy.md).

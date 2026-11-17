@@ -7152,6 +7152,13 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-10
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### MEMTIDY-11 — A file merged away in Huddle-wide Memory is "Now in" the kept one, and no description changed 💰
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-11--a-file-merged-away-in-huddle-wide-memory-is-now-in-the-kept-one-and-no-description-changed-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ### MEMTIDY-12 — A pass that meets the cap goes on the next day by itself 💰
 
 File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#memtidy-12--a-pass-that-meets-the-cap-goes-on-the-next-day-by-itself-)

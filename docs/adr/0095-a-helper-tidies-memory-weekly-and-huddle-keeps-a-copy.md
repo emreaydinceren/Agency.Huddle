@@ -116,5 +116,15 @@ They do not stop the following. Each is in [known-limits.md](../engineering/know
   `systemPrompt.memory` gains the optional `{{memoryTidy}}`.
 - **The Helper's card** gains an optional section, container `G9a1` in [wireframes.md](../engineering/wireframes.md).
 - In [language.md](../engineering/language.md), **Memory Tidy**, **Memory Tidy Helper** and **Memory backup** are added.
-- **Slice 5** (Huddle-wide Memory) adds a paragraph here and a dated note on ADR-0077's page. Until then Huddle-wide
-  Memory and Team Memory are not tidied.
+- **Team Memory is not tidied.** The Team Memory Helper judges each write there.
+
+## Huddle-wide Memory (slice 5, 2026-11-17)
+
+The pass judges Huddle-wide Memory (`Teams/memory`) after every Agent's own folder, with its descriptions locked: the
+Helper is not asked to describe, and a rewrite or merge whose kept file's description is missing or broken is refused,
+while one that passes keeps the description it had. The folder is shared by every Agent, so a description is what each
+of them reads to choose a file, and a model-written one would change all their Memory at once. Copies go to
+`<pass>/Huddle/`. Because every running Agent is told by [ADR-0077](0077-a-running-agent-hears-of-a-huddle-wide-fact-through-a-turn-hook.md)'s
+hook that a file was removed ("Removed, no longer true"), a file a merge removed there is recorded for 30 days in
+`memory_tidy_merges` (`MemoryTidyMergeStore`), and the hook says `- Now in <into>: <name>` instead; a dropped file is
+still announced as removed. The cost is one more call a week at most.
