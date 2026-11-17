@@ -8,6 +8,7 @@ using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Search;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App;
@@ -77,6 +78,9 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for scheduled Jobs.</summary>
     public JobsOptions Jobs { get; set; } = new();
+
+    /// <summary>Configuration for the Turn Queue, bound from <c>Team:TurnQueue</c>.</summary>
+    public TurnQueueOptions TurnQueue { get; set; } = new();
 
     /// <summary>Configuration for the Avatar Library, per Spec §6.1. Unset means no library.</summary>
     public AvatarLibraryOptions AvatarLibrary { get; set; } = new();

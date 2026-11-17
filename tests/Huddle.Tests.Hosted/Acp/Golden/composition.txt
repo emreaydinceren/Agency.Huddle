@@ -74,6 +74,7 @@ Singleton Agency.Huddle.App.Data.RawBaselineStore -> Agency.Huddle.App.Data.RawB
 Singleton Agency.Huddle.App.Data.RoomSpendStore -> Agency.Huddle.App.Data.RoomSpendStore
 Singleton Agency.Huddle.App.Data.ScopeIdStore -> Agency.Huddle.App.Data.ScopeIdStore
 Singleton Agency.Huddle.App.Data.TaskScopeStore -> Agency.Huddle.App.Data.TaskScopeStore
+Singleton Agency.Huddle.App.Data.TurnQueueStore -> Agency.Huddle.App.Data.TurnQueueStore
 Singleton Agency.Huddle.App.Data.WaitingQuestionStore -> Agency.Huddle.App.Data.WaitingQuestionStore
 Singleton Agency.Huddle.App.DocHistory.DocHistoryLibraryListener -> Agency.Huddle.App.DocHistory.DocHistoryLibraryListener
 Singleton Agency.Huddle.App.DocHistory.DocHistoryRecorder -> Agency.Huddle.App.DocHistory.DocHistoryRecorder

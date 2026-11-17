@@ -165,6 +165,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await ExecuteNonQueryAsync(connection, DdlCreateRoomTeamsTeamRoomIndex, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomProjects, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomJobs, ct).ConfigureAwait(false);
+        await ExecuteNonQueryAsync(connection, TurnQueueStore.DdlCreate, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomSpend, ct).ConfigureAwait(false);
         await ExecuteNonQueryAsync(connection, DdlCreateProjectSpendRetained, ct).ConfigureAwait(false);
 
@@ -775,6 +776,8 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
             deleteJob.Parameters.AddWithValue("$id", roomId);
             await deleteJob.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
         }
+
+        await TurnQueueStore.DeleteRoomRowsAsync(connection, transaction, roomId, ct).ConfigureAwait(false);
 
         var deleteArchived = connection.CreateCommand();
         await using (deleteArchived.ConfigureAwait(false))

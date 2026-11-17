@@ -26,7 +26,11 @@ namespace Agency.Huddle.Contracts;
 /// prompt, nothing more. Additive on the wire: omitted when <see langword="null"/>, and absent
 /// deserialises as a root Room.
 /// </param>
+/// <param name="Redelivery">
+/// Set only on a re-sent Message: it was waiting, or a Turn for it was cut off. Additive on the wire:
+/// omitted when <see langword="null"/>.
+/// </param>
 public sealed record MessagePosted(
     string RoomId, string RoomName, ChatMessage Message, bool Mentioned,
     IReadOnlyList<MemberInfo> Mentions, IReadOnlyList<MemberInfo> Members,
-    int AgentMessagesSinceHuman, int Budget, string? Team = null) : ProtocolMessage;
+    int AgentMessagesSinceHuman, int Budget, string? Team = null, Redelivery? Redelivery = null) : ProtocolMessage;

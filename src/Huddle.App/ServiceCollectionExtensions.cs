@@ -956,6 +956,7 @@ public static class ServiceCollectionExtensions
         // Scheduled Jobs: definitions in each owner's schedule.md, firing state in team.db, run once a minute like the cadences above.
         services.AddSingleton<Agency.Huddle.App.Jobs.JobStore>();
         services.AddSingleton<JobStateStore>();
+        services.AddSingleton<TurnQueueStore>();
         services.AddSingleton<JobRoomStore>();
         services.AddSingleton<Agency.Huddle.App.Jobs.IJobRunner, Agency.Huddle.App.Jobs.JobRunner>();
         services.AddSingleton<Agency.Huddle.App.Jobs.JobScheduler>();
