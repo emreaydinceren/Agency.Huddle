@@ -18,6 +18,38 @@ on:
   workflow_call: {}
 
 jobs:
+  # Runs in parallel with the other two jobs, on every PR and every push to main, docs-only or not.
+  # The callers have no `paths-ignore`, so a docs-only change reaches this job and the required
+  # checks always report. Check-DocIndex.ps1 is read-only and needs only git and pwsh; Check-All.ps1
+  # is not used here because it runs Check-Eol with -Fix and CI must report, not rewrite the tree.
+  # Add further read-only docs checks as steps below.
+  docs:
+    runs-on: dotnet-10-local
+    timeout-minutes: 5
+    container:
+      # Same image as `secret-scan`; see the note there.
+      image: huddle-ci:11.0.100
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: 📥 Checkout
+        env:
+          GIT_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
+
+      # Fails (exit 1) on MISSING (an Index.md link to a file that does not exist) or UNLISTED
+      # (a tracked docs/**/*.md page no Index.md link points at). The last output line is
+      # `CHECK-DOCINDEX Missing=<n> Unlisted=<n>`.
+      - name: 📚 Doc index lists every page and has no dead links
+        run: pwsh -NoProfile -NonInteractive -File ./agents/scripts/Check-DocIndex.ps1
+
   secret-scan:
     runs-on: dotnet-10-local
     # A hung job must not hold the only runner for the default hours. Needs runner 2.0.0 or newer;

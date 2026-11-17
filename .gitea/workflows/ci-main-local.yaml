@@ -8,8 +8,7 @@ name: CI (Main)
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
+    # No `paths-ignore`; see ci-pr-local.yaml.
 
 # Runs queue, never cancel: each merge's result is worth keeping.
 concurrency:

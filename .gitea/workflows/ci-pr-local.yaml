@@ -11,8 +11,8 @@ name: CI (Pull Request)
 on:
   pull_request:
     branches: [main]
-    paths-ignore:
-      - 'docs/**'
+    # No `paths-ignore`: a docs-only PR must still run, so the required checks report and the
+    # `docs` job in ci-shared.yaml gets to check it. It costs a docs-only PR a full run.
 
 # One runner serves every workflow, so a superseded run is wasted queue time.
 concurrency:
