@@ -23,6 +23,7 @@ internal sealed class TurnRedelivery : IDisposable
     private readonly RoomEvents events;
     private readonly IOptions<TeamOptions> options;
     private readonly IHostApplicationLifetime lifetime;
+    private readonly PersonaExists personaExists;
     private readonly ILogger<TurnRedelivery> logger;
     private readonly TimeProvider clock;
     private readonly Action<string> onUnpaused;
@@ -37,6 +38,7 @@ internal sealed class TurnRedelivery : IDisposable
     /// <param name="events">Raises the end of a Room's pause.</param>
     /// <param name="options">Supplies <c>Team:TurnQueue:Enabled</c>.</param>
     /// <param name="lifetime">Stops a send the host abandons.</param>
+    /// <param name="personaExists">Tells whether an Agent's Persona still exists.</param>
     /// <param name="logger">Receives failures.</param>
     /// <param name="timeProvider">The clock; <see langword="null"/> uses <see cref="TimeProvider.System"/>.</param>
     public TurnRedelivery(
@@ -49,9 +51,11 @@ internal sealed class TurnRedelivery : IDisposable
         RoomEvents events,
         IOptions<TeamOptions> options,
         IHostApplicationLifetime lifetime,
+        PersonaExists personaExists,
         ILogger<TurnRedelivery> logger,
         TimeProvider? timeProvider = null)
     {
+        ArgumentNullException.ThrowIfNull(personaExists);
         ArgumentNullException.ThrowIfNull(control);
         ArgumentNullException.ThrowIfNull(gateway);
         ArgumentNullException.ThrowIfNull(team);
@@ -71,6 +75,7 @@ internal sealed class TurnRedelivery : IDisposable
         this.events = events;
         this.options = options;
         this.lifetime = lifetime;
+        this.personaExists = personaExists;
         this.logger = logger;
         this.clock = timeProvider ?? TimeProvider.System;
         this.onUnpaused = roomId => _ = this.SendHeldAsync(roomId, this.lifetime.ApplicationStopping);
@@ -143,7 +148,8 @@ internal sealed class TurnRedelivery : IDisposable
         TurnQueueRow row = turn.Row;
         Room? room = await this.team.GetRoomAsync(row.RoomId, ct).ConfigureAwait(false);
         IReadOnlyList<User> members = room is null ? [] : await this.team.GetRoomMembersAsync(row.RoomId, ct).ConfigureAwait(false);
-        if (room is null || !members.Any(member => string.Equals(member.Id, agentId, StringComparison.Ordinal)))
+        User? agent = members.FirstOrDefault(member => string.Equals(member.Id, agentId, StringComparison.Ordinal));
+        if (room is null || agent is null || !this.personaExists(agent.Name))
         {
             this.control.CloseGone(row.Seq, this.clock.GetUtcNow());
             return;
@@ -152,6 +158,8 @@ internal sealed class TurnRedelivery : IDisposable
         ChatMessage? message = await this.FindMessageAsync(row.RoomId, row.MessageId, ct).ConfigureAwait(false);
         if (message is null)
         {
+            // The Message was deleted, or the crash fell between recording the row and appending it: no Turn is owed (spec §5.7).
+            this.control.Delete(row.Seq);
             return;
         }
 

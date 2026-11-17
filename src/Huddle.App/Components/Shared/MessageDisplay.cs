@@ -66,7 +66,8 @@ internal static partial class MessageDisplay
 
         if (text.StartsWith(RestartLine.NotPickedUpPrefix, StringComparison.Ordinal))
         {
-            detail = text[RestartLine.NotPickedUpPrefix.Length..].Trim();
+            // Both forms: "Not picked up after a restart. Not picked up: ..." (older) and "Not picked up after a restart: ...".
+            detail = text[RestartLine.NotPickedUpPrefix.Length..].TrimStart(':', '.', ' ').Trim();
             return true;
         }
 

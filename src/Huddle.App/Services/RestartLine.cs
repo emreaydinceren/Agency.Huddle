@@ -10,7 +10,7 @@ internal static class RestartLine
     internal const string Prefix = "Picked up after a restart.";
 
     /// <summary>The first words of a line in which nothing was picked up.</summary>
-    internal const string NotPickedUpPrefix = "Not picked up after a restart.";
+    internal const string NotPickedUpPrefix = "Not picked up after a restart";
 
     /// <summary>Builds the line.</summary>
     /// <param name="entries">One entry per Agent, in the order first seen.</param>
@@ -27,17 +27,19 @@ internal static class RestartLine
             return null;
         }
 
-        StringBuilder text = new(pickedUp.Count > 0 ? Prefix : NotPickedUpPrefix);
-        if (pickedUp.Count > 0)
+        if (pickedUp.Count == 0)
         {
-            _ = text.Append(' ').Append(Count(pickedUp[0].PickedUp, true)).Append(" waiting for ").Append(pickedUp[0].AgentName);
-            foreach (Entry entry in pickedUp.Skip(1))
-            {
-                _ = text.Append(", ").Append(Count(entry.PickedUp, false)).Append(" for ").Append(entry.AgentName);
-            }
-
-            _ = text.Append('.');
+            return NotPickedUpPrefix + ": " + string.Join("; ", notPickedUp) + ".";
         }
+
+        StringBuilder text = new(Prefix);
+        _ = text.Append(' ').Append(Count(pickedUp[0].PickedUp, true)).Append(" waiting for ").Append(pickedUp[0].AgentName);
+        foreach (Entry entry in pickedUp.Skip(1))
+        {
+            _ = text.Append(", ").Append(Count(entry.PickedUp, false)).Append(" for ").Append(entry.AgentName);
+        }
+
+        _ = text.Append('.');
 
         if (notPickedUp.Count > 0)
         {

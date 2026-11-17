@@ -139,6 +139,9 @@ public sealed class PipeHostFixture : IAsyncDisposable
         builder.Services.AddTeamServices(builder.Configuration);
         RemovePersonaSupervisorHostedService(builder.Services);
         RemoveBuiltinAgentSeederHostedService(builder.Services);
+
+        // The fixture's Agents are named by a Hello and have no Persona file, so every Name counts as a Persona unless a test says otherwise.
+        builder.Services.AddSingleton<Agency.Huddle.App.Services.PersonaExists>(static _ => true);
         configureServices?.Invoke(builder.Services);
 
         var loggerProvider = new RecordingLoggerProvider();

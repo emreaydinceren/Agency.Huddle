@@ -21,6 +21,10 @@ internal interface ITurnQueueControl
     /// <param name="now">The current time, from the injected clock.</param>
     void CloseGone(long seq, DateTimeOffset now);
 
+    /// <summary>Deletes one row whose Message is no longer in the Transcript, as the start-up pass does (spec §5.7).</summary>
+    /// <param name="seq">The row.</param>
+    void Delete(long seq);
+
     /// <summary>Whether the Agent's current connection keeps a durable queue.</summary>
     /// <param name="agentId">The Agent.</param>
     /// <returns><see langword="true"/> when the Agent is subscribed.</returns>

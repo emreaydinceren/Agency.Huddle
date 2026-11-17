@@ -440,6 +440,27 @@ public sealed class PersonaRenameCascadeTests
         Assert.Equal([other.Id], harness.QueueStore.Subscribers().ToArray());
     }
 
+    /// <summary>Turn Queue spec §5.9: renaming a Persona is not a removal, so its Agent's open rows stay open and its subscription stays.</summary>
+    [Fact]
+    public async Task Rename_LeavesTheAgentsOpenTurnQueueRowsOpen()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(TestPersonas.Identity("echo"), "You answer support questions.");
+        User? echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        DateTimeOffset now = DateTimeOffset.UtcNow;
+        harness.QueueStore.Subscribe(echo.Id);
+        _ = harness.QueueStore.Record(echo.Id, "m1", "r1", now, now);
+
+        harness.PersonaStore.Update("echo", TestPersonas.FrontmatterText("echoprime", "You answer support questions."), model: null, effort: null, workMode: null);
+
+        Assert.NotNull(harness.TeamDirectory.FindUserByName("echoprime"));
+        Assert.Equal("waiting", TurnQueueRows.Find(dir.Path, echo.Id, "r1", "m1").Status);
+        Assert.Equal([echo.Id], harness.QueueStore.Subscribers().ToArray());
+    }
+
     /// <summary>Removing a Persona deletes both its Avatar's JSON key and its image file from disk.</summary>
     [Fact]
     public async Task Remove_DeletesTheAvatarKeyAndItsImageFile()

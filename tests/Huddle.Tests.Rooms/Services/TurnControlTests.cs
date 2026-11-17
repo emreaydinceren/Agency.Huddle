@@ -184,6 +184,8 @@ public sealed class TurnControlTests
 
         public void CloseGone(long seq, DateTimeOffset now) => throw new NotSupportedException();
 
+        public void Delete(long seq) => throw new NotSupportedException();
+
         public bool IsSubscribed(string agentId) => throw new NotSupportedException();
 
         public void CloseForAgent(string agentId) => throw new NotSupportedException();

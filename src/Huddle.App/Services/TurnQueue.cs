@@ -182,6 +182,17 @@ internal sealed class TurnQueue : ITurnLedger, ITurnAcks, ITurnQueueControl
     }
 
     /// <inheritdoc />
+    public void Delete(long seq)
+    {
+        string? roomId = this.store.RoomOf(seq);
+        this.store.Delete(seq);
+        if (roomId is not null)
+        {
+            this.Changed(roomId);
+        }
+    }
+
+    /// <inheritdoc />
     public bool IsSubscribed(string agentId)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);

@@ -54,6 +54,39 @@ public sealed class TurnQueueStoreTests
         Assert.Empty(store.Open("a1"));
     }
 
+    /// <summary>A Started naming another Room than the one the row is in leaves the row waiting with its attempts, and adds no row.</summary>
+    [Fact]
+    public void Started_NamingAnotherRoom_LeavesTheRowAlone()
+    {
+        using TempDataDir dir = new();
+        TurnQueueStore store = new(dir.Options());
+        _ = store.Record("a1", "m1", "rB", T0, T0);
+
+        store.Started("a1", "rA", ["m1"], "reply-1", "c1", T0, T1);
+
+        TurnQueueRow row = Assert.Single(store.Open("a1"));
+        Assert.Equal(("rB", TurnQueueStatus.Waiting, 0), (row.RoomId, row.Status, row.Attempts));
+        Assert.Null(row.ReplyMessageId);
+        Assert.Null(row.ConnectionId);
+        _ = Assert.Single(TurnQueueRows.Read(dir.Path));
+    }
+
+    /// <summary>A Started naming another Room never attaches its reply and connection to a running row without a reply in the row's own Room.</summary>
+    [Fact]
+    public void Started_NamingAnotherRoom_LeavesARunningRowWithoutReplyAlone()
+    {
+        using TempDataDir dir = new();
+        TurnQueueStore store = new(dir.Options());
+        _ = store.Record("a1", "m1", "rB", T0, T0);
+        store.Set(Assert.Single(store.Open("a1")).Seq, TurnQueueStatus.Running, null, T0);
+
+        store.Started("a1", "rA", ["m1"], "reply-1", "c1", T0, T1);
+
+        TurnQueueRow row = Assert.Single(store.Open("a1"));
+        Assert.Null(row.ReplyMessageId);
+        Assert.Null(row.ConnectionId);
+    }
+
     /// <summary>The same Message owed to two Agents is two rows.</summary>
     [Fact]
     public void Record_TwoAgentsSameMessage_TwoRows()

@@ -275,7 +275,7 @@ public sealed class TurnQueueRecoveryTests
         await rig.RunAsync(ct);
 
         ChatMessage line = Assert.Single(await rig.HuddleLinesAsync(ct));
-        Assert.Equal("Not picked up after a restart. Not picked up: 1 Message for Kai that waited more than 24 hours.", line.Text);
+        Assert.Equal("Not picked up after a restart: 1 Message for Kai that waited more than 24 hours.", line.Text);
     }
 
     /// <summary>With the queue off, nothing changes and no line is posted (E-13).</summary>
@@ -311,6 +311,27 @@ public sealed class TurnQueueRecoveryTests
         Assert.Equal(("waiting", null), Outcome(rig, rig.Nova, "m1"));
     }
 
+    /// <summary>One Room whose Transcript cannot be read leaves its rows alone, and the other Rooms are still reconciled and told.</summary>
+    [Fact]
+    public async Task Pass_OneRoomThrows_OtherRoomsAreStillHandled()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        Room other = await rig.Team.CreateRoomAsync("Other", [KnownIds.Human, rig.Nova.Id], ct);
+        await rig.AppendAsync("m1", KnownIds.Human, "hello", ct);
+        await rig.File.AppendAsync(other.Id, new ChatMessage("m2", rig.Now.AddHours(-2), KnownIds.Human, KnownIds.Human, "hi"), ct);
+        rig.Waiting(rig.Nova, "m1", TimeSpan.FromHours(2));
+        _ = rig.Queue.Record(rig.Nova.Id, "m2", other.Id, rig.Now.AddHours(-2), rig.Before);
+        rig.Transcript.FailRoomId = rig.Room.Id;
+
+        await rig.RunAsync(ct);
+
+        Assert.Equal(("waiting", null), Outcome(rig, rig.Nova, "m1"));
+        ChatMessage line = Assert.Single(
+            await rig.File.ReadAllAsync(other.Id, ct), message => string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal));
+        Assert.Equal("Picked up after a restart. 1 Message waiting for Nova.", line.Text);
+    }
+
     /// <summary>The words the poster uses are the ones the parser recognises: the test fails if the two part.</summary>
     [Fact]
     public async Task RestartLine_PostedByThePass_IsRecognisedByTheParser()
@@ -329,13 +350,16 @@ public sealed class TurnQueueRecoveryTests
         Assert.Equal("1 Message waiting for Nova.", detail);
     }
 
-    /// <summary>The parser recognises both prefixes, reports which one, and rejects other text.</summary>
+    /// <summary>The parser recognises both prefixes and both forms of the second, reports which one, and rejects other text.</summary>
     [Fact]
     public void TryParseRestartLine_RecognisesBothPrefixesOnly()
     {
         Assert.True(MessageDisplay.TryParseRestartLine(RestartLine.NotPickedUpPrefix + " Not picked up: 1 Message.", out bool pickedUp, out string detail));
         Assert.False(pickedUp);
         Assert.Equal("Not picked up: 1 Message.", detail);
+        Assert.True(MessageDisplay.TryParseRestartLine("Not picked up after a restart: 1 Message for Kai that waited more than 24 hours.", out pickedUp, out detail));
+        Assert.False(pickedUp);
+        Assert.Equal("1 Message for Kai that waited more than 24 hours.", detail);
         Assert.False(MessageDisplay.TryParseRestartLine("Hello there. " + RestartLine.Prefix, out _, out _));
         Assert.False(MessageDisplay.TryParseRestartLine(string.Empty, out _, out _));
     }
@@ -352,10 +376,10 @@ public sealed class TurnQueueRecoveryTests
             "Picked up after a restart. 3 Messages waiting for Nova, 2 for Kai, 1 for Juno.",
             RestartLine.Build([new RestartLine.Entry("Nova", 3, 0, 0), new RestartLine.Entry("Kai", 2, 0, 0), new RestartLine.Entry("Juno", 1, 0, 0)], day));
         Assert.Equal(
-            "Not picked up after a restart. Not picked up: 2 Messages for Nova that waited more than 90 minutes.",
+            "Not picked up after a restart: 2 Messages for Nova that waited more than 90 minutes.",
             RestartLine.Build([new RestartLine.Entry("Nova", 0, 2, 0)], TimeSpan.FromMinutes(90)));
         Assert.Equal(
-            "Not picked up after a restart. Not picked up: 2 Messages that Huddle stopped twice while Nova was answering them.",
+            "Not picked up after a restart: 2 Messages that Huddle stopped twice while Nova was answering them.",
             RestartLine.Build([new RestartLine.Entry("Nova", 0, 0, 2)], day));
         Assert.Equal(
             "Picked up after a restart. 1 Message waiting for Kai. Not picked up: 1 Message for Nova that waited more than 1 hour; 3 for Kai that waited more than 1 hour; 1 that Huddle stopped twice while Kai was answering it.",
@@ -430,6 +454,9 @@ public sealed class TurnQueueRecoveryTests
 
         public bool FailReads { get; set; }
 
+        /// <summary>The one Room whose tail read throws; the others read normally.</summary>
+        public string? FailRoomId { get; set; }
+
         public Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default) => inner.AppendAsync(roomId, message, ct);
 
         public Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default)
@@ -445,7 +472,7 @@ public sealed class TurnQueueRecoveryTests
         public Task<IReadOnlyList<ChatMessage>> ReadTailAsync(string roomId, int count, CancellationToken ct = default)
         {
             this.TailCounts.Add(count);
-            if (this.FailReads)
+            if (this.FailReads || string.Equals(roomId, this.FailRoomId, StringComparison.Ordinal))
             {
                 throw new InvalidDataException("transcript down");
             }

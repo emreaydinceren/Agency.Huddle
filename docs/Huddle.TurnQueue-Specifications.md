@@ -481,7 +481,7 @@ produce a line. One line names every Agent and both outcomes:
 | Case | Text |
 | --- | --- |
 | Rows picked up | `Picked up after a restart.` Expanded: "2 Messages are waiting for Nova, 1 for Cleo." The pass runs before any Agent connects, so the line says what waits, not that anyone is answering: an Agent may never connect, or its rows may expire at hand-out |
-| Rows not picked up, with or without others picked up | The same line, adding: "Not picked up: 1 Message for Nova that waited more than 24 hours; 1 that Huddle stopped twice while Nova was answering it." When nothing was picked up the line reads `Not picked up after a restart.` |
+| Rows not picked up, with or without others picked up | The same line, adding: "Not picked up: 1 Message for Nova that waited more than 24 hours; 1 that Huddle stopped twice while Nova was answering it." When nothing was picked up the line reads `Not picked up after a restart: 1 Message for Nova that waited more than 24 hours.` |
 
 It is drawn like the Task wake row (`C4b`), a slim muted `system-row` with a restart icon, as `C4c`. Its first words
 live in one constant, `RestartLine.Prefix`, used by the poster and by `MessageDisplay.TryParseRestartLine` (beside

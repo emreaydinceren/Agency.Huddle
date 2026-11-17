@@ -60,7 +60,7 @@
                 <details class="system-row" data-message-id="@message.Id" tabindex="-1">
                     <summary>
                         <MudIcon Icon="@Icons.Material.Outlined.RestartAlt" Size="Size.Small" />
-                        <span class="system-row-text">@(pickedUp ? RestartLine.Prefix : RestartLine.NotPickedUpPrefix)</span>
+                        <span class="system-row-text">@(pickedUp ? RestartLine.Prefix : RestartLine.NotPickedUpPrefix + ".")</span>
                         <span class="system-row-time">@time</span>
                         <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
                     </summary>

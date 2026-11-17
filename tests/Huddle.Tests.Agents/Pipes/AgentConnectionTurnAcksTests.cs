@@ -109,6 +109,27 @@ public sealed class AgentConnectionTurnAcksTests
         Assert.Equal("waiting", scenario.Row(nova.AgentId, rioRoom, "m2").Status);
     }
 
+    /// <summary>A Started ack naming this Agent's Room for a Message whose row is in another Room leaves that row waiting.</summary>
+    [Fact]
+    public async Task Ack_StartedNamingTheWrongRoom_LeavesTheOtherRoomsRowWaiting()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
+        CancellationToken ct = cts.Token;
+        await using Scenario scenario = await Scenario.StartAsync(cts);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct);
+        Welcome rio = await scenario.ConnectAsync("Rio", durable: true, ct);
+        string novaRoom = Assert.Single(nova.Rooms).Id;
+        string rioRoom = Assert.Single(rio.Rooms).Id;
+        scenario.Seed(nova.AgentId, rioRoom, "m2");
+
+        await scenario.Client("Nova").WriteAsync(new QueueAck(novaRoom, ["m2"], QueueAckKind.Started, "reply-2"), ct);
+        await scenario.Client("Nova").WriteAsync(new QueueAck(novaRoom, ["m3"], QueueAckKind.Started, "reply-3"), ct);
+        await Scenario.UntilAsync(() => scenario.Rows().Any(row => row.MessageId == "m3"), ct);
+
+        Assert.Equal("waiting", scenario.Row(nova.AgentId, rioRoom, "m2").Status);
+        Assert.Null(scenario.Row(nova.AgentId, rioRoom, "m2").ConnectionId);
+    }
+
     /// <summary>A reply naming Messages closes their rows as replied even though no Started ack was ever sent.</summary>
     [Fact]
     public async Task Reply_WithInReplyTo_ClosesTheRowAsReplied()

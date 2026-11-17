@@ -54,8 +54,16 @@ internal sealed class TurnQueueRecovery(
         List<(string RoomId, List<RestartLine.Entry> Entries)> lines = [];
         foreach (IGrouping<string, TurnQueueRow> room in store.OpenUpdatedBefore(start).GroupBy(static row => row.RoomId, StringComparer.Ordinal))
         {
-            List<RestartLine.Entry> entries = await this.HandleRoomAsync(room.Key, [.. room], queue, start, ct).ConfigureAwait(false);
-            lines.Add((room.Key, entries));
+            try
+            {
+                List<RestartLine.Entry> entries = await this.HandleRoomAsync(room.Key, [.. room], queue, start, ct).ConfigureAwait(false);
+                lines.Add((room.Key, entries));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // One Room's failure leaves its rows as they were and must not cost the other Rooms their pass: it is logged and the loop goes on.
+                logger.LogError(ex, "The Turn Queue start-up pass failed for Room {RoomId}; its rows are left as they were.", room.Key);
+            }
         }
 
         _ = store.PruneDoneBefore(start.AddDays(-queue.KeepDays));

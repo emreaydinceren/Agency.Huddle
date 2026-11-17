@@ -132,6 +132,47 @@ public sealed class TurnRedeliveryTests
         Assert.Equal("gone", scenario.Row(nova.AgentId, rioRoom.Id, elsewhere.Id).Outcome);
     }
 
+    /// <summary>A waiting row whose Message is no longer in the Transcript is deleted, as start-up does, and nothing is sent for it.</summary>
+    [Fact]
+    public async Task Reconnect_MessageNotInTranscript_DeletesTheRow()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
+        CancellationToken ct = cts.Token;
+        await using Scenario scenario = await Scenario.StartAsync(null, cts);
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct, key: "old");
+        Room room = await scenario.Chat.CreateRoomForAsync([nova.AgentId], ct);
+        _ = scenario.Store.Record(nova.AgentId, "vanished", room.Id, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow);
+        await scenario.Client("old").DisposeAsync();
+
+        _ = await scenario.ConnectAsync("Nova", durable: true, ct, key: "new");
+        _ = await scenario.Chat.PostAsync(room.Id, KnownIds.Human, "marker", ct: ct);
+        MessagePosted next = await scenario.ReadAsync("new", ct);
+
+        Assert.Equal("marker", next.Message.Text);
+        await Scenario.UntilAsync(() => !scenario.Store.Open(nova.AgentId).Any(row => row.MessageId == "vanished"), ct);
+        Assert.DoesNotContain(TurnQueueRows.Read(scenario.DataDirectory), row => row.MessageId == "vanished");
+    }
+
+    /// <summary>A waiting row of an Agent whose Persona is gone is closed as gone and nothing is sent for it.</summary>
+    [Fact]
+    public async Task Reconnect_PersonaGone_ClosesRowGone()
+    {
+        using BehaviourBudget cts = new(TimeSpan.FromSeconds(20));
+        CancellationToken ct = cts.Token;
+        await using Scenario scenario = await Scenario.StartAsync(
+            null, cts, static services => services.AddSingleton<PersonaExists>(static name => !string.Equals(name, "Nova", StringComparison.Ordinal)));
+        Welcome nova = await scenario.ConnectAsync("Nova", durable: true, ct, key: "old");
+        Room room = await scenario.Chat.CreateRoomForAsync([nova.AgentId], ct);
+        ChatMessage posted = await scenario.Chat.PostAsync(room.Id, KnownIds.Human, "owed", ct: ct);
+        _ = scenario.Store.Record(nova.AgentId, posted.Id, room.Id, posted.Timestamp, DateTimeOffset.UtcNow);
+        await scenario.Client("old").DisposeAsync();
+
+        _ = await scenario.ConnectAsync("Nova", durable: true, ct, key: "new");
+
+        await Scenario.UntilAsync(() => scenario.Row(nova.AgentId, room.Id, posted.Id).Status == "done", ct);
+        Assert.Equal("gone", scenario.Row(nova.AgentId, room.Id, posted.Id).Outcome);
+    }
+
     /// <summary>With the queue switched off nothing is sent after the Welcome, even for a row left in the store.</summary>
     [Fact]
     public async Task Reconnect_QueueDisabled_SendsNothing()
@@ -211,10 +252,20 @@ public sealed class TurnRedeliveryTests
 
         internal TurnQueueStore Store => this.Fixture.Services.GetRequiredService<TurnQueueStore>();
 
+        internal string DataDirectory => this.DataDir;
+
         private string DataDir => this.Fixture.Services.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir;
 
-        internal static async Task<Scenario> StartAsync(Dictionary<string, string?>? config, BehaviourBudget budget) =>
-            new(config is null ? await PipeHostFixture.StartAsync(budget) : await PipeHostFixture.StartAsync(config, budget));
+        internal static async Task<Scenario> StartAsync(
+            Dictionary<string, string?>? config, BehaviourBudget budget, Action<IServiceCollection>? configureServices = null)
+        {
+            if (configureServices is not null)
+            {
+                return new(await PipeHostFixture.StartAsync(config, configureServices, budget));
+            }
+
+            return new(config is null ? await PipeHostFixture.StartAsync(budget) : await PipeHostFixture.StartAsync(config, budget));
+        }
 
         internal JsonLineStream Client(string key) => this.clients[key];
 

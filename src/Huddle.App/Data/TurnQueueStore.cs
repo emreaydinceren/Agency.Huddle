@@ -129,12 +129,13 @@ internal sealed class TurnQueueStore
                 UPDATE turn_queue
                 SET status = 'running', outcome = NULL, reply_message_id = $reply, connection_id = $connection,
                     attempts = attempts + 1, updated_utc = $now
-                WHERE agent_id = $agent AND message_id = $message AND status IN ('waiting', 'running');
+                WHERE agent_id = $agent AND room_id = $room AND message_id = $message AND status IN ('waiting', 'running');
                 """,
                 ("$reply", replyMessageId),
                 ("$connection", connectionId),
                 ("$now", FormatTime(now)),
                 ("$agent", agentId),
+                ("$room", roomId),
                 ("$message", messageId));
             if (moved == 0)
             {
@@ -144,11 +145,12 @@ internal sealed class TurnQueueStore
                     transaction,
                     """
                     UPDATE turn_queue SET reply_message_id = $reply, connection_id = $connection
-                    WHERE agent_id = $agent AND message_id = $message AND status = 'running' AND reply_message_id IS NULL;
+                    WHERE agent_id = $agent AND room_id = $room AND message_id = $message AND status = 'running' AND reply_message_id IS NULL;
                     """,
                     ("$reply", replyMessageId),
                     ("$connection", connectionId),
                     ("$agent", agentId),
+                    ("$room", roomId),
                     ("$message", messageId));
             }
         }

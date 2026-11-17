@@ -92,6 +92,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITurnAcks>(sp => sp.GetRequiredService<Services.TurnQueue>());
         services.AddSingleton<ITurnQueueControl>(sp => sp.GetRequiredService<Services.TurnQueue>());
         services.AddSingleton<IOwedTurnPolicy, OwedTurnPolicy>();
+        services.AddSingleton<Services.PersonaExists>(static sp => name => sp.GetRequiredService<Acp.PersonaStore>().Get(name) is not null);
         services.AddSingleton<Services.TurnRedelivery>();
         services.AddSingleton<ITurnControl, Services.TurnControl>();
         services.AddSingleton<ITurnQueueView, Services.TurnQueueView>();

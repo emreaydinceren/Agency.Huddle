@@ -126,6 +126,19 @@ public sealed class TurnQueueAcksTests
         Assert.Equal(("waiting", null), Outcome(harness, "m3"));
     }
 
+    /// <summary>A Started ack naming a Room the Message's row is not in leaves that row waiting.</summary>
+    [Fact]
+    public void Apply_StartedNamingAnotherRoom_LeavesTheRowWaiting()
+    {
+        using Harness harness = new();
+        harness.Seed("m1");
+
+        harness.Queue.Apply("c1", "a1", new QueueAck("rOther", ["m1"], QueueAckKind.Started, "reply-1"));
+
+        Assert.Equal(("waiting", null), Outcome(harness, "m1"));
+        Assert.Null(TurnQueueRows.Find(harness.Dir.Path, "a1", "r1", "m1").ConnectionId);
+    }
+
     /// <summary>Once the host announced it is stopping, a closing connection leaves its running rows for the next start to resume.</summary>
     [Fact]
     public void CloseRunning_AfterApplicationStopping_LeavesRowsRunning()
