@@ -2,7 +2,7 @@
 
 Prove, with real models, that an Agent keeps `reported.md` in its own Memory, that it reads the file before it reports and does not tell the Human the same thing twice, that the `memory` tool writes the date and drops old lines, and that the Chief of Staff reads a manager's file before it summarises a digest. Two free cases (TIDYLINES) prove slice 2's pass of the old lines, its Memory backups folder and its list. Spec: [Huddle.MemoryTidy-Specifications.md](../../Huddle.MemoryTidy-Specifications.md) (§8.2 lists these cases). Decision: [ADR-0094](../../adr/0094-an-agent-keeps-a-record-of-what-it-told-the-human.md). Later slices of the spec add cases to this page.
 
-**10 tests** · 2 free · 8 paid · about 2.6 hours. REPORTED-01 to 08 were written 2026-11-16 for issue #620, slice 1; TIDYLINES-01 and 02 the same day for issue #621, slice 2. **Not yet run by a person.**
+**12 tests** · 4 free · 8 paid · about 3.1 hours. REPORTED-01 to 08 were written 2026-11-16 for issue #620, slice 1; TIDYLINES-01 and 02 the same day for issue #621, slice 2; TIDYTIME-01 and 02 the same day for #621, slice 3. **Not yet run by a person.**
 
 > **Paid, Sonnet minimum.** Every case sends real Turns. Use Sonnet or better for each Agent, never Haiku. Set the models and read them back in `persona_models` before the first case, and watch the spend from the manager's side. Ask the owner first, and record each result in the [Run log](run-log.md).
 
@@ -296,3 +296,61 @@ Put the time zone back when the case is done.
 - A pass folder has no `changes.md` after the second start -> recovery did not finish it.
 - The Feed holds two items for one pass.
 - The app does not stop.
+
+### TIDYTIME-01 — An overdue pass runs once, about five minutes after the next start
+
+**Free** · about 25 min
+
+*Proves that a timetable saved before Huddle was closed, and missed, runs one overdue pass after the next start, and that the next run is then a regular time. Spec §6.7.*
+
+**Before you start**
+
+- This case spends nothing: use [`P-LAUNCH-FREE`](common.md#p-launch-free) on a fresh data folder, without `RunAtStart`. An Agent `Nova` exists ([`P-NEW-PERSONA`](common.md#p-new-persona)).
+- Set `$env:Team__Memory__Tidy__When` in `T-A` to a daily time about 8 minutes ahead of now, for example `daily at 14:30`, before the launch line.
+
+**Steps**
+
+1. Start the app and wait for the first tick, five minutes after start. This saves the next run and runs nothing: a new `When` is first sight.
+2. Stop the app with [`P-STOP`](common.md#p-stop) before the time. Wait until the time has passed.
+3. Start the app again, with the same `When`, and wait about six minutes.
+4. Open the **Memory backups** root in the Library and read today's folder, `pass.jsonl` first ([`O-FILE`](common.md#o-file)).
+5. Stay with the app running for ten more minutes.
+
+**Pass if — all of these**
+
+- After step 1 no pass folder exists.
+- After step 3 exactly one pass folder exists, made about five minutes after the second start, and its `pass.jsonl` says the pass was overdue.
+- No second pass starts in step 5.
+- The next run, saved in `memory_tidy_schedule` ([`O-DB`](common.md#o-db)), is the same time on the following day.
+
+**Fail if — any of these**
+
+- A pass runs on the first start, before the time.
+- No pass runs after the second start, or two do.
+- The journal does not say the pass was overdue.
+
+### TIDYTIME-02 — A When value that is not weekly or daily schedules nothing
+
+**Free** · about 5 min
+
+*Proves that an unsupported `When` is reported once as an Error at start-up and schedules no pass. Spec §6.7.*
+
+**Before you start**
+
+- [`P-LAUNCH-FREE`](common.md#p-launch-free) on a fresh data folder, without `RunAtStart`, with `$env:Team__Memory__Tidy__When = 'every 1 hours'` set in `T-A` before the launch line.
+
+**Steps**
+
+1. Start the app and read `T-A` ([`O-LOG`](common.md#o-log)).
+2. Wait ten minutes, past the first tick.
+3. Open the **Memory backups** root in the Library.
+
+**Pass if — all of these**
+
+- `T-A` shows one Error at start-up that says Memory Tidy's `When` must be weekly or daily and no pass is scheduled.
+- After ten minutes there is no pass folder, and the Error is not repeated.
+
+**Fail if — any of these**
+
+- A pass folder appears.
+- The Error is missing, or it repeats on every tick.

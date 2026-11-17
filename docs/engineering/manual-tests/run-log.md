@@ -7067,3 +7067,17 @@ File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidylines-
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+
+### TIDYTIME-01 — An overdue pass runs once, about five minutes after the next start
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TIDYTIME-02 — A When value that is not weekly or daily schedules nothing
+
+File: [`docs/engineering/manual-tests/memory-tidy.md`](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |

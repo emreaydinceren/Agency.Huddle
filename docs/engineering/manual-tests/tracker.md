@@ -1415,3 +1415,5 @@ Memory Tidy: the reported file an Agent keeps, the one-line "no change since", t
 | [TIDYLINES-02](memory-tidy.md#tidylines-02--a-pass-stopped-by-closing-huddle-finishes-one-list-and-nothing-is-posted-twice) |  | Active | #621 | not yet run by a person |
 | [REPORTED-07](memory-tidy.md#reported-07--an-old-line-is-dropped-and-a-future-line-is-kept-) | 💰 | Active | #620 | not yet run by a person |
 | [REPORTED-08](memory-tidy.md#reported-08--a-renamed-manager-is-not-found-and-the-tool-lists-the-managers-) | 💰 | Active | #620 | not yet run by a person |
+| [TIDYTIME-01](memory-tidy.md#tidytime-01--an-overdue-pass-runs-once-about-five-minutes-after-the-next-start) |  | Active | #621 | not yet run by a person |
+| [TIDYTIME-02](memory-tidy.md#tidytime-02--a-when-value-that-is-not-weekly-or-daily-schedules-nothing) |  | Active | #621 | not yet run by a person |
