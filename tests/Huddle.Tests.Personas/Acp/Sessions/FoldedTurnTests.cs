@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
@@ -108,8 +109,103 @@ public sealed class FoldedTurnTests
 
         (FakeAgentSession session, _) = await RunBehindAsync([Msg("t1", "a"), Msg("t2", "b"), Cmd("t3"), Msg("t4", "c")], 4, ct);
 
+        Assert.Equal(4, session.Prompts.Count);
         Assert.Equal(Fold(("Human", "a"), ("Human", "b")), session.Prompts[1]);
+        Assert.Equal("/compact", session.Prompts[2]);
         Assert.Equal(Label + "Human: c", session.Prompts[3]);
+    }
+
+    /// <summary>A Stop mark that covers the items queued behind an admitted head keeps them out of its fold, and each is dropped on its own (E-7).</summary>
+    [Fact]
+    public async Task StopMark_CoveringItemsBehindTheHead_KeepsThemOutOfTheFold()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TaskCompletionSource openGate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeAgentSession session = new();
+        session.EnqueueReply("final");
+        TaskCompletionSource opening = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeRoomSessionOwner owner = new();
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(
+            owner,
+            async openCt =>
+            {
+                opening.TrySetResult();
+                await openGate.Task.WaitAsync(openCt);
+                return session;
+            },
+            new() { Persona = Nova });
+
+        harness.Room.Enqueue(new QueuedWork(1, Msg("t0", "zero")));
+        await opening.Task.WaitAsync(ct);
+        harness.Room.Enqueue(new QueuedWork(2, Msg("t1", "a")));
+        harness.Room.Enqueue(new QueuedWork(3, Msg("t2", "b")));
+        await harness.Room.StopAsync(RoomId, 3, ct);
+        openGate.TrySetResult();
+        harness.Room.Enqueue(new QueuedWork(4, Msg("t3", "final")));
+        await WaitForPromptsAsync(session, 1, ct);
+
+        Assert.Equal([Label + "Human: final"], session.Prompts);
+        string[][] dropped = [.. Acks(owner).Where(ack => ack.Kind == QueueAckKind.Finished && ack.Outcome == QueueOutcome.Dropped).Select(ack => ack.MessageIds.ToArray())];
+        Assert.Equal([["t0"], ["t1"], ["t2"]], dropped);
+    }
+
+    /// <summary>A cut-off re-send among the folded items makes the Folded Turn a cut-off one, so the note is kept.</summary>
+    [Fact]
+    public async Task Fold_ACutOffResendBehindTheHead_KeepsTheCutOffNote()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        WorkItem head = Msg("t1", "a") with { Redelivery = Redelivery.Waiting };
+        WorkItem resent = Msg("t2", "b") with { Redelivery = Redelivery.CutOff };
+
+        (FakeAgentSession session, _) = await RunBehindAsync([head, resent], 2, ct);
+
+        string note = PromptCatalog.Get("turn.cutOffNote").Default;
+        Assert.Equal(note + "\n\n" + Fold(("Human", "a"), ("Human", "b")), session.Prompts[1]);
+    }
+
+    /// <summary>A Folded Turn whose first Message starts with a slash still opens with the Room label, never with the slash.</summary>
+    [Fact]
+    public async Task Fold_FirstMessageStartsWithASlash_OpensWithTheRoomLabel()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+
+        (FakeAgentSession session, _) = await RunBehindAsync([Msg("t1", "/status"), Msg("t2", "/compact now")], 2, ct);
+
+        Assert.Equal(Fold(("Human", "/status"), ("Human", "/compact now")), session.Prompts[1]);
+        Assert.Equal("[", session.Prompts[1][..1]);
+    }
+
+    /// <summary>The Catch-up trim never touches the folded block: with a tiny budget the Transcript shrinks and every folded line stays whole.</summary>
+    [Fact]
+    public async Task Fold_TinyCatchUpBudget_NeverTrimsTheFoldedBlock()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        string longA = "alpha " + new string('a', 600);
+        string longB = "beta " + new string('b', 600);
+        FakeAgentSession session = new();
+        session.EnqueueReply("ok");
+        FakeRoomSessionOwner owner = new()
+        {
+            ReadTranscriptHandler = (room, _, _, _, _) => Task.FromResult<TranscriptTail?>(new TranscriptTail(
+                "fake",
+                room,
+                [
+                    new ChatMessage("p1", DateTimeOffset.UnixEpoch, "x", "Friend", "oldest-line " + new string('o', 600)),
+                    new ChatMessage("p2", DateTimeOffset.UnixEpoch, "x", "Friend", "newest-line " + new string('n', 600)),
+                ],
+                0)),
+        };
+        await using RoomSessionHarness harness = RoomSessionHarness.Create(
+            owner, RoomSessionHarness.FixedOpen(session), new() { Persona = Nova, Acp = new AcpOptions { TranscriptCatchUpTokens = 20 } });
+        WorkItem folded = Msg("t1", longA) with { Folded = [new FoldedMessage("t1", "Human", longA, null), new FoldedMessage("t2", "Human", longB, null)] };
+
+        harness.Room.Enqueue(new QueuedWork(1, folded));
+        await WaitForPromptsAsync(session, 1, ct);
+
+        string prompt = session.Prompts[0];
+        Assert.DoesNotContain("oldest-line", prompt, StringComparison.Ordinal);
+        string block = Fold(("Human", longA), ("Human", longB))[Label.Length..];
+        Assert.Equal(block, prompt[^block.Length..]);
     }
 
     /// <summary>A Huddle post (not Foldable) in the middle ends the run, and Order is kept: a, post, b are three Turns.</summary>

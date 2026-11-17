@@ -1200,7 +1200,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// them all. Runs after the lazy open, so a failed open drops the head alone.
     /// </summary>
     /// <param name="head">The admitted head, already dequeued.</param>
-    /// <returns>The head's own item when nothing folds in, otherwise an item that lists every folded Message, oldest first.</returns>
+    /// <returns>The head's own item when nothing folds in, otherwise an item that lists every folded Message, oldest first, and keeps the cut-off note when any of them is a cut-off re-send.</returns>
     private WorkItem FoldBehind(QueuedWork head)
     {
         WorkItem first = head.Item;
@@ -1230,8 +1230,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         List<CaughtUpMessage> missed = [.. taken.SelectMany(item => item.MissedMessages)];
         List<string> postLines = [.. taken.SelectMany(item => item.OwnPostLines ?? [])];
+        bool anyCutOff = taken.Exists(item => item.Redelivery == Agency.Huddle.Contracts.Redelivery.CutOff);
         return first with
         {
+            Redelivery = anyCutOff ? Agency.Huddle.Contracts.Redelivery.CutOff : first.Redelivery,
             MissedMessages = missed,
             OwnPostLines = postLines.Count > 0 ? postLines : null,
             Folded = [.. taken.Select(item => new FoldedMessage(item.TriggerMessageId ?? string.Empty, item.SenderName, item.Text, null))],

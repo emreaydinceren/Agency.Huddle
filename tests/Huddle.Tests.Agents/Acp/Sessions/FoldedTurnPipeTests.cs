@@ -47,6 +47,19 @@ public sealed class FoldedTurnPipeTests
         Assert.Equal([["t1"], ["t2"], ["t3"]], started);
     }
 
+    /// <summary><c>Team:Acp:FoldOneToOne</c> off, set through the runner's options, reaches the read loop: the same three one-to-one Messages are three Turns.</summary>
+    [Fact]
+    public async Task OneToOne_FoldOneToOneOff_ThreeMessagesAreThreeTurns()
+    {
+        using CancellationTokenSource cts = new(Budget);
+        CancellationToken ct = cts.Token;
+
+        (IReadOnlyList<string[]> started, PostMessage reply) = await RunAsync(new RoomInfo("room-a", "Direct", [Human, Nova]), ct, foldOneToOne: false);
+
+        Assert.Equal(["t3"], reply.InReplyTo);
+        Assert.Equal([["t1"], ["t2"], ["t3"]], started);
+    }
+
     /// <summary>Only the Human's Message in a two-Member Room with <c>FoldOneToOne</c> on is Foldable.</summary>
     /// <param name="members">How many Members the Room has: 2 or 3.</param>
     /// <param name="humanSends">Whether the Human (or another Member) sent it.</param>
@@ -67,7 +80,10 @@ public sealed class FoldedTurnPipeTests
     }
 
     /// <summary>Sends t0 (held), then t1..t3, and releases t0; returns the Started ack ids after t0.</summary>
-    private static async Task<(IReadOnlyList<string[]> Started, PostMessage LastReply)> RunAsync(RoomInfo room, CancellationToken ct)
+    /// <param name="room">The Room the Messages go to.</param>
+    /// <param name="ct">Bounds the run.</param>
+    /// <param name="foldOneToOne">The runner's <c>Team:Acp:FoldOneToOne</c> switch.</param>
+    private static async Task<(IReadOnlyList<string[]> Started, PostMessage LastReply)> RunAsync(RoomInfo room, CancellationToken ct, bool foldOneToOne = true)
     {
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
         await using PipeRunnerServer server = new("folded-turn-pipe-tests");
@@ -76,7 +92,7 @@ public sealed class FoldedTurnPipeTests
         factory.Session.EnqueueReply("folded");
         factory.Session.EnqueueReply("second");
         factory.Session.EnqueueReply("third");
-        await using PersonaRunner runner = CreateRunner(server, factory);
+        await using PersonaRunner runner = CreateRunner(server, factory, foldOneToOne);
         RoomInfo sentinelRoom = new("room-s", "Sentinel", [Human, Nova, Rio]);
         await server.HandshakeAsync(runner, [room, sentinelRoom], ct);
         try
@@ -121,10 +137,14 @@ public sealed class FoldedTurnPipeTests
             AgentMessagesSinceHuman: 0,
             Budget: 0);
 
-    private static PersonaRunner CreateRunner(PipeRunnerServer server, FakeAgentHostFactory factory) =>
+    private static PersonaRunner CreateRunner(PipeRunnerServer server, FakeAgentHostFactory factory, bool foldOneToOne) =>
         new(
             TestPersonas.Nova,
-            TestOptions.Create(opts => opts.PipeName = server.PipeName),
+            TestOptions.Create(opts =>
+            {
+                opts.PipeName = server.PipeName;
+                opts.Acp = new AcpOptions { FoldOneToOne = foldOneToOne };
+            }),
             factory,
             new FakePromptSource(),
             new RoomFollows(),
