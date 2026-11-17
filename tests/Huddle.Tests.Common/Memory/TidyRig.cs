@@ -19,7 +19,7 @@ namespace Agency.Huddle.Tests.Memory;
 /// </summary>
 internal sealed class TidyRig : IDisposable
 {
-    private readonly TempDataDir dir = new();
+    private readonly TempDataDir dir;
     private readonly MemoryFolderGate gate = new();
 
     /// <summary>Builds the install with one Persona file per name.</summary>
@@ -33,7 +33,21 @@ internal sealed class TidyRig : IDisposable
     /// <param name="configure">Changes the options first, or <see langword="null"/>.</param>
     /// <param name="agents">The Agents in the catalog.</param>
     public TidyRig(Action<TeamOptions>? configure, params string[] agents)
+        : this(configure, false, agents)
     {
+    }
+
+    /// <summary>Builds the install with one Persona file per name, in a data folder where directory links can be made and followed.</summary>
+    /// <param name="supportsReparsePoints"><see langword="true"/> for a test that creates a junction or link.</param>
+    /// <param name="agents">The Agents in the catalog.</param>
+    public TidyRig(bool supportsReparsePoints, params string[] agents)
+        : this(null, supportsReparsePoints, agents)
+    {
+    }
+
+    private TidyRig(Action<TeamOptions>? configure, bool supportsReparsePoints, string[] agents)
+    {
+        this.dir = new TempDataDir(supportsReparsePoints);
         this.Options = this.dir.Options(configure);
         foreach (string agent in agents)
         {

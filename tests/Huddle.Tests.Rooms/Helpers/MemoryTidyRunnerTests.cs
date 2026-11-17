@@ -224,6 +224,105 @@ public sealed class MemoryTidyRunnerTests
         Assert.Equal(2, Volatile.Read(ref raised));
     }
 
+    /// <summary>A pass that lets the cancellation escape as an exception is still a stop: the runner reports <c>Stopped</c>, not <c>Threw</c>, and does not ask recovery again.</summary>
+    [Fact]
+    public async Task StopAsync_PassLetsCancellationEscape_EndsAsStoppedNotThrew()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TaskCompletionSource entered = Gate();
+        FakePass pass = new(async (_, token) =>
+        {
+            entered.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            return MemoryTidyPassEnd.Done;
+        });
+        FakeRecovery recovery = new();
+        using MemoryTidyRunner runner = Runner(pass, recovery);
+        await runner.StartAsync(ct);
+        Task<MemoryTidyPassEnd>? running = runner.TryStart(MemoryTidyStart.TidyNow);
+        Assert.NotNull(running);
+        await entered.Task.WaitAsync(ct);
+
+        await runner.StopAsync(ct);
+
+        Assert.Equal(MemoryTidyPassEnd.Stopped, await running);
+        Assert.Equal(1, recovery.Calls);
+    }
+
+    /// <summary>A <c>Changed</c> subscriber that throws neither skips the subscriber after it nor fails the pass.</summary>
+    [Fact]
+    public async Task Changed_SubscriberThrows_OtherSubscribersAndThePassAreUnaffected()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        int raised = 0;
+        using MemoryTidyRunner runner = Runner(new FakePass((_, _) => Task.FromResult(MemoryTidyPassEnd.Done)), new FakeRecovery());
+        runner.Changed += () => throw new InvalidOperationException("A subscriber threw.");
+        runner.Changed += () => Interlocked.Increment(ref raised);
+        await runner.StartAsync(ct);
+
+        Task<MemoryTidyPassEnd>? running = runner.TryStart(MemoryTidyStart.TidyNow);
+        Assert.NotNull(running);
+        MemoryTidyPassEnd end = await running.WaitAsync(ct);
+        await runner.StopAsync(ct);
+
+        Assert.Equal(MemoryTidyPassEnd.Done, end);
+        Assert.Equal(2, Volatile.Read(ref raised));
+    }
+
+    /// <summary>A request still queued when the host stops is answered <c>Stopped</c> and its pass never runs.</summary>
+    [Fact]
+    public async Task StopAsync_RequestStillQueued_IsAnsweredStopped()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TaskCompletionSource never = Gate();
+        FakePass pass = new((_, _) => Task.FromResult(MemoryTidyPassEnd.Done));
+        FakeRecovery recovery = new(token => never.Task.WaitAsync(token));
+        using MemoryTidyRunner runner = Runner(pass, recovery);
+        await runner.StartAsync(ct);
+        Task<MemoryTidyPassEnd>? queued = runner.TryStart(MemoryTidyStart.TidyNow);
+        Assert.NotNull(queued);
+
+        await runner.StopAsync(ct);
+
+        Assert.Equal(MemoryTidyPassEnd.Stopped, await queued);
+        Assert.Empty(pass.Starts);
+        Assert.False(runner.IsRunning);
+    }
+
+    /// <summary>A host that stops during the thirty-second wait of <c>RunAtStart</c> starts no pass.</summary>
+    [Fact]
+    public async Task StopAsync_DuringTheRunAtStartDelay_StartsNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakePass pass = new((_, _) => Task.FromResult(MemoryTidyPassEnd.Done));
+        using MemoryTidyRunner runner = Runner(pass, new FakeRecovery(), runAtStart: true);
+        runner.DelayForTests = static (_, token) => Task.Delay(Timeout.InfiniteTimeSpan, token);
+        await runner.StartAsync(ct);
+
+        await runner.StopAsync(ct);
+
+        Assert.Empty(pass.Starts);
+    }
+
+    /// <summary>Recovery that throws at start-up is logged and the runner still serves the next request.</summary>
+    [Fact]
+    public async Task ExecuteAsync_RecoveryThrows_StillServesTheNextRequest()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakePass pass = new((_, _) => Task.FromResult(MemoryTidyPassEnd.Done));
+        FakeRecovery recovery = new(static _ => throw new InvalidOperationException("Recovery failed."));
+        using MemoryTidyRunner runner = Runner(pass, recovery);
+        await runner.StartAsync(ct);
+
+        Task<MemoryTidyPassEnd>? running = runner.TryStart(MemoryTidyStart.TidyNow);
+        Assert.NotNull(running);
+        MemoryTidyPassEnd end = await running.WaitAsync(ct);
+        await runner.StopAsync(ct);
+
+        Assert.Equal(MemoryTidyPassEnd.Done, end);
+        Assert.Equal(1, recovery.Calls);
+    }
+
     private static TaskCompletionSource Gate() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     private static MemoryTidyRunner Runner(FakePass pass, FakeRecovery recovery, bool runAtStart = false) =>

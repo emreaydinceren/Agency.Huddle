@@ -114,6 +114,28 @@ public sealed class MemoryTidyStoppedPassTests
         Assert.Equal(new MemoryTidyEntry.PassFinished(false), MemoryTidyJournal.Read(folder)[^1]);
     }
 
+    /// <summary>One pass folder that cannot be finished does not stop recovery of the next: the first folder's list cannot be written, the second is still finished.</summary>
+    [Fact]
+    public async Task RecoverAsync_FirstFolderFails_FinishesTheNextOne()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TidyRig rig = new("Nova");
+        MemoryTidyEntry[] dropped =
+        [
+            new MemoryTidyEntry.PassStarted(Started, rig.Clock.GetUtcNow(), MemoryTidyStart.TidyNow),
+            new MemoryTidyEntry.LinesDropped("Nova", 1, "Agents/Nova/reported.md"),
+        ];
+        string bad = rig.SeedPass("2026-11-01", dropped);
+        string good = rig.SeedPass("2026-11-02", dropped);
+        _ = Directory.CreateDirectory(MemoryTidyList.PathIn(bad));
+
+        await rig.Recovery.RecoverAsync(ct);
+
+        Assert.DoesNotContain(MemoryTidyJournal.Read(bad), static entry => entry is MemoryTidyEntry.PassFinished);
+        Assert.Equal(new MemoryTidyEntry.PassFinished(false), MemoryTidyJournal.Read(good)[^1]);
+        Assert.True(File.Exists(MemoryTidyList.PathIn(good)));
+    }
+
     /// <summary>The first item says it is the first; once a pass has posted one, the next does not.</summary>
     [Fact]
     public async Task RecoverAsync_AfterAnEarlierPostedPass_TheItemIsNotTheFirst()

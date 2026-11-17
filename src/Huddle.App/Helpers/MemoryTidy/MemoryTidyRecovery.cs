@@ -84,8 +84,9 @@ internal sealed class MemoryTidyRecovery(MemoryTidyBackups backups, MemoryTidyFi
             {
                 _ = finisher.Finish(folder, new MemoryTidyJournal(folder), cancellationToken);
             }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
+                // One pass folder that cannot be finished (a disk error or damaged data) must not stop the others: log it, leave it for the next start, and go on.
                 logger.LogWarning(ex, "Memory Tidy could not finish the pass in {PassFolder}; the next start tries again.", folder);
             }
         }

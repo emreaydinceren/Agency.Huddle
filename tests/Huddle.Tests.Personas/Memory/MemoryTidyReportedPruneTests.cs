@@ -111,6 +111,52 @@ public sealed class MemoryTidyReportedPruneTests
         Assert.Empty(rig.Feed.Posts);
     }
 
+    /// <summary>A pass that throws after one prune still writes its end as <c>Threw</c>, its list and <c>PassFinished</c> in its own <c>finally</c>, and lets the exception out.</summary>
+    [Fact]
+    public async Task RunAsync_ThrowsAfterOnePrune_FinishesItsJournalAndListThenRethrows()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TidyRig rig = new("Ada", "Bea");
+        _ = rig.Seed("Ada", "reported.md", Head + Old);
+        _ = rig.Seed("Bea", "reported.md", Head + Old);
+        rig.Pass.AfterReportedReadForTests = file => file.Contains("Bea", StringComparison.Ordinal)
+            ? throw new InvalidOperationException("The disk went away.")
+            : Task.CompletedTask;
+        string passFolder = Path.Combine(rig.Backups.RootPath, PassId);
+
+        _ = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Pass.RunAsync(MemoryTidyStart.TidyNow, ct));
+
+        IReadOnlyList<MemoryTidyEntry> entries = MemoryTidyJournal.Read(passFolder);
+        Assert.Equal("Ada", Assert.Single(entries.OfType<MemoryTidyEntry.LinesDropped>()).Agent);
+        Assert.Contains(new MemoryTidyEntry.PassEnded(MemoryTidyPassEnd.Threw), entries);
+        Assert.Equal(new MemoryTidyEntry.PassFinished(false), entries[^1]);
+        Assert.True(File.Exists(MemoryTidyList.PathIn(passFolder)));
+    }
+
+    /// <summary>An Agent whose Work Dir is a junction or link has no own folder for Huddle: a folder on the way that follows a link is refused.</summary>
+    [Fact]
+    public void OwnFolderOf_WorkDirIsALink_IsRefused()
+    {
+        using TidyRig rig = new(true, "Nova", "Ember");
+        string target = Path.Combine(rig.DataDir, "elsewhere");
+        _ = Directory.CreateDirectory(target);
+        string link = rig.Paths.WorkDir("Nova");
+        if (!Agency.Huddle.Tests.Library.TestLinks.TryCreateLink(link, target))
+        {
+            Assert.Skip("Directory links cannot be created here.");
+        }
+
+        try
+        {
+            Assert.Null(rig.MemoryPaths.OwnFolderOf("Nova"));
+            Assert.NotNull(rig.MemoryPaths.OwnFolderOf("Ember"));
+        }
+        finally
+        {
+            Agency.Huddle.Tests.Library.TestLinks.RemoveLink(link);
+        }
+    }
+
     /// <summary>A <c>KeepDays</c> of zero turns the dropping off: the pass leaves the file alone.</summary>
     [Fact]
     public async Task RunAsync_KeepDaysZero_DropsNothing()

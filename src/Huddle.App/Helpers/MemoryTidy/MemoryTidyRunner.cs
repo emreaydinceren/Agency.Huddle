@@ -164,7 +164,9 @@ internal sealed class MemoryTidyRunner(
     {
         try
         {
-            await recovery.RecoverAsync(CancellationToken.None).ConfigureAwait(false);
+            // Not the stopping token (the throw may have come with it) and not unbounded: its own ten seconds, as the pass's finally has.
+            using CancellationTokenSource finishing = new(TimeSpan.FromSeconds(10), this.clock);
+            await recovery.RecoverAsync(finishing.Token).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
