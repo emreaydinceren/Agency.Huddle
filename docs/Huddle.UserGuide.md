@@ -60,7 +60,7 @@ nothing has to be installed first.
 irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.ps1 | iex
 ```
 
-**macOS (Apple Silicon or Intel):** open Terminal and run:
+**macOS (Apple Silicon, M1 or later; Intel Macs are not supported):** open Terminal and run:
 
 ```sh
 curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.sh | sh

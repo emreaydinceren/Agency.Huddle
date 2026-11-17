@@ -186,7 +186,7 @@ macos_major() {
     sw_vers -productVersion | cut -d. -f1
 }
 
-# Seam: machine hardware name as `uname -m` reports it (arm64 or x86_64 on supported Macs).
+# Seam: machine hardware name as `uname -m` reports it (arm64, or x86_64 in a Rosetta shell or on Intel).
 host_arch() {
     uname -m
 }
@@ -250,8 +250,8 @@ prereq_check_macos() {
     esac
 }
 
-# Sets HOST_RID to osx-arm64 or osx-x64. A Rosetta shell on Apple Silicon reports x86_64, so
-# sysctl decides.
+# Sets HOST_RID to osx-arm64; Intel Macs are not supported. A Rosetta shell on Apple Silicon reports
+# x86_64, so sysctl decides.
 prereq_check_cpu() {
     arch=$(host_arch 2>/dev/null || true)
     case $arch in
@@ -268,13 +268,13 @@ prereq_check_cpu() {
                 HOST_RID=osx-arm64
                 prereq_add ok "CPU" "x86_64 shell on Apple Silicon (Rosetta), using osx-arm64"
             else
-                HOST_RID=osx-x64
-                prereq_add ok "CPU" "x86_64 (Intel)"
+                prereq_add fail "CPU" "Intel (x86_64) Macs are not supported" \
+                    "Agency Huddle needs a Mac with Apple Silicon (M1 or later)."
             fi
             ;;
         *)
             prereq_add fail "CPU" "unsupported processor '$arch'" \
-                "Agency Huddle supports Apple Silicon (arm64) and Intel (x86_64) Macs."
+                "Agency Huddle needs a Mac with Apple Silicon (M1 or later)."
             ;;
     esac
 }
@@ -992,8 +992,8 @@ node_version_of() {
 # Installs the Node release named by nodeVersion in <InstallRoot>/release-info.json (Spec section 6,
 # Findings F2) so that node/bin/node and node/lib/node_modules/npm/bin/npm-cli.js exist. $1 is an
 # optional base for SHASUMS256.txt and the tarball: an existing folder or an https URL, default
-# https://nodejs.org/dist/<version>. The tarball name comes from HOST_RID (osx-arm64 -> darwin-arm64,
-# osx-x64 -> darwin-x64) and is verified against its SHASUMS256.txt line. Sets NODE_CHANGED to 1 when
+# https://nodejs.org/dist/<version>. The tarball name comes from HOST_RID (osx-arm64 -> darwin-arm64)
+# and is verified against its SHASUMS256.txt line. Sets NODE_CHANGED to 1 when
 # the node folder was replaced and 0 when the step was skipped (the state holds this version and the
 # installed binary prints it) or failed. Returns 1 on a failure, after logging it; the previous node
 # is left in place. A running instance is stopped only once the new node is verified and ready to be
@@ -1030,9 +1030,8 @@ install_node() {
     rid=${HOST_RID:-}
     case $rid in
         osx-arm64) arch=arm64 ;;
-        osx-x64) arch=x64 ;;
         *)
-            log_step fail node "unsupported CPU '$rid'" "Agency Huddle needs an Apple Silicon or Intel Mac."
+            log_step fail node "unsupported CPU '$rid'" "Agency Huddle needs a Mac with Apple Silicon (M1 or later)."
             return 1
             ;;
     esac
@@ -1700,12 +1699,7 @@ is_interactive() {
 
 # Prints the bundled claude binary for this Mac.
 claude_path() {
-    local arch
-    case ${HOST_RID:-} in
-        osx-x64) arch=x64 ;;
-        *) arch=arm64 ;;
-    esac
-    printf '%s/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-%s/claude' "${INSTALL_ROOT%/}" "$arch"
+    printf '%s/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude' "${INSTALL_ROOT%/}"
 }
 
 # The closing Claude sign-in note (Findings F3). Advice only: it never fails the install.
