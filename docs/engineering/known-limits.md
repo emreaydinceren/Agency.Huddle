@@ -512,7 +512,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
 - **Stop is per Room.** Stopping an Agent in one Room stops only that Room's session
   ([ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md)): `StopAsync` routes the
   Stop to that Room's session, and a Room with no session yet is a no-op
-  (`src/Huddle.App/Acp/Sessions/RoomSessionPool.cs:195-210`). The queue drain is per session
+  (`src/Huddle.App/Acp/Sessions/RoomSessionPool.cs:214-230`). The queue drain is per session
   too, so a Stop does not discard work queued for the Agent in its other Rooms
   (`src/Huddle.App/Acp/Sessions/RoomSession.cs:695`). The Persona text, Work Dir, Memory, App
   Tools and Adapter process are still shared across Rooms. An Adapter profile with

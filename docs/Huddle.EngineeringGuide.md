@@ -158,7 +158,7 @@ feature. A refactor that changes one of these removes the benefit silently:
 | Benefit | Rests on | Where |
 | --- | --- | --- |
 | A context kept for one job | One ACP session per Persona, never shared between Personas. The same fact makes context bleed between one Agent's own Rooms, so focus holds only while it stays in the Rooms for its job | The cardinality diagram in [Relationships](#relationships); [Known limits](engineering/known-limits.md) |
-| Independent first answers | A Turn's prompt is fixed when its Mention arrives: the read loop takes the Catch-up and builds the work item there, not when the Turn starts, so a Turn queued behind another still cannot see replies posted meanwhile | `PersonaRunner.cs:283-284` |
+| Independent first answers | A Turn's prompt is fixed when its Mention arrives: the read loop takes the Catch-up and builds the work item there, not when the Turn starts, so a Turn queued behind another still cannot see replies posted meanwhile | `PersonaRunner.EnqueueReply`, `PersonaRunner.cs:784-815` |
 | Secrets | `list_agents` shows other Agents a Persona's frontmatter fields, minus `_`-prefixed and excluded keys, and never its body. A secret belongs in the body; a frontmatter field is public to every Agent | `PersonaFrontmatter.ComposeJobDescription`, `ListAgentsTool` |
 | Different blind spots | The Model is stored per Persona and applied at session start | `PersonaModelStore` |
 | Memory that outlives a session | The Work Dir is created when missing and never deleted by the app. `run.ps1 -Clean` leaves it alone. A rename moves it, and gives up with a logged warning if the old process still holds it | `DotAcpAgentHostFactory.cs:89-90`, `run.ps1:27-31`, `PersonaRenameCascade.cs:225-264` |
