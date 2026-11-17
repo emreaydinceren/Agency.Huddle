@@ -287,13 +287,14 @@ Put the time zone back when the case is done.
 
 **Pass if — all of these**
 
-- Every pass folder has a `changes.md` that says what its pass did, and no folder has two.
+- The pass the stop cut short has a `changes.md` that says what it did, and no folder has two. A later pass that
+  dropped nothing and left no folder out has none (spec §6.13).
 - Every old line is gone from its live file, and nothing is dropped twice.
 - The Feed holds no more than one Memory Tidy item per pass that changed a topic file. Slice 2 changes none, so it holds none.
 
 **Fail if — any of these**
 
-- A pass folder has no `changes.md` after the second start -> recovery did not finish it.
+- The pass the stop cut short has no `changes.md` after the second start -> recovery did not finish it. (A new pass that dropped nothing and left no folder out writes no `changes.md`: spec §6.13.)
 - The Feed holds two items for one pass.
 - The app does not stop.
 
