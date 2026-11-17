@@ -204,7 +204,7 @@ public sealed class ChatServiceTurnLedgerTests
                 timeProvider: clock)
             {
                 OwedTurns = new OwedTurnPolicy(new RoomFollows()),
-                Ledger = ledger ?? new TurnQueue(this.Queue, options, NullLogger<TurnQueue>.Instance, new FakeTimeProvider(clock.GetUtcNow().AddHours(1))),
+                Ledger = ledger ?? new TurnQueue(this.Queue, options, NullLogger<TurnQueue>.Instance, new Agency.Huddle.Tests.Desktop.FakeLifetime(), new FakeTimeProvider(clock.GetUtcNow().AddHours(1))),
             };
         }
 

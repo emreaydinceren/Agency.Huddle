@@ -89,6 +89,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TurnQueueStore>();
         services.AddSingleton<Services.TurnQueue>();
         services.AddSingleton<ITurnLedger>(sp => sp.GetRequiredService<Services.TurnQueue>());
+        services.AddSingleton<ITurnAcks>(sp => sp.GetRequiredService<Services.TurnQueue>());
+        services.AddSingleton<ITurnQueueControl>(sp => sp.GetRequiredService<Services.TurnQueue>());
         services.AddSingleton<IOwedTurnPolicy, OwedTurnPolicy>();
         return services;
     }

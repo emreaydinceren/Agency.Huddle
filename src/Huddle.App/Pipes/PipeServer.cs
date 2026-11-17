@@ -20,6 +20,8 @@ internal sealed class PipeServer : BackgroundService
     private readonly Drafts drafts;
     private readonly RoomEvents roomEvents;
     private readonly FreshStartNotes freshStartNotes;
+    private readonly ITurnAcks acks;
+    private readonly ITurnQueueControl control;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PipeServer> logger;
 
@@ -32,10 +34,16 @@ internal sealed class PipeServer : BackgroundService
         Drafts drafts,
         RoomEvents roomEvents,
         FreshStartNotes freshStartNotes,
+        ITurnAcks acks,
+        ITurnQueueControl control,
         ILoggerFactory loggerFactory)
     {
         ArgumentNullException.ThrowIfNull(freshStartNotes);
+        ArgumentNullException.ThrowIfNull(acks);
+        ArgumentNullException.ThrowIfNull(control);
         this.freshStartNotes = freshStartNotes;
+        this.acks = acks;
+        this.control = control;
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
@@ -79,6 +87,8 @@ internal sealed class PipeServer : BackgroundService
             this.drafts,
             this.roomEvents,
             this.freshStartNotes,
+            this.acks,
+            this.control,
             this.loggerFactory.CreateLogger<AgentConnection>());
         _ = connection.RunAsync(stoppingToken);
     }
