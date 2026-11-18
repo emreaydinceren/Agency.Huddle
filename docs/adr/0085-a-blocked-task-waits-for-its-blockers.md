@@ -5,6 +5,8 @@ date: 2026-11-14
 
 # A blocked Task waits for its blockers
 
+> Amended by [ADR-0096](0096-a-review-is-a-task-owned-by-the-reviewer-not-a-state.md): there is no Review state, so the gate refuses In Progress, Needs You and Done; an open review Task is a blocker of its work Task.
+
 In the 2026-11-14 run, a Developer moved DEVT-0002 from Backlog to Review while DEVT-0001, the Task it was blocked by,
 was still in Needs You. `blocked_by` was only a note: the board showed the Task as blocked, the wake fired when the
 blocker reached Done, and nothing refused a move. Issue #538 closes that.

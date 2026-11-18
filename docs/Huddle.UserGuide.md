@@ -1170,8 +1170,8 @@ on the Task, "proceeded under Team level Run inside the Team", and as an item in
 | `qa-evidence-before-done` | A Task moving to **Done** until a member whose role verifies (for example QA) has added an Evidence line with a command. When the Team's Definition of Done names no command, a note from that member is enough. |
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
-| `failing-test-before-fix` | A bug Task moving to **Review** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
-| `blockers-done-before-start` | A Task moving to **In Progress**, **Review**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. The development processes have it, and development Teams you already had get it once, when you first start the new version; switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
+| `failing-test-before-fix` | A bug Task moving to **Needs you** or **Done** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
+| `blockers-done-before-start` | A Task moving to **In Progress**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. The development processes have it, and development Teams you already had get it once, when you first start the new version; switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
 
 A Task in a Team with gates shows a line such as `Gates: qa-evidence-before-done`
 in its panel.
@@ -1186,7 +1186,7 @@ in its panel.
 - On the **board**, a card you drag into a refused column snaps back and a message
   says "Could not move <Task>: " and the gate's reason. The card does not move,
   and there is no override on the board; open the Task panel instead.
-- **Creating** a Task directly in **In Progress**, **Review** or **Done** is
+- **Creating** a Task directly in **In Progress** or **Done** is
   refused in the same way when a gate would refuse it. In the Task panel you get the
   same warning with a **Move anyway** button, and confirming it creates the Task and
   logs the override. An Agent's `file_request` or create call cannot override.
@@ -1232,7 +1232,7 @@ Task created straight into a **Run inside the Team** project among them), and fo
 your git server. Your own approval of a prompt is never intercepted.
 
 > **Example (Scenario 4).** The Team's process lists `failing-test-before-fix`, so a
-> bug Task cannot move to Review until its Evidence shows the test failing and then
+> bug Task cannot move to Needs you or Done until its Evidence shows the test failing and then
 > passing. The retrospective in a later section is where a rule like this is
 > proposed.
 
@@ -1288,7 +1288,7 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
   for more information (**Needs info**, still in Backlog). A Request cannot leave
   Backlog any other way: an agent that tries is refused, and only you can move it
   from the Task panel with the usual override.
-- Work then follows the Task statuses: To Do, In Progress, Review. The
+- Work then follows the Task statuses: To Do, In Progress, Done. The
   receiving Team finishes the work and moves the Request to **Done**.
 - **Done is not closed.** The Request closes only when the requesting Team's verifier
   confirms it was delivered as asked. An agent that tries to close a Request nobody
@@ -1367,7 +1367,7 @@ evidence from after the change, linking a Task, a `logs/...#L12` line or a
 `_retros/` file.
 
 > **Example (Scenario 4).** After a sprint, the Retro agent finds three Tasks sent
-> back from Review for missing tests. It proposes one change to `AGENTS.md`: write
+> back for changes for missing tests. It proposes one change to `AGENTS.md`: write
 > the failing test before the fix. You accept it.
 
 ### Household teams
@@ -1394,7 +1394,7 @@ The default process, household basics, keeps a few family rules:
 - **A recurring chore is one Task each time.** Huddle has no repeating Tasks, so the
   owner opens the next one a week before it is due.
 - **Every spend and signature waits for you.** Such a Task carries an `action:` line,
-  so it waits in Review until its Proof is complete, then in **Needs You** however small
+  so it waits in In Progress until its Proof is complete, then in **Needs You** however small
   the amount.
 - **Notes say where a document is kept, never its number.** "Passports in the blue
   folder", never a passport, policy or account number.
@@ -2113,11 +2113,11 @@ The Team and Project are not fields. They come from the folder the file is in.
 
 | Status | Group |
 | --- | --- |
-| Backlog, To Do, In Progress, Review, Needs you | Open |
+| Backlog, To Do, In Progress, Needs you | Open |
 | Done | Finished |
 | Cancelled, Duplicate, Rejected | Won't do |
 
-**Needs you** is the ninth status: a Task whose Proof is in and whose decision is
+**Needs you** is a status: a Task whose Proof is in and whose decision is
 yours. See [The Human gate](#the-human-gate).
 
 You can move a Task from any status to any other, except that a Task under the
@@ -2261,7 +2261,7 @@ and you judge the evidence rather than the tone.
 
 A Task goes through five steps: **Draft, Check, Track, Gate, Decide.** The assignee
 drafts. Other Agents supply the Proof the Team asks for. The Task's Change log
-records who did what. When the Proof is complete Huddle moves the Task from Review to
+records who did what. When the Proof is complete Huddle moves the Task from In Progress to
 **Needs you**, and you **Accept**, **Request changes** or **Decline**. Two rules hold
 however the Team's process is set up: only you can mark a gated Task Done, and a
 Team's process can add Proof but never remove your decision.
@@ -2311,7 +2311,7 @@ and a rule:
 | `task tagged <tag>` | a sub-Task with that tag is Done |
 | `document reviewed by <step>` | a document attached to the Task was reviewed by that step after its last edit, and nobody has objected since |
 
-The development templates start their Definition of Done with `- Review: evidence from challenge`, so a Task does not reach you until a reviewer (or a tech lead or security engineer) has run the check command and posted an Evidence line. Because those templates also name a command (`Tests pass`), a note-only line does not count there. In the other built-in templates nothing runs a command, so the manager's note after checking the draft meets `evidence from verify`. Their `document reviewed by verify` item needs the draft as a file: the owner saves it in the Team's `outputs/` folder and attaches it to the Task, and the manager logs the review on it before posting the note. A draft written only in the Task's description leaves that item open with "no document attached". The order, review first and verify after, is written in the process and in the Reviewer and QA Engineer personas; Huddle does not check it.
+The development templates start their Definition of Done with `- Review: task tagged review`, so a Task does not reach you until a review Task assigned to a reviewer (or a tech lead or security engineer) is Done. Because those templates also name a command (`Tests pass`), a note-only line does not count there. In the other built-in templates nothing runs a command, so the manager's note after checking the draft meets `evidence from verify`. Their `document reviewed by verify` item needs the draft as a file: the owner saves it in the Team's `outputs/` folder and attaches it to the Task, and the manager logs the review on it before posting the note. A draft written only in the Task's description leaves that item open with "no document attached". The order, review first and verify after, is written in the process and in the Reviewer and QA Engineer personas; Huddle does not check it.
 
 The **Proof** list on the Task panel shows a tick or an open circle per line, with
 who owns the open ones and what is missing, such as "19 of 23 in #RSH-209". On an
@@ -2320,12 +2320,13 @@ RSH-208 needs Citation check before it can come to me." On an ordinary Task the 
 reads "Definition of Done (for information)": it guides, and locks nothing. A line
 Huddle can't read says "Huddle can't read this rule" and never counts as met.
 
-#### Needs you, the ninth status
+#### Needs you, the status for your decision
 
-**Needs you** sits between **Review** and **Done**. It means "the Proof is in, the
-decision is yours". Huddle moves a gated Task from Review to Needs you once the
-Proof is complete, and wakes no one. It does so after a change to the Task, after a
-new review of an attached document, and after a tagged child Task reaches Done. Some
+**Needs you** sits between **In Progress** and **Done**. It means "the Proof is in, the
+decision is yours". Huddle moves a gated Task from In Progress to Needs you once the
+Proof is complete and no blocker is open, and wakes no one. It does so after a change to the Task, after a
+new review of an attached document, and after a tagged child Task reaches Done. There is no Review status:
+a review or QA check is a child Task tagged `review` or `verify`, assigned to the reviewer and listed as a blocker of the work Task. Some
 Proof items, such as role coverage or an edit to the Team's process, can complete with
 no such change; Huddle does not move the Task then, and the assignee may move it. Agents do not ask you for approval
 in chat: you accept in Needs you, and the Action happens after that.
@@ -2341,9 +2342,8 @@ shows each Task as a **decision card**:
 
 If the Proof is incomplete, Accept is locked: "Proof 3/4 — citation check still
 open (Ruth, 19 of 23 in #RSH-209). Accept unlocks when it's in." You can still
-**Request changes**, and use **Ask <name>**. While the Task is still in Review,
-the card says Accept unlocks when the Task moves to Needs you, which it does by
-itself once the Proof is in. Save any edits
+**Request changes**, and use **Ask <name>**. A gated Task still In Progress is not
+listed here; it moves to Needs you by itself once the Proof is in. Save any edits
 to the Task before deciding.
 
 #### Accept, Request changes, Decline
@@ -2365,7 +2365,7 @@ On the board, a gated card shows a lock chip: "Needs you", or "Accepted" once yo
 have accepted it. Dropping it on **Done** is a shortcut to the decision, never the
 decision itself:
 
-- **From Review or earlier:** refused ("RSH-208 goes to Needs you first (Proof 3/4)"),
+- **From In Progress or earlier:** refused ("RSH-208 goes to Needs you first (Proof 3/4)"),
   and the card stays.
 - **From Needs you with the Proof incomplete:** refused, with the locked notice and
   an **Ask <name>** button.

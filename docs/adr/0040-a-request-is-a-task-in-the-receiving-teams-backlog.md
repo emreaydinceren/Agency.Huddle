@@ -5,6 +5,8 @@ date: 2026-10-08
 
 # A Request is a Task in the receiving Team's backlog
 
+> Amended by [ADR-0096](0096-a-review-is-a-task-owned-by-the-reviewer-not-a-state.md): there is no Review state; a Request's work runs In Progress, and a review is a child Task tagged `review`.
+
 When one Team needs something from another, such as a bug, a feature, feedback or a question,
 that need is a **Request**. A Request is an ordinary Task file in the receiving Team's
 `_tasks/` folder, with six extra frontmatter keys. Its lifecycle is a small state machine in

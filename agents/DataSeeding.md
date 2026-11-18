@@ -386,7 +386,7 @@ Collect the Q3 invoices and send them to the accountant.
 | --- | --- |
 | `id` | `<PREFIX>-<number>`, 4-digit padded. Unique across **all** Teams, including closed Tasks. A duplicate rejects both files |
 | `title` | Required, one line, 1–200 characters |
-| `status` | `Backlog`, `To Do`, `In Progress`, `Review`, `Done`, `Cancelled`, `Duplicate` or `Rejected` |
+| `status` | `Backlog`, `To Do`, `In Progress`, `Needs You`, `Done`, `Cancelled`, `Duplicate` or `Rejected` |
 | `priority` | `Low`, `Medium`, `High` or `Urgent` |
 | `creator` | Required. The Human's name or an Agent's name |
 | `assignee` | Optional. An Agent's exact `name`, or the Human's name |
@@ -478,7 +478,7 @@ Saved Task Views go in `views.json` at the data folder root. `all-tasks` and
         { "label": "Backlog", "states": ["Backlog"] },
         { "label": "To Do", "states": ["To Do"] },
         { "label": "In Progress", "states": ["In Progress"] },
-        { "label": "Review", "states": ["Review"] },
+        { "label": "Needs You", "states": ["Needs You"] },
         { "label": "Done", "states": ["Done"] },
         { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] }
       ]

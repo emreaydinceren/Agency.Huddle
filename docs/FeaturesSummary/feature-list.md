@@ -355,7 +355,7 @@ template or blank, and neither overwrites what is there. Six gates exist:
 `accept-before-merge`, `qa-evidence-before-done`, `checks-before-merge` (refuses an Agent's
 `git merge` or `git push` until the check command's Evidence passes),
 `spec-approved-before-build`, `failing-test-before-fix` and `blockers-done-before-start`
-(refuses a move to In Progress, Review, Needs You or Done while a blocker is not Done,
+(refuses a move to In Progress, Needs You or Done while a blocker is not Done,
 Cancelled, Duplicate or Rejected; the development processes have it, ADR-0085). In a Team without
 `accept-before-merge`, the assignee of an open gated Task with no valid Accept is refused a
 `git merge` of anything but `main`, and a `git push` to `main`. A generated hook makes the Claude Adapter ask before any `git merge`
@@ -410,17 +410,16 @@ adds the Tasks. PRs: #136.
 ## Tasks
 
 **Tasks are Markdown files.** `Teams/<Team>/[<Project>/]_tasks/<ID>.md`, with IDs such as
-`BUSI-0001` (prefix from the Team, numbers never reused). There are nine statuses: Backlog,
-To Do, In Progress, Review, Needs you, Done, Cancelled, Duplicate and Rejected. Priority,
+`BUSI-0001` (prefix from the Team, numbers never reused). There are eight statuses: Backlog,
+To Do, In Progress, Needs you, Done, Cancelled, Duplicate and Rejected. Priority,
 assignee, parent, blockers, duplicate-of, tags, start and due dates, a description and an
 append-only Timeline of events, comments and Evidence (with day and time). Closing is separate from status and moves the
 file to `_closed/`; there is no delete. Hand edits are noticed and logged, and two people
 editing the same Task get a per-field merge. PRs: #79, then #245.
 
 **Wake on change.** A change to an Agent's Task wakes it with a Message in the Task's origin
-Room, or a fitting Room. Changes within 5 seconds are combined. A Task entering Review also wakes the first
-member whose role covers `challenge`, when the assignee cannot review and the manager was not
-woken. Each Task allows 10 Agent-made wake-ups before the Human must **Allow 10 more**. A
+Room, or a fitting Room. Changes within 5 seconds are combined. A review Task is assigned to the reviewer, so the ordinary
+wake reaches them (ADR-0096). Each Task allows 10 Agent-made wake-ups before the Human must **Allow 10 more**. A
 hand-off refused by a spent Task budget or a paused Room waits: one Notification names who is
 waiting, and **Allow 10 more** or the Room's **Continue** delivers it. After a restart the
 Notification stays, with **Wake {Agent}** on its card. PRs: #79, then #340, #372, #412.
@@ -457,7 +456,7 @@ The Task rows survive restarts; the Room rows only partly do. PRs: #166, then #2
 **Action** that leaves the Team, such as sending, paying, signing, publishing or merging. Its
 **Proof** checklist comes from the Team's **Definition of Done** in `AGENTS.md`, using four
 rule kinds. When Evidence or an update completes the Proof, Huddle moves a gated Task from
-Review to **Needs you** by itself and wakes nobody; setting an Action on a ready Task does the
+In Progress to **Needs you** by itself and wakes nobody; setting an Action on a ready Task does the
 same, unless the Human set it. The assignee may move the Task too, and must when the Proof
 completes with no Task write. The Human **Accepts**, **Requests changes** or **Declines** from
 a decision card. Only the Human can make a gated Task Done. Dragging a gated card to Done opens

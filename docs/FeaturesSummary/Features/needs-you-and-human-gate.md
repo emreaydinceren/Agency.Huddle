@@ -140,7 +140,7 @@ Save any Task edits before deciding.
 
 | From | Result |
 | --- | --- |
-| Review or earlier | Refused, and the card stays |
+| In Progress or earlier | Refused, and the card stays |
 | Needs you, Proof incomplete | Refused, with the locked notice and **Ask {name}** |
 | Needs you, Proof complete | The decision card opens. **Accept** completes the move |
 
