@@ -63,6 +63,11 @@
     border-bottom: 1px solid var(--ink-line);
 }
 
+/* The field is a flex column with its own 4px gap, and margins do not collapse in flex: a notice's 12px would add to the gap. */
+.prompts-field > .mud-alert.notice {
+    margin-block: 0;
+}
+
 .prompts-field-header {
     display: flex;
     align-items: center;
