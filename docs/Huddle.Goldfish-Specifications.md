@@ -398,7 +398,7 @@ other way.
 - **The goldfish's own comeback is ignored**: a Message from the goldfish session is checked first and never matches. It
   ends with `goldfish_done`.
 - **An Agent not in goldfish mode:** Huddle replies "Ruth isn't in goldfish mode." (a quiet post) and does nothing else; the
-  Message owes no Turn. A lookup that fails is logged and treated the same way, which can be untrue; V1 accepts that.
+  Message owes no Turn. A lookup that fails is logged and nothing is posted, so Huddle never claims an Agent isn't in goldfish mode when it cannot tell.
 - **The result always says who called it back and when** ("Called back by Quinn after 4 minutes"). The **Call Ruth back**
   button posts the same text as the Human.
 
