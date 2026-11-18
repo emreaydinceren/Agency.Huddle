@@ -357,6 +357,59 @@ internal static class SystemPromptComposer
         return parts;
     }
 
+    /// <summary>The bare name of the tool that ends goldfish mode.</summary>
+    private const string GoldfishDoneToolName = "goldfish_done";
+
+    /// <summary>
+    /// Composes the system prompt of a clean (goldfish) session: the orientation, the Persona text, the identity
+    /// parts without Promised work, the tool paragraphs, the Skills block and <c>systemPrompt.goldfish</c>. It
+    /// carries no Memory, AGENTS.md, outputs, Needs You, workspace, role or browser block, and no Room closing;
+    /// the brief arrives as the first Turn.
+    /// </summary>
+    /// <param name="persona">The Persona whose text and name are spliced in.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="helpToolName"><c>get_help</c>'s own prefixed name.</param>
+    /// <param name="toolNames">Every tool name this session exposes, prefixed, in listing order.</param>
+    /// <param name="skills">The Persona's resolved Skills; an empty list omits the block.</param>
+    /// <param name="readSkillToolName"><c>read_skill</c>'s prefixed name; read only when <paramref name="skills"/> is non-empty.</param>
+    /// <param name="askHumanToolName"><c>ask_human</c>'s prefixed name, or <see langword="null"/> when not offered.</param>
+    /// <returns>The parts joined with a blank line.</returns>
+    internal static string ComposeClean(
+        Persona persona,
+        IPromptSource prompts,
+        string helpToolName,
+        IReadOnlyList<string> toolNames,
+        IReadOnlyList<Skill> skills,
+        string readSkillToolName,
+        string? askHumanToolName)
+    {
+        ArgumentNullException.ThrowIfNull(persona);
+        ArgumentNullException.ThrowIfNull(prompts);
+        ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
+        ArgumentNullException.ThrowIfNull(toolNames);
+        ArgumentNullException.ThrowIfNull(skills);
+
+        List<PromptPart> parts =
+        [
+            PromptOf(
+                prompts,
+                "Orientation",
+                "systemPrompt.orientation",
+                prompts.Render("systemPrompt.orientation", new Dictionary<string, string> { ["{{helpTool}}"] = helpToolName })),
+            new("Persona text", new PromptPartSource.Persona(persona.Name), persona.Text),
+        ];
+        AddIdentityParts(parts, prompts, persona, toolNames, includePromisedWork: false);
+        AddToolParagraphs(parts, prompts, toolNames, askHumanToolName, browser: false);
+        AddSkillsPart(parts, prompts, skills, readSkillToolName);
+        parts.Add(PromptOf(
+            prompts,
+            "Closing",
+            "systemPrompt.goldfish",
+            prompts.Render("systemPrompt.goldfish", new Dictionary<string, string> { ["{{goldfishDoneTool}}"] = FindGoldfishDoneTool(toolNames) })));
+
+        return string.Join("\n\n", parts.Select(static part => part.Text));
+    }
+
     /// <summary>A part rendered from a catalog prompt, recording whether the Human has overridden it.</summary>
     /// <param name="prompts">Says whether the prompt is overridden.</param>
     /// <param name="label">The part's label.</param>
@@ -370,7 +423,8 @@ internal static class SystemPromptComposer
     /// <param name="prompts">Resolves each prompt's current text.</param>
     /// <param name="persona">The Persona being named.</param>
     /// <param name="toolNames">The offered tools' names, already prefixed.</param>
-    private static void AddIdentityParts(List<PromptPart> parts, IPromptSource prompts, Persona persona, IReadOnlyList<string> toolNames)
+    /// <param name="includePromisedWork">Whether the Promised work paragraph is added; a clean session leaves it out.</param>
+    private static void AddIdentityParts(List<PromptPart> parts, IPromptSource prompts, Persona persona, IReadOnlyList<string> toolNames, bool includePromisedWork = true)
     {
         parts.Add(PromptOf(
             prompts,
@@ -382,11 +436,15 @@ internal static class SystemPromptComposer
             "Chat rules",
             "systemPrompt.chatRules",
             prompts.Render("systemPrompt.chatRules", new Dictionary<string, string>())));
-        parts.Add(PromptOf(
-            prompts,
-            "Promised work",
-            "systemPrompt.promisedWork",
-            prompts.Render("systemPrompt.promisedWork", new Dictionary<string, string>())));
+        if (includePromisedWork)
+        {
+            parts.Add(PromptOf(
+                prompts,
+                "Promised work",
+                "systemPrompt.promisedWork",
+                prompts.Render("systemPrompt.promisedWork", new Dictionary<string, string>())));
+        }
+
         parts.Add(PromptOf(
             prompts,
             "Silent replies",
@@ -753,6 +811,15 @@ internal static class SystemPromptComposer
     /// <param name="key">The closing prompt's key.</param>
     private static void AddClosing(List<PromptPart> parts, IPromptSource prompts, string key) =>
         parts.Add(PromptOf(prompts, "Closing", key, prompts.Render(key, new Dictionary<string, string>())));
+
+    /// <summary>The offered <c>goldfish_done</c> tool's prefixed name, or the bare name when the session does not list it.</summary>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    /// <returns>The name as offered; <c>goldfish_done</c> when it is not in the list.</returns>
+    internal static string FindGoldfishDoneTool(IReadOnlyList<string> toolNames)
+    {
+        ArgumentNullException.ThrowIfNull(toolNames);
+        return toolNames.FirstOrDefault(static name => name.EndsWith(GoldfishDoneToolName, StringComparison.Ordinal)) ?? GoldfishDoneToolName;
+    }
 
     /// <summary>
     /// Renders the <c>systemPrompt.roleBlock</c> block. The colleague and skill lists are built first and

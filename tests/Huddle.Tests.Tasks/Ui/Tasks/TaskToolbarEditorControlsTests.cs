@@ -180,8 +180,8 @@ public sealed class TaskToolbarEditorControlsTests
         await root.InvokeAsync(() => FindSelect<string>(root, "task-toolbar-filter-assignee").Instance.SelectedValuesChanged.InvokeAsync(["@me", "Kai"]));
         Assert.Equal(["@me", "Kai"], raised?.Filter.Assignees);
 
-        await root.InvokeAsync(() => FindSelect<string>(root, "task-toolbar-filter-state").Instance.SelectedValuesChanged.InvokeAsync(["To Do", "Review"]));
-        Assert.Equal([TaskState.ToDo, TaskState.Review], raised?.Filter.States);
+        await root.InvokeAsync(() => FindSelect<string>(root, "task-toolbar-filter-state").Instance.SelectedValuesChanged.InvokeAsync(["To Do", "Needs You"]));
+        Assert.Equal([TaskState.ToDo, TaskState.NeedsYou], raised?.Filter.States);
 
         await root.InvokeAsync(() => FindSelect<TaskPriority>(root, "task-toolbar-filter-priority").Instance.SelectedValuesChanged.InvokeAsync([TaskPriority.High]));
         Assert.Equal([TaskPriority.High], raised?.Filter.Priorities);
@@ -196,24 +196,24 @@ public sealed class TaskToolbarEditorControlsTests
         using ViewStore store = new(dir.Options(), NullLogger<ViewStore>.Instance);
         TaskView? raised = null;
         await using MudBunitContext ctx = NewToolbarContext(harness, store);
-        TaskView view = ListView() with { Filter = new TaskFilter { States = [TaskState.Review] } };
+        TaskView view = ListView() with { Filter = new TaskFilter { States = [TaskState.NeedsYou] } };
         (IRenderedComponent<ContainerFragment> root, _) = RenderToolbar(ctx, view, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(ctx, v => raised = v));
         await OpenFilterAsync(root);
         await root.InvokeAsync(() => root.Find(".task-toolbar-filter-state").MouseDownAsync());
 
         Assert.Equal(
-            ["All", "Open", "Backlog", "To Do", "In Progress", "Review", "Needs You", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
+            ["All", "Open", "Backlog", "To Do", "In Progress", "Needs You", "Closed", "Done", "Cancelled", "Duplicate", "Rejected"],
             root.FindAll(".task-toolbar-filter-state-group, .task-toolbar-filter-state-option").Select(el => el.TextContent.Trim()));
 
         IRenderedComponent<MudSelect<string>> select = FindSelect<string>(root, "task-toolbar-filter-state");
-        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@open"]));
-        Assert.Equal([TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review, TaskState.NeedsYou], raised?.Filter.States);
+        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Needs You", "@open"]));
+        Assert.Equal([TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.NeedsYou], raised?.Filter.States);
 
-        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@closed"]));
+        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Needs You", "@closed"]));
         Assert.Equal([TaskState.Done, TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected], raised?.Filter.States);
 
-        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Review", "@all"]));
-        Assert.Empty(raised?.Filter.States ?? [TaskState.Review]);
+        await root.InvokeAsync(() => select.Instance.SelectedValuesChanged.InvokeAsync(["Needs You", "@all"]));
+        Assert.Empty(raised?.Filter.States ?? [TaskState.NeedsYou]);
     }
     /// <summary>Opens the toolbar's Filter menu.</summary>
     /// <param name="root">The rendered toolbar host.</param>

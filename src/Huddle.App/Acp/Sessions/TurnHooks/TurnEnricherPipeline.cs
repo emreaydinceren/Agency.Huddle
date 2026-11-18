@@ -63,7 +63,19 @@ internal sealed class TurnEnricherPipeline
     /// <param name="host">The Persona's running Adapter host, or <see langword="null"/> when there is none.</param>
     /// <param name="cancellationToken">The run's own cancellation token.</param>
     /// <returns>The item with each successful enricher's block set; any other kind of item comes back as it was.</returns>
-    public async Task<WorkItem> EnrichAsync(WorkItem item, string personaName, IPersonaHost? host, CancellationToken cancellationToken)
+    public Task<WorkItem> EnrichAsync(WorkItem item, string personaName, IPersonaHost? host, CancellationToken cancellationToken)
+    {
+        return this.EnrichAsync(item, personaName, host, clean: false, cancellationToken);
+    }
+
+    /// <summary>Runs every enricher on a Message item, in list order, each on the previous one's result.</summary>
+    /// <param name="item">The item about to be prompted.</param>
+    /// <param name="personaName">The Persona the Turn is for.</param>
+    /// <param name="host">The Persona's running Adapter host, or <see langword="null"/> when there is none.</param>
+    /// <param name="clean">Whether the Turn is a goldfish possession's; each enricher is told through <see cref="TurnEnriching.Clean"/>.</param>
+    /// <param name="cancellationToken">The run's own cancellation token.</param>
+    /// <returns>The item with each successful enricher's block set; any other kind of item comes back as it was.</returns>
+    public async Task<WorkItem> EnrichAsync(WorkItem item, string personaName, IPersonaHost? host, bool clean, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(item);
         if (item.Kind != WorkItemKind.Message)
@@ -75,7 +87,7 @@ internal sealed class TurnEnricherPipeline
         {
             try
             {
-                item = await enricher.EnrichAsync(new TurnEnriching(item, personaName, host), cancellationToken).ConfigureAwait(false);
+                item = await enricher.EnrichAsync(new TurnEnriching(item, personaName, host, clean), cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

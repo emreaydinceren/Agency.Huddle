@@ -11,13 +11,13 @@
     <Icon>
         <MudIcon Icon="@(this.Hit.IsFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.Description)" Size="Size.Small" />
     </Icon>
-    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+    <Title><SearchHighlight Text="@this.Hit.Title" Term="@this.Phrase" /></Title>
     <Meta>@this.Meta</Meta>
 </SearchCardShell>
 
 @code {
     /// <summary>Renders a line of text with the phrase bolded.</summary>
-    private RenderFragment<string> Highlighted => text => @<MudHighlighter Text="@text" HighlightedText="@this.Phrase" />;
+    private RenderFragment<string> Highlighted => text => @<SearchHighlight Text="@text" Term="@this.Phrase" />;
 
     /// <summary>The Library hit this card shows.</summary>
     [Parameter, EditorRequired]

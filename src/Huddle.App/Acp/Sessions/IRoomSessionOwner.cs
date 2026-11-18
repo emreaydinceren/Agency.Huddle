@@ -39,7 +39,8 @@ internal interface IRoomSessionOwner
     /// <param name="runningTotal">The session's running total so far, not the amount of one Turn.</param>
     /// <param name="currency">The currency of <paramref name="runningTotal"/>.</param>
     /// <param name="roomId">The Room the reporting session belongs to, or <see langword="null"/> for the shared session, whose Spend is recorded against no Room.</param>
-    void AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId);
+    /// <param name="taskId">The Task a goldfish possession works for, so its Spend is recorded against it; <see langword="null"/> for a warm session.</param>
+    void AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId, string? taskId = null);
 
     /// <summary>
     /// Reports the complete list of commands an Adapter session now advertises (Commands spec, section

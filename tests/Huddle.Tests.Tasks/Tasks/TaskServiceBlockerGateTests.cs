@@ -141,14 +141,14 @@ public sealed class TaskServiceBlockerGateTests
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(BlockerGate), manager: Manager), proof: proof);
         TaskItem blocker = CreateTask(harness, "API base");
-        TaskDraft draft = new("API", Team, null, TaskState.Review) { HumanGate = true };
+        TaskDraft draft = new("API", Team, null, TaskState.InProgress) { HumanGate = true };
         TaskItem gated = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
         Assert.IsType<TaskResult.Saved>(harness.Service.Update(gated.Id, new TaskPatch { BlockedBy = [blocker.Id] }, null, HumanOf(harness)));
 
         TaskResult result = harness.Service.Update(gated.Id, MoveTo(TaskState.NeedsYou), null, Jane);
 
         Assert.Equal(GateId.BlockersDoneBeforeStart, Assert.IsType<TaskResult.GateRefused>(result).Gate);
-        Assert.Equal(TaskState.Review, harness.Store.Get(gated.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(gated.Id)?.Status);
     }
 
     /// <summary>The Human can override the gate, and the Change log records it.</summary>

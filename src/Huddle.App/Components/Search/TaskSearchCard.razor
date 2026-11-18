@@ -11,7 +11,7 @@
 
 <SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName">
     <Icon><MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Size="Size.Small" /></Icon>
-    <Title><MudHighlighter Text="@this.Heading" HighlightedText="@this.Phrase" /></Title>
+    <Title><SearchHighlight Text="@this.Heading" Term="@this.Phrase" /></Title>
     <Meta>@if (this.Hit.Assignee is { } assignee){@assignee@if (!string.IsNullOrWhiteSpace(this.Hit.AssigneeTitle)){<span class="search-card-subtitle">@(" · ")@this.Hit.AssigneeTitle</span>}@(" · ")}@this.TeamLabel</Meta>
     <Trailing><span class="search-card-chip"><TaskStatusChip Status="this.Hit.Status" /></span></Trailing>
 </SearchCardShell>

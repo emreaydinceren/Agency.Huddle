@@ -1,0 +1,31 @@
+@* <summary>
+     Draws <see cref="Text"/> with every case-insensitive occurrence of <see cref="Term"/> wrapped in a
+     <c>&lt;mark&gt;</c>. It replaces <c>MudHighlighter</c>, which splits with a regular expression under a fixed
+     one-second match timeout: a server stalled for a second inside one scan threw
+     <c>RegexMatchTimeoutException</c> from <c>OnParametersSet</c> and ended the Human's circuit. This component
+     searches with <c>string.IndexOf</c>, which has no timeout to exceed, so a slow server only draws slowly.
+   </summary> *@
+@foreach (HighlightPart part in this.Parts)
+{
+    if (part.Matched)
+    {
+        <mark>@part.Text</mark>
+    }
+    else
+    {
+        @part.Text
+    }
+}
+
+@code {
+    /// <summary>The text to draw.</summary>
+    [Parameter]
+    public string? Text { get; set; }
+
+    /// <summary>The search term to mark. Null, empty or whitespace marks nothing.</summary>
+    [Parameter]
+    public string? Term { get; set; }
+
+    /// <summary>The text cut into matched and unmatched runs, in order.</summary>
+    private IReadOnlyList<HighlightPart> Parts => HighlightSplitter.Split(this.Text, this.Term);
+}

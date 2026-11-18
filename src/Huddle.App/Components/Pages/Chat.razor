@@ -43,6 +43,7 @@ else
         <div class="room-header px-4">
             <PageHeader Title="@RoomScopeLabel.Display(this.room, this.members, this.TeamCatalog)" Chrome="true" TitleEditor="@(this.isRenaming ? this.RenameEditor : null)">
                 <TitleTrailing>
+                    <Agency.Huddle.App.Components.Chat.GoldfishChip RoomId="@this.room.Id" />
                     @if ((this.isTeamRoom || RoomScopeLabel.ScopeFor(this.room, this.members, this.TeamCatalog) is not null) && this.room.Team is { Length: > 0 } roomTeam)
                     {
                         <TeamAvatar Team="@roomTeam" Avatar="this.TeamCatalog.Find(roomTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="avatar-transcript room-team-avatar" />

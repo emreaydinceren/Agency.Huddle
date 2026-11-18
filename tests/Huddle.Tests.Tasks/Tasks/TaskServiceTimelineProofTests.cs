@@ -69,7 +69,7 @@ public sealed class TaskServiceTimelineProofTests
         Assert.IsType<TaskResult.Saved>(rig.Service.AddEvidence(id, Run("dotnet test"), Quinn));
         Snapshot before = rig.Snapshot(id);
         Assert.Equal(2, before.Total);
-        Assert.Equal(before.Total, before.Met);
+        Assert.Equal(1, before.Met); // the QA evidence item waits for a Task tagged verify (#669)
         Assert.NotEqual(loadedByTheForm, rig.Get(id).Version);
 
         TaskResult humanSave = rig.Service.Update(id, new TaskPatch { Description = "Edited by the Human." }, loadedByTheForm, rig.Human);
@@ -94,7 +94,7 @@ public sealed class TaskServiceTimelineProofTests
         TaskId id = new("PLAT", 1);
         Snapshot before = rig.Snapshot(id);
         Assert.Equal(2, before.Total);
-        Assert.Equal(before.Total, before.Met);
+        Assert.Equal(1, before.Met); // the QA evidence item waits for a Task tagged verify (#669)
         Assert.Contains("## Evidence", rig.Text(id), StringComparison.Ordinal);
 
         TaskResult result = rig.Service.Update(id, new TaskPatch { Description = "Rewritten by the manager." }, null, Lead);
@@ -115,7 +115,7 @@ public sealed class TaskServiceTimelineProofTests
         using Rig rig = new(LegacyFile);
         TaskId id = new("PLAT", 1);
         Snapshot before = rig.Snapshot(id);
-        Assert.Equal(before.Total, before.Met);
+        Assert.Equal(1, before.Met); // the QA evidence item waits for a Task tagged verify (#669)
         string loaded = rig.Get(id).Version;
 
         _ = Assert.IsType<TaskResult.Saved>(rig.Service.Update(id, new TaskPatch { Description = "First." }, loaded, rig.Human));

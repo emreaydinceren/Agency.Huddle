@@ -311,7 +311,7 @@ public sealed class PromptPartsTests
             "Needs You level (what waits for the Human):",
             "- Dev Team: Ask me",
             "- Dev Team › Lib: Run inside the Team",
-            "Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too), so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.");
+            "Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too), so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.");
         Assert.Equal(expected, part.Text);
     }
 

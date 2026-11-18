@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Teams;
 
@@ -53,7 +54,7 @@ internal sealed partial class RequestingManagerWakeRule(ITeamCatalog? teams, IHu
             return new TaskWakeChoice.Skip(null);
         }
 
-        if (string.Equals(manager, round.Actor.Name, StringComparison.OrdinalIgnoreCase)
+        if (string.Equals(manager, GoldfishStamp.AgentName(round.Actor.Name),StringComparison.OrdinalIgnoreCase)
             || string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase)
             || string.Equals(manager, teams?.Find(latest.Location.Team)?.Manager, StringComparison.OrdinalIgnoreCase)
             || human.Matches(manager)

@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.Teams;
@@ -287,7 +288,7 @@ internal sealed class TaskService : IDisposable
         bool waiting = !current.Location.Closed
             && (decision == TaskDecision.Accept
                 ? current.Status == TaskState.NeedsYou && Acceptance.Of(current).State != AcceptanceState.Valid && this.ProofOf(current).IsComplete
-                : current.Status is TaskState.Review or TaskState.NeedsYou);
+                : current.Status == TaskState.NeedsYou);
         if (!waiting)
         {
             return notWaiting;
@@ -524,7 +525,7 @@ internal sealed class TaskService : IDisposable
 
     /// <summary>
     /// Re-evaluates one Task after a Proof input outside the Task file changed (#593): the Task moves to Needs You exactly as after a
-    /// Task write when it is gated, in Review and its Proof is now complete. It writes nothing otherwise.
+    /// Task write when it is gated, In Progress and its Proof is now complete. It writes nothing otherwise.
     /// </summary>
     /// <param name="id">The Task whose Proof input changed.</param>
     internal void MoveIfReady(TaskId id)
@@ -545,12 +546,12 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
-    /// Moves a gated Task that is in Review with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
+    /// Moves a gated Task that is In Progress with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
     /// <see cref="HumanGateRules.Check"/> with Huddle as the actor. An ungated Task of a Team with <c>accept-before-merge</c> is
     /// brought in too, with the merge named as its Action in the same write (#416): that Team's merge waits for an Accept, and
     /// an Agent that asks in chat instead of setting the Action would otherwise leave nothing to accept. It does nothing for the
-    /// Human's own change, for any other ungated Task, for a Task not in Review, closed or already accepted, or whose Proof is
-    /// open. The caller raises the returned change after it has left the lock, as every other mutation does.
+    /// Human's own change, for any other ungated Task, for a Task not In Progress, closed or already accepted, or whose Proof is
+    /// open or empty, or that has an open blocker (a review still pending, #669). The caller raises the returned change after it has left the lock, as every other mutation does.
     /// </summary>
     /// <param name="task">The Task as just written (or as stored now, from <see cref="MoveIfReady"/>).</param>
     /// <param name="by">Who made the write that may have made the Task ready; Huddle when a Proof input outside the Task file changed.</param>
@@ -558,7 +559,7 @@ internal sealed class TaskService : IDisposable
     private TaskChange? MoveReadyToNeedsYou(TaskItem task, TaskActor by)
     {
         if (by.Kind == TaskActorKind.Human
-            || task.Status != TaskState.Review
+            || task.Status != TaskState.InProgress
             || task.Location.Closed
             || Acceptance.Of(task).State == AcceptanceState.Valid)
         {
@@ -578,6 +579,8 @@ internal sealed class TaskService : IDisposable
         Proof proof = this.ProofOf(task);
         TaskItem candidate = gated with { Status = TaskState.NeedsYou };
         if (!proof.IsComplete
+            || proof.Total == 0
+            || this.OpenBlockersOf(task).Count > 0
             || HumanGateRules.Check(task, candidate, TaskActors.Huddle, proof, this.human.Name) is not null
             || this.store.ReadText(task.Id) is not { } text)
         {
@@ -808,7 +811,7 @@ internal sealed class TaskService : IDisposable
             || !string.Equals(edit.Before.Action, edit.After.Action, StringComparison.Ordinal)
             || edit.Before.IsGated
             || edit.After.IsGated;
-        string? afterText = (statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done or TaskState.NeedsYou) || gateTouched
+        string? afterText = (statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Done or TaskState.NeedsYou) || gateTouched
             ? this.store.ReadText(edit.After.Id)
             : null;
         if (afterText is not null && this.RevertHumanGateEdit(edit, afterText, actor, at) is { } humanReverted)
@@ -821,7 +824,7 @@ internal sealed class TaskService : IDisposable
             return backlogReverted;
         }
 
-        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
+        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.NeedsYou or TaskState.Done
             && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
         {
             ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by gate: {refusal.Message}"));
@@ -976,7 +979,7 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
-    /// A Task that appears outside Huddle already in Needs You or Done against the Human gate (H-5, H-3) is reset to Review and the refusal logged.
+    /// A Task that appears outside Huddle already in Needs You or Done against the Human gate (H-5, H-3) is reset to In Progress and the refusal logged.
     /// </summary>
     /// <param name="created">The new Task as the file reads.</param>
     /// <param name="actor">The outside-edit actor.</param>
@@ -991,7 +994,7 @@ internal sealed class TaskService : IDisposable
         }
 
         ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by Human gate: {refusal.Message}"));
-        string reset = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, created with { Status = TaskState.Review }), refused);
+        string reset = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, created with { Status = TaskState.InProgress }), refused);
         return this.store.Write(created, created.Version, reset) is { } restored
             ? new TaskChange(null, restored, [], actor, refused)
             : null;
@@ -1118,7 +1121,7 @@ internal sealed class TaskService : IDisposable
         }
 
         // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
-        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
+        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.NeedsYou or TaskState.Done
             ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
             : null;
         if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || candidate.IsGated))
@@ -1142,7 +1145,7 @@ internal sealed class TaskService : IDisposable
             Title = draft.Title,
             Status = draft.Status,
             Priority = draft.Priority,
-            Creator = actor.Name,
+            Creator = GoldfishStamp.AgentName(actor.Name),
             Assignee = assignee,
             OriginRoomId = draft.OriginRoomId,
             Parent = draft.Parent,
@@ -1374,7 +1377,7 @@ internal sealed class TaskService : IDisposable
 
         IReadOnlyList<EvidenceLine> evidence = TaskFileFormat.ReadEvidence(text);
         Dictionary<string, string> covers = new(StringComparer.Ordinal);
-        foreach (string author in evidence.Select(static line => line.Author).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
+        foreach (string author in evidence.Select(static line => GoldfishStamp.AgentName(line.Author)).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
         {
             if (this.personas.Get(author) is { } persona
                 && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
@@ -1391,11 +1394,16 @@ internal sealed class TaskService : IDisposable
 
         // The stored blockers decide, never the candidate's: an update that clears blocked_by while it starts the Task must not pass.
         IReadOnlyList<OpenBlocker> openBlockers = this.OpenBlockersOf(current);
+        bool hasDoneVerifyChild = this.store.All.Any(child => child.Parent == current.Id
+            && child.Status == TaskState.Done
+            && child.Tags.Contains(ReviewTags.Verify, StringComparer.OrdinalIgnoreCase));
         foreach (string team in new[] { current.Location.Team, candidate.Location.Team }.Distinct(StringComparer.Ordinal))
         {
             GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name)
             {
                 OpenBlockers = openBlockers,
+                HasDoneVerifyChild = hasDoneVerifyChild,
+                IsCheckTask = ReviewTags.IsReviewTask(current.Tags),
             };
             if (this.gates.CheckTaskChange(context) is { } refusal)
             {
@@ -1452,7 +1460,7 @@ internal sealed class TaskService : IDisposable
             return false;
         }
 
-        return !string.Equals(this.gates.ManagerOf(current.Location.Team), actor.Name, StringComparison.OrdinalIgnoreCase);
+        return !string.Equals(this.gates.ManagerOf(current.Location.Team), GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Refusal for an Agent other than the Team's manager taking a blocker off a Task in a Team with the <c>blockers-done-before-start</c> gate (#538).</summary>

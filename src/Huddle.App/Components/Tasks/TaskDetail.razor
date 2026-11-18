@@ -500,7 +500,7 @@ else if (this.loaded is { } task)
                 <TaskProofList Task="@task" Proof="@this.proof" HumanName="@this.Human.Name" />
             }
 
-            @if (task.IsGated && task.Status is TaskState.Review or TaskState.NeedsYou)
+            @if (task.IsGated && task.Status == TaskState.NeedsYou)
             {
                 <TaskDecisionCard Task="@task" Proof="@this.proof" Blocked="@this.HasPending" OnReload="this.OnDecisionReload" />
             }

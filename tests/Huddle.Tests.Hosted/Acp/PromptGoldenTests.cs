@@ -476,6 +476,83 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("systemPrompt.roomSessions.txt", actual);
     }
 
+    /// <summary>Goldfish: pins the clean session's whole prompt, prefixed, for a Persona with one Skill and the ask_human tool. The golden is seeded by the first green run.</summary>
+    [Fact]
+    public void SystemPrompt_Clean_MatchesGolden()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        IReadOnlyList<string> tools = [.. ToolNames, "mcp__team__goldfish_done"];
+
+        string actual = SystemPromptComposer.ComposeClean(
+            persona, new FakePromptSource(), "mcp__team__get_help", tools, [TeamBuildingSkill()], "mcp__team__read_skill", "mcp__team__ask_human");
+
+        AssertMatchesGolden("systemPrompt.goldfish.txt", actual);
+        Assert.Contains("mcp__team__goldfish_done", actual, StringComparison.Ordinal); // contains-ok: the Goldfish prompt names the offered, prefixed tool
+    }
+
+    /// <summary>Goldfish: pins the clean session's whole prompt for an Adapter that does not prefix tool names: every name is bare. The golden is seeded by the first green run.</summary>
+    [Fact]
+    public void SystemPrompt_Clean_Unprefixed_MatchesGolden()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        IReadOnlyList<string> tools = [.. UnprefixedToolNames, "goldfish_done"];
+
+        string actual = SystemPromptComposer.ComposeClean(
+            persona, new FakePromptSource(), "get_help", tools, [TeamBuildingSkill()], "read_skill", "ask_human");
+
+        AssertMatchesGolden("systemPrompt.goldfish.unprefixed.txt", actual);
+        Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>Goldfish: a session that does not list the done tool still gets the bare name, never an unfilled placeholder.</summary>
+    [Fact]
+    public void SystemPrompt_Clean_NoDoneToolListed_FallsBackToBareName()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+
+        string actual = SystemPromptComposer.ComposeClean(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, null);
+
+        Assert.DoesNotContain("{{goldfishDoneTool}}", actual, StringComparison.Ordinal);
+        Assert.Contains("goldfish_done", actual, StringComparison.Ordinal); // contains-ok: the fallback is the bare tool name inside prose
+    }
+
+    /// <summary>Goldfish: the clean prompt leaves out every block that carries Room history, Memory or standing work, and the Promised work paragraph.</summary>
+    /// <param name="forbidden">Text that belongs only to a block a clean session must not read.</param>
+    [Theory]
+    [InlineData("memory/")]
+    [InlineData("AGENTS.md")]
+    [InlineData("Second Brain")]
+    [InlineData("Room Sessions")]
+    [InlineData("Needs You")]
+    [InlineData("outputs")]
+    public void SystemPrompt_Clean_LeavesOutTheOrdinaryBlocks(string forbidden)
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        IReadOnlyList<string> tools = [.. ToolNames, "mcp__team__goldfish_done"];
+
+        string actual = SystemPromptComposer.ComposeClean(
+            persona, new FakePromptSource(), "mcp__team__get_help", tools, [TeamBuildingSkill()], "mcp__team__read_skill", "mcp__team__ask_human");
+
+        Assert.DoesNotContain(forbidden, actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>Goldfish: the clean prompt does not carry the Promised work paragraph, which the ordinary prompt does.</summary>
+    [Fact]
+    public void SystemPrompt_Clean_LeavesOutPromisedWork()
+    {
+        Persona persona = new("Nova", "You are Nova.");
+        string promisedWork = PromptCatalog.Get("systemPrompt.promisedWork").Default;
+        IReadOnlyList<string> tools = [.. ToolNames, "mcp__team__goldfish_done"];
+
+        string clean = SystemPromptComposer.ComposeClean(
+            persona, new FakePromptSource(), "mcp__team__get_help", tools, [], string.Empty, null);
+        string ordinary = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", tools);
+
+        Assert.DoesNotContain(promisedWork, clean, StringComparison.Ordinal);
+        Assert.Contains(promisedWork, ordinary, StringComparison.Ordinal); // contains-ok: the control proves the text is searched for correctly
+    }
+
     /// <summary>
     /// D28, RS §6.9: with <see cref="SessionScope.PerRoom"/> and a non-null Memory index, the
     /// composed prompt appends <c>systemPrompt.roomSessionsCarry</c> as its own trailing part, after

@@ -33,7 +33,7 @@ public sealed class AddEvidenceToolNeedsYouMoveTests
     /// <param name="harness">The harness.</param>
     private static TaskItem CreateGatedInReview(TaskToolHarness harness)
     {
-        TaskDraft draft = new("Fix login", Team, null, TaskState.Review, TaskPriority.Medium, "Nova") { HumanGate = true };
+        TaskDraft draft = new("Fix login", Team, null, TaskState.InProgress, TaskPriority.Medium, "Nova") { HumanGate = true };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, TaskActors.Human(harness.Options.Value))).Task;
     }
 
@@ -78,9 +78,9 @@ public sealed class AddEvidenceToolNeedsYouMoveTests
         string result = await tool.InvokeAsync(arguments, ct);
 
         Assert.Equal(
-            $"Added evidence to {task.Id}. Its status is Review. Proof 0/1; first open item: Tests pass (Nova): not run. It can go to Needs You once its Proof is complete.",
+            $"Added evidence to {task.Id}. Its status is In Progress. Proof 0/1; first open item: Tests pass (Nova): not run. It can go to Needs You once its Proof is complete.",
             result);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>The call that completes the Proof says the Task is in Needs You, with no Proof clause (#547).</summary>
@@ -98,7 +98,7 @@ public sealed class AddEvidenceToolNeedsYouMoveTests
         string result = await tool.InvokeAsync(passing, ct);
 
         Assert.Equal(
-            $"Added evidence to {task.Id}. Its status is Review. Proof 0/1; first open item: Tests pass (Nova): last run exit 1. It can go to Needs You once its Proof is complete.",
+            $"Added evidence to {task.Id}. Its status is In Progress. Proof 0/1; first open item: Tests pass (Nova): last run exit 1. It can go to Needs You once its Proof is complete.",
             first);
         Assert.Equal($"Added evidence to {task.Id}. Its status is Needs You.", result);
     }
@@ -133,7 +133,7 @@ public sealed class AddEvidenceToolNeedsYouMoveTests
 
         Assert.DoesNotContain("Added evidence", result, StringComparison.Ordinal);
         TaskItem? after = harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.NotNull(after);
         Assert.Empty(after.Evidence);
     }

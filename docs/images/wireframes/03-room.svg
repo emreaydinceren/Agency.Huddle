@@ -22,6 +22,12 @@
 <text x="246" y="131" font-size="12" font-weight="400" fill="#1f2430" text-anchor="middle">⧉</text>
 <rect x="228" y="104" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
 <text x="244.0" y="116.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C2b</text>
+<rect x="300" y="138" width="330" height="20" rx="4" fill="#ffffff" stroke="#4f7fd1" stroke-width="1.2" stroke-dasharray="6 4"/>
+<ellipse cx="350" cy="148" rx="6" ry="3.5" fill="#4f7fd1" stroke="none"/>
+<polygon points="355,148 361,144 361,152" fill="#4f7fd1" stroke="none"/>
+<text x="370" y="152" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">Ruth in goldfish mode · 4 min     Call Ruth back</text>
+<rect x="296" y="132" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="312.0" y="144.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C2c</text>
 <rect x="690" y="112" width="250" height="34" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="686" y="104" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
 <text x="698.5" y="116.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C3</text>
@@ -64,6 +70,12 @@
 <rect x="280" y="298" width="444" height="46" rx="4" fill="#ffffff" stroke="#8b93a1" stroke-width="1.2"/>
 <rect x="276" y="290" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
 <text x="292.0" y="302.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C5c</text>
+<rect x="420" y="272" width="96" height="18" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="428" y="285" font-size="10" font-weight="400" fill="#1f2430" text-anchor="start">· goldfish</text>
+<ellipse cx="490" cy="281" rx="6" ry="3.5" fill="#4f7fd1" stroke="none"/>
+<polygon points="495,281 501,277 501,285" fill="#4f7fd1" stroke="none"/>
+<rect x="416" y="264" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="432.0" y="276.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C5d</text>
 <rect x="292" y="308" width="400" height="6" rx="3" fill="#cfd4dc" stroke="none"/>
 <rect x="292" y="322" width="200" height="6" rx="3" fill="#cfd4dc" stroke="none"/>
 <rect x="780" y="254" width="192" height="52" rx="4" fill="#d7eef0" stroke="#0e7c86" stroke-width="1.2"/>
@@ -76,6 +88,14 @@
 <text x="876" y="335" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">System row: Task T-12 woke Nova  ▾</text>
 <rect x="776" y="312" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
 <text x="792.0" y="324.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C4b</text>
+<rect x="780" y="358" width="192" height="22" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="876" y="373" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">Ruth went into goldfish mode  ▾</text>
+<rect x="776" y="350" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="792.0" y="362.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C4d</text>
+<rect x="780" y="396" width="192" height="22" rx="4" fill="none" stroke="#cfd4dc" stroke-width="1.2" stroke-dasharray="6 4"/>
+<text x="876" y="411" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">@Ruth is back. Finished  ▾</text>
+<rect x="776" y="388" width="32" height="17" rx="8.5" fill="#1e7a3c"/>
+<text x="792.0" y="400.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C4e</text>
 <rect x="228" y="368" width="520" height="190" rx="4" fill="#f6f7f9" stroke="#8b93a1" stroke-width="1.2" stroke-dasharray="6 4"/>
 <rect x="224" y="360" width="25" height="17" rx="8.5" fill="#1e7a3c"/>
 <text x="236.5" y="372.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">C7</text>

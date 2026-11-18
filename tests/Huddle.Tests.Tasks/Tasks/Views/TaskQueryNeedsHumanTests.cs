@@ -47,7 +47,7 @@ public sealed class TaskQueryNeedsHumanTests
     [Fact]
     public void WaitsOnHuman_GatedButNotInNeedsYou_IsFalse()
     {
-        TaskItem task = TestTasks.Make(id: "PLAT-0001", status: TaskState.Review, assignee: "Nova") with { HumanGate = true };
+        TaskItem task = TestTasks.Make(id: "PLAT-0001", status: TaskState.InProgress, assignee: "Nova") with { HumanGate = true };
 
         Assert.False(TaskQuery.WaitsOnHuman(task));
     }

@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teams;
@@ -25,7 +26,8 @@ internal sealed class UpdateTaskTool(
     IPromptSource prompts,
     string callerAgentId,
     NeedsYouLevels? levels = null,
-    ProcessGateService? gates = null) : IAppTool
+    ProcessGateService? gates = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "update_task";
@@ -68,7 +70,7 @@ internal sealed class UpdateTaskTool(
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
-        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         if (target is null)
         {
             return refusal;
@@ -226,7 +228,7 @@ internal sealed class UpdateTaskTool(
         {
             if (!TaskStates.TryParse(statusText, out TaskState parsedStatus))
             {
-                refusal = $"'status' has an unknown value '{statusText}'.";
+                refusal = TaskToolText.UnknownStatusRefusal(statusText);
                 return false;
             }
 

@@ -5,6 +5,8 @@ date: 2026-10-08
 
 # Process gates live in Process.md and are enforced in TaskService and the permission handler
 
+> Amended by [ADR-0096](0096-a-review-is-a-task-owned-by-the-reviewer-not-a-state.md): there is no Review state; read "Review" below as In Progress, and a review or QA check is a child Task tagged `review` or `verify`.
+
 > [!NOTE]
 > **Amended by [ADR-0061](0061-a-human-gated-task-waits-in-needs-you-for-the-humans-acceptance.md)
 > (proposed 2026-10-19).** On a Human-gated Task the Human's override does not apply: no gate

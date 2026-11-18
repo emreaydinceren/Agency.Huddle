@@ -274,7 +274,7 @@ public sealed class TaskFeedRulesTests
     {
         TaskItem before = Task(TaskState.InProgress);
 
-        FeedEffects moved = Run(before, before with { Status = TaskState.Review }, Human);
+        FeedEffects moved = Run(before, before with { Status = TaskState.NeedsYou }, Human);
         FeedEffects retitled = Run(before, before with { Title = "New" }, Human);
 
         Assert.Contains(new FeedResolution("PLAT-0001", FeedSourceType.GateDecisionDue), moved.Resolutions);
@@ -294,7 +294,7 @@ public sealed class TaskFeedRulesTests
         Assert.True(TaskFeedRules.Holds(FeedSourceType.TaskAssignedToYou, Task(assignee: HumanName), HumanName, NoConfirmer, null));
         Assert.False(TaskFeedRules.Holds(FeedSourceType.TaskAssignedToYou, Task(assignee: "Kai"), HumanName, NoConfirmer, null));
         Assert.True(TaskFeedRules.Holds(FeedSourceType.GateDecisionDue, stillThere, HumanName, NoConfirmer, decision));
-        Assert.False(TaskFeedRules.Holds(FeedSourceType.GateDecisionDue, stillThere with { Status = TaskState.Review }, HumanName, NoConfirmer, decision));
+        Assert.False(TaskFeedRules.Holds(FeedSourceType.GateDecisionDue, stillThere with { Status = TaskState.NeedsYou }, HumanName, NoConfirmer, decision));
         Assert.True(TaskFeedRules.Holds(FeedSourceType.RequestAwaitsYou, Task(TaskState.Done, extra: RequestFrom("Design")), HumanName, NoConfirmer, null));
         Assert.False(TaskFeedRules.Holds(FeedSourceType.RequestAwaitsYou, Task(TaskState.Done, extra: RequestFrom("Design")), HumanName, HasConfirmer, null));
     }

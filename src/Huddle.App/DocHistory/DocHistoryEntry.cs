@@ -6,4 +6,5 @@ namespace Agency.Huddle.App.DocHistory;
 /// <param name="ActorKind">Whether <paramref name="Actor"/> is an Agent or the Human.</param>
 /// <param name="Kind">What the author says they did.</param>
 /// <param name="Summary">One line in the author's words; empty for a Human save or create.</param>
-public sealed record DocHistoryEntry(DateTimeOffset At, string Actor, DocActorKind ActorKind, DocChangeKind Kind, string Summary);
+/// <param name="Goldfish">Whether the Agent wrote the entry as a goldfish (goldfish spec §6.8).</param>
+public sealed record DocHistoryEntry(DateTimeOffset At, string Actor, DocActorKind ActorKind, DocChangeKind Kind, string Summary, bool Goldfish = false);

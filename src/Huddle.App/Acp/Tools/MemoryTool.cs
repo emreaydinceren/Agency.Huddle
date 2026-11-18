@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
@@ -33,6 +34,8 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="logger">Records each mutation, and each refusal that points at a boundary.</param>
 /// <param name="renames">Resolves a Team's old name in a <c>folder</c> argument to today's; optional.</param>
 /// <param name="timeProvider">Gives the Human's local date that <c>reported.md</c> lines are stamped with; optional, the system clock when absent.</param>
+/// <param name="callerAgentId">The Agent this tool instance is bound to, for the goldfish refusal; optional.</param>
+/// <param name="goldfish">Tells whether the caller is a goldfish, which the tool refuses; optional.</param>
 internal sealed class MemoryTool(
     string personaName,
     AgentPaths agentPaths,
@@ -44,7 +47,9 @@ internal sealed class MemoryTool(
     MemoryWarnings warnings,
     ILogger<MemoryTool> logger,
     ITeamRenames? renames = null,
-    TimeProvider? timeProvider = null) : IAppTool
+    TimeProvider? timeProvider = null,
+    string? callerAgentId = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "memory";
@@ -94,6 +99,11 @@ internal sealed class MemoryTool(
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (callerAgentId is not null && goldfish?.Refusal(callerAgentId) is { } refusal)
+        {
+            return refusal;
+        }
 
         MemoryRequest request = MemoryRequest.From(arguments);
         if (request.Problem() is { } problem)

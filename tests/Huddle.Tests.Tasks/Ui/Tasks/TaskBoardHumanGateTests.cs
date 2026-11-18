@@ -54,7 +54,7 @@ public sealed class TaskBoardHumanGateTests
     /// <summary>Creates a gated Task assigned to Nova in <paramref name="status"/>; a Needs You Task is moved there by Nova.</summary>
     internal static TaskItem Gated(TaskToolHarness harness, TaskState status, string? action = null)
     {
-        TaskState start = status == TaskState.NeedsYou ? TaskState.Review : status;
+        TaskState start = status == TaskState.NeedsYou ? TaskState.InProgress : status;
         TaskDraft draft = new("Write the reply", "Platform", null, start, Assignee: Nova) { HumanGate = true, Action = action };
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
         if (status != TaskState.NeedsYou)
@@ -155,15 +155,15 @@ public sealed class TaskBoardHumanGateTests
             this.Board.FindAll("div.task-card").First(c => c.TextContent.Contains(id.ToString(), StringComparison.Ordinal));
     }
 
-    /// <summary>The Needs You column sits between Review and Done, in the View's order and on screen.</summary>
+    /// <summary>The Needs You column sits between In Progress and Done, in the View's order and on screen.</summary>
     [Fact]
-    public async Task Columns_NeedsYouSitsBetweenReviewAndDone()
+    public async Task Columns_NeedsYouSitsBetweenInProgressAndDone()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, new SettableProofSource(), []);
 
-        string[] expected = ["Backlog", "To Do", "In Progress", "Review", "Needs You", "Done", "Won't do"];
+        string[] expected = ["Backlog", "To Do", "In Progress", "Needs You", "Done", "Won't do"];
         string[] configured = [.. BoardLayout.DefaultColumns.Select(c => c.Label)];
         string[] shown = [.. rig.Board.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim())];
         Assert.Equal(expected, configured);
@@ -202,11 +202,11 @@ public sealed class TaskBoardHumanGateTests
 
     /// <summary>A gated card in another status shows the lock icon labelled "Human gate"; an ordinary card shows none (row 29).</summary>
     [Fact]
-    public async Task Lock_GatedInReview_ShowsTheLabelledIcon_OrdinaryCardDoesNot()
+    public async Task Lock_GatedInProgress_ShowsTheLabelledIcon_OrdinaryCardDoesNot()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        TaskItem gated = Gated(harness, TaskState.Review);
-        TaskItem plain = Ordinary(harness, TaskState.Review);
+        TaskItem gated = Gated(harness, TaskState.InProgress);
+        TaskItem plain = Ordinary(harness, TaskState.InProgress);
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, new SettableProofSource(), [gated, plain]);
 
@@ -216,12 +216,12 @@ public sealed class TaskBoardHumanGateTests
         Assert.DoesNotContain("Needs you", rig.Card(gated.Id).TextContent, StringComparison.Ordinal);
     }
 
-    /// <summary>A gated card in Review or earlier dropped into Done is refused with row 30, stays put, and saves nothing (row 1 of the drop table).</summary>
+    /// <summary>A gated card in In Progress or earlier dropped into Done is refused with row 30, stays put, and saves nothing (row 1 of the drop table).</summary>
     /// <param name="start">The card's status.</param>
     /// <param name="viaMenu">Whether the card's Move to menu is used instead of a drop.</param>
     [Theory]
-    [InlineData(TaskState.Review, false)]
-    [InlineData(TaskState.Review, true)]
+    [InlineData(TaskState.InProgress, false)]
+    [InlineData(TaskState.InProgress, true)]
     [InlineData(TaskState.ToDo, false)]
     [InlineData(TaskState.ToDo, true)]
     public async Task Drop_GatedBeforeNeedsYou_IsRefusedWithGoesToNeedsYouFirst(TaskState start, bool viaMenu)
@@ -402,7 +402,7 @@ public sealed class TaskBoardHumanGateTests
     {
         SettableProofSource proof = new() { Current = ThreeOfFour() };
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken, proof: proof);
-        TaskItem task = Ordinary(harness, TaskState.Review);
+        TaskItem task = Ordinary(harness, TaskState.InProgress);
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, proof, [task]);
 

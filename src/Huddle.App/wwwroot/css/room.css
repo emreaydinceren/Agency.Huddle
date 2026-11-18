@@ -89,6 +89,24 @@
     white-space: nowrap;
 }
 
+/* The fish after a goldfish's name (Goldfish spec C5d): inline, a small gap, the Info ink. */
+.message-goldfish {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 4px;
+    color: var(--mud-palette-info);
+}
+
+.message-goldfish .mud-icon-root {
+    width: 14px;
+    height: 14px;
+}
+
+/* A goldfish's brief in a start row's detail: plain text, its own line breaks kept. */
+.goldfish-brief {
+    white-space: pre-wrap;
+}
+
 /* An Agent's context fill on its newest group's meta line, pushed to the line's end. Same quiet ink as the time. */
 .message-context {
     margin-left: auto;

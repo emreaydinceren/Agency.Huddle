@@ -3,8 +3,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.HumanGate;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -18,6 +20,17 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// </summary>
 internal static class TaskToolText
 {
+    /// <summary>The refusal for a status text Huddle cannot parse: one message that teaches the new model when it names the removed Review state (D-13).</summary>
+    /// <param name="statusText">The status text the call carried.</param>
+    public static string UnknownStatusRefusal(string statusText)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        return string.Equals(statusText.Trim(), "Review", StringComparison.OrdinalIgnoreCase)
+            ? ProcessGateService.ReviewStateRefusal
+            : string.Create(CultureInfo.InvariantCulture, $"'status' has an unknown value '{statusText}'.");
+    }
+
     /// <summary>
     /// Indents every non-blank line after the first by two spaces, so a multi-line comment stays one readable block under its
     /// heading line. A blank line stays empty rather than carrying trailing spaces.
@@ -197,6 +210,7 @@ internal static class TaskToolText
     /// <param name="directory">Resolves the caller's <see cref="User"/> row.</param>
     /// <param name="callerAgentId">The calling Agent's user id.</param>
     /// <param name="cancellationToken">Propagated to <see cref="ITeamDirectory.GetUserAsync"/>.</param>
+    /// <param name="goldfish">When given and the caller is possessed, the Actor's Name carries the goldfish stamp; the id never does.</param>
     /// <returns>
     /// The resolved <see cref="TaskActor"/> paired with an empty <c>Refusal</c>, or a
     /// <see langword="null"/> Actor paired with a non-empty <c>Refusal</c> when the caller is
@@ -204,7 +218,7 @@ internal static class TaskToolText
     /// <c>Actor is null</c>.
     /// </returns>
     public static async Task<(TaskActor? Actor, string Refusal)> ResolveActorAsync(
-        ITeamDirectory directory, string callerAgentId, CancellationToken cancellationToken)
+        ITeamDirectory directory, string callerAgentId, CancellationToken cancellationToken, GoldfishGuard? goldfish = null)
     {
         ArgumentNullException.ThrowIfNull(directory);
         ArgumentException.ThrowIfNullOrWhiteSpace(callerAgentId);
@@ -215,7 +229,8 @@ internal static class TaskToolText
             return (null, $"Could not identify caller '{callerAgentId}' as an Agent.");
         }
 
-        return (new TaskActor(TaskActorKind.Agent, user.Name, callerAgentId), string.Empty);
+        string name = goldfish?.PossessionOf(callerAgentId) is not null ? GoldfishStamp.Apply(user.Name) : user.Name;
+        return (new TaskActor(TaskActorKind.Agent, name, callerAgentId), string.Empty);
     }
 
     /// <summary>
@@ -229,9 +244,10 @@ internal static class TaskToolText
     /// <param name="directory">Resolves the caller's <see cref="User"/> row.</param>
     /// <param name="callerAgentId">The calling Agent's user id.</param>
     /// <param name="cancellationToken">Propagated to <see cref="ITeamDirectory.GetUserAsync"/>.</param>
+    /// <param name="goldfish">Passed to <see cref="ResolveActorAsync"/>.</param>
     /// <returns>The target with an empty <c>Refusal</c>, or a <see langword="null"/> target with the refusal text.</returns>
     public static async Task<(TaskToolTarget? Target, string Refusal)> StartAsync(
-        JsonObject arguments, TaskStore store, ITeamDirectory directory, string callerAgentId, CancellationToken cancellationToken)
+        JsonObject arguments, TaskStore store, ITeamDirectory directory, string callerAgentId, CancellationToken cancellationToken, GoldfishGuard? goldfish = null)
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
@@ -245,7 +261,7 @@ internal static class TaskToolText
             return (null, resolveRefusal);
         }
 
-        (TaskActor? actor, string actorRefusal) = await ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskActor? actor, string actorRefusal) = await ResolveActorAsync(directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         return actor is null ? (null, actorRefusal) : (new TaskToolTarget(task, actor), string.Empty);
     }
 

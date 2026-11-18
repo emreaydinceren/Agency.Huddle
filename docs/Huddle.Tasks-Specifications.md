@@ -246,6 +246,8 @@ No package is added, so `Directory.Packages.props` doesn't change.
 
 ### 6.1 States and priorities
 
+> Amended by ADR-0096: there is no Review state; a review or QA check is a child Task tagged `review` or `verify`, and a saved `status: Review` loads as In Progress. Read every `Review` below as history.
+
 ```csharp
 public enum TaskState { Backlog, ToDo, InProgress, Review, Done, Cancelled, Duplicate, Rejected }
 public enum TaskPriority { Low, Medium, High, Urgent }
@@ -1536,7 +1538,7 @@ release).
 | Dates | `MudDatePicker` (`Date` is `DateTime?`; convert to and from `DateOnly` at the component) | [Basic Usage](https://mudblazor.com/components/datepicker#basic-usage) | — |
 | Timeline | `MudTimeline` (one item per entry), always open, in `TaskTimeline` | [Basic](https://mudblazor.com/components/timeline#basic) | The document History panel (`DocHistoryComponentBase`) |
 | Description Edit / Preview | `MudToggleGroup` + `MudTextField Lines AutoGrow` | [Multiline](https://mudblazor.com/components/textfield#multiline) | `AgentProfileCard.razor:252-257` |
-| Search matches in titles | `MudHighlighter` | [Usage](https://mudblazor.com/components/highlighter#usage) | — |
+| Search matches in titles | `SearchHighlight` (not `MudHighlighter`, banned) | — | — |
 | Wake-up toast | `ISnackbar.Add(RenderFragment, …)` with a per-Task `key` | [RenderFragment messages](https://mudblazor.com/components/snackbar#renderfragment-messages), [Preventing duplication](https://mudblazor.com/components/snackbar#preventing-duplication) | `SkillsPanel.razor` |
 | Rejected files, conflicts, unsaved-edits bar, errors | `MudAlert` (**add `role` yourself**, traps.md L22-27) | [Simple alerts](https://mudblazor.com/components/alert#simple-alerts) | `Agents.razor:32-48` |
 | Row and column layout | `MudStack`, and MudBlazor spacing and gap utility classes (`pa-2`, `gap-2`) | [Stack](https://mudblazor.com/components/stack#basic-usage) | `Chat.razor` |
@@ -1628,7 +1630,7 @@ does what the View asks for. Each of these was checked in the package's XML docs
              RowClick="@this.OnRowClick" RowClassFunc="@this.RowClass">
   <Columns>
     <PropertyColumn Property="t => t.Id" Title="ID" Sortable="true" SortBy="@(t => (t.Id.Prefix, t.Id.Number))" />
-    <TemplateColumn Title="Title" SortBy="@(t => t.Title)"> … MudHighlighter … </TemplateColumn>
+    <TemplateColumn Title="Title" SortBy="@(t => t.Title)"> … SearchHighlight … </TemplateColumn>
     <TemplateColumn Title="Status" Hidden="@(!this.Shows("status"))" SortBy="@(t => (int)t.Status)"
                     Grouping="@this.IsGrouped(TaskGroupField.State)" GroupByOrder="@this.GroupOrder(TaskGroupField.State)"
                     GroupBy="@(t => TaskQuery.GroupLabel(t, TaskGroupField.State))"> … MudChip … </TemplateColumn>
@@ -1755,7 +1757,7 @@ MudCard, because keyboard focus matters (the precedent is `Agents.razor:85-90`).
 
 - A header row (`.task-card-header`) with the id (12px, `TextSecondary`) and the priority chip
   (`StatusChip`: a tinted, text-variant `MudChip Size="Size.Small"` with a leading icon; §13.10 maps the
-  colours). Below it, the title (14px, weight 600, up to three lines, through `MudHighlighter` while
+  colours). Below it, the title (14px, weight 600, up to three lines, through `SearchHighlight` while
   searching) and the tags as quiet tag chips. The card has 12px of padding, a 1px `Divider` border and the
   card radius; cards sit 8px apart.
 - The assignee, a 24px avatar drawn with `Components/Shared/AgentAvatar.razor` inside a
@@ -2178,7 +2180,7 @@ kept (D-33). The text sent is the plain id, the same as a paste.
 - **A mouse click** on an item calls `BrowserCall.InvokeVoidAsync(this.JS, JsModule.Composer, "insertReference", this.textarea, row.InsertText)`.
 - **The popover:** `MudPopover Open="@this.pickerOpen" AnchorOrigin="Origin.TopLeft"
   TransformOrigin="Origin.BottomLeft"` above the textarea. It holds a dense `MudList` whose items
-  show `PLAT-0042`, the title (through `MudHighlighter` on the query) and a status `MudChip`
+  show `PLAT-0042`, the title (through `SearchHighlight` on the query) and a status `MudChip`
   (§13.10's colours). The highlighted item gets `aria-selected="true"`.
 - **Accessibility:** the textarea gets `aria-expanded`, `aria-controls` pointing at the list, and
   `aria-activedescendant` set to the highlighted item. The list has `role="listbox"`.

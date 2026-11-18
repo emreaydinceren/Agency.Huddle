@@ -37,4 +37,14 @@ public readonly record struct PresenceCue(PresenceGlyph Glyph, string Tone, stri
         PresenceState.Asleep => new(PresenceGlyph.Ring, "asleep", "Asleep"),
         _ => new(PresenceGlyph.Ring, "offline", "Offline"),
     };
+
+    /// <summary>The cue for an Agent in goldfish mode: the fish glyph, in the Info tone, replacing its Health cue.</summary>
+    /// <param name="name">The Agent's display name.</param>
+    /// <returns>The cue to draw.</returns>
+    public static PresenceCue Goldfish(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        return new(PresenceGlyph.Fish, "goldfish", $"{name}, in goldfish mode");
+    }
 }

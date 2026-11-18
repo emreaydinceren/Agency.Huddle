@@ -239,7 +239,7 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
             return false;
         }
 
-        entry = new DocHistoryEntry(parsed.At, actor, actorKind, kind, parsed.Summary ?? string.Empty);
+        entry = new DocHistoryEntry(parsed.At, actor, actorKind, kind, parsed.Summary ?? string.Empty, parsed.Goldfish is true);
         return true;
     }
 
@@ -247,7 +247,7 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
     /// <param name="entry">The entry.</param>
     /// <returns>The JSON line, without a line break.</returns>
     internal static string Serialize(DocHistoryEntry entry) =>
-        JsonSerializer.Serialize(new HistoryLine(FormatVersion, entry.At, entry.Actor, entry.ActorKind, entry.Kind, entry.Summary), LineOptions);
+        JsonSerializer.Serialize(new HistoryLine(FormatVersion, entry.At, entry.Actor, entry.ActorKind, entry.Kind, entry.Summary, entry.Goldfish ? true : null), LineOptions);
 
     /// <summary>Whether a history file ends in a partial line: it has content and its last byte is not a line feed, as after a crash mid-append or a hand edit.</summary>
     /// <param name="path">The history file, which may not exist yet.</param>
@@ -381,5 +381,6 @@ internal sealed class DocHistoryStore(IOptions<TeamOptions> options, ILogger<Doc
     /// <param name="ActorKind">Agent or Human.</param>
     /// <param name="Kind">What the author did.</param>
     /// <param name="Summary">The author's words.</param>
-    private sealed record HistoryLine(int V, DateTimeOffset At, string? Actor, DocActorKind? ActorKind, DocChangeKind? Kind, string? Summary);
+    /// <param name="Goldfish"><see langword="true"/> for a goldfish's entry; omitted from the line otherwise.</param>
+    private sealed record HistoryLine(int V, DateTimeOffset At, string? Actor, DocActorKind? ActorKind, DocChangeKind? Kind, string? Summary, [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Goldfish = null);
 }

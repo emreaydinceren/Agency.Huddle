@@ -133,7 +133,7 @@ internal static class FeedSeeder
                 : new TaskGatePayload(task.Id, task.Title, team, item.Detail),
             FeedSourceType.TaskNeedsYou => new TaskNeedsYouPayload(task.Id, task.Title, team, 4, 4),
             FeedSourceType.RequestAwaitsYou => new RequestAwaitsPayload(task.Id, task.Title, team, item.Extra ?? team, "bug"),
-            FeedSourceType.GateDecisionDue => new GateDecisionPayload(task.Id, task.Title, team, item.Extra ?? "gate", item.Detail ?? string.Empty, "Review", "Done"),
+            FeedSourceType.GateDecisionDue => new GateDecisionPayload(task.Id, task.Title, team, item.Extra ?? "gate", item.Detail ?? string.Empty, "In Progress", "Done"),
             _ => new TaskCreatedPayload(task.Id, task.Title, team, task.Assignee),
         };
 

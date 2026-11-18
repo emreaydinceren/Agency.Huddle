@@ -20,10 +20,10 @@ public sealed class TaskDetailGatedDoneTests
             new TaskDraft("Gate check", "Platform", null, status, Assignee: "Nova") { HumanGate = true },
             TaskActors.Human(harness.Options.Value))).Task;
 
-    /// <summary>A gated Task in Backlog and one in Review: Save with Done shows the H-4 reason and writes nothing.</summary>
+    /// <summary>A gated Task in Backlog and one In Progress: Save with Done shows the H-4 reason and writes nothing.</summary>
     [Theory]
     [InlineData(TaskState.Backlog)]
-    [InlineData(TaskState.Review)]
+    [InlineData(TaskState.InProgress)]
     public async Task Save_DoneOnGatedTaskWithNoAccept_ShowsTheReasonAndKeepsTheStatus(TaskState start)
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
@@ -39,13 +39,13 @@ public sealed class TaskDetailGatedDoneTests
         Assert.Equal(start, harness.Store.Get(task.Id)?.Status);
     }
 
-    /// <summary>An ungated Task in Review saves Done with no warning.</summary>
+    /// <summary>An ungated Task In Progress saves Done with no warning.</summary>
     [Fact]
     public async Task Save_DoneOnUngatedTask_Saves()
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(
-            new TaskDraft("Plain", "Platform", null, TaskState.Review, Assignee: "Nova"),
+            new TaskDraft("Plain", "Platform", null, TaskState.InProgress, Assignee: "Nova"),
             TaskActors.Human(harness.Options.Value))).Task;
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderDetail(ctx, task.Id);

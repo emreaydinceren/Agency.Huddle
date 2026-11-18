@@ -10,7 +10,7 @@ public sealed class TaskStatesTests
     [InlineData(TaskState.Backlog, "Backlog")]
     [InlineData(TaskState.ToDo, "To Do")]
     [InlineData(TaskState.InProgress, "In Progress")]
-    [InlineData(TaskState.Review, "Review")]
+    [InlineData(TaskState.NeedsYou, "Needs You")]
     [InlineData(TaskState.Done, "Done")]
     [InlineData(TaskState.Cancelled, "Cancelled")]
     [InlineData(TaskState.Duplicate, "Duplicate")]
@@ -26,7 +26,7 @@ public sealed class TaskStatesTests
     [InlineData(TaskState.Backlog)]
     [InlineData(TaskState.ToDo)]
     [InlineData(TaskState.InProgress)]
-    [InlineData(TaskState.Review)]
+    [InlineData(TaskState.NeedsYou)]
     [InlineData(TaskState.Done)]
     [InlineData(TaskState.Cancelled)]
     [InlineData(TaskState.Duplicate)]
@@ -105,7 +105,6 @@ public sealed class TaskStatesTests
             TaskState.Backlog,
             TaskState.ToDo,
             TaskState.InProgress,
-            TaskState.Review,
             TaskState.NeedsYou,
             TaskState.Done,
             TaskState.Cancelled,
@@ -157,13 +156,13 @@ public sealed class TaskPrioritiesTests
         Assert.Equal(TaskPriority.Low, result);
     }
 
-    /// <summary>Needs You sits at index 4: between Review and Done (Human gate Spec §6.2).</summary>
+    /// <summary>Needs You sits at index 3: between In Progress and Done (Human gate Spec §6.2).</summary>
     [Fact]
-    public void All_PutsNeedsYouBetweenReviewAndDone()
+    public void All_PutsNeedsYouBetweenInProgressAndDone()
     {
-        Assert.Equal(TaskState.Review, TaskStates.All[3]);
-        Assert.Equal(TaskState.NeedsYou, TaskStates.All[4]);
-        Assert.Equal(TaskState.Done, TaskStates.All[5]);
+        Assert.Equal(TaskState.InProgress, TaskStates.All[2]);
+        Assert.Equal(TaskState.NeedsYou, TaskStates.All[3]);
+        Assert.Equal(TaskState.Done, TaskStates.All[4]);
     }
 
     /// <summary>The wire name of Needs You has a space and a capital Y.</summary>

@@ -291,7 +291,7 @@
     {
       "id": "reviewer",
       "title": "Reviewer",
-      "description": "Reads a change in Review and reports on it without editing files.",
+      "description": "Reads a change when a review Task is assigned to it and reports on it without editing files.",
       "tags": [
         "code",
         "verification"

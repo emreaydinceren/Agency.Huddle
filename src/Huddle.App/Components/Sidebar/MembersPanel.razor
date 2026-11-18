@@ -33,7 +33,7 @@
         @foreach (User member in list)
         {
             <div class="sidebar-row members-row" @key="member.Id">
-                <PresenceAnchor Cue="@(member.Kind == UserKind.Agent ? PresenceCue.From(this.StateOf(member)) : null)">
+                <PresenceAnchor AgentName="@member.Name" Cue="@(member.Kind == UserKind.Agent ? PresenceCue.From(this.StateOf(member)) : null)">
                     <ProfileAvatar Name="@member.Name" Avatar="this.Avatars.Get(member.Name)" Size="Size.Small" Team="@this.team" />
                 </PresenceAnchor>
                 <div class="members-body">

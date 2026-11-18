@@ -220,12 +220,12 @@ public sealed class RoomTasksPanelTests
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = setup.Render();
         cut.WaitForAssertion(() => Assert.Equal("In Progress", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("aria-label")), TimeSpan.FromSeconds(5));
 
-        setup.Resolver.Add(Ref("SUPP-0010", "Fix login", TaskState.Review));
-        TaskItem item = TestTasks.Make(id: "SUPP-0010", status: TaskState.Review);
+        setup.Resolver.Add(Ref("SUPP-0010", "Fix login", TaskState.Done));
+        TaskItem item = TestTasks.Make(id: "SUPP-0010", status: TaskState.InProgress);
         TaskActor actor = new(TaskActorKind.Human, "Human", null);
         setup.TaskEvents.RaiseTaskChanged(new TaskChange(item, item, [], actor, new ChangeLogEntry(DateTimeOffset.UtcNow, "Human", "Status")));
 
-        cut.WaitForAssertion(() => Assert.Equal("Review", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("aria-label")), TimeSpan.FromSeconds(5));
+        cut.WaitForAssertion(() => Assert.Equal("Done", cut.Find(".room-tasks-row .task-state-dot").GetAttribute("aria-label")), TimeSpan.FromSeconds(5));
     }
 
     /// <summary>The Task's link opens its page by address.</summary>

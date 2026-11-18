@@ -33,10 +33,12 @@
 @using System.Globalization
 @using Agency.Huddle.App.Components.Shared.AgentCards
 @using Agency.Huddle.App.Elicitation
+@using Agency.Huddle.App.Goldfish
 
 @inject RoomEvents Events
 @inject ElicitationStore Elicitations
 @inject ElicitationService Service
+@inject GoldfishLive Live
 
 @if (this.RoomIsOpen)
 {
@@ -44,8 +46,9 @@
     {
         PendingElicitation current = card;
         bool busy = this.IsBusy(current.Id);
+        string askerShown = this.Live.StampedIfPossessed(current.AskerName, this.RoomId);
 
-        <AgentCard @key="current.Id" Class="elicitation-card" TitleClass="elicitation-card-title" Title="@($"{current.AskerName} is asking")" AriaLabel="@($"Form from {current.AskerName}")">
+        <AgentCard @key="current.Id" Class="elicitation-card" TitleClass="elicitation-card-title" Title="@($"{askerShown} is asking")" AriaLabel="@($"Form from {current.AskerName}")">
             <ChildContent>
 
             @if (!string.IsNullOrWhiteSpace(current.Form.Message) && !current.Form.MessageRepeatsLabel)
@@ -218,12 +221,24 @@
     protected override void Subscribe()
     {
         this.Events.ElicitationsChanged += this.RefreshOnChange;
+        this.Live.Changed += this.OnGoldfishChanged;
     }
 
-    /// <summary>Lets go of <see cref="RoomEvents.ElicitationsChanged"/>.</summary>
+    /// <summary>Lets go of <see cref="RoomEvents.ElicitationsChanged"/> and <see cref="GoldfishLive.Changed"/>.</summary>
     protected override void Unsubscribe()
     {
         this.Events.ElicitationsChanged -= this.RefreshOnChange;
+        this.Live.Changed -= this.OnGoldfishChanged;
+    }
+
+    /// <summary>Redraws the titles when an Agent enters or leaves goldfish mode, so the stamp follows the possession.</summary>
+    private void OnGoldfishChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>Reads the forms waiting in this card's Room.</summary>

@@ -95,6 +95,9 @@ internal sealed class MudBunitContext : BunitContext
         this.Services.AddSingleton<RightSidebarService>();
         this.Services.AddSingleton<PageCommandBus>();
         this.Services.AddSingleton<TeamShortcutStore>();
+        // PresenceAnchor reads GoldfishLive. A context starts with nobody in goldfish mode; a test of the cue registers its own.
+        this.Services.AddSingleton<EmptyGoldfishHost>();
+        this.Services.AddSingleton(sp => sp.GetRequiredService<EmptyGoldfishHost>().Live);
         this.Services.AddSingleton<Agency.Huddle.App.SecondBrain.IArchiveService, Agency.Huddle.Tests.Ui.Teams.EmptyArchiveService>();
         this.Services.AddSingleton<Agency.Huddle.App.Teams.ITeamRenamer, Agency.Huddle.Tests.Ui.Teams.RecordingTeamRenamer>();
 
@@ -186,6 +189,31 @@ internal sealed class MudBunitContext : BunitContext
     /// </remarks>
     /// <returns>A task that completes when the components are disposed.</returns>
     public Task DisposeComponentsOnDispatcherAsync() => this.Renderer.Dispatcher.InvokeAsync(this.DisposeComponentsAsync);
+
+    /// <summary>A <see cref="Agency.Huddle.App.Goldfish.GoldfishLive"/> over an empty store in a temp directory, disposed with the service provider.</summary>
+    private sealed class EmptyGoldfishHost : IDisposable
+    {
+        private readonly TempDataDir dir = new();
+
+        /// <summary>Builds the empty store and the read model over it.</summary>
+        public EmptyGoldfishHost()
+        {
+            this.Live = new Agency.Huddle.App.Goldfish.GoldfishLive(
+                new Agency.Huddle.App.Goldfish.GoldfishStore(this.dir.Options()),
+                Agency.Huddle.Tests.Factories.TestStores.CreateDirectory(this.dir),
+                Microsoft.Extensions.Logging.Abstractions.NullLogger<Agency.Huddle.App.Goldfish.GoldfishLive>.Instance);
+        }
+
+        /// <summary>The read model, always empty.</summary>
+        public Agency.Huddle.App.Goldfish.GoldfishLive Live { get; }
+
+        /// <summary>Stops the read model and removes the directory.</summary>
+        public void Dispose()
+        {
+            this.Live.Dispose();
+            this.dir.Dispose();
+        }
+    }
 
     /// <summary>
     /// Copies the JS calls recorded for <paramref name="identifier"/>, reading them on the renderer's

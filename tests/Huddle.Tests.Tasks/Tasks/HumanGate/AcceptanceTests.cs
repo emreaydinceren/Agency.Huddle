@@ -155,7 +155,7 @@ public sealed class AcceptanceTests
     [Fact]
     public void Of_NotInNeedsYou_IsNone()
     {
-        Assert.Equal(AcceptanceState.None, Acceptance.Of(AcceptedTask() with { Status = TaskState.Review }).State);
+        Assert.Equal(AcceptanceState.None, Acceptance.Of(AcceptedTask() with { Status = TaskState.InProgress }).State);
     }
 
     /// <summary>A move written as an outside edit, with its suffix, still counts as the entry into Needs You.</summary>

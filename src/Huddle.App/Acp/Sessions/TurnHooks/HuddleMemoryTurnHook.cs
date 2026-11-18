@@ -46,7 +46,7 @@ internal sealed class HuddleMemoryTurnHook(IOptions<TeamOptions> options, IPromp
     public override bool AppliesTo(TurnHookScope scope)
     {
         ArgumentNullException.ThrowIfNull(scope);
-        return true;
+        return !scope.Clean;
     }
 
     /// <inheritdoc />

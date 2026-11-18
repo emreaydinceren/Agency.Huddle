@@ -16,6 +16,8 @@ internal sealed class FakePersonaHost : IPersonaHost
     private readonly FakeAgentSession sharedSession;
     private readonly List<FakeAgentSession> sessions = [];
     private readonly List<string> resumeCalls = [];
+    private readonly List<CleanSessionSpec> cleanSpecs = [];
+    private readonly List<FakeAgentSession> cleanSessions = [];
     private bool firstOpenDone;
     private Exception? pendingOpenFailure;
     private int liveSessionCount;
@@ -136,7 +138,49 @@ internal sealed class FakePersonaHost : IPersonaHost
         }
     }
 
+    /// <summary>Every <see cref="CleanSessionSpec"/> <see cref="OpenCleanAsync"/> was called with, in call order.</summary>
+    public IReadOnlyList<CleanSessionSpec> CleanSpecs
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.cleanSpecs];
+            }
+        }
+    }
+
+    /// <summary>Every session <see cref="OpenCleanAsync"/> has returned, in open order. Each one is also in <see cref="Sessions"/>.</summary>
+    public IReadOnlyList<FakeAgentSession> CleanSessions
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.cleanSessions];
+            }
+        }
+    }
+
     public async Task<IAgentSession> OpenAsync(CancellationToken cancellationToken)
+    {
+        return await this.OpenCoreAsync(null, cancellationToken);
+    }
+
+    /// <summary>Opens a clean session the way <see cref="OpenAsync"/> does (delay, gate, failure injection, live-count bookkeeping), but always a fresh one, never the shared session.</summary>
+    /// <param name="spec">What the session is opened for; recorded in <see cref="CleanSpecs"/>.</param>
+    /// <param name="cancellationToken">Cancels the open.</param>
+    public async Task<IAgentSession> OpenCleanAsync(CleanSessionSpec spec, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+
+        return await this.OpenCoreAsync(spec, cancellationToken);
+    }
+
+    /// <summary>The one open path: <paramref name="clean"/> is <see langword="null"/> for an ordinary open.</summary>
+    /// <param name="clean">The clean spec, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">Cancels the open.</param>
+    private async Task<IAgentSession> OpenCoreAsync(CleanSessionSpec? clean, CancellationToken cancellationToken)
     {
         if (this.OpenDelay > TimeSpan.Zero)
         {
@@ -163,7 +207,7 @@ internal sealed class FakePersonaHost : IPersonaHost
         FakeAgentSession session;
         lock (this.gate)
         {
-            if (this.firstOpenDone)
+            if (clean is not null || this.firstOpenDone)
             {
                 session = new FakeAgentSession();
             }
@@ -174,6 +218,11 @@ internal sealed class FakePersonaHost : IPersonaHost
             }
 
             this.sessions.Add(session);
+            if (clean is not null)
+            {
+                this.cleanSpecs.Add(clean);
+                this.cleanSessions.Add(session);
+            }
         }
 
         session.OnDisposed = () => Interlocked.Decrement(ref this.liveSessionCount);

@@ -2,6 +2,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
@@ -89,9 +90,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
     /// <summary>The Prompt the wake-up Message is rendered from (Spec §10.5).</summary>
     private const string WakeMessageKey = "task.wake.message";
-
-    /// <summary>#403: the last line of a wake into Review. A reply in chat moves nothing; the outcome goes on the Task.</summary>
-    private const string ReviewSentence = "Review the work, then record the outcome on the Task and name the next step; a reply in chat alone does not move it.";
 
     /// <summary>The Prompt key of the line added when a Request reaches Done (#350).</summary>
     private const string RequestDoneKey = "task.wake.requestDone";
@@ -236,7 +234,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         [
             new AssigneeWakeRule(),
             new ManagerWakeRule(teams, this.human, personas, this.teamOptions),
-            new ChallengerWakeRule(teams, this.human, personas, confirmers, this.teamOptions),
             new RequestingManagerWakeRule(teams, this.human, personas, this.teamOptions, logger),
         ];
     }
@@ -273,7 +270,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return new WakePreview(assignee, null, WakeBlock.AssigneeIsHuman);
         }
 
-        if (string.Equals(assignee, actor.Name, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(assignee, GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase))
         {
             return new WakePreview(assignee, null, WakeBlock.AssigneeIsActor);
         }
@@ -519,7 +516,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
                 // The last status change decides: a Request moved into Done and straight out again is not waiting to be confirmed.
                 batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;
-                batch.MovedToReview = change.After.Status == TaskState.Review && change.Before?.Status != TaskState.Review;
             }
 
             if (change.Actor.Kind == TaskActorKind.OutsideHuddle)
@@ -702,7 +698,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         {
             string? manager = this.teams?.Find(blocked.Location.Team)?.Manager;
             bool usable = !string.IsNullOrEmpty(manager)
-                && !string.Equals(manager, actor.Name, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(manager, GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase)
                 && !this.human.Matches(manager)
                 && this.personas.Get(manager) is not null;
             recipient = usable ? manager : null;
@@ -810,7 +806,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
-        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, batch.MovedToReview, this.Preview(null, latest, batch.Actor));
+        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, this.Preview(null, latest, batch.Actor));
         foreach (ITaskWakeRule rule in this.wakeRules)
         {
             try
@@ -841,11 +837,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         switch (choice)
         {
             case TaskWakeChoice.Wake wake:
-                if (wake.AsChallenger)
-                {
-                    batch.Challenger = wake.Name;
-                }
-
                 _ = await this.DeliverAsync(batch, latest, wake.Name, ct).ConfigureAwait(false);
                 break;
             case TaskWakeChoice.HoldForBudget hold:
@@ -881,7 +872,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         if (!this.teamOptions.Tasks.Enabled
             || !this.teamOptions.Tasks.WakeEnabled
-            || string.Equals(recipient, actor.Name, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(recipient, GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase)
             || this.human.Matches(recipient)
             || this.personas.Get(recipient) is null)
         {
@@ -1347,7 +1338,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return userId;
         }
 
-        User? user = await this.directory.FindUserByNameAsync(actor.Name, ct).ConfigureAwait(false);
+        User? user = await this.directory.FindUserByNameAsync(GoldfishStamp.AgentName(actor.Name), ct).ConfigureAwait(false);
         return user?.Id;
     }
 
@@ -1514,21 +1505,24 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             text = text + "\n" + sentence;
         }
 
-        bool sentenceRecipient = string.Equals(assigneeName, latest.Assignee, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(assigneeName, batch.Challenger, StringComparison.OrdinalIgnoreCase);
-        if (batch.MovedToReview && latest.Status == TaskState.Review && sentenceRecipient)
-        {
-            text = text + "\n" + ReviewSentence;
-        }
-
         string? releasedScope = batch.Entries.Select(static entry => NeedsYouRelease.ScopeWordOf(entry.Summary)).LastOrDefault(static word => word is not null);
         if (releasedScope is not null)
         {
             text = text + "\n" + ReleaseSentence(latest, releasedScope);
         }
 
-        return this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine ? text + "\n" + confirmLine : text;
+        if (this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine)
+        {
+            text = text + "\n" + confirmLine;
+        }
+
+        // A review Task's assignee is told where the outcome goes (D-9); it is the last line, after any decision, release or confirm line.
+        bool outcomeWake = string.Equals(latest.Assignee, assigneeName, StringComparison.OrdinalIgnoreCase) && ReviewTags.IsReviewTask(latest.Tags);
+        return outcomeWake ? text + "\n" + ReviewSentence : text;
     }
+
+    /// <summary>The line a review or verify Task's assignee gets on every wake: the outcome is recorded on the Task, not in chat (D-9).</summary>
+    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. When the owner comments that the work is ready again, review it again on this Task.";
 
     /// <summary>The line a release (ADR-0088) adds to the wake: the merge needs no Accept, a push still does.</summary>
     /// <param name="latest">The Task's latest state.</param>
@@ -1735,12 +1729,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         /// <summary>Whether any batched change moved the Task into Done (#350: a Request that gets there waits for its requesting Team to confirm it).</summary>
         public bool MovedToDone { get; set; }
-
-        /// <summary>Whether the batch's last status change moved the Task into Review (#403: someone who can review must be woken once).</summary>
-        public bool MovedToReview { get; set; }
-
-        /// <summary>The member woken to review when the assignee could not, set by the wake for it just before it is delivered.</summary>
-        public string? Challenger { get; set; }
 
         /// <summary>The outside-edit window of this batch's latest outside-Huddle change, if any.</summary>
         public OutsideWindow? OutsideWindow { get; set; }

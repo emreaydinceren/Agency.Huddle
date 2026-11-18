@@ -100,8 +100,166 @@ internal static class PromptCatalog
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
         ..BuildPart53(),
-        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(),
+        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(), ..BuildGoldfishToolParts(), ..BuildGoldfishRefusalParts(), ..BuildGoldfishDoneParts(),
     ];
+
+    /// <summary>Builds the goldfish closing prompt, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
+    /// <returns>The prompt definitions of the goldfish slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishParts() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.goldfish",
+            Label: "Goldfish mode",
+            HelperText:
+                "Goldfish: the closing part of a clean session, in place of Room Sessions. It is the Agent's " +
+                "whole orientation in goldfish mode. Must keep {{goldfishDoneTool}}, the name of the tool that " +
+                "leaves goldfish mode: without it the Agent cannot finish and stays waiting. Must not name any " +
+                "one Room: the brief in the first Turn says where the work is.",
+            Default:
+                """
+                You are in goldfish mode. The brief in your first Turn is your only context: you have no Room
+                history and no Memory, and you cannot see what was said before it. Work from the brief alone.
+                If you need something more from a person, post an ordinary Message that asks for it and end your
+                Turn. A Message that Mentions you starts your next Turn, so you wait there for the answer. Ending
+                a Turn without calling {{goldfishDoneTool}} means you are waiting. When you have what you need,
+                or never needed to ask, call {{goldfishDoneTool}} to leave goldfish mode with your result.
+                Anyone may call you back later. Everything you write here is marked as goldfish work.
+                """,
+            Placeholders: ["{{goldfishDoneTool}}"],
+            RequiredPlaceholders: ["{{goldfishDoneTool}}"],
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to know they are in goldfish mode and how to wait and how to leave."),
+    ];
+
+    /// <summary>Builds the Prompts of the <c>goldfish</c> and <c>goldfish_done</c> tools and of the clean session's Turns (goldfish spec 5.1, 5.3, 5.4, 6.9).</summary>
+    /// <returns>The prompt definitions of the goldfish tools, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishToolParts() =>
+    [
+        GoldfishPrompt(
+            "tool.goldfish.description",
+            "goldfish description",
+            "What the model reads for the goldfish tool. Takes no placeholders. Must say that the brief is the only thing the goldfish knows and is posted word for word.",
+            "Go into goldfish mode: a fresh copy of you, with none of this Room's history and none of your Memory, does one piece of work while you step aside. "
+            + "The brief is the only thing the goldfish will know, and it is posted in the Room word for word. "
+            + "Say what to do and what to read; do not say what you think the answer is, what the author meant or what was agreed in chat. "
+            + "The goldfish leaves with goldfish_done, and anyone can call it back by writing your name and \"comeback\" in the Room. "
+            + "This call ends your Turn: end it with one short line and the result arrives as a new Turn.",
+            PromptTiming.NextSession),
+        GoldfishPrompt(
+            "tool.goldfish.started",
+            "goldfish: started",
+            "The reply when goldfish mode starts. Must keep {{room}} and {{silentToken}}: the Agent is told to end its Turn with one line or the silent token.",
+            "Goldfish started in {{room}}. Your brief is posted there. End this Turn now with one short line, or {{silentToken}}.\nYou will get the result as a new Turn when the goldfish is done. Until then you cannot post in {{room}}.",
+            PromptTiming.Live,
+            "{{room}}",
+            "{{silentToken}}"),
+        GoldfishPrompt(
+            "tool.goldfish.briefEmpty",
+            "goldfish: empty brief",
+            "The refusal for an empty brief. Takes no placeholders. Says it is final.",
+            "Write the brief: what to do and what to read. Nothing was started.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.briefTooLong",
+            "goldfish: brief too long",
+            "The refusal for a brief over the limit. Must keep {{count}} (its length) and {{limit}}.",
+            "The brief is {{count}} characters; the limit is {{limit}}. Say less: what to do and which files to read. Nothing was started.",
+            PromptTiming.Live,
+            "{{count}}",
+            "{{limit}}"),
+    ];
+
+    /// <summary>Builds the <c>goldfish</c> refusal Prompts.</summary>
+    /// <returns>The prompt definitions, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishRefusalParts() =>
+    [
+        GoldfishPrompt(
+            "tool.goldfish.noTurn",
+            "goldfish: no Turn",
+            "The refusal when no Turn of the caller is running. Takes no placeholders.",
+            "Call goldfish from the Turn where the work is. Nothing was started.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.already",
+            "goldfish: already in the mode",
+            "The refusal when the Agent is already in goldfish mode. Must keep {{room}}, the Room of the open possession.",
+            "You are already in goldfish mode in {{room}}. One at a time. Nothing was started.",
+            PromptTiming.Live,
+            "{{room}}"),
+        GoldfishPrompt(
+            "tool.goldfish.nested",
+            "goldfish: nested",
+            "The refusal when a goldfish itself calls goldfish. Takes no placeholders.",
+            "You are in goldfish mode. Finish with goldfish_done first. Nothing was started.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.concurrent",
+            "goldfish: several Turns at once",
+            "The refusal when Team:Acp:MaxConcurrentTurns is above one. Must keep {{count}}.",
+            "Goldfish mode needs one Turn at a time, and this Huddle runs up to {{count}} at once. It is not available here; do not retry.",
+            PromptTiming.Live,
+            "{{count}}"),
+        GoldfishPrompt(
+            "tool.goldfish.refused",
+            "goldfish: tool refused",
+            "What a tool that reads Memory, Transcripts or records answers inside a possession. Takes no placeholders.",
+            "Not in goldfish mode: this tool reads what you must not know. Work from your brief and the files it names.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.warmBlocked",
+            "goldfish: warm Agent blocked",
+            "The refusal when the warm Agent posts into the Room it has a goldfish in. Must keep {{agent}} and {{room}}.",
+            "{{agent}} is in goldfish mode in {{room}}; post there after they are back.",
+            PromptTiming.Live,
+            "{{agent}}",
+            "{{room}}"),
+    ];
+
+    /// <summary>Builds the <c>goldfish_done</c> Prompts and the clean session's Turn Prompts.</summary>
+    /// <returns>The prompt definitions, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishDoneParts() =>
+    [
+        GoldfishPrompt(
+            "tool.goldfishDone.description",
+            "goldfish_done description",
+            "What the model reads for the goldfish_done tool. Takes no placeholders.",
+            "Leave goldfish mode and hand your result back. In result, say what you did, the questions you asked and the answers you got, and the path of any file you wrote; "
+            + "put each finding in findings. Use the outcome stuck only when you cannot go on, even with assumptions. Your Turn ends after this call.",
+            PromptTiming.NextSession),
+        GoldfishPrompt(
+            "tool.goldfishDone.done",
+            "goldfish_done: done",
+            "The reply when a possession ends. Must keep {{agent}}.",
+            "Done. Your body goes back to {{agent}}.",
+            PromptTiming.Live,
+            "{{agent}}"),
+        GoldfishPrompt(
+            "tool.goldfishDone.notPossessed",
+            "goldfish_done: not in the mode",
+            "The refusal when goldfish_done is called outside a possession. Takes no placeholders.",
+            "You are not in goldfish mode, so there is nothing to finish here. Do not call goldfish_done again.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "turn.goldfishBrief",
+            "Goldfish Turn: brief",
+            "The first Turn of a goldfish: the brief and where the work is. Must keep {{brief}} and {{roomLabel}}.",
+            "Brief for the work in {{roomLabel}}:\n\n{{brief}}",
+            PromptTiming.Live,
+            "{{brief}}",
+            "{{roomLabel}}"),
+        GoldfishPrompt(
+            "turn.goldfishMessage",
+            "Goldfish Turn: message",
+            "A later Turn of a goldfish: a Message owed to the Agent in the possession's Room. Must keep {{sender}} and {{text}}.",
+            "{{sender}} writes:\n\n{{text}}",
+            PromptTiming.Live,
+            "{{sender}}",
+            "{{text}}"),
+    ];
+
+    /// <summary>One goldfish Prompt; every placeholder it takes is required.</summary>
+    private static PromptDefinition GoldfishPrompt(string key, string label, string helperText, string text, PromptTiming timing, params string[] placeholders) =>
+        new(key, label, helperText, text, placeholders, placeholders, timing);
 
     /// <summary>Builds the Turn Queue prompts, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
     /// <returns>The prompt definitions of the Turn Queue slices, in catalog order.</returns>
@@ -496,7 +654,7 @@ internal static class PromptCatalog
                 """
                 Needs You level (what waits for the Human):
                 {{levels}}
-                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too), so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.
+                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too), so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.
                 """,
             Placeholders: ["{{levels}}"],
             RequiredPlaceholders: ["{{levels}}"],
@@ -2054,7 +2212,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Creates a Task: durable work tracked outside this conversation. Create one to hand work to an Agent so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. A Task with a Human gate or an Action is reviewed in Needs You, where the Human accepts; don't ask for approval in chat. Huddle moves a Task to Needs You only from Review with its Proof complete, never from Backlog: when the only step left is the Human's, move it to Review yourself. The Action is the one outward step, such as merging or sending, never a hand-off or status. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
+                Creates a Task: durable work tracked outside this conversation. Create one to hand work to an Agent so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. A Task with a Human gate or an Action waits in Needs You, where the Human accepts; don't ask for approval in chat. Huddle moves a Task to Needs You only from In Progress with its Proof complete, never from Backlog: when the only step left is the Human's, move it to In Progress yourself. To ask for a review, create a Task tagged review (or verify for a QA check) as a child of the Task being reviewed, assigned to the reviewer, and add it to that Task's blocked_by. The Action is the one outward step, such as merging or sending, never a hand-off or status. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2102,7 +2260,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. A Task with a Human gate or an Action goes from Review to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
+                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Done. A review is not a status: it is a Task tagged review, assigned to the reviewer, a child of the Task and in its blocked_by. A Task with a Human gate or an Action goes from In Progress to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2173,8 +2331,8 @@ internal static class PromptCatalog
                 human_gate true, or set it with update_task. Set the Action, the one outward step,
                 with the action argument; set the Action before you do it. Never use the Action for
                 hand-offs or status: put those in a Message or a comment on the Task. When the Proof
-                is complete, Huddle moves a Task in Review to Needs You. Until then it stays in
-                Review: tell the Human a Task waits for them in Needs You only when its status is
+                is complete, Huddle moves the Task from In Progress to Needs You. Until then it stays
+                In Progress: tell the Human a Task waits for them in Needs You only when its status is
                 Needs You, and otherwise say which Proof item is open; add_evidence and get_task
                 name it. You may still move it
                 yourself, which is harmless if it is already there. Some Proof items complete with no
@@ -2191,6 +2349,11 @@ internal static class PromptCatalog
                 level, whatever runs it (a script or a git alias too), and goes in the Task's
                 Action. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.
+
+                A review is a Task, not a status. To ask for one, create a Task tagged review (or tagged verify, for a QA check)
+                as a child of the Task being reviewed, assigned to the reviewer, and add it to that Task's blocked_by.
+                A Task waits In Progress while a blocker is open. The reviewer approves by moving the review Task to Done,
+                or leaves it open with the findings as a comment; fix the work and comment that it is ready.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

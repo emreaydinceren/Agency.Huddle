@@ -181,7 +181,7 @@ internal static class SoftwareCoHome
         new()
         {
             Id = "HOME-0011", Location = new(Team, Meals), Title = "Plan next week's meals",
-            Status = "Review", Priority = "Medium", Creator = "Theo", Assignee = "Theo",
+            Status = "In Progress", Priority = "Medium", Creator = "Theo", Assignee = "Theo",
             Tags = ["menu"], DueOffset = 2, CreatedDaysAgo = 3, LastTouchedDaysAgo = 1,
             OriginRoom = ChatSundayPlanning,
             Body = "Five dinners, one of them meat-free, nothing with peanuts. The draft is in the weekly meal plan.",
@@ -212,7 +212,7 @@ internal static class SoftwareCoHome
         new()
         {
             Id = "HOME-0004", Location = new(Team, Maintenance), Title = "Approve the boiler repair quote",
-            Status = "Review", Priority = "High", Creator = "Ravi", Assignee = "Ravi",
+            Status = "In Progress", Priority = "High", Creator = "Ravi", Assignee = "Ravi",
             Tags = ["boiler", "spend"], DueOffset = 5, CreatedDaysAgo = 4, LastTouchedDaysAgo = 1,
             HumanGate = true,
             ExtraEvents = [new("Ravi", "human gate on (reason: Spends money on the house)")],

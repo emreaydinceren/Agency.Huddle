@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.DocHistory;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Teams;
 
@@ -35,7 +36,7 @@ internal sealed class ProofContextBuilder(
         List<string> roster = [.. teams.Find(team)?.Members ?? []];
         List<TaskItem> children = [.. tasks.All.Where(candidate => candidate.Parent == task.Id)];
         List<ProofDocument> documents = [.. this.AttachedDocuments(task)];
-        IEnumerable<string> names = evidence.Select(static line => line.Author)
+        IEnumerable<string> names = evidence.Select(static line => GoldfishStamp.AgentName(line.Author))
             .Concat(roster)
             .Concat(documents.SelectMany(static document => document.History.Select(static entry => entry.Actor)));
         return new ProofContext(

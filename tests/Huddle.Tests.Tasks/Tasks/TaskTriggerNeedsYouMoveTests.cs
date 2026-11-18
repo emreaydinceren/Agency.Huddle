@@ -49,7 +49,7 @@ public sealed class TaskTriggerNeedsYouMoveTests
 
         TaskItem seeded = harness.Seed(TestTasks.Make(
             id: "PLAT-0001",
-            status: TaskState.Review,
+            status: TaskState.InProgress,
             assignee: "Nova",
             originRoomId: room.Id,
             unknownFields: [.. new RequestFields(RequestKind.Bug, "Design", "Mia", TriageState.None, string.Empty, string.Empty).ToFrontmatter()]) with { HumanGate = true });

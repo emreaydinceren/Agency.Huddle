@@ -48,17 +48,67 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(203,PromptCatalog.All.Count);
+        Assert.Equal(219,PromptCatalog.All.Count);
     }
 
-    /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>
+    /// <summary>Goldfish tools (slice 3 step 2): each of the fifteen Prompts exists with the placeholders its text takes, and none names the tool prefix.</summary>
+    [Theory]
+    [InlineData("tool.goldfish.description", "")]
+    [InlineData("tool.goldfish.started", "{{room}} {{silentToken}}")]
+    [InlineData("tool.goldfish.briefEmpty", "")]
+    [InlineData("tool.goldfish.briefTooLong", "{{count}} {{limit}}")]
+    [InlineData("tool.goldfish.noTurn", "")]
+    [InlineData("tool.goldfish.already", "{{room}}")]
+    [InlineData("tool.goldfish.nested", "")]
+    [InlineData("tool.goldfish.concurrent", "{{count}}")]
+    [InlineData("tool.goldfish.refused", "")]
+    [InlineData("tool.goldfish.warmBlocked", "{{agent}} {{room}}")]
+    [InlineData("tool.goldfishDone.description", "")]
+    [InlineData("tool.goldfishDone.done", "{{agent}}")]
+    [InlineData("tool.goldfishDone.notPossessed", "")]
+    [InlineData("turn.goldfishBrief", "{{brief}} {{roomLabel}}")]
+    [InlineData("turn.goldfishMessage", "{{sender}} {{text}}")]
+    public void GoldfishToolPrompts_TakeTheirPlaceholdersAndCarryNoPrefix(string key, string placeholders)
+    {
+        ArgumentNullException.ThrowIfNull(placeholders);
+        PromptDefinition prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(placeholders.Split(' ', StringSplitOptions.RemoveEmptyEntries), prompt.Placeholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>Goldfish: the refusal a tool gives inside a possession is the spec's text word for word (5.4), and the warm-Agent refusal names the Agent and the Room (6.9).</summary>
     [Fact]
-    public void CreateTaskDescription_TellsAgentToMoveHumanOnlyTaskToReview()
+    public void GoldfishRefusals_AreTheSpecText()
+    {
+        Assert.Equal(
+            "Not in goldfish mode: this tool reads what you must not know. Work from your brief and the files it names.",
+            PromptCatalog.Get("tool.goldfish.refused").Default);
+        Assert.Equal(
+            "{{agent}} is in goldfish mode in {{room}}; post there after they are back.",
+            PromptCatalog.Get("tool.goldfish.warmBlocked").Default);
+    }
+
+    /// <summary>Goldfish: <c>systemPrompt.goldfish</c> takes and requires the done tool's name, is read at the next session, and carries no tool prefix.</summary>
+    [Fact]
+    public void GoldfishPrompt_TakesDoneToolAndCarriesNoPrefix()
+    {
+        PromptDefinition prompt = PromptCatalog.Get("systemPrompt.goldfish");
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(["{{goldfishDoneTool}}"], prompt.Placeholders);
+        Assert.Equal(["{{goldfishDoneTool}}"], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to In Progress, because Huddle moves only a Task in In Progress and never one in Backlog (#393, #669).</summary>
+    [Fact]
+    public void CreateTaskDescription_TellsAgentToMoveHumanOnlyTaskToInProgress()
     {
         string create = PromptCatalog.All.Single(p => p.Key == "tool.createTask.description").Default;
 
         Assert.Contains("only step left is the Human's", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
-        Assert.Contains("move it to Review", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("move it to In Progress yourself", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("never from Backlog", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
     }
 
@@ -70,10 +120,10 @@ public sealed partial class PromptCatalogTests
         string create = PromptCatalog.All.Single(p => p.Key == "tool.createTask.description").Default;
         string help = PromptCatalog.All.Single(p => p.Key == "getHelp.tasks").Default;
 
-        Assert.Contains("Review to Needs You; Huddle moves it there", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("In Progress to Needs You; Huddle moves it there", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("Never use it for hand-offs or status", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("don't ask for approval in chat", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
-        Assert.Contains("Huddle moves a Task in Review to Needs You", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("Huddle moves the Task from In Progress to Needs You", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("Huddle does not move the Task then, so move it yourself", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("only when its status is Needs You", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
     }

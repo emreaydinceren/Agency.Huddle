@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
@@ -40,7 +41,8 @@ internal sealed class CreateTaskTool(
     NeedsYouLevels? levels = null,
     ProcessGateService? gates = null,
     ITeamCatalog? catalog = null,
-    TaskStore? store = null) : IAppTool
+    TaskStore? store = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
     private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
@@ -67,7 +69,7 @@ internal sealed class CreateTaskTool(
             ["status"] = new JsonObject
             {
                 ["type"] = "string",
-                ["enum"] = new JsonArray { "Backlog", "To Do", "In Progress", "Review", "Done" },
+                ["enum"] = new JsonArray { "Backlog", "To Do", "In Progress", "Done" },
             },
             ["priority"] = new JsonObject
             {
@@ -130,7 +132,7 @@ internal sealed class CreateTaskTool(
             return valuesRefusal;
         }
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;
@@ -341,7 +343,7 @@ internal sealed class CreateTaskTool(
         {
             if (!TaskStates.TryParse(raw.Status, out status))
             {
-                refusal = string.Create(CultureInfo.InvariantCulture, $"'status' has an unknown value '{raw.Status}'.");
+                refusal = TaskToolText.UnknownStatusRefusal(raw.Status);
                 return false;
             }
 

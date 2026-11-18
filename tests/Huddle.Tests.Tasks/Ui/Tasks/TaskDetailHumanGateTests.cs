@@ -16,7 +16,7 @@ namespace Agency.Huddle.Tests.Ui.Tasks;
 /// <summary>
 /// Pins T10.1 for the Task panel (Spec §6.8, corrections P10 items 5-9; UI copy corrections rows 24 and 27):
 /// <c>TaskDetail</c> never offers Move anyway for a gated Task, always mounts the Human gate section,
-/// mounts the Proof list when there is Proof, mounts the decision card for a gated Task in Review or
+/// mounts the Proof list when there is Proof, mounts the decision card for a gated Task in
 /// Needs You, blocks a decision while edits are unsaved, and drops the Human gate fields on "Take theirs".
 /// </summary>
 public sealed class TaskDetailHumanGateTests
@@ -45,10 +45,10 @@ public sealed class TaskDetailHumanGateTests
         new ProofItem("citation check", false, "Ruth", null, ProofItemSource.Process),
     ]);
 
-    /// <summary>Creates a gated Task assigned to Nova in <paramref name="status"/>; a Needs You Task is created in Review and then moved by Nova.</summary>
+    /// <summary>Creates a gated Task assigned to Nova in <paramref name="status"/>; a Needs You Task is created In Progress and then moved by Nova.</summary>
     private static TaskItem CreateGated(TaskToolHarness harness, TaskState status, string? action = null)
     {
-        TaskState first = status == TaskState.NeedsYou ? TaskState.Review : status;
+        TaskState first = status == TaskState.NeedsYou ? TaskState.InProgress : status;
         TaskDraft draft = new("Write the reply", "Platform", null, first, Assignee: Nova) { HumanGate = true, Action = action };
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
         if (status != TaskState.NeedsYou)
@@ -101,7 +101,7 @@ public sealed class TaskDetailHumanGateTests
     {
         using TempDataDir gateDir = new();
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken, gates: TaskGateText.BuildGates(gateDir, TaskGateText.Process(TaskGateText.QaGate)), proof: new StubProofSource(Complete()));
-        TaskItem task = CreateGated(harness, TaskState.Review);
+        TaskItem task = CreateGated(harness, TaskState.InProgress);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderOver(ctx,Complete(), task.Id);
 
@@ -110,7 +110,7 @@ public sealed class TaskDetailHumanGateTests
 
         Assert.Single(cut.FindAll(".task-detail-gate-refusal"));
         Assert.Empty(cut.FindAll(".task-detail-gate-override"));
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>A refusal that could be overridden stops offering Move anyway the moment the Task becomes gated underneath it.</summary>
@@ -182,16 +182,15 @@ public sealed class TaskDetailHumanGateTests
         Assert.Equal(withItems ? 1 : 0, cut.FindAll(".task-proof-list").Count);
     }
 
-    /// <summary>The decision card is mounted for a gated Task in Review or Needs You and for no other Task.</summary>
+    /// <summary>The decision card is mounted for a gated Task in Needs You and for no other Task.</summary>
     /// <param name="gated">Whether the Task is gated.</param>
     /// <param name="status">The Task's status.</param>
     /// <param name="mounted">Whether the card is expected.</param>
     [Theory]
-    [InlineData(true, TaskState.Review, true)]
     [InlineData(true, TaskState.NeedsYou, true)]
     [InlineData(true, TaskState.InProgress, false)]
-    [InlineData(false, TaskState.Review, false)]
-    public async Task DecisionCard_IsMountedOnlyForAGatedTaskInReviewOrNeedsYou(bool gated, TaskState status, bool mounted)
+    [InlineData(false, TaskState.InProgress, false)]
+    public async Task DecisionCard_IsMountedOnlyForAGatedTaskInNeedsYou(bool gated, TaskState status, bool mounted)
     {
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken, proof: new StubProofSource(Complete()));
         TaskItem task = gated ? CreateGated(harness, status) : CreateTask(harness, status: status, assignee: Nova);

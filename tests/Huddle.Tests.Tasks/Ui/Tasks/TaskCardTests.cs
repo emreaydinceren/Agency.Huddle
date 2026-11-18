@@ -126,9 +126,9 @@ public sealed class TaskCardTests : IDisposable
         Assert.Equal(priority.ToWire(), cut.Find(".task-card-header .mud-chip").TextContent.Trim());
     }
 
-    /// <summary>Spec §13.4 Cards: the title is wrapped by <c>MudHighlighter</c> while a search term is active.</summary>
+    /// <summary>Spec §13.4 Cards: the title is wrapped by <c>SearchHighlight</c> while a search term is active.</summary>
     [Fact]
-    public async Task SearchTerm_TitleIsWrappedByMudHighlighter()
+    public async Task SearchTerm_TitleIsWrappedBySearchHighlight()
     {
         TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "Widget Alpha Release");
 

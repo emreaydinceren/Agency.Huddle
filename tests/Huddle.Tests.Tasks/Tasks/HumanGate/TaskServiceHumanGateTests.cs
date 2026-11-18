@@ -30,7 +30,7 @@ public sealed class TaskServiceHumanGateTests
     /// <param name="harness">The harness.</param>
     /// <param name="status">The starting status.</param>
     /// <param name="action">The Action, or <see langword="null"/>.</param>
-    private static TaskItem CreateGated(TaskToolHarness harness, TaskState status = TaskState.Review, string? action = null)
+    private static TaskItem CreateGated(TaskToolHarness harness, TaskState status = TaskState.InProgress, string? action = null)
     {
         TaskDraft draft = new("Write the reply", Team, null, status) { HumanGate = true, Action = action };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
@@ -71,7 +71,7 @@ public sealed class TaskServiceHumanGateTests
         Assert.Equal(GateId.HumanGate, refused.Gate);
         Assert.Equal($"{task.Id} needs You's acceptance. Move it to Needs You when the Proof is complete; you'll be woken when You decides.", refused.Message);
         Assert.False(refused.CanOverride);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>The Human moving a gated Task in Needs You to Done without accepting it is refused.</summary>
@@ -102,7 +102,7 @@ public sealed class TaskServiceHumanGateTests
         TaskResult.GateRefused refused = Assert.IsType<TaskResult.GateRefused>(result);
         Assert.Equal(GateId.ProofIncomplete, refused.Gate);
         Assert.Equal($"{task.Id} can go to Needs You once its Proof is complete (3/4: citation check is open).", refused.Message);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>A move into Needs You with a complete Proof is logged with its Proof count.</summary>
@@ -116,7 +116,7 @@ public sealed class TaskServiceHumanGateTests
         TaskResult result = harness.Service.Update(task.Id, MoveTo(TaskState.NeedsYou), null, Nova);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        Assert.Equal("status: Review → Needs You (Proof 4/4)", saved.Change.Entry.Summary);
+        Assert.Equal("status: In Progress → Needs You (Proof 4/4)", saved.Change.Entry.Summary);
     }
 
     /// <summary>The Human's override flag is ignored for the Human gate's own refusal on a gated Task.</summary>
@@ -217,7 +217,7 @@ public sealed class TaskServiceHumanGateTests
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskResult created = harness.Service.Create(new TaskDraft("Write the reply", Team, null, TaskState.Review), HumanOf(harness));
+        TaskResult created = harness.Service.Create(new TaskDraft("Write the reply", Team, null, TaskState.InProgress), HumanOf(harness));
         TaskItem task = Assert.IsType<TaskResult.Saved>(created).Task;
 
         TaskResult result = harness.Service.Update(task.Id, new TaskPatch { HumanGate = Optional<bool>.Set(true) }, null, Nova);
@@ -276,19 +276,19 @@ public sealed class TaskServiceHumanGateTests
         harness.Store.RebuildFromWatcher();
 
         TaskItem? after = harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.Equal("Edited by hand", after?.Description);
         Assert.Equal(
             $"outside edit refused by Human gate: {task.Id} needs You's acceptance. Move it to Needs You when the Proof is complete; you'll be woken when You decides.",
             after?.ChangeLog[^1].Summary);
     }
 
-    /// <summary>A gated Task that appears outside Huddle already in Needs You or Done is reset to Review and logged.</summary>
+    /// <summary>A gated Task that appears outside Huddle already in Needs You or Done is reset to In Progress and logged.</summary>
     /// <param name="status">The status the file claims.</param>
     [Theory]
     [InlineData(TaskState.NeedsYou)]
     [InlineData(TaskState.Done)]
-    public void OutsideEdit_GatedTaskCreatedInNeedsYouOrDone_IsResetToReviewAndLogged(TaskState status)
+    public void OutsideEdit_GatedTaskCreatedInNeedsYouOrDone_IsResetToInProgressAndLogged(TaskState status)
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
@@ -300,7 +300,7 @@ public sealed class TaskServiceHumanGateTests
         harness.Store.RebuildFromWatcher();
 
         TaskItem? after = harness.Store.Get(newId);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.Equal($"outside edit refused by Human gate: {newId} is Human-gated, so it starts before Needs You.", after?.ChangeLog[^1].Summary);
     }
 

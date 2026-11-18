@@ -16,7 +16,7 @@ namespace Agency.Huddle.Tests.Tasks;
 public sealed class TaskServiceGateTests
 {
     private const string SpecFirst = "Gate spec-approved-before-build: the parent spec Task must be approved before this Task can move to In Progress.";
-    private const string FailFirst = "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move to Review.";
+    private const string FailFirst = "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move on.";
     private const string HumanOnly = "Only the Human can set approved_by.";
     private const string SpecGate = "'spec-approved-before-build'";
     private const string FailGate = "'failing-test-before-fix'";
@@ -267,15 +267,15 @@ public sealed class TaskServiceGateTests
         Assert.Equal(TaskState.InProgress, Assert.IsType<TaskResult.Saved>(allowed).Task.Status);
     }
 
-    /// <summary>A Task labelled bug is refused Review without a failing test followed by a passing one.</summary>
+    /// <summary>A Task labelled bug is refused Done without a failing test followed by a passing one.</summary>
     [Fact]
-    public void Update_BugTagToReviewWithoutFailingTest_IsGateRefused()
+    public void Update_BugTagToDoneWithoutFailingTest_IsGateRefused()
     {
         using TempDataDir gateDir = new();
         using TaskToolHarness harness = new(gates: BuildGates(gateDir, Process(FailGate)));
         TaskItem bug = CreateTask(harness, tags: ["bug"]);
 
-        TaskResult result = harness.Service.Update(bug.Id, MoveTo(TaskState.Review), null, Nova);
+        TaskResult result = harness.Service.Update(bug.Id, MoveTo(TaskState.Done), null, Nova);
 
         Assert.Equal(FailFirst, Assert.IsType<TaskResult.GateRefused>(result).Message);
     }

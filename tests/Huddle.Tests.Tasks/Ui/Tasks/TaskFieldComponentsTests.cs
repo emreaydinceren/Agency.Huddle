@@ -28,7 +28,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
     [InlineData(TaskState.Backlog, Color.Default)]
     [InlineData(TaskState.ToDo, Color.Default)]
     [InlineData(TaskState.InProgress, Color.Info)]
-    [InlineData(TaskState.Review, Color.Tertiary)]
+    [InlineData(TaskState.NeedsYou, Color.Tertiary)]
     [InlineData(TaskState.Done, Color.Success)]
     [InlineData(TaskState.Rejected, Color.Error)]
     public async Task StatusChip_SmallChipInStateColourWithWireName(TaskState status, Color expected)
@@ -85,7 +85,7 @@ public sealed class TaskFieldComponentsTests : IDisposable
     [InlineData(TaskState.Backlog, "task-status-chip status-chip-state-backlog")]
     [InlineData(TaskState.ToDo, "task-status-chip status-chip-state-todo")]
     [InlineData(TaskState.InProgress, "task-status-chip status-chip-state-inprogress")]
-    [InlineData(TaskState.Review, "task-status-chip status-chip-state-review")]
+    [InlineData(TaskState.NeedsYou, "task-status-chip status-chip-state-needsyou")]
     [InlineData(TaskState.Done, "task-status-chip status-chip-state-done")]
     [InlineData(TaskState.Cancelled, "task-status-chip status-chip-state-cancelled")]
     public async Task TaskStatusChip_CarriesItsStateClass(TaskState status, string expected)

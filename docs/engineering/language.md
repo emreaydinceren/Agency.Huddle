@@ -220,7 +220,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   **Human-gated** when it names an **Action** or the Human turned on *Requires your
   acceptance*. The Human decides with **Accept**, **Request changes** or **Decline**;
   only an acceptance opens Done, and it is void if the text changes (ADR-0061).
-: *Avoid*: approval, sign-off, override, review (Review is a status).
+: *Avoid*: approval, sign-off, override, review (a review is a Task tagged `review`, ADR-0096).
 
 **Action**
 : What a Human-gated Task will do outside the Team once accepted, in one line: "Send
@@ -668,7 +668,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   listed until the Human posts in it or dismisses it. Opening the Room does not
   clear it. In interface copy the card reads "Needs you". See
   [ADR-0050](../adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md).
-: Also the Task status between Review and Done that only a **Human-gated** Task can
+: Also the Task status between In Progress and Done that only a **Human-gated** Task can
   enter, once its **Proof** is complete. A Task in it, not yet accepted, is listed on
   the card and the `/needs-you` page; it leaves only by a decision or a status change
   (ADR-0061). The status and the card share the name on purpose.
@@ -795,6 +795,28 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   `changes.md` list. The Human restores a file by copying its text back by hand. Pass folders older
   than `Team:Memory:Tidy:KeepBackupDays` (90) are deleted when a pass starts.
 : *Avoid*: archive (that is `memory/archive/`, old topics kept on purpose), trash.
+
+**Goldfish mode**
+: An Agent doing a piece of work in one Room with an empty mind: its own Name, Persona, Adapter and Model, its tools
+  except the ones that read Memory and other Rooms, and nothing of the Room's history but the **brief**. An Agent starts
+  it with the `goldfish` App Tool; it ends by `goldfish_done` or by a Member's "@Ruth comeback", and every exit returns
+  the body with a result. Messages the goldfish posts carry the stamp "Ruth · goldfish". Offered only on a Claude
+  Adapter with isolation. See
+  [ADR-0097](../adr/0097-goldfish-mode-a-possession-of-one-agent-in-one-room.md).
+: *Avoid*: clone, sub-agent, reviewer mode, fresh-eyes mode (that is the Room subtitle's wording, not the name).
+
+**brief**
+: The one text that crosses into goldfish mode: what to do and which files to read. Huddle posts it word for word in
+  the Room when the goldfish starts, and again at the top of the result. At most `Team:Goldfish:MaxBriefChars`
+  characters. It should not say what the author thinks the answer is.
+: *Avoid*: prompt, instructions (that is the tool's argument name, `instructions`), context.
+
+**possession**
+: The state of one Agent in one Room while goldfish mode runs there, from the runner's report that the clean session
+  opened until the return step. The warm Agent is set aside in that Room only, and every tool call from that (Agent,
+  Room) pair is the goldfish's. One open possession per Agent. It is never resumed after a restart. In code,
+  `Possession` and `GoldfishSupervisor`.
+: *Avoid*: takeover, handoff, session (a possession owns a clean session; it is not one).
 
 **`AGENTS.md` Changes Helper**
 : The third Helper. It reads one edit to an `AGENTS.md` file, as the old text, the new

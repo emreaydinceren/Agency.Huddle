@@ -11,7 +11,6 @@ public static class TaskStates
         { TaskState.Backlog, "Backlog" },
         { TaskState.ToDo, "To Do" },
         { TaskState.InProgress, "In Progress" },
-        { TaskState.Review, "Review" },
         { TaskState.NeedsYou, "Needs You" },
         { TaskState.Done, "Done" },
         { TaskState.Cancelled, "Cancelled" },
@@ -19,13 +18,12 @@ public static class TaskStates
         { TaskState.Rejected, "Rejected" },
     };
 
-    /// <summary>Declaration order: Backlog, ToDo, InProgress, Review, NeedsYou, Done, Cancelled, Duplicate, Rejected.</summary>
+    /// <summary>Declaration order: Backlog, ToDo, InProgress, NeedsYou, Done, Cancelled, Duplicate, Rejected.</summary>
     private static readonly IReadOnlyList<TaskState> AllStates = new ReadOnlyCollection<TaskState>(
     [
         TaskState.Backlog,
         TaskState.ToDo,
         TaskState.InProgress,
-        TaskState.Review,
         TaskState.NeedsYou,
         TaskState.Done,
         TaskState.Cancelled,

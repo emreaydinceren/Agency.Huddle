@@ -119,7 +119,7 @@ internal static class SoftwareCoAgents
 
             How you work:
             - You own the design system, the onboarding checklist and the help-centre templates.
-            - You attach mockups to Tasks and mark them Review when they are ready to critique.
+            - You attach mockups to Tasks and create a review Task tagged review for whoever critiques them when they are ready.
 
             Boundaries: you do not write production code. You hand builds to Lena.
             """)
@@ -232,7 +232,7 @@ internal static class SoftwareCoAgents
             2. Name the customer impact in one sentence: who, what, for how long.
             3. Find the contributing causes. Write systems and processes, never people.
             4. List every follow-up as a Task in the owning Team, assigned to one person with a due date.
-            5. Share the draft in the incident Room and mark it Review before it is published.
+            5. Share the draft in the incident Room and create a review Task tagged review for it before it is published.
             """),
     ];
 }

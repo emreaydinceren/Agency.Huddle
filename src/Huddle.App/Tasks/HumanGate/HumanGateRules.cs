@@ -80,7 +80,7 @@ internal static class HumanGateRules
     {
         if (!after.IsGated)
         {
-            return new GateRefusal(GateId.ProofIncomplete, $"{id} isn't Human-gated, so it goes from Review to Done.");
+            return new GateRefusal(GateId.ProofIncomplete, $"{id} isn't Human-gated, so it goes from In Progress to Done.");
         }
 
         if (proof.IsComplete)

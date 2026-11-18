@@ -18,7 +18,7 @@ internal enum RequestEvent
     /// <summary>The receiving manager declined the Request with a reason.</summary>
     Decline,
 
-    /// <summary>The receiving Team worked the Request (To Do to Review).</summary>
+    /// <summary>The receiving Team worked the Request (To Do or In Progress; the status is unchanged).</summary>
     Work,
 
     /// <summary>The requesting Team's QA confirmed the Request is done.</summary>

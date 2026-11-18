@@ -53,7 +53,9 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
    throwaway terminal, `$env:Team__Acp__TraceWire = 'true'` set before the `dotnet run` line of
    `P-LAUNCH-PAID`, closed afterwards, never set for any other test. **That alone prints nothing:** the
    wire trace is written at `Trace` level and the Development log shows `Debug`, so also set
-   `[Environment]::SetEnvironmentVariable('Logging__LogLevel__Agency.Huddle.Acp.Wire', 'Trace', 'Process')`
+   `[Environment]::SetEnvironmentVariable('Logging__Console__LogLevel__Agency.Huddle.Acp.Wire', 'Trace', 'Process')`
+   (the `Console` segment matters: `appsettings.json` sets a `Logging:Console:LogLevel` filter that wins over `Logging:LogLevel`, so the
+   variable without it prints nothing, measured on the goldfish manual run)
    (found on the 2026-10-01 run; without it `O-LOG` has no `session/*` lines at all). It prints the tool
    server's bearer token into `O-LOG`. To search it, redirect the app's output to a file and use
    `Select-String`; a request is `"method": "session/..."` on its own line, with its body after it. That file

@@ -59,7 +59,7 @@ not yet:
 | --- | --- | --- |
 | Generate | An Agent with its own role, context and model | Built |
 | Challenge | `@`-mention a second Agent, ideally on another model | Built; you have to ask for it |
-| Verify | You, a member of every room; Tasks with a named owner and a Review status | Partly: no built-in test step |
+| Verify | You, a member of every room; Tasks with a named owner and a review Task for the reviewer | Partly: no built-in test step |
 
 The rest of this page explains each row.
 
@@ -239,7 +239,7 @@ per Project and cards you drag between columns. When a Task assigned to an Agent
 changes, whether you drag a card, edit the file by hand or another Agent updates
 it, Huddle posts a message in a Room that wakes the assignee. Work moves without
 anyone polling a chat. Every change is appended to the Task's timeline, and the
-statuses include **Review**, which is where a Challenge step belongs. Agents
+a Challenge step is a review Task assigned to the reviewer. Agents
 changing each other's Tasks could loop, so each Task allows ten Agent-made
 wake-ups until you select **Allow 10 more**.
 

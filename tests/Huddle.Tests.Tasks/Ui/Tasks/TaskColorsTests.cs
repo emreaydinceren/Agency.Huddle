@@ -16,7 +16,7 @@ public sealed class TaskColorsTests
     [InlineData(TaskState.Backlog, Color.Default)]
     [InlineData(TaskState.ToDo, Color.Default)]
     [InlineData(TaskState.InProgress, Color.Info)]
-    [InlineData(TaskState.Review, Color.Tertiary)]
+    [InlineData(TaskState.NeedsYou, Color.Tertiary)]
     [InlineData(TaskState.Done, Color.Success)]
     [InlineData(TaskState.Cancelled, Color.Error)]
     [InlineData(TaskState.Duplicate, Color.Error)]

@@ -131,7 +131,7 @@ public sealed class NeedsYouTaskSourceTests
     public void GatedTaskInReview_IsNotListed()
     {
         using TaskToolHarness harness = new();
-        _ = Seed(harness, "PLAT-0001", TaskState.Review, true, null, TestTasks.Entry(FirstEntry, "Ada", "created"));
+        _ = Seed(harness, "PLAT-0001", TaskState.InProgress, true, null, TestTasks.Entry(FirstEntry, "Ada", "created"));
         using NeedsYouTaskSource source = SourceOver(harness, new FixedProofSource(new Proof([])));
 
         Assert.Empty(source.Entries);
@@ -218,7 +218,7 @@ public sealed class NeedsYouTaskSourceTests
         using NeedsYouTaskSource source = SourceOver(harness, new FixedProofSource(new Proof([])));
         Assert.Single(source.Entries);
 
-        _ = Edit(harness, task, t => t with { Status = TaskState.Review });
+        _ = Edit(harness, task, t => t with { Status = TaskState.InProgress });
 
         Assert.Empty(source.Entries);
     }

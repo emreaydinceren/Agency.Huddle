@@ -835,16 +835,6 @@
     border-radius: var(--hu-radius-card);
 }
 
-:root:has([data-hu-surface="paper"]) .task-decision-review {
-    padding: 8px 12px;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--hu-tone-warning-line);
-    border-radius: var(--hu-radius-card);
-    font-size: var(--mud-typography-caption-size);
-    line-height: 1.45;
-    color: var(--hu-text-subtle);
-}
-
 /* ---- composer=underlined: Fluent ------------------------------------------------------------- */
 /* Fluent (composer: underlined, the one Theme that declares it): a 14px ink heading on each card, and the decision card keeps
    the warning band of the panel. */

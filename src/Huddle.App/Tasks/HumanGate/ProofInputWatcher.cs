@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Tasks.HumanGate;
 
 /// <summary>
 /// Closes #593: a Proof input that lives outside the Task file (an attached document's REVIEWED history entry, a tagged child
-/// reaching Done) re-evaluates the gated Task and moves it from Review to Needs You the same way a Task write does. It reuses
+/// reaching Done) re-evaluates the gated Task and moves it from In Progress to Needs You the same way a Task write does. It reuses
 /// <see cref="DocHistoryStore.Changed"/> rather than <see cref="LibraryEvents"/>, because <see cref="LibraryEvents"/> only carries
 /// the Human's Library saves, while a REVIEWED entry comes from an Agent's <c>log_change</c>, which only <see cref="DocHistoryStore"/>
 /// sees. There is no polling. It subscribes in its constructor, so the host builds it at start-up (it is a hosted service only for that).
@@ -52,7 +52,7 @@ internal sealed class ProofInputWatcher : IHostedService, IDisposable
         this.events.TaskChanged -= this.OnTaskChanged;
     }
 
-    /// <summary>Re-evaluates the Tasks in Review that attach <paramref name="file"/> when its newest entry is a review.</summary>
+    /// <summary>Re-evaluates the Tasks In Progress that attach <paramref name="file"/> when its newest entry is a review.</summary>
     /// <param name="file">The document whose History changed.</param>
     private void OnHistoryChanged(LibraryPath file)
     {
@@ -63,7 +63,7 @@ internal sealed class ProofInputWatcher : IHostedService, IDisposable
             return;
         }
 
-        List<TaskItem> waiting = [.. this.tasks.All.Where(static task => task.Status == TaskState.Review && !task.Location.Closed)];
+        List<TaskItem> waiting = [.. this.tasks.All.Where(static task => task.Status == TaskState.InProgress && !task.Location.Closed)];
         foreach (TaskItem task in waiting.Where(task => this.Attaches(task, file)))
         {
             this.service.MoveIfReady(task.Id);
