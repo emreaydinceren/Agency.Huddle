@@ -43,7 +43,7 @@ else if (this.isAdmin == true)
 
     @if (this.error is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
+        <Notice Severity="NoticeLevel.Error">@this.error</Notice>
     }
 
     <div class="settings-layout">

@@ -74,7 +74,7 @@
 
 @if (this.addError is not null)
 {
-    <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="library-panel-add-error">@this.addError</MudAlert>
+    <Notice Severity="NoticeLevel.Error" Class="library-panel-add-error">@this.addError</Notice>
 }
 
 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-2 library-panel-add-row">

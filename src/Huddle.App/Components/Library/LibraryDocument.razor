@@ -60,7 +60,7 @@
     </MudToolBar>
     @if (this.outsideScope)
     {
-        <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-outside-scope">Outside this view</MudAlert>
+        <Notice Severity="NoticeLevel.Info" Class="library-document-outside-scope">Outside this view</Notice>
         <ActionButton Role="ButtonRole.Quiet" Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</ActionButton>
     }
     else if (this.missing)
@@ -90,15 +90,15 @@
         }
         @if (this.saveError is not null)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="library-document-save-error">@this.saveError</MudAlert>
+            <Notice Severity="NoticeLevel.Error" Class="library-document-save-error">@this.saveError</Notice>
         }
         @if (this.definitionName is not null)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-banner">This is @(this.definitionName)'s definition.</MudAlert>
+            <Notice Severity="NoticeLevel.Info" Class="library-document-banner">This is @(this.definitionName)'s definition.</Notice>
         }
         @if (this.content.ViewOnlyReason is not null)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-banner">@this.content.ViewOnlyReason</MudAlert>
+            <Notice Severity="NoticeLevel.Info" Class="library-document-banner">@this.content.ViewOnlyReason</Notice>
         }
         else if (this.mode == LibraryMode.Edit && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
         {

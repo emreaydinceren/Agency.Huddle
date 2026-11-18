@@ -19,7 +19,7 @@
 
 @if (this.error is not null)
 {
-    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" role="alert">@this.error</MudAlert>
+    <Notice Severity="NoticeLevel.Error">@this.error</Notice>
 }
 
 @if (this.ready)

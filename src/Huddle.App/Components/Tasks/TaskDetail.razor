@@ -583,10 +583,10 @@ else if (this.loaded is { } task)
     @* Below the Header, which holds Save: above it, the notice's arrival moved Save out from under the pointer. *@
     @if (this.HasPending)
     {
-        <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
+        <Notice Severity="NoticeLevel.Info" Class="task-detail-unsaved">
             <span class="task-detail-unsaved-text">Unsaved edits</span>
             <ActionButton OnClick="this.Revert">Revert</ActionButton>
-        </MudAlert>
+        </Notice>
     }
 
     <MudGrid Class="task-detail-grid">

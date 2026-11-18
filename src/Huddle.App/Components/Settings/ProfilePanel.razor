@@ -28,10 +28,10 @@
 
 @if (!this.Profiles.IsSaved)
 {
-    <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="mb-3 profile-welcome">
+    <Notice Severity="NoticeLevel.Info" Class="profile-welcome">
         Welcome. Start by telling your Agents who you are: your Name, an optional Alias they can
         @@mention you by, and your title. Click the avatar to give yourself a face.
-    </MudAlert>
+    </Notice>
 }
 
 <SettingsIntro>
@@ -57,12 +57,12 @@
 
         @if (this.problems.Count > 0)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="mt-2 profile-problems">
+            <Notice Severity="NoticeLevel.Error" Class="profile-problems">
                 @foreach (var problem in this.problems)
                 {
                     <div class="profile-problem">@problem</div>
                 }
-            </MudAlert>
+            </Notice>
         }
 
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-3">

@@ -16,7 +16,7 @@
 
 @if (!this.Options.Value.Acp.Enabled)
 {
-    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">@HelpersCopy.AdaptersOff</MudAlert>
+    <Notice Severity="NoticeLevel.Info">@HelpersCopy.AdaptersOff</Notice>
 }
 
 @foreach (IHelperAgent entry in this.Registry.All)
