@@ -48,10 +48,10 @@
             }
 
             <div class="new-chat-actions">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="new-chat-cancel" OnClick="this.CloseAsync">Cancel</MudButton>
+                <ActionButton Class="new-chat-cancel" OnClick="this.CloseAsync">Cancel</ActionButton>
                 @if (this.agents.Count > 0)
                 {
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" Size="Size.Small" OnClick="this.StartChatAsync">Open room</MudButton>
+                    <ActionButton Role="ButtonRole.Primary" Class="new-chat-start" Disabled="@(this.selectedAgentIds.Count == 0)" OnClick="this.StartChatAsync">Open room</ActionButton>
                 }
             </div>
         </div>

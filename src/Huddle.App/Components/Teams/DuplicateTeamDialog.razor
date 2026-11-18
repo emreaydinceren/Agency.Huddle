@@ -22,7 +22,7 @@
                 <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace flex-grow-1" />
                 @if (!this.RemoteAccess.IsConfigured)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Folder" OnClick="this.BrowseAsync" Class="duplicate-team-browse">Browse</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Folder" OnClick="this.BrowseAsync" Class="duplicate-team-browse">Browse</ActionButton>
                 }
             </MudStack>
             @if (this.error is not null)

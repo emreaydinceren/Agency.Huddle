@@ -58,15 +58,15 @@
             @if (this.RegistrySkills(copyable: false).Count > 0)
             {
                 <MudText Typo="Typo.caption" Class="custom-role-skills-helper d-block mud-text-secondary">Skills not downloaded are listed below; ask your AI tool to fetch them.</MudText>
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="custom-role-not-here-toggle" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
-                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.RegistrySkills(copyable: false).Count)</MudButton>
+                <ActionButton Class="custom-role-not-here-toggle" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
+                              EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.RegistrySkills(copyable: false).Count)</ActionButton>
                 <MudCollapse Expanded="@this.notHereOpen" Class="custom-role-not-here">
                     @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.RegistrySkills(copyable: false))
                     {
                         Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
                         <div class="custom-role-not-here-row d-flex flex-wrap align-center gap-2 mb-1" data-skill="@shown.Name">
                             <MudText Typo="Typo.body2">@shown.Name</MudText>
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="custom-role-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</MudButton>
+                            <ActionButton Role="ButtonRole.Secondary" Class="custom-role-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</ActionButton>
                         </div>
                     }
                 </MudCollapse>

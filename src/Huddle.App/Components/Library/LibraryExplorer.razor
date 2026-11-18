@@ -86,10 +86,10 @@
                     @if (this.PrimaryScope() is not null)
                     {
                         <div class="library-explorer-tree-actions">
-                            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote"
-                                       OnClick="this.NewNoteAsync" Class="library-explorer-new-note">New note</MudButton>
-                            <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewFolder"
-                                       OnClick="this.NewFolderAsync" Class="library-explorer-new-folder">New folder</MudButton>
+                            <ActionButton StartIcon="@ActionIcons.NewNote"
+                                          OnClick="this.NewNoteAsync" Class="library-explorer-new-note">New note</ActionButton>
+                            <ActionButton StartIcon="@ActionIcons.NewFolder"
+                                          OnClick="this.NewFolderAsync" Class="library-explorer-new-folder">New folder</ActionButton>
                         </div>
                     }
                 </div>
@@ -138,7 +138,7 @@
                         <Action>
                             @if (this.SingleScope() is not null && this.Part != LibraryExplorerPart.DocumentOnly)
                             {
-                                <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@ActionIcons.NewNote" OnClick="this.NewNoteAsync">New note</MudButton>
+                                <ActionButton StartIcon="@ActionIcons.NewNote" OnClick="this.NewNoteAsync">New note</ActionButton>
                             }
                         </Action>
                     </EmptyState>

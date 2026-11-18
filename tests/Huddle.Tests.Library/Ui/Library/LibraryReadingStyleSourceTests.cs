@@ -63,10 +63,13 @@ public sealed class LibraryReadingStyleSourceTests
     public void Explorer_NewNoteButtons_ShareOneStyle()
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Library", "LibraryExplorer.razor"));
-        string[] lines = markup.Split('\n').Where(l => l.Contains("New note</MudButton>", StringComparison.Ordinal)).ToArray(); // contains-ok: Razor source text, not rendered markup
+        string[] tags = System.Text.RegularExpressions.Regex.Matches(markup, @"<ActionButton[^<]*?New note</ActionButton>", System.Text.RegularExpressions.RegexOptions.CultureInvariant, TimeSpan.FromSeconds(2))
+            .Select(static m => m.Value)
+            .ToArray();
 
-        Assert.Equal(2, lines.Length);
-        Assert.All(lines, l => Assert.DoesNotContain("Variant.Outlined", l, StringComparison.Ordinal)); // contains-ok: Razor source text, not rendered markup
+        // Quiet is ActionButton's default role, so a New note button that writes any Role is no longer the quiet style.
+        Assert.Equal(2, tags.Length);
+        Assert.All(tags, t => Assert.DoesNotContain("Role=", t, StringComparison.Ordinal)); // contains-ok: Razor source text, not rendered markup
     }
 
 }

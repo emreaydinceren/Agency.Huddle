@@ -45,7 +45,7 @@
         <MudSpacer />
         @if (this.mode != LibraryMode.Read && this.content is { Kind: LibraryFileKind.Markdown, Editable: true })
         {
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="library-document-save" Disabled="@(!this.dirty)" OnClick="@this.OnSaveRequestedAsync">Save</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Class="library-document-save" Disabled="@(!this.dirty)" OnClick="@this.OnSaveRequestedAsync">Save</ActionButton>
         }
         @if (this.ShowModeToggle())
         {
