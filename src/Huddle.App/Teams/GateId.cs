@@ -12,13 +12,13 @@ internal enum GateId
     /// <summary>A Task cannot move to In Progress until its parent spec Task is approved.</summary>
     SpecApprovedBeforeBuild,
 
-    /// <summary>A bug Task cannot move to Review until an Evidence line shows a failing test before the fix.</summary>
+    /// <summary>A bug Task cannot move to Needs You or Done until an Evidence line shows a failing test before the fix.</summary>
     FailingTestBeforeFix,
 
     /// <summary>A merge into main waits for an accepted Task of the Team, whoever runs it and however the Task is worded (#401).</summary>
     AcceptBeforeMerge,
 
-    /// <summary>A Task cannot move to In Progress, Review, Needs You or Done while a Task it is blocked by is still open (#538).</summary>
+    /// <summary>A Task cannot move to In Progress, Needs You or Done while a Task it is blocked by is still open (#538).</summary>
     BlockersDoneBeforeStart,
 
     /// <summary>A Human-gated Task cannot skip the Human's acceptance; never written in _team.md.</summary>

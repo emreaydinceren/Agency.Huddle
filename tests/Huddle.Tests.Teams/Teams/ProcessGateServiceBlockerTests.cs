@@ -22,7 +22,6 @@ public sealed class ProcessGateServiceBlockerTests
     /// <param name="to">The proposed status.</param>
     [Theory]
     [InlineData("In Progress")]
-    [InlineData("Review")]
     [InlineData("Needs You")]
     [InlineData("Done")]
     public void CheckTaskChange_OpenBlocker_IsRefusedNamingIt(string to)
@@ -48,9 +47,9 @@ public sealed class ProcessGateServiceBlockerTests
         GateRefusal? refusal = service.CheckTaskChange(Context(
             "Backlog",
             "In Progress",
-            [new OpenBlocker(new TaskId("DEVT", 1), TaskState.Review), new OpenBlocker(new TaskId("DEVT", 4), TaskState.Backlog)]));
+            [new OpenBlocker(new TaskId("DEVT", 1), TaskState.InProgress), new OpenBlocker(new TaskId("DEVT", 4), TaskState.Backlog)]));
 
-        Assert.Contains("blocked by DEVT-0001 (Review), DEVT-0004 (Backlog).", refusal?.Message, StringComparison.Ordinal); // contains-ok: pins the list order and separator; the full sentence is pinned in the theory above
+        Assert.Contains("blocked by DEVT-0001 (In Progress), DEVT-0004 (Backlog).", refusal?.Message, StringComparison.Ordinal); // contains-ok: pins the list order and separator; the full sentence is pinned in the theory above
     }
 
     /// <summary>Moving to Backlog or To Do is never refused by the gate: a blocked Task may be planned.</summary>

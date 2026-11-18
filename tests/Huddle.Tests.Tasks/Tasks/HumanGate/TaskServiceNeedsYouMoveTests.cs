@@ -28,7 +28,7 @@ public sealed class TaskServiceNeedsYouMoveTests
     /// <param name="harness">The harness.</param>
     /// <param name="status">The status to create it in.</param>
     /// <param name="gated">Whether it is Human-gated.</param>
-    private static TaskItem Create(TaskToolHarness harness, TaskState status = TaskState.Review, bool gated = true)
+    private static TaskItem Create(TaskToolHarness harness, TaskState status = TaskState.InProgress, bool gated = true)
     {
         TaskDraft draft = new("Write the reply", Team, null, status) { HumanGate = gated };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
@@ -60,7 +60,7 @@ public sealed class TaskServiceNeedsYouMoveTests
         Assert.NotNull(after);
         Assert.Equal(TaskState.NeedsYou, after.Status);
         ChangeLogEntry last = after.ChangeLog[^1];
-        Assert.Equal("status: Review → Needs You (Proof 4/4)", last.Summary);
+        Assert.Equal("status: In Progress → Needs You (Proof 4/4)", last.Summary);
         Assert.Equal("Huddle", last.Actor);
     }
 
@@ -79,19 +79,19 @@ public sealed class TaskServiceNeedsYouMoveTests
         Assert.Equal(2, changes.Count);
         Assert.Equal(TaskActorKind.Agent, changes[0].Actor.Kind);
         Assert.Equal(TaskActorKind.Helper, changes[1].Actor.Kind);
-        Assert.Equal(TaskState.Review, changes[1].Before?.Status);
+        Assert.Equal(TaskState.InProgress, changes[1].Before?.Status);
         Assert.Equal(TaskState.NeedsYou, changes[1].After.Status);
     }
 
-    /// <summary>An Agent moving a gated Task to Review with its Proof already complete finds it in Needs You.</summary>
+    /// <summary>An Agent moving a gated Task to In Progress with its Proof already complete finds it in Needs You.</summary>
     [Fact]
-    public void Update_AgentMovesToReviewWithProofComplete_MovesToNeedsYou()
+    public void Update_AgentMovesToInProgressWithProofComplete_MovesToNeedsYou()
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskItem task = Create(harness, TaskState.InProgress);
+        TaskItem task = Create(harness, TaskState.ToDo);
 
-        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, Nova));
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, Nova));
 
         Assert.Equal(TaskState.NeedsYou, harness.Store.Get(task.Id)?.Status);
     }
@@ -110,17 +110,6 @@ public sealed class TaskServiceNeedsYouMoveTests
         Assert.Equal(TaskState.NeedsYou, harness.Store.Get(task.Id)?.Status);
     }
 
-    /// <summary>A Task still In Progress stays there when Evidence completes its Proof: review is not skipped.</summary>
-    [Fact]
-    public void AddEvidence_InProgress_StaysInProgress()
-    {
-        FixedProofSource proof = new(FixedProofSource.Complete);
-        using TaskToolHarness harness = Build(proof);
-        TaskItem task = Create(harness, TaskState.InProgress);
-
-        Assert.Equal(TaskState.InProgress, AddEvidenceAndRead(harness, task)?.Status);
-    }
-
     /// <summary>A Task whose Proof is still open stays in Review.</summary>
     [Fact]
     public void AddEvidence_ProofIncomplete_StaysInReview()
@@ -129,7 +118,7 @@ public sealed class TaskServiceNeedsYouMoveTests
         using TaskToolHarness harness = Build(proof);
         TaskItem task = Create(harness);
 
-        Assert.Equal(TaskState.Review, AddEvidenceAndRead(harness, task)?.Status);
+        Assert.Equal(TaskState.InProgress, AddEvidenceAndRead(harness, task)?.Status);
     }
 
     /// <summary>An ungated Task stays in Review: it goes from Review to Done, never to Needs You.</summary>
@@ -140,7 +129,7 @@ public sealed class TaskServiceNeedsYouMoveTests
         using TaskToolHarness harness = Build(proof);
         TaskItem task = Create(harness, gated: false);
 
-        Assert.Equal(TaskState.Review, AddEvidenceAndRead(harness, task)?.Status);
+        Assert.Equal(TaskState.InProgress, AddEvidenceAndRead(harness, task)?.Status);
     }
 
     /// <summary>A closed Task is not moved.</summary>
@@ -155,7 +144,7 @@ public sealed class TaskServiceNeedsYouMoveTests
         TaskItem? after = AddEvidenceAndRead(harness, task);
 
         Assert.NotNull(after);
-        Assert.Equal(TaskState.Review, after.Status);
+        Assert.Equal(TaskState.InProgress, after.Status);
     }
 
     /// <summary>A Task the Human already accepted stays where it is and gets no second move from Huddle; an acceptance only exists in Needs You.</summary>
@@ -164,7 +153,7 @@ public sealed class TaskServiceNeedsYouMoveTests
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskDraft draft = new("Write the reply", Team, null, TaskState.Review) { HumanGate = true, Action = "Send the reply" };
+        TaskDraft draft = new("Write the reply", Team, null, TaskState.InProgress) { HumanGate = true, Action = "Send the reply" };
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
         TaskItem waiting = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, Nova)).Task;
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, waiting.Version, HumanOf(harness)));
@@ -178,17 +167,17 @@ public sealed class TaskServiceNeedsYouMoveTests
         Assert.Single(changes);
     }
 
-    /// <summary>The Human dragging a gated card back to Review leaves it there, even with the Proof complete.</summary>
+    /// <summary>The Human dragging a gated card to In Progress leaves it there, even with the Proof complete.</summary>
     [Fact]
-    public void Update_HumanMovesToReview_StaysInReview()
+    public void Update_HumanMovesToInProgress_StaysInProgress()
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskItem task = Create(harness, TaskState.InProgress);
+        TaskItem task = Create(harness, TaskState.ToDo);
 
-        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, HumanOf(harness)));
+        _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, HumanOf(harness)));
 
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>An unrelated edit by an Agent on a ready Task in Review does not trigger the move.</summary>
@@ -201,7 +190,7 @@ public sealed class TaskServiceNeedsYouMoveTests
 
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Title = "Write the reply today" }, null, Nova));
 
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>An Agent that moves the Task to Needs You itself still can, and Huddle adds no second move.</summary>
@@ -235,7 +224,7 @@ public sealed class TaskServiceNeedsYouMoveTests
         TaskItem? after = harness.Store.Get(task.Id);
         Assert.NotNull(after);
         Assert.Equal(TaskState.NeedsYou, after.Status);
-        Assert.Equal("status: Review → Needs You (Proof 4/4)", after.ChangeLog[^1].Summary);
+        Assert.Equal("status: In Progress → Needs You (Proof 4/4)", after.ChangeLog[^1].Summary);
         Assert.Equal("Huddle", after.ChangeLog[^1].Actor);
     }
 
@@ -254,7 +243,7 @@ public sealed class TaskServiceNeedsYouMoveTests
         TaskItem? after = harness.Store.Get(task.Id);
         Assert.NotNull(after);
         Assert.Equal(task.Version, after.Version);
-        Assert.Equal(TaskState.Review, after.Status);
+        Assert.Equal(TaskState.InProgress, after.Status);
         Assert.Empty(changes);
     }
 

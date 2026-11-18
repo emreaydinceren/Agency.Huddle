@@ -31,7 +31,7 @@ public sealed class TaskServiceHumanGateReviewTests
     /// <param name="action">The Action, or <see langword="null"/>.</param>
     private static TaskItem Create(TaskToolHarness harness, bool gated = true, string? action = null)
     {
-        TaskDraft draft = new("Write the reply", Team, null, TaskState.Review) { HumanGate = gated, Action = action };
+        TaskDraft draft = new("Write the reply", Team, null, TaskState.InProgress) { HumanGate = gated, Action = action };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
     }
 
@@ -118,7 +118,7 @@ public sealed class TaskServiceHumanGateReviewTests
     {
         const string Refusal = "outside edit refused by Human gate: only You can accept PLAT-0001, in Huddle.";
         TaskItem draft = TestTasks.Make(title: "Write the summary", status: TaskState.NeedsYou, description: "Body text") with { Action = "Read the summary" };
-        ChangeLogEntry entered = TestTasks.Entry("2026-10-01T09:00:00Z", "Ada", "status: Review → Needs You (Proof 4/4)");
+        ChangeLogEntry entered = TestTasks.Entry("2026-10-01T09:00:00Z", "Ada", "status: In Progress → Needs You (Proof 4/4)");
         string hash = ContentFingerprint.Of(draft.Title, draft.Action, draft.Description);
         ChangeLogEntry accepted = TestTasks.Entry("2026-10-02T09:00:00Z", "Emre", "accepted " + hash);
         ChangeLogEntry refusal = TestTasks.Entry("2026-10-03T09:00:00Z", "Emre", Refusal);
@@ -203,15 +203,17 @@ public sealed class TaskServiceHumanGateReviewTests
         TaskItem accepted = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Accept, null, task.Version, HumanOf(harness))).Task;
 
         TaskItem moved = Assert.IsType<TaskResult.Saved>(harness.Service.Update(accepted.Id, new TaskPatch { Status = TaskState.InProgress }, null, Nova)).Task;
-        TaskItem back = Assert.IsType<TaskResult.Saved>(harness.Service.Update(accepted.Id, new TaskPatch { Status = TaskState.NeedsYou }, null, Nova)).Task;
+        TaskItem? back = harness.Store.Get(accepted.Id);
 
         Assert.Equal(TaskState.InProgress, moved.Status);
+        Assert.NotNull(back);
+        Assert.Equal(TaskState.NeedsYou, back.Status);
         Assert.Equal(AcceptanceState.None, Acceptance.Of(back).State);
     }
 
-    /// <summary>An ungated Task that appears outside Huddle already in Needs You is reset to Review and logged.</summary>
+    /// <summary>An ungated Task that appears outside Huddle already in Needs You is reset to In Progress and logged.</summary>
     [Fact]
-    public void OutsideEdit_UngatedTaskCreatedInNeedsYou_IsResetToReviewAndLogged()
+    public void OutsideEdit_UngatedTaskCreatedInNeedsYou_IsResetToInProgressAndLogged()
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
@@ -222,19 +224,19 @@ public sealed class TaskServiceHumanGateReviewTests
         TaskItem? after = OutsideEdit(harness, template with { Id = newId, Path = path, Status = TaskState.NeedsYou });
 
         Assert.NotNull(after);
-        Assert.Equal(TaskState.Review, after.Status);
-        Assert.Equal($"outside edit refused by Human gate: {newId} isn't Human-gated, so it goes from Review to Done.", after.ChangeLog[^1].Summary);
+        Assert.Equal(TaskState.InProgress, after.Status);
+        Assert.Equal($"outside edit refused by Human gate: {newId} isn't Human-gated, so it goes from In Progress to Done.", after.ChangeLog[^1].Summary);
     }
 
-    /// <summary>Deciding on a closed Task is refused as not waiting, even if its file says Review.</summary>
+    /// <summary>Deciding on a closed Task is refused as not waiting, even if its file says In Progress.</summary>
     [Fact]
     public void Decide_ClosedTask_IsRefusedAsNotWaiting()
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskItem task = Create(harness);
+        TaskItem task = InNeedsYou(harness);
         TaskItem closed = Assert.IsType<TaskResult.Saved>(harness.Service.Decide(task.Id, TaskDecision.Decline, "No longer needed", task.Version, HumanOf(harness))).Task;
-        TaskItem? reopened = OutsideEdit(harness, closed with { Status = TaskState.Review });
+        TaskItem? reopened = OutsideEdit(harness, closed with { Status = TaskState.InProgress });
         Assert.NotNull(reopened);
         Assert.True(reopened.Location.Closed);
 
@@ -266,13 +268,13 @@ public sealed class TaskServiceHumanGateReviewTests
         Assert.Single(raised);
     }
 
-    /// <summary>Decline from Review rejects the Task and closes it.</summary>
+    /// <summary>Decline from Needs You rejects the Task and closes it.</summary>
     [Fact]
-    public void Decide_DeclineFromReview_ClosesTheTask()
+    public void Decide_DeclineFromNeedsYou_ClosesTheTask()
     {
         FixedProofSource proof = new(FixedProofSource.Complete);
         using TaskToolHarness harness = Build(proof);
-        TaskItem task = Create(harness);
+        TaskItem task = InNeedsYou(harness);
 
         TaskResult result = harness.Service.Decide(task.Id, TaskDecision.Decline, "Not needed", task.Version, HumanOf(harness));
 

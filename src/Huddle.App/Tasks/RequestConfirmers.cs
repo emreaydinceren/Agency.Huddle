@@ -26,20 +26,6 @@ internal sealed class RequestConfirmers(ITeamCatalog teams, PersonaStore persona
     }
 
     /// <inheritdoc />
-    public bool IsChallengerOf(string team, string member)
-    {
-        TeamSummary? summary = teams.Find(team);
-        if (summary is null || !summary.Members.Contains(member, StringComparer.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
-        return personas.Get(member) is { } persona
-            && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
-            && gates.CoversChallenge(identity.Role);
-    }
-
-    /// <inheritdoc />
     public bool TeamHasConfirmer(string team)
     {
         TeamSummary? summary = teams.Find(team);

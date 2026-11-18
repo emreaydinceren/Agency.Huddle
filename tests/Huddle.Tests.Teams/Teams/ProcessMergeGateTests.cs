@@ -142,7 +142,7 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        TaskItem task = AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.Review);
+        TaskItem task = AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.InProgress);
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
         string? refusal = gate.RefusalFor("Nova", "git merge --no-ff feat/quote-calculator");
@@ -158,7 +158,7 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.Review);
+        AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.InProgress);
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
         Assert.NotNull(gate.RefusalFor("Nova", "git push origin main"));
@@ -185,8 +185,8 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        AddGatedTask(harness, "Kai", gated: true, accepted: false, TaskState.Review);
-        AddGatedTask(harness, "Nova", gated: false, accepted: false, TaskState.Review);
+        AddGatedTask(harness, "Kai", gated: true, accepted: false, TaskState.InProgress);
+        AddGatedTask(harness, "Nova", gated: false, accepted: false, TaskState.InProgress);
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
         Assert.NotNull(gate.RefusalFor("Nova", "git merge feat/quote-calculator"));
@@ -214,7 +214,7 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.Review);
+        AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.InProgress);
         ProcessMergeGate gate = Build(harness, dir, "'qa-evidence-before-done'");
 
         Assert.Null(gate.RefusalFor("Nova", command));
@@ -226,7 +226,7 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.Review);
+        AddGatedTask(harness, "Nova", gated: true, accepted: false, TaskState.InProgress);
         ProcessMergeGate gate = Build(harness, dir, "'checks-before-merge'");
 
         Assert.Equal(ChecksFirst, gate.RefusalFor("Nova", "git merge feat/quote-calculator"));
@@ -246,7 +246,7 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         using TempDataDir dir = new();
-        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.Review, Assignee: "Nova"), TaskActors.Human(harness.Options.Value))).Task;
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.InProgress, Assignee: "Nova"), TaskActors.Human(harness.Options.Value))).Task;
         ProcessMergeGate gate = Build(harness, dir, AcceptGate);
 
         Assert.Equal(
@@ -339,7 +339,7 @@ public sealed class ProcessMergeGateTests
         using TempDataDir dir = new();
         TaskActor human = TaskActors.Human(harness.Options.Value);
         TaskActor nova = new(TaskActorKind.Agent, "Nova", "id");
-        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.Review, Assignee: "Nova"), human)).Task;
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.InProgress, Assignee: "Nova"), human)).Task;
         ProcessMergeGate gate = Build(harness, dir, AcceptGate);
         Assert.NotNull(gate.RefusalFor("Nova", FeatureMerge));
 
@@ -492,11 +492,11 @@ public sealed class ProcessMergeGateTests
     {
         using TaskToolHarness harness = NewHarness();
         TaskActor human = TaskActors.Human(harness.Options.Value);
-        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.Review, Assignee: "Nova"), human)).Task;
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quote calculator", Team, null, TaskState.InProgress, Assignee: "Nova"), human)).Task;
 
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { Action = Optional<string?>.Set("Merge it") }, null, human));
 
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>A Team without <c>accept-before-merge</c> on its gates line holds a merge into main for an Accept all the same: with no Accept it is refused, and an Accept on a Task of the Team lets it through.</summary>

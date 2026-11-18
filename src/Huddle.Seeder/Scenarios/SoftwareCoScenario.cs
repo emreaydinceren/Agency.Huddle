@@ -27,7 +27,6 @@ internal sealed class SoftwareCoScenario : IScenario
                 { "label": "Backlog", "states": ["Backlog"] },
                 { "label": "To Do", "states": ["To Do"] },
                 { "label": "In Progress", "states": ["In Progress"] },
-                { "label": "Review", "states": ["Review"] },
                 { "label": "Done", "states": ["Done"] },
                 { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] }
               ]
@@ -67,11 +66,11 @@ internal sealed class SoftwareCoScenario : IScenario
             },
             {
               "id": "awaiting-review",
-              "name": "Awaiting review",
+              "name": "Waiting on you",
               "kind": "list",
               "scope": "active",
               "fields": ["team", "priority", "due_date"],
-              "filter": { "states": ["Review"] },
+              "filter": { "states": ["Needs You"] },
               "grouping": ["assignee"],
               "sort": [],
               "columns": []
@@ -155,7 +154,6 @@ internal sealed class SoftwareCoScenario : IScenario
                 { "label": "Backlog", "states": ["Backlog"] },
                 { "label": "To Do", "states": ["To Do"] },
                 { "label": "In Progress", "states": ["In Progress"] },
-                { "label": "Review", "states": ["Review"] },
                 { "label": "Done", "states": ["Done"] },
                 { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] }
               ]

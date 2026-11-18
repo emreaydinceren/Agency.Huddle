@@ -209,8 +209,7 @@ internal static class TaskFileWriter
     private static IEnumerable<string> StatusChanges(string status) => status switch
     {
         "In Progress" => ["To Do → In Progress"],
-        "Review" => ["To Do → In Progress", "In Progress → Review"],
-        "Done" => ["To Do → In Progress", "In Progress → Review", "Review → Done"],
+        "Done" => ["To Do → In Progress", "In Progress → Done"],
         "Cancelled" or "Rejected" or "Duplicate" => [$"To Do → {status}"],
         _ => [],
     };

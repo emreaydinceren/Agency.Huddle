@@ -12,9 +12,6 @@ internal static class RequestLifecycle
     /// <summary>Status wire name: In Progress.</summary>
     private const string InProgress = "In Progress";
 
-    /// <summary>Status wire name: Review.</summary>
-    private const string Review = "Review";
-
     /// <summary>Status wire name: Done.</summary>
     private const string Done = "Done";
 
@@ -33,8 +30,7 @@ internal static class RequestLifecycle
         string status = current.Status;
         bool untriagedBacklog = string.Equals(status, Backlog, StringComparison.Ordinal) && current.Triage == TriageState.None;
         bool workable = string.Equals(status, ToDo, StringComparison.Ordinal)
-            || string.Equals(status, InProgress, StringComparison.Ordinal)
-            || string.Equals(status, Review, StringComparison.Ordinal);
+            || string.Equals(status, InProgress, StringComparison.Ordinal);
 
         switch (ev)
         {

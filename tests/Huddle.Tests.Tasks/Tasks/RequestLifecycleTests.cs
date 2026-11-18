@@ -70,12 +70,11 @@ public sealed class RequestLifecycleTests
             WakeTarget.ChiefOfStaff);
     }
 
-    /// <summary>Working an accepted Request in any of To Do, In Progress or Review keeps the status and wakes the requesting manager (RQ-4).</summary>
+    /// <summary>Working an accepted Request in To Do or In Progress keeps the status and wakes the requesting manager (RQ-4).</summary>
     /// <param name="status">The Task status wire name.</param>
     [Theory]
     [InlineData("To Do")]
     [InlineData("In Progress")]
-    [InlineData("Review")]
     public void Work_InWorkingStatuses_KeepsStatusWakesRequester(string status)
     {
         AssertAllowed(Run(status, "Accepted", "Work"), status, TriageState.Accepted, WakeTarget.RequestingManager);

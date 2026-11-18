@@ -1097,7 +1097,7 @@ or deleted.*
 
 **Steps**
 
-1. Ask the Developer to run the Team's check command and record it with `add_evidence`, then move the Task to Review.
+1. Ask the Developer to run the Team's check command and record it with `add_evidence`, then create a review Task for the Reviewer.
    Ask the QA Engineer to verify it and record Evidence. Note the Proof count in the Task panel.
 2. Ask the manager to rewrite the Task's description with `update_task`.
 3. Open the Task's edit page, change the description and choose **Save**.

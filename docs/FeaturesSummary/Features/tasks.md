@@ -14,8 +14,9 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 Every Task has a status, priority, assignee, tags, start and due dates, a description and a Change
 log. It can also have a parent, blockers and a duplicate-of link.
 
-The statuses are **Backlog**, **To Do**, **In Progress**, **Review**, **Needs you**, **Done**,
-**Cancelled**, **Duplicate** and **Rejected**.
+The statuses are **Backlog**, **To Do**, **In Progress**, **Needs you**, **Done**,
+**Cancelled**, **Duplicate** and **Rejected**. A review or QA check is not a status: it is a child Task tagged
+`review` or `verify`, assigned to the reviewer and listed as a blocker of the work Task.
 
 ## See it as a List or a Board
 
@@ -45,7 +46,7 @@ same Task get a field-by-field merge.
   5 seconds are combined.
 - **A blocked Task wakes its assignee** once its last blocker finishes (Done, Cancelled, Duplicate or Rejected).
 - **A blocked Task waits.** In a Team with the `blockers-done-before-start` gate, a Task cannot move to In Progress,
-  Review, Needs You or Done while a blocker is open. A blocker in Needs You still blocks.
+  Needs You or Done while a blocker is open. A blocker in Needs You still blocks.
 - **Runaway hand-offs stop.** Each Task allows 10 Agent-made wake-ups, then you choose
   **Allow 10 more**.
 
@@ -112,7 +113,7 @@ The Team and Project aren't fields. They come from the folder the file is in.
 
 | Group | Statuses |
 | --- | --- |
-| Open | Backlog, To Do, In Progress, Review, Needs you |
+| Open | Backlog, To Do, In Progress, Needs you |
 | Finished | Done |
 | Won't do | Cancelled, Duplicate, Rejected |
 
@@ -149,8 +150,8 @@ Past the 10 wake-ups, changes still save, and nobody wakes until you select **Al
 make resets the count, and so does a restart. A waiting hand-off stays in the Feed, with **Wake {Agent}** on
 its card after a restart.
 
-When a Task enters Review, Huddle can also wake the first member whose role covers `challenge`, if the
-assignee can't review and the manager wasn't woken.
+A review Task is assigned to the reviewer, so the ordinary assignee wake reaches them; there is no separate wake
+for a Task entering a review state.
 
 ### Views in depth
 

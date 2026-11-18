@@ -284,7 +284,7 @@ internal sealed class ListTasksTool(
             if (!TaskStates.TryParse(value, out TaskState state))
             {
                 states = [];
-                refusal = $"'status' has an unknown value '{value}'.";
+                refusal = TaskToolText.UnknownStatusRefusal(value);
                 return false;
             }
 

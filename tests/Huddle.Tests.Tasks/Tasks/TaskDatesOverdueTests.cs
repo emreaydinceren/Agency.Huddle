@@ -62,11 +62,11 @@ public sealed class TaskDatesOverdueTests
         Assert.False(TaskDates.IsOverdue(task, clock));
     }
 
-    /// <summary>An open Task is overdue from the day after its due date, including a Task in Review.</summary>
+    /// <summary>An open Task is overdue from the day after its due date, including a Task in Needs You.</summary>
     [Theory]
     [InlineData(TaskState.Backlog)]
     [InlineData(TaskState.InProgress)]
-    [InlineData(TaskState.Review)]
+    [InlineData(TaskState.NeedsYou)]
     public void IsOverdue_OpenStatePastDue_IsTrue(TaskState status)
     {
         ManualTimeProvider clock = ClockAt(new DateTimeOffset(2026, 9, 24, 12, 0, 0, TimeSpan.Zero), 0);

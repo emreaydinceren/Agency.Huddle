@@ -246,6 +246,8 @@ No package is added, so `Directory.Packages.props` doesn't change.
 
 ### 6.1 States and priorities
 
+> Amended by ADR-0096: there is no Review state; a review or QA check is a child Task tagged `review` or `verify`, and a saved `status: Review` loads as In Progress. Read every `Review` below as history.
+
 ```csharp
 public enum TaskState { Backlog, ToDo, InProgress, Review, Done, Cancelled, Duplicate, Rejected }
 public enum TaskPriority { Low, Medium, High, Urgent }

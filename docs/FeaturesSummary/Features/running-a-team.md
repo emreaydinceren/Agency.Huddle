@@ -27,8 +27,8 @@ A Team's process has two parts:
 | `qa-evidence-before-done` | An Evidence line with a command, from a member whose role verifies, before a Task is Done; only a note when the Definition of Done names no command |
 | `checks-before-merge` | Evidence that the Team's check command passed, before an Agent's `git merge` or `git push` |
 | `spec-approved-before-build` | An approved parent spec Task before a Task moves to In Progress |
-| `failing-test-before-fix` | Evidence of a failing run and then a passing one, before a bug Task moves to Review |
-| `blockers-done-before-start` | Every Task it is blocked by Done, Cancelled, Duplicate or Rejected, before a Task moves to In Progress, Review, Needs You or Done |
+| `failing-test-before-fix` | Evidence of a failing run and then a passing one, before a bug Task moves to Needs You or Done |
+| `blockers-done-before-start` | Every Task it is blocked by Done, Cancelled, Duplicate or Rejected, before a Task moves to In Progress, Needs You or Done |
 
 Only you can override a gate, with **Move anyway** on the Task, and the override is logged.
 

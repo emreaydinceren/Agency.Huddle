@@ -39,7 +39,7 @@ public sealed class TaskQuerySortGroupTests
     {
         TaskItem rejected = TestTasks.Make(id: "PLAT-0001", status: TaskState.Rejected);
         TaskItem backlog = TestTasks.Make(id: "PLAT-0002", status: TaskState.Backlog);
-        TaskItem review = TestTasks.Make(id: "PLAT-0003", status: TaskState.Review);
+        TaskItem review = TestTasks.Make(id: "PLAT-0003", status: TaskState.InProgress);
 
         IReadOnlyList<SortKey> keys = [new("status", SortDirection.Ascending)];
         IReadOnlyList<TaskItem> result = TaskQuery.Sort([rejected, backlog, review], keys);

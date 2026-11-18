@@ -79,7 +79,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Before you start**
 
-- A gated Task `T3` in Review, assigned to Ada, with three of four Proof items met and the fourth open and owned by Bo, with a detail such as `19 of 23`.
+- A gated Task `T3` in Needs You, assigned to Ada, with three of four Proof items met and the fourth open and owned by Bo, with a detail such as `19 of 23`.
 
 **Steps**
 
@@ -95,7 +95,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 - At step 2 `Accept` is disabled.
 - At step 3 a snackbar reads `Asked Bo in <room>.` and the button's accessible name is `Ask Bo for <label>`.
 - At step 4 the Message is from the Human and reads `@Bo, T3 needs <label> before it can come to me.`
-- At step 5 the dialog title reads `Request changes on T3`, the Task leaves Review as changes requested, and its Change log has the reason.
+- At step 5 the dialog title reads `Request changes on T3`, the Task leaves Needs You as changes requested, and its Change log has the reason.
 
 ### HUMANGATE-04 — An Agent cannot mark a gated Task Done (U-4)
 
@@ -105,7 +105,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Before you start**
 
-- A gated Task `T4` assigned to Ada, in Review or To Do, not accepted.
+- A gated Task `T4` assigned to Ada, in In Progress or To Do, not accepted.
 
 **Steps**
 
@@ -123,11 +123,11 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Free** · about 10 min
 
-*Proves U-5: the refusal from Review, the dialog from Needs You, Accept completing the move and Cancel leaving it.*
+*Proves U-5: the refusal from In Progress, the dialog from Needs You, Accept completing the move and Cancel leaving it.*
 
 **Before you start**
 
-- Two gated Tasks, `T5a` in Review with Proof 3/4, and `T5b` in Needs You with Proof 4/4. The Board is open, grouped by state.
+- Two gated Tasks, `T5a` in In Progress with Proof 3/4, and `T5b` in Needs You with Proof 4/4. The Board is open, grouped by state.
 
 **Steps**
 
@@ -140,7 +140,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 2 the snackbar reads `T5a goes to Needs you first (Proof 3/4).` and the card is still in Review.
+- At step 2 the snackbar reads `T5a goes to Needs you first (Proof 3/4).` and the card is still in In Progress.
 - At step 3 `T5b` shows the chip `Needs you`, and `T5a` shows a lock icon whose accessible name is `Human gate`.
 - At step 4 the dialog title reads `Your decision on T5b`, and there is no `Move anyway` button on either card.
 - At step 5 `T5b` is still in Needs You.
@@ -285,7 +285,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 3 no Task goes to Needs You for a merge, and no Accept is asked for one. After its Proof is complete in Review the Developer merges the branch named after the Task's id into the local `main` and moves the Task to Done.
+- At step 3 no Task goes to Needs You for a merge, and no Accept is asked for one. After its Proof is complete the Developer merges the branch named after the Task's id into the local `main` and moves the Task to Done.
 - At step 4 the timeline holds one entry by Huddle, `proceeded under Team level Run inside the Team: its merge into main needs no Accept`, the Feed shows it as Activity, and `main` holds the merge.
 - At step 5 the push is refused and nothing reaches the remote. A feature-branch push waits like any other push.
 - At step 6 the push goes through only after the Human accepts the Task whose Action names the push, and not before.

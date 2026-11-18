@@ -13,7 +13,7 @@ public sealed class TaskQueryFilterTests
             assignee: "Nova", location: new("Platform", "Auth v2", false)),
         TestTasks.Make(id: "PLAT-0002", title: "Board layout", status: TaskState.InProgress, priority: TaskPriority.Urgent,
             assignee: "Sable", location: new("Platform", "Auth v2", false)),
-        TestTasks.Make(id: "PLAT-0003", title: "Views JSON", status: TaskState.Review, priority: TaskPriority.Medium,
+        TestTasks.Make(id: "PLAT-0003", title: "Views JSON", status: TaskState.InProgress, priority: TaskPriority.Medium,
             assignee: null, location: new("Platform", null, false)),
         TestTasks.Make(id: "PLAT-0004", title: "Old cleanup", status: TaskState.Done, priority: TaskPriority.Low,
             assignee: "Nova", location: new("Platform", null, true)),

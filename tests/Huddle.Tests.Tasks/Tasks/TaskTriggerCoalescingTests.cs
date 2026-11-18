@@ -231,17 +231,17 @@ public sealed class TaskTriggerCoalescingTests
         TaskItem task = harness.Seed(TestTasks.Make(
             id: "SEC-0007",
             title: "Rotate keys",
-            status: TaskState.Review,
+            status: TaskState.InProgress,
             assignee: "Nova",
             originRoomId: cast.Room.Id,
             location: new TaskLocation("Security", null, false)));
 
-        harness.Raise(task, cast.KaiActor, "Status: In Progress → Review");
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
         harness.Clock.Advance(DefaultWindow);
         await harness.Trigger.WhenIdleAsync();
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
-        Assert.Equal("@Nova|SEC-0007|Rotate keys|Review|Security|Kai|- Status: In Progress → Review", post.Message.Text);
+        Assert.Equal("@Nova|SEC-0007|Rotate keys|In Progress|Security|Kai|- Status: To Do → In Progress", post.Message.Text);
     }
 
     /// <summary>Spec §10.3: when the assignee changes inside the window, the latest assignee gets one Message listing every change in the batch, and the previous assignee isn't Mentioned.</summary>

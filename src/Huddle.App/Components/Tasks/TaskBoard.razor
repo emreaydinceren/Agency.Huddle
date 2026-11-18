@@ -434,7 +434,6 @@
                 TaskState.Backlog => "Backlog is empty.",
                 TaskState.ToDo => "Nothing to do yet.",
                 TaskState.InProgress => "Nothing in progress.",
-                TaskState.Review => "Nothing in review.",
                 TaskState.NeedsYou => "Nothing needs you.",
                 TaskState.Done => "Nothing done yet.",
                 _ => string.Create(CultureInfo.InvariantCulture, $"Nothing {column.States[0].ToWire().ToLowerInvariant()} yet."),
@@ -578,7 +577,7 @@
 
         Proof proof = this.ProofSource.For(current);
         string assignee = string.IsNullOrWhiteSpace(current.Assignee) ? HumanGateCopy.UnassignedAssignee : current.Assignee;
-        if (current.Status is TaskState.Backlog or TaskState.ToDo or TaskState.InProgress or TaskState.Review)
+        if (current.Status is TaskState.Backlog or TaskState.ToDo or TaskState.InProgress)
         {
             this.Snackbar.Add(HumanGateCopy.GoesToNeedsYouFirst(current.Id.ToString(), proof.MetCount, proof.Total), Severity.Error, configure: null, key: "board-gate-first");
         }

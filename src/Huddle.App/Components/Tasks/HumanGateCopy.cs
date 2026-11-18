@@ -91,10 +91,6 @@ internal static class HumanGateCopy
         return $"Proof {met}/{total} — {label} still open{open}. Accept unlocks when it's in.";
     }
 
-    /// <summary>The line for a Task still in Review (row 18).</summary>
-    /// <param name="assignee">The assignee's name.</param>
-    public static string StillInReview(string assignee) => $"Accept unlocks when the Task moves to Needs you. It moves by itself once its Proof is in; {assignee} can also move it.";
-
     /// <summary>The line for a valid acceptance whose Action is pending (row 23).</summary>
     /// <param name="human">Who accepted.</param>
     /// <param name="assignee">The assignee's name.</param>
@@ -179,7 +175,7 @@ internal static class HumanGateCopy
     /// <summary>The cancel button of the decision dialog (row 33).</summary>
     public const string CancelButton = "Cancel";
 
-    /// <summary>The refusal for a drop into Done from Review or earlier (row 30).</summary>
+    /// <summary>The refusal for a drop into Done before Needs You (row 30).</summary>
     /// <param name="id">The Task's id.</param>
     /// <param name="met">The Proof items met.</param>
     /// <param name="total">The Proof items in all.</param>

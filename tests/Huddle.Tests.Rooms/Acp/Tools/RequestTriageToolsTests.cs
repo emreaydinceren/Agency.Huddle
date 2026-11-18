@@ -332,11 +332,11 @@ public sealed class RequestTriageToolsTests
     public async Task Confirm_NotDone_IsRefused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Scene scene = await CreateSceneAsync(ct, TaskState.Review, TriageState.Accepted);
+        using Scene scene = await CreateSceneAsync(ct, TaskState.InProgress, TriageState.Accepted);
 
         string result = await scene.ConfirmTool("Quinn").InvokeAsync(new JsonObject { ["taskId"] = TaskId }, ct);
 
-        Assert.Equal("A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee, Kai, to move it to Done.", result);
+        Assert.Equal("A Request can be confirmed once it is in Done. This one is in In Progress. Ask its assignee, Kai, to move it to Done.", result);
         Assert.False(scene.Current().Location.Closed);
         Assert.Empty(scene.Notifier.Calls);
     }
@@ -360,11 +360,11 @@ public sealed class RequestTriageToolsTests
     public async Task Confirm_NotDoneNoAssignee_UsesGenericAssignee()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Scene scene = await CreateSceneAsync(ct, TaskState.Review, TriageState.Accepted, assignee: null);
+        using Scene scene = await CreateSceneAsync(ct, TaskState.InProgress, TriageState.Accepted, assignee: null);
 
         string result = await scene.ConfirmTool("Quinn").InvokeAsync(new JsonObject { ["taskId"] = TaskId }, ct);
 
-        Assert.Equal("A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee to move it to Done.", result);
+        Assert.Equal("A Request can be confirmed once it is in Done. This one is in In Progress. Ask its assignee to move it to Done.", result);
     }
 
     /// <summary>A plain Task cannot be confirmed.</summary>

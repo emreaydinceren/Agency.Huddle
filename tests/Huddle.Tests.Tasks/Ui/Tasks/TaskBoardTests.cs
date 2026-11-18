@@ -42,7 +42,6 @@ public sealed class TaskBoardTests
         new("Backlog", [TaskState.Backlog]),
         new("To Do", [TaskState.ToDo]),
         new("In Progress", [TaskState.InProgress]),
-        new("Review", [TaskState.Review]),
         new("Done", [TaskState.Done]),
         new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),
     ];
@@ -68,8 +67,8 @@ public sealed class TaskBoardTests
         IReadOnlyList<IElement> headers = cut.FindAll("div.task-board-column-header");
         string[] labels = [.. headers.Select(h => h.QuerySelector(".task-board-column-label")?.TextContent.Trim() ?? "")];
         string[] counts = [.. headers.Select(h => h.QuerySelector(".task-board-column-count")?.TextContent.Trim() ?? "")];
-        string[] expectedLabels = ["Backlog", "To Do", "In Progress", "Review", "Done", "Won't do"];
-        string[] expectedCounts = ["0", "2", "1", "0", "0", "2"];
+        string[] expectedLabels = ["Backlog", "To Do", "In Progress", "Done", "Won't do"];
+        string[] expectedCounts = ["0", "2", "1", "0", "2"];
         Assert.Equal(expectedLabels, labels);
         Assert.Equal(expectedCounts, counts);
     }
@@ -87,7 +86,7 @@ public sealed class TaskBoardTests
 
         string[] labels = [.. cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim())];
         Assert.DoesNotContain("Done", labels);
-        Assert.Equal(5, labels.Length);
+        Assert.Equal(4, labels.Length);
         Assert.DoesNotContain(BoardLayout.ZoneId(NoLane, TaskState.Done), ZoneIds(cut));
     }
 
@@ -150,9 +149,8 @@ public sealed class TaskBoardTests
             BoardLayout.ZoneId(NoLane, TaskState.Backlog),
             BoardLayout.ZoneId(NoLane, TaskState.ToDo),
             BoardLayout.ZoneId(NoLane, TaskState.InProgress),
-            BoardLayout.ZoneId(NoLane, TaskState.Review),
             BoardLayout.ZoneId(NoLane, TaskState.Done),
-            "lane:|col:5",
+            "lane:|col:4",
         ];
         Assert.Equal(expected.Order(StringComparer.Ordinal), ZoneIds(cut).Order(StringComparer.Ordinal));
         Assert.Equal("lane:|state:To Do", BoardLayout.ZoneId(NoLane, TaskState.ToDo));
@@ -175,7 +173,7 @@ public sealed class TaskBoardTests
         Assert.Single(cut.FindComponents<MudDropZone<TaskItem>>(), z => string.Equals(z.Instance.Identifier, BoardLayout.ZoneId("Kai", TaskState.InProgress), StringComparison.Ordinal));
     }
 
-    /// <summary>corrections-B5 D12-5: a multi-state column's display zone id is <c>lane:{b64}|col:{i}</c> - here <c>lane:Tm92YQ|col:5</c> for Nova's Won't do - which <see cref="BoardLayout.TryParseZone"/> rejects.</summary>
+    /// <summary>corrections-B5 D12-5: a multi-state column's display zone id is <c>lane:{b64}|col:{i}</c> - here <c>lane:Tm92YQ|col:4</c> for Nova's Won't do - which <see cref="BoardLayout.TryParseZone"/> rejects.</summary>
     [Fact]
     public async Task MultiStateColumn_DisplayZoneId_EncodesLaneAndColumnIndex()
     {
@@ -185,8 +183,8 @@ public sealed class TaskBoardTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(grouping: [TaskGroupField.Assignee]), [TestTasks.Make(id: "PLAT-0001", assignee: "Nova")]);
 
-        Assert.Contains("lane:Tm92YQ|col:5", ZoneIds(cut));
-        Assert.False(BoardLayout.TryParseZone("lane:Tm92YQ|col:5", out _, out _));
+        Assert.Contains("lane:Tm92YQ|col:4", ZoneIds(cut));
+        Assert.False(BoardLayout.TryParseZone("lane:Tm92YQ|col:4", out _, out _));
     }
 
     /// <summary>Spec §13.4: the multi-state display zone shows its cards (every state it holds) and refuses drops - <c>CanDrop</c> is false for it.</summary>
@@ -202,11 +200,11 @@ public sealed class TaskBoardTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [duplicate, cancelled, toDo]);
 
-        IRenderedComponent<MudDropZone<TaskItem>> display = Zone(cut, "lane:|col:5");
+        IRenderedComponent<MudDropZone<TaskItem>> display = Zone(cut, "lane:|col:4");
         Assert.Equal(["PLAT-0001", "PLAT-0002"], CardIds(display));
         Func<TaskItem, string, bool> canDrop = CanDrop(cut);
-        Assert.False(canDrop(toDo, "lane:|col:5"));
-        Assert.False(canDrop(duplicate, "lane:|col:5"));
+        Assert.False(canDrop(toDo, "lane:|col:4"));
+        Assert.False(canDrop(duplicate, "lane:|col:4"));
     }
 
     /// <summary>Plan 12.2.t: a multi-state column has no ghost buckets at rest - no zone for Cancelled, Duplicate or Rejected, and no <c>.task-ghost-bucket</c>.</summary>
@@ -250,7 +248,7 @@ public sealed class TaskBoardTests
             Assert.Contains("task-ghost-bucket", (bucket.Instance.Class ?? "").Split(' '), StringComparer.Ordinal);
         }
 
-        IRenderedComponent<MudDropZone<TaskItem>> display = Zone(cut, "lane:|col:5");
+        IRenderedComponent<MudDropZone<TaskItem>> display = Zone(cut, "lane:|col:4");
         Assert.Equal(3, display.FindAll(".task-ghost-bucket").Count);
     }
 
@@ -278,7 +276,7 @@ public sealed class TaskBoardTests
         Assert.Equal(icon, Assert.Single(bucket.FindComponents<MudIcon>()).Instance.Icon);
     }
 
-    /// <summary>12.2.i: a bucket for a state the Spec gives no icon for (here Review, in a custom Review + Done column) still shows its name, with the fallback icon <c>Outlined.Label</c>.</summary>
+    /// <summary>12.2.i: a bucket for a state the Spec gives no icon for (here Needs You, in a custom Needs You + Done column) still shows its name, with the fallback icon <c>Outlined.Label</c>.</summary>
     [Fact]
     public async Task GhostBucket_OtherState_ShowsNameAndFallbackIcon()
     {
@@ -289,7 +287,7 @@ public sealed class TaskBoardTests
             new("Backlog", [TaskState.Backlog]),
             new("To Do", [TaskState.ToDo]),
             new("In Progress", [TaskState.InProgress]),
-            new("Finished", [TaskState.Review, TaskState.Done]),
+            new("Finished", [TaskState.NeedsYou, TaskState.Done]),
             new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),
         ];
         TaskItem toDo = TestTasks.Make(id: "PLAT-0001", status: TaskState.ToDo);
@@ -299,8 +297,8 @@ public sealed class TaskBoardTests
         await StartDragAsync(cut, toDo, BoardLayout.ZoneId(NoLane, TaskState.ToDo));
 
         cut.WaitForAssertion(() => Assert.Equal(5, cut.FindAll(".task-ghost-bucket").Count));
-        IRenderedComponent<MudDropZone<TaskItem>> bucket = Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.Review));
-        Assert.Equal("Review", bucket.Find(".task-ghost-bucket-label").TextContent.Trim());
+        IRenderedComponent<MudDropZone<TaskItem>> bucket = Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.NeedsYou));
+        Assert.Equal("Needs You", bucket.Find(".task-ghost-bucket-label").TextContent.Trim());
         Assert.Equal(Icons.Material.Outlined.Label, Assert.Single(bucket.FindComponents<MudIcon>()).Instance.Icon);
     }
 
@@ -335,7 +333,7 @@ public sealed class TaskBoardTests
         await cut.InvokeAsync(() => container.Instance.CancelTransaction());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".task-ghost-bucket")));
-        Assert.Equal(6, ZoneIds(cut).Length);
+        Assert.Equal(5, ZoneIds(cut).Length);
     }
 
     /// <summary>Spec §13.4: buckets belong to multi-state columns only - with Cancelled in its own column and Duplicate + Rejected sharing one, a drag shows exactly two buckets (Duplicate, Rejected), and Cancelled keeps its single zone.</summary>
@@ -349,7 +347,6 @@ public sealed class TaskBoardTests
             new("Backlog", [TaskState.Backlog]),
             new("To Do", [TaskState.ToDo]),
             new("In Progress", [TaskState.InProgress]),
-            new("Review", [TaskState.Review]),
             new("Done", [TaskState.Done]),
             new("Cancelled", [TaskState.Cancelled]),
             new("Closed out", [TaskState.Duplicate, TaskState.Rejected]),
@@ -362,7 +359,7 @@ public sealed class TaskBoardTests
 
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".task-ghost-bucket").Count));
         Assert.False(Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.Cancelled)).Instance.OnlyZone);
-        Assert.Equal(2, Zone(cut, "lane:|col:6").FindAll(".task-ghost-bucket").Count);
+        Assert.Equal(2, Zone(cut, "lane:|col:5").FindAll(".task-ghost-bucket").Count);
     }
 
     /// <summary>Spec §13.4: in a grouped Board every lane's multi-state column gets its own buckets, identified by that lane.</summary>
@@ -419,7 +416,7 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [duplicate]);
 
         Func<TaskItem, string, bool> selector = ItemsSelector(cut);
-        Assert.True(selector(duplicate, "lane:|col:5"));
+        Assert.True(selector(duplicate, "lane:|col:4"));
         Assert.False(selector(duplicate, BoardLayout.ZoneId(NoLane, TaskState.Duplicate)));
     }
 
@@ -972,11 +969,11 @@ public sealed class TaskBoardTests
 
         IReadOnlyList<IElement> headers = cut.FindAll("div.task-board-column-header");
         Assert.All(headers, header => Assert.Equal("task-state-dot", header.Children[0].ClassList[0]));
-        Assert.Contains("task-state-dot-success", headers[4].Children[0].ClassList);
+        Assert.Contains("task-state-dot-success", headers[3].Children[0].ClassList);
         Assert.Contains("task-state-dot-backlog", headers[0].Children[0].ClassList);
         Assert.DoesNotContain("task-state-dot-backlog", headers[1].Children[0].ClassList);
         string[] empty = [.. cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim())];
-        Assert.Contains("Nothing in review.", empty);
+        Assert.DoesNotContain("Nothing in review.", empty);
         Assert.Contains("Backlog is empty.", empty);
         Assert.DoesNotContain("Nothing to do yet.", empty);
         Assert.DoesNotContain("Nothing done yet.", empty); // the empty Done column is a rail, which carries no line (audit B4a)

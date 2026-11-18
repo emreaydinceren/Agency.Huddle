@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Seeder;
 /// <summary>Pins the <c>software-co</c> plan against the requirements and against the coverage list in <c>agents/DataSeeding.md</c>. No files are written. Seeder spec §6 and §8.</summary>
 public sealed partial class SoftwareCoScenarioTests
 {
-    private static readonly string[] AllStatuses = ["Backlog", "To Do", "In Progress", "Review", "Done", "Cancelled", "Duplicate", "Rejected"];
+    private static readonly string[] AllStatuses = ["Backlog", "To Do", "In Progress", "Done", "Cancelled", "Duplicate", "Rejected"];
 
     private static SeedPlan Plan() => new SoftwareCoScenario().Build(SeededFolder.Today);
 
