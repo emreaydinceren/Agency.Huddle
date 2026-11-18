@@ -1,13 +1,18 @@
+@implements IDisposable
+@using Agency.Huddle.App.Goldfish
+@inject GoldfishLive Live
 @* <summary>
      The positioning frame that lets a presence badge sit on an avatar's bottom-right rim. It wraps the avatar from
      outside because <c>AgentAvatar</c> keeps its single <c>MudAvatar</c> root (a <c>MudAvatar</c> clips its
-     children, so the badge cannot live inside it). With no <see cref="Cue"/> it renders the avatar alone.
+     children, so the badge cannot live inside it). With no <see cref="Cue"/> it renders the avatar alone. Given an
+     <see cref="AgentName"/> it also draws goldfish mode: while that Agent is in a live possession the fish badge
+     replaces the Health cue and the frame carries the <c>goldfish</c> ring.
    </summary> *@
-<span class="presence-anchor">
+<span class="@this.AnchorClass">
     @this.ChildContent
-    @if (this.Cue is { } cue)
+    @if (this.EffectiveCue is { } cue)
     {
-        <PresenceBadge Cue="cue" OnAvatar="true" Detail="@this.Detail" />
+        <PresenceBadge Cue="cue" OnAvatar="true" Detail="@(this.InGoldfish ? null : this.Detail)" />
     }
 </span>
 
@@ -23,4 +28,31 @@
     /// <summary>Extra tooltip words after the state name; see <see cref="PresenceBadge.Detail"/>.</summary>
     [Parameter]
     public string? Detail { get; set; }
+
+    /// <summary>The Agent's display name; when set and that Agent is in goldfish mode, the fish cue replaces <see cref="Cue"/>.</summary>
+    [Parameter]
+    public string? AgentName { get; set; }
+
+    /// <summary>Draws the fish badge but not the ring (the profile card, which has its own ring).</summary>
+    [Parameter]
+    public bool BadgeOnly { get; set; }
+
+    private bool InGoldfish => this.AgentName is not null && this.Live.ForAgent(this.AgentName) is not null;
+
+    private PresenceCue? EffectiveCue => this.AgentName is { } name && this.InGoldfish ? PresenceCue.Goldfish(name) : this.Cue;
+
+    private string AnchorClass => this.InGoldfish && !this.BadgeOnly ? "presence-anchor goldfish" : "presence-anchor";
+
+    /// <summary>Re-renders whenever goldfish mode changes.</summary>
+    protected override void OnInitialized() => this.Live.Changed += this.OnChanged;
+
+    /// <summary>Unsubscribes from <see cref="GoldfishLive.Changed"/>.</summary>
+    public void Dispose() => this.Live.Changed -= this.OnChanged;
+
+    private void OnChanged() =>
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
 }

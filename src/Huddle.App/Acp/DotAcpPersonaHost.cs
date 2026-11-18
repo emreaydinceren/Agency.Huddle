@@ -2,6 +2,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teams;
@@ -49,6 +50,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly Func<RoleBlockInput?> roleBlock;
     private readonly SessionPromptSources sources;
     private readonly bool browser;
+    private readonly Func<IReadOnlyList<string>>? readDenyFolders;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpPersonaHost"/> class.</summary>
     /// <param name="inner">The started ACP host, ready for <c>session/new</c> or <c>session/resume</c>.</param>
@@ -79,6 +81,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="browser">Whether the session <c>_meta</c> carries the browser server; the system prompt then adds the browser rules.</param>
     /// <param name="reportedDays">How many days the memory tool keeps a line of <c>reported.md</c> (<c>Team:Memory:Reported:KeepDays</c>); the Memory block names it.</param>
     /// <param name="memoryTidy">Says at each session start whether the Memory Tidy Helper is on, so the Memory block carries its sentence; <see langword="null"/> for off.</param>
+    /// <param name="readDenyFolders">Lists the folders a goldfish session may not read, asked at each clean open; <see langword="null"/> for none.</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
         AppToolServer toolServer,
@@ -107,10 +110,12 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         SessionPromptSources sources,
         bool browser,
         int reportedDays = MemoryReportedOptions.DefaultKeepDays,
-        Func<bool>? memoryTidy = null)
+        Func<bool>? memoryTidy = null,
+        Func<IReadOnlyList<string>>? readDenyFolders = null)
     {
         ValidateSessionPromptSources(roleBlock, sources, guards);
         (this.sources, this.browser, this.roleBlock, this.reportedDays, this.memoryTidy) = (sources, browser, roleBlock, reportedDays, memoryTidy);
+        this.readDenyFolders = readDenyFolders;
         ValidateCollaborators(inner, toolServer, profile, persona, prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
@@ -223,22 +228,86 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// whether <see cref="OpenAsync"/> or <see cref="ResumeAsync"/> — sends what
     /// <c>DotAcpAgentHostFactory.StartAsync</c> used to send exactly once.
     /// </summary>
-    private AgentSessionOptions BuildOptions()
+    private AgentSessionOptions BuildOptions() => this.BuildOptions(this.ComposeSystemPrompt(), this.meta);
+
+    /// <summary>
+    /// Builds one session's <see cref="AgentSessionOptions"/> around a composed system prompt and <c>_meta</c>; the ordinary open and a
+    /// clean open differ only in those two.
+    /// </summary>
+    /// <param name="systemPrompt">The prompt appended to the Adapter's own.</param>
+    /// <param name="sessionMeta">The session <c>_meta</c>, or <see langword="null"/> for none.</param>
+    private AgentSessionOptions BuildOptions(string systemPrompt, IReadOnlyDictionary<string, object>? sessionMeta)
     {
-        // Enforced here, where the options are built, so a database row written by hand for a hidden
-        // mode is inert (ADR-0033). Whether the Adapter advertises the mode is DotAcpAgentHost's check.
-        // With none, Huddle chooses, so the session does not run in the mode the Human's own Claude settings name (issue #414).
-        string? mode = this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.Profile.IsolateUserSettings, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
+        string? mode = this.EffectiveMode();
 
         return new AgentSessionOptions(
             this.workDir,
             DotAcpPersonaHost.GuardPermissions(this.CreatePermissionHandler(), mode, this.loggerFactory),
-            new SystemPromptOptions(this.ComposeSystemPrompt(), SystemPromptMode.Append),
+            new SystemPromptOptions(systemPrompt, SystemPromptMode.Append),
             this.toolServerEndpoint,
             this.persona.Model,
             this.persona.Effort,
-            this.meta,
+            sessionMeta,
             mode);
+    }
+
+    /// <summary>
+    /// The Persona's effective Work Mode. Enforced where the options are built, so a database row written by hand for a hidden
+    /// mode is inert (ADR-0033). Whether the Adapter advertises the mode is DotAcpAgentHost's check.
+    /// With none, Huddle chooses, so the session does not run in the mode the Human's own Claude settings name (issue #414).
+    /// </summary>
+    private string? EffectiveMode() =>
+        this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.Profile.IsolateUserSettings, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
+
+    /// <summary>
+    /// Whether a profile can carry a goldfish's clean session: it isolates the user's settings and the host really launches claude-agent-acp for it
+    /// (<see cref="AdapterCatalog.LaunchesClaude"/>, the test the offer uses, so the stock install's synthesised profile passes). Goldfish only:
+    /// <see cref="AdapterCatalog.RunsClaude"/> stays what the ordinary sessions use. The isolation meta needs no such test on an isolating profile.
+    /// </summary>
+    /// <param name="profile">The profile to judge.</param>
+    /// <returns><see langword="true"/> when the clean session can be opened.</returns>
+    internal static bool CanOpenClean(AdapterProfile profile) =>
+        profile.IsolateUserSettings && AdapterCatalog.LaunchesClaude(profile);
+
+    /// <summary>
+    /// Opens a clean session for a goldfish possession (spec 8.4): <see cref="SystemPromptComposer.ComposeClean"/>'s prompt, the connectors off
+    /// and the Agent's memory and the Rooms' history denied to <c>Read</c>, <c>Grep</c> and <c>Glob</c>. Only a Claude Adapter that isolates the
+    /// user's settings can carry those rules, so any other profile is refused here as well as by the tool.
+    /// </summary>
+    /// <param name="spec">What the session is opened for.</param>
+    /// <param name="cancellationToken">Cancels the open.</param>
+    /// <exception cref="InvalidOperationException">The profile does not isolate user settings or does not run Claude.</exception>
+    public async Task<IAgentSession> OpenCleanAsync(CleanSessionSpec spec, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(spec);
+        if (!DotAcpPersonaHost.CanOpenClean(this.Profile))
+        {
+            throw new InvalidOperationException($"Goldfish needs a Claude Adapter that isolates user settings; '{this.Profile.Id}' does not.");
+        }
+
+        string systemPrompt = SystemPromptComposer.ComposeClean(
+            this.persona,
+            this.prompts,
+            this.helpToolName,
+            this.toolNames,
+            this.skills,
+            this.readSkillToolName,
+            this.askHumanToolName);
+        IReadOnlyList<string> readDeny = GoldfishReadDeny.Rules(this.readDenyFolders?.Invoke() ?? []);
+        if (readDeny.Count == 0)
+        {
+            this.loggerFactory.CreateLogger<DotAcpPersonaHost>().LogWarning(
+                "Goldfish session for Persona '{PersonaName}' opens with no Read deny rules: none of the memory or Room history folders exists yet, so the Agent could read them.",
+                this.persona.Name);
+        }
+
+        Dictionary<string, object>? cleanMeta = DotAcpAgentHostFactory.BuildIsolationMeta(
+            this.Profile,
+            connectors: false,
+            askRules: true,
+            browserServer: null,
+            readDeny: readDeny);
+        return await this.inner.StartSessionAsync(this.BuildOptions(systemPrompt, cleanMeta), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

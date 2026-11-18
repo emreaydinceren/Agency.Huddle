@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -17,7 +18,10 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
     private readonly ConcurrentDictionary<string, AgentConnection> connections = new(StringComparer.Ordinal);
     private readonly Action<MessagePostedEvent> onMessagePosted;
 
-    public AgentGateway(RoomEvents events, Drafts drafts, ILogger<AgentGateway> logger)
+    /// <summary>The goldfish supervisor told when an Agent's runner connection is lost or replaced; set by the composition root.</summary>
+    internal GoldfishSupervisor? Goldfish { get; set; }
+
+    public AgentGateway(RoomEvents events,Drafts drafts, ILogger<AgentGateway> logger)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(drafts);
@@ -70,6 +74,24 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         await connection.SendAsync(new StartAfresh(roomId), cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Sends one message to an Agent's runner; a silent no-op when the Agent is offline.</summary>
+    /// <param name="agentId">The Agent to send to.</param>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancels the send.</param>
+    /// <returns>A task that completes when the message is sent or there was no connection.</returns>
+    internal async Task SendAsync(string agentId, ProtocolMessage message, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (!this.connections.TryGetValue(agentId, out var connection))
+        {
+            return;
+        }
+
+        await connection.SendAsync(message, cancellationToken).ConfigureAwait(false);
+    }
+
     internal void Register(AgentConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
@@ -89,6 +111,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         if (stale is not null && !ReferenceEquals(stale, connection))
         {
             stale.Close();
+            this.ReportRunnerLost(agentId);
         }
 
         this.RaisePresenceChanged();
@@ -119,7 +142,29 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
             this.events.PublishDraftChanged(roomId);
         }
 
+        this.ReportRunnerLost(agentId);
         this.RaisePresenceChanged();
+    }
+
+    /// <summary>The Agent's runner connection was lost or replaced: its open possession ends Failed (E-3). A failure is logged and never reaches the caller.</summary>
+    private void ReportRunnerLost(string agentId)
+    {
+        if (this.Goldfish is { } supervisor)
+        {
+            _ = this.EndLostPossessionAsync(supervisor, agentId);
+        }
+    }
+
+    private async Task EndLostPossessionAsync(GoldfishSupervisor supervisor, string agentId)
+    {
+        try
+        {
+            await supervisor.OnRunnerLostAsync(agentId, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogWarning(ex, "Ending the possession of {AgentId} after its runner was lost failed.", agentId);
+        }
     }
 
     internal async Task DeliverAsync(MessagePostedEvent e, CancellationToken ct = default)

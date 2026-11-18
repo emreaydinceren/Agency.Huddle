@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Acp.Tools;
@@ -16,13 +17,15 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="callerAgentId">The calling Agent's user id.</param>
 /// <param name="verb">The past-tense verb of the success text, such as <c>Closed</c>.</param>
 /// <param name="move">The <see cref="TaskService"/> call that moves the Task. It never returns <see cref="TaskResult.Unchanged"/>: <c>CloseOrReopenCore</c> refuses an already-moved Task instead of diffing it.</param>
+/// <param name="goldfish">Stamps the caller's Actor while the caller is possessed.</param>
 internal sealed class TaskTransition(
     TaskStore store,
     TaskTriggerService triggers,
     ITeamDirectory directory,
     string callerAgentId,
     string verb,
-    Func<TaskToolTarget, TaskResult> move)
+    Func<TaskToolTarget, TaskResult> move,
+    GoldfishGuard? goldfish = null)
 {
     /// <summary>Runs the move for the Task <paramref name="arguments"/> names and words the outcome; never throws for a refusal.</summary>
     /// <param name="arguments">The tool's JSON arguments.</param>
@@ -30,7 +33,7 @@ internal sealed class TaskTransition(
     /// <param name="cancellationToken">Propagated to the caller lookup.</param>
     public async Task<string> InvokeAsync(JsonObject arguments, string toolName, CancellationToken cancellationToken)
     {
-        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         if (target is null)
         {
             return refusal;

@@ -1455,3 +1455,26 @@ Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice,
 | [TURNQUEUE-15](turn-queue.md#turnqueue-15--cancel-on-the-rooms-follow-up-row-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
 | [TURNQUEUE-16](turn-queue.md#turnqueue-16--a-follow-up-waits-in-a-paused-room-and-runs-once-after-the-human-speaks-) | 💰 | Pass | #619 | run 2026-11-17, `be865921`, see the Run log |
 | [TURNQUEUE-18](turn-queue.md#turnqueue-18--a-waiting-mention-is-held-while-its-room-is-paused-) | 💰 | Pass | #617 | run 2026-11-17, `a3142a11`, see the Run log |
+
+## goldfish
+
+Goldfish mode: a clean copy of an Agent takes one Room, the chip and **Call Ruth back**, the stamp, Mentions of the Agent, the restart, the deny list and the spec review Task (paid, Sonnet minimum; run 2026-11-17 and 2026-11-18, 15 Pass, GOLDFISH-13 Active) — [area file](goldfish.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [GOLDFISH-01](goldfish.md#goldfish-01--a-call-runs-end-to-end-on-a-stock-install-) | 💰 | Pass | #627 | run 2026-11-18, `64802bd2`, see the Run log |
+| [GOLDFISH-02](goldfish.md#goldfish-02--the-clean-session-sees-only-the-brief-and-the-files-it-names-) | 💰 | Pass | #627 | run 2026-11-18, `64802bd2`, see the Run log |
+| [GOLDFISH-03](goldfish.md#goldfish-03--only-a-mention-of-ruth-starts-the-goldfishs-next-turn-) | 💰 | Pass | #627 | run 2026-11-18, `17a3ef35`, see the Run log |
+| [GOLDFISH-04](goldfish.md#goldfish-04--five-questions-in-a-row-are-ordinary-messages-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-05](goldfish.md#goldfish-05--an-unrelated-mention-of-ruth-goes-to-the-goldfish-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-06](goldfish.md#goldfish-06--call-ruth-back-ends-the-possession-with-the-partial-result-) | 💰 | Pass | #627 | run 2026-11-18, `64802bd2`, see the Run log |
+| [GOLDFISH-07](goldfish.md#goldfish-07--ruth-comeback-later-ends-nothing-) | 💰 | Pass | #627 | run 2026-11-18, `17a3ef35`, see the Run log |
+| [GOLDFISH-08](goldfish.md#goldfish-08--the-warm-ruth-answers-in-another-room-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-09](goldfish.md#goldfish-09--plain-messages-stay-context-for-the-warm-ruth-after-the-return-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-10](goldfish.md#goldfish-10--a-kill-mid-possession-ends-as-restarted-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-11](goldfish.md#goldfish-11--a-goldfish-that-asked-and-got-nothing-waits-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-12](goldfish.md#goldfish-12--a-goldfishs-review-reads-goldfish-review-by-ruth-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+| [GOLDFISH-13](goldfish.md#goldfish-13--a-spec-review-task-leads-ruth-to-call-goldfish-) | 💰 | Active | #627 | Needs a `spec-driven` Team with a review Task (#669, now built); not run |
+| [GOLDFISH-14](goldfish.md#goldfish-14--the-read-deny-stops-read-and-cat-of-memory-) | 💰 | Pass | #627 | run 2026-11-18, `17a3ef35`, see the Run log |
+| [GOLDFISH-15](goldfish.md#goldfish-15--a-goldfishs-question-can-be-answered-from-its-card-) | 💰 | Pass | #627 | run 2026-11-18, `17a3ef35`, see the Run log |
+| [GOLDFISH-16](goldfish.md#goldfish-16--goldfish-is-refused-while-maxconcurrentturns-is-above-1-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |

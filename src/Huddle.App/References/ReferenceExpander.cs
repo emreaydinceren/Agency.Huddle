@@ -21,7 +21,19 @@ internal sealed class ReferenceExpander(ReferenceResolver resolver, IPromptSourc
     /// <param name="chiefOfStaff">Whether the reader is the built-in Chief of Staff, whose hint names <c>search</c> because it reads every Room.</param>
     /// <param name="ct">Cancels the lookups.</param>
     /// <returns>The header text, or null when expansion is off or the text names nothing to describe.</returns>
-    public async Task<string?> ExpandAsync(string triggerText, bool usesToolNamePrefix, bool chiefOfStaff, CancellationToken ct)
+    public Task<string?> ExpandAsync(string triggerText, bool usesToolNamePrefix, bool chiefOfStaff, CancellationToken ct)
+    {
+        return this.ExpandAsync(triggerText, usesToolNamePrefix, chiefOfStaff, clean: false, ct);
+    }
+
+    /// <summary>Expands the references in <paramref name="triggerText"/> into the header text.</summary>
+    /// <param name="triggerText">The triggering Message's own text; never catch-up or Transcript text.</param>
+    /// <param name="usesToolNamePrefix">Whether the Adapter names tools with the <c>mcp__team__</c> prefix.</param>
+    /// <param name="chiefOfStaff">Whether the reader is the built-in Chief of Staff, whose hint names <c>search</c> because it reads every Room.</param>
+    /// <param name="clean">Whether the Turn is a goldfish possession's: only Task references are described, because a Room, Team or Agent is not the brief's to expose.</param>
+    /// <param name="ct">Cancels the lookups.</param>
+    /// <returns>The header text, or null when expansion is off or the text names nothing to describe.</returns>
+    public async Task<string?> ExpandAsync(string triggerText, bool usesToolNamePrefix, bool chiefOfStaff, bool clean, CancellationToken ct)
     {
         TeamOptions team = options.Value;
         if (!team.References.ExpandInPrompt)
@@ -30,7 +42,11 @@ internal sealed class ReferenceExpander(ReferenceResolver resolver, IPromptSourc
         }
 
         // The header never lists Library files (the Library block does), so they are not looked up here: no disk check per Turn.
-        List<ReferenceCandidate> candidates = [.. ReferenceScanner.Scan(triggerText).Where(static candidate => candidate.Kind != ReferenceKind.LibraryFile)];
+        List<ReferenceCandidate> candidates =
+        [
+            .. ReferenceScanner.Scan(triggerText)
+                .Where(candidate => clean ? candidate.Kind == ReferenceKind.Task : candidate.Kind != ReferenceKind.LibraryFile),
+        ];
         if (candidates.Count == 0)
         {
             return null;

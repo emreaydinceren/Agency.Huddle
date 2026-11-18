@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
@@ -34,7 +35,8 @@ internal sealed class ReadRecordsTool(
     TimeProvider clock,
     string callerAgentId,
     IPromptSource prompts,
-    ITeamRenames? renames = null) : IAppTool
+    ITeamRenames? renames = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The most characters one call returns.</summary>
     private const int MaxCharacters = 12000;
@@ -78,6 +80,11 @@ internal sealed class ReadRecordsTool(
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (goldfish?.Refusal(callerAgentId) is { } goldfishRefusal)
+        {
+            return goldfishRefusal;
+        }
 
         (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)

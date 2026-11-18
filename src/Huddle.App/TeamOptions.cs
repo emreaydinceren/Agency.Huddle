@@ -3,6 +3,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.DocHistory;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Jobs;
 using Agency.Huddle.App.Library;
@@ -81,6 +82,9 @@ public sealed class TeamOptions
 
     /// <summary>Configuration for the Turn Queue, bound from <c>Team:TurnQueue</c>.</summary>
     public TurnQueueOptions TurnQueue { get; set; } = new();
+
+    /// <summary>Configuration for goldfish mode, bound from <c>Team:Goldfish</c>.</summary>
+    public GoldfishOptions Goldfish { get; set; } = new();
 
     /// <summary>Configuration for the Avatar Library, per Spec §6.1. Unset means no library.</summary>
     public AvatarLibraryOptions AvatarLibrary { get; set; } = new();

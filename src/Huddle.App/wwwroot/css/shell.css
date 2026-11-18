@@ -93,6 +93,11 @@
     box-shadow: none;
 }
 
+.agent-dot.goldfish {
+    background: color-mix(in srgb, var(--mud-palette-info) 80%, var(--mud-palette-black));
+    box-shadow: none;
+}
+
 .agent-dot.starting {
     background: color-mix(in srgb, var(--mud-palette-warning) 80%, var(--mud-palette-black));
     box-shadow: none;
@@ -108,6 +113,7 @@
 .agent-dot.presence-glyph-check::after,
 .agent-dot.presence-glyph-pulse::after,
 .agent-dot.presence-glyph-dash::after,
+.agent-dot.presence-glyph-fish::after,
 .task-card-presence.presence-glyph-check .mud-badge::after,
 .task-card-presence.presence-glyph-pulse .mud-badge::after,
 .task-card-presence.presence-glyph-dash .mud-badge::after {
@@ -133,6 +139,10 @@
 .agent-dot.presence-glyph-dash::after,
 .task-card-presence.presence-glyph-dash .mud-badge::after {
     mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M2.6 5 H7.4' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'/%3E%3C/svg%3E");
+}
+
+.agent-dot.presence-glyph-fish::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.4 5 C2.4 3.6 3.6 3 4.9 3 C5.7 3 6.3 3.3 6.8 3.8 L8.6 2.8 V7.2 L6.8 6.2 C6.3 6.7 5.7 7 4.9 7 C3.6 7 2.4 6.4 1.4 5 Z' fill='none' stroke='%23000' stroke-width='1' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* A gentle pulse for a state in flux: the badge breathes between full and about half opacity. Static when the
@@ -165,6 +175,13 @@
     display: inline-flex;
     flex: 0 0 auto;
     vertical-align: middle;
+}
+
+/* Goldfish mode (Huddle.Goldfish §7.4): a solid Info ring, 2px clear of the avatar and outside it. */
+.presence-anchor.goldfish {
+    outline: 2px solid var(--mud-palette-info);
+    outline-offset: 2px;
+    border-radius: 50%;
 }
 
 .agent-dot.on-avatar {

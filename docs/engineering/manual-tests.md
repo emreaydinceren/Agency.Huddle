@@ -240,6 +240,7 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [The named pipe](manual-tests/pipe-external.md): external agents and the wire.
 - [Prompt blocks](manual-tests/prompt-blocks.md): images in a Prompt, the cap, the size limit and Adapter Profiles.
 - [Settings Prompts](manual-tests/prompts-settings.md): editing, per-field reset and Save.
+- [Goldfish mode](manual-tests/goldfish.md): a clean copy of an Agent takes one Room, the stamp and chip, **Call Ruth back**, the restart, the deny list and the spec review Task (paid, Sonnet minimum).
 - [Questions](manual-tests/questions.md): `ask_human`, the elicitation bridge and its cards.
 - [Reply Gate and Budget](manual-tests/reply-gate-budget.md): the Reply Gate, Mentions and the Room Budget.
 - [Room messaging](manual-tests/room-messaging.md): the Room view, posting Messages and Transcript rendering.

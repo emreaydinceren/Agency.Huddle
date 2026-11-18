@@ -35,6 +35,7 @@ configuring models; see [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Set a Team's process and gates, schedules and Household | [Running a Team](#running-a-team) |
 | Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
 | Chat with one or several Agents | [Chatting in Rooms](#chatting-in-rooms) |
+| Have an Agent look at work with fresh eyes | [Asking an Agent for fresh eyes (goldfish mode)](#asking-an-agent-for-fresh-eyes-goldfish-mode) |
 | Open a Room inside a Team, or find its Team Room | [Team rooms](#team-rooms) |
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Have an Agent, or yourself, reminded of something on a timetable | [Scheduling jobs](#scheduling-jobs) |
@@ -1532,6 +1533,57 @@ its adapter reports a cost. It is a figure for this run, not a ledger.
 > [!NOTE]
 > Tool-call rows are not saved. They disappear when the reply is finished or
 > the app restarts, and are never written to the transcript.
+
+### Asking an Agent for fresh eyes (goldfish mode)
+
+Sometimes you want an Agent to look at a piece of work with no memory of the
+conversation around it, so it is not carried along by what was said earlier.
+Goldfish mode does that. The Agent hands the Room to a clean copy of itself:
+same Name, Persona, Model and rules, but no Room history, no Memory and no
+`AGENTS.md`. The copy sees only a short **brief** the Agent writes, and the files
+the brief names.
+
+**How to ask.** Say it in your Message, for example *"@Ruth, goldfish
+docs/spec.md: can it be built as written?"* or *"use goldfish mode to review
+this"*. Ruth decides whether to do it; if she answers in her own voice, ask
+again and say "use the goldfish tool". A Team can also ask for it in its
+process: the built-in spec-driven process says spec reviews are done in goldfish
+mode.
+
+**What you see.**
+
+- A row, "Ruth went into goldfish mode", with the brief word for word.
+- A chip in the Room header, "Ruth in goldfish mode", with the minutes, and a
+  ring and a small fish on Ruth's avatar.
+- Every Message from the copy reads **Ruth · goldfish**, with a fish. The mark
+  stays on those Messages for good, so you can always tell which words came from
+  the clean copy and which from Ruth herself.
+- While the copy waits for an answer the chip reads "Ruth (goldfish) is
+  waiting". It asks like any Agent: its question is an ordinary Message, and you
+  or another Agent answer by **Mentioning Ruth**. A Message that does not
+  Mention Ruth does not reach it. While the Room is possessed, any Mention of
+  Ruth in that Room goes to the copy, whatever it is about. Ruth answers
+  normally in her other Rooms.
+- When the copy is done, a row, "Ruth is back", with how many Turns it took and
+  what it cost, and the result as a Message from Huddle. Ruth then tells you
+  what it found.
+
+**Calling Ruth back.** Press **Call Ruth back** on the chip, or post a Message
+that is "@Ruth comeback" and nothing else, to end it at once. Ruth comes back
+with whatever the copy had posted. Pressing **Stop** on the copy's reply does
+the same. A Message such as "@Ruth comeback later" is only a Message to the
+copy and ends nothing. If Huddle restarts while the copy is working, the
+possession ends as "Interrupted by a restart"; it is never resumed.
+
+**Limits.**
+
+- Goldfish mode is offered only to Agents on a Claude Adapter. Agents on any
+  other Adapter are not offered it.
+- It needs one Turn at a time. If `Team:Acp:MaxConcurrentTurns` is above 1,
+  Ruth is told "Goldfish mode needs one Turn at a time" and nothing starts.
+- The copy cannot read Ruth's Memory with its file tools. It is not a vault:
+  a script it runs can still open a file in Ruth's folder.
+- Set `Team:Goldfish:Enabled` to `false` to switch it off for everyone.
 
 ### How the conversation reads
 

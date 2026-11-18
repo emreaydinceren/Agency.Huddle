@@ -385,10 +385,31 @@ internal sealed class AgentConnection
                 case QueueAck ack:
                 await this.HandleQueueAckAsync(lineStream, ack, ct).ConfigureAwait(false);
                 break;
+                case GoldfishReport report:
+                await this.HandleGoldfishReportAsync(report, ct).ConfigureAwait(false);
+                break;
                 default:
                 await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Unexpected message type."), ct).ConfigureAwait(false);
                 break;
             }
+        }
+    }
+
+    /// <summary>Hands a runner's goldfish report to the supervisor; a failing store is logged and never ends the connection.</summary>
+    private async Task HandleGoldfishReportAsync(GoldfishReport report, CancellationToken ct)
+    {
+        if (this.gateway.Goldfish is not { } supervisor || this.Agent is not { } agent)
+        {
+            return;
+        }
+
+        try
+        {
+            await supervisor.OnReportAsync(agent.Id, report, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is SqliteException or IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            this.logger.LogError(ex, "Applying a goldfish report failed on connection {ConnectionId}.", this.ConnectionId);
         }
     }
 

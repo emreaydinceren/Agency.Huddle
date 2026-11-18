@@ -55,11 +55,20 @@ internal sealed record RoomSessionHarnessOptions
     /// <summary>The store the first Turn after a fresh start writes its whole prompt text to, or <see langword="null"/> for none (no file is written).</summary>
     public LastCatchUpStore? LastCatchUp { get; init; }
 
+    /// <summary>The possession the session serves (it then reports to the owner and passes the Task id with its Spend), or <see langword="null"/> for an ordinary session; set <see cref="Clean"/> with it.</summary>
+    public CleanSessionSpec? Goldfish { get; init; }
+
     /// <summary>The Turn hook pipeline the session runs around each Message Turn, or <see langword="null"/> for none.</summary>
     public TurnHookPipeline? Hooks { get; init; }
 
     /// <summary>The clock the session and its watchdog use, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</summary>
     public TimeProvider? Time { get; init; }
+
+    /// <summary>Whether the session serves a goldfish possession: no Transcript Catch-up, enrichers told it is clean. <see langword="false"/> for an ordinary session.</summary>
+    public bool Clean { get; init; }
+
+    /// <summary>The enricher pipeline to use instead of the one <see cref="TurnHookTestFactory"/> builds from <see cref="LibraryDocs"/> and <see cref="ReadsFiles"/>, or <see langword="null"/> for that one.</summary>
+    public TurnEnricherPipeline? Enrichers { get; init; }
 }
 
 /// <summary>
@@ -114,13 +123,15 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             agentId: settings.AgentId,
             turnActivity: settings.TurnActivity,
             contextFill: settings.ContextFill,
-            enrichers: TurnHookTestFactory.Enrichers(settings.LibraryDocs, settings.ReadsFiles),
+            enrichers: settings.Enrichers ?? TurnHookTestFactory.Enrichers(settings.LibraryDocs, settings.ReadsFiles),
             roomSessions: settings.RoomSessions,
             host: settings.Host,
             sessionSettings: settings.SessionSettings,
             lastCatchUp: settings.LastCatchUp,
             time: settings.Time,
-            hooks: settings.Hooks);
+            hooks: settings.Hooks,
+            clean: settings.Clean,
+            goldfish: settings.Goldfish);
         return new RoomSessionHarness(session, runCts);
     }
 

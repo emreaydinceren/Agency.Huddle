@@ -100,8 +100,166 @@ internal static class PromptCatalog
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
         ..BuildPart53(),
-        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(),
+        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(), ..BuildGoldfishToolParts(), ..BuildGoldfishRefusalParts(), ..BuildGoldfishDoneParts(),
     ];
+
+    /// <summary>Builds the goldfish closing prompt, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
+    /// <returns>The prompt definitions of the goldfish slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishParts() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.goldfish",
+            Label: "Goldfish mode",
+            HelperText:
+                "Goldfish: the closing part of a clean session, in place of Room Sessions. It is the Agent's " +
+                "whole orientation in goldfish mode. Must keep {{goldfishDoneTool}}, the name of the tool that " +
+                "leaves goldfish mode: without it the Agent cannot finish and stays waiting. Must not name any " +
+                "one Room: the brief in the first Turn says where the work is.",
+            Default:
+                """
+                You are in goldfish mode. The brief in your first Turn is your only context: you have no Room
+                history and no Memory, and you cannot see what was said before it. Work from the brief alone.
+                If you need something more from a person, post an ordinary Message that asks for it and end your
+                Turn. A Message that Mentions you starts your next Turn, so you wait there for the answer. Ending
+                a Turn without calling {{goldfishDoneTool}} means you are waiting. When you have what you need,
+                or never needed to ask, call {{goldfishDoneTool}} to leave goldfish mode with your result.
+                Anyone may call you back later. Everything you write here is marked as goldfish work.
+                """,
+            Placeholders: ["{{goldfishDoneTool}}"],
+            RequiredPlaceholders: ["{{goldfishDoneTool}}"],
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to know they are in goldfish mode and how to wait and how to leave."),
+    ];
+
+    /// <summary>Builds the Prompts of the <c>goldfish</c> and <c>goldfish_done</c> tools and of the clean session's Turns (goldfish spec 5.1, 5.3, 5.4, 6.9).</summary>
+    /// <returns>The prompt definitions of the goldfish tools, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishToolParts() =>
+    [
+        GoldfishPrompt(
+            "tool.goldfish.description",
+            "goldfish description",
+            "What the model reads for the goldfish tool. Takes no placeholders. Must say that the brief is the only thing the goldfish knows and is posted word for word.",
+            "Go into goldfish mode: a fresh copy of you, with none of this Room's history and none of your Memory, does one piece of work while you step aside. "
+            + "The brief is the only thing the goldfish will know, and it is posted in the Room word for word. "
+            + "Say what to do and what to read; do not say what you think the answer is, what the author meant or what was agreed in chat. "
+            + "The goldfish leaves with goldfish_done, and anyone can call it back by writing your name and \"comeback\" in the Room. "
+            + "This call ends your Turn: end it with one short line and the result arrives as a new Turn.",
+            PromptTiming.NextSession),
+        GoldfishPrompt(
+            "tool.goldfish.started",
+            "goldfish: started",
+            "The reply when goldfish mode starts. Must keep {{room}} and {{silentToken}}: the Agent is told to end its Turn with one line or the silent token.",
+            "Goldfish started in {{room}}. Your brief is posted there. End this Turn now with one short line, or {{silentToken}}.\nYou will get the result as a new Turn when the goldfish is done. Until then you cannot post in {{room}}.",
+            PromptTiming.Live,
+            "{{room}}",
+            "{{silentToken}}"),
+        GoldfishPrompt(
+            "tool.goldfish.briefEmpty",
+            "goldfish: empty brief",
+            "The refusal for an empty brief. Takes no placeholders. Says it is final.",
+            "Write the brief: what to do and what to read. Nothing was started.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.briefTooLong",
+            "goldfish: brief too long",
+            "The refusal for a brief over the limit. Must keep {{count}} (its length) and {{limit}}.",
+            "The brief is {{count}} characters; the limit is {{limit}}. Say less: what to do and which files to read. Nothing was started.",
+            PromptTiming.Live,
+            "{{count}}",
+            "{{limit}}"),
+    ];
+
+    /// <summary>Builds the <c>goldfish</c> refusal Prompts.</summary>
+    /// <returns>The prompt definitions, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishRefusalParts() =>
+    [
+        GoldfishPrompt(
+            "tool.goldfish.noTurn",
+            "goldfish: no Turn",
+            "The refusal when no Turn of the caller is running. Takes no placeholders.",
+            "Call goldfish from the Turn where the work is. Nothing was started.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.already",
+            "goldfish: already in the mode",
+            "The refusal when the Agent is already in goldfish mode. Must keep {{room}}, the Room of the open possession.",
+            "You are already in goldfish mode in {{room}}. One at a time. Nothing was started.",
+            PromptTiming.Live,
+            "{{room}}"),
+        GoldfishPrompt(
+            "tool.goldfish.nested",
+            "goldfish: nested",
+            "The refusal when a goldfish itself calls goldfish. Takes no placeholders.",
+            "You are in goldfish mode. Finish with goldfish_done first. Nothing was started.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.concurrent",
+            "goldfish: several Turns at once",
+            "The refusal when Team:Acp:MaxConcurrentTurns is above one. Must keep {{count}}.",
+            "Goldfish mode needs one Turn at a time, and this Huddle runs up to {{count}} at once. It is not available here; do not retry.",
+            PromptTiming.Live,
+            "{{count}}"),
+        GoldfishPrompt(
+            "tool.goldfish.refused",
+            "goldfish: tool refused",
+            "What a tool that reads Memory, Transcripts or records answers inside a possession. Takes no placeholders.",
+            "Not in goldfish mode: this tool reads what you must not know. Work from your brief and the files it names.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "tool.goldfish.warmBlocked",
+            "goldfish: warm Agent blocked",
+            "The refusal when the warm Agent posts into the Room it has a goldfish in. Must keep {{agent}} and {{room}}.",
+            "{{agent}} is in goldfish mode in {{room}}; post there after they are back.",
+            PromptTiming.Live,
+            "{{agent}}",
+            "{{room}}"),
+    ];
+
+    /// <summary>Builds the <c>goldfish_done</c> Prompts and the clean session's Turn Prompts.</summary>
+    /// <returns>The prompt definitions, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishDoneParts() =>
+    [
+        GoldfishPrompt(
+            "tool.goldfishDone.description",
+            "goldfish_done description",
+            "What the model reads for the goldfish_done tool. Takes no placeholders.",
+            "Leave goldfish mode and hand your result back. In result, say what you did, the questions you asked and the answers you got, and the path of any file you wrote; "
+            + "put each finding in findings. Use the outcome stuck only when you cannot go on, even with assumptions. Your Turn ends after this call.",
+            PromptTiming.NextSession),
+        GoldfishPrompt(
+            "tool.goldfishDone.done",
+            "goldfish_done: done",
+            "The reply when a possession ends. Must keep {{agent}}.",
+            "Done. Your body goes back to {{agent}}.",
+            PromptTiming.Live,
+            "{{agent}}"),
+        GoldfishPrompt(
+            "tool.goldfishDone.notPossessed",
+            "goldfish_done: not in the mode",
+            "The refusal when goldfish_done is called outside a possession. Takes no placeholders.",
+            "You are not in goldfish mode, so there is nothing to finish here. Do not call goldfish_done again.",
+            PromptTiming.Live),
+        GoldfishPrompt(
+            "turn.goldfishBrief",
+            "Goldfish Turn: brief",
+            "The first Turn of a goldfish: the brief and where the work is. Must keep {{brief}} and {{roomLabel}}.",
+            "Brief for the work in {{roomLabel}}:\n\n{{brief}}",
+            PromptTiming.Live,
+            "{{brief}}",
+            "{{roomLabel}}"),
+        GoldfishPrompt(
+            "turn.goldfishMessage",
+            "Goldfish Turn: message",
+            "A later Turn of a goldfish: a Message owed to the Agent in the possession's Room. Must keep {{sender}} and {{text}}.",
+            "{{sender}} writes:\n\n{{text}}",
+            PromptTiming.Live,
+            "{{sender}}",
+            "{{text}}"),
+    ];
+
+    /// <summary>One goldfish Prompt; every placeholder it takes is required.</summary>
+    private static PromptDefinition GoldfishPrompt(string key, string label, string helperText, string text, PromptTiming timing, params string[] placeholders) =>
+        new(key, label, helperText, text, placeholders, placeholders, timing);
 
     /// <summary>Builds the Turn Queue prompts, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
     /// <returns>The prompt definitions of the Turn Queue slices, in catalog order.</returns>

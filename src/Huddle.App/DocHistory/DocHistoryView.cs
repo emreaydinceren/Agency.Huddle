@@ -21,10 +21,29 @@ internal static class DocHistoryView
         }
 
         string writer = entries.FirstOrDefault(static entry => entry.Kind == DocChangeKind.Created)?.Actor ?? entries[0].Actor;
-        List<string> editedBy = ActorsOf(entries, DocChangeKind.Edited);
+        List<string> editedBy = ActorsOf(entries, DocChangeKind.Edited, goldfish: false);
         editedBy.RemoveAll(name => string.Equals(name, writer, StringComparison.OrdinalIgnoreCase));
-        return new DocByline(writer, editedBy, ActorsOf(entries, DocChangeKind.Reviewed), ActorsOf(entries, DocChangeKind.Objected), entries.Max(static entry => entry.At));
+        return new DocByline(
+            writer,
+            editedBy,
+            ActorsOf(entries, DocChangeKind.Reviewed, goldfish: false),
+            ActorsOf(entries, DocChangeKind.Objected, goldfish: false),
+            entries.Max(static entry => entry.At),
+            ActorsOf(entries, DocChangeKind.Edited, goldfish: true),
+            ActorsOf(entries, DocChangeKind.Reviewed, goldfish: true));
     }
+
+    /// <summary>The byline label of an edit or review part: a goldfish's is worded apart, so no one reads it as a warm Agent's.</summary>
+    /// <param name="kind">The part's kind, <see cref="DocChangeKind.Edited"/> or <see cref="DocChangeKind.Reviewed"/>.</param>
+    /// <param name="goldfish">Whether the part lists goldfish entries.</param>
+    /// <returns>For example "Goldfish review by".</returns>
+    internal static string BylineLabel(DocChangeKind kind, bool goldfish) => (kind, goldfish) switch
+    {
+        (DocChangeKind.Reviewed, true) => "Goldfish review by",
+        (_, true) => "Goldfish edit by",
+        (DocChangeKind.Reviewed, false) => "Reviewed by",
+        _ => "Edited by",
+    };
 
     /// <summary>Joins Names for the byline: at most <see cref="MaxNames"/>, then "+N".</summary>
     /// <param name="names">The Names, in display order.</param>
@@ -151,14 +170,15 @@ internal static class DocHistoryView
     /// <summary>Distinct actors of one kind, most recent first, compared case-insensitively as Names are.</summary>
     /// <param name="entries">The entries, oldest first.</param>
     /// <param name="kind">The kind to collect.</param>
+    /// <param name="goldfish">Whether to collect goldfish entries or the others.</param>
     /// <returns>The Names.</returns>
-    private static List<string> ActorsOf(IReadOnlyList<DocHistoryEntry> entries, DocChangeKind kind)
+    private static List<string> ActorsOf(IReadOnlyList<DocHistoryEntry> entries, DocChangeKind kind, bool goldfish)
     {
         List<string> names = [];
         for (int index = entries.Count - 1; index >= 0; index--)
         {
             DocHistoryEntry entry = entries[index];
-            if (entry.Kind == kind && !names.Contains(entry.Actor, StringComparer.OrdinalIgnoreCase))
+            if (entry.Kind == kind && entry.Goldfish == goldfish && !names.Contains(entry.Actor, StringComparer.OrdinalIgnoreCase))
             {
                 names.Add(entry.Actor);
             }

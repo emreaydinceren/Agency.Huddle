@@ -6,6 +6,9 @@ namespace Agency.Huddle.App.Tabs;
 /// </summary>
 internal static class MaterialSymbols
 {
+    /// <summary>A fish facing left with a forked tail and an eye: goldfish mode (a fresh-eyes Agent), used for that concept only.</summary>
+    public const string Fish = "<path d=\"M2 12c3.5-4.5 7.5-6.5 12-6.5 2.2 0 4.2 1.1 5.8 3.2L22 7v10l-2.2-1.7c-1.6 2.1-3.6 3.2-5.8 3.2-4.5 0-8.5-2-12-6.5zm5.5-1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2z\"/>";
+
     /// <summary>Material Symbols <c>move_selection_left</c>: a solid pane on the left, a dotted one on the right.</summary>
     public const string MoveSelectionLeft = "<path d=\"M2 18V6h12v12H2zm2-2h8V8H4v8zm12-8V6h2v2h-2zm0 10v-2h2v2h-2zm4-10V6h2v2h-2zm0 5v-2h2v2h-2zm0 5v-2h2v2h-2z\"/>";
 

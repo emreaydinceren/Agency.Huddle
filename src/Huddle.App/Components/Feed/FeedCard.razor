@@ -7,6 +7,7 @@
 *@
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Feed
+@using Agency.Huddle.App.Goldfish
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.NeedsYou
 @using Agency.Huddle.App.Tabs
@@ -217,7 +218,7 @@
     private string ActorName => this.Lead.Actor.Kind == FeedActorKind.Human ? "You" : this.Lead.Actor.Name;
 
     /// <summary>The Name the avatar store knows this card's actor by: the Human's own Name for the Human, whose card says "You".</summary>
-    private string AvatarOwner => this.Lead.Actor.Kind == FeedActorKind.Human ? this.Human.Name : this.Lead.Actor.Name;
+    private string AvatarOwner => this.Lead.Actor.Kind == FeedActorKind.Human ? this.Human.Name : GoldfishStamp.AgentName(this.Lead.Actor.Name);
 
     private string RootClass =>
         "feed-card feed-kind-" + this.Category

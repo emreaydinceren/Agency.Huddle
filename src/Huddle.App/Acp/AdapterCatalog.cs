@@ -51,6 +51,28 @@ internal sealed class AdapterCatalog
         || AdapterCatalog.IsClaudeAgent(profile.AdapterPath)
         || (profile.Args is not null && profile.Args.Any(AdapterCatalog.IsClaudeAgent));
 
+    /// <summary>
+    /// Whether the host really launches claude-agent-acp for a profile: <see cref="RunsClaude"/>, or a profile that names
+    /// none of it and so gets the bundled adapter (<see cref="AgentProcessOptionsFactory.TryCreate"/> falls through to
+    /// <see cref="AdapterLocator"/> for exactly that shape, which is the stock install's synthesised profile).
+    /// </summary>
+    /// <param name="profile">The profile to inspect.</param>
+    /// <returns><see langword="true"/> when the process the host starts for the profile is claude-agent-acp.</returns>
+    internal static bool LaunchesClaude(AdapterProfile profile) =>
+        AdapterCatalog.RunsClaude(profile) || AdapterCatalog.LaunchesBundledAdapter(profile);
+
+    /// <summary>
+    /// Whether the launcher resolves this profile to the bundled adapter: no Args, no AdapterPath, the <c>mcp__</c> prefix, and
+    /// <c>node</c> as the Command, because the located adapter is a Node script and only a Node runtime runs it.
+    /// </summary>
+    /// <param name="profile">The profile to inspect.</param>
+    /// <returns><see langword="true"/> when <see cref="AgentProcessOptionsFactory.TryCreate"/> would hand <see cref="AdapterLocator"/>'s script to Node.</returns>
+    private static bool LaunchesBundledAdapter(AdapterProfile profile) =>
+        profile.UsesToolNamePrefix
+        && profile.Args is not { Count: > 0 }
+        && string.IsNullOrWhiteSpace(profile.AdapterPath)
+        && string.Equals(Path.GetFileNameWithoutExtension(profile.Command), "node", StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Whether a value names the <c>claude-agent-acp</c> adapter, ignoring case.</summary>
     /// <param name="value">The text to inspect, or <see langword="null"/>.</param>
     /// <returns><see langword="true"/> when <paramref name="value"/> contains the adapter name.</returns>

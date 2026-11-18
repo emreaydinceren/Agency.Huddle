@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
@@ -21,7 +22,8 @@ internal sealed class AddEvidenceTool(
     TimeProvider clock,
     string callerAgentId,
     IPromptSource prompts,
-    IProofSource? proofs = null) : IAppTool
+    IProofSource? proofs = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     private const string FieldSeparator = " | ";
     private const string LogMarker = "#L";
@@ -58,7 +60,7 @@ internal sealed class AddEvidenceTool(
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
-        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         if (target is null)
         {
             return refusal;

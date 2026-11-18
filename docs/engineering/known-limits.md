@@ -958,3 +958,18 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   it is killed by hand. A clean shutdown still kills it.
 - **The `allowed_origins_required` Security item cannot fire yet.** It depends on `GatewayRuntimeView.BareNameHostInUse`,
   which always returns `false` today, so a bare machine name that needs `AllowedOrigins` is not detected.
+- **Goldfish mode is clean in its prompt and tools, and only partly clean on disk** ([ADR-0097](../adr/0097-goldfish-mode-a-possession-of-one-agent-in-one-room.md),
+  [spec](../Huddle.Goldfish-Specifications.md) §8.4, §10).
+  - **A script in `Bash` can still read a denied file (E-9).** The session starts with `Read(//drive/path/**)` deny rules for the
+    Agent's Memory, every Team, Project and Huddle-wide `memory/` folder and the Rooms' data. They stop `Read`, `Grep`, `Glob`
+    and a plain `cat`, but not `python -c "open(...)"`. The Work Dir is not a jail, and the Work Dir's own `CLAUDE.md`
+    still loads. Accepted: the goldfish is the Agent itself, and its Persona tells it what not to read.
+  - **A folder created after the session opens is not denied.** The rules are fixed when the session starts, and a folder
+    that does not exist then gets none (`GoldfishReadDeny`). A Team's `memory/` folder made during a possession is open to it.
+  - **A waiting goldfish holds its Room until a Mention or a call back (E-6).** A goldfish whose Turn ends without
+    `goldfish_done` waits, with the warm Agent set aside in that Room, indefinitely. There is no timeout (D-17, D-18): the
+    header chip says it is waiting and "@Ruth comeback" or **Call back** ends it. A restart ends it as Restarted.
+  - **A goldfish's `post_message` into another Room is not stamped.** The stamp follows the possessed (Agent, Room) pair, so
+    a post into a different Room by the same Agent carries no "· goldfish" and reads as the Agent's own.
+  - **Goldfish mode refuses while `Team:Acp:MaxConcurrentTurns` is above 1** (D-20, E-16). A setting raised during an open
+    possession lets it go on; the next `goldfish` call refuses.

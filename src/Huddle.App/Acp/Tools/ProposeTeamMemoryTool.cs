@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.Memory;
@@ -24,6 +25,8 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// <param name="prompts">Renders the description and every reply.</param>
 /// <param name="options">Supplies the size caps and whether Adapters are on.</param>
 /// <param name="renames">Names today's Team when the call carries the old name of a renamed one; optional.</param>
+/// <param name="callerAgentId">The Agent this tool instance is bound to, for the goldfish refusal; optional.</param>
+/// <param name="goldfish">Tells whether the caller is a goldfish, which the tool refuses; optional.</param>
 internal sealed class ProposeTeamMemoryTool(
     string personaName,
     TeamMemoryAccess access,
@@ -33,7 +36,9 @@ internal sealed class ProposeTeamMemoryTool(
     HelperBudget budget,
     IPromptSource prompts,
     IOptions<TeamOptions> options,
-    ITeamRenames? renames = null) : IAppTool
+    ITeamRenames? renames = null,
+    string? callerAgentId = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "propose_team_memory";
@@ -66,6 +71,11 @@ internal sealed class ProposeTeamMemoryTool(
     public Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+        if (callerAgentId is not null && goldfish?.Refusal(callerAgentId) is { } refusal)
+        {
+            return Task.FromResult(refusal);
+        }
+
         return Task.FromResult(this.Propose(arguments));
     }
 

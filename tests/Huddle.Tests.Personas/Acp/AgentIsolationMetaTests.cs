@@ -314,6 +314,68 @@ public sealed class AgentIsolationMetaTests
         Assert.Equal([.. ExpectedAgentRules, "mcp__claude_ai_*", "mcp__playwright__*"], DotAcpAgentHostFactory.AskRules(connectors: true, browser: true));
     }
 
+    private static readonly string[] ReadDeny = ["Read(//e/huddle/data/rooms/**)", "Read(//e/huddle/data/work/nova/memory/**)"];
+
+    /// <summary>Goldfish: a clean session's meta carries the deny rules exactly, in the same <c>permissions</c> dictionary as <c>ask</c>.</summary>
+    [Fact]
+    public void ReadDeny_Isolating_SitsBesideAsk()
+    {
+        Dictionary<string, object> options = Options(DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors: false, readDeny: ReadDeny));
+
+        Dictionary<string, object> permissions = Assert.IsType<Dictionary<string, object>>(Settings(options)["permissions"]);
+        Assert.Equal(["ask", "deny"], permissions.Keys.Order(StringComparer.Ordinal));
+        Assert.Equal(ReadDeny, Assert.IsType<string[]>(permissions["deny"]));
+        Assert.Equal(ExpectedAgentRules, Assert.IsType<string[]>(permissions["ask"]));
+    }
+
+    /// <summary>Goldfish: with a browser entry the browser rule comes first and the read rules follow it.</summary>
+    [Fact]
+    public void ReadDeny_WithBrowser_BrowserRuleFirst()
+    {
+        Dictionary<string, object> options = Options(
+            DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors: false, browserServer: Entry(), readDeny: ReadDeny));
+
+        Dictionary<string, object> permissions = Assert.IsType<Dictionary<string, object>>(Settings(options)["permissions"]);
+        Assert.Equal(["mcp__playwright__browser_run_code_unsafe", .. ReadDeny], Assert.IsType<string[]>(permissions["deny"]));
+    }
+
+    /// <summary>Goldfish: a null or empty read-deny list leaves the meta JSON-identical to what it is today, for either connectors setting.</summary>
+    /// <param name="connectors">The connectors setting.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void ReadDeny_NullOrEmpty_IsJsonIdenticalToToday(bool connectors)
+    {
+        string today = System.Text.Json.JsonSerializer.Serialize(DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors));
+
+        Assert.Equal(today, System.Text.Json.JsonSerializer.Serialize(DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors, readDeny: null)));
+        Assert.Equal(today, System.Text.Json.JsonSerializer.Serialize(DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors, readDeny: [])));
+    }
+
+    /// <summary>Goldfish: with no ask rules (a Helper) the read rules are not added, because the <c>permissions</c> key is not there to hold them.</summary>
+    [Fact]
+    public void ReadDeny_AskRulesOff_AddsNothing()
+    {
+        Dictionary<string, object> options = Options(
+            DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors: false, askRules: false, readDeny: ReadDeny));
+
+        Assert.False(Settings(options).ContainsKey("permissions"));
+    }
+
+    /// <summary>Goldfish: a profile that does not isolate gets no meta however many read rules are offered.</summary>
+    [Fact]
+    public void ReadDeny_NotIsolating_ReturnsNull() =>
+        Assert.Null(DotAcpAgentHostFactory.BuildIsolationMeta(Profile(isolate: false), connectors: true, readDeny: ReadDeny));
+
+    /// <summary>Goldfish: an ordinary meta (no read-deny argument) has no <c>deny</c> key at all.</summary>
+    [Fact]
+    public void ReadDeny_OrdinaryMeta_HasNoDeny()
+    {
+        Dictionary<string, object> options = Options(DotAcpAgentHostFactory.BuildIsolationMeta(IsolatingClaude(), connectors: false));
+
+        Assert.False(Assert.IsType<Dictionary<string, object>>(Settings(options)["permissions"]).ContainsKey("deny"));
+    }
+
     /// <summary>#551: the profile folder is under <c>browser-profiles</c> beside the Agent folders, never inside one.</summary>
     [Fact]
     public void BrowserProfile_IsUnderBrowserProfilesRoot()

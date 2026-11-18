@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp.Sessions.TurnHooks;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.References;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Factories;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -73,5 +74,68 @@ public sealed class ReferencedItemsEnricherTests
         WorkItem enriched = await enricher.EnrichAsync(new TurnEnriching(item, "Nova", null), ct);
 
         Assert.NotNull(enriched.ReferencedItems);
+    }
+
+    private static TaskItem TaskFile(string id, string title) => Tasks.TestTasks.Make(
+        id: id,
+        title: title,
+        status: TaskState.InProgress,
+        assignee: "Nova",
+        location: new TaskLocation("Platform", null, false));
+
+    /// <summary>Builds the enricher, a Room and a Task in the fixture, and a Message that links the Room and names the Task.</summary>
+    private static async Task<(ReferencedItemsEnricher Enricher, WorkItem Item)> RoomAndTaskAsync(ReferenceFixture fixture, CancellationToken ct)
+    {
+        Room room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, fixture.Nova.Id], ct);
+        ReferencedItemsEnricher enricher = new(
+            new ReferenceExpander(fixture.Resolver(), new FakePromptSource(), TestOptions.Create()), static _ => false);
+        WorkItem item = new("room-1", "Room 1", "Human", $"see [Launch](/rooms/{room.Id}) and PLAT-0001", [], TriggerMessageId: "trig-1");
+        return (enricher, item);
+    }
+
+    /// <summary>A clean Turn whose Message links only a Room gets no Referenced items header: a Room is not the brief's to expose.</summary>
+    [Fact]
+    public async Task EnrichAsync_CleanAndOnlyARoomLink_HasNoHeader()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct, null, TaskFile("PLAT-0001", "Fix login"));
+        Room room = await fixture.Directory.CreateRoomAsync("Launch", [KnownIds.Human, fixture.Nova.Id], ct);
+        ReferencedItemsEnricher enricher = new(
+            new ReferenceExpander(fixture.Resolver(), new FakePromptSource(), TestOptions.Create()), static _ => false);
+        WorkItem item = new("room-1", "Room 1", "Human", $"see [Launch](/rooms/{room.Id})", [], TriggerMessageId: "trig-1");
+
+        WorkItem enriched = await enricher.EnrichAsync(new TurnEnriching(item, "Nova", null, Clean: true), ct);
+
+        Assert.Null(enriched.ReferencedItems);
+    }
+
+    /// <summary>A clean Turn keeps a Task reference and drops the Room link beside it: the header describes the Task only.</summary>
+    [Fact]
+    public async Task EnrichAsync_CleanWithTaskAndRoom_DescribesOnlyTheTask()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct, null, TaskFile("PLAT-0001", "Fix login"));
+        (ReferencedItemsEnricher enricher, WorkItem item) = await RoomAndTaskAsync(fixture, ct);
+
+        WorkItem enriched = await enricher.EnrichAsync(new TurnEnriching(item, "Nova", null, Clean: true), ct);
+
+        Assert.NotNull(enriched.ReferencedItems);
+        Assert.Contains("Fix login", enriched.ReferencedItems, StringComparison.Ordinal); // contains-ok: the header's own text is the FakePromptSource's, the Task title is the pinned part
+        Assert.DoesNotContain("Launch", enriched.ReferencedItems, StringComparison.Ordinal);
+    }
+
+    /// <summary>An ordinary Turn with the same Message describes the Room and the Task both, so the clean flag is what changed the header.</summary>
+    [Fact]
+    public async Task EnrichAsync_NotClean_DescribesTheRoomAndTheTask()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ReferenceFixture fixture = await ReferenceFixture.BuildAsync(ct, null, TaskFile("PLAT-0001", "Fix login"));
+        (ReferencedItemsEnricher enricher, WorkItem item) = await RoomAndTaskAsync(fixture, ct);
+
+        WorkItem enriched = await enricher.EnrichAsync(new TurnEnriching(item, "Nova", null), ct);
+
+        Assert.NotNull(enriched.ReferencedItems);
+        Assert.Contains("Fix login", enriched.ReferencedItems, StringComparison.Ordinal); // contains-ok: the header's own text is the FakePromptSource's, the Task title is the pinned part
+        Assert.Contains("Launch", enriched.ReferencedItems, StringComparison.Ordinal); // contains-ok: as above, the Room name is the pinned part
     }
 }

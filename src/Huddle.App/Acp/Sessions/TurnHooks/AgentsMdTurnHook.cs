@@ -35,7 +35,7 @@ internal sealed class AgentsMdTurnHook(AgentsMdScopes scopes, AgentsMdNoticeSour
     public override bool AppliesTo(TurnHookScope scope)
     {
         ArgumentNullException.ThrowIfNull(scope);
-        return true;
+        return !scope.Clean;
     }
 
     /// <inheritdoc />

@@ -23,6 +23,12 @@ internal interface IPersonaHost : IAsyncDisposable
     /// <summary>Opens a fresh session, composing its system prompt now so the memory index is current.</summary>
     Task<IAgentSession> OpenAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Opens a clean session for a goldfish possession: a system prompt with no memory, AGENTS.md, outputs or Room-session text, and read
+    /// access to the Agent's memory and the Rooms' history denied. Refuses a profile that cannot enforce that.
+    /// </summary>
+    Task<IAgentSession> OpenCleanAsync(CleanSessionSpec spec, CancellationToken cancellationToken);
+
     /// <summary>Resumes a session by id, or returns <see langword="null"/> when the Adapter no longer has it.</summary>
     Task<IAgentSession?> ResumeAsync(string sessionId, CancellationToken cancellationToken);
 }

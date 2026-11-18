@@ -6,4 +6,13 @@ namespace Agency.Huddle.App.DocHistory;
 /// <param name="ReviewedBy">Actors of <see cref="DocChangeKind.Reviewed"/> entries.</param>
 /// <param name="ObjectedBy">Actors of <see cref="DocChangeKind.Objected"/> entries.</param>
 /// <param name="When">The newest entry's time.</param>
-public sealed record DocByline(string Writer, IReadOnlyList<string> EditedBy, IReadOnlyList<string> ReviewedBy, IReadOnlyList<string> ObjectedBy, DateTimeOffset When);
+/// <param name="GoldfishEditedBy">Actors of <see cref="DocChangeKind.Edited"/> entries written as a goldfish.</param>
+/// <param name="GoldfishReviewedBy">Actors of <see cref="DocChangeKind.Reviewed"/> entries written as a goldfish.</param>
+public sealed record DocByline(
+    string Writer,
+    IReadOnlyList<string> EditedBy,
+    IReadOnlyList<string> ReviewedBy,
+    IReadOnlyList<string> ObjectedBy,
+    DateTimeOffset When,
+    IReadOnlyList<string> GoldfishEditedBy,
+    IReadOnlyList<string> GoldfishReviewedBy);

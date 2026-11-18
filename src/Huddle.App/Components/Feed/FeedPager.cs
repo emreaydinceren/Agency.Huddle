@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Goldfish;
 
 namespace Agency.Huddle.App.Components.Feed;
 
@@ -151,7 +152,7 @@ internal sealed class FeedPager(FeedStore store, int pageSize, bool hideDismisse
     {
         ArgumentNullException.ThrowIfNull(item);
 
-        if (this.Agent is { } name && !string.Equals(item.Actor.Name, name, StringComparison.OrdinalIgnoreCase))
+        if (this.Agent is { } name && !string.Equals(GoldfishStamp.AgentName(item.Actor.Name), name,StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

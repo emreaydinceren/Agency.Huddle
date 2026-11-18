@@ -16,7 +16,7 @@
             @* Editable (Settings > Profile): the pencil is easy to miss, so a quiet text button under the avatar says plainly that it
                can be changed (ADR-0047). Both call OnAvatarClick. *@
             <div class="avatar-edit-column">
-                <PresenceAnchor Cue="@(profile.State is { } editCueState ? PresenceCue.From(editCueState) : null)">
+                <PresenceAnchor AgentName="@profile.Name" BadgeOnly="true" Cue="@(profile.State is { } editCueState ? PresenceCue.From(editCueState) : null)">
                     <button type="button" class="agent-profile-card-avatar" aria-label="Change avatar" title="Change avatar" @onclick="this.OnAvatarClick">
                         <span class="roster-avatar-ring"><AgentAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
                         <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
@@ -27,7 +27,7 @@
         }
         else
         {
-            <PresenceAnchor Cue="@(profile.State is { } cueState ? PresenceCue.From(cueState) : null)">
+            <PresenceAnchor AgentName="@profile.Name" BadgeOnly="true" Cue="@(profile.State is { } cueState ? PresenceCue.From(cueState) : null)">
                 <span class="roster-avatar-ring" aria-hidden="true"><AgentAvatar Name="@profile.Name" Avatar="@profile.Avatar" PendingImage="@profile.PendingImage" PendingImageExtension="@profile.PendingImageExtension" Class="roster-avatar" /></span>
             </PresenceAnchor>
         }

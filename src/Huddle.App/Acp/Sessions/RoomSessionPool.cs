@@ -45,6 +45,19 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly Dictionary<string, RoomSession> sessionsByRoom = new(StringComparer.Ordinal);
     private readonly HashSet<string> notePendingRooms = new(StringComparer.Ordinal);
 
+    // The goldfish slot: one clean session beside sessionsByRoom, never in it, so the live count, PickVictim and the idle
+    // sweep never see it. Guarded by poolLock.
+    private RoomSession? goldfish;
+    private string? goldfishRoomId;
+    private string? goldfishPossessionId;
+
+    // The goldfish session's own run token, linked to runToken: a session ends only when its run token is cancelled, so
+    // closing the slot while the app runs cancels this one.
+    private CancellationTokenSource? goldfishCts;
+
+    // The close that is disposing the last emptied slot, so a later close awaits it rather than returning early. Guarded by poolLock.
+    private Task? goldfishClosing;
+
     private readonly RoomSession? sharedSession;
     private readonly ITimer? sweepTimer;
     private RoomSession? startupSession;
@@ -221,13 +234,200 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         }
 
         RoomSession? session;
+        RoomSession? clean = null;
         lock (this.poolLock)
         {
             this.sessionsByRoom.TryGetValue(roomId, out session);
+            if (string.Equals(this.goldfishRoomId, roomId, StringComparison.Ordinal))
+            {
+                clean = this.goldfish;
+            }
         }
 
-        return session is null ? Task.CompletedTask : session.StopAsync(roomId, mark, cancellationToken);
+        return StopBothAsync(session, clean, roomId, mark, cancellationToken);
     }
+
+    private static async Task StopBothAsync(RoomSession? session, RoomSession? clean, string roomId, long mark, CancellationToken cancellationToken)
+    {
+        Task warm = session is null ? Task.CompletedTask : session.StopAsync(roomId, mark, cancellationToken);
+        Task cold = clean is null ? Task.CompletedTask : clean.StopAsync(roomId, mark, cancellationToken);
+        await Task.WhenAll(warm, cold).ConfigureAwait(false);
+    }
+
+    /// <summary>The Room the goldfish session serves, or <see langword="null"/> when the slot is empty.</summary>
+    internal string? GoldfishRoomId
+    {
+        get
+        {
+            lock (this.poolLock)
+            {
+                return this.goldfishRoomId;
+            }
+        }
+    }
+
+    /// <summary>The possession the goldfish session serves, or <see langword="null"/> when the slot is empty.</summary>
+    internal string? GoldfishPossessionId
+    {
+        get
+        {
+            lock (this.poolLock)
+            {
+                return this.goldfishPossessionId;
+            }
+        }
+    }
+
+    /// <summary>Whether the goldfish session serves <paramref name="roomId"/> and already holds a Turn for the Message, queued, running or (when re-sent) ended.</summary>
+    /// <param name="roomId">The Room the Message was posted in.</param>
+    /// <param name="messageId">The Message id.</param>
+    /// <param name="resent"><see langword="true"/> for a delivery the server sends again.</param>
+    /// <returns><see langword="true"/> when the goldfish already holds it.</returns>
+    internal bool GoldfishHasMessage(string roomId, string messageId, bool resent)
+    {
+        RoomSession? session;
+        lock (this.poolLock)
+        {
+            session = string.Equals(this.goldfishRoomId, roomId, StringComparison.Ordinal) ? this.goldfish : null;
+        }
+
+        return session?.HasMessage(messageId, resent) == true;
+    }
+
+    /// <summary>Opens the goldfish slot: a clean session that opens through <see cref="IPersonaHost.OpenCleanAsync"/> and shares this pool's Turn gate.</summary>
+    /// <param name="roomId">The Room the possession lives in.</param>
+    /// <param name="spec">What the clean session is opened for.</param>
+    /// <returns>The new session.</returns>
+    /// <exception cref="InvalidOperationException">The slot is taken, or the host is not per-Room.</exception>
+    internal RoomSession OpenGoldfish(string roomId, CleanSessionSpec spec)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        ArgumentNullException.ThrowIfNull(spec);
+
+        if (!this.sessionPerRoom)
+        {
+            throw new InvalidOperationException("A goldfish session needs a per-Room Adapter host.");
+        }
+
+        lock (this.poolLock)
+        {
+            ObjectDisposedException.ThrowIf(this.disposed, this);
+            if (this.goldfish is not null)
+            {
+                throw new InvalidOperationException("The goldfish slot is already taken.");
+            }
+
+            CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(this.runToken);
+            RoomSession session = this.NewGoldfishSession(roomId, spec, cts.Token);
+            this.goldfishCts = cts;
+            this.goldfish = session;
+            this.goldfishRoomId = roomId;
+            this.goldfishPossessionId = spec.PossessionId;
+            return session;
+        }
+    }
+
+    /// <summary>Queues a Turn to the goldfish session.</summary>
+    /// <param name="item">The Turn to run.</param>
+    /// <exception cref="InvalidOperationException">The slot is empty.</exception>
+    /// <exception cref="ObjectDisposedException">The pool is disposed.</exception>
+    internal void EnqueueGoldfish(QueuedWork item)
+    {
+        // Queued under poolLock, the lock a close empties the slot under: the item is queued before the close takes the session,
+        // so the close sees its ticket, or the slot is already empty and this throws.
+        lock (this.poolLock)
+        {
+            ObjectDisposedException.ThrowIf(this.disposed, this);
+            if (this.goldfish is null)
+            {
+                throw new InvalidOperationException("The goldfish slot is empty.");
+            }
+
+            this.goldfish.Enqueue(item);
+        }
+    }
+
+    /// <summary>
+    /// Disposes the goldfish session and empties the slot. Does nothing when it is empty, except that a close already disposing the
+    /// last session is awaited, so every caller returns after that session is disposed.
+    /// </summary>
+    /// <returns>A task that completes when the session is disposed.</returns>
+    internal Task CloseGoldfishAsync()
+    {
+        RoomSession session;
+        CancellationTokenSource cts;
+        Task prior;
+        TaskCompletionSource done = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        lock (this.poolLock)
+        {
+            if (this.goldfish is null || this.goldfishCts is null)
+            {
+                return this.goldfishClosing ?? Task.CompletedTask;
+            }
+
+            session = this.goldfish;
+            cts = this.goldfishCts;
+            prior = this.goldfishClosing ?? Task.CompletedTask;
+            this.goldfish = null;
+            this.goldfishCts = null;
+            this.goldfishRoomId = null;
+            this.goldfishPossessionId = null;
+            this.goldfishClosing = done.Task;
+        }
+
+        return RoomSessionPool.CloseSlotAsync(session, cts, prior, done);
+    }
+
+    /// <summary>How long closing the goldfish slot waits for its running Turn to end after the Stop.</summary>
+    private static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(10);
+
+    private static async Task CloseSlotAsync(RoomSession session, CancellationTokenSource cts, Task prior, TaskCompletionSource done)
+    {
+        try
+        {
+            await prior.ConfigureAwait(false);
+
+            // The Turn that called goldfish_done is still open: end it as a Stop does, so its Draft ends and nothing reads as a failure.
+            await session.StopRunningTurnAsync(RoomSessionPool.StopGrace, cts.Token).ConfigureAwait(false);
+            await cts.CancelAsync().ConfigureAwait(false);
+            await session.DisposeAsync().ConfigureAwait(false);
+
+            // The consumer may have ended before it took a ticket an enqueue had offered: withdraw it, so the shared gate never holds it.
+            session.WithdrawQueuedTickets();
+            done.SetResult();
+        }
+        catch (Exception ex)
+        {
+            done.SetException(ex);
+            throw;
+        }
+        finally
+        {
+            cts.Dispose();
+        }
+    }
+
+    private RoomSession NewGoldfishSession(string roomId, CleanSessionSpec spec, CancellationToken sessionToken) =>
+        new(
+            roomId,
+            open: ct => this.host.OpenCleanAsync(spec, ct),
+            owner: this.owner,
+            scheduler: this,
+            prompts: this.prompts,
+            options: this.options,
+            logger: this.logger,
+            runToken: sessionToken,
+            time: this.time,
+            persona: this.persona,
+            host: this.host,
+            agentId: this.agentId,
+            turnActivity: this.turnActivity,
+            enrichers: this.enrichers,
+            elicitationBridge: this.elicitationBridge,
+            sessionSettings: this.sessionSettings,
+            hooks: this.hooks?.ForClean(),
+            clean: true,
+            goldfish: spec);
 
     /// <summary>Closes every <c>Idle</c>, empty-queue Room Session whose <see cref="RoomSession.LastActivity"/> is older than <see cref="AcpOptions.SessionIdleMinutes"/>. A no-op in shared mode (finding P-20) or when the threshold is zero or less.</summary>
     internal Task SweepIdleAsync()
@@ -329,6 +529,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         // while closing - a skipped host is a `node` process that outlives the app.
         try
         {
+            await this.CloseGoldfishAsync().ConfigureAwait(false);
+
             if (this.sessionPerRoom)
             {
                 List<RoomSession> sessions;

@@ -177,7 +177,32 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             roleBlock,
             sources,
             agentMeta.BrowserPassed,
-            this.options.Memory.Reported.KeepDays, this.MemoryTidyOn);
+            this.options.Memory.Reported.KeepDays, this.MemoryTidyOn, () => this.ReadDenyFolders(workDir));
+    }
+
+    /// <summary>
+    /// The folders a goldfish session may not read: the Persona's own memory, the Huddle-wide memory, each Team's and Project's memory and the
+    /// Rooms' history, as <see cref="SessionPromptInputs"/> names them. The catalog is read once into a local, because its snapshot is swapped atomically.
+    /// </summary>
+    /// <param name="workDir">The Persona's Work Dir, which holds <c>memory</c>.</param>
+    /// <returns>The folders, whether or not they exist yet; the deny builder drops the missing ones.</returns>
+    private List<string> ReadDenyFolders(string workDir)
+    {
+        string teamsRoot = this.TeamsRoot();
+        List<string> folders =
+        [
+            Path.Combine(workDir, TeamNames.MemoryFolder),
+            Path.Combine(teamsRoot, TeamNames.MemoryFolder),
+        ];
+        foreach (TeamSummary team in this.teamCatalog.Teams)
+        {
+            string teamFolder = Path.Combine(teamsRoot, team.Name);
+            folders.Add(Path.Combine(teamFolder, TeamNames.MemoryFolder));
+            folders.AddRange(team.Projects.Select(project => Path.Combine(teamFolder, project, TeamNames.MemoryFolder)));
+        }
+
+        folders.Add(Path.Combine(this.options.DataDir, "rooms"));
+        return folders;
     }
 
     /// <summary>What <see cref="BuildAgentMeta"/> decided for one session start.</summary>
@@ -298,6 +323,28 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetService<NeedsYouLevels>());
     }
 
+    /// <summary>Whether the goldfish tools are offered on a profile: the mode is on, and the profile isolates settings and launches Claude.</summary>
+    /// <param name="options">The Team options.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns><see langword="true"/> when both tools are offered.</returns>
+    internal static bool OffersGoldfish(TeamOptions options, AdapterProfile profile) =>
+        options.Goldfish.Enabled && profile.IsolateUserSettings && AdapterCatalog.LaunchesClaude(profile);
+
+    /// <summary>Adds <c>goldfish</c> and <c>goldfish_done</c> when goldfish mode is on and the Adapter is Claude with isolated settings; shared mode is not offered.</summary>
+    /// <param name="chatTools">The tools so far.</param>
+    /// <param name="agentId">The Agent id the tools are bound to.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns><paramref name="chatTools"/>, with the two goldfish tools when offered.</returns>
+    private IReadOnlyList<IAppTool> OfferGoldfishTools(IReadOnlyList<IAppTool> chatTools, string agentId, AdapterProfile profile) =>
+        DotAcpAgentHostFactory.OffersGoldfish(this.options, profile)
+            ?
+            [
+                .. chatTools,
+                ActivatorUtilities.CreateInstance<GoldfishTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<GoldfishDoneTool>(this.serviceProvider, agentId),
+            ]
+            : chatTools;
+
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
     /// <param name="Tools">The tools the session is offered, <c>get_help</c> first.</param>
     /// <param name="Prompts">The prompt source resolved from the application's container.</param>
@@ -343,9 +390,11 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
         var askHumanTool = ActivatorUtilities.CreateInstance<AskHumanTool>(this.serviceProvider, agentId);
         IReadOnlyList<IAppTool> chatTools = this.CreateChatTools(persona.Name, agentId, readSkillTool, askHumanTool);
+        chatTools = this.OfferGoldfishTools(chatTools, agentId, profile);
+
         if (proposesTeamMemory)
         {
-            chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<ProposeTeamMemoryTool>(this.serviceProvider, persona.Name)];
+            chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<ProposeTeamMemoryTool>(this.serviceProvider, persona.Name, agentId)];
         }
 
         chatTools = this.OfferChatTools(chatTools, persona, profile, skillResolution);
@@ -580,7 +629,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
             // Memory is not optional know-how, so it is not gated by a Skill, and it is offered whether or not the
             // Adapter reads files (Instructions spec §5.1).
-            ActivatorUtilities.CreateInstance<MemoryTool>(this.serviceProvider, personaName),
+            ActivatorUtilities.CreateInstance<MemoryTool>(this.serviceProvider, personaName, agentId),
         ];
 
         // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets
@@ -695,12 +744,17 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// never passed without its ask rule (<c>mcp__playwright__*</c>) and its deny rule (<c>browser_run_code_unsafe</c>, denied outright, which removes
     /// the tool from the Agent's tool list), because both live in the same <c>permissions</c> key. In every other case the meta is exactly what it is without it.
     /// </param>
+    /// <param name="readDeny">
+    /// The goldfish read-deny rules from the goldfish deny builder, or <see langword="null"/> for none. They follow the browser's
+    /// deny rule in the same <c>deny</c> list and only when <paramref name="askRules"/> is <see langword="true"/>; null or empty leaves the meta exactly as it is without them.
+    /// </param>
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
     internal static Dictionary<string, object>? BuildIsolationMeta(
         AdapterProfile profile,
         bool connectors,
         bool askRules = true,
-        IReadOnlyDictionary<string, object>? browserServer = null)
+        IReadOnlyDictionary<string, object>? browserServer = null,
+        IReadOnlyList<string>? readDeny = null)
     {
         Dictionary<string, object> options = new(StringComparer.Ordinal);
         if (profile.IsolateUserSettings)
@@ -718,9 +772,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 {
                     ["ask"] = AskRules(connectors, browserServer is not null),
                 };
+                string[] deny = [.. browserServer is not null ? DenyRules() : [], .. readDeny ?? []];
+                if (deny.Length > 0)
+                {
+                    permissions["deny"] = deny;
+                }
+
                 if (browserServer is not null)
                 {
-                    permissions["deny"] = DenyRules();
                     options["mcpServers"] = new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         [BrowserServerConfig.ServerName] = browserServer,

@@ -32,7 +32,7 @@ public sealed class ReviewTaskWakeTests
         await RaiseAndFireAsync(harness, task, cast.KaiActor, "created");
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
-        Assert.EndsWith(ReviewSentence, post.Message.Text, StringComparison.Ordinal);
+        Assert.EndsWith(ReviewSentence, post.Message.Text, StringComparison.Ordinal); // contains-ok: pins the wording a Human or an Agent reads
         Assert.Equal(WakeOutcome.Woken, harness.Activity.LastWake(task.Id)?.Outcome);
     }
 
@@ -67,7 +67,7 @@ public sealed class ReviewTaskWakeTests
         await RaiseAndFireAsync(harness, task, cast.KaiActor, "comment added by Kai");
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
-        Assert.EndsWith(ReviewSentence, post.Message.Text, StringComparison.Ordinal);
+        Assert.EndsWith(ReviewSentence, post.Message.Text, StringComparison.Ordinal); // contains-ok: pins the wording a Human or an Agent reads
     }
 
     /// <summary>No registered wake rule is a challenger rule: the production names hold none.</summary>

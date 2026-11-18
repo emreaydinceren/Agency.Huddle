@@ -2,6 +2,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.References;
 using Agency.Huddle.App.Agents;
@@ -93,6 +94,9 @@ public sealed partial class ChatService
     /// </summary>
     internal ITurnLedger? Ledger { get; set; }
 
+    /// <summary>The goldfish supervisor, set after construction like <see cref="Ledger"/>; <see langword="null"/> means goldfish mode is not wired and every Message is ordinary.</summary>
+    internal GoldfishSupervisor? Goldfish { get; set; }
+
     /// <summary>The number of uploaded files a delete of <paramref name="room"/> would send to the Recycle Bin.</summary>
     /// <param name="room">The Room about to be deleted.</param>
     /// <returns>The file count of both upload folders; 0 when none exist.</returns>
@@ -182,7 +186,7 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, false, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, false, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -197,7 +201,8 @@ public sealed partial class ChatService
     /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
     /// <returns>The Message that was appended.</returns>
     /// <exception cref="ChatException">The Room does not exist, or <paramref name="text"/> is blank.</exception>
-    public async Task<ChatMessage> PostAsHuddleAsync(string roomId, string text, CancellationToken ct)
+    /// <param name="goldfish">The possession id to stamp the Message with, or <see langword="null"/>; the goldfish start and return rows pass it, and the Mentions still parse.</param>
+    public async Task<ChatMessage> PostAsHuddleAsync(string roomId, string text, CancellationToken ct, string? goldfish = null)
     {
         ArgumentNullException.ThrowIfNull(text);
 
@@ -206,7 +211,43 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, false, ct, goldfish).ConfigureAwait(false);
+    }
+
+    /// <summary>The text of the last Message an Agent posted in a Room while a possession was in force: what a goldfish that never called <c>goldfish_done</c> last said.</summary>
+    /// <param name="roomId">The Room to read.</param>
+    /// <param name="possessionId">The possession id the Message is stamped with.</param>
+    /// <param name="agentId">The Agent who must have sent it.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The Message text, or <see langword="null"/> when the goldfish posted nothing there.</returns>
+    public async Task<string?> LastGoldfishReplyAsync(string roomId, string possessionId, string agentId, CancellationToken ct)
+    {
+        IReadOnlyList<ChatMessage> history = await this.store.ReadAllAsync(roomId, ct).ConfigureAwait(false);
+        return history
+            .LastOrDefault(message => string.Equals(message.Goldfish, possessionId, StringComparison.Ordinal)
+                && string.Equals(message.SenderId, agentId, StringComparison.Ordinal))?.Text;
+    }
+
+    /// <summary>
+    /// Posts Huddle's own Message like <see cref="PostAsHuddleAsync"/>, but parses no Mentions, so quoted text that holds a
+    /// <c>@Member</c> addresses nobody and owes no Turn. The goldfish result Message uses it to quote a brief word for word.
+    /// </summary>
+    /// <param name="roomId">The Room to post into.</param>
+    /// <param name="text">The Message text.</param>
+    /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    /// <returns>The Message that was appended.</returns>
+    /// <exception cref="ChatException">The Room does not exist, or <paramref name="text"/> is blank.</exception>
+    /// <param name="goldfish">The possession id to stamp the Message with, or <see langword="null"/>; the result Message passes it explicitly.</param>
+    public async Task<ChatMessage> PostAsHuddleQuietAsync(string roomId, string text, CancellationToken ct, string? goldfish = null)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.TrimEnd().Length == 0)
+        {
+            throw new ChatException(ErrorCodes.BadMessage, "empty message");
+        }
+
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, true, ct, goldfish).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -240,7 +281,7 @@ public sealed partial class ChatService
             return null;
         }
 
-        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, false, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, false, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -259,9 +300,11 @@ public sealed partial class ChatService
     /// Whether the Message is Huddle's own (ADR-0065). It needs no Membership and, being neither the Human nor an Agent, neither
     /// spends nor resets the Budget and drops no waiting card.
     /// </param>
+    /// <param name="mentionsNobody">Whether the text is quoted, not addressed, so no Mention in it is parsed and no Turn is owed.</param>
     /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    /// <param name="goldfish">The possession id to stamp the Message with, or <see langword="null"/> to stamp an Agent's post by its own possession.</param>
     private async Task<ChatMessage> PostCoreAsync(
-        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, bool asHuddle, CancellationToken ct)
+        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, bool asHuddle, bool mentionsNobody, CancellationToken ct, string? goldfish = null)
     {
         var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
@@ -280,6 +323,8 @@ public sealed partial class ChatService
             : await this.references.SnapshotAsync(text, ct).ConfigureAwait(false);
 
         var semaphore = this.postLocks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
+        GoldfishPost goldfishPost = new(null, [], null, null);
+        ChatMessage posted;
         await semaphore.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -293,17 +338,12 @@ public sealed partial class ChatService
             var budget = this.CurrentBudget(roomId);
             bool humanEndedPause = budgetSender == BudgetSender.Human && budget.Exhausted;
 
-            if (sender is { Kind: UserKind.Agent } && budget.Exhausted)
-            {
-                ChatService.LogBudgetExhausted(this.logger, sender.Name, roomId, budget.Granted);
-                throw new ChatException(ErrorCodes.BudgetExhausted, ChatService.BudgetRefusal(budget.Granted));
-            }
+            this.RefuseExhaustedAgent(sender, budget, roomId);
 
             var id = messageId ?? Guid.CreateVersion7().ToString("N");
-            IReadOnlyList<User> mentions = withheldFromAgentId is null
-                ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
-                : [];
-            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot };
+            goldfishPost = this.DecideGoldfish(text, sender, asHuddle, roomId, goldfish, members, withheldFromAgentId is null && !mentionsNobody);
+            IReadOnlyList<User> mentions = goldfishPost.Mentions;
+            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot, Goldfish = goldfishPost.Stamp };
             await this.AppendRecordingOwedTurnsAsync(room, members, mentions, message, RoomBudgets.After(budget, budgetSender, this.agentMessageBudget), withheldFromAgentId, ct).ConfigureAwait(false);
 
             // Huddle is neither the Human nor an Agent: its Message spends no Budget, resets none and drops no waiting card (ADR-0065).
@@ -314,11 +354,126 @@ public sealed partial class ChatService
             }
 
             this.PublishPosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId), humanEndedPause);
-            return message;
+            posted = message;
         }
         finally
         {
             semaphore.Release();
+        }
+
+        // After the lock is released: the return posts into this same Room, and postLocks is not reentrant.
+        await this.NotifyGoldfishAsync(goldfishPost, sender, roomId, ct).ConfigureAwait(false);
+        return posted;
+    }
+
+    /// <summary>What the post lock decided about goldfish mode for one Message.</summary>
+    /// <param name="Stamp">The possession id the Message is stamped with, or <see langword="null"/>.</param>
+    /// <param name="Mentions">The Mentions the Message keeps; none when it is a comeback attempt.</param>
+    /// <param name="ComebackOf">The Agent a comeback names, or <see langword="null"/>.</param>
+    /// <param name="Open">That Agent's open possession, or <see langword="null"/> when it is not in goldfish mode.</param>
+    /// <param name="LookupFailed">Whether reading <paramref name="Open"/> failed, so "not in goldfish mode" is unknown and nothing may be said about it.</param>
+    private sealed record GoldfishPost(string? Stamp, IReadOnlyList<User> Mentions, User? ComebackOf, Possession? Open, bool LookupFailed = false);
+
+    /// <summary>Refuses an Agent's post when the Room's Budget is spent.</summary>
+    private void RefuseExhaustedAgent(User? sender, RoomBudget budget, string roomId)
+    {
+        if (sender is { Kind: UserKind.Agent } && budget.Exhausted)
+        {
+            ChatService.LogBudgetExhausted(this.logger, sender.Name, roomId, budget.Granted);
+            throw new ChatException(ErrorCodes.BudgetExhausted, ChatService.BudgetRefusal(budget.Granted));
+        }
+    }
+
+    /// <summary>Parses the Mentions and decides, inside the post lock, the stamp and whether the Message is a comeback; it posts and ends nothing.</summary>
+    private GoldfishPost DecideGoldfish(
+        string text, User? sender, bool asHuddle, string roomId, string? explicitStamp, IReadOnlyList<User> members, bool parseMentions)
+    {
+        IReadOnlyList<User> mentions = parseMentions ? MentionParser.Parse(text, members, this.aliasSource.Aliases) : [];
+        GoldfishSupervisor? supervisor = this.Goldfish;
+        if (supervisor is null)
+        {
+            return new GoldfishPost(explicitStamp, mentions, null, null);
+        }
+
+        string? stamp = explicitStamp ?? (sender is { Kind: UserKind.Agent } ? this.SafePossessionOf(supervisor, sender.Id, roomId) : null);
+        if (asHuddle)
+        {
+            return new GoldfishPost(stamp, mentions, null, null);
+        }
+
+        foreach (User agent in members.Where(member => member.Kind == UserKind.Agent && !string.Equals(member.Id, sender?.Id, StringComparison.Ordinal)))
+        {
+            if (GoldfishComeback.Matches(text, agent, members, this.aliasSource.Aliases, stamp is not null))
+            {
+                bool found = this.TryFindOpen(supervisor, agent.Id, out Possession? open);
+                return new GoldfishPost(stamp, [], agent, open, LookupFailed: !found);
+            }
+        }
+
+        return new GoldfishPost(stamp, mentions, null, null);
+    }
+
+    private string? SafePossessionOf(GoldfishSupervisor supervisor, string agentId, string roomId)
+    {
+        try
+        {
+            return supervisor.PossessionOf(agentId, roomId);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(ex, "The possession of {AgentId} in Room {RoomId} could not be read; the Message is not stamped.", agentId, roomId);
+            return null;
+        }
+    }
+
+    private bool TryFindOpen(GoldfishSupervisor supervisor, string agentId, out Possession? open)
+    {
+        try
+        {
+            open = supervisor.FindOpen(agentId);
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(ex, "The possession of {AgentId} could not be read for a comeback; nothing is posted.", agentId);
+            open = null;
+            return false;
+        }
+    }
+
+    /// <summary>After the post lock: ends a called-back possession, answers a comeback that finds none, or tells the supervisor of each Mention. Failures are logged and never fail the post.</summary>
+    private async Task NotifyGoldfishAsync(GoldfishPost decision, User? sender, string roomId, CancellationToken ct)
+    {
+        GoldfishSupervisor? supervisor = this.Goldfish;
+        if (supervisor is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (decision.ComebackOf is { } called)
+            {
+                if (decision.Open is { } open)
+                {
+                    _ = await supervisor.EndAsync(open.Id, GoldfishExit.CalledBack, sender?.Name, ct).ConfigureAwait(false);
+                }
+                else if (!decision.LookupFailed)
+                {
+                    _ = await this.PostAsHuddleQuietAsync(roomId, GoldfishLine.NotInMode(called.Name), ct).ConfigureAwait(false);
+                }
+
+                return;
+            }
+
+            foreach (User mentioned in decision.Mentions.Where(mention => mention.Kind == UserKind.Agent))
+            {
+                await supervisor.OnMentionAsync(mentioned.Id, roomId, ct).ConfigureAwait(false);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.logger.LogWarning(ex, "Goldfish mode could not be notified of a Message in Room {RoomId}.", roomId);
         }
     }
 

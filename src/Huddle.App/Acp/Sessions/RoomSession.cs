@@ -41,6 +41,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private readonly IPromptSource prompts;
     private readonly AcpOptions options;
     private readonly MemoryPaths? memoryPaths;
+    private readonly bool clean;
+    private readonly CleanSessionSpec? goldfish;
+    private decimal? runningSpend;
+    private string? spendCurrency;
+    private TaskCompletionSource? turnDrained;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
@@ -200,6 +205,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
     /// <param name="hooks">The Turn hooks run around each Message Turn. <see langword="null"/> runs none, like every caller that predates it.</param>
     /// <param name="memoryPaths">Resolves an Agent's own <c>memory</c> writes to paths for <c>Touched</c>. <see langword="null"/> records none, like every caller that predates it.</param>
+    /// <param name="clean">Whether this is a goldfish possession's session: no Transcript Catch-up, and the enrichers are told the Turn is clean.</param>
+    /// <param name="goldfish">The possession this session serves; it reports the possession's Turns to the server and passes its Task id with each Spend. <see langword="null"/> for every session but a goldfish's.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -222,8 +229,12 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
         TurnHookPipeline? hooks = null,
-        MemoryPaths? memoryPaths = null)
+        MemoryPaths? memoryPaths = null,
+        bool clean = false,
+        CleanSessionSpec? goldfish = null)
     {
+        this.clean = clean;
+        this.goldfish = goldfish;
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(scheduler);
@@ -375,6 +386,21 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
 
         this.itemAvailable.Release();
+    }
+
+    /// <summary>
+    /// Withdraws the ticket of every item still queued, the way an admission wait cut short by shutdown does (RS §6.1 step 5). Called after a
+    /// session is disposed, whose consumer may have ended before it took a ticket that <see cref="Enqueue"/> had already offered.
+    /// </summary>
+    internal void WithdrawQueuedTickets()
+    {
+        lock (this.gate)
+        {
+            foreach (QueuedWork queued in this.queue)
+            {
+                this.scheduler.Withdraw(queued.Sequence);
+            }
+        }
     }
 
     /// <summary>
@@ -790,6 +816,39 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Ends the Turn this session is running, the way a Human's Stop does, and waits until it has finished, so its Draft is ended and it counts
+    /// as stopped, not failed. A goldfish slot closes through this while the Turn that called <c>goldfish_done</c> is still open; every Turn
+    /// still queued is dropped too.
+    /// </summary>
+    /// <param name="timeout">How long to wait for the Turn to finish; a Turn that does not is left to the teardown that follows.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>A task that completes when no Turn is running, or when the wait ends.</returns>
+    internal async Task StopRunningTurnAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        Task drained;
+        lock (this.gate)
+        {
+            if (!this.running || this.RoomId is null)
+            {
+                return;
+            }
+
+            this.turnDrained ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            drained = this.turnDrained.Task;
+        }
+
+        await this.StopAsync(this.RoomId, long.MaxValue, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await drained.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
+        {
+            // The Turn did not end in time, or the run is shutting down: the teardown that follows ends it the hard way.
+        }
     }
 
     /// <summary>Sends <c>session/close</c> and keeps the stored id, so the session can be resumed. Only acts while <see cref="RoomSessionState.Idle"/>.</summary>
@@ -1303,6 +1362,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             await this.SendAckAsync(head.Item, QueueAckKind.Finished, null, QueueOutcome.Failed, ct).ConfigureAwait(false);
+            await this.SendGoldfishReportAsync(GoldfishReportKind.Failed, null, ex.Message, null, ct).ConfigureAwait(false);
             await this.HandleLazyOpenFailureAsync(head, ex).ConfigureAwait(false);
             return false;
         }
@@ -1353,6 +1413,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         lock (this.gate)
         {
             this.running = false;
+            _ = this.turnDrained?.TrySetResult();
+            this.turnDrained = null;
             this.RememberEndedTrigger(this.runningTriggerId);
             this.runningTriggerId = null;
             this.state = this.state == RoomSessionState.Busy ? RoomSessionState.Idle : this.state;
@@ -1511,14 +1573,22 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 return null;
             }
 
-            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, messageId, this.QueuedTriggerIds(item.RoomId), ct).ConfigureAwait(false);
+            if (!this.clean)
+            {
+                item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, messageId, this.QueuedTriggerIds(item.RoomId), ct).ConfigureAwait(false);
+            }
+
             if (this.enrichers is not null)
             {
-                item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);
+                item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, this.clean, ct).ConfigureAwait(false);
             }
 
             // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
-            this.transcriptCatchUp.WriteLastCatchUp(item);
+            if (!this.clean)
+            {
+                this.transcriptCatchUp.WriteLastCatchUp(item);
+            }
+
             run = this.TryPublishTurn(item, hookResult, sequence, messageId, ct);
             return run;
         }
@@ -1759,6 +1829,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             run.Failed = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
+
+        // Reached by every Turn that ended without shutdown: completed, stopped, timed out or failed. Never claims Done; the tool does.
+        await this.SendGoldfishReportAsync(GoldfishReportKind.TurnEnded, this.runningSpend, null, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1787,6 +1860,36 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             if (this.logger.IsEnabled(LogLevel.Debug))
             {
                 this.logger.LogDebug(ex, "Persona '{PersonaName}' could not send a queue ack for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes one goldfish report for this session's possession. A session that serves no possession writes nothing; a write the pipe
+    /// cannot take is swallowed, like a queue ack: the server learns of a lost runner another way.
+    /// </summary>
+    /// <param name="kind">What the report says.</param>
+    /// <param name="runningSpend">The session's running cost, for a <see cref="GoldfishReportKind.TurnEnded"/>.</param>
+    /// <param name="detail">The reason, for a <see cref="GoldfishReportKind.Failed"/>.</param>
+    /// <param name="done">Whether the brief is finished, for a <see cref="GoldfishReportKind.TurnEnded"/>.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task SendGoldfishReportAsync(GoldfishReportKind kind, decimal? runningSpend, string? detail, bool? done, CancellationToken ct)
+    {
+        if (this.goldfish is null || ct.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            string? currency = runningSpend is null ? null : this.spendCurrency;
+            await this.owner.WriteAsync(new GoldfishReport(this.goldfish.PossessionId, kind, runningSpend, currency, detail, done), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug(ex, "Persona '{PersonaName}' could not send a goldfish report for room {RoomId}.", this.owner.PersonaName, this.RoomId);
             }
         }
     }
@@ -1855,6 +1958,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     {
         WorkItem item = run.Item;
         var prompt = TurnPromptFramer.BuildPrompt(item, this.prompts);
+        await this.SendGoldfishReportAsync(GoldfishReportKind.TurnStarted, null, null, null, ct).ConfigureAwait(false);
         await this.SendAckAsync(item, QueueAckKind.Started, run.MessageId, null, ct).ConfigureAwait(false);
         await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, TurnPromptFramer.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
         run.PromptReturned = true;
@@ -2491,7 +2595,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         // last update of a Turn, as a running total for this session.
         if (usage.Cost is { } cost)
         {
-            this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency, this.RoomId);
+            this.runningSpend = cost.Amount;
+            this.spendCurrency = cost.Currency;
+            this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency, this.RoomId, this.goldfish?.TaskId);
         }
     }
 

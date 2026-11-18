@@ -51,10 +51,10 @@ public sealed class ReviewStateRemovedTests
         Assert.NotNull(loaded);
         Assert.Equal("In Progress", loaded.Status.ToWire());
         TimelineEntry line = Assert.Single(loaded.Timeline, static entry => entry.Author == "Huddle");
-        Assert.Contains("Review → In Progress", line.Text, StringComparison.Ordinal);
-        Assert.Contains("Huddle has no Review state", line.Text, StringComparison.Ordinal);
+        Assert.Contains("Review → In Progress", line.Text, StringComparison.Ordinal); // contains-ok: pins the wording a Human or an Agent reads
+        Assert.Contains("Huddle has no Review state", line.Text, StringComparison.Ordinal); // contains-ok: pins the wording a Human or an Agent reads
         Assert.False(outsideEdit);
-        Assert.Contains("status: Review", File.ReadAllText(path), StringComparison.Ordinal);
+        Assert.Contains("status: Review", File.ReadAllText(path), StringComparison.Ordinal); // contains-ok: pins the wording a Human or an Agent reads
     }
 
     /// <summary>A Task that was in Review loads as In Progress and keeps its blockers and tags; only the status changes (D-6).</summary>
@@ -86,7 +86,7 @@ public sealed class ReviewStateRemovedTests
             changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "Human", "created")]);
         string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), task);
         string text = File.ReadAllText(path);
-        Assert.Contains("status: In Progress", text, StringComparison.Ordinal);
+        Assert.Contains("status: In Progress", text, StringComparison.Ordinal); // contains-ok: pins the wording a Human or an Agent reads
         File.WriteAllText(path, text.Replace("status: In Progress", "status: Review", StringComparison.Ordinal));
         File.SetLastWriteTimeUtc(path, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         return path;

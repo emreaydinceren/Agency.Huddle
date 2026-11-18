@@ -54,6 +54,18 @@ public sealed partial class BuiltInProcessWordingTests
         Assert.Contains("create a review Task", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
     }
 
+    /// <summary>The spec-driven process asks for the spec review in goldfish mode (#627); the other development processes do not.</summary>
+    [Fact]
+    public void SpecDriven_AsksForSpecReviewsInGoldfishMode()
+    {
+        string text = File.ReadAllText(ProcessPath(RepoRoot(), "spec-driven"));
+
+        Assert.Contains("Spec reviews are done in goldfish mode", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        Assert.All(
+            DevelopmentProcesses.Where(static p => p != "spec-driven"),
+            process => Assert.DoesNotContain("goldfish", File.ReadAllText(ProcessPath(RepoRoot(), process)), StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>The spec-driven process has no <c>Spec reviewed:</c> line and its Definition of Done uses the two tags.</summary>
     [Fact]
     public void SpecDriven_DefinitionOfDone_UsesTaskTagsNotSpecReviewed()
