@@ -46,7 +46,7 @@
 
     @if (this.saveError is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="needs-you-level-error">@this.saveError</MudAlert>
+        <Notice Severity="NoticeLevel.Error" Class="needs-you-level-error">@this.saveError</Notice>
     }
 
     @foreach (CapAsk ask in this.asks)

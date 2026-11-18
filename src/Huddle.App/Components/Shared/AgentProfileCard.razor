@@ -78,7 +78,7 @@
     <DialogContent>
         @if (this.error is not null)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" role="alert">@this.error</MudAlert>
+            <Notice Severity="NoticeLevel.Error">@this.error</Notice>
         }
 
         @if (this.mode != AgentProfileCardMode.View)
@@ -340,12 +340,12 @@
                    not-its-history.md for why history is deliberately left alone. *@
                 @if (!string.Equals(this.name, this.Name, StringComparison.Ordinal))
                 {
-                    @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
-                       so role="status" is added explicitly to keep the note announced, per rules.md/traps.md.
+                    @* A Notice writes its own role, and an Info one is a status:
+                       the note stays announced without a role written here.
                        "status" rather than "alert": this is no longer an interruption, it is a consequence. *@
-                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                    <Notice Severity="NoticeLevel.Info">
                         Renaming brings this agent's Rooms, its history and its work folder with it. Messages already posted keep the old name — the transcript records what was said at the time.
-                    </MudAlert>
+                    </Notice>
                 }
             }
 
@@ -534,9 +534,9 @@
                human just did, not an interruption. *@
             @if (this.adapterResetModelAndEffort)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                <Notice Severity="NoticeLevel.Info">
                     Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
-                </MudAlert>
+                </Notice>
             }
 
             @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
@@ -632,9 +632,9 @@
                what the user just did, not an interruption. *@
             @if (this.effortResetByModelChange)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                <Notice Severity="NoticeLevel.Info">
                     Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
-                </MudAlert>
+                </Notice>
             }
 
             @* MS-3: a vendor shared with a role this one must differ from. *@
@@ -648,9 +648,9 @@
                one, so the text those tests pin does not move. *@
             @if (this.adapterResetWorkMode)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3" role="status">
+                <Notice Severity="NoticeLevel.Info">
                     Changing the adapter reset Work mode to its default. Each adapter advertises its own modes, so a mode chosen for the previous adapter does not carry across — pick one again if you want a specific mode.
-                </MudAlert>
+                </Notice>
             }
 
         }
