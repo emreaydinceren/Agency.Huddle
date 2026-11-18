@@ -38,10 +38,16 @@ Finance Tracker. Every spend or signature waits for you. Only the Household Mana
 | **Members** | Role cards and the roster |
 | **Files** | The Library, scoped to this Team |
 | **Tasks** | A List or Board with one swimlane per Project |
-| **Process** | The Team's rules and gates, on a Team with a `_team.md` file |
+| **Process** | The Team's rules, gates and Needs You level, on a Team with a `_team.md` file |
 | **Details** | Type, name, purpose, Library folder and archive |
 
-A Project's page has **Files** and **Tasks**. Any ordinary sub-folder of a Team folder is a Project. In the sidebar, an open Team lists itself and its Projects as a selectable list, each with its number of open Tasks. Pick one to see its Rooms, Tasks and Library link below the list.
+A Project's page has **Files** and **Tasks**, and its own **Spent** total. Any ordinary sub-folder of a Team folder is a
+Project.
+
+In the **Teams** sidebar, the open Team's card has a selector to switch to another Team. Below it, the Team and its
+Projects are a selectable list, each Project with a square avatar and its number of open Tasks. Pick one to see its
+Rooms, Tasks and Library link below the list. A Room can belong to one Project, and **No project** shows what belongs
+to none.
 
 ## Other things you can do
 
@@ -49,14 +55,19 @@ A Project's page has **Files** and **Tasks**. Any ordinary sub-folder of a Team 
 - **Add a shortcut.** Each Team can have an avatar tile in the Activity bar, opening its Team and Project
   list with their Rooms, Tasks and Library. Tiles are on by default.
 - **Give a Team an avatar**, drawn as a rounded square so it never reads as a person.
-- **See the Team's spend** as a total per currency.
+- **See the Team's spend** as a total per currency, and a Project's own spend on its page.
+- **Choose how much waits for you** with the Needs You level, on the Team's **Process** tab or a Project's
+  **Needs You level...** action. See [Needs you and the Human gate](needs-you-and-human-gate.md).
 - **Connect a workspace**, such as a code repository, so members know where the real work lives.
+- **Rename** a Team or a Project with **Rename team...** or **Rename project...**, on its page or in its sidebar menu.
+  A confirmation lists what can go wrong. The folder, Rooms, Tasks, Views and links move with it, the Team Room gets
+  one line saying so, an Agent that may know the old name is told once, and the old name still reaches it.
 - **Archive** a Team or a Project, from its row's More (⋮) menu in the sidebar or from its page. The folder moves unchanged into the read-only **Archive**, and
   **Restore** on the **Archived** page brings it back. See [Second Brain and Memory](second-brain-and-memory.md).
 
 ## Good to know
 
-- Teams can't be renamed or deleted in the app. They can be archived.
+- Teams can't be deleted in the app. They can be archived.
 - By default, a Team holds up to 8 Agents and Huddle runs up to 16 live processes.
 - A role that needs a connector you haven't set up shows **Not connected yet**, which never blocks the hire.
 
@@ -116,6 +127,45 @@ Team folder. The names `memory`, `raw` and `outputs` are excluded, along with an
 To start a chat inside a Project, select the Project in the sidebar and press the "+" on its **ROOMS** section. The Room belongs to
 that Project from then on, is listed under ROOMS when that Project is selected, and can't be moved. A Room whose Project is later archived appears in
 the Team's own Rooms instead.
+
+A Project's **Spent** total adds up the Turns that ran in the Project's Rooms, whoever ran them, one amount per
+currency. A Turn in a Room outside the Project counts toward none, and deleting a Room keeps what it spent. The total is
+blank until something is spent there.
+
+**No project** in the sidebar narrows the Rooms, Tasks and Library link to what belongs to no Project. It appears once
+the Team has a Project.
+
+### Renaming a Team or a Project
+
+Choose **Rename team...** or **Rename project...** from the More (⋮) menu on its sidebar row, or **Rename** on a Team's
+**Details** tab. Huddle asks for the new name, checked by the same rules as a new one, then shows a confirmation before
+changing anything. Only you can rename: Agents have no way to.
+
+The confirmation lists what can go wrong, with your Team's numbers:
+
+- **Members restart.** Each starts a new conversation, keeping a summary of recent Messages but losing its working
+  context. Any member in the middle of a Turn is named, and loses that Turn's work. Renaming a Project restarts no one.
+- **Agents are told on their next Turn,** not at once, so until then one may use the old name. An Agent that writes a
+  file to the old folder brings it back as an empty Team.
+- **Agents' own notes keep the old name** until each Agent updates them.
+- **Links outside Huddle break,** such as bookmarks and scripts that use the old folder.
+- **It can't be undone in one step.** The old name stays reserved, and renaming back is another rename.
+
+Once you confirm, the folder, Rooms, Tasks, Requests, saved Views and links inside Huddle move with it, and the Team Room
+gets one line saying so. The old name still reaches the right place: a link or Reference to it opens the renamed Team, an
+Agent that reads by it is forwarded and told, and one that tries to write by it is refused with the new name. A Project is
+renamed in place inside its Team.
+
+If Huddle stops partway, such as when it is closed during a rename, the rename finishes at the next start. If a step
+keeps failing, the Feed shows a notice listing what is left, and Huddle retries at the next start.
+
+### Archiving a Team or a Project
+
+Archiving a Team first tells you how many open Tasks it would hide and which Agents would be left with no Team. A Project
+is archived at once, since nothing is lost. The Team's Rooms are archived with it, and **Restore** on the **Archived**
+page brings back members and Rooms too. The page has **Teams**, **Projects** and **Rooms** tabs, and shows where each Room
+belongs. If something now has the same name, Huddle refuses and asks you to rename one of them first. An archived Team's
+Projects come back with it.
 
 ### Team types
 
@@ -179,5 +229,8 @@ itself.
 | A hire says the Team is full | A [hire limit](#hire-limits) was reached |
 | The Chief of Staff says a role cannot be hired yet | A Skill or Pack the role needs isn't ready. Set it up, or ask for a role it lists as ready |
 | A Team still appears after you removed everyone | Removing members never deletes the folder. It shows **No members** |
+| A rename was refused | The name breaks the name rules, is taken, or is an old name that stays reserved. Pick another |
+| The Feed says a rename is stuck | A step could not finish, such as a file held open. Close what holds it, and the rename finishes at the next start |
+| Restore was refused | Something now has that name. Rename one of them, then restore |
 | A membership change was undone | An Edit card open during the change saved its old text. Add the member again |
 | Your Team type is missing | See **Settings > Team types > Problems**, fix the file, then select **Reload** |

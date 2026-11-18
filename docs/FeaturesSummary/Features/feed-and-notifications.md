@@ -27,6 +27,12 @@ resolved.
 A Helper's gate change appears as a Notification with its reason. If a Helper pauses at its cap or keeps
 failing, Huddle reports it in the Feed.
 
+## Spot the less obvious items
+
+The Feed also tells you when a Memory Tidy pass changed Agents' Memory (select the item to open the list of changes),
+when an Agent set a Follow-up, when a Job or Follow-up could not run, and when a Team's spend cap needs a decision.
+The **Feed** icon is the first button in the Activity bar.
+
 ## Good to know
 
 - The Feed never shows Message text and never changes the work.
@@ -85,7 +91,18 @@ Task that's waiting. These buttons only open things, so deciding and replying st
 A Helper's wake-up Message is written by **Huddle**, so it doesn't answer a Mention of you or clear a Room from **Needs
 you**.
 
-### Keeping and turning off
+### Other items you may see
+
+| Item | What it tells you |
+| --- | --- |
+| **Memory Tidy** tidied Agents' Memory | A Notification such as "Memory Tidy tidied 4 topic files and dropped 2 in 3 Memory folders". Select it to open the list of what changed and why, including anything Huddle refused |
+| An Agent set a Follow-up | An Activity card naming the Agent, the Room and the time. Cancel it from the Room |
+| A Job or Follow-up **did not run** | The Job's title and the reason, such as its Room or Agent no longer being available, or being more than a day late |
+| A Team or Project reached its spend cap | A Notification asking whether to let it spend another amount. It leaves **Needs you** when you answer, or change the level or cap |
+| A Team rename that could not finish | A Notification with the reason |
+| You turned an Agent's account connectors or browser on or off | An Activity card, so there is a record |
+
+The Memory Tidy list stays in the Library under the **Memory backups** root.
 
 Items are kept for 30 days, and a dismissed Notification for 30 days after you dismissed it. With the Feed off, the
 bell and the **Feed** icon disappear.

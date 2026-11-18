@@ -66,9 +66,11 @@ foreach ($line in (Get-Content -LiteralPath $indexPath)) {
 }
 
 $unlisted = 0
+# Pages the mirror strips by path (see agents/GiteaToGitHubPlaybook.md): the index must not link them.
+$offMirror = @('docs/FeaturesSummary/UPDATING.md')
 foreach ($file in (git -C $repoRoot ls-files 'docs/*.md')) {
     $full = [System.IO.Path]::GetFullPath((Join-Path $repoRoot $file))
-    if ($full -ieq $indexPath) {
+    if (($full -ieq $indexPath) -or ($offMirror -contains $file)) {
         continue
     }
     if (-not $linked.Contains($full)) {

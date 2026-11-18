@@ -16,6 +16,7 @@ The **Needs you** card in the sidebar and the **Needs you** page list:
 
 - Rooms with an unanswered mention, an open question or form, a spent Budget, or a Job for you.
 - Tasks waiting for your decision.
+- A question from a Team that reached its spend cap.
 
 A Room leaves the list when you post or press ✓.
 
@@ -30,6 +31,13 @@ names an **Action** that leaves the Team, such as sending, paying, signing, publ
 
 The Proof checklist comes from the Team's **Definition of Done**. Only you can make a gated Task Done,
 and dragging its card to Done opens the decision instead.
+
+## Choose how much waits for you
+
+The **Needs You level** sets how much of a Team's work waits for your Accept. **Ask me** is the default. **Run inside
+the Team** lets a local merge of a Task's own branch, and a Sprint whose Tasks all run inside the Team, go ahead without
+you. Pushes, Task Actions and connector calls still wait. You can set it for everything in **Settings**, for one Team on
+its **Process** tab, or for one Project. See [Needs You levels](#needs-you-levels).
 
 ## Let Helpers catch what's easy to miss
 
@@ -70,8 +78,9 @@ Rooms are listed longest wait first, and each row shows who asked and when.
 | Press ✓ | It hides until something new makes it wait. The Question or Form behind it stays unanswered |
 | Press **Continue** on a paused Room | Only the paused reason clears |
 
-After a restart, Rooms with an unanswered mention in the last 50 Messages are listed again. A waiting Question
-or Form is gone, and so is any ✓ you pressed.
+After a restart, Rooms with an unanswered mention in the last 50 Messages are listed again. A Question an Agent
+asked that is still waiting is listed again too, with its card still in the Room. A waiting Form is gone, and so
+is any ✓ you pressed.
 
 Task rows show their progress, such as "Waiting on you · Proof 4/4". They have no ✓, leave only when you decide
 or the status changes, and survive restarts because they are read from the Task files.
@@ -80,8 +89,30 @@ or the status changes, and survive restarts because they are read from the Task 
 
 | Category | Examples |
 | --- | --- |
-| Always gated | Customer messages, money, contracts, public posts, merges to main, deleting data |
+| Always gated | Customer messages, money, contracts, public posts, deleting data, and any push |
+| Gated unless you choose otherwise | Merges to main wait at **Ask me**; see [Needs You levels](#needs-you-levels) |
 | No gate needed | Internal notes, drafts, research, ordinary Task updates |
+
+### Needs You levels
+
+| Level | What waits for you |
+| --- | --- |
+| **Ask me** (the default) | Every merge into main, every push, every Task with an Action, every connector call |
+| **Run inside the Team** | The same, except a local merge of a Task's own branch once its Proof is complete, a Sprint whose Tasks all run inside the Team, and a Task an Agent creates straight into such a Project go ahead without your Accept |
+
+Any push, any Task Action marked **Requires your acceptance**, and every connector call wait at both levels.
+
+- **Where to set it.** **Settings > Needs You level** for everything, a Team's **Process** tab for that Team, and a
+  Project's **Needs You level...** action. The most specific one wins, and a scope you leave unset inherits from the
+  one above. A line under the control says which level is in force and where it comes from.
+- **Only you set it.** An Agent, a Helper or a retro proposal can't change it.
+- **Spend cap (USD).** Optional, beside **Run inside the Team**. When the scope has spent that much running inside the
+  Team, it falls back to **Ask me** and asks you here and in the Feed: **Let it spend another** that amount, or **No, ask
+  me for each step**. Yes allows one more cap. No keeps it on **Ask me** until you change the level or the cap.
+- **What you see afterwards.** A step that went ahead appears in the Task's Timeline and the Feed.
+- **What it can't catch.** The level reads the command an Agent runs, so a script or an alias in a git config file can
+  still merge or push, and one Accept on a push Task lets the Team push anything for up to 24 hours. For a guarantee,
+  protect the branch on your git server. See [Running a Team](running-a-team.md#how-the-merge-gates-work).
 
 ### Setting it up on a Task
 

@@ -3,7 +3,7 @@
     Fetches every pull request from the Huddle Gitea repo and regenerates PRs.md and Prs-Feature.md.
 
 .DESCRIPTION
-    Step 1 of private/feature-logs/UPDATING.md. Everything it writes goes to private/feature-logs/, is
+    Step 1 of docs/FeaturesSummary/UPDATING.md. Everything it writes goes to private/feature-logs/, is
     CRLF, and has email addresses, the local Windows user path and the Gitea host redacted, because
     these files are tracked and the secret scan reads them. It:
       1. reads every PR (open, closed, merged) through the Gitea API;
