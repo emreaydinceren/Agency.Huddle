@@ -38,7 +38,7 @@
 {
     <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
     <div class="task-read-view-actions">
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-read-view-close" OnClick="this.OnClose">Close</MudButton>
+        <ActionButton Role="ButtonRole.Primary" Class="task-read-view-close" OnClick="this.OnClose">Close</ActionButton>
     </div>
 }
 else if (this.loaded is { } task)
@@ -60,8 +60,8 @@ else if (this.loaded is { } task)
         }
         <span class="task-read-view-actions-spacer"></span>
         <MudTooltip Text="@this.EditLabel(task)">
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" Class="task-read-view-edit"
-                       aria-label="@this.EditLabel(task)" OnClick="this.EditAsync">Edit</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Edit" Class="task-read-view-edit"
+                          aria-label="@this.EditLabel(task)" OnClick="this.EditAsync">Edit</ActionButton>
         </MudTooltip>
         <MudTooltip Text="Copy id">
             <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {task.Id}")"

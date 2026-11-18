@@ -199,12 +199,12 @@
             </MudStack>
             </ChildContent>
             <Actions>
-                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="elicitation-card-send"
-                           Disabled="@(busy || !this.CanSend(current))"
-                           OnClick="@(() => this.SendAsync(current))">@(busy ? "Sending…" : "Send")</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="elicitation-card-dismiss"
-                           Disabled="@busy"
-                           OnClick="@(() => this.DismissAsync(current))">Dismiss</MudButton>
+                <ActionButton Role="ButtonRole.Primary" Class="elicitation-card-send"
+                              Disabled="@(busy || !this.CanSend(current))"
+                              OnClick="@(() => this.SendAsync(current))">@(busy ? "Sending…" : "Send")</ActionButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="elicitation-card-dismiss"
+                              Disabled="@busy"
+                              OnClick="@(() => this.DismissAsync(current))">Dismiss</ActionButton>
             </Actions>
         </AgentCard>
     }

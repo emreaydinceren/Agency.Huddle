@@ -55,8 +55,8 @@
             </MudExpansionPanels>
         </ChildContent>
         <Actions>
-            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</MudButton>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@this.Busy" OnClick="this.DeclineAsync">@(this.IsBusy(DeclineKey) ? "Declining…" : "Decline")</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</ActionButton>
+            <ActionButton Role="ButtonRole.Secondary" Disabled="@this.Busy" OnClick="this.DeclineAsync">@(this.IsBusy(DeclineKey) ? "Declining…" : "Decline")</ActionButton>
         </Actions>
     </AgentCard>
 }

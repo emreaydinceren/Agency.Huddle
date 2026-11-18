@@ -38,10 +38,10 @@
         <div class="task-decision-message" role="alert">@this.message</div>
     }
     <div class="task-decision-buttons">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@this.Blocked" OnClick="@(() => this.AskAsync(TaskDecision.RequestChanges))">@HumanGateCopy.RequestChangesButton</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@(!this.CanAccept)"
-                   StartIcon="@(this.CanAccept ? null : Icons.Material.Filled.Lock)" UserAttributes="@this.AcceptAttributes"
-                   OnClick="@(() => this.DecideAsync(TaskDecision.Accept, null))">@HumanGateCopy.AcceptButton</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Disabled="@this.Blocked" OnClick="@(() => this.AskAsync(TaskDecision.RequestChanges))">@HumanGateCopy.RequestChangesButton</ActionButton>
+        <ActionButton Role="ButtonRole.Primary" Disabled="@(!this.CanAccept)"
+                      StartIcon="@(this.CanAccept ? null : Icons.Material.Filled.Lock)" @attributes="this.AcceptAttributes"
+                      OnClick="@(() => this.DecideAsync(TaskDecision.Accept, null))">@HumanGateCopy.AcceptButton</ActionButton>
         <MudMenu Dense="true">
             <ActivatorContent Context="menuContext">
                 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="@HumanGateCopy.MoreDecisions" OnClick="menuContext.ToggleAsync" />

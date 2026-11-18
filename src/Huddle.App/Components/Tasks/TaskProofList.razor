@@ -32,9 +32,9 @@
                 }
                 @if (this.CanAsk(item))
                 {
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-proof-ask"
-                               aria-label="@HumanGateCopy.AskAccessibleName(item.Owner, item.Label)"
-                               OnClick="@(() => this.AskAsync(item))">@HumanGateCopy.AskButton(item.Owner)</MudButton>
+                    <ActionButton Class="task-proof-ask"
+                                  aria-label="@HumanGateCopy.AskAccessibleName(item.Owner, item.Label)"
+                                  OnClick="@(() => this.AskAsync(item))">@HumanGateCopy.AskButton(item.Owner)</ActionButton>
                 }
             </div>
         }

@@ -70,8 +70,8 @@
                           Error="@(this.commentError is not null)" ErrorText="@this.commentError"
                           Class="task-timeline-comment-field long-text-field markdown-field" />
             <div class="task-timeline-comment-actions">
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="task-timeline-comment-send"
-                           Disabled="@(string.IsNullOrWhiteSpace(this.commentText))" OnClick="this.AddComment">Comment</MudButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="task-timeline-comment-send"
+                              Disabled="@(string.IsNullOrWhiteSpace(this.commentText))" OnClick="this.AddComment">Comment</ActionButton>
             </div>
         </div>
     }

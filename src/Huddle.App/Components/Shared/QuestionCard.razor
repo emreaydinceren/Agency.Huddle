@@ -103,12 +103,11 @@
         <Actions>
             @if (!this.SendsOnTap(current))
             {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary"
-                           Disabled="@(this.OptionsDisabled || !this.IsComplete(current))"
-                           Size="Size.Small"
-                           OnClick="this.SendAsync">@(this.Busy ? "Sending…" : "Send")</MudButton>
+                <ActionButton Role="ButtonRole.Primary"
+                              Disabled="@(this.OptionsDisabled || !this.IsComplete(current))"
+                              OnClick="this.SendAsync">@(this.Busy ? "Sending…" : "Send")</ActionButton>
             }
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@this.Busy" OnClick="this.Dismiss">Dismiss</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" Disabled="@this.Busy" OnClick="this.Dismiss">Dismiss</ActionButton>
         </Actions>
     </AgentCard>
 }

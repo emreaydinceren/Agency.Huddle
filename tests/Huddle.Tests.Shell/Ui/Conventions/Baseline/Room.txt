@@ -1,7 +1,2 @@
-CV15|src/Huddle.App/Components/Pages/Chat.razor|3
-CV15|src/Huddle.App/Components/Shared/ElicitationCard.razor|2
 CV15|src/Huddle.App/Components/Shared/InviteAgent.razor|1
-CV15|src/Huddle.App/Components/Shared/ProposalCard.razor|2
-CV15|src/Huddle.App/Components/Shared/QuestionCard.razor|3
-CV15|src/Huddle.App/Components/Shared/RetroProposalCard.razor|2
-CV15|src/Huddle.App/Components/Shared/SprintProposalCard.razor|2
+CV15|src/Huddle.App/Components/Shared/QuestionCard.razor|1

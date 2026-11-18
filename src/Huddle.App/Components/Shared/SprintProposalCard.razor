@@ -35,8 +35,8 @@
             <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.Busy" />
         </ChildContent>
         <Actions>
-            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="sprint-proposal-approve" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</MudButton>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="sprint-proposal-decline" Disabled="@this.Busy" OnClick="this.DeclineAsync">@(this.IsBusy(DeclineKey) ? "Declining…" : "Decline")</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Class="sprint-proposal-approve" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</ActionButton>
+            <ActionButton Role="ButtonRole.Secondary" Class="sprint-proposal-decline" Disabled="@this.Busy" OnClick="this.DeclineAsync">@(this.IsBusy(DeclineKey) ? "Declining…" : "Decline")</ActionButton>
         </Actions>
     </AgentCard>
 }
