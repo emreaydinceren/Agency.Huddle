@@ -1,11 +1,12 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Goldfish;
 
 /// <summary>The words the goldfish posts: the return line per exit (spec 6.5), the result Message (6.6) and the not-in-mode reply (6.7).</summary>
-internal static class GoldfishLine
+internal static partial class GoldfishLine
 {
     /// <summary>What ends the first line of a start row, after the Agent's name.</summary>
     internal const string StartMarker = " went into goldfish mode. They don't remember this Room.";
@@ -27,7 +28,7 @@ internal static class GoldfishLine
     /// <param name="calledBackBy">Who called the Agent back; only <see cref="GoldfishExit.CalledBack"/> reads it.</param>
     /// <param name="elapsed">How long the possession lasted; only <see cref="GoldfishExit.CalledBack"/> reads it.</param>
     /// <param name="isMember">Whether the Agent is a Member of the Room.</param>
-    /// <param name="findings">How many findings the goldfish reported; only <see cref="GoldfishExit.Finished"/> reads it.</param>
+    /// <param name="findings">How many list items the posted result holds (<see cref="CountListItems"/>); only <see cref="GoldfishExit.Finished"/> reads it, and zero leaves the count out.</param>
     /// <param name="firstLine">The first line of the result; only <see cref="GoldfishExit.Stuck"/> reads it.</param>
     internal static string ReturnLine(string agentName, GoldfishExit exit, string? calledBackBy, TimeSpan elapsed, bool isMember, int findings = 0, string? firstLine = null)
     {
@@ -35,6 +36,7 @@ internal static class GoldfishLine
         string byWho = calledBackBy is null ? string.Empty : $" by {calledBackBy}";
         string rest = exit switch
         {
+            GoldfishExit.Finished when findings <= 0 => "Goldfish finished: result above.",
             GoldfishExit.Finished => string.Create(CultureInfo.InvariantCulture, $"Goldfish finished: {findings} {(findings == 1 ? "finding" : "findings")}, result above."),
             GoldfishExit.Stuck => string.IsNullOrWhiteSpace(firstLine) ? "Gave up." : $"Gave up: {firstLine}.",
             GoldfishExit.CalledBack => $"Called back{byWho} after {Span(elapsed)}. Partial result above.",
@@ -45,6 +47,24 @@ internal static class GoldfishLine
 
         return who + ReturnMarker + rest;
     }
+
+    /// <summary>
+    /// How many list items the posted result holds: every line that starts, after any indent, with a bullet
+    /// (<c>-</c>, <c>*</c>, <c>+</c>) or a number and a dot or bracket. Nested items count. Zero for prose.
+    /// </summary>
+    /// <param name="postedResult">The result text as posted, without the brief.</param>
+    internal static int CountListItems(string? postedResult)
+    {
+        if (string.IsNullOrEmpty(postedResult))
+        {
+            return 0;
+        }
+
+        return ListItemPattern().Count(postedResult);
+    }
+
+    [GeneratedRegex(@"^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex ListItemPattern();
 
     /// <summary>Reads a start row back (the transcript recognises it by its stamp, then by this).</summary>
     /// <param name="text">The Message text.</param>

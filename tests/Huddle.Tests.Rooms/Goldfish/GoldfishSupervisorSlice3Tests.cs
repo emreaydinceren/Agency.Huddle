@@ -276,6 +276,35 @@ public sealed class GoldfishSupervisorSlice3Tests
         Assert.Empty(rig.Link.Ends);
     }
 
+    /// <summary>The return line counts the list items of the posted result, not the length of the findings array.</summary>
+    [Fact]
+    public async Task EndAsync_FinishedWithListInTheResultText_CountsThePostedItemsNotTheFindingsArray()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+        GoldfishResult result = new("Checked:\n1. a\n2. b\n   - c\n3. d", []);
+
+        _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, ct, result);
+
+        IReadOnlyList<ChatMessage> lines = await rig.HuddleLinesAsync(ct);
+        Assert.Equal(GoldfishLine.ReturnLine("Nova", GoldfishExit.Finished, null, TimeSpan.Zero, true, findings: 4), lines[1].Text);
+    }
+
+    /// <summary>A finished possession whose result is prose and has no findings posts a return line without a number.</summary>
+    [Fact]
+    public async Task EndAsync_FinishedWithProse_ReturnLineHasNoCount()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+
+        _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, ct, new GoldfishResult("All fine.", []));
+
+        IReadOnlyList<ChatMessage> lines = await rig.HuddleLinesAsync(ct);
+        Assert.Equal("@Nova is back. Goldfish finished: result above.", lines[1].Text);
+    }
+
     /// <summary>A finished possession with a result posts the brief, the result text and each finding, in that order, as Huddle.</summary>
     [Fact]
     public async Task EndAsync_FinishedWithResult_PostsTheResultAndFindings()

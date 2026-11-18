@@ -211,8 +211,8 @@ it Mentions whoever it names, as for any Agent. A question only the Human can an
 - `outcome` defaults to `finished`. `stuck` is the goldfish saying it cannot go on, even with assumptions (§6.5).
 - Huddle posts the result Message (§6.6) and starts the return step. The tool returns "Done. Your body goes back to
   {Agent}." and the goldfish's Turn is stopped after the call returns.
-- `result` lists the questions the goldfish asked and the answers it got; the findings stay in `findings`. Huddle counts
-  nothing itself.
+- `result` lists the questions the goldfish asked and the answers it got; the findings stay in `findings`. The return line
+  counts the list items of what Huddle posts, not an array length or a number the goldfish reports.
 - A file the goldfish wrote (a report) is named in `result` by its path; Huddle does not write a file of its own.
 
 ### 5.4 What works inside a possession
@@ -345,7 +345,7 @@ Every possession ends with exactly one exit, and every exit runs the same return
 
 | Exit | Trigger | Return line (the warm Agent's Turn and the Room's system row) |
 | --- | --- | --- |
-| **Finished** | `goldfish_done` with `finished` | "Ruth is back. Goldfish finished: 3 findings, result above." |
+| **Finished** | `goldfish_done` with `finished` | "Ruth is back. Goldfish finished: 3 findings, result above." The number is the list items in the result as posted (the result text plus the findings), nested and numbered ones included. A result with no list reads "Ruth is back. Goldfish finished: result above." |
 | **Stuck** | `goldfish_done` with `stuck` | "Ruth is back. Gave up: {first line of the result}." |
 | **Called back** | An exact comeback (§6.7), the **Call Ruth back** button, or the Human's Stop on the goldfish's Draft (`TurnControl.StopAsync` ends it CalledBack by the Human and sends no `StopTurn`); from any state, `Waiting` included | "Ruth is back. Called back by Quinn after 4 minutes. Partial result above." |
 | **Failed** | The clean session failed to open, the Adapter stopped, the Turn failed or timed out, the Agent was restarted, renamed away or removed | "Ruth is back. Didn't finish: the Adapter stopped." |

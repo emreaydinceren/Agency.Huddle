@@ -53,6 +53,31 @@ public sealed class GoldfishLineTests
         Assert.Equal("@Ruth is back. Called back after 2 minutes. Partial result above.", line);
     }
 
+    /// <summary>The count is the list items of the posted result: nested, numbered and bulleted lines all count.</summary>
+    [Fact]
+    public void CountListItems_TwelveItemsNestedAndNumbered_IsTwelve()
+    {
+        string result = "Review done.\n1. one\n2) two\n   - nested a\n   - nested b\n\t* nested c\n3. three\n- four\n- five\n+ six\n- seven\n10. eight\n   1. nine\nClosing prose.";
+
+        Assert.Equal(12, GoldfishLine.CountListItems(result));
+    }
+
+    /// <summary>A result of plain prose has no count.</summary>
+    [Fact]
+    public void CountListItems_Prose_IsZero()
+    {
+        Assert.Equal(0, GoldfishLine.CountListItems("Everything reads well - no problems, 3-4 nits.\nSecond line."));
+    }
+
+    /// <summary>With no count the finished line says the result is posted instead of showing a number.</summary>
+    [Fact]
+    public void ReturnLine_FinishedWithoutItems_OmitsTheCount()
+    {
+        string line = GoldfishLine.ReturnLine("Ruth", GoldfishExit.Finished, null, TimeSpan.Zero, isMember: true, findings: 0);
+
+        Assert.Equal("@Ruth is back. Goldfish finished: result above.", line);
+    }
+
     /// <summary>One finding is singular.</summary>
     [Fact]
     public void ReturnLine_OneFinding_IsSingular()

@@ -334,6 +334,10 @@ internal sealed class GoldfishSupervisor(
         }
     }
 
+    /// <summary>The list items of the result as <see cref="PostResultAsync"/> posts it: the result text, then one bullet per finding.</summary>
+    private static int CountPostedItems(GoldfishResult? result) =>
+        result is null ? 0 : GoldfishLine.CountListItems(result.Text) + result.Findings.Count;
+
     private async Task PostReturnRowAsync(Possession row, GoldfishExit exit, string? by, GoldfishResult? result, CancellationToken ct)
     {
         try
@@ -342,7 +346,7 @@ internal sealed class GoldfishSupervisor(
             User? agent = members.FirstOrDefault(member => string.Equals(member.Id, row.AgentId, StringComparison.Ordinal));
             TimeSpan elapsed = this.clock.GetUtcNow() - row.StartedAt;
             string? firstLine = result?.Text.Split('\n', 2)[0].Trim();
-            string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null, result?.Findings.Count ?? 0, firstLine);
+            string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null, CountPostedItems(result), firstLine);
             _ = await chat.PostAsHuddleAsync(row.RoomId, text, ct, goldfish: row.Id).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
