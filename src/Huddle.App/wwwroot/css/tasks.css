@@ -1113,7 +1113,6 @@
 }
 
 .task-decision-locked,
-.task-decision-review,
 .task-decision-trail {
     color: var(--mud-palette-text-secondary);
 }

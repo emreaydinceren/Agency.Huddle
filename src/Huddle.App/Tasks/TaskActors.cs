@@ -23,19 +23,19 @@ internal static class TaskActors
     }
 
     /// <summary>
-    /// Huddle itself, the actor of a move it makes without being asked (a ready gated Task going from Review to Needs You, #349).
+    /// Huddle itself, the actor of a move it makes without being asked (a ready gated Task going from In Progress to Needs You, #349).
     /// A <see cref="TaskActorKind.Helper"/>, because such a change is a background judgement Huddle applied; its Name has no
     /// parentheses, so it is told apart from a real Helper (<see cref="Helper"/>).
     /// </summary>
     public static TaskActor Huddle { get; } = new(TaskActorKind.Helper, "Huddle", KnownIds.Huddle);
 
-    /// <summary>Whether <paramref name="change"/> is Huddle's own move of a ready Task from Review to Needs You, which wakes nobody.</summary>
+    /// <summary>Whether <paramref name="change"/> is Huddle's own move of a ready Task from In Progress to Needs You, which wakes nobody.</summary>
     /// <param name="change">The change to test.</param>
     public static bool IsReadyMove(TaskChange change)
     {
         ArgumentNullException.ThrowIfNull(change);
         return change.Actor == Huddle
-            && change.Before?.Status == TaskState.Review
+            && change.Before?.Status == TaskState.InProgress
             && change.After.Status == TaskState.NeedsYou;
     }
 

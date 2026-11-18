@@ -90,9 +90,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <summary>The Prompt the wake-up Message is rendered from (Spec §10.5).</summary>
     private const string WakeMessageKey = "task.wake.message";
 
-    /// <summary>#403: the last line of a wake into Review. A reply in chat moves nothing; the outcome goes on the Task.</summary>
-    private const string ReviewSentence = "Review the work, then record the outcome on the Task and name the next step; a reply in chat alone does not move it.";
-
     /// <summary>The Prompt key of the line added when a Request reaches Done (#350).</summary>
     private const string RequestDoneKey = "task.wake.requestDone";
 
@@ -236,7 +233,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         [
             new AssigneeWakeRule(),
             new ManagerWakeRule(teams, this.human, personas, this.teamOptions),
-            new ChallengerWakeRule(teams, this.human, personas, confirmers, this.teamOptions),
             new RequestingManagerWakeRule(teams, this.human, personas, this.teamOptions, logger),
         ];
     }
@@ -518,9 +514,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
                 batch.StatusChanged = true;
 
                 // The last status change decides: a Request moved into Done and straight out again is not waiting to be confirmed.
-                batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;
-                batch.MovedToReview = change.After.Status == TaskState.Review && change.Before?.Status != TaskState.Review;
-            }
+                batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;            }
 
             if (change.Actor.Kind == TaskActorKind.OutsideHuddle)
             {
@@ -810,7 +804,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
-        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, batch.MovedToReview, this.Preview(null, latest, batch.Actor));
+        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, this.Preview(null, latest, batch.Actor));
         foreach (ITaskWakeRule rule in this.wakeRules)
         {
             try
@@ -841,11 +835,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         switch (choice)
         {
             case TaskWakeChoice.Wake wake:
-                if (wake.AsChallenger)
-                {
-                    batch.Challenger = wake.Name;
-                }
-
                 _ = await this.DeliverAsync(batch, latest, wake.Name, ct).ConfigureAwait(false);
                 break;
             case TaskWakeChoice.HoldForBudget hold:
@@ -1514,13 +1503,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             text = text + "\n" + sentence;
         }
 
-        bool sentenceRecipient = string.Equals(assigneeName, latest.Assignee, StringComparison.OrdinalIgnoreCase)
-            || string.Equals(assigneeName, batch.Challenger, StringComparison.OrdinalIgnoreCase);
-        if (batch.MovedToReview && latest.Status == TaskState.Review && sentenceRecipient)
-        {
-            text = text + "\n" + ReviewSentence;
-        }
-
         string? releasedScope = batch.Entries.Select(static entry => NeedsYouRelease.ScopeWordOf(entry.Summary)).LastOrDefault(static word => word is not null);
         if (releasedScope is not null)
         {
@@ -1735,12 +1717,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         /// <summary>Whether any batched change moved the Task into Done (#350: a Request that gets there waits for its requesting Team to confirm it).</summary>
         public bool MovedToDone { get; set; }
-
-        /// <summary>Whether the batch's last status change moved the Task into Review (#403: someone who can review must be woken once).</summary>
-        public bool MovedToReview { get; set; }
-
-        /// <summary>The member woken to review when the assignee could not, set by the wake for it just before it is delivered.</summary>
-        public string? Challenger { get; set; }
 
         /// <summary>The outside-edit window of this batch's latest outside-Huddle change, if any.</summary>
         public OutsideWindow? OutsideWindow { get; set; }

@@ -16,6 +16,12 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 {
     private const string VerifyCoverage = "verify";
 
+    /// <summary>
+    /// The refusal for a tool call that names the Review state Huddle no longer has (D-13). It lives here, with the other process
+    /// wording that says "who reviews" in plain English, because the role-neutrality scan allows no further file to contain that word.
+    /// </summary>
+    internal const string ReviewStateRefusal = "Huddle has no Review state. To ask for a review, create a Task tagged review, assigned to the reviewer, as a child of this Task, and add it to this Task's blocked_by.";
+
     private readonly ConcurrentDictionary<string, bool> warned = new(StringComparer.Ordinal);
 
     /// <summary>The one-sentence risk shown when a gate is turned off.</summary>
@@ -26,7 +32,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         GateId.QaEvidenceBeforeDone => "A Task can then be marked Done with no verified Evidence.",
         GateId.ChecksBeforeMerge => "Code can then be merged or pushed without a passing check run on record.",
         GateId.SpecApprovedBeforeBuild => "Work can then start on a Task before its spec is approved.",
-        GateId.FailingTestBeforeFix => "A bug can then move to Review without a test that failed first.",
+        GateId.FailingTestBeforeFix => "A bug can then move on without a test that failed first.",
         GateId.AcceptBeforeMerge => "Code can then be merged into main without the Human's Accept.",
         GateId.BlockersDoneBeforeStart => "A Task can then start, or reach Done, while a Task it is blocked by is still open.",
         GateId.HumanGate => "A Task can then reach Done without the Human's acceptance.",
@@ -46,7 +52,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         IReadOnlyList<GateId> enabled = this.EnabledGates(context.Team);
         bool toDone = string.Equals(context.ToStatus, TaskState.Done.ToWire(), StringComparison.Ordinal);
         bool toInProgress = string.Equals(context.ToStatus, TaskState.InProgress.ToWire(), StringComparison.Ordinal);
-        bool toReview = string.Equals(context.ToStatus, TaskState.Review.ToWire(), StringComparison.Ordinal);
+        bool toNeedsYou = string.Equals(context.ToStatus, TaskState.NeedsYou.ToWire(), StringComparison.Ordinal);
 
         if (context.OpenBlockers.Count > 0 && enabled.Contains(GateId.BlockersDoneBeforeStart) && IsBlockerGated(context.ToStatus))
         {
@@ -63,9 +69,9 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             return new GateRefusal(GateId.SpecApprovedBeforeBuild, "Gate spec-approved-before-build: the parent spec Task must be approved before this Task can move to In Progress.");
         }
 
-        if (toReview && context.IsBug && enabled.Contains(GateId.FailingTestBeforeFix) && !HasFailureBeforePass(context.Evidence))
+        if ((toNeedsYou || toDone) && context.IsBug && enabled.Contains(GateId.FailingTestBeforeFix) && !HasFailureBeforePass(context.Evidence))
         {
-            return new GateRefusal(GateId.FailingTestBeforeFix, "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move to Review.");
+            return new GateRefusal(GateId.FailingTestBeforeFix, "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move on.");
         }
 
         return null;
@@ -123,7 +129,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         && this.CoverageOf(role) is { } coverage
         && coverage.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Tells whether a role covers the <c>challenge</c> step, which is what reviewing a Task in Review takes (#403).</summary>
+    /// <summary>Tells whether a role covers the <c>challenge</c> step, which is what reviewing a Task takes (#403).</summary>
     /// <param name="role">The role a member was hired into, or <see langword="null"/> for an Agent with none.</param>
     /// <returns><see langword="true"/> when the role's coverage lists challenge.</returns>
     public bool CoversChallenge(RoleRef? role) =>
@@ -144,11 +150,10 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         return teams.Find(renames?.Resolve(team) ?? team)?.Manager;
     }
 
-    /// <summary>Whether <c>blockers-done-before-start</c> covers a move into a status: In Progress, Review, Needs You and Done.</summary>
+    /// <summary>Whether <c>blockers-done-before-start</c> covers a move into a status: In Progress, Needs You and Done.</summary>
     /// <param name="toStatus">The wire name of the proposed status.</param>
     private static bool IsBlockerGated(string toStatus) =>
         string.Equals(toStatus, TaskState.InProgress.ToWire(), StringComparison.Ordinal)
-        || string.Equals(toStatus, TaskState.Review.ToWire(), StringComparison.Ordinal)
         || string.Equals(toStatus, TaskState.NeedsYou.ToWire(), StringComparison.Ordinal)
         || string.Equals(toStatus, TaskState.Done.ToWire(), StringComparison.Ordinal);
 

@@ -67,7 +67,7 @@ internal static class SoftwareCoRooms
             new(Human, 10, "11:05", "Yes. Push it as the top priority."),
             new("Owen", 10, "11:06", "Done. GROW-0002 is High and with Sofia; GROW-0004 gives us the events to measure it."),
             new(Human, 6, "15:20", "I need to review the pricing tiers before Friday."),
-            new("Owen", 6, "15:22", "They are in Review: GROW-0009. Three tiers, prices on the Pricing Brief. What would make you say yes?"),
+            new("Owen", 6, "15:22", "They are in progress: GROW-0009. Three tiers, prices on the Pricing Brief. What would make you say yes?"),
             new(Human, 6, "15:25", "Show me the competitor comparison next to it."),
             new("Owen", 6, "15:27", "It is in the Pricing Research note. I will link both from the Task."),
             new(Human, 2, "09:30", "Legal review of the price claims is mine, GROW-0013. I'll do it by next week."),

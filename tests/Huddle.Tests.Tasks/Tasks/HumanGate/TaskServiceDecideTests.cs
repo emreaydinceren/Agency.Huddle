@@ -27,7 +27,7 @@ public sealed class TaskServiceDecideTests
     /// <param name="action">The Action, or <see langword="null"/>.</param>
     private static TaskItem InNeedsYou(TaskToolHarness harness, string? action = null)
     {
-        TaskDraft draft = new("Write the reply", Team, null, TaskState.Review) { HumanGate = true, Action = action };
+        TaskDraft draft = new("Write the reply", Team, null, TaskState.InProgress) { HumanGate = true, Action = action };
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
         TaskPatch patch = new() { Status = TaskState.NeedsYou };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, patch, null, Nova)).Task;
@@ -37,7 +37,7 @@ public sealed class TaskServiceDecideTests
     /// <param name="harness">The harness.</param>
     private static TaskItem InReview(TaskToolHarness harness)
     {
-        TaskDraft draft = new("Write the reply", Team, null, TaskState.Review) { HumanGate = true };
+        TaskDraft draft = new("Write the reply", Team, null, TaskState.InProgress) { HumanGate = true };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
     }
 
@@ -104,7 +104,7 @@ public sealed class TaskServiceDecideTests
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
         Assert.Equal([$"{task.Id} isn't waiting for your decision."], refused.Problems);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>Request changes from Needs You logs the note and moves the Task to In Progress.</summary>
@@ -122,17 +122,17 @@ public sealed class TaskServiceDecideTests
         Assert.Equal("status: Needs You → In Progress", saved.Task.ChangeLog[^1].Summary);
     }
 
-    /// <summary>Request changes is also allowed from Review.</summary>
+    /// <summary>Request changes on a Task still In Progress is refused: only a Task in Needs You waits for a decision.</summary>
     [Fact]
-    public void Decide_RequestChangesFromReview_MovesToInProgress()
+    public void Decide_RequestChangesFromInProgress_IsRefused()
     {
         using TaskToolHarness harness = Build();
         TaskItem task = InReview(harness);
 
         TaskResult result = harness.Service.Decide(task.Id, TaskDecision.RequestChanges, "Add the date", task.Version, HumanOf(harness));
 
-        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        Assert.Equal(TaskState.InProgress, saved.Task.Status);
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal([$"{task.Id} isn't waiting for your decision."], refused.Problems);
     }
 
     /// <summary>Request changes without a note is refused with the exact text.</summary>

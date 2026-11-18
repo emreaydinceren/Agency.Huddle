@@ -98,7 +98,6 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Equal(1, run.Wakes(webManager.Name, "Request event: Accept"));
 
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
-        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
         await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
         await ReviewAsync(run, teams.Api, service, request.Id, ct);
@@ -150,11 +149,10 @@ public sealed class TeamsPhase4EndToEndTests
         TaskItem request = Assert.Single(store.All, static task => string.Equals(task.Location.Team, ApiTeam, StringComparison.Ordinal));
         _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
-        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
 
         string early = await Tool<ConfirmRequestTool>(run, webManager).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString() }, ct);
 
-        Assert.Equal($"A Request can be confirmed once it is in Done. This one is in Review. Ask its assignee, {apiDeveloper.Name}, to move it to Done.", early);
+        Assert.Equal($"A Request can be confirmed once it is in Done. This one is in In Progress. Ask its assignee, {apiDeveloper.Name}, to move it to Done.", early);
 
         await ReviewAsync(run, teams.Api, service, request.Id, ct);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
@@ -202,11 +200,10 @@ public sealed class TeamsPhase4EndToEndTests
         _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
         _ = Saved(service.Update(request.Id, new TaskPatch { Action = Optional<string?>.Set("Deploy the fix to production") }, null, apiManager));
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
-        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
 
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
 
-        Assert.Equal(TaskState.Review, Current(store, request.Id).Status);
+        Assert.Equal(TaskState.InProgress, Current(store, request.Id).Status);
 
         await ReviewAsync(run, teams.Api, service, request.Id, ct);
 
@@ -273,7 +270,6 @@ public sealed class TeamsPhase4EndToEndTests
         TaskItem request = Assert.Single(store.All, static task => string.Equals(task.Location.Team, ApiTeam, StringComparison.Ordinal));
         _ = await Tool<TriageRequestTool>(run, apiManager).InvokeAsync(Triage(request.Id, "accept", null, apiDeveloper.Name), ct);
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
-        _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.Review }, null, apiDeveloper));
         await ReviewAsync(run, api, service, request.Id, ct);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
         AcceptNamedMerge(service, store, request.Id, HumanActor(run));
@@ -390,7 +386,7 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Equal("Verified needs evidence from after the change.", opinion);
         Assert.Equal("Row R-001 is now Verified.", linked);
         Assert.Equal(RetroStatus.Verified, Assert.Single(register.ReadRegister(WebTeam)).Status);
-        Assert.Equal(TaskState.Review, Current(run.Services.GetRequiredService<TaskStore>(), bounced.Id).Status);
+        Assert.Equal(TaskState.InProgress, Current(run.Services.GetRequiredService<TaskStore>(), bounced.Id).Status);
     }
 
     /// <summary>Flow 5 (NF-8): a new host on the same data directory still has the Request, the retro register and the proposal still waiting, and the waiting change can still be accepted.</summary>
@@ -581,14 +577,17 @@ public sealed class TeamsPhase4EndToEndTests
         TaskActor developer = await web.ActorAsync(run, DeveloperRole, ct);
         TaskActor reviewer = await web.ActorAsync(run, ReviewerRole, ct);
         TaskItem task = Saved(service.Create(new TaskDraft("Fix checkout", WebTeam, null, TaskState.InProgress, Assignee: developer.Name), HumanActor(run)));
+        // Huddle no longer writes the Review bounce markers (D-17), so the three bounces are written the way an older Huddle wrote them.
+        TaskStore store = run.Services.GetRequiredService<TaskStore>();
+        string text = File.ReadAllText(task.Path);
         for (int round = 0; round < 3; round++)
         {
-            _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, developer));
-            _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.ToDo }, null, reviewer));
-            _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, developer));
+            text = TaskFileFormat.AppendEntry(text, new ChangeLogEntry(DateTimeOffset.UtcNow.AddMinutes(round), reviewer.Name, "status: Review → To Do"));
         }
 
-        return Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, developer));
+        File.WriteAllText(task.Path, text);
+        store.RebuildFromWatcher();
+        return Current(store, task.Id);
     }
 
     /// <summary>Creates and starts the Web Team (Small preset plus the Retro agent) and the API Team (Small preset).</summary>

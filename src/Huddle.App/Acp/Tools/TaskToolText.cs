@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.HumanGate;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp.Tools;
 
@@ -18,6 +19,17 @@ namespace Agency.Huddle.App.Acp.Tools;
 /// </summary>
 internal static class TaskToolText
 {
+    /// <summary>The refusal for a status text Huddle cannot parse: one message that teaches the new model when it names the removed Review state (D-13).</summary>
+    /// <param name="statusText">The status text the call carried.</param>
+    public static string UnknownStatusRefusal(string statusText)
+    {
+        ArgumentNullException.ThrowIfNull(statusText);
+
+        return string.Equals(statusText.Trim(), "Review", StringComparison.OrdinalIgnoreCase)
+            ? ProcessGateService.ReviewStateRefusal
+            : string.Create(CultureInfo.InvariantCulture, $"'status' has an unknown value '{statusText}'.");
+    }
+
     /// <summary>
     /// Indents every non-blank line after the first by two spaces, so a multi-line comment stays one readable block under its
     /// heading line. A blank line stays empty rather than carrying trailing spaces.

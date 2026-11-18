@@ -6,7 +6,7 @@
 @inject IDialogService Dialogs
 
 @*
-    Spec §6.8: the decision card of a gated Task in Review or Needs You. It computes the acceptance
+    Spec §6.8: the decision card of a gated Task in Needs You. It computes the acceptance
     itself, calls TaskService.Decide with its own Task's version (never the panel's baseVersion), and
     reports a version conflict through its own message and OnReload (corrections P10).
 *@
@@ -20,10 +20,6 @@
     @if (!this.Proof.IsComplete)
     {
         <div id="task-decision-locked" class="task-decision-locked">@this.LockedText</div>
-    }
-    @if (this.Task.Status == TaskState.Review)
-    {
-        <div id="task-decision-review" class="task-decision-review">@HumanGateCopy.StillInReview(this.AssigneeName)</div>
     }
     @if (this.Blocked)
     {
@@ -115,10 +111,6 @@
             else if (!this.Proof.IsComplete)
             {
                 attributes["aria-describedby"] = "task-decision-locked";
-            }
-            else if (this.Task.Status == TaskState.Review)
-            {
-                attributes["aria-describedby"] = "task-decision-review";
             }
 
             return attributes;

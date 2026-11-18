@@ -25,7 +25,7 @@ public sealed class TaskServiceNeedsYouLevelTests
         _ = Assert.IsType<TaskResult.Saved>(rig.AddEvidence(task));
 
         TaskItem stored = rig.Read(task);
-        Assert.Equal(TaskState.Review, stored.Status);
+        Assert.Equal(TaskState.InProgress, stored.Status);
         Assert.Null(stored.Action);
         Assert.Equal(ReleaseText("project"), Assert.Single(rig.Releases(task)).Summary);
         Assert.Equal("Huddle", Assert.Single(rig.Releases(task)).Actor);
@@ -40,7 +40,7 @@ public sealed class TaskServiceNeedsYouLevelTests
 
         _ = rig.AddEvidence(task);
 
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
         Assert.Equal(ReleaseText("Team"), Assert.Single(rig.Releases(task)).Summary);
     }
 
@@ -109,7 +109,7 @@ public sealed class TaskServiceNeedsYouLevelTests
     public void ReadyTask_GatedUnderRunInside_StillGoesToNeedsYou()
     {
         using NeedsYouLevelRig rig = new(teamLevel: NeedsYouLevel.RunInsideTheTeam);
-        TaskDraft draft = new("Quote calculator", NeedsYouLevelRig.Team, null, TaskState.Review, Assignee: "Nova", Description: "Body") { Action = "Merge it" };
+        TaskDraft draft = new("Quote calculator", NeedsYouLevelRig.Team, null, TaskState.InProgress, Assignee: "Nova", Description: "Body") { Action = "Merge it" };
         TaskItem task = Assert.IsType<TaskResult.Saved>(rig.Service.Create(draft, rig.Human)).Task;
 
         _ = rig.AddEvidence(task);
@@ -124,13 +124,13 @@ public sealed class TaskServiceNeedsYouLevelTests
     public void ReadyTask_HumanTurnedGateOff_IsNeitherMovedNorReleased()
     {
         using NeedsYouLevelRig rig = new(teamLevel: NeedsYouLevel.RunInsideTheTeam);
-        TaskDraft draft = new("Quote calculator", NeedsYouLevelRig.Team, null, TaskState.Review, Assignee: "Nova", Description: "Body") { HumanGate = true };
+        TaskDraft draft = new("Quote calculator", NeedsYouLevelRig.Team, null, TaskState.InProgress, Assignee: "Nova", Description: "Body") { HumanGate = true };
         TaskItem task = Assert.IsType<TaskResult.Saved>(rig.Service.Create(draft, rig.Human)).Task;
         _ = Assert.IsType<TaskResult.Saved>(rig.Service.Update(task.Id, new TaskPatch { HumanGate = Optional<bool>.Set(false) }, null, rig.Human));
 
         _ = rig.AddEvidence(task);
 
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
         Assert.Empty(rig.Releases(task));
     }
 
@@ -160,7 +160,7 @@ public sealed class TaskServiceNeedsYouLevelTests
 
         _ = rig.AddEvidence(task);
 
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
         Assert.Empty(rig.Releases(task));
     }
 }

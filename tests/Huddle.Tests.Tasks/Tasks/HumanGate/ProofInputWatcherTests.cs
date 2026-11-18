@@ -67,14 +67,14 @@ public sealed class ProofInputWatcherTests
         TaskItem task = rig.GatedTaskInReview(rig.Attach("draft.md"));
         rig.Log("draft.md", Entry(0, "Lead", DocChangeKind.Created), Entry(1, "Quinn", DocChangeKind.Reviewed), Entry(2, "Lead", DocChangeKind.Edited));
         rig.AddEvidence(task);
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
 
         rig.Log("draft.md", Entry(3, "Quinn", DocChangeKind.Reviewed));
 
         TaskItem after = rig.Read(task);
         Assert.Equal(TaskState.NeedsYou, after.Status);
         ChangeLogEntry last = after.ChangeLog[^1];
-        Assert.Equal("status: Review → Needs You (Proof 2/2)", last.Summary);
+        Assert.Equal("status: In Progress → Needs You (Proof 2/2)", last.Summary);
         Assert.Equal("Huddle", last.Actor);
     }
 
@@ -94,7 +94,7 @@ public sealed class ProofInputWatcherTests
 
         TaskChange change = Assert.Single(changes);
         Assert.Equal(TaskActorKind.Helper, change.Actor.Kind);
-        Assert.Equal(TaskState.Review, change.Before?.Status);
+        Assert.Equal(TaskState.InProgress, change.Before?.Status);
         Assert.Equal(TaskState.NeedsYou, change.After.Status);
         Assert.Equal(TaskState.NeedsYou, rig.Read(task).Status);
     }
@@ -111,21 +111,8 @@ public sealed class ProofInputWatcherTests
 
         rig.Log("draft.md", Entry(0, "Lead", DocChangeKind.Created), Entry(1, "Quinn", DocChangeKind.Reviewed));
 
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
-        Assert.Empty(changes);
-    }
-
-    /// <summary>A gated Task still In Progress stays there when a review completes its Proof: review is not skipped.</summary>
-    [Fact]
-    public void ReReview_TaskInProgress_StaysInProgress()
-    {
-        using Rig rig = new();
-        TaskItem task = rig.GatedTaskInReview(rig.Attach("draft.md"), TaskState.InProgress);
-        rig.AddEvidence(task);
-
-        rig.Log("draft.md", Entry(0, "Lead", DocChangeKind.Created), Entry(1, "Quinn", DocChangeKind.Reviewed));
-
         Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
+        Assert.Empty(changes);
     }
 
     /// <summary>A review of a document the Task does not attach re-evaluates nothing; a review of the attached one does.</summary>
@@ -141,7 +128,7 @@ public sealed class ProofInputWatcherTests
 
         rig.Log("other.md", Entry(2, "Quinn", DocChangeKind.Reviewed));
 
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
         Assert.Empty(changes);
 
         rig.Log("draft.md", Entry(3, "Quinn", DocChangeKind.Reviewed));
@@ -162,7 +149,7 @@ public sealed class ProofInputWatcherTests
 
         rig.Log("b.md", new DocHistoryEntry(Noon.AddMinutes(2), "Human", DocActorKind.Human, DocChangeKind.Edited, "s"));
 
-        Assert.Equal(TaskState.Review, rig.Read(task).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(task).Status);
         Assert.Empty(changes);
 
         rig.Log("a.md", Entry(3, "Quinn", DocChangeKind.Reviewed));
@@ -177,13 +164,13 @@ public sealed class ProofInputWatcherTests
         using Rig rig = new(ChildOnly);
         TaskItem parent = rig.GatedTaskInReview(string.Empty);
         TaskItem child = rig.CreateChild(parent, "citation-check");
-        Assert.Equal(TaskState.Review, rig.Read(parent).Status);
+        Assert.Equal(TaskState.InProgress, rig.Read(parent).Status);
 
         rig.MarkDone(child);
 
         TaskItem after = rig.Read(parent);
         Assert.Equal(TaskState.NeedsYou, after.Status);
-        Assert.Equal("status: Review → Needs You (Proof 1/1)", after.ChangeLog[^1].Summary);
+        Assert.Equal("status: In Progress → Needs You (Proof 1/1)", after.ChangeLog[^1].Summary);
         Assert.Equal("Huddle", after.ChangeLog[^1].Actor);
     }
 
@@ -248,7 +235,7 @@ public sealed class ProofInputWatcherTests
         /// <param name="tag">The tag.</param>
         public TaskItem CreateChild(TaskItem parent, string tag)
         {
-            TaskDraft draft = new("Check the citations", Team, null, TaskState.Review, Parent: parent.Id, Tags: [tag]);
+            TaskDraft draft = new("Check the citations", Team, null, TaskState.InProgress, Parent: parent.Id, Tags: [tag]);
             return Assert.IsType<TaskResult.Saved>(this.harness.Service.Create(draft, this.Human)).Task;
         }
 
@@ -271,7 +258,7 @@ public sealed class ProofInputWatcherTests
         /// <param name="description">The Task's description.</param>
         /// <param name="status">The status to create it in.</param>
         /// <param name="gated">Whether it is Human-gated.</param>
-        public TaskItem GatedTaskInReview(string description, TaskState status = TaskState.Review, bool gated = true)
+        public TaskItem GatedTaskInReview(string description, TaskState status = TaskState.InProgress, bool gated = true)
         {
             TaskDraft draft = new("Write the reply", Team, null, status, Description: description) { HumanGate = gated };
             return Assert.IsType<TaskResult.Saved>(this.harness.Service.Create(draft, TaskActors.Human(this.harness.Options.Value))).Task;

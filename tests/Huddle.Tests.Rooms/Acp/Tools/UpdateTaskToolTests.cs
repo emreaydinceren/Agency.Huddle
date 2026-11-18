@@ -138,13 +138,13 @@ public sealed class UpdateTaskToolTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.ToDo);
         UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
-        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["status"] = "Review" };
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["status"] = "In Progress" };
 
         await tool.InvokeAsync(arguments, ct);
 
         TaskItem? updated = harness.Store.Get(task.Id);
         Assert.NotNull(updated);
-        Assert.Equal(TaskState.Review, updated.Status);
+        Assert.Equal(TaskState.InProgress, updated.Status);
     }
 
     /// <summary>The <c>priority</c> argument sets <see cref="TaskItem.Priority"/>.</summary>

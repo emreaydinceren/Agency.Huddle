@@ -81,7 +81,7 @@ internal static class SoftwareCoTasks
         new()
         {
             Id = "PLAT-0004", Location = new(Platform, ApiV2), Title = "Rate limiting per API key",
-            Status = "Review", Priority = "High", Creator = Human, Assignee = "Grace",
+            Status = "In Progress", Priority = "High", Creator = Human, Assignee = "Grace",
             Tags = ["api", "security"], DueOffset = 2, CreatedDaysAgo = 18, LastTouchedDaysAgo = 1,
             Body = "Token-bucket limiter keyed on API key. Marcus opened the change; Grace is reviewing.",
         },
@@ -149,7 +149,7 @@ internal static class SoftwareCoTasks
         new()
         {
             Id = "PLAT-0010", Location = new(Platform, Observability), Title = "Route alerts to the on-call rota",
-            Status = "Review", Priority = "High", Creator = Human, Assignee = "Alan",
+            Status = "In Progress", Priority = "High", Creator = Human, Assignee = "Alan",
             Tags = ["observability", "on-call"], DueOffset = 3, CreatedDaysAgo = 16, LastTouchedDaysAgo = 1,
             Body = "Pages go to the current on-call engineer, then escalate to Grace after 15 minutes.",
         },
@@ -274,7 +274,7 @@ internal static class SoftwareCoTasks
         new()
         {
             Id = "GROW-0009", Location = new(Growth, Pricing), Title = "Draft the three-tier structure",
-            Status = "Review", Priority = "High", Creator = "Owen", Assignee = "Owen",
+            Status = "In Progress", Priority = "High", Creator = "Owen", Assignee = "Owen",
             Tags = ["pricing"], DueOffset = 1, CreatedDaysAgo = 17, LastTouchedDaysAgo = 1,
             OriginRoom = SoftwareCoRooms.LaunchCrew,
             Body = "Starter, Team and Business. Limits and price points ready for review.",
@@ -320,7 +320,7 @@ internal static class SoftwareCoTasks
         new()
         {
             Id = "GROW-0015", Location = new(Growth, null), Title = "Write the brand voice guide",
-            Status = "Review", Priority = "Medium", Creator = "Owen", Assignee = "Maya",
+            Status = "In Progress", Priority = "Medium", Creator = "Owen", Assignee = "Maya",
             Tags = ["copy", "brand"], DueOffset = 5, CreatedDaysAgo = 21, LastTouchedDaysAgo = 1,
             Body = "One page: tone, words we use, words we avoid, and three before-and-after examples.",
         },
@@ -381,7 +381,7 @@ internal static class SoftwareCoTasks
         new()
         {
             Id = "SUPP-0008", Location = new(Support, IncidentTooling), Title = "Follow up on incident 0412",
-            Status = "Review", Priority = "High", Creator = "Dana", Assignee = "Dana",
+            Status = "In Progress", Priority = "High", Creator = "Dana", Assignee = "Dana",
             Tags = ["incident", "postmortem"], DueOffset = 4, CreatedDaysAgo = 8, LastTouchedDaysAgo = 1,
             OriginRoom = SoftwareCoRooms.IncidentWarRoom,
             HumanGate = true,

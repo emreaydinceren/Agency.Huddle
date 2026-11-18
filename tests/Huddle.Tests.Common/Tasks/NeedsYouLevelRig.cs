@@ -117,7 +117,7 @@ internal sealed class NeedsYouLevelRig : IDisposable
     /// <param name="project">The Project, or <see langword="null"/> for work directly under the Team.</param>
     public TaskItem CreateInReview(string? project = null)
     {
-        TaskDraft draft = new("Quote calculator", Team, project, TaskState.Review, Assignee: "Nova", Description: "Body");
+        TaskDraft draft = new("Quote calculator", Team, project, TaskState.InProgress, Assignee: "Nova", Description: "Body");
         return Assert.IsType<TaskResult.Saved>(this.Service.Create(draft, this.Human)).Task;
     }
 

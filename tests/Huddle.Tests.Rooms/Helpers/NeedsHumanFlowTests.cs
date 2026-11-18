@@ -82,7 +82,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     /// <param name="action">The Action, or <see langword="null"/>.</param>
     private TaskItem Create(TaskActor actor, string title = "Reply to Acme about the renewal price", string? action = null)
     {
-        TaskDraft draft = new(title, Team, null, TaskState.Review) { Action = action };
+        TaskDraft draft = new(title, Team, null, TaskState.InProgress) { Action = action };
         return Assert.IsType<TaskResult.Saved>(this.harness.Service.Create(draft, actor)).Task;
     }
 
@@ -190,7 +190,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         await this.CallsAsync(1);
         await this.RecordedAsync();
 
-        TaskResult result = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, Leo);
+        TaskResult result = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, Leo);
         this.PassTheWait();
         await SettleAsync();
 
@@ -287,7 +287,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     public async Task HumanTurnsGateOff_IsNeverJudgedAgain(bool helperOnWhenHumanActs)
     {
         TaskActor human = TaskActors.Human(this.harness.Options.Value);
-        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.Review) { HumanGate = true };
+        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.InProgress) { HumanGate = true };
         TaskItem task = Assert.IsType<TaskResult.Saved>(this.harness.Service.Create(draft, human)).Task;
         if (!helperOnWhenHumanActs)
         {

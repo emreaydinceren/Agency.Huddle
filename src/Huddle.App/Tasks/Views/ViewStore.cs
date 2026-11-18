@@ -473,7 +473,7 @@ internal sealed partial class ViewStore : IDisposable
             TaskView view;
             try
             {
-                view = entryObject.Deserialize<TaskView>(ViewJson.Options) ?? throw new JsonException("Deserialised to null.");
+                view = WithoutReviewState(entryObject).Deserialize<TaskView>(ViewJson.Options) ?? throw new JsonException("Deserialised to null.");
             }
             catch (JsonException ex)
             {
@@ -489,7 +489,7 @@ internal sealed partial class ViewStore : IDisposable
                 continue;
             }
 
-            fileViews.Add(WithNeedsYou(view));
+            fileViews.Add(view);
         }
 
         List<TaskView> views = [BuiltInOrOverride(fileViews, AllTasksId, DefaultAllTasks), BuiltInOrOverride(fileViews, MyTasksId, DefaultMyTasks)];
@@ -505,9 +505,9 @@ internal sealed partial class ViewStore : IDisposable
     }
 
     /// <summary>
-    /// A Board View with no Needs You column gains one, in memory only (Human gate Spec §6.2): right after the column
-    /// that holds Review, else right before the column that holds Done, else at the end. Run before validation, because
-    /// the validator requires a Board's columns to cover every state. Any other View is returned as it is.
+    /// A Board View with no Needs You column gains one, in memory only (Human gate Spec §6.2): right before the column
+    /// that holds Done, else at the end. Run before validation, because the validator requires a Board's columns to cover
+    /// every state. Any other View is returned as it is.
     /// </summary>
     /// <param name="view">The View as read from the file.</param>
     private static TaskView WithNeedsYouColumn(TaskView view)
@@ -517,14 +517,10 @@ internal sealed partial class ViewStore : IDisposable
             return view;
         }
 
-        int index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Review)) + 1;
-        if (index == 0)
+        int index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Done));
+        if (index < 0)
         {
-            index = view.Columns.ToList().FindIndex(column => column.States.Contains(TaskState.Done));
-            if (index < 0)
-            {
-                index = view.Columns.Count;
-            }
+            index = view.Columns.Count;
         }
 
         List<BoardColumn> columns = [.. view.Columns];
@@ -533,19 +529,51 @@ internal sealed partial class ViewStore : IDisposable
     }
 
     /// <summary>
-    /// A View whose state filter has Review and not Needs You gains Needs You, in memory only: nothing is written
-    /// back (Human gate Spec §6.2). Any other View is returned as it is.
+    /// A copy of a saved View's JSON without the Review state Huddle no longer has (D-6): a column that held only Review is
+    /// dropped, a shared column keeps its other states, and a state filter loses it and gains Needs You. In memory only; the file is not written.
     /// </summary>
-    /// <param name="view">The View as read from the file.</param>
-    private static TaskView WithNeedsYou(TaskView view)
+    /// <param name="entry">The View's JSON as read from the file.</param>
+    private static JsonObject WithoutReviewState(JsonObject entry)
     {
-        IReadOnlyList<TaskState> states = view.Filter.States;
-        if (!states.Contains(TaskState.Review) || states.Contains(TaskState.NeedsYou))
+        JsonObject copy = (JsonObject)entry.DeepClone();
+        if (copy["columns"] is JsonArray columns)
         {
-            return view;
+            for (int index = columns.Count - 1; index >= 0; index--)
+            {
+                if (columns[index] is JsonObject column && column["states"] is JsonArray states && DropReview(states) && states.Count == 0)
+                {
+                    columns.RemoveAt(index);
+                }
+            }
         }
 
-        return view with { Filter = view.Filter with { States = [.. states, TaskState.NeedsYou] } };
+        if (copy["filter"] is JsonObject filter && filter["states"] is JsonArray filterStates && DropReview(filterStates)
+            && !filterStates.Any(static node => string.Equals(node?.GetValue<string>(), TaskState.NeedsYou.ToWire(), StringComparison.OrdinalIgnoreCase)))
+        {
+            // The Human's decisions used to wait in Review; the filter keeps showing them, now as Needs You (and is never left empty, which would mean every state).
+            filterStates.Add(TaskState.NeedsYou.ToWire());
+        }
+
+        return copy;
+    }
+
+    /// <summary>Removes every "Review" entry from a JSON array of state names and says whether it removed any.</summary>
+    /// <param name="states">The array of state names.</param>
+    private static bool DropReview(JsonArray states)
+    {
+        bool dropped = false;
+        for (int index = states.Count - 1; index >= 0; index--)
+        {
+            if (states[index] is JsonValue value
+                && value.TryGetValue(out string? wire)
+                && string.Equals(wire.Trim(), "Review", StringComparison.OrdinalIgnoreCase))
+            {
+                states.RemoveAt(index);
+                dropped = true;
+            }
+        }
+
+        return dropped;
     }
 
     /// <summary>The file's own entry for <paramref name="id"/>, marked <see cref="TaskView.BuiltIn"/>, or <paramref name="defaultFactory"/>'s result when the file carries none.</summary>

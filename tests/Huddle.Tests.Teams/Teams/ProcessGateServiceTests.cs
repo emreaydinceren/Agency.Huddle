@@ -14,7 +14,7 @@ public sealed class ProcessGateServiceTests
     private const string Check = "dotnet test";
     private const string QaDone = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.";
     private const string SpecFirst = "Gate spec-approved-before-build: the parent spec Task must be approved before this Task can move to In Progress.";
-    private const string FailFirst = "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move to Review.";
+    private const string FailFirst = "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move on.";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";
 
     private static readonly DateTimeOffset Noon = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
@@ -167,7 +167,7 @@ public sealed class ProcessGateServiceTests
 
         Assert.Null(service.CheckTaskChange(Context("Review", "Done")));
         Assert.Null(service.CheckTaskChange(Context("To Do", "In Progress", parentSpecApproved: false)));
-        Assert.Null(service.CheckTaskChange(Context("In Progress", "Review", isBug: true)));
+        Assert.Null(service.CheckTaskChange(Context("In Progress", "Needs You", isBug: true)));
     }
 
     /// <summary>A Team with no Process.md has no gates, so nothing is refused.</summary>
@@ -187,7 +187,7 @@ public sealed class ProcessGateServiceTests
         using TempDataDir dir = new();
         ProcessGateService service = Build(dir, Process("'qa-evidence-before-done'"));
 
-        Assert.Null(service.CheckTaskChange(Context("In Progress", "Review")));
+        Assert.Null(service.CheckTaskChange(Context("In Progress", "Needs You")));
     }
 
     /// <summary>Moving to In Progress under an unapproved parent spec is refused.</summary>
@@ -221,7 +221,7 @@ public sealed class ProcessGateServiceTests
         using TempDataDir dir = new();
         ProcessGateService service = Build(dir, Process("'failing-test-before-fix'"));
 
-        GateRefusal? refusal = service.CheckTaskChange(Context("In Progress", "Review", isBug: true));
+        GateRefusal? refusal = service.CheckTaskChange(Context("In Progress", "Needs You", isBug: true));
 
         Assert.Equal(GateId.FailingTestBeforeFix, refusal?.Gate);
         Assert.Equal(FailFirst, refusal?.Message);
@@ -235,7 +235,7 @@ public sealed class ProcessGateServiceTests
         ProcessGateService service = Build(dir, Process("'failing-test-before-fix'"));
         EvidenceLine[] evidence = [Line("Dev", Check, 1, 0), Line("Dev", Check, 0, 10)];
 
-        Assert.Null(service.CheckTaskChange(Context("In Progress", "Review", isBug: true, evidence: evidence)));
+        Assert.Null(service.CheckTaskChange(Context("In Progress", "Needs You", isBug: true, evidence: evidence)));
     }
 
     /// <summary>A pass that is only followed by a failure, or a failure with no later pass, does not satisfy the gate.</summary>
@@ -247,8 +247,8 @@ public sealed class ProcessGateServiceTests
         EvidenceLine[] passThenFail = [Line("Dev", Check, 0, 0), Line("Dev", Check, 1, 10)];
         EvidenceLine[] failOnly = [Line("Dev", Check, 1, 0)];
 
-        Assert.Equal(FailFirst, service.CheckTaskChange(Context("In Progress", "Review", isBug: true, evidence: passThenFail))?.Message);
-        Assert.Equal(FailFirst, service.CheckTaskChange(Context("In Progress", "Review", isBug: true, evidence: failOnly))?.Message);
+        Assert.Equal(FailFirst, service.CheckTaskChange(Context("In Progress", "Needs You", isBug: true, evidence: passThenFail))?.Message);
+        Assert.Equal(FailFirst, service.CheckTaskChange(Context("In Progress", "Needs You", isBug: true, evidence: failOnly))?.Message);
     }
 
     /// <summary>The failing-test gate only applies to bugs.</summary>
@@ -258,7 +258,7 @@ public sealed class ProcessGateServiceTests
         using TempDataDir dir = new();
         ProcessGateService service = Build(dir, Process("'failing-test-before-fix'"));
 
-        Assert.Null(service.CheckTaskChange(Context("In Progress", "Review", isBug: false)));
+        Assert.Null(service.CheckTaskChange(Context("In Progress", "Needs You", isBug: false)));
     }
 
     /// <summary>A passing check command with nothing later lets a merge through.</summary>

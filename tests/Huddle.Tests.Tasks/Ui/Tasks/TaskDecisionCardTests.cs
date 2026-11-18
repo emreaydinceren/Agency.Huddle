@@ -27,7 +27,7 @@ public sealed class TaskDecisionCardTests
     private const string Nova = "Nova";
     private const string Human = "Emre";
     private const string SomeAction = "send the press release";
-    private const string EnteredNeedsYou = "status: Review → Needs You";
+    private const string EnteredNeedsYou = "status: In Progress → Needs You";
 
     /// <summary>An <see cref="IProofSource"/> that answers every Task with a complete Proof, so the service lets Accept through.</summary>
     private sealed class CompleteProofSource : IProofSource
@@ -102,10 +102,10 @@ public sealed class TaskDecisionCardTests
     /// <summary>The Human's actor.</summary>
     private static TaskActor HumanOf(TaskToolHarness harness) => TaskActors.Human(harness.Options.Value);
 
-    /// <summary>Creates a gated Task assigned to Nova in Review, and optionally moves it into Needs You.</summary>
+    /// <summary>Creates a gated Task assigned to Nova In Progress, and optionally moves it into Needs You.</summary>
     private static TaskItem Gated(TaskToolHarness harness, bool needsYou, string? action = null)
     {
-        TaskDraft draft = new("Write the reply", "Platform", null, TaskState.Review, Assignee: Nova) { HumanGate = true, Action = action };
+        TaskDraft draft = new("Write the reply", "Platform", null, TaskState.InProgress, Assignee: Nova) { HumanGate = true, Action = action };
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, HumanOf(harness))).Task;
         if (!needsYou)
         {
@@ -222,19 +222,6 @@ public sealed class TaskDecisionCardTests
         Assert.Equal(notice.Id, accept.GetAttribute("aria-describedby"));
     }
 
-    /// <summary>A Task still in Review says Accept unlocks when its assignee moves it to Needs you.</summary>
-    [Fact]
-    public async Task ReviewLine_StillInReview_NamesTheAssignee()
-    {
-        using TaskToolHarness harness = new(proof: new CompleteProofSource());
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = Render(ctx, harness, Display(TaskState.Review), AllMet());
-
-        const string expected = "Accept unlocks when the Task moves to Needs you. It moves by itself once its Proof is in; Nova can also move it.";
-        Assert.Equal(expected, HumanGateCopy.StillInReview(Nova));
-        Assert.Equal(expected, cut.Find(".task-decision-review").TextContent.Trim());
-    }
-
     /// <summary>The buttons read Request changes and Accept; Decline is not among them.</summary>
     [Fact]
     public async Task Buttons_AreRequestChangesAndAccept_DeclineIsInTheMenu()
@@ -254,7 +241,7 @@ public sealed class TaskDecisionCardTests
     }
 
     /// <summary>Accept is enabled only in Needs You with complete Proof, no valid acceptance, and nothing unsaved.</summary>
-    /// <param name="inNeedsYou">Whether the Task is in Needs You (otherwise Review).</param>
+    /// <param name="inNeedsYou">Whether the Task is in Needs You (otherwise In Progress).</param>
     /// <param name="complete">Whether the Proof is complete.</param>
     /// <param name="acceptance">"none", "valid" or "stale".</param>
     /// <param name="blocked">Whether there are unsaved edits.</param>
@@ -270,7 +257,7 @@ public sealed class TaskDecisionCardTests
     {
         using TaskToolHarness harness = new(proof: new CompleteProofSource());
         await using MudBunitContext ctx = new();
-        TaskItem task = Display(inNeedsYou ? TaskState.NeedsYou : TaskState.Review, acceptance, action: string.Equals(acceptance, "valid", StringComparison.Ordinal) ? SomeAction : null);
+        TaskItem task = Display(inNeedsYou ? TaskState.NeedsYou : TaskState.InProgress, acceptance, action: string.Equals(acceptance, "valid", StringComparison.Ordinal) ? SomeAction : null);
         IRenderedComponent<ContainerFragment> cut = Render(ctx, harness, task, complete ? AllMet() : ThreeOfFour(), blocked);
 
         Assert.Equal(!enabled, CardButton(cut, "Accept").HasAttribute("disabled"));

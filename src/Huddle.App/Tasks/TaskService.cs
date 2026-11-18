@@ -287,7 +287,7 @@ internal sealed class TaskService : IDisposable
         bool waiting = !current.Location.Closed
             && (decision == TaskDecision.Accept
                 ? current.Status == TaskState.NeedsYou && Acceptance.Of(current).State != AcceptanceState.Valid && this.ProofOf(current).IsComplete
-                : current.Status is TaskState.Review or TaskState.NeedsYou);
+                : current.Status == TaskState.NeedsYou);
         if (!waiting)
         {
             return notWaiting;
@@ -524,7 +524,7 @@ internal sealed class TaskService : IDisposable
 
     /// <summary>
     /// Re-evaluates one Task after a Proof input outside the Task file changed (#593): the Task moves to Needs You exactly as after a
-    /// Task write when it is gated, in Review and its Proof is now complete. It writes nothing otherwise.
+    /// Task write when it is gated, In Progress and its Proof is now complete. It writes nothing otherwise.
     /// </summary>
     /// <param name="id">The Task whose Proof input changed.</param>
     internal void MoveIfReady(TaskId id)
@@ -545,11 +545,11 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
-    /// Moves a gated Task that is in Review with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
+    /// Moves a gated Task that is In Progress with its Proof complete to Needs You (#349), under <see cref="mutateGate"/> and through
     /// <see cref="HumanGateRules.Check"/> with Huddle as the actor. An ungated Task of a Team with <c>accept-before-merge</c> is
     /// brought in too, with the merge named as its Action in the same write (#416): that Team's merge waits for an Accept, and
     /// an Agent that asks in chat instead of setting the Action would otherwise leave nothing to accept. It does nothing for the
-    /// Human's own change, for any other ungated Task, for a Task not in Review, closed or already accepted, or whose Proof is
+    /// Human's own change, for any other ungated Task, for a Task not In Progress, closed or already accepted, or whose Proof is
     /// open. The caller raises the returned change after it has left the lock, as every other mutation does.
     /// </summary>
     /// <param name="task">The Task as just written (or as stored now, from <see cref="MoveIfReady"/>).</param>
@@ -558,7 +558,7 @@ internal sealed class TaskService : IDisposable
     private TaskChange? MoveReadyToNeedsYou(TaskItem task, TaskActor by)
     {
         if (by.Kind == TaskActorKind.Human
-            || task.Status != TaskState.Review
+            || task.Status != TaskState.InProgress
             || task.Location.Closed
             || Acceptance.Of(task).State == AcceptanceState.Valid)
         {
@@ -808,7 +808,7 @@ internal sealed class TaskService : IDisposable
             || !string.Equals(edit.Before.Action, edit.After.Action, StringComparison.Ordinal)
             || edit.Before.IsGated
             || edit.After.IsGated;
-        string? afterText = (statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.Done or TaskState.NeedsYou) || gateTouched
+        string? afterText = (statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Done or TaskState.NeedsYou) || gateTouched
             ? this.store.ReadText(edit.After.Id)
             : null;
         if (afterText is not null && this.RevertHumanGateEdit(edit, afterText, actor, at) is { } humanReverted)
@@ -821,7 +821,7 @@ internal sealed class TaskService : IDisposable
             return backlogReverted;
         }
 
-        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
+        if (afterText is not null && statusChanged && edit.After.Status is TaskState.InProgress or TaskState.NeedsYou or TaskState.Done
             && this.CheckGates(edit.Before, edit.After, afterText, actor) is { } refusal)
         {
             ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by gate: {refusal.Message}"));
@@ -976,7 +976,7 @@ internal sealed class TaskService : IDisposable
     }
 
     /// <summary>
-    /// A Task that appears outside Huddle already in Needs You or Done against the Human gate (H-5, H-3) is reset to Review and the refusal logged.
+    /// A Task that appears outside Huddle already in Needs You or Done against the Human gate (H-5, H-3) is reset to In Progress and the refusal logged.
     /// </summary>
     /// <param name="created">The new Task as the file reads.</param>
     /// <param name="actor">The outside-edit actor.</param>
@@ -991,7 +991,7 @@ internal sealed class TaskService : IDisposable
         }
 
         ChangeLogEntry refused = new(at, actor.Name, string.Create(CultureInfo.InvariantCulture, $"outside edit refused by Human gate: {refusal.Message}"));
-        string reset = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, created with { Status = TaskState.Review }), refused);
+        string reset = TaskFileFormat.AppendEntry(TaskFileFormat.ReplaceHead(text, created with { Status = TaskState.InProgress }), refused);
         return this.store.Write(created, created.Version, reset) is { } restored
             ? new TaskChange(null, restored, [], actor, refused)
             : null;
@@ -1118,7 +1118,7 @@ internal sealed class TaskService : IDisposable
         }
 
         // A Task may be created in a gated status only when no gate refuses it (the Human may override on request).
-        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.Review or TaskState.NeedsYou or TaskState.Done
+        GateRefusal? refusal = candidate.Status is TaskState.InProgress or TaskState.NeedsYou or TaskState.Done
             ? this.CheckGates(candidate with { Status = TaskState.Backlog }, candidate, string.Empty, actor)
             : null;
         if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || candidate.IsGated))

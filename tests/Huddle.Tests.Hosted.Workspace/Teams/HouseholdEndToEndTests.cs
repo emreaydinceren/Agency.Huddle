@@ -72,7 +72,6 @@ public sealed class HouseholdEndToEndTests
         TaskItem task = Saved(service.Create(new TaskDraft("Plan the school trip", TeamName, null, TaskState.ToDo, Assignee: manager.Name), human));
 
         _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, actor, false));
-        _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, actor, false));
         _ = Saved(service.AddEvidence(task.Id, VerifierNote(), actor));
         IProofSource proofs = services.GetRequiredService<IProofSource>();
         TaskItem checkedTask = services.GetRequiredService<TaskStore>().Get(task.Id) ?? throw new InvalidOperationException("The Task is gone.");
@@ -100,7 +99,7 @@ public sealed class HouseholdEndToEndTests
         LogChange(services, draft, liaisonName, DocChangeKind.Created, "drafted the reply slip");
         LogChange(services, draft, managerName, DocChangeKind.Reviewed, "checked it against the school email");
         TaskService service = services.GetRequiredService<TaskService>();
-        Assert.Equal(TaskState.Review, Current(services, task).Status);
+        Assert.Equal(TaskState.InProgress, Current(services, task).Status);
 
         _ = Saved(service.AddEvidence(task.Id, VerifierNote(), manager));
 
@@ -124,7 +123,7 @@ public sealed class HouseholdEndToEndTests
         _ = Saved(services.GetRequiredService<TaskService>().AddEvidence(task.Id, VerifierNote(), manager));
 
         TaskItem current = Current(services, task);
-        Assert.Equal(TaskState.Review, current.Status);
+        Assert.Equal(TaskState.InProgress, current.Status);
         Proof proof = services.GetRequiredService<IProofSource>().For(current);
         Assert.True(proof.Items.Single(static item => string.Equals(item.Label, PlanChecked, StringComparison.Ordinal)).Met);
         ProofItem reviewed = proof.Items.Single(static item => string.Equals(item.Label, PlanReviewed, StringComparison.Ordinal));
@@ -245,8 +244,7 @@ public sealed class HouseholdEndToEndTests
         TaskDraft draft = new("Reply to the school", TeamName, null, TaskState.ToDo, Assignee: liaison.Name) { HumanGate = true, Action = "Hand the signed slip to school" };
         TaskItem task = Saved(service.Create(draft, human));
         _ = Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, liaison, false));
-        _ = Saved(service.Update(task.Id, new TaskPatch { Description = description }, null, liaison, false));
-        return Saved(service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, liaison, false));
+        return Saved(service.Update(task.Id, new TaskPatch { Description = description }, null, liaison, false));
     }
 
     /// <summary>Reads the Task as it is stored now.</summary>

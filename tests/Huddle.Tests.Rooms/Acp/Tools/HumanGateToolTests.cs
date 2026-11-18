@@ -41,7 +41,7 @@ public sealed class HumanGateToolTests
     /// <param name="action">The Action, or <see langword="null"/>.</param>
     private static TaskItem GatedInReview(TaskToolHarness harness, string? action = null)
     {
-        TaskDraft draft = new("Write the reply", Team, null, TaskState.Review) { HumanGate = true, Action = action };
+        TaskDraft draft = new("Write the reply", Team, null, TaskState.InProgress) { HumanGate = true, Action = action };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, harness.HumanActor())).Task;
     }
 
@@ -138,7 +138,7 @@ public sealed class HumanGateToolTests
         string result = await UpdateAsNova(harness).InvokeAsync(arguments, ct);
 
         Assert.Equal($"{task.Id} needs You's acceptance. Move it to Needs You when the Proof is complete; you'll be woken when You decides.", result);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>A refused move to Needs You with an incomplete Proof returns the H-3 message naming the open item.</summary>
@@ -153,7 +153,7 @@ public sealed class HumanGateToolTests
         string result = await UpdateAsNova(harness).InvokeAsync(arguments, ct);
 
         Assert.Equal($"{task.Id} can go to Needs You once its Proof is complete (3/4: citation check is open).", result);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>The <c>create_task</c> tool accepts <c>human_gate</c> and <c>action</c> together and saves both.</summary>

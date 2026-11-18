@@ -28,9 +28,9 @@ public sealed class ViewStoreBoardNeedsYouTests
         return path;
     }
 
-    /// <summary>A Board with a Review column gains Needs You right after it.</summary>
+    /// <summary>A Board saved with a Review column loses it and gains Needs You right before Done.</summary>
     [Fact]
-    public void Read_BoardWithReview_GainsNeedsYouAfterReview()
+    public void Read_BoardWithReview_LosesReviewAndGainsNeedsYouBeforeDone()
     {
         using TempDataDir dataDir = new();
         WriteBoardFile(dataDir, SixColumns);
@@ -39,9 +39,9 @@ public sealed class ViewStoreBoardNeedsYouTests
 
         TaskView view = Assert.Single(store.Views, v => v.Id == "b1");
         Assert.Equal(
-            ["Backlog", "To Do", "In Progress", "Review", "Needs You", "Done", "Won't do"],
+            ["Backlog", "To Do", "In Progress", "Needs You", "Done", "Won't do"],
             view.Columns.Select(c => c.Label).ToList());
-        Assert.Equal([TaskState.NeedsYou], view.Columns[4].States);
+        Assert.Equal([TaskState.NeedsYou], view.Columns[3].States);
     }
 
     /// <summary>A Board whose Review shares a column with other states gains Needs You right after that column, before Done.</summary>
@@ -94,7 +94,7 @@ public sealed class ViewStoreBoardNeedsYouTests
         using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
 
         TaskView view = Assert.Single(store.Views, v => v.Id == "b1");
-        Assert.Equal(7, view.Columns.Count);
+        Assert.Equal(6, view.Columns.Count);
         Assert.Equal(before, File.ReadAllBytes(path));
     }
 

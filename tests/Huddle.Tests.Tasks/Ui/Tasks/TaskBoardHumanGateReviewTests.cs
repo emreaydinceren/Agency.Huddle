@@ -31,7 +31,7 @@ public sealed class TaskBoardHumanGateReviewTests
     {
         SettableProofSource proof = new();
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken, proof: proof);
-        TaskItem stale = Ordinary(harness, TaskState.Review);
+        TaskItem stale = Ordinary(harness, TaskState.InProgress);
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, proof, [stale]);
         _ = Assert.IsType<TaskResult.Saved>(harness.Service.Update(stale.Id, new TaskPatch { HumanGate = Optional<bool>.Set(true) }, null, HumanOf(harness)));
@@ -41,7 +41,7 @@ public sealed class TaskBoardHumanGateReviewTests
 
         Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
         Assert.Equal($"{stale.Id} goes to Needs you first (Proof 1/1).", shown.Message);
-        Assert.Equal(TaskState.Review, harness.Store.Get(stale.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(stale.Id)?.Status);
         Assert.DoesNotContain(changes, static c => c.After.Status == TaskState.Done);
     }
 
@@ -56,7 +56,7 @@ public sealed class TaskBoardHumanGateReviewTests
         SettableProofSource proof = new();
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken, proof: proof);
         TaskItem original = Ordinary(harness, TaskState.Backlog);
-        TaskItem gated = Gated(harness, TaskState.Review);
+        TaskItem gated = Gated(harness, TaskState.InProgress);
         TaskPatch patch = new()
         {
             Status = closed,

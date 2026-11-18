@@ -16,10 +16,4 @@ internal interface IRequestConfirmers
     /// <param name="team">The requesting Team's name.</param>
     /// <returns><see langword="true"/> when at least one member is a verifier.</returns>
     bool TeamHasConfirmer(string team);
-
-    /// <summary>Whether <paramref name="member"/> belongs to <paramref name="team"/> in a role whose coverage includes <c>challenge</c>, so they can check a Task that waits for a second look (#403).</summary>
-    /// <param name="team">The Team's name.</param>
-    /// <param name="member">The member's name.</param>
-    /// <returns><see langword="true"/> for a member who can; the default is <see langword="false"/>.</returns>
-    bool IsChallengerOf(string team, string member) => false;
 }
