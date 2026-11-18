@@ -72,6 +72,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 47 | [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file](memory-tidy.md) | 24 | 17 | 8.1h |
 | 48 | [Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention](turn-queue.md) | 18 | 18 | 4.3h |
 | 49 | [Goldfish mode: a clean copy of an Agent takes one Room, the chip and Call Ruth back, the stamp, Mentions, the restart, the deny list and the spec review Task](goldfish.md) | 16 | 16 | 4.8h |
+| 50 | [Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Project missions](team-playbooks.md) | 12 | 2 | 2.6h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -224,6 +225,8 @@ The tests that spend money, with an estimate for each. This register is not yet 
 | [QUESTIONS-08](questions.md#questions-08--claudes-askuserquestion-reaches-the-human-and-the-turn-survives-the-wait) | `questions` | Claude's `AskUserQuestion` reaches the Human, and the Turn survives the wait | 20 min |
 | [QUESTIONS-09](questions.md#questions-09--dismiss-and-stop-end-a-waiting-form-cleanly) | `questions` | Skip and Stop end a waiting form cleanly | 20 min |
 | [QUESTIONS-10](questions.md#questions-10--an-unanswered-form-is-dropped-after-acpuserinputtimeoutseconds) | `questions` | An unanswered form is dropped after `Acp:UserInputTimeoutSeconds` | 15 min |
+| [PLAYBOOK-11](team-playbooks.md#playbook-11--live-haiku-follows-the-playbook-loop-and-the-mission-) | `team-playbooks` | Live Haiku follows the Playbook loop and the mission | 20 min |
+| [PLAYBOOK-12](team-playbooks.md#playbook-12--the-chief-of-staff-files-the-goal-task-for-a-new-team-) | `team-playbooks` | The Chief of Staff files the goal Task for a new Team | 20 min |
 
 Before the first paid test of a session:
 

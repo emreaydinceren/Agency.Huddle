@@ -3077,6 +3077,13 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### PROMPTSSETTINGS-42 — The Playbooks group has two live keys with their helper texts
+
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-42--the-playbooks-group-has-two-live-keys-with-their-helper-texts)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Appearance tab, Themes, Tokens and overrides
 
 ### APPEARANCETHEME-01 — The Appearance tab is on the Settings tab bar and is reachable by its own route
@@ -7472,3 +7479,90 @@ File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-16--gol
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane A: with `MaxConcurrentTurns=2` the tool refused with the one-Turn-at-a-time sentence; no possession row, nothing posted. |
+
+## Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Project missions
+
+### PLAYBOOK-01 — The tab on a fresh Team shows both sections with the Huddle default and read-only rules
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-01--the-tab-on-a-fresh-team-shows-both-sections-with-the-huddle-default-and-read-only-rules)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-02 — Customize opens the Library editor and a save turns the chip to Customized
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-02--customize-opens-the-library-editor-and-a-save-turns-the-chip-to-customized)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-03 — A member hears a changed Playbook once per Room at its next Turn
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-03--a-member-hears-a-changed-playbook-once-per-room-at-its-next-turn)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-04 — Editing the default on Settings Prompts reaches an uncustomized Team and marks a customized one Default updated
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-04--editing-the-default-on-settings-prompts-reaches-an-uncustomized-team-and-marks-a-customized-one-default-updated)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-05 — Keep my version and Reset to default with its confirm
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-05--keep-my-version-and-reset-to-default-with-its-confirm)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-06 — An Agent in two Teams sees the Playbook order and labels on the Prompt blocks page
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-06--an-agent-in-two-teams-sees-the-playbook-order-and-labels-on-the-prompt-blocks-page)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-07 — An Agent cannot write a Playbook file
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-07--an-agent-cannot-write-a-playbook-file)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-08 — A Task moved into a Project and assigned to the manager is treated as the goal
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-08--a-task-moved-into-a-project-and-assigned-to-the-manager-is-treated-as-the-goal)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-09 — A member sees the Project mission in Team Memory on its Prompt blocks page
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-09--a-member-sees-the-project-mission-in-team-memory-on-its-prompt-blocks-page)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-10 — A retro proposal to an uncustomized Member Playbook customizes it on Accept
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-10--a-retro-proposal-to-an-uncustomized-member-playbook-customizes-it-on-accept)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-11 — Live Haiku follows the Playbook loop and the mission 💰
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-11--live-haiku-follows-the-playbook-loop-and-the-mission-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PLAYBOOK-12 — The Chief of Staff files the goal Task for a new Team 💰
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-12--the-chief-of-staff-files-the-goal-task-for-a-new-team-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+

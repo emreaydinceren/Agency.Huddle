@@ -161,6 +161,7 @@ the per-area tables below.
 | [Second Brain from zero: three Teams hired by hand, documents ingested into memory, and a Development Team building an app](second-brain-zero.md) | [below](#second-brain-zero) |
 | [Memory Tidy: the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum)](memory-tidy.md) | [below](#memory-tidy) |
 | [Turn Queue: a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, the age limit and Don't answer (paid, Sonnet minimum)](turn-queue.md) | [below](#turn-queue) |
+| [Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Project missions](team-playbooks.md) | [below](#team-playbooks) |
 ---
 
 ## at-tagging
@@ -665,6 +666,7 @@ Settings: the 24 Prompts, editing, per-field reset and Save — [area file](prom
 | [PROMPTSSETTINGS-39](prompts-settings.md#promptssettings-39--costs-money-a-next-session-prompt-edit-is-silently-inert-on-a-running-agent-until-it-restarts) | 💰 | Active |  |  |
 | [PROMPTSSETTINGS-40](prompts-settings.md#promptssettings-40--costs-money-get_help-re-renders-on-every-call-so-its-get-help-prompts-land-on-the-next-call--while-a-tool-description-does-not) | 💰 | Active |  |  |
 | [PROMPTSSETTINGS-41](prompts-settings.md#promptssettings-41--the-library-tab-opens-its-own-pane-and-does-not-fall-back-to-prompts) |  | Active |  |  |
+| [PROMPTSSETTINGS-42](prompts-settings.md#promptssettings-42--the-playbooks-group-has-two-live-keys-with-their-helper-texts) |  | Active |  |  |
 
 ## appearance-theme
 
@@ -1478,3 +1480,22 @@ Goldfish mode: a clean copy of an Agent takes one Room, the chip and **Call Ruth
 | [GOLDFISH-14](goldfish.md#goldfish-14--the-read-deny-stops-read-and-cat-of-memory-) | 💰 | Pass | #627 | run 2026-11-18, `17a3ef35`, see the Run log |
 | [GOLDFISH-15](goldfish.md#goldfish-15--a-goldfishs-question-can-be-answered-from-its-card-) | 💰 | Pass | #627 | run 2026-11-18, `17a3ef35`, see the Run log |
 | [GOLDFISH-16](goldfish.md#goldfish-16--goldfish-is-refused-while-maxconcurrentturns-is-above-1-) | 💰 | Pass | #627 | run 2026-11-17, `feat/goldfish-mode`, see the Run log |
+
+## team-playbooks
+
+Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Project missions — [area file](team-playbooks.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [PLAYBOOK-01](team-playbooks.md#playbook-01--the-tab-on-a-fresh-team-shows-both-sections-with-the-huddle-default-and-read-only-rules) |  | Active |  |  |
+| [PLAYBOOK-02](team-playbooks.md#playbook-02--customize-opens-the-library-editor-and-a-save-turns-the-chip-to-customized) |  | Active |  |  |
+| [PLAYBOOK-03](team-playbooks.md#playbook-03--a-member-hears-a-changed-playbook-once-per-room-at-its-next-turn) |  | Active |  |  |
+| [PLAYBOOK-04](team-playbooks.md#playbook-04--editing-the-default-on-settings-prompts-reaches-an-uncustomized-team-and-marks-a-customized-one-default-updated) |  | Active |  |  |
+| [PLAYBOOK-05](team-playbooks.md#playbook-05--keep-my-version-and-reset-to-default-with-its-confirm) |  | Active |  |  |
+| [PLAYBOOK-06](team-playbooks.md#playbook-06--an-agent-in-two-teams-sees-the-playbook-order-and-labels-on-the-prompt-blocks-page) |  | Active |  |  |
+| [PLAYBOOK-07](team-playbooks.md#playbook-07--an-agent-cannot-write-a-playbook-file) |  | Active |  |  |
+| [PLAYBOOK-08](team-playbooks.md#playbook-08--a-task-moved-into-a-project-and-assigned-to-the-manager-is-treated-as-the-goal) |  | Active |  |  |
+| [PLAYBOOK-09](team-playbooks.md#playbook-09--a-member-sees-the-project-mission-in-team-memory-on-its-prompt-blocks-page) |  | Active |  |  |
+| [PLAYBOOK-10](team-playbooks.md#playbook-10--a-retro-proposal-to-an-uncustomized-member-playbook-customizes-it-on-accept) |  | Active |  |  |
+| [PLAYBOOK-11](team-playbooks.md#playbook-11--live-haiku-follows-the-playbook-loop-and-the-mission-) | 💰 | Active |  |  |
+| [PLAYBOOK-12](team-playbooks.md#playbook-12--the-chief-of-staff-files-the-goal-task-for-a-new-team-) | 💰 | Active |  |  |
