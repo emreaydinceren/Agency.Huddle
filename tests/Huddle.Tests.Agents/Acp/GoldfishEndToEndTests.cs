@@ -92,7 +92,9 @@ public sealed class GoldfishEndToEndTests
         _ = await scenario.PromptAsync(static text => text.StartsWith("Brief for the work in ", StringComparison.Ordinal), bound.Token);
 
         await scenario.Fixture.Runner.DisposeAsync();
-        await Eventually.UntilAsync(() => scenario.Store.Get(row.Id)?.Exit == GoldfishExit.Failed, bound.Token, TestBudgets.Slowest);
+        // The exit is claimed (state Returning) before the return is posted. Restarting the host in that window stops the return and the start-up pass
+        // rightly ends the row Restarted, so wait for the row to be Ended, the point at which Failed is final.
+        await Eventually.UntilAsync(() => scenario.Store.Get(row.Id) is { State: PossessionState.Ended, Exit: GoldfishExit.Failed }, bound.Token, TestBudgets.Slowest);
         int before = scenario.PromptCount;
         await scenario.RestartAsync(bound.Token);
         string back = await scenario.PromptAsync(static text => text.Contains(Brief, StringComparison.Ordinal) && !text.StartsWith("Brief for the work in ", StringComparison.Ordinal), bound.Token); // contains-ok: the return Turn names the brief the possession was given
