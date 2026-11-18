@@ -89,6 +89,13 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   them and `ProtocolJson` omits a null property. The version stays 3. Every id taken
   from the wire this way is checked with `NameRules.IsValidId` and applied only to the
   sending Agent's rows in the named Room; an invalid id is dropped, never trusted.
+  **A new envelope type is not ignored: it is rejected.** `ProtocolMessage` is a polymorphic
+  `[JsonDerivedType]` hierarchy, so a client that does not know a `type` discriminator fails to parse the
+  line. Goldfish mode (ADR-0096) added three envelopes (`goldfishBegin` and `goldfishEnd` to the client,
+  `goldfishReport` to the server) and the nullable `ChatMessage.Goldfish`, with the version left at 3. The
+  property is additive; the envelopes are not, so the server and the runner ship together
+  and a stale runner or external client sees an error on the first possession, not a silent skip.
+  `ProtocolJsonTests` pins each envelope's literal JSON.
 - **A `Logging:LogLevel` key is a namespace prefix, so the 2026-09-12 namespace
   rename moved it and the `Team:` config root did not.** `ILogger<T>` takes its
   category from `typeof(T).FullName`, so the filters now read `"Agency.Huddle"`.
