@@ -33,13 +33,18 @@ public sealed class LibraryReadingStyleSourceTests
         Assert.Contains("margin-inline: auto;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
-    /// <summary>The Read, Edit and Split labels are 13px.</summary>
+    /// <summary>
+    /// The Read, Edit and Split labels are 13px: the segmented control sets it for every segment, and no Library rule
+    /// re-sizes them.
+    /// </summary>
     [Fact]
-    public void AppCss_ModeToggle_LabelsAreThirteenPixels()
+    public void ModeToggle_LabelsAreThirteenPixels()
     {
-        string body = CssText.RuleBody(CssText.AppCss(), ".library-document-mode-toggle .mud-toggle-item,\n.library-document-mode-toggle .mud-toggle-item .mud-typography", RuleMatch.Last);
+        string component = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "SegmentedControl.razor.css")).Replace("\r\n", "\n", StringComparison.Ordinal);
+        string body = CssText.RuleBody(component, ".segmented-control ::deep .segmented-group .mud-toggle-item");
 
         Assert.Contains("font-size: var(--mud-typography-body2-size);", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.DoesNotContain(".library-document-mode-toggle .mud-toggle-item", CssText.AppCss(), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>A full-pane empty state rests a third of the way down: two flex spacers split the free height 1 to 2.</summary>

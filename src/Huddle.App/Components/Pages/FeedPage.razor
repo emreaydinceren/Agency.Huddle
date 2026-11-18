@@ -47,16 +47,7 @@
 
         <div class="feed-filter-bar">
             <div class="feed-category-scroller">
-                <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="FeedCategories.Choices.Count">
-                    @foreach (FeedCategory entry in FeedCategories.Choices)
-                    {
-                        @* Only Needs you carries a count: it is the one number that asks something of the Human. *@
-                        <MudToggleItem Value="@entry">@FeedCategories.Label(entry)@if (entry == FeedCategory.NeedsYou)
-                            {
-                                @(" ")<span class="feed-count feed-count-needsyou">@FeedCategories.CountOf(this.counts, entry)</span>
-                            }</MudToggleItem>
-                    }
-                </HuddleSegmentedControl>
+                <SegmentedControl T="FeedCategory" Options="this.CategoryOptions" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" />
             </div>
 
             <div class="feed-filter-end">
@@ -107,6 +98,13 @@
     private ITimer? seenTimer;
     private bool subscribed;
     private long tabSeenUpTo;
+
+    /// <summary>The Category segments; only Needs you carries a count, the one number that asks something of the Human.</summary>
+    private IReadOnlyList<SegmentedOption<FeedCategory>> CategoryOptions =>
+        [.. FeedCategories.Choices.Select(entry => new SegmentedOption<FeedCategory>(
+            entry,
+            FeedCategories.Label(entry),
+            Badge: entry == FeedCategory.NeedsYou ? FeedCategories.CountOf(this.counts, entry).ToString(System.Globalization.CultureInfo.InvariantCulture) : null))];
 
     /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
     [CascadingParameter]

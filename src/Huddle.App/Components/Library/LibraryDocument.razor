@@ -49,12 +49,8 @@
         }
         @if (this.ShowModeToggle())
         {
-            <HuddleSegmentedControl T="LibraryMode" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync" 
-                             Class="library-document-mode-toggle" ItemCount="3">
-                <MudToggleItem Value="LibraryMode.Read" Text="Read" />
-                <MudToggleItem Value="LibraryMode.Edit" Text="Edit" />
-                <MudToggleItem Value="LibraryMode.Split" Text="Split" />
-            </HuddleSegmentedControl>
+            <SegmentedControl T="LibraryMode" Options="ModeOptions" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync"
+                              Class="library-document-mode-toggle" />
         }
         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" OnClick="@this.PopOut" />
         @if (this.OnClose.HasDelegate)
@@ -154,6 +150,10 @@
 </div>
 
 @code {
+    /// <summary>The Read, Edit and Split segments.</summary>
+    private static readonly IReadOnlyList<SegmentedOption<LibraryMode>> ModeOptions =
+        [new(LibraryMode.Read, "Read"), new(LibraryMode.Edit, "Edit"), new(LibraryMode.Split, "Split")];
+
     /// <summary>
     /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading front matter block (YAML between
     /// <c>---</c> lines, or a JSON object) is split off with <see cref="NoteFrontmatter.Locate(string)"/>, read by

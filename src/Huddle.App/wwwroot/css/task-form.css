@@ -670,51 +670,6 @@
     background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
 }
 
-/* Edit | Preview on the edit page and List | Kanban on the Tasks page share the Feed's segmented-control tokens. */
-.huddle-segmented-control.task-detail-description-toggle,
-.huddle-segmented-control.task-toolbar-kind {
-    background: var(--hu-control-track);
-}
-
-.task-detail-description-toggle .mud-toggle-item,
-.task-toolbar-kind .mud-toggle-item {
-    color: var(--hu-control-ink);
-}
-
-.task-detail-description-toggle .mud-toggle-item.huddle-segmented-active-item,
-.task-toolbar-kind .mud-toggle-item.huddle-segmented-active-item {
-    color: var(--hu-control-selected-ink);
-}
-
-.task-detail-description-toggle .huddle-segmented-indicator,
-.task-toolbar-kind .huddle-segmented-indicator {
-    border-color: var(--hu-control-selected-line);
-}
-
-/* List | Kanban is a light toolbar control, as in every Theme's mockup: a 2px track around 24px items at 12px with 14px
-   icons, about 30px in all. The indicator moves to the same 2px inset; the
-   doubled class outranks the component's scoped 3px. */
-.huddle-segmented-control.task-toolbar-kind {
-    padding: 2px;
-}
-
-.huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
-    top: 2px;
-    bottom: 2px;
-    left: 2px;
-}
-
-.huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item {
-    height: 24px;
-    padding-block: 0;
-    font-size: var(--mud-typography-caption-size);
-}
-
-.huddle-segmented-control.task-toolbar-kind .task-toolbar-kind-icon.mud-icon-root {
-    width: 14px;
-    height: 14px;
-}
-
 /* The Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
    with a single border that turns to the focus colour while the field is being written in. */
 .task-detail-description-box {
@@ -787,31 +742,6 @@
     inset-inline-start: -4px;
     width: 1px;
     background: var(--hu-editor-toolbar-line);
-}
-
-/* Edit | Preview is a compact 28px control here (the toolbar rule's height). The indicator is placed and sized by the component for a track with 3px of padding (it is 3px in
-   from each edge and (100% - 6px) / items wide), so the track keeps that padding and the items fill what is left: the tile is then exactly as
-   tall and as wide as the item it sits under, and the label is centred in it. The root prefix keeps this ahead of the component's own rule. */
-:root .huddle-segmented-control.task-detail-description-toggle {
-    box-sizing: border-box;
-    height: 28px;
-    padding: calc(4px * 0.75);
-}
-
-:root .task-detail-description-toggle .huddle-segmented-group {
-    align-items: stretch;
-    height: 100%;
-}
-
-:root .task-detail-description-toggle .mud-toggle-item {
-    height: 100%;
-    min-height: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding-block: 0;
-    padding-inline: 8px;
-    line-height: 1;
 }
 
 /* ---- voice=book: Nordic ---------------------------------------------------------------------- */

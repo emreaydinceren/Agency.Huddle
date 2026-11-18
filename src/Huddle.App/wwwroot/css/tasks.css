@@ -1132,7 +1132,7 @@
 }
 
 /* C. The Tasks page: toolbar, chips, List rows, Board columns and cards. */
-/* The toolbar's List | Kanban control is a segmented control; HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
+/* The toolbar's List | Kanban control is a segmented control; SegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
 .task-toolbar-kind {
     flex: none;
 }
@@ -1140,12 +1140,6 @@
 /* The List | Kanban control has two short, equal-width segments, so the same equal-segment floor is smaller. */
 .task-toolbar-kind .mud-toggle-item {
     min-width: 5rem;
-}
-
-/* Each segment leads with its View kind's sidebar icon, at the row icon size, 4px before the word. */
-.task-toolbar-kind .task-toolbar-kind-icon {
-    font-size: var(--icon-size-row);
-    margin-right: 4px;
 }
 
 /* The header row: List | Kanban, then the counts, on the left; the page's actions on the right. */
@@ -1424,21 +1418,6 @@
 :root:has([data-hu-surface="paper"]) .tasks-count-need-you:not(.is-zero) {
     color: var(--hu-tone-warning-ink);
     font-weight: 600;
-}
-
-/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls, as the design system sets for every toolbar row: the shared
-   control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
-.task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
-    box-sizing: border-box;
-    height: 28px;
-    padding: 1px;
-    align-items: center;
-}
-
-.task-toolbar-header .huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
-    top: 1px;
-    bottom: 1px;
-    left: 1px;
 }
 
 /* ---- Task state and priority: a glyph then a small label, with no chip. This is every Theme's look except status=pill (Nordic).

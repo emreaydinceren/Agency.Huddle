@@ -34,11 +34,8 @@
     @* "Group by: All | Team" - the same segmented control as the Tasks toolbar's List | Kanban. The choice is remembered per browser. *@
     <div class="room-list-grouping">
         <span class="room-list-grouping-label">Group by:</span>
-        <HuddleSegmentedControl T="RoomGrouping" Value="this.grouping" ValueChanged="this.OnGroupingChangedAsync"
-                                Class="room-list-grouping-control" ItemCount="2">
-            <MudToggleItem Value="RoomGrouping.All">All</MudToggleItem>
-            <MudToggleItem Value="RoomGrouping.Team">Team</MudToggleItem>
-        </HuddleSegmentedControl>
+        <SegmentedControl T="RoomGrouping" Options="GroupingOptions" Value="this.grouping" ValueChanged="this.OnGroupingChangedAsync"
+                          Class="room-list-grouping-control" />
     </div>
 
     <MudNavMenu>
@@ -92,6 +89,10 @@
 </div>
 
 @code {
+    /// <summary>The Group by segments.</summary>
+    private static readonly IReadOnlyList<SegmentedOption<RoomGrouping>> GroupingOptions =
+        [new(RoomGrouping.All, "All"), new(RoomGrouping.Team, "Team")];
+
     private IReadOnlyList<Room> rooms = [];
     private IReadOnlyDictionary<string, IReadOnlyList<User>> membersByRoom = new Dictionary<string, IReadOnlyList<User>>(StringComparer.Ordinal);
     private string? error;

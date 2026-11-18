@@ -17,6 +17,7 @@ page adds only what is particular to this work.
 - Proving a visual change
 - The owner brief
 - Questions to answer before each wave
+- Lessons from the pilot
 
 ## What is decided
 
@@ -67,8 +68,8 @@ So each wrapper adds one rule, `CV14` onward, that counts the raw Mud tag it rep
 - It is added in every place the existing rules are: `UiConventionScanner.Rules` and `Scan`,
   `UiConventionSource.InScope`, and the rule list and mutation row in `UiConventionTests` (one
   added violation overruns the baseline).
-- The B1 rename also edits `UiConventionSource.CssTrackFiles`, which names
-  `HuddleSegmentedControl.razor.css` by file name.
+- The B1 rename also edited `UiConventionSource.CssTrackFiles`, which names
+  `SegmentedControl.razor.css` by file name; a later rename of a tracked `.razor.css` does the same.
 - Its starting baseline is generated, not typed: run the test once with
   `HUDDLE_WRITE_BASELINES=1`.
 - `Exceptions.txt` is manager-only. An owner never edits it.
@@ -82,7 +83,7 @@ another reason for one migration per area at a time.
 
 | Wave | Work | Owners at once | Why this order |
 | --- | --- | --- | --- |
-| 1 | **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14`. Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
+| 1 | **Done 2026-11-18.** **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14` (zero-tolerance from the start: all six sites moved in the build PR). Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
 | 2 | **B2** buttons by role, with **A2** `DialogFooter` as its first user. Then migrate by area | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
 | 3 | **A1** `Notice`, then **B3** text field and **B4** select. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
 | 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList`, **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
@@ -160,3 +161,44 @@ are in the catalog.
 | Wave 3 | `Q-A1-1` to `Q-A1-3`; `Q-B3-1` |
 | Wave 4 | `Q-A4-1`, `Q-A4-2`; `Q-A6-1`, `Q-A6-2`; `Q-A7-1`, `Q-A7-2`; `Q-A3-1`, `Q-A3-2`; `Q-B5-1` |
 | Wave 5 | `Q-A5-1`; `Q-A8-1` |
+
+## Lessons from the pilot
+
+B1 (`SegmentedControl`, 2026-11-18) set the pattern. What the plan did not say:
+
+- **Check the snapshot tool before the baseline.** The seeder had renamed a Room scope
+  ("Platform chat" to "in Platform") and the New chat label, so a fresh Capture stopped at the
+  Room list and every `open-new-chat` page failed. B1 fixed the scope in `css-snapshot.mjs`; the
+  New chat step still finds nothing (16 pages, the same in both captures, so they cancel out).
+  Run a short `-Only feed` Capture first and read the log before starting the 7-minute one. A
+  Capture cut short (B1's machine crashed mid-run) leaves an `-Out` folder the next Capture
+  refuses to overwrite: capture into a new folder; a finished baseline stays valid.
+- **`-SeedRoot` must be a folder named `css-snap*`** (the script refuses anything else, because
+  it wipes it). Pass Windows paths from PowerShell, not Git Bash, which eats the backslashes.
+- **A class rename turns every renamed element into "removed" plus "added"**, which hides the
+  property changes the Report exists to show. Rewrite the baseline's element paths instead with
+  `agents/scripts/css-snapshot-rename.mjs` (it maps old class names to new ones and re-sorts each
+  path segment), then Report against the rewritten copy.
+- **A fixed height and a trait border fight.** `paper` and `hairline` draw a 1 px border on the
+  track, so a 28 px `border-box` track with 2 px padding leaves 22 px for 24 px items. The fix is a
+  custom property the trait overrides (`--segmented-inset: 1px`), not a second geometry per Theme.
+- **A public type in `Components/Shared` fails CA1716** (the namespace ends in a keyword). A
+  parameter type must be public (rules.md), so it goes in `Agency.Huddle.App.Components`, as
+  `AgentProfileCardMode` does.
+- **Specificity moves when rules move into the component.** A rule reached through `::deep` gains
+  the scope attribute, so a caller's override must name more classes than the component's rule;
+  the Feed's Nordic badge pill names the control for that reason.
+- **The shell hooks block `sed -i`**, and the Write tool and heredocs emit LF. A rename across many
+  files is a PowerShell `[IO.File]::ReadAllText` and `.Replace` loop, which keeps CRLF.
+
+Commands that worked (PowerShell, from the repo root; `$s` is a scratch folder outside the repo):
+
+```powershell
+pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Capture -Screens -Reseed -SeedRoot C:\seeds\huddle\css-snap-b1 -Port 5320 -Out "$s\baseline"
+# after the change and a dotnet build Huddle.slnx; no -Reseed, so both captures share the golden copy
+pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Capture -Screens -SeedRoot C:\seeds\huddle\css-snap-b1 -Port 5320 -Out "$s\candidate"
+node agents/scripts/css-snapshot-rename.mjs "$s\baseline" "$s\baseline-renamed" huddle-segmented-control=segmented-control huddle-segmented-indicator=segmented-indicator huddle-segmented-group=segmented-group huddle-segmented-active-item=segmented-active-item feed-count=segmented-badge feed-count-needsyou= task-toolbar-kind-icon=segmented-icon
+pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Report -Baseline "$s\baseline-renamed" -Candidate "$s\candidate" -Out "$s\report" -Declared "$s\declared.txt"
+# a convention baseline, only when a raw tag is left somewhere; B1 needed none (CV14 is 0 everywhere)
+$env:HUDDLE_WRITE_BASELINES = '1'; pwsh agents/scripts/Run-Tests.ps1 -FilterClass '*UiConventionTests'; Remove-Item Env:HUDDLE_WRITE_BASELINES
+```

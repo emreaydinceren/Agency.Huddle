@@ -196,7 +196,7 @@ gauge (paused) and a new `alert` badge (`Icons.Material.Outlined.ErrorOutline`) 
   Helper's `task-gate-on` stays in **Gates**: it is about a Task.
 - `FeedCounts` gains `Helpers`; `FeedStore.Counts` gains its `SUM(CASE …)` column. The unit test
   that every `FeedSourceType` is in exactly one type Category now has five Categories.
-- The Feed Tab's `HuddleSegmentedControl` goes to `ItemCount="7"`, and the panel's chip set gets a
+- The Feed Tab's `SegmentedControl` gets a seventh option, and the panel's chip set gets a
   seventh chip. The header wireframe gains a "Helpers" segment (§6).
 
 ### 5.5 The Helper target

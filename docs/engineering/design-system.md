@@ -1053,7 +1053,7 @@ Start from the pattern in the file the table names; the full list is in
 | Icon button | `MudIconButton Size="Size.Small"`, with an `aria-label`, and a `MudTooltip` when it is not obvious |
 | Text input | `MudTextField Variant="Variant.Outlined" Margin="Margin.Dense"` |
 | Search field | The same, with a `Filled.Search` start adornment, `Clearable`, `Immediate`, one debounce constant, a placeholder ("Search members") and an `aria-label` (UX-055) |
-| Choice | `MudSelect` and `MudAutocomplete` (Outlined, Dense), `MudRadioGroup`, `MudToggleGroup`; for a two- to five-way mode switch, `HuddleSegmentedControl` |
+| Choice | `MudSelect` and `MudAutocomplete` (Outlined, Dense), `MudRadioGroup`, `MudToggleGroup`; for a two- to five-way mode switch, `SegmentedControl` |
 | Container | `MudPaper Outlined="true" Elevation="0"` for a panel or card; `MudStack` for layout |
 | Status | `StatusChip` for a state in a word, `MudBadge` or `StatusDot` for presence; see [Chips](#chips) |
 | Table | `MudSimpleTable` for short lists, with an empty row; `MudDataGrid` for sortable, groupable data |
@@ -1109,8 +1109,9 @@ rules that catalog's rows carry out.
   sentence that says what to do next, and an optional action. A full-pane one adds
   `empty-state-centered` and sits a third of the way down. In a table, put it in a `colspan`
   row. [Catalog row](UXDesignGuidelines.md#display).
-- **A pill track with a sliding indicator is `HuddleSegmentedControl`**, up to five
-  options, coloured from `background-gray` and `surface`.
+- **A pill track with a sliding indicator is `SegmentedControl`**, built from an options
+  list, one 28 px row (2 px inset, 24 px items, 13 px text, the selected item at weight 500),
+  coloured from the `--hu-control-track`, `-ink`, `-selected-ink` and `-selected-line` tokens.
 - **A destructive yes or no is `ConfirmAsync`, or `InlineConfirm` on a list row.**
   Confirm takes focus, Escape cancels. See [Confirming](#confirming).
 - **A one-field name dialog is `NameDialog`.**

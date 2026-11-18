@@ -134,42 +134,6 @@
     }
 }
 
-/* ---- Segmented control: MudBlazor's toggle group inside HuddleSegmentedControl ------------------
-   The indicator that slides under the active item is scoped to the component; these rules reach the
-   toggle group's own markup, so they live here. Each selector starts at .huddle-segmented-control, which
-   out-ranks MudBlazor's own toggle-item rules, so none of them needs the important flag. */
-.huddle-segmented-control .huddle-segmented-group {
-    background: transparent;
-    position: relative;
-    z-index: 2;
-    width: 100%;
-}
-
-.huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
-    flex: 1 1 0;
-    text-align: center;
-    border-radius: var(--hu-radius-control);
-    border: none;
-    background: transparent;
-    padding: 2px 12px;
-    min-height: unset;
-    position: relative;
-    z-index: 2;
-    color: var(--mud-palette-text-secondary);
-    font-weight: 500;
-    transition: color 120ms ease;
-}
-
-.huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {
-    background-color: transparent;
-    color: var(--mud-palette-text-primary);
-}
-
-.huddle-segmented-control .huddle-segmented-group .mud-toggle-item * {
-    color: inherit;
-    font-weight: inherit;
-}
-
 /* ---- Teams nav: the Team, scope, section and Room rows in the sidebar -------------------------
    A Team is a root row of the Teams view, under no section header: its chevron fills the leading slot and its name
    starts on the text line, with "Build a team" in line with them. The scope blocks and their folders below set their
@@ -784,20 +748,21 @@
     color: var(--mud-palette-text-secondary);
 }
 
-/* -- surface=paper: segmented controls, a sunk track and the selected option a raised tile (15.6) ------------------- */
-:root:has([data-hu-surface="paper"]) .huddle-segmented-control {
+/* -- surface=paper: segmented controls (the 1px border takes 1px of the 2px inset), a sunk track and the selected option a raised tile (15.6) ------------------- */
+:root:has([data-hu-surface="paper"]) .segmented-control {
+    --segmented-inset: 1px;
     background-color: var(--hu-ground-sunk);
     border: 1px solid var(--hu-line-region);
     border-radius: var(--hu-radius-card);
 }
 
-:root:has([data-hu-surface="paper"]) .huddle-segmented-indicator {
+:root:has([data-hu-surface="paper"]) .segmented-indicator {
     background-color: var(--hu-ground-raised);
     border-color: var(--hu-line-region);
     box-shadow: var(--hu-shadow-card);
 }
 
-:root:has([data-hu-surface="paper"]) .huddle-segmented-control .huddle-segmented-active-item {
+:root:has([data-hu-surface="paper"]) .segmented-control .segmented-active-item {
     color: var(--mud-palette-text-primary);
 }
 
@@ -824,26 +789,27 @@
     color: var(--hu-text-subtle);
 }
 
-/* -- surface=hairline: segmented controls, a track on a hairline with a raised tile (15.6); the track is the Theme's control.track -------- */
-:root:has([data-hu-surface="hairline"]) .huddle-segmented-control {
+/* -- surface=hairline: segmented controls (the 1px border takes 1px of the 2px inset), a track on a hairline with a raised tile (15.6); the track is the Theme's control.track -------- */
+:root:has([data-hu-surface="hairline"]) .segmented-control {
+    --segmented-inset: 1px;
     background-color: var(--hu-control-track);
     border: 1px solid var(--hu-line-region);
     border-radius: var(--hu-radius-card);
 }
 
-:root:has([data-hu-surface="hairline"]) .huddle-segmented-indicator {
+:root:has([data-hu-surface="hairline"]) .segmented-indicator {
     background-color: var(--hu-ground-raised);
     border-color: var(--hu-line-region);
     border-radius: var(--hu-radius-control);
     box-shadow: var(--hu-shadow-card);
 }
 
-:root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item {
+:root:has([data-hu-surface="hairline"]) .segmented-control .segmented-group .mud-toggle-item {
     color: var(--hu-text-subtle);
     border-radius: var(--hu-radius-control);
 }
 
-:root:has([data-hu-surface="hairline"]) .huddle-segmented-control .huddle-segmented-group .mud-toggle-item.huddle-segmented-active-item {
+:root:has([data-hu-surface="hairline"]) .segmented-control .segmented-group .mud-toggle-item.segmented-active-item {
     color: var(--mud-palette-text-primary);
 }
 

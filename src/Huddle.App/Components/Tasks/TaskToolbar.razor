@@ -241,13 +241,15 @@
     };
 
     /// <summary>Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view" offers to persist it - the View editor's own Kind control is the saved counterpart.</summary>
-    private RenderFragment KindControl => @<HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
-                                                                   Class="task-toolbar-kind" ItemCount="2">
-        @* The same icons as the View's sidebar row (TaskViewNav). In the content, not SelectedIcon/UnselectedIcon: MudToggleGroup
-           draws those only with CheckMark on, and the segmented control turns it off. *@
-        <MudToggleItem Value="ViewKind.List"><MudIcon Icon="@Icons.Material.Outlined.ViewList" Size="Size.Small" Class="task-toolbar-kind-icon" />List</MudToggleItem>
-        <MudToggleItem Value="ViewKind.Kanban"><MudIcon Icon="@Icons.Material.Outlined.ViewKanban" Size="Size.Small" Class="task-toolbar-kind-icon" />Kanban</MudToggleItem>
-    </HuddleSegmentedControl>;
+    private RenderFragment KindControl => @<SegmentedControl T="ViewKind" Options="KindOptions" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
+                                                             Class="task-toolbar-kind" />;
+
+    /// <summary>List and Kanban, with the same icons as the View's sidebar row (TaskViewNav).</summary>
+    private static readonly IReadOnlyList<SegmentedOption<ViewKind>> KindOptions =
+    [
+        new(ViewKind.List, "List", Icons.Material.Outlined.ViewList),
+        new(ViewKind.Kanban, "Kanban", Icons.Material.Outlined.ViewKanban),
+    ];
 
     /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>
     private static readonly IReadOnlyList<TaskState> ActiveStates = [.. TaskStates.All.Where(static state => !state.IsTerminal())];

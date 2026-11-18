@@ -1,0 +1,78 @@
+@typeparam T
+@using System.Globalization
+@using MudBlazor
+
+@* A mode switch: a track, a tile that slides under the selected option, and MudBlazor's toggle group drawn over it. Callers pass an
+   options list and the selected value; the indicator is placed from the list (ComponentCatalog, Segmented control). *@
+<div class="segmented-control @this.Class" style="@this.IndicatorStyle">
+    <div class="segmented-indicator"></div>
+
+    <MudToggleGroup T="T" Value="@this.selected" ValueChanged="@this.OnValueChangedAsync" Class="segmented-group" SelectedClass="segmented-active-item"
+                    Size="Size.Small" Outlined="false" Delimiters="false" Ripple="false" CheckMark="false" Color="Color.Default">
+        @foreach (SegmentedOption<T> option in this.Options)
+        {
+            @* The icon goes in the content, not SelectedIcon/UnselectedIcon: MudToggleGroup draws those only with CheckMark on. *@
+            <MudToggleItem Value="@option.Value">@if (option.Icon is { } icon)
+                {
+                    <MudIcon Icon="@icon" Size="Size.Small" Class="segmented-icon" />
+                }@option.Label@if (option.Badge is { } badge)
+                {
+                    @(" ")<span class="segmented-badge">@badge</span>
+                }</MudToggleItem>
+        }
+    </MudToggleGroup>
+</div>
+
+@code {
+    private T? selected;
+
+    /// <summary>The choices, in order; each is one segment.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<SegmentedOption<T>> Options { get; set; } = [];
+
+    /// <summary>The selected value.</summary>
+    [Parameter]
+    public T? Value { get; set; }
+
+    /// <summary>Raised with the new value when the selection changes.</summary>
+    [Parameter]
+    public EventCallback<T?> ValueChanged { get; set; }
+
+    /// <summary>Extra CSS classes for the track, a hook for the caller's layout (width, flex), never its geometry or colours.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>The option count and the selected index, for the indicator's width and position.</summary>
+    private string IndicatorStyle => string.Create(
+        CultureInfo.InvariantCulture,
+        $"--segmented-count: {Math.Max(this.Options.Count, 1)}; --segmented-index: {this.SelectedIndex()};");
+
+    /// <summary>Takes the caller's value on every render, so the indicator follows a value set from outside.</summary>
+    protected override void OnParametersSet()
+    {
+        this.selected = this.Value;
+    }
+
+    /// <summary>The index of the selected option, or 0 (the first segment, as before) when no option holds the value.</summary>
+    /// <returns>The zero-based index.</returns>
+    private int SelectedIndex()
+    {
+        for (int index = 0; index < this.Options.Count; index++)
+        {
+            if (EqualityComparer<T>.Default.Equals(this.Options[index].Value, this.selected))
+            {
+                return index;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>Moves the indicator at once, then tells the caller.</summary>
+    /// <param name="value">The newly selected value.</param>
+    private async Task OnValueChangedAsync(T? value)
+    {
+        this.selected = value;
+        await this.ValueChanged.InvokeAsync(value);
+    }
+}

@@ -229,17 +229,24 @@ chips in `Components/Feed/`.
 
 ![The Tasks toolbar: a List and Kanban switch, open and need-you counts, a New task button and a menu](../images/components/tasks-toolbar.png)
 
+Both screenshots predate the 28 px change (B1, 2026-11-18).
+
 | Component | Path | Sites | Key parameters |
 | --- | --- | --- | --- |
-| `HuddleSegmentedControl<T>` | `Components/Shared/HuddleSegmentedControl.razor` | 6 (6 files) | `Value`, `ValueChanged`, `ItemCount`, `Disabled`, `SelectionMode` |
+| `SegmentedControl<T>` | `Components/Shared/SegmentedControl.razor` | 6 (6 files) | `Options` (`SegmentedOption<T>`: `Value`, `Label`, optional `Icon`, optional `Badge`), `Value`, `ValueChanged`, `Class` |
 
-A two- to five-way mode switch, a toggle group with a sliding pill under the selected item. Its
-children are `MudToggleItem`s, and the indicator follows up to nine segments. It is used six
-times: the Feed's All and Needs you, the Tasks toolbar's List and Kanban, the Library's
-[Read, Edit and Split](#library-document-header), the sidebar's
-[Group by switch](#sidebar-switch-and-settings-navigation), a Task Description's Edit and
-Preview, and the Needs You level choice. Its call sites repeat a lot of setup, so it is planned
-to take an options list (B1 in [Patterns still built by hand](#patterns-still-built-by-hand)).
+A two- to five-way mode switch, a toggle group with a sliding pill under the selected item. A
+caller passes an options list and the selected value, never Mud parameters or child items; the
+component writes `--segmented-count` and `--segmented-index` from the list, so the indicator
+follows any number of options. Every site draws one 28 px row: 2 px from the track's edge to an
+item (a Theme whose surface trait borders the track sets `--segmented-inset: 1px`, so border and
+inset stay 2 px), 24 px items, 13 px text, the selected item at weight 500. The four colour
+tokens (`--hu-control-track`, `-ink`, `-selected-ink`, `-selected-line`) are read by the
+component only. It is used six times: the Feed's All and Needs you (with a badge), the Tasks
+toolbar's List and Kanban (with icons), the Library's [Read, Edit and Split](#library-document-header),
+the sidebar's [Group by switch](#sidebar-switch-and-settings-navigation), a Task Description's
+Edit and Preview, and the Needs You level choice. Convention rule CV14 fails the build on a raw
+`MudToggleGroup` anywhere else.
 
 ## Page furniture
 
@@ -632,7 +639,6 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned component | Reuse cases | Evidence | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| B1 | **`HuddleSegmentedControl`, evolved**: an options list (value, label, optional icon, optional badge), a `Look` and a compact size | 6 sites | `ItemCount` is passed by hand at all 6 and must match the item count. Three sites (Feed, Tasks kind, Task Description) re-declare the same four colour rules (`--hu-control-track`, `-ink`, `-selected-ink`, `-selected-line`). Nine hard-coded `translateX` rules place the indicator. `TaskToolbar` carries a comment working around `MudToggleGroup` only drawing its own icons with the check mark on | M | Planned |
 | B2 | **Buttons by role**: primary, secondary, quiet and danger | 205 uses in 83 files | 169 (82%) fall in three combos: Text and Small (71), Outlined and Small (59), Filled, Small and Primary (39). 136 carry a per-site `Class`. 15 are medium, 14 set no variant, about 10 are coloured danger or warning, 3 of them chosen at runtime | L | Planned |
 | B3 | **Text field**: defaults, a `Long` option and a `Compact` option | 62 uses in 29 files | 100% Outlined and Dense. 57 have a `Label`, 29 a `HelperText`, 35 use `Immediate`. 12 use `Lines`, but only 7 use the `long-text-field` class | M | Planned |
 | B4 | **Select** | 34 uses in 14 files | 100% Outlined and Dense; defaults only | S | Planned |
@@ -653,9 +659,9 @@ ships, move its row to the entry for the new component and delete it here.
 | # | Item | Evidence |
 | --- | --- | --- |
 | D1 | A convention rule per wrapper that bans the raw Mud tag, as CV13 does for chips. **Checked 2026-11-18: it can allow what exists and block what is new.** The convention test holds each file to a per-file baseline that may only shrink (see [ComponentRollout.md](ComponentRollout.md#the-guard-that-stops-backsliding)) | The pattern exists: `Chip` plus CV13, whose baseline is empty because every chip has moved |
-| D2 | Conflicting `.task-toolbar-kind` rules in `task-form.css` and `tasks.css` | Padding 2px against 1px, indicator inset 2px against 1px, and the icon size set in both. Which one wins is not checked |
+| D2 | Conflicting `.task-toolbar-kind` rules in `task-form.css` and `tasks.css`. **Done in B1, 2026-11-18**: the geometry and icon rules in both went to `SegmentedControl`; `tasks.css` keeps only the toolbar's layout (`flex: none` and the 5 rem item floor), `task-form.css` none | Padding 2px against 1px, indicator inset 2px against 1px, and the icon size set in both. Which one wins is not checked |
 | D3 | A dead CSS hook, `needs-you-level-choice` | The class is on `NeedsYouLevelControl` and has no rules anywhere |
-| D4 | One naming convention for the wrappers. **Ruled 2026-11-18: no prefix**, named for what it is (`Notice`, `SegmentedControl`, `DialogFooter`); a name that would clash with HTML or MudBlazor gets a sharper word (`ActionButton`). Rename `HuddleSegmentedControl` (6 sites) in the B1 pilot | `HuddleSegmentedControl` has a prefix; `Chip`, `EmptyState` and `SearchField` do not |
+| D4 | One naming convention for the wrappers. **Ruled 2026-11-18: no prefix**, named for what it is (`Notice`, `SegmentedControl`, `DialogFooter`); a name that would clash with HTML or MudBlazor gets a sharper word (`ActionButton`). **Done in B1, 2026-11-18**: `HuddleSegmentedControl` is now `SegmentedControl`, its classes lost the `huddle-` prefix | `HuddleSegmentedControl` has a prefix; `Chip`, `EmptyState` and `SearchField` do not |
 | D5 | Text fields with neither `Label` nor `aria-label` | 5 of 62; not yet checked whether they have another accessible name |
 
 ### Inconsistencies to fix, per planned component
@@ -923,49 +929,6 @@ rule picks one.
 
 - `Q-A8-1` In a button, spinner or "…ing" text? Recommended: the text ("Reloading…") with no
   spinner, as four sites already do; a spinner only where there is no button.
-
-#### B1 Segmented control
-
-See [Segmented control](#segmented-control). *Measured* in Lumen Light:
-
-| Variant | Where | Outer height | Track padding | Item height and text |
-| --- | --- | --- | --- | --- |
-| Default | `Pages/FeedPage.razor:50`, `Library/LibraryDocument.razor:52`, `Shared/RoomList.razor:37`, `Shared/NeedsYouLevelControl.razor:20` | 38 px | 4 px, plus a 1 px `hairline` border | 28 px, 13 px |
-| List and Kanban | `Tasks/TaskToolbar.razor:244`, `tasks.css:1431`, `task-form.css:697` | 28 px | 1 px | 24 px, 12 px, 70 px floor (`tasks.css:1141`) |
-| Edit and Preview | `Tasks/TaskDetail.razor:696`, `task-form.css:795` | 28 px | 3 px | 20 px, 13 px, 8 px sides |
-
-Also: the Feed's selected item is weight 600, every other 500 (`FeedPage.razor.css:97`). Feed,
-List and Kanban, and Edit and Preview colour the track with `--hu-control-track`; the other three
-use the component's 6% mix (`HuddleSegmentedControl.razor.css:7`). In Lumen both give `#f0f0f2`;
-in Fluent `control.track` is `ground.sidebar`, so the two groups differ there (lead, not measured).
-The track radius is the card step (6 px), the items the control step (4.5 px). The rules for
-List and Kanban are written twice (`task-form.css:697` against `tasks.css:1431`: D2).
-
-**Which is right.** design-system.md Spacing: one height per toolbar row, 28 px, the segmented
-control included. Shape: a segment and the indicator take the control step.
-
-**Fix:**
-
-1. The component draws 28 px: track padding 2 px, items 24 px, indicator inset 2 px, set in
-   `HuddleSegmentedControl.razor.css` (its `0.1875rem` insets become px). `visual` at the four
-   38 px sites
-2. Delete the per-site geometry in `tasks.css:1431-1442`, `task-form.css:697-716` and
-   `:795-815`. `visual` for Edit and Preview (20 px items become 24 px)
-3. Move the four colour tokens into the component; delete `task-form.css:674-691` and
-   `FeedPage.razor.css:88-104`. `visual` in Fluent and Cobalt Soft, if their tokens differ
-4. Remove `library.css:742-745`, which sets the 13 px the control already has. `markup only`
-
-**How to prove.** Css-Snapshot Report on `/feed`, `/`, `/library`, `/settings/needsyou`,
-`/tasks/all-tasks` and a Task's edit page in all four Themes; declare `.huddle-segmented-control |
-height` and `.mud-toggle-item | height`. `paper` and `hairline` restyle the track
-(`sidebar.css:788`, `:828`).
-
-**Open questions for the owner:**
-
-- `Q-B1-1` **Ruled 2026-11-18: 13 px everywhere**, the Button role, so a segment matches the buttons
-  beside it. The List and Kanban items grow from 12 px; no compact size.
-- `Q-B1-2` **Ruled 2026-11-18: selected item at weight 500 everywhere.** The Feed's 600
-  (`FeedPage.razor.css:97`) goes.
 
 #### B2 Buttons by role
 

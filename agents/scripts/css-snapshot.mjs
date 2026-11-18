@@ -377,7 +377,7 @@ function buildRoutes(manifestText, settingsPaths) {
     { name: 'room-needs-you', path: room('Launch crew', 'root') },
     { name: 'room-incident', path: room('Incident 0412 war room', 'root') },
     { name: 'room-team', path: room('Platform', 'Platform Team Room') },
-    { name: 'room-team-chat', path: room('Pagination design', 'Platform chat') },
+    { name: 'room-team-chat', path: room('Pagination design', 'in Platform') },
   ];
   for (const tab of ['members', 'files', 'tasks', 'process', 'details']) { routes.push({ name: `team-platform-${tab}`, path: `/teams/Platform/${tab}` }); }
   routes.push({ name: 'team-sandbox', path: '/teams/Sandbox' });

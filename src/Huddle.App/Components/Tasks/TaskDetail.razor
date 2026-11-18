@@ -693,11 +693,12 @@ else if (this.loaded is { } task)
     }
 
     /// <summary>Edit | Preview, drawn at the right end of the Description card's toolbar row in both modes.</summary>
-    private RenderFragment DescriptionToggle => @<HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
-                                                                           Class="task-detail-description-toggle" ItemCount="2">
-        <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
-        <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
-    </HuddleSegmentedControl>;
+    private RenderFragment DescriptionToggle => @<SegmentedControl T="DescriptionViewMode" Options="DescriptionOptions" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
+                                                                     Class="task-detail-description-toggle" />;
+
+    /// <summary>The Edit and Preview segments.</summary>
+    private static readonly IReadOnlyList<SegmentedOption<DescriptionViewMode>> DescriptionOptions =
+        [new(DescriptionViewMode.Edit, "Edit"), new(DescriptionViewMode.Preview, "Preview")];
     private TaskActionsMenu? actionsMenu;
     private (bool Visible, string Label, bool Disabled) notifiedFooter;
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;

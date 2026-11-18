@@ -143,7 +143,7 @@ component here, move it onto the component rather than writing another copy.
 | An Agent's health beside a name | `StatusDot` | [Avatars and status](design-system.md#avatars-and-status) |
 | A presence badge on an avatar | `PresenceAnchor` around the avatar, with a `PresenceCue` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
-| A two- to five-way mode switch | `HuddleSegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
+| A two- to five-way mode switch | `SegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
 | Filter chips | `ChipCloud` | [Chips](design-system.md#chips) |
 | A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip` | [Catalog: actions and input](#actions-and-input) |
 | To save a page's own setup | Save each change as it is made, through `ViewStore` | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
@@ -228,7 +228,7 @@ shapes that have no component yet.
 | `ConflictRow` | `Components/Tasks/ConflictRow.razor` | A conflicting field in the Task detail | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` | One field of an edit conflict, in the panel or the expanded table |
 | `SettingsIntro`, `StoredAt`, `ProblemList` | `Components/Settings/` | The top and foot of a Settings panel | `ChildContent`; `Path`, `Label`; `Count` | The intro paragraph, the "Stored at" line and the "Problems" list of every Settings panel |
 | `SearchCardShell` | `Components/Search/SearchCardShell.razor` | Every row of the `S1b` dropdown | `Icon`, `Title`, `Meta`, `Snippet`, `Trailing`, `AccessibleName`, `Archived` | A new kind of search result: fill the slots, don't copy a card |
-| `HuddleSegmentedControl<T>` | `Components/Shared/HuddleSegmentedControl.razor` | `T3a`, `L3b`, `S2b1` | `Value`, `ValueChanged`, `ItemCount`, `Disabled`, `SelectionMode`; `MudToggleItem`s as children | A two- to five-way mode switch, such as the Feed's All | Needs you (`F3a`). The indicator follows up to nine segments |
+| `SegmentedControl<T>` | `Components/Shared/SegmentedControl.razor` | `T3a`, `L3b`, `S2b1` | `Options` (a list of `SegmentedOption<T>`: value, label, optional icon, optional badge), `Value`, `ValueChanged`, `Class` | A two- to five-way mode switch, such as the Feed's All | Needs you (`F3a`). One 28 px row; the indicator follows any number of options. A raw `MudToggleGroup` elsewhere fails convention rule CV14 |
 | `SkillProvenanceLine` | `Components/Shared/SkillProvenanceLine.razor` | Skills, Agent card | `Skill` | Where a Skill came from and whether it was modified |
 | `EditPreview` | `Components/Shared/EditPreview.razor` | `C7b` | `Edit`, `Path` | A file edit's before and after |
 | `MessageReferences` | `Components/References/MessageReferences.razor` | Under `C5c` | `Message` | The reference chips a Message carries |

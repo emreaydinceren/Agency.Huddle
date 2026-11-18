@@ -354,4 +354,31 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv13("src/Huddle.App/Components/Shared/Chip.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv13("src/Huddle.App/Components/Shared/StatusChip.razor", source).Count);
     }
+
+    /// <summary>CV14: a raw <c>MudToggleGroup</c> is counted, but not its items, a <c>SegmentedControl</c> or the generic type name in code.</summary>
+    [Fact]
+    public void Cv14_RawMudToggleGroup_IsCounted()
+    {
+        const string source = """
+            <MudToggleGroup T="string" Size="Size.Small"><MudToggleItem Value="@("a")" /></MudToggleGroup>
+            <SegmentedControl T="string" Options="this.options" />
+            <MudToggleGroup T="int" Size="Size.Small" Value="1" />
+            @code { private MudToggleGroup<string>? group; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv14(RazorPath, source);
+
+        Assert.Equal("CV14", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV14: the one <c>SegmentedControl</c> component is the only file allowed to draw a <c>MudToggleGroup</c>.</summary>
+    [Fact]
+    public void Cv14_SegmentedControlRazor_IsExempt()
+    {
+        const string source = """<MudToggleGroup T="T" Size="Size.Small" Value="@this.Value" />""";
+
+        Assert.Equal(0, UiConventionScanner.Cv14("src/Huddle.App/Components/Shared/SegmentedControl.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv14("src/Huddle.App/Components/Shared/RoomList.razor", source).Count);
+    }
 }

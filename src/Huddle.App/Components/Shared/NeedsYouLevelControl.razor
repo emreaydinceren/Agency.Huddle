@@ -17,15 +17,7 @@
     }
     else
     {
-        <HuddleSegmentedControl T="string" Value="@this.choice" ValueChanged="this.OnChoiceChanged" Class="needs-you-level-choice"
-                                ItemCount="@(this.Inherits ? 3 : 2)">
-            @if (this.Inherits)
-            {
-                <MudToggleItem Value="@InheritChoice">Inherit</MudToggleItem>
-            }
-            <MudToggleItem Value="@AskMeChoice">@NeedsYouLevel.AskMe.ToDisplay()</MudToggleItem>
-            <MudToggleItem Value="@RunChoice">@NeedsYouLevel.RunInsideTheTeam.ToDisplay()</MudToggleItem>
-        </HuddleSegmentedControl>
+        <SegmentedControl T="string" Options="this.ChoiceOptions" Value="@this.choice" ValueChanged="this.OnChoiceChanged" Class="needs-you-level-choice" />
 
         @if (this.choice == RunChoice)
         {
@@ -67,6 +59,15 @@
     private const string InheritChoice = "inherit";
     private const string AskMeChoice = "ask-me";
     private const string RunChoice = "run-inside-team";
+
+    /// <summary>The level choices; Inherit leads them where there is a level to inherit.</summary>
+    private static readonly IReadOnlyList<SegmentedOption<string>> OwnChoices =
+        [new(AskMeChoice, NeedsYouLevel.AskMe.ToDisplay()), new(RunChoice, NeedsYouLevel.RunInsideTheTeam.ToDisplay())];
+
+    private static readonly IReadOnlyList<SegmentedOption<string>> InheritingChoices = [new(InheritChoice, "Inherit"), .. OwnChoices];
+
+    /// <summary>The segments this scope shows.</summary>
+    private IReadOnlyList<SegmentedOption<string>> ChoiceOptions => this.Inherits ? InheritingChoices : OwnChoices;
 
     private string? loadedScope;
     private string choice = AskMeChoice;

@@ -146,7 +146,7 @@ public sealed partial class ChromeTraitsTests
         string notice = Body("surface", "paper", ".budget-prompt");
         string primary = Body("surface", "paper", ".mud-button-filled.mud-button-filled-primary:hover");
         string dialog = Body("surface", "paper", ".mud-dialog");
-        string indicator = Body("surface", "paper", ".huddle-segmented-indicator");
+        string indicator = Body("surface", "paper", ".segmented-indicator");
         string track = Body("surface", "paper", ".mud-switch .mud-checked + .mud-switch-track");
         string tooltip = Body("surface", "paper", ".mud-tooltip.mud-tooltip-default");
 
