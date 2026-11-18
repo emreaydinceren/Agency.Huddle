@@ -69,9 +69,9 @@
     {
         <PageHeader Title="@job.Title" Subtitle="@($"For {JobText.OwnerName(job.Owner, this.Human.Name)} · {job.When.Describe()}")">
             <Actions>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-edit" OnClick="@(() => this.EditAsync(job.Id))">Edit…</MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-pause" OnClick="@(() => this.SetPaused(job, !job.Paused))">@(job.Paused ? "Resume" : "Pause")</MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-run" Disabled="this.running" OnClick="@(() => this.RunNowAsync(job))">Run now</MudButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="scheduled-edit" OnClick="@(() => this.EditAsync(job.Id))">Edit…</ActionButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="scheduled-pause" OnClick="@(() => this.SetPaused(job, !job.Paused))">@(job.Paused ? "Resume" : "Pause")</ActionButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="scheduled-run" Disabled="this.running" OnClick="@(() => this.RunNowAsync(job))">Run now</ActionButton>
                 <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="@MenuDialogs.ActivatorLabel(job.Title)">
                     @if (this.JobRooms.RoomOf(job.Id) is { } roomId)
                     {

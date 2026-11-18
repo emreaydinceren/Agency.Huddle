@@ -78,7 +78,7 @@
 
         @if (this.Pager.HasMore)
         {
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" Class="feed-show-more" OnClick="this.ShowMore">Show more</ActionButton>
         }
         else if (this.Pager.Items.Count > 0)
         {

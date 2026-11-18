@@ -14,7 +14,7 @@
     <MudTooltip Text="@GoldfishStamp.Tooltip">
         <Chip T="string" Look="ChipLook.Status" Color="Color.Info" Icon="@MaterialSymbols.Fish" Text="@ChipText(possession.AgentName, possession.Waiting, this.MinutesSince(possession))" />
     </MudTooltip>
-    <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@this.called" OnClick="@(() => this.CallBackAsync(possession.AgentName))">@CallBackText(possession.AgentName)</MudButton>
+    <ActionButton Disabled="@this.called" OnClick="@(() => this.CallBackAsync(possession.AgentName))">@CallBackText(possession.AgentName)</ActionButton>
 }
 
 @code {

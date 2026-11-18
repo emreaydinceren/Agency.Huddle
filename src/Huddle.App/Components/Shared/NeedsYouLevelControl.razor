@@ -31,8 +31,8 @@
             <MudText Typo="Typo.caption" Class="needs-you-level-note">@NeedsYouLevelCopy.AskMeNote</MudText>
         }
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="needs-you-level-save"
-                   Disabled="@(!this.Dirty)" OnClick="this.Save">Save</MudButton>
+        <ActionButton Role="ButtonRole.Primary" Class="needs-you-level-save"
+                   Disabled="@(!this.Dirty)" OnClick="this.Save">Save</ActionButton>
     }
 
     @if (this.effective is not null)

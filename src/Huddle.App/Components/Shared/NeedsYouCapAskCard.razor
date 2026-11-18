@@ -13,10 +13,10 @@
     <MudPaper Outlined="true" Class="needs-you-cap-ask" role="region" aria-label="@($"Spend cap reached: {this.ScopeName}")">
         <div class="needs-you-cap-ask-text">@NeedsYouLevelCopy.AskText(this.ScopeName, this.Spent, this.Cap)</div>
         <div class="needs-you-cap-ask-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="needs-you-cap-grant"
-                       OnClick="this.GrantAsync">@NeedsYouLevelCopy.GrantLabel(this.Cap)</MudButton>
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="needs-you-cap-decline"
-                       OnClick="this.DeclineAsync">@NeedsYouLevelCopy.DeclineLabel</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Class="needs-you-cap-grant"
+                       OnClick="this.GrantAsync">@NeedsYouLevelCopy.GrantLabel(this.Cap)</ActionButton>
+            <ActionButton Role="ButtonRole.Secondary" Class="needs-you-cap-decline"
+                       OnClick="this.DeclineAsync">@NeedsYouLevelCopy.DeclineLabel</ActionButton>
         </div>
     </MudPaper>
 }

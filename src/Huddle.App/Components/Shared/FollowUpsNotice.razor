@@ -18,7 +18,7 @@
     <MudAlert Severity="Severity.Info" Dense="true" Class="follow-ups-notice room-notice-column" role="status">
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <span class="follow-ups-notice-text">@this.TextOf(job)</span>
-            <MudButton Size="Size.Small" Variant="Variant.Text" Class="follow-ups-notice-cancel" OnClick="@(() => this.Cancel(id))">Cancel</MudButton>
+            <ActionButton Class="follow-ups-notice-cancel" OnClick="@(() => this.Cancel(id))">Cancel</ActionButton>
         </MudStack>
     </MudAlert>
 }

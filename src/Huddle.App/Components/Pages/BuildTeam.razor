@@ -192,8 +192,8 @@
             </div>
             @if (this.RoleEntries.Count > CollapsedRoleLimit)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
-                           OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</MudButton>
+                <ActionButton Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
+                           OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</ActionButton>
             }
             @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
             {
@@ -223,17 +223,17 @@
                                 <Actions>
                                     @if (removing)
                                     {
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Undo" OnClick="@(() => this.UndoRemove(draft.Key))"
-                                                   aria-label="@($"Keep {draft.Name}")" Class="roster-undo">Undo</MudButton>
+                                        <ActionButton StartIcon="@Icons.Material.Outlined.Undo" OnClick="@(() => this.UndoRemove(draft.Key))"
+                                                   aria-label="@($"Keep {draft.Name}")" Class="roster-undo">Undo</ActionButton>
                                     }
                                     else if (draft.Existing)
                                     {
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditMemberAsync(draft.Name))"
-                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
+                                        <ActionButton StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditMemberAsync(draft.Name))"
+                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</ActionButton>
                                         @if (this.CanMessage?.Invoke(draft.Name) == true)
                                         {
-                                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
-                                                       aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</MudButton>
+                                            <ActionButton StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
+                                                       aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</ActionButton>
                                         }
                                         @* A destructive action is never a top-level button with a caret (design-system "Menus"):
                                            Edit and Message lead, and the removals sit under the more-actions button. The activator
@@ -254,18 +254,18 @@
                                     {
                                         @if (draft.SkillSetup.Any(static item => item.Problem != SkillAvailability.Withdrawn))
                                         {
-                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.CopySetupPromptAsync(draft))" Class="roster-copy-prompt">Copy prompt</MudButton>
+                                            <ActionButton Role="ButtonRole.Secondary" OnClick="@(() => this.CopySetupPromptAsync(draft))" Class="roster-copy-prompt">Copy prompt</ActionButton>
                                         }
                                         @if (draft.SkillSetup.Any(static item => item.Problem == SkillAvailability.Withdrawn))
                                         {
                                             <MudText Typo="Typo.caption" Class="roster-withdrawn mud-text-secondary">Edit the draft to drop it.</MudText>
                                         }
-                                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
-                                                   aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
-                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.RemoveDraft(draft.Key))"
-                                                   aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</MudButton>
+                                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
+                                                   aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</ActionButton>
+                                        <ActionButton StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
+                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</ActionButton>
+                                        <ActionButton OnClick="@(() => this.RemoveDraft(draft.Key))"
+                                                   aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</ActionButton>
                                     }
                                 </Actions>
                             </ProfileCard>

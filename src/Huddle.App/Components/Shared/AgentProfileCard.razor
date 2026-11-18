@@ -98,7 +98,7 @@
                                     PendingImage="this.avatarPendingBytes" PendingImageExtension="@this.avatarPendingExtension" />
                     <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
                 </button>
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.EditAvatarAsync">Edit avatar…</MudButton>
+                <ActionButton OnClick="this.EditAvatarAsync">Edit avatar…</ActionButton>
             </div>
 
             @if (this.mode == AgentProfileCardMode.Create)
@@ -172,17 +172,17 @@
             <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap" Class="mb-2">
                 @if (this.onMessage.HasDelegate)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.MessageAsync">Message</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" OnClick="this.MessageAsync">Message</ActionButton>
                 }
                 else if (this.roomId is not null)
                 {
-                    <MudButton Href="@($"/rooms/{this.roomId}")" Variant="Variant.Outlined" Size="Size.Small">Message</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Href="@($"/rooms/{this.roomId}")">Message</ActionButton>
                 }
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.BeginEditAsync">Edit</MudButton>
+                <ActionButton Role="ButtonRole.Secondary" OnClick="this.BeginEditAsync">Edit</ActionButton>
                 @* Open launches a process on the machine Huddle runs on, so it is not drawn while remote access is configured (rules.md). *@
                 @if (!this.RemoteAccess.IsConfigured)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OpenInEditor">Open</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" OnClick="this.OpenInEditor">Open</ActionButton>
                 }
                 @* Offered in every state, including Online. It was once offered only while there was
                    "something to fix", on the grounds that a healthy agent needs no button that
@@ -201,7 +201,7 @@
                    be cancelling. Offline, Degraded and Online are all settled states. *@
                 @if (this.status.State is not PersonaState.Starting)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="this.restarting" OnClick="this.RestartAsync">@(this.restarting ? "Restarting…" : "Restart")</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Disabled="this.restarting" OnClick="this.RestartAsync">@(this.restarting ? "Restarting…" : "Restart")</ActionButton>
                 }
                 @* Deliberately an inline swap, not a nested MudDialog: MudBlazor dialogs are not
                    designed to stack, and a confirmation dialog on top of this one would need a second
@@ -405,8 +405,8 @@
                remedy, so a Skill the Human cannot pick yet is still in sight (Skill Packs spec §6.10.4). *@
             @if (this.NotDownloadedSkills.Count > 0)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="agent-profile-card-not-here-toggle mb-1" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
-                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.NotDownloadedSkills.Count)</MudButton>
+                <ActionButton Class="agent-profile-card-not-here-toggle mb-1" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
+                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.NotDownloadedSkills.Count)</ActionButton>
                 <MudCollapse Expanded="@this.notHereOpen" Class="agent-profile-card-not-here mb-3">
                     @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.NotDownloadedSkills)
                     {
@@ -418,7 +418,7 @@
                                 <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@shown.Description</MudText>
                                 <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(shown.Publisher, shown.Origin, shown.License)</MudText>
                             </div>
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="agent-profile-card-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</MudButton>
+                            <ActionButton Role="ButtonRole.Secondary" Class="agent-profile-card-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</ActionButton>
                         </div>
                     }
                 </MudCollapse>
@@ -477,7 +477,7 @@
                     Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
                     <div class="agent-profile-card-pack-missing d-flex flex-wrap align-center gap-2 mb-1">
                         <MudText Typo="Typo.body2">Pack "@entry.Title" is not downloaded.</MudText>
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="agent-profile-card-pack-copy-prompt" OnClick="@(() => this.CopyPackPromptAsync(entry))">Copy prompt</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" Class="agent-profile-card-pack-copy-prompt" OnClick="@(() => this.CopyPackPromptAsync(entry))">Copy prompt</ActionButton>
                     </div>
                 }
                 @foreach (var pack in this.rolePacks.Where(pack => this.PackState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.Withdrawn && this.IsPackActive(pack.Id)))
@@ -485,7 +485,7 @@
                     Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
                     <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-2 agent-profile-card-warning agent-profile-card-pack-withdrawn-warning">
                         <span class="agent-profile-card-pack-withdrawn-text">Pack "@entry.Title" was withdrawn by its Source: @this.ReasonOf(entry). @this.name keeps working.</span>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Class="agent-profile-card-pack-remove ml-2" OnClick="@(() => this.TogglePack(entry))">Remove from this Agent</MudButton>
+                        <ActionButton Class="agent-profile-card-pack-remove ml-2" OnClick="@(() => this.TogglePack(entry))">Remove from this Agent</ActionButton>
                     </MudAlert>
                 }
             }
