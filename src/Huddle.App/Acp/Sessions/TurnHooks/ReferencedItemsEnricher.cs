@@ -45,7 +45,7 @@ internal sealed class ReferencedItemsEnricher(ReferenceExpander expander, Func<s
             ? string.Join('\n', folded.Select(message => message.Text))
             : turn.Item.Text;
         string? header = await expander
-            .ExpandAsync(triggerText, turn.Host?.Profile.UsesToolNamePrefix ?? true, isChiefOfStaff(turn.PersonaName), cancellationToken)
+            .ExpandAsync(triggerText, turn.Host?.Profile.UsesToolNamePrefix ?? true, isChiefOfStaff(turn.PersonaName), turn.Clean, cancellationToken)
             .ConfigureAwait(false);
         return turn.Item with { ReferencedItems = header };
     }

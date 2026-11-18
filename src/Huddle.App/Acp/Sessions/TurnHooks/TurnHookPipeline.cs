@@ -18,7 +18,7 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
     /// moved, then AGENTS.md because a rule change governs how the Agent reads everything after it, then the Huddle-wide Memory hook,
     /// then File Changes. A new hook is one class and one entry here.
     /// </summary>
-    private static readonly List<string> ProductionOrder =
+    internal static readonly List<string> ProductionOrder =
     [
         TeamRenamedTurnHook.HookName,
         AgentsMdTurnHook.HookName,
@@ -35,6 +35,13 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
     internal static TurnHookPipeline ForPersona(TurnHookScope scope, IEnumerable<ITurnHook> hooks, ILogger logger)
     {
         return new TurnHookPipeline(InProductionOrder(hooks), scope, logger);
+    }
+
+    /// <summary>Builds the pipeline a goldfish possession gets: the same hooks under a clean scope, so none applies.</summary>
+    /// <returns>The clean pipeline.</returns>
+    internal TurnHookPipeline ForClean()
+    {
+        return new TurnHookPipeline(hooks, scope with { Clean = true }, logger);
     }
 
     /// <summary>Sorts the hooks into the production order.</summary>

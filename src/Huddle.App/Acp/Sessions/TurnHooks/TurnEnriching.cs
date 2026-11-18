@@ -4,4 +4,5 @@ namespace Agency.Huddle.App.Acp.Sessions.TurnHooks;
 /// <param name="Item">The item as the previous enricher left it.</param>
 /// <param name="PersonaName">The Persona the Turn is for, for log lines.</param>
 /// <param name="Host">The Persona's running Adapter host, or <see langword="null"/> for a caller that predates resume: nothing was advertised then.</param>
-internal sealed record TurnEnriching(WorkItem Item, string PersonaName, IPersonaHost? Host);
+/// <param name="Clean">Whether the Turn is a goldfish possession's: Referenced items keep only Tasks.</param>
+internal sealed record TurnEnriching(WorkItem Item, string PersonaName, IPersonaHost? Host, bool Clean = false);

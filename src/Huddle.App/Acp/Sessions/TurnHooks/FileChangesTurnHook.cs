@@ -29,7 +29,7 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
     public override bool AppliesTo(TurnHookScope scope)
     {
         ArgumentNullException.ThrowIfNull(scope);
-        return scope.FileChangesOn;
+        return !scope.Clean && scope.FileChangesOn;
     }
 
     /// <inheritdoc />
