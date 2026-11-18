@@ -636,4 +636,63 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv22("src/Huddle.App/Components/Shared/RowActionsMenu.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv22("src/Huddle.App/Components/Tasks/TaskDecisionCard.razor", source).Count);
     }
+
+    /// <summary>CV24: a raw <c>MudProgressCircular</c> is counted, with or without a label, but not a <c>BusyLabel</c>, a linear bar or a comment.</summary>
+    [Fact]
+    public void Cv24_RawSpinner_IsCounted()
+    {
+        const string source = """
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" aria-label="Loading" Class="mr-2" />
+            <MudProgressLinear Indeterminate="true" />
+            <BusyLabel Label="Loading" />
+            @* <MudProgressCircular Indeterminate="true" /> *@
+            """;
+
+        RuleCount result = UiConventionScanner.Cv24(RazorPath, source);
+
+        Assert.Equal("CV24", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV24: <c>BusyLabel</c> and <c>ActionButton</c>, whose busy spinner is its own, are the only files allowed to draw a spinner.</summary>
+    [Fact]
+    public void Cv24_BusyLabelAndActionButtonRazor_AreExempt()
+    {
+        const string source = """<MudProgressCircular Indeterminate="true" Size="Size.Small" aria-hidden="true" />""";
+
+        Assert.Equal(0, UiConventionScanner.Cv24("src/Huddle.App/Components/Shared/BusyLabel.razor", source).Count);
+        Assert.Equal(0, UiConventionScanner.Cv24("src/Huddle.App/Components/Shared/ActionButton.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv24("src/Huddle.App/Components/Shared/InlineConfirm.razor", source).Count);
+    }
+
+    /// <summary>CV25: a single-select <c>MudChipSet</c> is counted, but not a closable or multi-select set, a hand-built radiogroup or a <c>ChipRadioGroup</c>.</summary>
+    [Fact]
+    public void Cv25_SingleSelectChipSet_IsCounted()
+    {
+        const string source = """
+            <MudChipSet T="string"
+                        SelectionMode="SelectionMode.SingleSelection"
+                        SelectedValue="@this.x"><Chip T="string" Look="ChipLook.Filter" Text="a" /></MudChipSet>
+            <MudChipSet T="string" AllClosable="true" OnClose="this.Remove"><Chip T="string" Text="b" /></MudChipSet>
+            <MudChipSet T="string" SelectionMode="SelectionMode.MultiSelection"><Chip T="string" Text="c" /></MudChipSet>
+            <div role="radiogroup" aria-label="Avatar"><button role="radio" aria-checked="true">d</button></div>
+            <ChipRadioGroup T="string" Items="this.items" Label="e" ItemLabel="static s => s" />
+            """;
+
+        RuleCount result = UiConventionScanner.Cv25(RazorPath, source);
+
+        Assert.Equal("CV25", result.Rule);
+        Assert.Equal(1, result.Count);
+    }
+
+    /// <summary>CV25: the one <c>ChipRadioGroup</c> component is the only file allowed to draw a single-select chip set.</summary>
+    [Fact]
+    public void Cv25_ChipRadioGroupRazor_IsExempt()
+    {
+        const string source = """<MudChipSet T="T" SelectionMode="SelectionMode.SingleSelection" SelectedValue="@this.Value"></MudChipSet>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv25("src/Huddle.App/Components/Shared/ChipRadioGroup.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv25("src/Huddle.App/Components/Feed/NotificationsPanel.razor", source).Count);
+    }
 }

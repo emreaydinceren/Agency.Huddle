@@ -1,0 +1,138 @@
+@*
+    One choice out of a few, drawn as Filter chips (ComponentCatalog ChipRadioGroup): the Feed's Categories and the search scopes. The
+    group is a role="radiogroup" and each chip a role="radio" with aria-checked, so selection reads as state and never as colour alone
+    (design-system Chips). It owns the one keyboard behaviour, a roving tabindex: only the chosen chip is a tab stop, and a plain arrow
+    key on the group moves the choice, Right and Down forward, Left and Up back, wrapping at the ends, then focuses the chosen chip. An
+    arrow with Ctrl, Alt or Meta is left alone, so a caller's own shortcut (the search box's Ctrl+arrow) never moves the choice twice.
+    A raw single-select MudChipSet anywhere else fails the convention scan (CV25).
+*@
+@typeparam T
+@inject IJSRuntime Js
+
+<div role="radiogroup" aria-label="@this.Label" class="@this.CssClass" @ref="this.group" @onkeydown="this.OnKeyDownAsync">
+    <MudChipSet T="T"
+                SelectionMode="SelectionMode.SingleSelection"
+                SelectedValue="@this.Value"
+                SelectedValueChanged="this.ChooseAsync">
+        @foreach (T item in this.Items)
+        {
+            bool chosen = EqualityComparer<T>.Default.Equals(item, this.Value);
+            <Chip T="T"
+                  Look="ChipLook.Filter"
+                  Value="@item"
+                  IsSet="@chosen"
+                  role="radio"
+                  aria-checked="@(chosen ? "true" : "false")"
+                  tabindex="@(chosen ? "0" : "-1")">
+                <span>@this.ItemLabel(item)</span>
+                @if (this.ItemCount?.Invoke(item) is { } count)
+                {
+                    @(" ")<span class="chip-radio-count">@count</span>
+                }
+            </Chip>
+        }
+    </MudChipSet>
+</div>
+
+@code {
+    private ElementReference group;
+    private bool focusChosen;
+
+    /// <summary>The choices, in the order the chips and the arrow keys follow.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<T> Items { get; set; } = [];
+
+    /// <summary>The chosen item.</summary>
+    [Parameter]
+    public T? Value { get; set; }
+
+    /// <summary>Raised with the newly chosen item, by a click or an arrow key; never for the item already chosen.</summary>
+    [Parameter]
+    public EventCallback<T> ValueChanged { get; set; }
+
+    /// <summary>The group's accessible name ("Category", "Filter").</summary>
+    [Parameter, EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>The words on an item's chip.</summary>
+    [Parameter, EditorRequired]
+    public Func<T, string> ItemLabel { get; set; } = static item => item?.ToString() ?? string.Empty;
+
+    /// <summary>An optional count drawn after an item's words, in secondary ink; <see langword="null"/> for an item with none.</summary>
+    [Parameter]
+    public Func<T, int?>? ItemCount { get; set; }
+
+    /// <summary>Extra classes on the group, for the caller's hook or layout.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string CssClass => string.IsNullOrEmpty(this.Class) ? "chip-radio-group" : $"chip-radio-group {this.Class}";
+
+    /// <summary>Moves focus onto the chip an arrow key just chose.</summary>
+    /// <param name="firstRender">Whether this is the first render.</param>
+    /// <returns>A task that completes once the focus moved.</returns>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!this.focusChosen)
+        {
+            return;
+        }
+
+        this.focusChosen = false;
+        try
+        {
+            IJSObjectReference feed = await JsModule.Feed.ImportAsync(this.Js);
+            await feed.InvokeVoidAsync("focusChecked", this.group);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
+        {
+            // The circuit is gone or the page has no script, and only the focus ring is lost.
+        }
+    }
+
+    private async Task ChooseAsync(T chosen)
+    {
+        if (!EqualityComparer<T>.Default.Equals(chosen, this.Value))
+        {
+            await this.ValueChanged.InvokeAsync(chosen);
+        }
+    }
+
+    /// <summary>A plain arrow key moves the choice one place, wrapping at the ends, as a radio group does.</summary>
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        if (args.CtrlKey || args.AltKey || args.MetaKey || this.Items.Count == 0)
+        {
+            return;
+        }
+
+        int step = args.Key switch
+        {
+            "ArrowRight" or "ArrowDown" => 1,
+            "ArrowLeft" or "ArrowUp" => -1,
+            _ => 0,
+        };
+        if (step == 0)
+        {
+            return;
+        }
+
+        int current = Math.Max(0, IndexOf(this.Items, this.Value));
+        int next = (((current + step) % this.Items.Count) + this.Items.Count) % this.Items.Count;
+        this.focusChosen = true;
+        await this.ChooseAsync(this.Items[next]);
+    }
+
+    private static int IndexOf(IReadOnlyList<T> items, T? value)
+    {
+        for (int index = 0; index < items.Count; index++)
+        {
+            if (EqualityComparer<T>.Default.Equals(items[index], value))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+}

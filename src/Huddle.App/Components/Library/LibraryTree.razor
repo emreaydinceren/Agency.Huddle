@@ -102,9 +102,7 @@
                     {
                         @if (item.Children is null)
                         {
-                            <span class="library-tree-loading" aria-label="Loading">
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                            </span>
+                            <BusyLabel Label="Loading" Class="library-tree-loading" />
                         }
                         else if (item.Children.Count == 0)
                         {

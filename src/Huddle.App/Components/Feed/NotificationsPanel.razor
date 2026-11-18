@@ -16,31 +16,10 @@
 @inject FeedQueue Queue
 @inject FeedEvents Events
 @inject IOptions<TeamOptions> Options
-@inject IJSRuntime Js
 
 <div class="notifications-panel">
-    <div role="radiogroup" aria-label="Category" class="feed-categories" @ref="this.categoryGroup" @onkeydown="this.OnCategoryKeyDown">
-        <MudChipSet T="FeedCategory"
-                    SelectionMode="SelectionMode.SingleSelection"
-                    SelectedValue="@this.category"
-                    SelectedValueChanged="this.OnCategoryChanged">
-            @foreach (FeedCategory entry in FeedCategories.Choices)
-            {
-                <Chip T="FeedCategory"
-                      Look="ChipLook.Filter"
-                      Value="@entry"
-                      IsSet="@(entry == this.category)"
-                      role="radio"
-                      aria-checked="@(entry == this.category ? "true" : "false")">
-                    <span>@FeedCategories.Label(entry)</span>
-                    @if (entry == FeedCategory.NeedsYou)
-                    {
-                        @(" ")<span class="feed-category-count">@FeedCategories.CountOf(this.counts, entry)</span>
-                    }
-                </Chip>
-            }
-        </MudChipSet>
-    </div>
+    <ChipRadioGroup T="FeedCategory" Items="FeedCategories.Choices" Value="@this.category" ValueChanged="this.OnCategoryChanged" Label="Category"
+                    ItemLabel="FeedCategories.Label" ItemCount="this.CountOf" Class="feed-categories" />
 
     @if (this.Pager.Items.Count == 0 && !this.Pager.Arrived)
     {
@@ -63,10 +42,8 @@
     private FeedCategory category = FeedCategory.NeedsYou;
     private FeedCounts counts = new(0, 0, 0, 0, 0, 0, 0);
     private FeedList? list;
-    private ElementReference categoryGroup;
     private long markedUpTo;
     private long drawnArrivedNotificationId;
-    private bool focusChosen;
 
     /// <summary>The frame's context, which shows the unseen count in the header.</summary>
     [CascadingParameter]
@@ -84,28 +61,6 @@
         this.Load();
         this.Events.ItemsAdded += this.OnItemsAdded;
         this.Events.ItemsChanged += this.OnItemsChanged;
-    }
-
-    /// <summary>Moves focus onto the Category the arrow keys just chose.</summary>
-    /// <param name="firstRender">Whether this is the first render.</param>
-    /// <returns>A task that completes once the focus moved.</returns>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (!this.focusChosen)
-        {
-            return;
-        }
-
-        this.focusChosen = false;
-        try
-        {
-            IJSObjectReference feed = await JsModule.Feed.ImportAsync(this.Js);
-            await feed.InvokeVoidAsync("focusChecked", this.categoryGroup);
-        }
-        catch (Exception ex) when (ex is JSDisconnectedException or JSException)
-        {
-            // The circuit is gone or the page has no script, and only the focus ring is lost.
-        }
     }
 
     /// <summary>Unsubscribes from the Feed hub.</summary>
@@ -159,25 +114,8 @@
         this.Load();
     }
 
-    /// <summary>The arrow keys move the Category choice, wrapping at the ends, as a radio group does.</summary>
-    private void OnCategoryKeyDown(KeyboardEventArgs args)
-    {
-        int step = args.Key switch
-        {
-            "ArrowRight" or "ArrowDown" => 1,
-            "ArrowLeft" or "ArrowUp" => -1,
-            _ => 0,
-        };
-        if (step == 0)
-        {
-            return;
-        }
-
-        IReadOnlyList<FeedCategory> order = FeedCategories.Choices;
-        int next = (((order.ToList().IndexOf(this.category) + step) % order.Count) + order.Count) % order.Count;
-        this.focusChosen = true;
-        this.OnCategoryChanged(order[next]);
-    }
+    /// <summary>Only Needs you carries a count on its chip.</summary>
+    private int? CountOf(FeedCategory entry) => entry == FeedCategory.NeedsYou ? FeedCategories.CountOf(this.counts, entry) : null;
 
     private void ShowMore()
     {

@@ -16,7 +16,7 @@
     }
     @if (this.Busy)
     {
-        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+        <BusyLabel Label="Working" />
     }
     <ActionButton Role="ButtonRole.Quiet" Class="inline-confirm-cancel"
                Disabled="this.Busy" OnClick="this.OnCancel">Cancel</ActionButton>

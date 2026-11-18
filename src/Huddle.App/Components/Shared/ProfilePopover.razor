@@ -33,7 +33,7 @@
     <div class="profile-popover" tabindex="-1" @ref="this.panel" @onkeydown="this.OnKeyDownAsync">
         @if (this.loading)
         {
-            <MudProgressCircular Indeterminate="true" Size="Size.Small" aria-label="Loading profile" />
+            <BusyLabel Label="Loading profile" />
         }
         else if (this.view is not { } shown)
         {

@@ -226,7 +226,7 @@
                                 <span class="turn-detail-mark" role="img" aria-label="@MessageList.StatusLabel(call.Status)">
                                     @if (call.Status == ToolActivityStatus.InProgress)
                                     {
-                                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                        <BusyLabel />
                                     }
                                     else
                                     {
