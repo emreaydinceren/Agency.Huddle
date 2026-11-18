@@ -1,6 +1,6 @@
 ---
 title: 'Home lab basics'
-template: 'home-lab-basics@1.0.0'
+template: 'home-lab-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team keeps a home lab as code in one repository: its configuration, scripts
 2. **In progress**: the automation engineer writes the change and its run, check and undo steps in the repository. Done when the change is on a branch.
 3. **Verify**: the security engineer and the docs tester review, and the IT admin checks the change against the Task and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human applies the change, then marks the Task Done.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

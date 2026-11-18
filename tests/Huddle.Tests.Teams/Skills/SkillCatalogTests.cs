@@ -80,6 +80,15 @@ public sealed class SkillCatalogTests
         Assert.Contains("If `close_task` says the Task is already closed, the one who asked closed it first, and there is nothing more to do.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
+    /// <summary>Playbooks S4: the <c>team-management</c> Skill points a manager to the Manager Playbook for how to manage and keeps itself the tool manual.</summary>
+    [Fact]
+    public void TeamManagement_PointsToTheManagerPlaybook()
+    {
+        string text = string.Join(' ', SkillCatalog.All["team-management"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("# Team management How to manage, from triage to running a mission, is in your Manager Playbook; this Skill covers the tools.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
     /// <summary>#536: the catalog holds <c>browser-check</c>: valid, one file, and it grants no tools.</summary>
     [Fact]
     public void All_ContainsBrowserCheck_GrantingNoTools()

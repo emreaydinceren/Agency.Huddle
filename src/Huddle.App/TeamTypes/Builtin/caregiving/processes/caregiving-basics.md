@@ -1,6 +1,6 @@
 ---
 title: 'Caregiving basics'
-template: 'caregiving-basics@1.0.0'
+template: 'caregiving-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team handles the paperwork of caring for one person: appointments, forms, b
 2. **In progress**: the health admin, benefits navigator, schedule keeper or inbox triager gathers the facts and drafts the form, entry or message. Done when the draft is attached to the Task.
 3. **Verify**: the care coordinator checks it against the care plan and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

@@ -199,7 +199,7 @@ public sealed class BuiltinHouseholdTypeTests
         Assert.Empty(document.MissingSections);
         Assert.True(TeamFile.TryParse(text, out TeamFile? file));
         ProcessSettings settings = file.Process;
-        Assert.Equal("household-basics@1.1.0", settings.Template);
+        Assert.Equal("household-basics@1.2.0", settings.Template);
         Assert.Empty(settings.Gates);
         Assert.Empty(settings.UnknownGates);
         Assert.Equal(new DigestCadence(7, CadenceUnit.Days), settings.DigestSchedule());

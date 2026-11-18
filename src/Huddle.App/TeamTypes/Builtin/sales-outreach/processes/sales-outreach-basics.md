@@ -1,6 +1,6 @@
 ---
 title: 'Sales outreach basics'
-template: 'sales-outreach-basics@1.0.0'
+template: 'sales-outreach-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -25,8 +25,6 @@ Follow the voice principles in `Teams/AGENTS.md`. Every first email gives one re
 2. **In progress**: the Prospect Researcher gathers the brief, then a writer drafts the email or proposal and the CRM Steward updates the record. Done when the draft is attached to the Task and the record is updated.
 3. **Verify**: the Sales Lead checks the draft against the brief and the offer and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human sends, prices or approves and marks the Task Done.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 
@@ -59,7 +57,6 @@ A draft that the Definition of Done reviews is a file, not text in the Task: its
 ## Escalation
 
 - A price, a discount, a contract term or an opt-out request goes to the Human.
-- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

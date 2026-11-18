@@ -1,6 +1,6 @@
 ---
 title: 'Learning basics'
-template: 'learning-basics@1.0.0'
+template: 'learning-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team supports one learner working towards one goal: a subject, a skill, a l
 2. **In progress**: the Curriculum Planner writes the plan or session, or the Quiz Writer writes a quiz and its key. Done when the draft is attached to the Task.
 3. **Verify**: the Tutor Lead checks the draft against the plan and the key, and the Grader marks the learner's answers. Done when the Tutor Lead posts an Evidence line.
 4. **Done**: the Human marks the Task Done after reading the Evidence line.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

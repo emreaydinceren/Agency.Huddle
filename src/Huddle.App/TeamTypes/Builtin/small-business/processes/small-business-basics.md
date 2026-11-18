@@ -1,6 +1,6 @@
 ---
 title: 'Small business basics'
-template: 'small-business-basics@1.0.0'
+template: 'small-business-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team runs the day-to-day work of a small business: it reconciles the books,
 2. **In progress**: the Bookkeeper, Customer Support or Marketing Writer drafts the figures, the reply or the copy from the source records, emails or brief. Done when the draft is attached to the Task.
 3. **Verify**: the business manager compares the draft with its source and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line, and sends, pays or publishes anything that leaves the business.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 
@@ -57,7 +55,6 @@ A draft that the Definition of Done reviews is a file, not text in the Task: its
 
 - Money, prices, refunds, a promise to a customer, or anything filed with an authority goes to the Human.
 - A tax question goes to the Human for their accountant.
-- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

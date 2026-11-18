@@ -10,7 +10,8 @@ namespace Agency.Huddle.Tests.Prompts;
 public sealed class ConductSplitTests
 {
     private const string AgentsMdResource = "Overlays/second-brain/AGENTS.md";
-    private const string ChiefResource = "Builtin/chief-of-staff.md";
+    private const string MemberPlaybookResource = "Overlays/second-brain/prompts/memberPlaybook.md";
+    private const string ChiefResource ="Builtin/chief-of-staff.md";
 
     private static readonly char[] Whitespace = [' ', '\t', '\r', '\n'];
 
@@ -25,7 +26,9 @@ public sealed class ConductSplitTests
     /// <summary>An embedded resource of the app assembly, whitespace-flattened.</summary>
     private static string Embedded(string resource)
     {
-        using Stream stream = typeof(PromptCatalog).Assembly.GetManifestResourceStream(resource)
+        System.Reflection.Assembly assembly = typeof(PromptCatalog).Assembly;
+        string name = assembly.GetManifestResourceNames().SingleOrDefault(n => string.Equals(n.Replace('\\', '/'), resource, StringComparison.Ordinal)) ?? resource;
+        using Stream stream = assembly.GetManifestResourceStream(name)
             ?? throw new InvalidOperationException($"Resource '{resource}' is not embedded.");
         using StreamReader reader = new(stream);
         return Flatten(reader.ReadToEnd());
@@ -58,9 +61,9 @@ public sealed class ConductSplitTests
     /// <summary>The line each destination gains, as written there: an equivalent of a moved sentence.</summary>
     public static TheoryData<string, string> Destinations() => new()
     {
-        { AgentsMdResource, "Write \"@all\" only when you need every other agent to answer, never just to reply to one member." },
-        { AgentsMdResource, "When you need the Human's preferences, constraints or goals and were about to write your questions out as a list, ask with options they can tap instead." },
-        { AgentsMdResource, "Don't ask for a fact you can look up or infer, for an opinion they want from you, or for a detail they already gave." },
+        { MemberPlaybookResource, "Write \"@all\" only when every other Agent must answer, never to reply to one member." },
+        { MemberPlaybookResource, "When you need the Human's preferences, constraints or goals, ask with options they can tap rather than a list of questions." },
+        { MemberPlaybookResource, "Look first. Don't ask for a fact you can look up or infer, an opinion the Human wants from you, or a detail they already gave." },
         { AgentsMdResource, "When you learn something durable (a decision, a correction, a preference, a fact about the people or work you support), write it to the right topic file at once." },
         { AgentsMdResource, "Do not save what is true only for this conversation, or what you can easily look up again." },
         { AgentsMdResource, "When a decision is reversed, replace it and note briefly that it changed." },

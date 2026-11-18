@@ -1,6 +1,6 @@
 ---
 title: 'Tax season basics'
-template: 'tax-season-basics@1.0.0'
+template: 'tax-season-basics@1.1.0'
 gates: ['qa-evidence-before-done']
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team gathers and cites the documents for one tax year, from the checklist t
 2. **In progress**: the receipt clerk, deduction researcher or finance tracker gathers the documents, ledger lines or cited rules. Done when they are attached to the Task with links to their sources.
 3. **Verify**: the skeptic reviewer challenges the worksheet, and the tax organizer checks each figure against its document and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 
