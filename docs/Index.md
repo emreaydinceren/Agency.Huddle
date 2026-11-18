@@ -27,7 +27,7 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Touch `Huddle.Acp`, `Huddle.Contracts` or the wire | [traps.md](engineering/traps.md) (binding), [acp-agent-guide.md](engineering/acp-agent-guide.md), [architecture.md](engineering/architecture.md) |
 | Find which file does a thing | [code-map.md](engineering/code-map.md) |
 | Discover what Huddle can do, as a user | [Features-&-Capabilities.md](FeaturesSummary/Features-&-Capabilities.md) |
-| See what Huddle does today, feature by feature with its PRs, or bring these documents up to date | [feature-list.md](FeaturesSummary/feature-list.md); to update them, `private/feature-logs/UPDATING.md` (not in the public mirror) |
+| See what Huddle does today, feature by feature with its PRs, or bring these documents up to date | [feature-list.md](FeaturesSummary/feature-list.md); to update them, `docs/FeaturesSummary/UPDATING.md` (not in the public mirror) |
 | Understand how a Message travels | [architecture.md](engineering/architecture.md) |
 | Name something, or write prose or interface copy | [language.md](engineering/language.md), then [CONTEXT.md](engineering/CONTEXT.md) for the vocabulary in dialogue |
 | Write or change a test | [testing.md](engineering/testing.md), then [../agents/Testing.md](../agents/Testing.md); for a Razor component also [../agents/BlazorTesting.md](../agents/BlazorTesting.md). Which test project a test goes in: the *Where a test goes* section of [../agents/Testing.md](../agents/Testing.md) |

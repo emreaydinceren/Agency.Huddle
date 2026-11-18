@@ -32,9 +32,10 @@ restart. Each change is one file in the **Prompts** root, and deleting the file 
 | --- | --- |
 | **Profile** | Your name, alias, title, description and avatar |
 | **Prompts** | The text sent to models |
-| **Helpers** | Each Helper's on/off, Adapter, Model, Effort and daily cap |
+| **Helpers** | Each Helper's on/off, Adapter, Model, Effort and daily cap, and **Tidy now** on the Memory Tidy card |
 | **Spending** | Reported cost |
 | **Appearance** | Themes and accent colour |
+| **Needs You level** | How much of the Teams' work waits for you |
 | **Personas** | Agent definitions |
 | **Skills** | Skills, Packs and Sources |
 | **Team types** | Built-in and custom types, and any **Problems** |
@@ -71,6 +72,21 @@ next call.
 To see which prompts reach an Agent, use **What this Agent reads** on
 [its card](agents.md#look-after-a-running-agent).
 
+### The Needs You level
+
+**Settings > Needs You level** sets how much of the Teams' work waits for you: **Ask me**, the default, or **Run
+inside the Team**. You can also set a **Spend cap (USD)**. Every Team and Project inherits the level until it sets its
+own, on its page's **Process** tab or with **Needs You level...** on a Project, and the most specific one wins. Pushes,
+Tasks with an Action and connector calls wait for your Accept at both levels. The
+[User Guide](../../Huddle.UserGuide.md#the-needs-you-level) lists what each level lets through.
+
+### Helpers
+
+Each Helper has a card with an on/off switch, the Adapter, Model and Effort it runs on, a daily cap, what it spent
+today and its last error. At its cap a Helper pauses until you allow more calls for the day. The **Memory Tidy** card
+adds the next and last pass, **Tidy now** and **Open the last list**. See
+[Memory Tidy](second-brain-and-memory.md#memory-tidy).
+
 ### Sessions
 
 This section sets how much a fresh session rereads of a Room: a limit in Messages and an estimated limit in tokens. See
@@ -84,11 +100,18 @@ This section sets how much a fresh session rereads of a Room: a limit in Message
 | **Prompts** | One file per changed prompt in `Prompts/` |
 | **Helpers** | `team.db` |
 | **Appearance** | `appearance.json` |
+| **Needs You level** | `team.db` |
 | **Personas** | `Agents/…` |
 | **Skills** | `Skills/…` and `SkillSources/` |
 | **Team types** | `TeamTypes/…`. This section is a read-only list with **Reload** |
 | **Library** | `library-roots.json` |
 | **Sessions** | `session-settings.json` |
+
+### Memory backups
+
+Memory Tidy keeps its copies in the **Memory backups** root of the [Library](library.md), under `MemoryBackups/`. It is
+a read-only root, and Search leaves it out. Pass folders are deleted after 90
+days, set by `Team:Memory:Tidy:KeepBackupDays`.
 
 ### Other switches
 

@@ -88,14 +88,16 @@ messages, and old revisions of docs.
 - **The `personal-email` rule in `.gitleaks.toml` embeds the address as an escaped regex.**
   The replacements file therefore needs the escaped form as a separate line, or the public
   copy of the rule would name the very address the scrub is hiding.
-- **`private/` never ships.** The maintainer's history lives there: the PR logs, their
-  classification and update guide (`private/feature-logs/`), and plans that carry run costs or
+- **`private/` never ships.** The maintainer's history lives there: the PR logs and their
+  classification (`private/feature-logs/`), and plans that carry run costs or
   owner gates. The sync strips the folder from every revision, along with the paths those files
   had before they moved (listed in `sync-github.yaml`), and the verify step fails if any of them
   survives. A public page may name a `private/` path in backticks, but must never link to it:
   the link would be broken on GitHub. To keep a new file off the mirror, put it under
   `private/`. If it ever lived somewhere else, add that old path to both lists in
-  `sync-github.yaml`.
+  `sync-github.yaml`. One page stays under `docs/` and off the mirror: the update guide,
+  `docs/FeaturesSummary/UPDATING.md`. The sync strips it by path, and `Check-DocIndex.ps1` exempts it, so
+  `Index.md` names it in backticks and never links it.
 - **Stripping a path does not scrub text.** A line that leaked into a kept page stays in that
   page's old revisions. Fix the page, and if the old revisions matter, add a needle to
   `SYNC_REPLACEMENTS`.
