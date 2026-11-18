@@ -228,7 +228,7 @@ large layout now. `TaskDetailDialog` stays, because Make a copy… still uses it
 | `T15e` | Description | `section.task-read-view-description`, Group label "Description" | Today's Preview, always: `MarkdownRenderer.ToHtml` with the same Task-id and Library links. No Edit \| Preview toggle, no Link or Attach buttons. An empty description reads "No description." in Quiet ink |
 | `T15f` | Human gate summary | `TaskHumanGate` with `ReadOnly="true"` | Drawn dashed: on a gated Task only. The same rows as `T10` (`T10a`, `T10d`, `T10e`, `T10f`), with `T10b` and `T10c` as text: "Requires your acceptance: On" and "What will happen: {action}" (or the existing placeholder sentence). An ungated Task shows nothing here, where `T10` today shows the switch turned off |
 | `T11` | Proof list | `TaskProofList`, unchanged | Drawn dashed: when the Team has a Definition of Done. Ask (`T11c`) still works |
-| `T12` | Decision card | `TaskDecisionCard`, unchanged | Drawn dashed: a gated Task in Review or Needs You. `Blocked` is always false here, because the read view never has pending edits |
+| `T12` | Decision card | `TaskDecisionCard`, unchanged | Drawn dashed: a gated Task in Needs You. (Amended by ADR-0096: there is no Review state.) `Blocked` is always false here, because the read view never has pending edits |
 | `T15g` | Timeline and meta | `TaskTimeline` (an h3 "Timeline (n)", oldest first, with its comment box `T15i` and Evidence entries `T15h`) and `.task-detail-footer-meta` | Always open, no expansion panel. See [wireframes.md](engineering/wireframes.md) for the sub-parts |
 
 ## Figure 12: The Task edit page

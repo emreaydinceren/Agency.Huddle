@@ -50,7 +50,7 @@ public sealed class TaskTriggerRequestDoneWakeTests
     /// <summary>Everything one test arranges.</summary>
     private sealed record Arrangement(Harness Harness, Cast Cast, TaskItem Task);
 
-    /// <summary>Builds a started trigger, a Room holding everyone, and one Task in Review.</summary>
+    /// <summary>Builds a started trigger, a Room holding everyone, and one Task In Progress.</summary>
     /// <param name="dir">The data directory.</param>
     /// <param name="assignee">The Task's assignee.</param>
     /// <param name="fromTeam">The Team that filed it, or <see langword="null"/> for a plain Task.</param>
@@ -107,10 +107,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: Review → Done\n" + ConfirmLine("Quinn"), post);
+        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Done\n" + ConfirmLine("Quinn"), post);
     }
 
     /// <summary>The development shape: the requesting manager is not a verifier, so the line names the QA to pass the Request to.</summary>
@@ -122,10 +122,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: Review → Done\n" + ConfirmLine("Quinn"), post);    }
+        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Done\n" + ConfirmLine("Quinn"), post);    }
 
     /// <summary>The small-business shape: the requesting manager covers verify, so the line names the manager itself.</summary>
     [Fact]
@@ -136,10 +136,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Mia", "Platform", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = harness.Posts.Select(static p => p.Message.Text).First(static text => text.StartsWith("Nova|", StringComparison.Ordinal));
-        Assert.Equal("Nova|PLAT-0001|Kai|- status: Review → Done\n" + ConfirmLine("Nova"), post);
+        Assert.Equal("Nova|PLAT-0001|Kai|- status: In Progress → Done\n" + ConfirmLine("Nova"), post);
     }
 
     /// <summary>A Team with nobody who may confirm says so, so the manager is not told to pass it to a person who does not exist.</summary>
@@ -151,10 +151,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct, designHasVerifier: false);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: Review → Done\n" + ConfirmLine("nobody yet, so the Human closes it"), post);
+        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Done\n" + ConfirmLine("nobody yet, so the Human closes it"), post);
     }
 
     /// <summary>The assignee on the receiving side is never told it is their turn to confirm.</summary>
@@ -166,25 +166,25 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.NovaActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.NovaActor, TaskState.InProgress, TaskState.Done);
 
         string kaiPost = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Kai|", StringComparison.Ordinal));
-        Assert.Equal("Kai|PLAT-0001|Nova|- status: Review → Done", kaiPost);
+        Assert.Equal("Kai|PLAT-0001|Nova|- status: In Progress → Done", kaiPost);
     }
 
     /// <summary>A Request's move to a status other than Done wakes the requesting manager with the plain change and no confirm line.</summary>
     [Fact]
-    public async Task Request_MovesToReview_WakesWithoutConfirmLine()
+    public async Task Request_MovesToInProgress_WakesWithoutConfirmLine()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct, TaskState.Review);
+        Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct, TaskState.InProgress);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Review);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.ToDo, TaskState.InProgress);
 
         string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Review", post);
+        Assert.Equal("Mia|PLAT-0001|Kai|- status: To Do → In Progress", post);
     }
 
     /// <summary>A plain Task reaching Done wakes its assignee as before: the text is the Task wake and carries no confirm line.</summary>
@@ -196,10 +196,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Nova", null, ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = Assert.Single(harness.Posts).Message.Text;
-        Assert.Equal("Nova|PLAT-0001|Kai|- status: Review → Done", post);
+        Assert.Equal("Nova|PLAT-0001|Kai|- status: In Progress → Done", post);
     }
 
     /// <summary>The requesting manager is also the assignee: the assignee wake is the one that tells them, and it carries the line.</summary>
@@ -211,10 +211,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Mia", "Design", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = harness.Posts.Select(static p => p.Message.Text).First(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: Review → Done\n" + ConfirmLine("Quinn"), post);
+        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Done\n" + ConfirmLine("Quinn"), post);
     }
 
     /// <summary>The requesting manager is also the receiving Team's manager: the manager wake is the one that tells them, and it carries the line.</summary>
@@ -226,10 +226,10 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Platform", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.Done);
 
         string post = harness.Posts.Select(static p => p.Message.Text).First(static text => text.StartsWith("Nova|", StringComparison.Ordinal));
-        Assert.Equal("Nova|PLAT-0001|Kai|- status: Review → Done\n" + ConfirmLine("Nova"), post);
+        Assert.Equal("Nova|PLAT-0001|Kai|- status: In Progress → Done\n" + ConfirmLine("Nova"), post);
     }
 
     /// <summary>The requesting manager made the move itself: nobody is woken about it, and nobody else is told to confirm.</summary>
@@ -241,7 +241,7 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Platform", ct);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.NovaActor, TaskState.Review, TaskState.Done);
+        await MoveAsync(arrangement, arrangement.Cast.NovaActor, TaskState.InProgress, TaskState.Done);
 
         Assert.DoesNotContain(harness.Posts.Select(static p => p.Message.Text), static text => text.EndsWith(ConfirmLine("Nova"), StringComparison.Ordinal));
     }
@@ -255,9 +255,9 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Arrangement arrangement = await ArrangeAsync(dir, "Kai", "Design", ct, TaskState.NeedsYou);
         using Harness harness = arrangement.Harness;
 
-        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.Review, TaskState.NeedsYou);
+        await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.NeedsYou);
 
         string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: Review → Needs You", post);
+        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Needs You", post);
     }
 }

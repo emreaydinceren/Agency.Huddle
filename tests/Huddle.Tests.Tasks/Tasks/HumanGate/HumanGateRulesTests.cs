@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Tasks.HumanGate;
 public sealed class HumanGateRulesTests
 {
     private const string Human = "Emre";
-    private const string Entered = "status: Review → Needs You (Proof 4/4)";
+    private const string Entered = "status: In Progress → Needs You (Proof 4/4)";
 
     private static readonly TaskActor TheHuman = new(TaskActorKind.Human, Human, "u-human");
     private static readonly TaskActor AnAgent = new(TaskActorKind.Agent, "Ada", "u-ada");
@@ -108,7 +108,7 @@ public sealed class HumanGateRulesTests
     [Fact]
     public void H3_AgentEntersNeedsYouWithOpenProof_IsRefused()
     {
-        GateRefusal? refusal = HumanGateRules.Check(Gated(TaskState.Review), Gated(TaskState.NeedsYou), AnAgent, ProofWith(3), Human);
+        GateRefusal? refusal = HumanGateRules.Check(Gated(TaskState.InProgress), Gated(TaskState.NeedsYou), AnAgent, ProofWith(3), Human);
 
         AssertRefused(refusal, GateId.ProofIncomplete, "PLAT-0001 can go to Needs You once its Proof is complete (3/4: citation check is open).");
     }
@@ -117,7 +117,7 @@ public sealed class HumanGateRulesTests
     [Fact]
     public void H3_HumanEntersNeedsYouWithOpenProof_IsRefused()
     {
-        GateRefusal? refusal = HumanGateRules.Check(Gated(TaskState.Review), Gated(TaskState.NeedsYou), TheHuman, ProofWith(1), Human);
+        GateRefusal? refusal = HumanGateRules.Check(Gated(TaskState.InProgress), Gated(TaskState.NeedsYou), TheHuman, ProofWith(1), Human);
 
         AssertRefused(refusal, GateId.ProofIncomplete, "PLAT-0001 can go to Needs You once its Proof is complete (1/4: sources listed is open).");
     }
@@ -126,19 +126,19 @@ public sealed class HumanGateRulesTests
     [Fact]
     public void H3_EntersNeedsYouWithCompleteProof_IsAllowed()
     {
-        Assert.Null(HumanGateRules.Check(Gated(TaskState.Review), Gated(TaskState.NeedsYou), AnAgent, ProofWith(4), Human));
-        Assert.Null(HumanGateRules.Check(Gated(TaskState.Review), Gated(TaskState.NeedsYou), TheHuman, ProofWith(4), Human));
+        Assert.Null(HumanGateRules.Check(Gated(TaskState.InProgress), Gated(TaskState.NeedsYou), AnAgent, ProofWith(4), Human));
+        Assert.Null(HumanGateRules.Check(Gated(TaskState.InProgress), Gated(TaskState.NeedsYou), TheHuman, ProofWith(4), Human));
     }
 
     /// <summary>H-3: an ungated Task cannot enter Needs You, whoever asks.</summary>
     [Fact]
     public void H3_UngatedTaskEntersNeedsYou_IsRefused()
     {
-        TaskItem before = TestTasks.Make(id: "PLAT-0001", status: TaskState.Review);
+        TaskItem before = TestTasks.Make(id: "PLAT-0001", status: TaskState.InProgress);
         TaskItem after = before with { Status = TaskState.NeedsYou };
 
-        AssertRefused(HumanGateRules.Check(before, after, AnAgent, ProofWith(4), Human), GateId.ProofIncomplete, "PLAT-0001 isn't Human-gated, so it goes from Review to Done.");
-        AssertRefused(HumanGateRules.Check(before, after, TheHuman, ProofWith(4), Human), GateId.ProofIncomplete, "PLAT-0001 isn't Human-gated, so it goes from Review to Done.");
+        AssertRefused(HumanGateRules.Check(before, after, AnAgent, ProofWith(4), Human), GateId.ProofIncomplete, "PLAT-0001 isn't Human-gated, so it goes from In Progress to Done.");
+        AssertRefused(HumanGateRules.Check(before, after, TheHuman, ProofWith(4), Human), GateId.ProofIncomplete, "PLAT-0001 isn't Human-gated, so it goes from In Progress to Done.");
     }
 
     /// <summary>H-4: a gated Task in Needs You with no acceptance cannot go to Done, for an Agent or the Human.</summary>
@@ -222,11 +222,11 @@ public sealed class HumanGateRulesTests
         Assert.Equal(GateId.HumanGate, refusal.Gate);
     }
 
-    /// <summary>H-4: Done straight from Review, skipping Needs You, is refused on a gated Task.</summary>
+    /// <summary>H-4: Done straight from In Progress, skipping Needs You, is refused on a gated Task.</summary>
     [Fact]
-    public void H4_DoneFromReview_IsRefused()
+    public void H4_DoneFromInProgress_IsRefused()
     {
-        TaskItem before = Gated(TaskState.Review);
+        TaskItem before = Gated(TaskState.InProgress);
 
         GateRefusal? refusal = HumanGateRules.Check(before, before with { Status = TaskState.Done }, TheHuman, ProofWith(4), Human);
 
@@ -259,7 +259,7 @@ public sealed class HumanGateRulesTests
     public void LeavingNeedsYouForAnEarlierStatus_IsAllowedForAnyone()
     {
         TaskItem before = Accepted();
-        TaskItem after = before with { Status = TaskState.Review };
+        TaskItem after = before with { Status = TaskState.InProgress };
 
         Assert.Null(HumanGateRules.Check(before, after, AnAgent, ProofWith(0), Human));
         Assert.Null(HumanGateRules.Check(before, after, TheHuman, ProofWith(0), Human));
@@ -297,7 +297,7 @@ public sealed class HumanGateRulesTests
     [Fact]
     public void Check_UngatedTask_RefusesOnlyEntryIntoNeedsYou()
     {
-        TaskItem review = TestTasks.Make(id: "PLAT-0001", status: TaskState.Review);
+        TaskItem review = TestTasks.Make(id: "PLAT-0001", status: TaskState.InProgress);
 
         Assert.Null(HumanGateRules.Check(review, review with { Status = TaskState.Done }, AnAgent, ProofWith(0), Human));
         Assert.Null(HumanGateRules.Check(review with { Status = TaskState.ToDo }, review with { Status = TaskState.InProgress }, AnAgent, ProofWith(0), Human));

@@ -118,7 +118,7 @@ public sealed class TaskFieldAdoptionTests : IDisposable
     public async Task Card_StatusInFields_ShowsNoChipAndNoLine()
     {
         await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = this.RenderCard(ctx, TestTasks.Make(status: TaskState.Review), fields: ["status"]);
+        IRenderedComponent<ContainerFragment> cut = this.RenderCard(ctx, TestTasks.Make(status: TaskState.InProgress), fields: ["status"]);
 
         Assert.Empty(cut.FindAll(".task-status-chip"));
         Assert.Empty(cut.FindAll(".task-card-field-status"));

@@ -6,7 +6,6 @@ public enum TaskState
     Backlog,
     ToDo,
     InProgress,
-    Review,
     NeedsYou,
     Done,
     Cancelled,

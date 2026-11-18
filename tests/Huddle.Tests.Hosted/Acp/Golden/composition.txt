@@ -315,6 +315,7 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.A
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.SkillSources.InstallFileWriter
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Data.DataInitializer
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.BlockersDoneBeforeStartMigration
+Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Teams.ReviewStageMigration
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.RetiredFileScanService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.SecondBrain.DefaultAgentsMdService
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Profile.HumanRenameCascade

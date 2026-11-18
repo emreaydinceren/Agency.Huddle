@@ -654,7 +654,7 @@ internal static class PromptCatalog
                 """
                 Needs You level (what waits for the Human):
                 {{levels}}
-                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete in Review, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too), so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.
+                Run inside the Team: do not set a merge Action on that scope's Tasks; Huddle releases a Task when its Proof is complete, and its assignee then merges its branch into the local main. Name every branch after its Task id, for example feat/DEV-0012-login: a merge of any other branch still needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too), so a push, and any step that leaves the Team, goes in the Task's Action. The Human can change a level at any time, so the list above may be out of date; Huddle checks the level again at every merge.
                 """,
             Placeholders: ["{{levels}}"],
             RequiredPlaceholders: ["{{levels}}"],
@@ -2212,7 +2212,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Creates a Task: durable work tracked outside this conversation. Create one to hand work to an Agent so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. A Task with a Human gate or an Action is reviewed in Needs You, where the Human accepts; don't ask for approval in chat. Huddle moves a Task to Needs You only from Review with its Proof complete, never from Backlog: when the only step left is the Human's, move it to Review yourself. The Action is the one outward step, such as merging or sending, never a hand-off or status. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
+                Creates a Task: durable work tracked outside this conversation. Create one to hand work to an Agent so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. A Task with a Human gate or an Action waits in Needs You, where the Human accepts; don't ask for approval in chat. Huddle moves a Task to Needs You only from In Progress with its Proof complete, never from Backlog: when the only step left is the Human's, move it to In Progress yourself. To ask for a review, create a Task tagged review (or verify for a QA check) as a child of the Task being reviewed, assigned to the reviewer, and add it to that Task's blocked_by. The Action is the one outward step, such as merging or sending, never a hand-off or status. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2260,7 +2260,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. A Task with a Human gate or an Action goes from Review to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
+                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Done. A review is not a status: it is a Task tagged review, assigned to the reviewer, a child of the Task and in its blocked_by. A Task with a Human gate or an Action goes from In Progress to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2331,8 +2331,8 @@ internal static class PromptCatalog
                 human_gate true, or set it with update_task. Set the Action, the one outward step,
                 with the action argument; set the Action before you do it. Never use the Action for
                 hand-offs or status: put those in a Message or a comment on the Task. When the Proof
-                is complete, Huddle moves a Task in Review to Needs You. Until then it stays in
-                Review: tell the Human a Task waits for them in Needs You only when its status is
+                is complete, Huddle moves the Task from In Progress to Needs You. Until then it stays
+                In Progress: tell the Human a Task waits for them in Needs You only when its status is
                 Needs You, and otherwise say which Proof item is open; add_evidence and get_task
                 name it. You may still move it
                 yourself, which is harmless if it is already there. Some Proof items complete with no
@@ -2349,6 +2349,11 @@ internal static class PromptCatalog
                 level, whatever runs it (a script or a git alias too), and goes in the Task's
                 Action. Use list_tasks with the
                 status Needs You to see what is waiting for the Human.
+
+                A review is a Task, not a status. To ask for one, create a Task tagged review (or tagged verify, for a QA check)
+                as a child of the Task being reviewed, assigned to the reviewer, and add it to that Task's blocked_by.
+                A Task waits In Progress while a blocker is open. The reviewer approves by moving the review Task to Done,
+                or leaves it open with the findings as a comment; fix the work and comment that it is ready.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

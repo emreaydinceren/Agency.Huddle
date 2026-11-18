@@ -15,7 +15,7 @@ public sealed class TaskQueryNeedsYouTests
     [InlineData(TaskState.Backlog)]
     [InlineData(TaskState.ToDo)]
     [InlineData(TaskState.InProgress)]
-    [InlineData(TaskState.Review)]
+    [InlineData(TaskState.NeedsYou)]
     public void NeedsYou_OpenAndAssignedToTheHuman_IsTrue(TaskState status)
     {
         TaskItem task = TestTasks.Make(id: "PLAT-0001", status: status, assignee: "Sam");

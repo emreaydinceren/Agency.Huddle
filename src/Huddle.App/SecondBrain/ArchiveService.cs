@@ -94,7 +94,7 @@ internal sealed partial class ArchiveService : IArchiveService, IDisposable
         ArgumentNullException.ThrowIfNull(team);
 
         List<TaskItem> own = [.. this.tasks.All.Where(t => string.Equals(t.Location.Team, team, StringComparison.OrdinalIgnoreCase))];
-        int open = own.Count(static t => t.Status is TaskState.Backlog or TaskState.ToDo or TaskState.InProgress or TaskState.Review or TaskState.NeedsYou);
+        int open = own.Count(static t => t.Status is TaskState.Backlog or TaskState.ToDo or TaskState.InProgress or TaskState.NeedsYou);
         int waiting = own.Count(static t => t.Status == TaskState.NeedsYou);
         return new ArchiveConfirmation(open, waiting, this.MembersWithoutAnotherTeam(team));
     }

@@ -228,7 +228,7 @@ internal sealed class UpdateTaskTool(
         {
             if (!TaskStates.TryParse(statusText, out TaskState parsedStatus))
             {
-                refusal = $"'status' has an unknown value '{statusText}'.";
+                refusal = TaskToolText.UnknownStatusRefusal(statusText);
                 return false;
             }
 

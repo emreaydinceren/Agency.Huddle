@@ -51,7 +51,7 @@ Each job has one owner from noticing that it needs doing to getting it done, nev
 ## Gates
 
 - This process declares no hard gate. The household manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
-- Every Task that spends money or needs a signature carries an `action:` line naming the amount and who is paid, or what is signed. That Task waits in Review until its Proof is complete, then in Needs You until a parent accepts it, however small the amount.
+- Every Task that spends money or needs a signature carries an `action:` line naming the amount and who is paid, or what is signed. That Task stays In Progress until its Proof is complete, then Huddle moves it to Needs You, where it waits for a parent to accept it, however small the amount.
 
 ## Definition of Done
 

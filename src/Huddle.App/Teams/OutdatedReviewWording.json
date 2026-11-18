@@ -1,0 +1,250 @@
+[
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "onlyIn": ["title: 'Lightweight flow'"],
+    "finds": [
+      "3. **Review**: a reviewer reads the diff. Done when no open finding remains."
+    ],
+    "replace": "3. **Ask for a review**: to ask for a review, the Task's owner (the developer) must create a review Task: tagged `review`, a child of the work Task, assigned to the reviewer, and adds it to the work Task's `blocked_by`. The reviewer reads the diff, runs the Team's check command on it and records the outcome on the review Task as an Evidence line with that command, with the next step, not only in chat. The reviewer approves by moving the review Task to Done, or leaves it open with the findings as a comment; the owner fixes the work and comments that it is ready. A review Task is never reopened. Done when the review Task is Done."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "finds": [
+      "3. **Review**: a reviewer reads the diff and records the outcome on the Task, with the next step, not only in chat. Done when no open finding remains.",
+      "3. **Review**: a reviewer reads the diff, runs the Team's check command on it and records the outcome on the Task as an Evidence line with that command, with the next step, not only in chat. Done when no open finding remains."
+    ],
+    "replace": "3. **Ask for a review**: to ask for a review, the Task's owner (the developer) must create a review Task: tagged `review`, a child of the work Task, assigned to the reviewer, and adds it to the work Task's `blocked_by`. The reviewer reads the diff, runs the Team's check command on it and records the outcome on the review Task as an Evidence line with that command, with the next step, not only in chat. The reviewer approves by moving the review Task to Done, or leaves it open with the findings as a comment; the owner fixes the work and comments that it is ready. A review Task is never reopened. Done when the review Task is Done."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "finds": [
+      "4. **Verify**: QA checks the change against the acceptance line and posts an Evidence line. Done when that line exists.",
+      "4. **Verify**: QA checks the change against the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists.",
+      "4. **Verify**: QA starts only after the review has no open finding. QA checks the change against the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists. If the change gets a new commit after the review, QA runs the verify again on that commit."
+    ],
+    "replace": "4. **Ask for a QA check**: once the review Task is Done, the owner creates a QA Task the same way: tagged `verify`, a child of the work Task, assigned to QA, added to the work Task's `blocked_by`. QA checks the change against the acceptance line, posts an Evidence line on the QA Task and moves it to Done. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when the QA Task is Done. If the change gets a new commit after the review, the owner creates a new QA Task for that commit."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "onlyIn": ["title: 'Sprints'"],
+    "finds": [
+      "3. **Review**: a reviewer reads the diff. Done when no open finding remains."
+    ],
+    "replace": "3. **Ask for a review**: to ask for a review, the Task's owner (the developer) must create a review Task: tagged `review`, a child of the work Task, assigned to the reviewer, and adds it to the work Task's `blocked_by`. The reviewer reads the diff, runs the Team's check command on it and records the outcome on the review Task as an Evidence line with that command. The reviewer approves by moving the review Task to Done, or leaves it open with the findings as a comment; the owner fixes the work and comments that it is ready. A review Task is never reopened. Done when the review Task is Done."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "finds": [
+      "3. **Review**: a reviewer reads the diff, runs the Team's check command on it and records the outcome on the Task as an Evidence line with that command. Done when no open finding remains."
+    ],
+    "replace": "3. **Ask for a review**: to ask for a review, the Task's owner (the developer) must create a review Task: tagged `review`, a child of the work Task, assigned to the reviewer, and adds it to the work Task's `blocked_by`. The reviewer reads the diff, runs the Team's check command on it and records the outcome on the review Task as an Evidence line with that command. The reviewer approves by moving the review Task to Done, or leaves it open with the findings as a comment; the owner fixes the work and comments that it is ready. A review Task is never reopened. Done when the review Task is Done."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "finds": [
+      "4. **Verify**: QA checks the acceptance line and posts an Evidence line. Done when that line exists.",
+      "4. **Verify**: QA checks the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists.",
+      "4. **Verify**: QA starts only after the review has no open finding. QA checks the acceptance line and posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when that line exists. If the change gets a new commit after the review, QA runs the verify again on that commit."
+    ],
+    "replace": "4. **Ask for a QA check**: once the review Task is Done, the owner creates a QA Task the same way: tagged `verify`, a child of the work Task, assigned to QA, added to the work Task's `blocked_by`. QA checks the acceptance line, posts an Evidence line on the QA Task and moves it to Done. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill) and the Evidence line says what it did. Done when the QA Task is Done. If the change gets a new commit after the review, the owner creates a new QA Task for that commit."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "finds": [
+      "5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. Done when both are recorded.",
+      "5. **Review and verify**: a reviewer reads the diff and QA posts an Evidence line. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded."
+    ],
+    "replace": "5. **Ask for a review and a QA check**: the Task's owner (the developer) must create a review Task and a QA Task, each a child of the build Task, assigned to the reviewer or to QA, added to the build Task's `blocked_by`, and tagged `review` or `verify`. The reviewer reads the diff against the spec and approves by moving the review Task to Done, or leaves it open with the findings as a comment; a review Task is never reopened. QA posts an Evidence line on the QA Task and moves it to Done. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both Tasks are Done."
+  },
+  {
+    "title": "Ask for a review through a review Task, not a Review stage",
+    "finds": [
+      "4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. Done when both are recorded.",
+      "4. **Review and verify**: a reviewer reads the diff and QA checks the symptom is gone. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both are recorded."
+    ],
+    "replace": "4. **Ask for a review and a QA check**: the Task's owner (the developer) must create a review Task and a QA Task, each a child of the bug Task, assigned to the reviewer or to QA, added to the bug Task's `blocked_by`, and tagged `review` or `verify`. The reviewer reads the diff and approves by moving the review Task to Done, or leaves it open with the findings as a comment; a review Task is never reopened. QA checks the symptom is gone, posts an Evidence line on the QA Task and moves it to Done. When the acceptance names a web page or a UI, QA drives it in a browser (the browser-check Skill). Done when both Tasks are Done."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `developer` builds the change, writes the tests and asks for review when the checks pass."],
+    "replace": "- `developer` builds the change, writes the tests and creates the review Task when the checks pass."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `reviewer` reads the diff and records findings on the Task."],
+    "replace": "- `reviewer` reads the diff and comments the findings on the review Task."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `qa-engineer` verifies the acceptance line and posts the Evidence line."],
+    "replace": "- `qa-engineer` verifies the acceptance line on the QA Task and posts the Evidence line."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `developer` builds each Task, writes its tests and asks for review."],
+    "replace": "- `developer` builds each Task, writes its tests and creates its review Task."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `qa-engineer` verifies each acceptance line and posts the Evidence line."],
+    "replace": "- `qa-engineer` verifies each acceptance line on the QA Task and posts the Evidence line."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `developer` builds the change against the approved spec and asks for review."],
+    "replace": "- `developer` builds the change against the approved spec and creates the review and QA Tasks."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `reviewer` reads the diff against the spec and records findings."],
+    "replace": "- `reviewer` reads the diff against the spec and comments the findings on the review Task."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `developer` writes the failing test, makes the fix and asks for review."],
+    "replace": "- `developer` writes the failing test, makes the fix and creates the review and QA Tasks."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `reviewer` reads the diff and checks that the fix is minimal."],
+    "replace": "- `reviewer` reads the diff on the review Task and checks that the fix is minimal."
+  },
+  {
+    "title": "The developer, reviewer and QA work through review and QA Tasks",
+    "finds": ["- `qa-engineer` confirms the symptom is gone and posts the Evidence line."],
+    "replace": "- `qa-engineer` confirms the symptom is gone on the QA Task and posts the Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the developer asks the manager for a second read, and the manager reviews the diff.\n"],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the diff, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done.\n"
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the developer asks the manager for a second read, and the manager reviews the diff. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`."],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the diff, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the manager reviews the diff before it is merged.\n"],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the diff before it is merged, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done.\n"
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the manager reviews the diff before it is merged. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`."],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the diff before it is merged, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the manager reviews the diff against the spec.\n"],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the diff against the spec, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done.\n"
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the manager reviews the diff against the spec. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`."],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the diff against the spec, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the manager reviews the fix before it is merged.\n"],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the fix before it is merged, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done.\n"
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `reviewer`: the manager reviews the fix before it is merged. The Definition of Done's Review item still needs an Evidence line from a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`."],
+    "replace": "- No `reviewer`: the manager owns the review Task and reviews the fix before it is merged, or assigns the review Task to a member whose role covers challenge, such as a `tech-lead` or a `security-engineer`. The Definition of Done's review item still needs that review Task to be Done."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager verifies against the acceptance line and posts the Evidence line. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, verifies against the acceptance line and posts the Evidence line on it. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager verifies against the acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, verifies against the acceptance line and posts the Evidence line on it. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager verifies the acceptance line and posts the Evidence line. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, verifies the acceptance line and posts the Evidence line on it. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager verifies the acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, verifies the acceptance line and posts the Evidence line on it. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager verifies each acceptance line and posts the Evidence line. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, verifies each acceptance line and posts the Evidence line on it. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager verifies each acceptance line and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, verifies each acceptance line and posts the Evidence line on it. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager confirms the symptom is gone and posts the Evidence line. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, confirms the symptom is gone and posts the Evidence line on it. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Without a reviewer or QA the manager owns the review and QA Task",
+    "finds": ["- No `qa-engineer`: the manager confirms the symptom is gone and posts the Evidence line. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."],
+    "replace": "- No `qa-engineer`: the manager owns the QA Task, confirms the symptom is gone and posts the Evidence line on it. When the acceptance names a web page or a UI, the manager drives it in a browser too. The Done gate still needs that Evidence line."
+  },
+  {
+    "title": "Gates no longer name a Review state",
+    "onlyIn": ["title: 'Lightweight flow'", "title: 'Spec-driven'", "title: 'Maintenance'", "title: 'Sprints'"],
+    "finds": ["when the Proof is complete in Review, Huddle releases the Task"],
+    "replace": "when the Proof is complete, Huddle releases the Task"
+  },
+  {
+    "title": "Gates no longer name a Review state",
+    "onlyIn": ["title: 'Lightweight flow'", "title: 'Spec-driven'", "title: 'Maintenance'", "title: 'Sprints'"],
+    "finds": ["Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by`"],
+    "replace": "Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by`"
+  },
+  {
+    "title": "A Done QA Task meets the QA evidence gate",
+    "onlyIn": ["title: 'Lightweight flow'", "title: 'Spec-driven'", "title: 'Maintenance'", "title: 'Sprints'"],
+    "finds": ["a member whose role covers verify posts an Evidence line."],
+    "replace": "a member whose role covers verify posts an Evidence line, or a child Task tagged `verify` is Done."
+  },
+  {
+    "title": "Gates no longer name a Review state",
+    "onlyIn": ["title: 'Maintenance'"],
+    "finds": ["Huddle refuses to move a bug Task to Review until an Evidence line shows a failing test written before the fix."],
+    "replace": "Huddle refuses to move a bug Task on to Needs You or Done until an Evidence line shows a failing test written before the fix."
+  },
+  {
+    "title": "The Definition of Done asks for a Done review Task",
+    "onlyIn": ["title: 'Lightweight flow'", "title: 'Spec-driven'", "title: 'Maintenance'", "title: 'Sprints'"],
+    "finds": ["- Review: evidence from challenge"],
+    "replace": "- Review: task tagged review"
+  },
+  {
+    "title": "The Definition of Done asks for a Done QA Task",
+    "onlyIn": ["title: 'Lightweight flow'", "title: 'Spec-driven'", "title: 'Maintenance'", "title: 'Sprints'"],
+    "finds": ["- QA evidence: evidence from verify"],
+    "replace": "- QA evidence: task tagged verify"
+  },
+  {
+    "title": "A draft is reviewed through its review Task",
+    "onlyIn": ["title: 'Spec-driven'"],
+    "finds": ["A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item."],
+    "replace": "A draft that is reviewed is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The spec is reviewed the same way as the build: its owner creates a review Task for it, and the reviewer checks that file, logs the review on it with `log_change` and the kind `reviewed` as its history line, and moves the review Task to Done. A draft written only in the Task's description cannot be reviewed. Spec reviews are done in goldfish mode: the reviewer calls goldfish with a brief naming the spec."
+  },
+  {
+    "title": "The Definition of Done drops the spec review line",
+    "onlyIn": ["title: 'Spec-driven'"],
+    "finds": ["- Spec reviewed: document reviewed by verify\n"],
+    "replace": ""
+  },
+  {
+    "title": "A Task that needs a parent stays In Progress until its Proof is complete",
+    "finds": ["That Task waits in Review until its Proof is complete, then in Needs You until a parent accepts it, however small the amount."],
+    "replace": "That Task stays In Progress until its Proof is complete, then Huddle moves it to Needs You, where it waits for a parent to accept it, however small the amount."
+  }
+]

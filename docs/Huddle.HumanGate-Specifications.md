@@ -176,6 +176,8 @@ A status move is logged as today. A move into Needs You is logged with its Proof
 
 ### 6.2 The status
 
+> Amended by ADR-0096: there is no Review state; a gated In Progress Task with complete Proof and no open blocker moves to Needs You, and the decision card shows in Needs You only. Read every `Review` below as In Progress.
+
 `TaskState.NeedsYou` is added between `Review` and `Done`, wire name `Needs You`. It is not
 terminal and not Won't do. `TaskStates.All` keeps declaration order, so the board gains a
 column between Review and Done.

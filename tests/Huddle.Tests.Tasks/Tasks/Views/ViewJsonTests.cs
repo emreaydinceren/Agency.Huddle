@@ -23,7 +23,7 @@ public sealed class ViewJsonTests
               "sort": [{ "field": "priority", "direction": "descending" }, { "field": "due_date", "direction": "ascending" }],
               "columns": [
                 { "label": "Backlog", "states": ["Backlog"] }, { "label": "To Do", "states": ["To Do"] },
-                { "label": "In Progress", "states": ["In Progress"] }, { "label": "Review", "states": ["Review"] },
+                { "label": "In Progress", "states": ["In Progress"] },
                 { "label": "Done", "states": ["Done"] },
                 { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] } ] }
           ]
@@ -65,7 +65,7 @@ public sealed class ViewJsonTests
             [new SortKey("priority", SortDirection.Descending), new SortKey("due_date", SortDirection.Ascending)],
             view.Sort);
 
-        Assert.Equal(6, view.Columns.Count);
+        Assert.Equal(5, view.Columns.Count);
         BoardColumn last = view.Columns[^1];
         Assert.Equal("Won't do", last.Label);
         Assert.Equal([TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected], last.States);

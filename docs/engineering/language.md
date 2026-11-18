@@ -205,7 +205,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   **Human-gated** when it names an **Action** or the Human turned on *Requires your
   acceptance*. The Human decides with **Accept**, **Request changes** or **Decline**;
   only an acceptance opens Done, and it is void if the text changes (ADR-0061).
-: *Avoid*: approval, sign-off, override, review (Review is a status).
+: *Avoid*: approval, sign-off, override, review (a review is a Task tagged `review`, ADR-0096).
 
 **Action**
 : What a Human-gated Task will do outside the Team once accepted, in one line: "Send
@@ -653,7 +653,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   listed until the Human posts in it or dismisses it. Opening the Room does not
   clear it. In interface copy the card reads "Needs you". See
   [ADR-0050](../adr/0050-needs-you-is-derived-from-room-events-and-held-in-memory.md).
-: Also the Task status between Review and Done that only a **Human-gated** Task can
+: Also the Task status between In Progress and Done that only a **Human-gated** Task can
   enter, once its **Proof** is complete. A Task in it, not yet accepted, is listed on
   the card and the `/needs-you` page; it leaves only by a decision or a status change
   (ADR-0061). The status and the card share the name on purpose.
@@ -787,7 +787,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   it with the `goldfish` App Tool; it ends by `goldfish_done` or by a Member's "@Ruth comeback", and every exit returns
   the body with a result. Messages the goldfish posts carry the stamp "Ruth · goldfish". Offered only on a Claude
   Adapter with isolation. See
-  [ADR-0096](../adr/0096-goldfish-mode-a-possession-of-one-agent-in-one-room.md).
+  [ADR-0097](../adr/0097-goldfish-mode-a-possession-of-one-agent-in-one-room.md).
 : *Avoid*: clone, sub-agent, reviewer mode, fresh-eyes mode (that is the Room subtitle's wording, not the name).
 
 **brief**

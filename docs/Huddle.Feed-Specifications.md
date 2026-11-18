@@ -975,7 +975,7 @@ exactly one Category.
 | "Wren filed 2 Retro proposals", "asked you to accept a Retro proposal" | The retro flow (ADR-0041) | Gates |
 | "Priya recorded proof on #TASK-142 · ✓ test failed before the change · run #2284" | `TaskService.AddEvidence` | Gates |
 | "Kai changed due on #TASK-142 Oct 13 → Oct 14 · and marked it blocked by #TASK-143" | `TaskService` field changes | Tasks |
-| "Priya moved #TASK-142 In progress → Review" (any status change) | `TaskService` | Tasks |
+| "Priya moved #TASK-142 In progress → Needs you" (any status change) | `TaskService` | Tasks |
 | "Zoe drafted a Request to the Data Team", "Docs Team filed a Request for the Development Team" | Request tools (ADR-0040); a Team as actor | Tasks |
 | "Gate turned on · Needs you → Done now needs CI … · in Team process" | `ProcessGateService` / `Process.md` changes | Gates |
 | "Data Team hired an Agent · Mira", "Margot hired Wren" | The hiring flow | None of the five fits: All only, or a new Category, decided in 1b |

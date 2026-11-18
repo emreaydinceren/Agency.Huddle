@@ -83,7 +83,7 @@ internal static partial class TaskFileFormat
 
         string? assignee = TryGetField(fields, "assignee", out string? assigneeRaw) ? NullIfEmpty(assigneeRaw) : null;
         string? originRoomId = TryGetField(fields, "origin", out string? originRaw) ? NullIfEmpty(originRaw) : null;
-        ParsedBody parsedBody = ParseBody(body);
+        ParsedBody parsedBody = ParseBodyOf(body, required);
         task = new TaskItem
         {
             Id = required.Id,
@@ -109,14 +109,44 @@ internal static partial class TaskFileFormat
             UnknownFields = UnknownFieldsOf(fields),
             Path = path,
             Version = ComputeVersion(text),
-            ClosedAt = ComputeClosedAt(parsedBody.ChangeLog,location.Closed),
+            ClosedAt = ComputeClosedAt(parsedBody.ChangeLog, location.Closed),
         };
         error = "";
         return true;
     }
 
     /// <summary>The keys a Task file must carry, validated per Spec §7.2.</summary>
-    private sealed record RequiredFields(TaskId Id, string Title, TaskState Status, TaskPriority Priority, string Creator);
+    private sealed record RequiredFields(TaskId Id, string Title, TaskState Status, TaskPriority Priority, string Creator, bool StoredReview);
+
+    /// <summary>The wire text of the Review state Huddle no longer has; a file that still says it reads as In Progress (D-6).</summary>
+    private const string LegacyReviewWire = "Review";
+
+    /// <summary>The Huddle line a loaded <c>status: Review</c> Task carries on its Timeline (D-6).</summary>
+    private const string LegacyReviewLine = "status: Review → In Progress (Huddle has no Review state; a review is a Task tagged review)";
+
+    /// <summary>Parses a stored status; a stored Review reads as In Progress and is reported in <paramref name="storedReview"/> (D-6).</summary>
+    private static bool TryParseStatus(string raw, out TaskState status, out bool storedReview)
+    {
+        storedReview = string.Equals(raw.Trim(), LegacyReviewWire, StringComparison.OrdinalIgnoreCase);
+        status = TaskState.InProgress;
+        return storedReview || TaskStates.TryParse(raw, out status);
+    }
+
+    /// <summary>
+    /// Parses the body; when the file stored the Review status, adds the Huddle line that says it was read as In Progress,
+    /// dated at the Task's last entry so the Timeline order holds.
+    /// </summary>
+    private static ParsedBody ParseBodyOf(string body, RequiredFields required)
+    {
+        ParsedBody parsed = ParseBody(body);
+        if (!required.StoredReview)
+        {
+            return parsed;
+        }
+
+        DateTimeOffset at = TimelineMerge.LastAt(parsed.Comments, parsed.ChangeLog) ?? DateTimeOffset.UnixEpoch;
+        return parsed with { ChangeLog = [.. parsed.ChangeLog, new ChangeLogEntry(at, "Huddle", LegacyReviewLine)] };
+    }
 
     /// <summary>The optional keys that point at other records or carry dates, validated per Spec §7.2.</summary>
     private sealed record Relations(TaskId? Parent, IReadOnlyList<TaskId> BlockedBy, TaskId? DuplicateOf, IReadOnlyList<string> Tags, DateOnly? StartDate, DateOnly? DueDate, SprintId? Sprint, bool HumanGate, string? Action);
@@ -156,7 +186,7 @@ internal static partial class TaskFileFormat
             return false;
         }
 
-        if (!TaskStates.TryParse(statusRaw, out TaskState status))
+        if (!TryParseStatus(statusRaw, out TaskState status, out bool storedReview))
         {
             error = string.Create(CultureInfo.InvariantCulture, $"invalid status: '{statusRaw}'");
             return false;
@@ -180,7 +210,7 @@ internal static partial class TaskFileFormat
             return false;
         }
 
-        required = new RequiredFields(id, title, status, priority, creatorRaw.Trim());
+        required = new RequiredFields(id, title, status, priority, creatorRaw.Trim(), storedReview);
         error = "";
         return true;
     }

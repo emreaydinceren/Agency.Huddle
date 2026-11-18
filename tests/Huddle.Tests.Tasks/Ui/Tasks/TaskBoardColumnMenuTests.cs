@@ -46,14 +46,13 @@ public sealed partial class TaskBoardColumnMenuTests
         new("Backlog", [TaskState.Backlog]),
         new("To Do", [TaskState.ToDo]),
         new("In Progress", [TaskState.InProgress]),
-        new("Review", [TaskState.Review]),
         new("Needs You", [TaskState.NeedsYou]),
         new("Done", [TaskState.Done]),
         new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),
     ];
 
     /// <summary>The default column labels, in order.</summary>
-    private static readonly string[] DefaultLabels = ["Backlog", "To Do", "In Progress", "Review", "Needs You", "Done", "Won't do"];
+    private static readonly string[] DefaultLabels = ["Backlog", "To Do", "In Progress", "Needs You", "Done", "Won't do"];
 
     /// <summary>Spec §13.4 <i>Columns</i>: each column header's ⋮ menu offers exactly <i>Rename</i> and <i>Hide</i>.</summary>
     [Fact]
@@ -84,7 +83,7 @@ public sealed partial class TaskBoardColumnMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, []);
         await RenameAsync(cut, "In Progress", "Doing");
 
-        string[] expected = ["Backlog", "To Do", "Doing", "Review", "Needs You", "Done", "Won't do"];
+        string[] expected = ["Backlog", "To Do", "Doing", "Needs You", "Done", "Won't do"];
         Assert.Equal(expected, SavedLabels(harness));
     }
 
@@ -100,11 +99,11 @@ public sealed partial class TaskBoardColumnMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, []);
         await ClickHeaderItemAsync(cut, "In Progress", "Hide");
 
-        bool[] expected = [false, false, true, false, false, false, false];
+        bool[] expected = [false, false, true, false, false, false];
         Assert.Equal(expected, SavedHidden(harness));
     }
 
-    /// <summary>The header menu maps a visible column to its place among all columns: with Backlog already hidden, hiding Review (third visible, fourth overall) hides Review and nothing else.</summary>
+    /// <summary>The header menu maps a visible column to its place among all columns: with Backlog already hidden, hiding Needs You (third visible, fourth overall) hides Needs You and nothing else.</summary>
     [Fact]
     public async Task Hide_WithAnotherColumnHidden_HidesTheRightColumn()
     {
@@ -114,9 +113,9 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, []);
-        await ClickHeaderItemAsync(cut, "Review", "Hide");
+        await ClickHeaderItemAsync(cut, "Needs You", "Hide");
 
-        bool[] expected = [true, false, false, true, false, false, false];
+        bool[] expected = [true, false, false, true, false, false];
         Assert.Equal(expected, SavedHidden(harness));
     }
 
@@ -136,7 +135,7 @@ public sealed partial class TaskBoardColumnMenuTests
         TaskView? after = harness.Views.Get(BoardId);
         Assert.NotNull(after);
         Assert.Empty(after.Grouping);
-        bool[] expected = [false, false, false, false, false, true, false];
+        bool[] expected = [false, false, false, false, true, false];
         Assert.Equal(expected, SavedHidden(harness));
     }
 
@@ -176,7 +175,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await ClickHeaderItemAsync(cut, "Done", "Hide");
 
         TaskView raised = Assert.Single(changed);
-        bool[] expected = [false, false, false, false, false, true, false];
+        bool[] expected = [false, false, false, false, true, false];
         Assert.Equal(expected, raised.Columns.Select(c => c.Hidden));
         TaskView? saved = harness.Views.Get(ViewStore.AllTasksId);
         Assert.NotNull(saved);
@@ -198,7 +197,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await RenameAsync(cut, "In Progress", "Doing");
 
         TaskView raised = Assert.Single(changed);
-        string[] expected = ["Backlog", "To Do", "Doing", "Review", "Needs You", "Done", "Won't do"];
+        string[] expected = ["Backlog", "To Do", "Doing", "Needs You", "Done", "Won't do"];
         Assert.Equal(expected, raised.Columns.Select(c => c.Label));
         Assert.Empty(harness.Views.Get(ViewStore.AllTasksId)?.Columns ?? []);
     }
@@ -522,7 +521,7 @@ public sealed partial class TaskBoardColumnMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
         await RenameAsync(cut, "In Progress", "Doing");
 
-        string[] expected = ["Backlog", "To Do", "Doing", "Review", "Needs You", "Done", "Won't do"];
+        string[] expected = ["Backlog", "To Do", "Doing", "Needs You", "Done", "Won't do"];
         cut.WaitForAssertion(() => Assert.Equal(expected, cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim())));
         Assert.Empty(cut.FindAll(".task-board-column-rename"));
     }

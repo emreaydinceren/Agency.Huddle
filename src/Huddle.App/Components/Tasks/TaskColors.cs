@@ -6,13 +6,13 @@ namespace Agency.Huddle.App.Components.Tasks;
 /// <summary>The Spec §13.10 mapping from a Task's state, priority or presence to a MudBlazor <see cref="Color"/>.</summary>
 internal static class TaskColors
 {
-    /// <summary>Backlog and To Do Default, In Progress Info, Review Tertiary (its own signal, so Review never reads as the Accent or as In Progress), Done Success, Cancelled/Duplicate/Rejected Error. Amber (Warning) means "needs attention" only, so no state uses it.</summary>
+    /// <summary>Backlog and To Do Default, In Progress Info, Needs You Tertiary (its own signal, so it never reads as the Accent or as In Progress), Done Success, Cancelled/Duplicate/Rejected Error. Amber (Warning) means "needs attention" only, so no state uses it.</summary>
     public static Color For(TaskState state) => state switch
     {
         TaskState.Backlog => Color.Default,
         TaskState.ToDo => Color.Default,
         TaskState.InProgress => Color.Info,
-        TaskState.Review or TaskState.NeedsYou => Color.Tertiary,
+        TaskState.NeedsYou => Color.Tertiary,
         TaskState.Done => Color.Success,
         TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Color.Error,
         _ => Color.Default,
@@ -43,7 +43,6 @@ internal static class TaskColors
         TaskState.Backlog => Icons.Material.Filled.Inbox,
         TaskState.ToDo => Icons.Material.Filled.RadioButtonUnchecked,
         TaskState.InProgress => Icons.Material.Filled.PlayCircleOutline,
-        TaskState.Review => Icons.Material.Filled.RateReview,
         TaskState.NeedsYou => Icons.Material.Filled.PriorityHigh,
         TaskState.Done => Icons.Material.Filled.CheckCircle,
         TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Icons.Material.Filled.Cancel,

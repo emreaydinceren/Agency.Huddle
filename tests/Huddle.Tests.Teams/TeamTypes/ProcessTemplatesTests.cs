@@ -227,7 +227,7 @@ public sealed partial class ProcessTemplatesTests
         ProcessFile file = LoadProcess(processId);
         string firstStage = Section(file, "Stages").First(line => line.StartsWith(stage, StringComparison.Ordinal));
 
-        Assert.Contains("- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Review, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.", Section(file, "Gates")); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.", Section(file, "Gates")); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("A Task with blockers waits here until every blocker is finished and the manager gives the go-ahead; do no work on it before then.", firstStage, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
@@ -258,7 +258,7 @@ public sealed partial class ProcessTemplatesTests
         Assert.Contains("When no QA Engineer is hired, you verify each acceptance line yourself. When it names a web page or a UI, drive it in a browser with your browser-check Skill and record what you did as Evidence.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
-    /// <summary>#537: every Development process starts its Definition of Done with a Review item that needs Evidence from challenge, before QA evidence.</summary>
+    /// <summary>#537, #669: every Development process starts its Definition of Done with a Review item met by a Done Task tagged review, before QA evidence met by a Done Task tagged verify.</summary>
     /// <param name="processId">The process id.</param>
     [Theory]
     [InlineData("lightweight-flow")]
@@ -276,11 +276,13 @@ public sealed partial class ProcessTemplatesTests
 
         Assert.True(review >= 0, "The Definition of Done has no Review item.");
         Assert.True(review < qa, "Review must come before QA evidence.");
-        DoneRule.EvidenceFrom rule = Assert.IsType<DoneRule.EvidenceFrom>(document.DefinitionOfDone[review].Rule);
-        Assert.Equal("challenge", rule.Step);
+        DoneRule.TaskTagged reviewRule = Assert.IsType<DoneRule.TaskTagged>(document.DefinitionOfDone[review].Rule);
+        Assert.Equal("review", reviewRule.Tag);
+        DoneRule.TaskTagged qaRule = Assert.IsType<DoneRule.TaskTagged>(document.DefinitionOfDone[qa].Rule);
+        Assert.Equal("verify", qaRule.Tag);
     }
 
-    /// <summary>#537: the lightweight flow and sprints stages say QA starts only after the review, and what the reviewer records.</summary>
+    /// <summary>#537, #669: the lightweight flow and sprints stages say the QA Task is created once the review Task is Done, and what the reviewer records on the review Task.</summary>
     /// <param name="processId">The process id.</param>
     [Theory]
     [InlineData("lightweight-flow")]
@@ -290,21 +292,21 @@ public sealed partial class ProcessTemplatesTests
         ProcessFile file = LoadProcess(processId);
         string text = string.Join(' ', file.Body);
 
-        Assert.Contains("QA starts only after the review has no open finding.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
-        Assert.Contains("If the change gets a new commit after the review, QA runs the verify again on that commit.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
-        Assert.Contains("runs the Team's check command on it and records the outcome on the Task as an Evidence line with that command", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("once the review Task is Done, the owner creates a QA Task the same way", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("If the change gets a new commit after the review, the owner creates a new QA Task for that commit.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("runs the Team's check command on it and records the outcome on the review Task as an Evidence line with that command", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
-    /// <summary>#537: the QA Engineer waits for the review, and the Reviewer records every review as an Evidence line with a command.</summary>
+    /// <summary>#537, #669: the QA Engineer waits for the review Task to be Done, and the Reviewer records every review on the review Task as an Evidence line with a command.</summary>
     [Fact]
     public void Personas_QaAndReviewer_OrderReviewBeforeVerify()
     {
         string qa = ReadPersona("qa-engineer");
         string reviewer = ReadPersona("reviewer");
 
-        Assert.Contains("Start the verify only after the Task's review has no open finding: the reviewer's Evidence line is on the Task and nothing it raised is still open.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Start it only after the review Task of that Task is Done.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("If the change gets a new commit after the review, run the checks again on that commit and add a new Evidence line.", qa, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
-        Assert.Contains("Record every review on the Task, approval or bounce, as one Evidence line with the check command you ran, its exit code and your verdict in the note. A line with only a note does not count as a review in the Task's Proof.", reviewer, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Record every review on the review Task, approval or findings, as one Evidence line with the check command you ran, its exit code and your verdict in the note. A line with only a note does not count as a review in the Task's Proof.", reviewer, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.DoesNotContain("the evidence shows the checks passing", reviewer, StringComparison.Ordinal);
     }
 
@@ -342,17 +344,17 @@ public sealed partial class ProcessTemplatesTests
         Assert.True(failures.Count == 0, "Stages lack the attached-file paragraph in: " + string.Join(", ", failures));
     }
 
-    /// <summary>#547: the household process's Gates section says a gated Task waits in Review until its Proof is complete, and only then in Needs You.</summary>
+    /// <summary>#547, #669: the household process's Gates section says a gated Task stays In Progress until its Proof is complete, and only then waits in Needs You.</summary>
     [Fact]
-    public void Process_HouseholdBasicsGates_SayTheTaskWaitsInReviewUntilItsProofIsComplete()
+    public void Process_HouseholdBasicsGates_SayTheTaskStaysInProgressUntilItsProofIsComplete()
     {
         string text = ReadResourceText("TeamTypes/Builtin/household/processes/household-basics.md");
         string gates = string.Join('\n', GatesLines(text));
 
-        Assert.Contains("That Task waits in Review until its Proof is complete, then in Needs You until a parent accepts it", gates, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("That Task stays In Progress until its Proof is complete, then Huddle moves it to Needs You, where it waits for a parent to accept it", gates, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
-    /// <summary>#547: no built-in process claims a Task waits in Needs You without the Review and Proof step first.</summary>
+    /// <summary>#547, #669: no built-in process claims a Task waits in Needs You without the Proof step first.</summary>
     [Fact]
     public void Process_EveryBuiltIn_NeverSaysTheTaskWaitsInNeedsYouUntil()
     {
@@ -363,7 +365,7 @@ public sealed partial class ProcessTemplatesTests
 
         Assert.NotEmpty(resources);
         List<string> failures = [.. resources.Where(static resource => ReadResourceText(resource).Contains("waits in Needs You until", StringComparison.Ordinal))]; // contains-ok: scanning shipped text for a banned claim
-        Assert.True(failures.Count == 0, "These processes say a Task waits in Needs You with no Review step first: " + string.Join(", ", failures));
+        Assert.True(failures.Count == 0, "These processes say a Task waits in Needs You with no Proof step first: " + string.Join(", ", failures));
     }
 
     /// <summary>Returns the trimmed lines of the Gates section of a raw process file.</summary>

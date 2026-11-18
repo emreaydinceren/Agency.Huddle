@@ -91,7 +91,7 @@ legitimate empty result. Back to the hub: [Huddle.EngineeringGuide.md](../Huddle
   sending Agent's rows in the named Room; an invalid id is dropped, never trusted.
   **A new envelope type is not ignored: it is rejected.** `ProtocolMessage` is a polymorphic
   `[JsonDerivedType]` hierarchy, so a client that does not know a `type` discriminator fails to parse the
-  line. Goldfish mode (ADR-0096) added three envelopes (`goldfishBegin` and `goldfishEnd` to the client,
+  line. Goldfish mode (ADR-0097) added three envelopes (`goldfishBegin` and `goldfishEnd` to the client,
   `goldfishReport` to the server) and the nullable `ChatMessage.Goldfish`, with the version left at 3. The
   property is additive; the envelopes are not, so the server and the runner ship together
   and a stale runner or external client sees an error on the first possession, not a silent skip.

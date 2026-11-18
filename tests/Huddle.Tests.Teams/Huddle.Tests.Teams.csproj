@@ -1,3 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <Import Project="..\Huddle.Tests.Feature.props" />
+
+  <ItemGroup>
+    <!-- Every process template Huddle shipped before a review became a Task, read by ReviewStageMigrationTests. -->
+    <None Update="Teams\ReviewStageOldProcesses\*.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

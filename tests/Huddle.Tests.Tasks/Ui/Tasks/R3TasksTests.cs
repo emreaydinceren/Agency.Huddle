@@ -135,7 +135,7 @@ public sealed class R3TasksTests
         Assert.Equal(["Done", "Won't do"], cut.FindAll(".task-board-column-rail .task-board-rail-label").Select(label => label.TextContent.Trim()).Distinct(StringComparer.Ordinal));
         Assert.Equal(2, cut.FindAll("div.task-board-column-header-rail").Count);
         string style = cut.Find(".task-board-columns").GetAttribute("style") ?? string.Empty;
-        Assert.Equal("grid-template-columns: minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) 40px 40px;", style);
+        Assert.Equal("grid-template-columns: minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) minmax(260px, 300px) 40px 40px;", style);
         Assert.Equal(style, cut.Find(".task-board-lane-columns").GetAttribute("style"));
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("grid-auto-columns: minmax(260px, 300px)", CssText.RuleBody(CssText.AppCss(), ".task-board-lane-columns"), StringComparison.Ordinal);
@@ -153,7 +153,7 @@ public sealed class R3TasksTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [TestTasks.Make(id: "PLAT-0001", status: TaskState.Done), TestTasks.Make(id: "PLAT-0002", status: TaskState.Cancelled)]);
 
         Assert.Empty(cut.FindAll("div.task-board-column-header-rail"));
-        Assert.Equal(["Backlog is empty.", "Nothing to do yet.", "Nothing in progress.", "Nothing in review.", "Nothing needs you."], cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim()));
+        Assert.Equal(["Backlog is empty.", "Nothing to do yet.", "Nothing in progress.", "Nothing needs you."], cut.FindAll(".task-board-column-empty").Select(e => e.TextContent.Trim()));
     }
 
     /// <summary>A rail is a column that opens while its name is being renamed, so the field fits.</summary>
@@ -193,7 +193,7 @@ public sealed class R3TasksTests
         Assert.Single(lines, "Backlog is empty.");
         Assert.DoesNotContain("Nothing to do yet.", lines);
         Assert.Single(lines, "Nothing in progress.");
-        Assert.Single(lines, "Nothing in review.");
+        Assert.Single(lines, "Nothing needs you.");
     }
 
     /// <summary>A swimlane label is the section heading (an h2 in the group-heading style) with its count; a Chrome line sits under it (audit B4b).</summary>
@@ -631,7 +631,7 @@ public sealed class R3TasksTests
         Assert.Contains("task-state-dot-backlog", TaskStateDot.ClassFor(TaskState.Backlog), StringComparison.Ordinal);
         Assert.DoesNotContain("task-state-dot-backlog", TaskStateDot.ClassFor(TaskState.ToDo), StringComparison.Ordinal);
         // contains-ok: a class list is space-separated; one token is pinned.
-        Assert.Contains("task-state-dot-tertiary", TaskStateDot.ClassFor(TaskState.Review), StringComparison.Ordinal);
+        Assert.Contains("task-state-dot-tertiary", TaskStateDot.ClassFor(TaskState.NeedsYou), StringComparison.Ordinal);
     }
 
     // ---- E10, B10i: the drawer's menu and Close task… ----

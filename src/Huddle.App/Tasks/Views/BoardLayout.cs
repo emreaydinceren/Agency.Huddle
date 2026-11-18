@@ -11,13 +11,12 @@ internal static class BoardLayout
     /// <summary>Replaces a null grouping value in a lane's Key, so an Agent literally named "Unassigned" cannot collide with the null group.</summary>
     private const string NullSentinel = "\u0000";
 
-    /// <summary>The seven columns for a new Board View: Spec §12.3's six, plus Needs You between Review and Done (Human gate Spec §6.2).</summary>
+    /// <summary>The six columns for a new Board View: Backlog, To Do, In Progress, Needs You (Human gate Spec §6.2), Done and Won't do.</summary>
     internal static readonly IReadOnlyList<BoardColumn> DefaultColumns =
     [
         new("Backlog", [TaskState.Backlog]),
         new("To Do", [TaskState.ToDo]),
         new("In Progress", [TaskState.InProgress]),
-        new("Review", [TaskState.Review]),
         new("Needs You", [TaskState.NeedsYou]),
         new("Done", [TaskState.Done]),
         new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),

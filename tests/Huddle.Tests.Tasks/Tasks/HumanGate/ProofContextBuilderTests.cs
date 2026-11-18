@@ -173,7 +173,7 @@ public sealed class ProofContextBuilderTests
         Proof proof = source.For(parent);
 
         Assert.Equal(3, proof.Total);
-        Assert.True(proof.IsComplete);
+        Assert.Equal(2, proof.MetCount); // the QA evidence item waits for a Task tagged verify (#669)
     }
 
     /// <summary>One history entry by an Agent.</summary>

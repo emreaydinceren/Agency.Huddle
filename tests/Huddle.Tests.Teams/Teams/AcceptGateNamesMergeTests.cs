@@ -45,14 +45,14 @@ public sealed class AcceptGateNamesMergeTests
         Assert.True(TaskActors.IsReadyMove(changes[1]));
     }
 
-    /// <summary>An Agent moving an ungated Task to Review with its Proof already complete finds the merge named and the Task in Needs You.</summary>
+    /// <summary>An Agent moving an ungated Task to In Progress with its Proof already complete finds the merge named and the Task in Needs You.</summary>
     [Fact]
-    public void Update_AgentMovesToReviewWithProofComplete_NamesTheMergeAndMovesToNeedsYou()
+    public void Update_AgentMovesToInProgressWithProofComplete_NamesTheMergeAndMovesToNeedsYou()
     {
         using Lane lane = new(AcceptGate, FixedProofSource.Complete);
-        TaskItem task = lane.Create(TaskState.InProgress);
+        TaskItem task = lane.Create(TaskState.ToDo);
 
-        _ = Assert.IsType<TaskResult.Saved>(lane.Harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, Nova));
+        _ = Assert.IsType<TaskResult.Saved>(lane.Harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, Nova));
 
         TaskItem? after = lane.Harness.Store.Get(task.Id);
         Assert.Equal(TaskState.NeedsYou, after?.Status);
@@ -69,7 +69,7 @@ public sealed class AcceptGateNamesMergeTests
         lane.AddEvidence(task);
 
         TaskItem? after = lane.Harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.Null(after?.Action);
     }
 
@@ -84,7 +84,7 @@ public sealed class AcceptGateNamesMergeTests
         lane.AddEvidence(task);
 
         TaskItem? after = lane.Harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.Null(after?.Action);
     }
 
@@ -118,7 +118,7 @@ public sealed class AcceptGateNamesMergeTests
         lane.AddEvidence(task);
 
         TaskItem? after = lane.Harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.Null(after?.Action);
     }
 
@@ -137,32 +137,18 @@ public sealed class AcceptGateNamesMergeTests
         lane.AddEvidence(task);
 
         TaskItem? after = lane.Harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
+        Assert.Equal(TaskState.InProgress, after?.Status);
         Assert.Null(after?.Action);
     }
 
     /// <summary>The Human's own change moves nothing, as for any gated Task: Huddle acts only on an Agent's write.</summary>
     [Fact]
-    public void Update_HumanMovesToReviewWithProofComplete_StaysInReview()
+    public void Update_HumanMovesToInProgressWithProofComplete_StaysInProgress()
     {
         using Lane lane = new(AcceptGate, FixedProofSource.Complete);
-        TaskItem task = lane.Create(TaskState.InProgress);
+        TaskItem task = lane.Create(TaskState.ToDo);
 
-        _ = Assert.IsType<TaskResult.Saved>(lane.Harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Review }, null, lane.Human));
-
-        TaskItem? after = lane.Harness.Store.Get(task.Id);
-        Assert.Equal(TaskState.Review, after?.Status);
-        Assert.Null(after?.Action);
-    }
-
-    /// <summary>Evidence on a Task still In Progress does not skip Review.</summary>
-    [Fact]
-    public void AddEvidence_InProgress_StaysInProgressWithNoAction()
-    {
-        using Lane lane = new(AcceptGate, FixedProofSource.Complete);
-        TaskItem task = lane.Create(TaskState.InProgress);
-
-        lane.AddEvidence(task);
+        _ = Assert.IsType<TaskResult.Saved>(lane.Harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, lane.Human));
 
         TaskItem? after = lane.Harness.Store.Get(task.Id);
         Assert.Equal(TaskState.InProgress, after?.Status);
@@ -255,7 +241,7 @@ public sealed class AcceptGateNamesMergeTests
         }
 
         /// <summary>Creates an ungated Task in Review.</summary>
-        public TaskItem CreateInReview() => this.Create(TaskState.Review);
+        public TaskItem CreateInReview() => this.Create(TaskState.InProgress);
 
         /// <summary>Adds an Evidence line as Nova.</summary>
         /// <param name="task">The Task.</param>

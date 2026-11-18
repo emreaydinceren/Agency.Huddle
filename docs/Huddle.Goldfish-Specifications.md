@@ -1,8 +1,8 @@
 # Huddle.Goldfish — Design Specification
 
-**Date:** 2026-11-17 · **Status:** Built 2026-11-17 (slices 0 to 4); slice 5 waits for #669 · **Issue:** #627 (V1). #629, a full process built on the idea, is
-V2 and out of scope · **Depends on:** #669 (a review becomes a Task and the Review state goes; a goldfish review is
-a review Task done in goldfish mode; a Team asks for it in its process text, §9.1) · **Decision record:** [ADR-0096](adr/0096-goldfish-mode-a-possession-of-one-agent-in-one-room.md) ·
+**Date:** 2026-11-17 · **Status:** Built 2026-11-18 (slices 0 to 5) · **Issue:** #627 (V1). #629, a full process built on the idea, is
+V2 and out of scope · **Depends on:** #669, built (a review becomes a Task and the Review state goes; a goldfish review is
+a review Task done in goldfish mode; a Team asks for it in its process text, §9.1) · **Decision record:** [ADR-0097](adr/0097-goldfish-mode-a-possession-of-one-agent-in-one-room.md) ·
 **Builds on:** [ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md) (one session per Room),
 [ADR-0065](adr/0065-huddle-posts-as-itself.md) (Huddle posts as itself),
 [ADR-0060](adr/0060-a-documents-history-is-what-its-editors-report.md) (document history),
@@ -63,7 +63,7 @@ The issue's *Where Huddle is now* was checked line by line before the build. Wha
 | T-14 | Read-deny rules go through the session's `permissions.deny` (`DenyRules`) | `DenyRules()` names one tool, the browser's `browser_run_code_unsafe` (`DotAcpAgentHostFactory.cs:808`), and `permissions.deny` is sent **only when the browser is passed** (`:721-728`). A goldfish deny list is a new list in the same `permissions` key (§8.4) | Partly |
 | T-15 | The Agent's Memory is outside its Work Dir | It is **inside**: `{WorkDir}/memory` (`DotAcpAgentHostFactory.cs:444`), and the Work Dir is every session's `cwd` (`DotAcpPersonaHost.cs:234`). A goldfish working in the Work Dir can read its own Memory with the Adapter's file tools unless something denies it (§8.4, O-2) | New finding |
 | T-16 | The avatar can take a dashed ring | design-system.md reserves the dashed `ProfileCard` ring for a proposed Agent, "Nowhere else" ([design-system.md](engineering/design-system.md), *Avatars and status*, Profile ring). **Resolved with a ring of its own look:** a 2px solid Info ring, where the `ProfileCard` ring is 1px `TextSecondary` dashed or solid, and the design-system row is amended to name it (§7.4) | Resolved |
-| T-17 | A Task waits for review in the Review state | Today, yes: `TaskState.Review` (`src/Huddle.App/Tasks/TaskState.cs`) drives `ChallengerWakeRule`, `ReviewSentence` and `ProofInputWatcher`. **#669 removes it** (decided 2026-11-17): a review is its own Task, owned by the reviewer, and the work Task waits `blocked_by` it. This spec assumes #669 and never relies on the Review state | Changing first |
+| T-17 | A Task waits for review in the Review state | It did: `TaskState.Review` drove `ChallengerWakeRule`, `ReviewSentence` and `ProofInputWatcher`. **#669 removed it and is built** ([ADR-0096](adr/0096-a-review-is-a-task-owned-by-the-reviewer-not-a-state.md)): a review is its own Task, tagged `review`, owned by the reviewer, a child of the work Task and in its `blocked_by`. This spec never relies on the Review state | Built |
 
 ---
 
@@ -898,8 +898,7 @@ pushing, read its *Passing on Linux CI* section. Each test has a `///` summary (
 ### 14.2 Manual verification
 
 Paid, on **Sonnet at least** for every Agent, in an isolated lane per
-[manual-tests/common.md](engineering/manual-tests/common.md). A new page, `engineering/manual-tests/goldfish.md`, holds them
-when built.
+[manual-tests/common.md](engineering/manual-tests/common.md). The page [manual-tests/goldfish.md](engineering/manual-tests/goldfish.md) holds them.
 
 | # | Steps | Expect |
 | --- | --- | --- |
@@ -915,7 +914,7 @@ when built.
 | GF-M10 | Kill Huddle mid-possession; start | "Interrupted by a restart"; never resumed; a Mention still owed is answered once, by the warm Ruth |
 | GF-M11 | Let the goldfish ask and do not answer | It ends its Turn and waits; the chip reads "Ruth (goldfish) is waiting · n min"; nothing more until a Mention of Ruth or **Call Ruth back** |
 | GF-M12 | A goldfish `log_change` with `reviewed` on a spec | The document's History reads "Goldfish review by Ruth" |
-| GF-M13 | In a Team created from the `spec-driven` template, assign Ruth a review Task whose parent holds a spec | Ruth, following the process text, calls `goldfish`; the brief is a comment on the review Task too |
+| GF-M13 | In a Team created from the `spec-driven` template, give Ruth a review Task tagged `review`, a child of the spec Task (#669) | Ruth, following the process text ("Spec reviews are done in goldfish mode"), calls `goldfish`; the brief is a comment on the review Task too; her approval moves the review Task to Done |
 | GF-M14 | As the goldfish, try `cat` and `Read` of `memory/` (Claude, after S-1) | `Read` refused; `cat` refused too (measured twice); a script (`python -c`) is the open route (E-9, accepted) |
 | GF-M15 | Brief the goldfish so it must ask the Human (for example, "ask the Human which environment to test"); it calls `ask_human` | The Question card reads "Ruth · goldfish is asking" and Needs You lists the Room; answer it: the goldfish continues with the answer, the warm Ruth gets no Turn for it; the result lists the question and answer |
 | GF-M16 | Set `Team:Acp:MaxConcurrentTurns` to 2 and ask Ruth to goldfish a spec | `goldfish` refuses with the one-Turn-at-a-time sentence; nothing is posted and Ruth is not possessed |
@@ -926,7 +925,7 @@ when built.
 
 | Doc | Change |
 | --- | --- |
-| New ADR (0096 or next free) | Goldfish mode: the possession, the brief on the record, Mentions routed to the goldfish, (Agent, Room) possession for tools and the stamp, never resumed |
+| New ADR (0097) | Goldfish mode: the possession, the brief on the record, Mentions routed to the goldfish, (Agent, Room) possession for tools and the stamp, never resumed |
 | `docs/Huddle.EngineeringGuide.md` | The `Team:Goldfish:*` keys |
 | `docs/engineering/language.md` | **Goldfish mode**, **brief**, **possession** (avoid: clone, sub-agent, reviewer mode) |
 | `docs/engineering/wireframes.md` | §7.5's codes |
@@ -952,7 +951,7 @@ changes `docs/Index.md` in the same commit).
 | 2 | The clean session: `OpenCleanAsync`, `ComposeClean` and its golden, the clean flag on `RoomSession`, hooks and enrichers; the deny list | 1, S-1 | Built 2026-11-17 |
 | 3 | The two tools, `IPossessionLookup`, the reader refusals and the stamped `ask_human`; routing the Room's Turns in the runner; the comeback in `ChatService`; the stamp writers and `GoldfishStamp` readers; spend with the Task id | 2 | Built 2026-11-17 |
 | 4 | UI: `C2c` with Call back, `C4d`, `C4e`, `C5d`, the avatar cue, the fish symbol | 3 | Built 2026-11-17 |
-| 5 | The `spec-driven` template's sentence (§9.1); the manual page; the UserGuide | 4, #669 | Waits for #669 |
+| 5 | The `spec-driven` template's sentence (§9.1); the manual page; the UserGuide | 4, #669 | Built 2026-11-18 |
 
 ## Appendix B. Assumptions made while writing
 

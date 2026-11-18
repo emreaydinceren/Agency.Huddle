@@ -297,7 +297,7 @@ internal sealed partial class ProcessMergeGate(PersonaStore personas, TaskStore 
 
         if (runsInside)
         {
-            return "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-0012-login), once that Task's Proof is complete in Review, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
+            return "Cannot merge yet: under Run inside the Team a merge into main runs only for a branch named after a Task's id (for example feat/DEV-0012-login), once that Task's Proof is complete, and no Task of your Team is ready. Finish review and QA Evidence first; do not set a merge Action.";
         }
 
         string where = own.Count == 1

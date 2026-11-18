@@ -5,6 +5,8 @@ date: 2026-11-15
 
 # A Needs You level per scope lets a Team's local work run without an Accept
 
+> Amended by [ADR-0096](0096-a-review-is-a-task-owned-by-the-reviewer-not-a-state.md): there is no Review state; read "in Review" below as In Progress.
+
 In the 2026-11-14 from-scratch run, a development Team built a small website in its own local repository with no remote.
 To finish it, the Human pressed Accept four times. Each Accept was only there so the Developer could fast-forward a
 reviewed and tested commit onto the local `main`. The Human also approved a Sprint. Nothing left the machine, and the

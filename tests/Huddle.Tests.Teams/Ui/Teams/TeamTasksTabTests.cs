@@ -35,7 +35,7 @@ public sealed class TeamTasksTabTests
     private const string ColumnLabel = ".task-board-column-label";
 
     /// <summary>The six default Board columns, restated (Spec §12.3).</summary>
-    private static readonly string[] DefaultColumnLabels = ["Backlog", "To Do", "In Progress", "Review", "Needs You", "Done", "Won't do"];
+    private static readonly string[] DefaultColumnLabels = ["Backlog", "To Do", "In Progress", "Needs You", "Done", "Won't do"];
 
     /// <summary>The Team page's swimlane grouping, restated.</summary>
     private static readonly TaskGroupField[] ProjectGrouping = [TaskGroupField.Project];

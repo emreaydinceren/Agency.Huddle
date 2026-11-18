@@ -22,7 +22,7 @@ public sealed class TaskServiceHelperActorTests
     /// <param name="gated">Whether the Task starts with the Human gate on.</param>
     private static TaskItem Create(TaskToolHarness harness, bool gated = false)
     {
-        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.Review) { HumanGate = gated };
+        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.InProgress) { HumanGate = gated };
         return Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, TaskActors.Human(harness.Options.Value))).Task;
     }
 
@@ -52,7 +52,7 @@ public sealed class TaskServiceHelperActorTests
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
         Assert.Contains("A reason is only recorded when the status becomes Cancelled or Rejected.", refused.Problems);
-        Assert.Equal(TaskState.Review, harness.Store.Get(task.Id)?.Status);
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(task.Id)?.Status);
     }
 
     /// <summary>A reason is refused on a change that touches an already-gated Task without turning the gate on.</summary>
@@ -86,7 +86,7 @@ public sealed class TaskServiceHelperActorTests
     public void Update_HelperClearsAction_IsRefused()
     {
         using TaskToolHarness harness = Build();
-        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.Review) { Action = "Send the reply" };
+        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.InProgress) { Action = "Send the reply" };
         TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(draft, TaskActors.Human(harness.Options.Value))).Task;
 
         TaskResult result = harness.Service.Update(task.Id, new TaskPatch { Action = Optional<string?>.Set(null) }, task.Version, Helper);

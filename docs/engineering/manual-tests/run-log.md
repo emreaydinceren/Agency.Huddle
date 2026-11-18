@@ -7345,3 +7345,130 @@ File: [`docs/engineering/manual-tests/turn-queue.md`](turn-queue.md#turnqueue-18
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `a3142a11` | #617 | Budget 3, Nova Offline as in TURNQUEUE-14. Cleo Mentioned Nova and the Room paused after Kai and Cleo spent the Budget. Bringing Nova back re-sent both of its waiting Mentions, which it held: the notice read "Waiting for Nova: 2 Messages, until this Room's Budget is continued" with Don't answer. Typing "carry on" (not Continue) released them; Nova answered both, once each. |
+
+### GOLDFISH-01 — A call runs end to end on a stock install 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-01--a-call-runs-end-to-end-on-a-stock-install-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `64802bd2` | #627 | Lane D (stock profile, no AdapterPath): no refusal, clean session opened, `goldfish_done` returned the body, Ruth relayed it; the warm Ruth's next Message had no stamp. Earlier lanes found the stock-profile refusal, the lost header (B2) and the stale Draft (B3); lane C confirmed B2 and B3 fixed. |
+
+### GOLDFISH-02 — The clean session sees only the brief and the files it names 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-02--the-clean-session-sees-only-the-brief-and-the-files-it-names-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `64802bd2` | #627 | Lane A read the clean `session/new` (no Room Messages, Memory or `AGENTS.md`; the tool list is the warm one plus the two goldfish tools). Lane D: `permissions.deny` holds the three `Read` rules on the clean session, none on the warm ones. |
+
+### GOLDFISH-03 — Only a Mention of Ruth starts the goldfish's next Turn 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-03--only-a-mention-of-ruth-starts-the-goldfishs-next-turn-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `17a3ef35` | #627 | Lane C: Quinn's answer and a Human note with no Mention did not start a Turn (`turns` stayed 1, `waiting`); a Mention did (turns 2, 3). |
+
+### GOLDFISH-04 — Five questions in a row are ordinary Messages 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-04--five-questions-in-a-row-are-ordinary-messages-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane B: five questions, five Mention answers, result listed all five; `turns` 5, spend 0.1156 USD. |
+
+### GOLDFISH-05 — An unrelated Mention of Ruth goes to the goldfish 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-05--an-unrelated-mention-of-ruth-goes-to-the-goldfish-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane A: an unrelated Mention went to the goldfish, which answered it stamped; chip stayed waiting. |
+
+### GOLDFISH-06 — Call Ruth back ends the possession with the partial result 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-06--call-ruth-back-ends-the-possession-with-the-partial-result-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `64802bd2` | #627 | Lane D: Call back on a waiting goldfish gave "Partial result: Posted 'goldfish here' ..." and "Called back by You after 1 minute"; no Draft, no Degraded. Lane A had found the result read "No result was posted" (fixed). |
+
+### GOLDFISH-07 — "@Ruth comeback later" ends nothing 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-07--ruth-comeback-later-ends-nothing-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `17a3ef35` | #627 | Lanes A and C: the goldfish took a Turn and the possession stayed `waiting`. |
+
+### GOLDFISH-08 — The warm Ruth answers in another Room 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-08--the-warm-ruth-answers-in-another-room-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane A: the direct Room was answered by the warm Ruth's own session; the possession stayed `waiting`. |
+
+### GOLDFISH-09 — Plain Messages stay context for the warm Ruth after the return 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-09--plain-messages-stay-context-for-the-warm-ruth-after-the-return-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane A: the goldfish answered the Mentioning Message; after the return the warm Ruth listed both as context. |
+
+### GOLDFISH-10 — A kill mid-possession ends as Restarted 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-10--a-kill-mid-possession-ends-as-restarted-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane B: kill mid-possession; after restart `ended`, `exit restarted`, "Interrupted by a restart", never resumed, the owed Mention answered once by the warm Ruth. |
+
+### GOLDFISH-11 — A goldfish that asked and got nothing waits 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-11--a-goldfish-that-asked-and-got-nothing-waits-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane B: chip "Ruth (goldfish) is waiting" 0 then 1 min; no new Turn for 70 s. The Human has to dictate the brief's words or Ruth adds "begin with @Ruth". |
+
+### GOLDFISH-12 — A goldfish's review reads "Goldfish review by Ruth" 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-12--a-goldfishs-review-reads-goldfish-review-by-ruth-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane B: the History line carries `goldfish:true`; the byline reads "Goldfish review by Ruth". |
+
+### GOLDFISH-13 — A spec review Task leads Ruth to call `goldfish` 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-13--a-spec-review-task-leads-ruth-to-call-goldfish-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### GOLDFISH-14 — The Read deny stops `Read` and `cat` of Memory 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-14--the-read-deny-stops-read-and-cat-of-memory-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `17a3ef35` | #627 | Lanes B and C: `Read` refused and `cat` refused too; the codeword never appeared. The spec's old table row (cat succeeds) was corrected. |
+
+### GOLDFISH-15 — A goldfish's Question can be answered from its card 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-15--a-goldfishs-question-can-be-answered-from-its-card-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | `17a3ef35` | #627 | Lane C: card "Ruth · goldfish is asking"; options disabled while the Turn was open and enabled once it waited; the answer reached the goldfish and the result listed it. Lane B had found the options stuck disabled (fixed). |
+
+### GOLDFISH-16 — `goldfish` is refused while `MaxConcurrentTurns` is above 1 💰
+
+File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-16--goldfish-is-refused-while-maxconcurrentturns-is-above-1-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane A: with `MaxConcurrentTurns=2` the tool refused with the one-Turn-at-a-time sentence; no possession row, nothing posted. |

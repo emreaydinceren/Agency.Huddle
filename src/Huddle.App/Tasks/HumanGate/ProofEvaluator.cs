@@ -26,10 +26,12 @@ internal static class ProofEvaluator
         ArgumentNullException.ThrowIfNull(context);
 
         List<ProofItem> items = [.. context.Definition.Select(item => EvaluateItem(task, context, item.Label, item.Rule, item.Source))];
-        bool alreadyVerifies = context.Definition.Any(static item => item.Rule is DoneRule.EvidenceFrom from && string.Equals(from.Step, Verify, StringComparison.OrdinalIgnoreCase));
-        if (context.Gates.Contains(GateId.QaEvidenceBeforeDone) && !alreadyVerifies)
+        bool alreadyVerifies = context.Definition.Any(static item =>
+            (item.Rule is DoneRule.EvidenceFrom from && string.Equals(from.Step, Verify, StringComparison.OrdinalIgnoreCase))
+            || (item.Rule is DoneRule.TaskTagged tagged && string.Equals(tagged.Tag, ReviewTags.Verify, StringComparison.OrdinalIgnoreCase)));
+        if (context.Gates.Contains(GateId.QaEvidenceBeforeDone) && !alreadyVerifies && !ReviewTags.IsReviewTask(task.Tags))
         {
-            items.Add(EvaluateItem(task, context, QaLabel, new DoneRule.EvidenceFrom(Verify), ProofItemSource.Gate));
+            items.Add(EvaluateItem(task, context, QaLabel, new DoneRule.TaskTagged(ReviewTags.Verify), ProofItemSource.Gate));
         }
 
         if (context.Gates.Contains(GateId.FailingTestBeforeFix) && context.IsBug)

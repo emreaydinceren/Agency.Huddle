@@ -82,7 +82,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     /// <param name="action">The Action, or <see langword="null"/>.</param>
     private TaskItem Create(TaskActor actor, string title = "Reply to Acme about the renewal price", string? action = null)
     {
-        TaskDraft draft = new(title, Team, null, TaskState.Review) { Action = action };
+        TaskDraft draft = new(title, Team, null, TaskState.InProgress) { Action = action };
         return Assert.IsType<TaskResult.Saved>(this.harness.Service.Create(draft, actor)).Task;
     }
 
@@ -120,7 +120,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     /// <summary>Holds still long enough for a wrongly queued judgement to have run.</summary>
     private static Task SettleAsync() => Task.Delay(150, TestContext.Current.CancellationToken);
 
-    /// <summary>An Agent's new Task that needs the Human gets the gate, logged by the Helper with the reason (U-1); a Task in Review with nothing left to prove then goes to Needs You.</summary>
+    /// <summary>An Agent's new Task that needs the Human gets the gate, logged by the Helper with the reason (U-1); a Task with an empty Proof stays In Progress (#669, D-7).</summary>
     [Fact]
     public async Task AgentCreate_NeedsHuman_TurnsGateOnWithReason()
     {
@@ -132,11 +132,10 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         TaskItem? after = this.harness.Store.Get(task.Id);
         Assert.NotNull(after);
         Assert.True(after.HumanGate);
-        ChangeLogEntry entry = after.ChangeLog[^2];
+        ChangeLogEntry entry = after.ChangeLog[^1];
         Assert.Equal("Needs Human (Helper)", entry.Actor);
         Assert.Equal("human gate on (reason: Sends a reply to a customer)", entry.Summary);
-        Assert.Equal("Huddle", after.ChangeLog[^1].Actor);
-        Assert.Equal(TaskState.NeedsYou, after.Status);
+        Assert.Equal(TaskState.InProgress, after.Status);
         Assert.Equal($"Turned the gate on for {task.Id}", this.status.Get(NeedsHumanHelper.HelperId).LastResult);
     }
 
@@ -190,7 +189,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         await this.CallsAsync(1);
         await this.RecordedAsync();
 
-        TaskResult result = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, Leo);
+        TaskResult result = this.harness.Service.Update(task.Id, new TaskPatch { Status = TaskState.Done }, null, Leo);
         this.PassTheWait();
         await SettleAsync();
 
@@ -287,7 +286,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
     public async Task HumanTurnsGateOff_IsNeverJudgedAgain(bool helperOnWhenHumanActs)
     {
         TaskActor human = TaskActors.Human(this.harness.Options.Value);
-        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.Review) { HumanGate = true };
+        TaskDraft draft = new("Reply to Acme", Team, null, TaskState.InProgress) { HumanGate = true };
         TaskItem task = Assert.IsType<TaskResult.Saved>(this.harness.Service.Create(draft, human)).Task;
         if (!helperOnWhenHumanActs)
         {
@@ -439,7 +438,7 @@ public sealed class NeedsHumanFlowTests : IAsyncLifetime
         Assert.IsType<HelperApplied.Changed>(applied);
         TaskItem? stored = this.harness.Store.Get(task.Id);
         Assert.NotNull(stored);
-        Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", stored.ChangeLog[^2].Summary);
+        Assert.Equal($"human gate on (reason: {new string('x', 197)}...)", stored.ChangeLog[^1].Summary);
     }
 
     /// <summary>#399: a Verdict that names an action sets the gate and the Action in one write, logged by the Helper.</summary>

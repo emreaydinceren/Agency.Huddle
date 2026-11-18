@@ -90,7 +90,7 @@ public sealed class ReadRecordsToolTests
         /// <param name="comments">The Task's comment and Evidence timeline entries, if any.</param>
         public void Seed(string id, DateTimeOffset at, string summary, string description = "Body", string team = Team, IReadOnlyList<TimelineEntry>? comments = null)
         {
-            TaskItem task = TestTasks.Make(id: id, status: TaskState.Review, description: description, location: new TaskLocation(team, null, false), changeLog: [new ChangeLogEntry(at, "Kai", summary)]) with { Comments = comments ?? [] };
+            TaskItem task = TestTasks.Make(id: id, status: TaskState.InProgress, description: description, location: new TaskLocation(team, null, false), changeLog: [new ChangeLogEntry(at, "Kai", summary)]) with { Comments = comments ?? [] };
             TaskItem toWrite = task with { Path = TaskLayout.PathFor(this.Harness.Store.RootDirectory, task.Location, task.Id) };
             _ = this.Harness.Store.Create(toWrite, TaskFileFormat.Compose(toWrite)) ?? throw new InvalidOperationException("Fixture collided with an existing file.");
         }
@@ -283,11 +283,11 @@ public sealed class ReadRecordsToolTests
         using Scene scene = await CreateSceneAsync(ct);
         scene.SeedLegacy(
             "PLAT-0001",
-            "---\nid: PLAT-0001\ntitle: T\nstatus: Review\npriority: Medium\ncreator: Human\n---\nBody\n\n## Evidence\nChecked by hand\n\n## Change log\n- 2026-10-07T12:00:00Z | Kai | status: Review → Done\n");
+            "---\nid: PLAT-0001\ntitle: T\nstatus: In Progress\npriority: Medium\ncreator: Human\n---\nBody\n\n## Evidence\nChecked by hand\n\n## Change log\n- 2026-10-07T12:00:00Z | Kai | status: Review → Done\n");
 
         string result = await scene.Tool("Rae").InvokeAsync(Args(taskId: "PLAT-0001"), ct);
 
-        Assert.Equal("PLAT-0001 T (Review)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\nChecked by hand\ncomments: none", result);
+        Assert.Equal("PLAT-0001 T (InProgress)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\nChecked by hand\ncomments: none", result);
     }
 
     /// <summary>A Task with timeline entries lists its Evidence from the timeline and its comments, a multi-line one indented.</summary>
@@ -310,7 +310,7 @@ public sealed class ReadRecordsToolTests
         string result = await scene.Tool("Rae").InvokeAsync(Args(taskId: "PLAT-0001"), ct);
 
         Assert.Equal(
-            "PLAT-0001 T (Review)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\n" +
+            "PLAT-0001 T (InProgress)\nchange log:\n2026-10-07 12:00 Kai status: Review → Done\nevidence:\n" +
             "2026-10-07T09:05Z | Kai | dotnet test | exit 0\nKai note: Checked on staging.\n" +
             "comments:\n2026-10-07 10:30 Mia Looks good.\n  Ship it.",
             result);

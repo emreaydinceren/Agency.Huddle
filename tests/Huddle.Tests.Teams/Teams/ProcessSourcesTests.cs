@@ -23,7 +23,7 @@ public sealed class ProcessSourcesTests
     private const string Check = "dotnet test";
     private const string Agents = "# Home\n\n## Onboarding\n\n- Read the workspace.\n- Run the tests.\n\n## Definition of Done\n\n- [ ] Tests pass\n";
     private const string LegacyProcess = "---\ntitle: 'Flow'\ngates: ['qa-evidence-before-done']\nretro: { every: 3, unit: 'days' }\n---\n# Flow\n\n## Onboarding\n\n- Legacy step.\n\n## Definition of Done\n\n- [ ] Legacy item\n";
-    private const string QaDone = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.";
+    private const string QaDone = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer), or a child Task tagged verify that is Done, is needed before this Task can be Done.";
 
     private static readonly DateTimeOffset Start = new(2026, 10, 8, 12, 0, 0, TimeSpan.Zero);
     private static readonly IReadOnlyDictionary<string, string> Covers = new Dictionary<string, string>(StringComparer.Ordinal)

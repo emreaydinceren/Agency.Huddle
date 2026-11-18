@@ -60,7 +60,6 @@ public sealed class TaskBoardDropTests
         new("Backlog", [TaskState.Backlog]),
         new("To Do", [TaskState.ToDo]),
         new("In Progress", [TaskState.InProgress]),
-        new("Review", [TaskState.Review]),
         new("Needs You", [TaskState.NeedsYou]),
         new("Done", [TaskState.Done]),
         new("Won't do", [TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected]),
@@ -69,7 +68,7 @@ public sealed class TaskBoardDropTests
     /// <summary>
     /// Plan 12.3.t bullet 1 and Spec §13.4 step 4: a move to In Progress calls <c>TaskService.Update</c>
     /// as the Human with <c>baseVersion: null</c> - so even a stale card (someone moved the Task to
-    /// Review after the Board rendered it, touching the very field the drop changes) saves, last write
+    /// Backlog after the Board rendered it, touching the very field the drop changes) saves, last write
     /// wins, instead of conflicting - and it is saved at once (D-20).
     /// </summary>
     /// <param name="viaMenu">Whether to use the card's Move to menu instead of a drop.</param>
@@ -81,7 +80,7 @@ public sealed class TaskBoardDropTests
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         TaskItem stale = CreateTask(harness, "Ship it", TaskState.ToDo);
-        _ = Saved(harness.Service.Update(stale.Id, new TaskPatch { Title = "Ship it now", Status = TaskState.Review }, null, Human(harness)));
+        _ = Saved(harness.Service.Update(stale.Id, new TaskPatch { Title = "Ship it now", Status = TaskState.Backlog }, null, Human(harness)));
         List<TaskChange> changes = [];
         harness.Events.TaskChanged += changes.Add;
 
@@ -93,7 +92,7 @@ public sealed class TaskBoardDropTests
         Assert.NotNull(saved);
         Assert.Equal(TaskState.InProgress, saved.Status);
         Assert.Equal("Ship it now", saved.Title);
-        Assert.Equal("status: Review → In Progress", saved.ChangeLog[^1].Summary);
+        Assert.Equal("status: Backlog → In Progress", saved.ChangeLog[^1].Summary);
         TaskChange change = Assert.Single(changes);
         Assert.Equal(TaskActorKind.Human, change.Actor.Kind);
         Assert.Equal("You", change.Actor.Name);
@@ -435,7 +434,7 @@ public sealed class TaskBoardDropTests
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
 
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
         Assert.All(rig.Board.FindAll(".task-board-drag-caption"), c => Assert.Equal("Nova will be notified", c.TextContent.Trim()));
         IReadOnlyList<IElement> headers = rig.Board.FindAll("div.task-board-column-header");
         Assert.Null(headers[1].QuerySelector(".task-board-drag-caption"));
@@ -470,12 +469,12 @@ public sealed class TaskBoardDropTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
         harness.Options.Value.Tasks.WakeEnabled = false;
         await rig.Board.InvokeAsync(() => harness.Gateway.SetOnline(novaId));
 
         rig.Board.WaitForAssertion(() => Assert.Equal("Nova is Asleep", rig.Board.FindComponent<MudBadge>().Instance.BadgeAriaLabel));
-        Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count);
+        Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count);
         Assert.Equal("Nova will be notified", rig.Board.Find(".task-board-drag-caption").TextContent.Trim());
     }
 
@@ -490,7 +489,7 @@ public sealed class TaskBoardDropTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
         await rig.Board.InvokeAsync(() => rig.Container.CancelTransaction());
 
         rig.Board.WaitForAssertion(() => Assert.Empty(rig.Board.FindAll(".task-board-drag-caption")));

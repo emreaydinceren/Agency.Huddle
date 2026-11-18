@@ -20,20 +20,6 @@ public sealed class ViewStoreNeedsYouTests
         return path;
     }
 
-    /// <summary>A View whose state filter has Review reads with Needs You added.</summary>
-    [Fact]
-    public void Read_ViewWithReview_GainsNeedsYou()
-    {
-        using TempDataDir dataDir = new();
-        WriteViewsFile(dataDir, "[\"To Do\", \"Review\"]");
-
-        using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
-
-        TaskView view = Assert.Single(store.Views, v => v.Id == "v1");
-        Assert.Contains(TaskState.Review, view.Filter.States);
-        Assert.Contains(TaskState.NeedsYou, view.Filter.States);
-    }
-
     /// <summary>A View whose state filter has no Review is left exactly as written.</summary>
     [Fact]
     public void Read_ViewWithoutReview_IsUnchanged()
@@ -60,7 +46,7 @@ public sealed class ViewStoreNeedsYouTests
         Assert.Single(view.Filter.States, s => s == TaskState.NeedsYou);
     }
 
-    /// <summary>Reading the gained state never rewrites <c>views.json</c>: its bytes on disk are unchanged.</summary>
+    /// <summary>Reading a filter that named Review never rewrites <c>views.json</c>: its bytes on disk are unchanged, and the View reads with Needs You.</summary>
     [Fact]
     public void Read_ViewGainsNeedsYou_FileIsNotRewritten()
     {

@@ -69,7 +69,7 @@ internal sealed class CreateTaskTool(
             ["status"] = new JsonObject
             {
                 ["type"] = "string",
-                ["enum"] = new JsonArray { "Backlog", "To Do", "In Progress", "Review", "Done" },
+                ["enum"] = new JsonArray { "Backlog", "To Do", "In Progress", "Done" },
             },
             ["priority"] = new JsonObject
             {
@@ -343,7 +343,7 @@ internal sealed class CreateTaskTool(
         {
             if (!TaskStates.TryParse(raw.Status, out status))
             {
-                refusal = string.Create(CultureInfo.InvariantCulture, $"'status' has an unknown value '{raw.Status}'.");
+                refusal = TaskToolText.UnknownStatusRefusal(raw.Status);
                 return false;
             }
 
