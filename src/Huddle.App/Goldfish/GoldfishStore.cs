@@ -192,7 +192,15 @@ internal sealed class GoldfishStore
     /// <param name="id">The possession id.</param>
     /// <param name="spend">What the Turn cost, or <see langword="null"/> when unknown.</param>
     /// <param name="currency">The currency of <paramref name="spend"/>; kept when <see langword="null"/>.</param>
-    public void AddTurn(string id, decimal? spend, string? currency)
+    public void AddTurn(string id, decimal? spend, string? currency) => this.AddCost(id, spend, currency, 1);
+
+    /// <summary>Adds spend to a row without counting a Turn: the cost of a Turn that was counted earlier.</summary>
+    /// <param name="id">The possession id.</param>
+    /// <param name="spend">What to add.</param>
+    /// <param name="currency">The currency of <paramref name="spend"/>; kept when <see langword="null"/>.</param>
+    public void AddSpend(string id, decimal spend, string? currency) => this.AddCost(id, spend, currency, 0);
+
+    private void AddCost(string id, decimal? spend, string? currency, int turns)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
@@ -202,8 +210,9 @@ internal sealed class GoldfishStore
         Execute(
             connection,
             transaction,
-            "UPDATE goldfish_possessions SET turns = turns + 1, spend = $spend, currency = COALESCE($currency, currency) WHERE id = $id;",
+            "UPDATE goldfish_possessions SET turns = turns + $turns, spend = $spend, currency = COALESCE($currency, currency) WHERE id = $id;",
             ("$id", id),
+            ("$turns", turns),
             ("$spend", Text(total)),
             ("$currency", currency));
         transaction.Commit();

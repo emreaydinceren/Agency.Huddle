@@ -214,6 +214,20 @@ public sealed partial class ChatService
         return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, false, ct, goldfish).ConfigureAwait(false);
     }
 
+    /// <summary>The text of the last Message an Agent posted in a Room while a possession was in force: what a goldfish that never called <c>goldfish_done</c> last said.</summary>
+    /// <param name="roomId">The Room to read.</param>
+    /// <param name="possessionId">The possession id the Message is stamped with.</param>
+    /// <param name="agentId">The Agent who must have sent it.</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The Message text, or <see langword="null"/> when the goldfish posted nothing there.</returns>
+    public async Task<string?> LastGoldfishReplyAsync(string roomId, string possessionId, string agentId, CancellationToken ct)
+    {
+        IReadOnlyList<ChatMessage> history = await this.store.ReadAllAsync(roomId, ct).ConfigureAwait(false);
+        return history
+            .LastOrDefault(message => string.Equals(message.Goldfish, possessionId, StringComparison.Ordinal)
+                && string.Equals(message.SenderId, agentId, StringComparison.Ordinal))?.Text;
+    }
+
     /// <summary>
     /// Posts Huddle's own Message like <see cref="PostAsHuddleAsync"/>, but parses no Mentions, so quoted text that holds a
     /// <c>@Member</c> addresses nobody and owes no Turn. The goldfish result Message uses it to quote a brief word for word.

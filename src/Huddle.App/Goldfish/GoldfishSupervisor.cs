@@ -82,6 +82,13 @@ internal sealed class GoldfishSupervisor(
                 return false;
             }
 
+            if (result is not null)
+            {
+                // goldfish_done is called inside its Turn, so that Turn's own report reaches a row already ended: count it here.
+                store.AddTurn(row.Id, null, null);
+                row = row with { Turns = row.Turns + 1 };
+            }
+
             return await this.ReturnClaimedAsync(row, exit, by, result, ct).ConfigureAwait(false);
         }
         finally
@@ -221,6 +228,7 @@ internal sealed class GoldfishSupervisor(
 
         if (this.FindOpen(agentId) is not { } open || !string.Equals(open.Id, report.PossessionId, StringComparison.Ordinal))
         {
+            this.AddLateSpend(report);
             return;
         }
 
@@ -254,6 +262,19 @@ internal sealed class GoldfishSupervisor(
             default:
                 break;
         }
+    }
+
+    /// <summary>The Turn that called <c>goldfish_done</c> reports its cost after the row ended: add that cost to the row (its Turn was counted at the return).</summary>
+    private void AddLateSpend(GoldfishReport report)
+    {
+        if (report.Kind != GoldfishReportKind.TurnEnded
+            || report.RunningSpend is not { } running
+            || store.Get(report.PossessionId) is not { Exit: GoldfishExit.Finished or GoldfishExit.Stuck } ended)
+        {
+            return;
+        }
+
+        store.AddSpend(ended.Id, running - ended.Spend, report.Currency);
     }
 
     private async Task RestartOneAsync(string possessionId, CancellationToken ct)
@@ -290,7 +311,8 @@ internal sealed class GoldfishSupervisor(
         try
         {
             string? findings = result is { Findings.Count: > 0 } ? string.Join('\n', result.Findings.Select(finding => "- " + finding)) : null;
-            string text = GoldfishLine.ResultText(row.Brief, result?.Text, findings, exit == GoldfishExit.Stuck);
+            string? partialText = result is null ? await chat.LastGoldfishReplyAsync(row.RoomId, row.Id, row.AgentId, ct).ConfigureAwait(false) : null;
+            string text = GoldfishLine.ResultText(row.Brief, result?.Text ?? partialText, findings, result is null || exit == GoldfishExit.Stuck);
             ChatMessage posted = await chat.PostAsHuddleQuietAsync(row.RoomId, text, ct, goldfish: row.Id).ConfigureAwait(false);
             store.SetResultMessage(row.Id, posted.Id);
         }

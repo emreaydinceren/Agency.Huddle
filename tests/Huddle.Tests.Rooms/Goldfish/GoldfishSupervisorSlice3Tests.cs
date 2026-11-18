@@ -309,6 +309,56 @@ public sealed class GoldfishSupervisorSlice3Tests
         Assert.Equal(GoldfishLine.ReturnLine("Nova", GoldfishExit.Stuck, null, TimeSpan.Zero, true, firstLine: "Could not open the file"), lines[1].Text);
     }
 
+    /// <summary>A comeback with no <c>goldfish_done</c> posts the goldfish's last stamped reply as the partial result, not "No result was posted".</summary>
+    [Fact]
+    public async Task EndAsync_CalledBackAfterAStampedReply_PostsThatReplyAsThePartialResult()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+        await rig.File.AppendAsync(rig.Room.Id, new ChatMessage("m-1", rig.Now, rig.Nova.Id, "Nova", "first thought") { Goldfish = "p1" }, ct);
+        await rig.File.AppendAsync(rig.Room.Id, new ChatMessage("m-2", rig.Now, rig.Kai.Id, "Kai", "not the goldfish") { Goldfish = "p1" }, ct);
+        await rig.File.AppendAsync(rig.Room.Id, new ChatMessage("m-3", rig.Now, rig.Nova.Id, "Nova", "the last reply") { Goldfish = "p1" }, ct);
+        await rig.File.AppendAsync(rig.Room.Id, new ChatMessage("m-4", rig.Now, rig.Nova.Id, "Nova", "warm, unstamped") { Goldfish = null }, ct);
+
+        _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.CalledBack, "You", ct);
+
+        IReadOnlyList<ChatMessage> lines = await rig.HuddleLinesAsync(ct);
+        Assert.Equal(GoldfishLine.ResultText("Look into it", "the last reply", null, true), lines[0].Text);
+    }
+
+    /// <summary>A possession that ends without any stamped reply still says that no result was posted.</summary>
+    [Fact]
+    public async Task EndAsync_CalledBackWithNoStampedReply_SaysNoResultWasPosted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+
+        _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.CalledBack, "You", ct);
+
+        IReadOnlyList<ChatMessage> lines = await rig.HuddleLinesAsync(ct);
+        Assert.Equal("Brief: Look into it\n\nNo result was posted.", lines[0].Text);
+    }
+
+    /// <summary>A possession finished by <c>goldfish_done</c> in its first Turn counts that Turn, and the late Turn report adds its spend.</summary>
+    [Fact]
+    public async Task EndAsync_FinishedInTheFirstTurn_CountsTheTurnAndTheLateReportAddsSpend()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+        await rig.Supervisor.OnReportAsync(rig.Nova.Id, new GoldfishReport("p1", GoldfishReportKind.TurnStarted), ct);
+
+        _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, ct, new GoldfishResult("Done", []));
+        Assert.Equal(1, rig.Row("p1").Turns);
+
+        await rig.Supervisor.OnReportAsync(rig.Nova.Id, new GoldfishReport("p1", GoldfishReportKind.TurnEnded, 0.05m, "USD", Done: false), ct);
+
+        Possession row = rig.Row("p1");
+        Assert.Equal((1, 0.05m, "USD"), (row.Turns, row.Spend, row.Currency));
+    }
+
     /// <summary>The start row names the Agent, then the brief word for word; the Task comment names the Agent, then the brief word for word.</summary>
     [Fact]
     public void StartRowAndTaskComment_NameTheAgentAndQuoteTheBriefVerbatim()

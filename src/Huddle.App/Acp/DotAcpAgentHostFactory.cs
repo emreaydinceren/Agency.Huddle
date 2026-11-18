@@ -323,13 +323,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetService<NeedsYouLevels>());
     }
 
+    /// <summary>Whether the goldfish tools are offered on a profile: the mode is on, and the profile isolates settings and launches Claude.</summary>
+    /// <param name="options">The Team options.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns><see langword="true"/> when both tools are offered.</returns>
+    internal static bool OffersGoldfish(TeamOptions options, AdapterProfile profile) =>
+        options.Goldfish.Enabled && profile.IsolateUserSettings && AdapterCatalog.LaunchesClaude(profile);
+
     /// <summary>Adds <c>goldfish</c> and <c>goldfish_done</c> when goldfish mode is on and the Adapter is Claude with isolated settings; shared mode is not offered.</summary>
     /// <param name="chatTools">The tools so far.</param>
     /// <param name="agentId">The Agent id the tools are bound to.</param>
     /// <param name="profile">The resolved Adapter Profile.</param>
     /// <returns><paramref name="chatTools"/>, with the two goldfish tools when offered.</returns>
     private IReadOnlyList<IAppTool> OfferGoldfishTools(IReadOnlyList<IAppTool> chatTools, string agentId, AdapterProfile profile) =>
-        this.options.Goldfish.Enabled && profile.IsolateUserSettings && AdapterCatalog.RunsClaude(profile)
+        DotAcpAgentHostFactory.OffersGoldfish(this.options, profile)
             ?
             [
                 .. chatTools,
