@@ -119,6 +119,7 @@ public static class ServiceCollectionExtensions
         {
             Goldfish.GoldfishSupervisor supervisor = ActivatorUtilities.CreateInstance<Goldfish.GoldfishSupervisor>(sp);
             sp.GetRequiredService<Pipes.AgentGateway>().Goldfish = supervisor;
+            sp.GetRequiredService<Services.ChatService>().Goldfish = supervisor;
             return supervisor;
         });
         services.AddSingleton<Goldfish.IPossessionLookup>(static sp => sp.GetRequiredService<Goldfish.GoldfishSupervisor>());

@@ -291,7 +291,7 @@ internal sealed class GoldfishSupervisor(
         {
             string? findings = result is { Findings.Count: > 0 } ? string.Join('\n', result.Findings.Select(finding => "- " + finding)) : null;
             string text = GoldfishLine.ResultText(row.Brief, result?.Text, findings, exit == GoldfishExit.Stuck);
-            ChatMessage posted = await chat.PostAsHuddleQuietAsync(row.RoomId, text, ct).ConfigureAwait(false);
+            ChatMessage posted = await chat.PostAsHuddleQuietAsync(row.RoomId, text, ct, goldfish: row.Id).ConfigureAwait(false);
             store.SetResultMessage(row.Id, posted.Id);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
