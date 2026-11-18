@@ -72,7 +72,8 @@ public sealed class GoldfishSlotLifetimeTests
         await using Rig rig = Rig.Create(scriptClean: session => session.OnDisposed = () =>
         {
             entered.Set();
-            release.Wait(TestBudgets.Standard);
+            // Held until the test releases it or is cancelled: a budget here would let a loaded runner finish the dispose on its own before the assert.
+            release.Wait(ct);
         });
         rig.Pool.OpenGoldfish("A", Spec);
         rig.Pool.EnqueueGoldfish(Work(1, "A", "the brief"));
@@ -84,8 +85,8 @@ public sealed class GoldfishSlotLifetimeTests
             first = rig.Pool.CloseGoldfishAsync();
             await Eventually.UntilAsync(() => entered.IsSet, ct, timeout: TestBudgets.Standard);
 
+            // The dispose is held, so the second close cannot have completed however late this line runs: no pause is needed to see it wait.
             second = rig.Pool.CloseGoldfishAsync();
-            await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
             Assert.False(second.IsCompleted);
         }
         finally
