@@ -66,6 +66,7 @@ The issue's five open questions were settled by the delivery manager; the rest w
 | D-20 | **Out of scope, as the issue says:** goldfish mode (#627, PR #670; the sentence "Spec reviews are done in goldfish mode" is not added here), enforcement beyond the current gates (ADR-0062: Human-gated Tasks only), a new kind of Task |  |
 | D-21 | **No shared root file is changed** (`.gitea/**`, `Directory.*.props`, `.editorconfig`, `README.md`) unless slice 5 finds `README.md` states the Review column | The brief |
 | D-22 | **`qa-evidence-before-done` and the Proof's `QA evidence` item do not apply to a Task tagged `review` or `verify`.** A check Task is closed by its reviewer's approval, and the reviewer (who covers `challenge`) posts no verifier Evidence on it | Found in slice 4: the gate would otherwise refuse the reviewer closing their own review Task |
+| D-23 | **A review with findings is re-reviewed on the same Task, in wording only, no new gate.** Each built-in process step that asks for a review or a QA Task, the developer persona, the reviewer and QA personas and `ReviewSentence` say: the owner fixes the work and comments on that same Task that it is ready, the reviewer reviews again, and a second review Task is never created for the same work. The migration marker is renamed `review-tasks.checked` (it is written on a Team's first start whether or not anything was offered, and its text says which); `review-tasks.proposed` is still read as checked | Paid lane E: a second review Task was created and the first kept blocking the parent; the marker said "offered" when nothing was |
 
 ## 3. Inventory
 
@@ -114,8 +115,8 @@ An installed Team's `AGENTS.md` is a copy of the process template and is never o
 `AGENTS.md` contains one of the shipped Review-stage texts verbatim (a table of every distinct shipped wording, read from
 `git log -p` of the built-in process files and kept as data in `Teams/OutdatedReviewWording.cs`), it stores one or more
 `RetroProposalSet`s (at most three changes per set) whose changes replace that text with the current wording. The Human sees
-them as the existing retro cards and accepts or rejects each. A marker file in the Team folder (`review-tasks.proposed`)
-stops the offer being repeated after a Reject. The step never writes `AGENTS.md`.
+them as the existing retro cards and accepts or rejects each. A marker file in the Team folder (`review-tasks.checked`, read as well under its older name `review-tasks.proposed`)
+records that the Team was checked once, so the check is not repeated after a Reject. The step never writes `AGENTS.md`.
 
 ### 3.4 Docs
 

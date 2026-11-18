@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Tasks;
 /// </summary>
 public sealed class ReviewTaskWakeTests
 {
-    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it.";
+    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. When the owner comments that the work is ready again, review it again on this Task.";
 
     /// <summary>Creating a Task tagged review or verify, assigned to a reviewer, wakes the reviewer, and the wake text ends with the review sentence.</summary>
     /// <param name="tag">The tag.</param>

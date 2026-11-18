@@ -126,6 +126,48 @@ public sealed partial class BuiltInProcessWordingTests
         Assert.Contains("leave the review Task open", PersonaText(root, "reviewer"), StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
     }
 
+    /// <summary>Each development process, and the developer persona, tell the owner to answer findings on the same review Task and never create a second one for the same work.</summary>
+    /// <param name="process">The process id, or <c>developer</c> for the persona.</param>
+    [Theory]
+    [InlineData("lightweight-flow")]
+    [InlineData("maintenance")]
+    [InlineData("sprints")]
+    [InlineData("spec-driven")]
+    [InlineData("developer")]
+    public void OwnerWording_AnswersFindingsOnTheSameReviewTask(string process)
+    {
+        string root = RepoRoot();
+        string text = process == "developer" ? PersonaText(root, process) : File.ReadAllText(ProcessPath(root, process));
+
+        Assert.Contains("on that same review Task that it is ready", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        Assert.Contains("never create a second review Task for the same work", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+    }
+
+    /// <summary>Each development process tells the owner to answer QA findings on the same QA Task and never create a second one.</summary>
+    /// <param name="process">The process id.</param>
+    [Theory]
+    [InlineData("lightweight-flow")]
+    [InlineData("maintenance")]
+    [InlineData("sprints")]
+    [InlineData("spec-driven")]
+    public void DevelopmentProcess_AnswersQaFindingsOnTheSameQaTask(string process)
+    {
+        string text = File.ReadAllText(ProcessPath(RepoRoot(), process));
+
+        Assert.Contains("on that same QA Task that it is ready", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        Assert.Contains("never create a second QA Task for the same work", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+    }
+
+    /// <summary>The reviewer and QA personas review again on the same Task when the owner comments that it is ready.</summary>
+    [Fact]
+    public void ReviewerAndQa_ReviewAgainOnTheSameTask()
+    {
+        string root = RepoRoot();
+
+        Assert.Contains("you review again on the same review Task", PersonaText(root, "reviewer"), StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        Assert.Contains("check again on the same verify Task", PersonaText(root, "qa-engineer"), StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+    }
+
     /// <summary>Lists every shipped process, team type, persona and the pool file.</summary>
     /// <param name="root">The repository root.</param>
     /// <returns>The file paths.</returns>

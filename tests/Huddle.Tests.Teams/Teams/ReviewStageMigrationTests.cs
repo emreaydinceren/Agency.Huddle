@@ -13,7 +13,9 @@ namespace Agency.Huddle.Tests.Teams;
 /// </summary>
 public sealed partial class ReviewStageMigrationTests
 {
-    private const string MarkerName = "review-tasks.proposed";
+    private const string MarkerName = "review-tasks.checked";
+
+    private const string LegacyMarkerName = "review-tasks.proposed";
 
     private static readonly string OldFolder = Path.Combine(AppContext.BaseDirectory, "Teams", "ReviewStageOldProcesses");
 
@@ -181,6 +183,52 @@ public sealed partial class ReviewStageMigrationTests
         await Migration(fixture).StartAsync(ct);
 
         Assert.Empty(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>A Team whose file holds no old text is marked checked once, and the marker does not say anything was offered.</summary>
+    [Fact]
+    public async Task StartAsync_NothingToOffer_WritesACheckedMarkerThatSaysNothingWasOffered()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Rig rig = new(dir, RetroProposalFixture.ProcessText);
+
+        await rig.Migration().StartAsync(ct);
+
+        string marker = await File.ReadAllTextAsync(Path.Combine(dir.Path, "platform", MarkerName), ct);
+        Assert.Empty(rig.Store.Pending(Rig.TeamName));
+        Assert.Contains("nothing was offered", marker, StringComparison.Ordinal); // contains-ok: pins the stored marker text
+        Assert.False(File.Exists(Path.Combine(dir.Path, "platform", LegacyMarkerName)));
+    }
+
+    /// <summary>A Team whose file holds old text is marked checked with a marker that says a rewrite was offered.</summary>
+    [Fact]
+    public async Task StartAsync_OldText_WritesACheckedMarkerThatSaysARewriteWasOffered()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Rig rig = new(dir, OldText("sprints.9f23cabc0.md"));
+
+        await rig.Migration().StartAsync(ct);
+
+        string marker = await File.ReadAllTextAsync(Path.Combine(dir.Path, "platform", MarkerName), ct);
+        Assert.NotEmpty(rig.Store.Pending(Rig.TeamName));
+        Assert.Contains("a rewrite was offered", marker, StringComparison.Ordinal); // contains-ok: pins the stored marker text
+    }
+
+    /// <summary>A Team that holds the older marker name is already checked: nothing is offered and no new marker is written.</summary>
+    [Fact]
+    public async Task StartAsync_LegacyMarker_IsTreatedAsCheckedAndOffersNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        Rig rig = new(dir, OldText("sprints.9f23cabc0.md"));
+        await File.WriteAllTextAsync(Path.Combine(dir.Path, "platform", LegacyMarkerName), "old marker", ct);
+
+        await rig.Migration().StartAsync(ct);
+
+        Assert.Empty(rig.Store.Pending(Rig.TeamName));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "platform", MarkerName)));
     }
 
     /// <summary>A Team that fails is logged and the next Team is still handled.</summary>
