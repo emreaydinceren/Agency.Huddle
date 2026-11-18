@@ -86,7 +86,39 @@ public sealed class SessionPromptInputsTests : IDisposable
             Compose(actual.Memory, actual.TeamMemory, actual.AgentsMd));
     }
 
-    /// <summary>Builds the snapshot for a Persona in the rig's Team Platform, which has the Project Site, with the rig's levels.</summary>
+    /// <summary>
+    /// A Persona in a Team with its own Member Playbook file gets that file as a Playbook part through the real input path (Team Playbooks
+    /// spec §6.1): <see cref="SessionPromptInputs.Build"/> builds the snapshot and the composer turns it into the part; with no Playbook source wired the
+    /// snapshot is null.
+    /// </summary>
+    [Fact]
+    public void Build_PersonaInTeamWithPlaybookFile_GetsThePlaybookParts()
+    {
+        string teamsRoot = Path.Combine(this.root, "Teams");
+        string memoryDir = Path.Combine(this.root, "Agents", "nova", "memory");
+        string business = Path.Combine(teamsRoot, "Business");
+        Directory.CreateDirectory(business);
+        string playbookPath = Path.Combine(business, "_member-playbook.md");
+        File.WriteAllText(playbookPath, "---\nbasedOn: 'sha256:3f9a0c1e7b2d4a65'\n---\nShip small.\n");
+        AgentsMdReader reader = new(new FakePromptSource(), new AgentsMdOptions(), NullLogger<AgentsMdReader>.Instance);
+        MemoryWarnings warnings = new(NullLogger<MemoryWarnings>.Instance);
+        IReadOnlyList<TeamSummary> teams = [new TeamSummary("Business", [], ["nova"], true)];
+        PlaybookInputs playbooks = new(new FakePromptSource(), new PlaybookOptions(), NullLogger.Instance);
+
+        SessionPromptSnapshot actual = SessionPromptInputs.Build(reader, warnings, teams, "nova", memoryDir, 50, ["business"], teamsRoot, 50, maxHuddleMemoryEntries: 30, maxOutputsEntries: 40, playbooks: playbooks);
+        SessionPromptSnapshot unwired = SessionPromptInputs.Build(reader, warnings, teams, "nova", memoryDir, 50, ["business"], teamsRoot, 50, maxHuddleMemoryEntries: 30, maxOutputsEntries: 40);
+
+        Assert.NotNull(actual.Playbooks);
+        IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
+            new Persona("Nova", "You are Nova."), new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, actual.Memory, SessionScope.Shared, playbooks: actual.Playbooks);
+        Assert.Contains(
+            new PromptPart("Member Playbook", new PromptPartSource.File(playbookPath), "## Member Playbook for Business (this Team's own)\nShip small.\n"),
+            parts);
+        Assert.Contains(parts, static part => part.Label == "Huddle rules (Member)");
+        Assert.Null(unwired.Playbooks);
+    }
+
+    /// <summary>Builds the snapshot for a Persona in the rig's Team Platform,which has the Project Site, with the rig's levels.</summary>
     /// <param name="rig">The rig whose levels and catalog are read.</param>
     private SessionPromptSnapshot BuildFor(NeedsYouLevelRig rig)
     {

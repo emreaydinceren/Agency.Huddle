@@ -47,7 +47,10 @@ public sealed class TeamOptions
     /// <summary>Size limits on the AGENTS.md files, bound from <c>Team:AgentsMd</c> per Spec §7.4.</summary>
     public AgentsMdOptions AgentsMd { get; set; } = new();
 
-    /// <summary>Configuration for the Outputs index, bound from <c>Team:Outputs</c> per Spec §7.4.</summary>
+    /// <summary>Size limits on the Team Playbooks, bound from <c>Team:Playbooks</c> per Team Playbooks spec §5.3.</summary>
+    public PlaybookOptions Playbooks { get; set; } = new();
+
+    /// <summary>Configuration for the Outputs index,bound from <c>Team:Outputs</c> per Spec §7.4.</summary>
     public OutputsOptions Outputs { get; set; } = new();
 
     /// <summary>Configuration for the Second Brain check, bound from <c>Team:SecondBrain</c> per Spec §7.4.</summary>

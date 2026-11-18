@@ -22,7 +22,9 @@ internal static class SessionPromptInputs
     /// <param name="maxOutputsEntries">The cap on the outputs index across the Persona's Teams, in the order they are listed.</param>
     /// <param name="overCap">Told about each folder whose index left files out, or <see langword="null"/> where nobody is told (a preview).</param>
     /// <param name="levels">Resolves each Team's and Project's Needs You level; <see langword="null"/> where none is wired, which leaves the prompt without that section.</param>
-    /// <returns>The five snapshots.</returns>
+    /// <param name="playbooks">What builds the Team Playbook snapshot; <see langword="null"/> where none is wired, which leaves the prompt without Playbook parts.</param>
+    /// <param name="filesReadable">Whether the Adapter can read files, so a cut Playbook may point at its file.</param>
+    /// <returns>The snapshots.</returns>
     internal static SessionPromptSnapshot Build(
         AgentsMdReader agentsMd,
         MemoryWarnings warnings,
@@ -36,7 +38,9 @@ internal static class SessionPromptInputs
         int maxHuddleMemoryEntries,
         int maxOutputsEntries,
         OverCapNotifier? overCap = null,
-        NeedsYouLevels? levels = null)
+        NeedsYouLevels? levels = null,
+        PlaybookInputs? playbooks = null,
+        bool filesReadable = true)
     {
         var (entries, notListed) = MemoryIndex.Build(memoryDir, maxMemoryEntries, warnings);
         MemorySnapshot memory = new(memoryDir, entries, notListed);
@@ -66,7 +70,11 @@ internal static class SessionPromptInputs
             ReportOverCap(overCap, personaName, memory, teamMemory, huddleMemory, outputs, (maxMemoryEntries, maxTeamMemoryEntries, maxHuddleMemoryEntries, maxOutputsEntries));
         }
 
-        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs, ReadableWorkspaces(catalogTeams, teamNames), NeedsYouScopes(levels, catalogTeams, teamNames));
+        PlaybookSnapshot? playbookSnapshot = playbooks is null
+            ? null
+            : PlaybookSnapshotBuilder.Build(playbooks.Prompts, catalogTeams, personaName, teamLabels, teamsRoot, playbooks.Options, filesReadable, playbooks.Logger);
+
+        return new SessionPromptSnapshot(memory, teamMemory, agentsMd.Read(teamsRoot, teamNames), huddleMemory, outputs, ReadableWorkspaces(catalogTeams, teamNames), NeedsYouScopes(levels, catalogTeams, teamNames), playbookSnapshot);
     }
 
     /// <summary>

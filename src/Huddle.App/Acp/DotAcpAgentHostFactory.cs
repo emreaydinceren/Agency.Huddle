@@ -320,7 +320,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.agentPaths,
             this.options.Outputs.MaxIndexEntries,
             this.serviceProvider.GetService<OverCapNotifier>(),
-            this.serviceProvider.GetService<NeedsYouLevels>());
+            this.serviceProvider.GetService<NeedsYouLevels>(),
+            new PlaybookInputs(prompts, this.options.Playbooks, this.loggerFactory.CreateLogger<PlaybookInputs>()));
     }
 
     /// <summary>Whether the goldfish tools are offered on a profile: the mode is on, and the profile isolates settings and launches Claude.</summary>
@@ -914,7 +915,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.options.Teams.MaxMemoryEntries,
             this.options.Teams.MaxHuddleMemoryEntries,
             sources.MaxOutputsEntries,
-            levels: sources.Levels);
+            levels: sources.Levels,
+            playbooks: sources.Playbooks,
+            filesReadable: profile.ReadsFiles);
 
         IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
             persona,
@@ -937,7 +940,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             needsYou: inputs.NeedsYou,
             browser: browser,
             reportedDays: this.options.Memory.Reported.KeepDays,
-            memoryTidy: this.MemoryTidyOn());
+            memoryTidy: this.MemoryTidyOn(),
+            playbooks: inputs.Playbooks);
         return (parts, profile.Id);
     }
 }

@@ -48,7 +48,58 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(219,PromptCatalog.All.Count);
+        Assert.Equal(224,PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// Team Playbooks (spec §4, §6.1, §6.3): the five new Prompts exist with their label, Timing and placeholders, and none names the tool
+    /// prefix. The frame is <c>Live</c> with no placeholders; the cut line takes the path of the file that holds the rest.
+    /// </summary>
+    [Theory]
+    [InlineData("systemPrompt.playbooks", "Playbooks", PromptTiming.Live, "")]
+    [InlineData("systemPrompt.memberPlaybook", "Member Playbook", PromptTiming.Live, "")]
+    [InlineData("systemPrompt.managerPlaybook", "Manager Playbook", PromptTiming.Live, "")]
+    [InlineData("systemPrompt.playbookCut", "Playbook cut", PromptTiming.Live, "{{path}}")]
+    [InlineData("systemPrompt.playbookCutNoFiles", "Playbook cut (no files)", PromptTiming.Live, "")]
+    public void PlaybookPrompts_HaveTheirLabelTimingAndPlaceholders_AndCarryNoPrefix(string key, string label, PromptTiming timing, string placeholders)
+    {
+        ArgumentNullException.ThrowIfNull(placeholders);
+        PromptDefinition prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(label, prompt.Label);
+        Assert.Equal(timing, prompt.Timing);
+        Assert.Equal(placeholders.Split(' ', StringSplitOptions.RemoveEmptyEntries), prompt.Placeholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>The Playbooks frame, the cut line and the no-files line are the spec's text word for word (§6.1, §6.3).</summary>
+    [Fact]
+    public void PlaybookPrompts_DefaultsAreTheSpecText()
+    {
+        Assert.Equal(
+            "Your Teams' Playbooks follow. They say how to work in a Team, whatever the work. The Huddle rules are enforced by Huddle. " +
+            "The Playbook text is the Human's; where a Team has its own, it replaces the default for that Team only.",
+            PromptCatalog.Get("systemPrompt.playbooks").Default);
+        Assert.Equal(
+            "The rest of this Playbook is in `{{path}}`; read it before you work on this Team's Tasks.",
+            PromptCatalog.Get("systemPrompt.playbookCut").Default);
+        Assert.Equal(
+            "The rest was cut; ask the Human to shorten this Playbook.",
+            PromptCatalog.Get("systemPrompt.playbookCutNoFiles").Default);
+    }
+
+    /// <summary>The two Playbook defaults open with their first heading and name no tool, only actions (spec §4, D-7).</summary>
+    [Fact]
+    public void PlaybookDefaults_StartWithTheirHeading_AndNameNoTool()
+    {
+        string member = PromptCatalog.Get("systemPrompt.memberPlaybook").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
+        string manager = PromptCatalog.Get("systemPrompt.managerPlaybook").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.StartsWith("## How to work on a Task\n\nWork in passes. Each pass is one loop:", member, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.StartsWith("## How to run the Team\n\nYou are also a member: the Member Playbook applies to you.", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.Contains("### Running a mission", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.DoesNotContain("{{", member, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", manager, StringComparison.Ordinal);
     }
 
     /// <summary>Goldfish tools (slice 3 step 2): each of the fifteen Prompts exists with the placeholders its text takes, and none names the tool prefix.</summary>

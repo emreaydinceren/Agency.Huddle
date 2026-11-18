@@ -21,6 +21,10 @@ public abstract record PromptPartSource
     /// <param name="Count">How many entries (or groups) it lists.</param>
     internal sealed record Index(string Kind, int Count) : PromptPartSource;
 
+    /// <summary>A text shipped inside the application that the Human cannot edit, such as the Huddle rules.</summary>
+    /// <param name="Key">The text's key, for example <c>huddleRules.member</c>.</param>
+    internal sealed record Embedded(string Key) : PromptPartSource;
+
     /// <summary>The list of offered tools.</summary>
     /// <param name="Count">How many tools are offered.</param>
     internal sealed record Tools(int Count) : PromptPartSource;

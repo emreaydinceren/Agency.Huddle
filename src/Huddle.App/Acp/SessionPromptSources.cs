@@ -12,4 +12,5 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="MaxOutputsEntries">The cap on the outputs index across the Agent's Teams, <c>Team:Outputs:MaxIndexEntries</c> (Spec §6.3).</param>
 /// <param name="OverCap">Told when an index leaves files out (Spec §6.8), or <see langword="null"/> where no Feed is wired.</param>
 /// <param name="Levels">Resolves the Needs You level of each Team and Project at session start (ADR-0088), or <see langword="null"/> where none is wired; then the prompt has no Needs You section.</param>
-internal sealed record SessionPromptSources(AgentsMdReader AgentsMd, TeamMemoryAccess TeamMemory, MemoryWarnings Warnings, AgentPaths AgentPaths, int MaxOutputsEntries, OverCapNotifier? OverCap = null, NeedsYouLevels? Levels = null);
+/// <param name="Playbooks">What builds the Team Playbook snapshot (Team Playbooks spec §6.1), or <see langword="null"/> where none is wired; then the prompt has no Playbook part.</param>
+internal sealed record SessionPromptSources(AgentsMdReader AgentsMd, TeamMemoryAccess TeamMemory, MemoryWarnings Warnings, AgentPaths AgentPaths, int MaxOutputsEntries, OverCapNotifier? OverCap = null, NeedsYouLevels? Levels = null, PlaybookInputs? Playbooks = null);
