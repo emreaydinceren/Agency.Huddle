@@ -15,57 +15,54 @@
 
 <section class="library-properties" aria-label="Properties">
     <MudText Typo="Typo.caption" Class="group-label library-properties-title">Properties</MudText>
-    <dl class="library-properties-list">
+    <PropertyList Compact="true" Class="library-properties-list">
         @foreach (NoteProperty property in this.Properties)
         {
-            <div class="library-properties-row">
-                <dt class="library-properties-key">@NotePropertyText.Prepare(property.Key)</dt>
-                <dd class="library-properties-value">
-                    @if (property.Shape != NotePropertyShape.Empty || property.Kind == NotePropertyKind.Checkbox)
+            <PropertyRow Label="@NotePropertyText.Prepare(property.Key)" Class="library-properties-row" LabelClass="library-properties-key" ValueClass="library-properties-value">
+                @if (property.Shape != NotePropertyShape.Empty || property.Kind == NotePropertyKind.Checkbox)
+                {
+                    @switch (property.Kind)
                     {
-                        @switch (property.Kind)
-                        {
-                            case NotePropertyKind.Checkbox:
-                                bool ticked = NotePropertyValues.TryParseBoolean(property.Value, out bool truth) && truth;
-                                <MudIcon Icon="@(ticked ? Icons.Material.Outlined.CheckBox : Icons.Material.Outlined.CheckBoxOutlineBlank)" Size="Size.Small"
-                                         Class="library-properties-checkbox" role="img" aria-label="@(ticked ? "Yes" : "No")" />
-                                break;
-                            case NotePropertyKind.Date or NotePropertyKind.DateTime:
-                                <span class="library-properties-date" title="@NotePropertyText.Prepare(property.Value)">@this.FormatTemporal(property)</span>
-                                break;
-                            case NotePropertyKind.Number:
-                                <span class="library-properties-number">@NotePropertyText.Prepare(property.Value)</span>
-                                break;
-                            case NotePropertyKind.Unsupported:
-                                <pre class="library-properties-source">@NotePropertyText.Prepare(property.Source)</pre>
-                                break;
-                            case NotePropertyKind.Mismatch:
-                                <span class="library-properties-mismatch-value">@NotePropertyText.Prepare(NotePropertyText.Raw(property))</span>
-                                <span class="library-properties-mismatch" role="img" title="@MismatchText(property)" aria-label="@MismatchText(property)">
-                                    <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
-                                </span>
-                                break;
-                            case NotePropertyKind.List or NotePropertyKind.Aliases or NotePropertyKind.Tags:
-                                @foreach (string item in this.ChipItems(property))
-                                {
-                                    <Chip T="string" Look="ChipLook.Tag" Class="library-properties-chip">@this.Linked(NotePropertyText.Prepare(item))</Chip>
-                                }
+                        case NotePropertyKind.Checkbox:
+                            bool ticked = NotePropertyValues.TryParseBoolean(property.Value, out bool truth) && truth;
+                            <MudIcon Icon="@(ticked ? Icons.Material.Outlined.CheckBox : Icons.Material.Outlined.CheckBoxOutlineBlank)" Size="Size.Small"
+                                     Class="library-properties-checkbox" role="img" aria-label="@(ticked ? "Yes" : "No")" />
+                            break;
+                        case NotePropertyKind.Date or NotePropertyKind.DateTime:
+                            <span class="library-properties-date" title="@NotePropertyText.Prepare(property.Value)">@this.FormatTemporal(property)</span>
+                            break;
+                        case NotePropertyKind.Number:
+                            <span class="library-properties-number">@NotePropertyText.Prepare(property.Value)</span>
+                            break;
+                        case NotePropertyKind.Unsupported:
+                            <pre class="library-properties-source">@NotePropertyText.Prepare(property.Source)</pre>
+                            break;
+                        case NotePropertyKind.Mismatch:
+                            <span class="library-properties-mismatch-value">@NotePropertyText.Prepare(NotePropertyText.Raw(property))</span>
+                            <span class="library-properties-mismatch" role="img" title="@MismatchText(property)" aria-label="@MismatchText(property)">
+                                <MudIcon Icon="@Icons.Material.Outlined.WarningAmber" Size="Size.Small" />
+                            </span>
+                            break;
+                        case NotePropertyKind.List or NotePropertyKind.Aliases or NotePropertyKind.Tags:
+                            @foreach (string item in this.ChipItems(property))
+                            {
+                                <Chip T="string" Look="ChipLook.Tag" Class="library-properties-chip">@this.Linked(NotePropertyText.Prepare(item))</Chip>
+                            }
 
-                                @if (this.UsesRawFallback(property))
-                                {
-                                    <span class="library-properties-text">@NotePropertyText.Prepare(NotePropertyText.Raw(property))</span>
-                                }
+                            @if (this.UsesRawFallback(property))
+                            {
+                                <span class="library-properties-text">@NotePropertyText.Prepare(NotePropertyText.Raw(property))</span>
+                            }
 
-                                break;
-                            default:
-                                <span class="library-properties-text">@this.Linked(NotePropertyText.Prepare(property.Value))</span>
-                                break;
-                        }
+                            break;
+                        default:
+                            <span class="library-properties-text">@this.Linked(NotePropertyText.Prepare(property.Value))</span>
+                            break;
                     }
-                </dd>
-            </div>
+                }
+            </PropertyRow>
         }
-    </dl>
+    </PropertyList>
 </section>
 
 @code {

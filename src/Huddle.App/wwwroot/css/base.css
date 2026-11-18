@@ -260,6 +260,63 @@ button:focus-visible {
     margin-block-end: 12px;
 }
 
+/* ---- PropertyList and PropertyRow: a label and a value per row (ComponentCatalog, PropertyList) ----------------------------
+   Every row is its own grid with a fixed 120px label column (Q-A6-1), so lists stacked on one page line up without sharing a track.
+   A row is 32px with a 13px label, or 28px with a 12px label when Compact (cards and previews). The label is as tall as a one-line
+   value and centred on it; a taller value (chips, a note, a field with help text) grows below. A hairline only between the rows of a
+   Divided list (Q-A6-2, the long ones). An editing list's rows hold boxed inputs, so they have 8px of air between them. */
+.property-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+.property-list-editing {
+    row-gap: 8px;
+}
+
+.property-row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    column-gap: 8px;
+    align-items: start;
+    overflow-wrap: anywhere;
+}
+
+.property-list-divided > .property-row + .property-row {
+    border-top: 1px solid var(--hu-detail-row-line);
+}
+
+.property-row-label,
+.property-row-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+}
+
+.property-list-compact .property-row-label,
+.property-list-compact .property-row-value {
+    min-height: 28px;
+}
+
+.property-row-label {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.property-list-compact .property-row-label {
+    font-size: var(--mud-typography-caption-size);
+}
+
+.property-row-value {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    min-width: 0;
+    color: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+}
+
 .mud-alert[class*="mud-alert-text-"] .mud-alert-message,
 .mud-alert[class*="mud-alert-outlined-"] .mud-alert-message {
     color: var(--mud-palette-text-primary);

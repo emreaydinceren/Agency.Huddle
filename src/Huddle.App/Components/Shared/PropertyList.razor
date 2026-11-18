@@ -1,0 +1,50 @@
+@* The one label-and-value list (ComponentCatalog, PropertyList): every row a fixed 120 px label column, so lists stacked on one page
+   line up, and a 32 px row with a 13 px label, or a 28 px row with a 12 px label when Compact (cards and previews). A read list is a
+   definition list and each PropertyRow a dt and dd pair grouped in a div; an editing list is a plain group whose rows hold inputs, each
+   input carrying its own accessible name. The grid, the label ink, the hairline and the editing list's air are in base.css. *@
+<CascadingValue Value="this" IsFixed="true">
+    @if (this.Editing)
+    {
+        <div class="@this.CssClass" @attributes="this.UserAttributes">@this.ChildContent</div>
+    }
+    else
+    {
+        <dl class="@this.CssClass" @attributes="this.UserAttributes">@this.ChildContent</dl>
+    }
+</CascadingValue>
+
+@code {
+    /// <summary>The rows: one <see cref="PropertyRow"/> per property.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>A 28 px row and a 12 px label, for a card or a preview; the default is a 32 px row and a 13 px label.</summary>
+    [Parameter]
+    public bool Compact { get; set; }
+
+    /// <summary>A hairline between rows, for a long list (more than six rows), so the eye keeps its row; a short list has none.</summary>
+    [Parameter]
+    public bool Divided { get; set; }
+
+    /// <summary>
+    /// Whether the rows hold inputs: the list is then a plain group, each label is hidden from assistive technology (the input's
+    /// own label is its accessible name) and the rows have air between them. A read list is a definition list.
+    /// </summary>
+    [Parameter]
+    public bool Editing { get; set; }
+
+    /// <summary>Extra classes, for a test or script hook and the caller's layout only; never a colour, size or row spacing.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Any other attribute (<c>id</c>, <c>aria-label</c>), passed to the list element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    private string CssClass =>
+        "property-list"
+        + (this.Compact ? " property-list-compact" : string.Empty)
+        + (this.Divided ? " property-list-divided" : string.Empty)
+        + (this.Editing ? " property-list-editing" : string.Empty)
+        + (string.IsNullOrWhiteSpace(this.Class) ? string.Empty : " " + this.Class);
+}

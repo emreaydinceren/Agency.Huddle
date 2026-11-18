@@ -2,8 +2,8 @@
 
 /* ---- The Task detail form as four headed groups of label | value properties ----------------------
    TaskDetail.razor groups its fields under subtitle2 headings (.group-heading). Each .task-detail-prop is a
-   label and a value: stacked, label over value, in a narrow drawer; two columns, label left and value right
-   (the Library Properties block's grid: .library-properties-list), once the container is 368px wide - a 400px
+   label and a value (a PropertyRow): stacked, label over value, in a narrow drawer; two columns, label left and value right
+   (PropertyRow's own 120px label column, the read view's too), once the container is 368px wide - a 400px
    drawer less its 16px padding on each side. A container query on .task-detail-groups, not a viewport media
    query, because the drawer is resizable (resize.js). The visible label is .task-detail-prop-label; the
    control's own MudBlazor label stays in the DOM, visually hidden, as its accessible name. */
@@ -261,28 +261,23 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-.task-detail-props {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-}
-
+/* The groups' rows are an editing PropertyList (base.css), the same row as the read view's. Narrower than 368px a row stacks, label
+   over value; at 368px PropertyRow's own 120px label column comes back (the container query below). A value holds its field and any
+   chips or note stacked at full width; the strip's items reuse the value class without the row. */
 .task-detail-prop {
-    display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
-    align-items: start;
+    row-gap: 4px;
 }
 
 .task-detail-prop-label {
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
-    line-height: 1.5;
+    min-height: 0;
 }
 
 .task-detail-prop-value {
     display: flex;
     flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
     gap: 8px;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -314,12 +309,10 @@
 @container task-detail (min-width: 368px) {
     .task-detail-prop {
         grid-template-columns: 120px minmax(0, 1fr);
-        column-gap: 24px;
-        align-items: start;
     }
 
     .task-detail-prop-label {
-        padding-top: 8px;
+        min-height: 32px;
     }
 }
 
@@ -567,26 +560,11 @@
     border-bottom: 1px solid var(--hu-form-group-head-line);
 }
 
-/* One rhythm for every field row, in both columns: 12px above and below, a hairline between rows of a group (never between groups), and the label
-   column the Library's width so the labels and the values line up from the top of the page to the bottom. */
+/* One rhythm for every field row, in both columns: PropertyList's 32px row and 8px between rows, no hairline in a group this short
+   (Q-A6-2), and the same 120px label column as the read view, so the labels and the values line up from the top of the page to the
+   bottom. The first row keeps 4px from its group's heading rule. */
 .task-edit-page .task-detail-props {
-    gap: 0;
-}
-
-.task-edit-page .task-detail-prop {
-    padding-block: 8px;
-}
-
-.task-edit-page .task-detail-prop + .task-detail-prop {
-    border-top: 1px solid var(--hu-line-region);
-}
-
-.task-edit-page .task-detail-prop:first-child {
     padding-top: 4px;
-}
-
-.task-edit-page .task-detail-prop:last-child {
-    padding-bottom: 0;
 }
 
 .task-edit-page .task-detail-library + .task-detail-library {
@@ -601,27 +579,11 @@
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The strip's fields are the form's fields: the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
-   label (.task-detail-strip-label, 96px) is the groups' label column. */
+/* The strip's fields are the form's fields: the .task-detail-prop-value rule below gives every field 34px and body2 text. */
 
 /* The strip carries the page's one rule under the header, so the header has none of its own. */
 .task-edit-page-header .page-header.has-chrome {
     border-bottom: 0;
-}
-
-@container task-detail (min-width: 368px) {
-    .task-edit-page .task-detail-prop {
-        grid-template-columns: 96px minmax(0, 1fr);
-        column-gap: 8px;
-    }
-
-    /* The label is as tall as a one-line field and centred in it, so it sits on the field's centre line; a taller value (chips, a note) grows below. */
-    .task-edit-page .task-detail-prop-label {
-        display: flex;
-        align-items: center;
-        min-height: 32px;
-        padding-top: 0;
-    }
 }
 
 /* A field is 32px tall with body-size text, and the row's 12px is the only space around it (MudBlazor's own margin is dropped). */

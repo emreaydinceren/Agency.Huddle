@@ -978,10 +978,10 @@ detail (`T7`) moved to the Right sidebar on 2026-10-28, and `ResizableEndDrawer`
 - **The form is grouped.** Put the fields under a Label each (`.group-label`,
   12px/600 in Quiet ink): the Task detail uses Status and priority, People, Planning and Dates,
   with a 120px label column at 13px `TextSecondary`. The title stays the only 16px text.
-- **A property is a label and a value.** `.task-detail-groups` is a size container. At 368px
-  of container width or more (a 400px column less its padding), `.task-detail-prop` is two
-  columns, label left and value right. Narrower, it stacks. This mirrors the Library
-  Properties grid, but shares no class.
+- **A property is a label and a value.** Every list of them is a `PropertyList` of
+  `PropertyRow`s: a 120px label column and a 32px row, the read view's and the form's alike.
+  `.task-detail-groups` is a size container: at 368px of container width or more (a 400px
+  column less its padding) a row is two columns, label left and value right; narrower, it stacks.
 - **Every field has a visible label.** Team and Project are two rows, and Description has
   a label. The control's own floating label stays in the DOM, visually hidden.
 - **Created, Updated and Closed are footer meta.** They leave the Dates group and sit at the
@@ -1067,6 +1067,7 @@ Start from the pattern in the file the table names; the full list is in
 | Icon button | `MudIconButton Size="Size.Small"`, with an `aria-label`, and a `MudTooltip` when it is not obvious |
 | Text input | `TextField`: always Outlined and Dense; a `Label`, or an `AriaLabel` when nothing visible names it (a field with neither throws). `Shape`: `Line` (32 px), `Compact` (the 28 px toolbar box), `LongText` (4 rows of body1 text) or `Markdown` (4 rows of monospace at 13 px); `Rows` only when the content sets the height. Never `ReadOnly` (use `Disabled`). A raw `MudTextField` fails CV17 |
 | Search field | `SearchField`: a `TextField` with a `Filled.Search` start icon, `Clearable`, `Immediate`, one debounce constant, a placeholder ("Search members") and an `aria-label` (UX-055) |
+| Label and value | `PropertyList` of `PropertyRow`s: a fixed 120 px label column, a 32 px row with a 13 px label (`Compact`: 28 px, 12 px, for a card or preview), a hairline between rows only past six rows (`Divided`), `Editing` when the values are inputs. A raw `<dt>` fails CV23 |
 | Choice | `SelectField` (Outlined and Dense, the `MudSelectItem`s as its content, `Compact` in a toolbar, `MultiSelection` for a filter; a raw `MudSelect` fails CV18), `MudAutocomplete` (Outlined, Dense), `MudRadioGroup`; for a two- to five-way mode switch, `SegmentedControl`; for an Adapter, Model and Effort choice, `AdapterModelEffortPicker`, whose probed selects are `ProbedSelect` (Disabled and busy, with a progress bar, while the list is read) |
 | On or off | A `SettingSwitch` for a setting that takes effect the moment it is flipped: always Small (44 × 24 px) and Primary, a label that names the setting and never "On" or "Off", and one caption line under it for its helper or, while disabled, the reason (a raw `MudSwitch` fails CV19). A `MudCheckBox` with `Color.Primary` and `Dense` for picking items from a list, or an option that only counts once a form is saved (Save, Create, Apply); a checkbox without `Color.Primary` fails CV20. Never a switch inside a form that waits for Save, and never a checkbox for an immediate setting. A ticked control is never grey |
 | Container | `MudPaper Outlined="true" Elevation="0"` for a panel or card; `MudStack` for layout |

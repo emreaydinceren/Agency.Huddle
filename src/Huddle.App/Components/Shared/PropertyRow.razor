@@ -1,0 +1,57 @@
+@* One label and its value inside a PropertyList (ComponentCatalog, PropertyRow). The value is the child content: text, a chip, a
+   link or, in an editing list, an input. A read row is a dt and dd pair grouped in a div; an editing row is a span label hidden
+   from assistive technology and a div value, because the input inside names itself. Read and edit views of the same fields share
+   this row, so a field lines up in both. *@
+@if (this.List is { Editing: true })
+{
+    <div class="@this.RowClass" @attributes="this.UserAttributes">
+        <span class="@this.LabelCssClass" aria-hidden="true">@this.Label</span>
+        <div class="@this.ValueCssClass">@this.ChildContent</div>
+    </div>
+}
+else
+{
+    <div class="@this.RowClass" @attributes="this.UserAttributes">
+        <dt class="@this.LabelCssClass">@this.Label</dt>
+        <dd class="@this.ValueCssClass">@this.ChildContent</dd>
+    </div>
+}
+
+@code {
+    /// <summary>The list this row belongs to; it decides between the read and the editing markup.</summary>
+    [CascadingParameter]
+    public PropertyList? List { get; set; }
+
+    /// <summary>The visible label, in sentence case ("Due date").</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>The value: text, a chip, a link, or an input in an editing list.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Extra classes on the row, for a test or script hook and a state such as overdue; never a size or spacing.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Extra classes on the label element, for a test or script hook.</summary>
+    [Parameter]
+    public string? LabelClass { get; set; }
+
+    /// <summary>Extra classes on the value element, for a test or script hook and the value's own layout.</summary>
+    [Parameter]
+    public string? ValueClass { get; set; }
+
+    /// <summary>Any other attribute (<c>data-*</c>), passed to the row element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    private string RowClass => PropertyRow.Join("property-row", this.Class);
+
+    private string LabelCssClass => PropertyRow.Join("property-row-label", this.LabelClass);
+
+    private string ValueCssClass => PropertyRow.Join("property-row-value", this.ValueClass);
+
+    private static string Join(string own, string? extra) => string.IsNullOrWhiteSpace(extra) ? own : own + " " + extra;
+}

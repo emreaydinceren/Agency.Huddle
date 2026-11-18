@@ -28,19 +28,3 @@
     font-weight: 600;
 }
 
-.feed-helper-preview .feed-preview-grid {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    gap: 4px 16px;
-    margin: 0;
-}
-
-.feed-helper-preview .feed-preview-grid dt {
-    color: var(--mud-palette-text-secondary);
-}
-
-.feed-helper-preview .feed-preview-grid dd {
-    margin: 0;
-    min-width: 0;
-    overflow-wrap: anywhere;
-}

@@ -23,39 +23,7 @@
     flex: 1 1 auto;
 }
 
-/* A label and a value per row, 28px high with an Edge hairline between rows. */
-.task-read-view-props {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    column-gap: 24px;
-    margin: 0;
-}
-
-.task-read-view-prop {
-    display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    align-items: center;
-    column-gap: 8px;
-    min-height: 28px;
-    border-bottom: 1px solid var(--hu-detail-row-line);
-    overflow-wrap: anywhere;
-}
-
-.task-read-view-prop dt {
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-caption-size);
-}
-
-.task-read-view-prop dd {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
-    min-width: 0;
-    margin: 0;
-    color: var(--mud-palette-text-primary);
-    font-size: var(--mud-typography-body2-size);
-}
+/* The property grid is a Divided PropertyList (base.css): a 120px label column, 32px rows, a hairline between them. */
 
 .task-read-view-empty {
     color: var(--mud-palette-text-secondary);
@@ -73,7 +41,7 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-.task-read-view-prop.task-overdue dd {
+.task-read-view-due-date.task-overdue dd {
     color: var(--mud-palette-error);
 }
 
@@ -91,11 +59,19 @@
 
 @container task-read-view (min-width: 440px) {
     .task-read-view-props {
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 24px;
     }
 
-    .task-read-view-prop.is-wide {
+    .task-read-view-props > .is-wide {
         grid-column: 1 / -1;
+    }
+
+    /* Two columns of rows: a hairline under every row, so the two columns' lines meet, instead of PropertyList's line between rows. */
+    .task-read-view-props.property-list-divided > .property-row {
+        border-top: 0;
+        border-bottom: 1px solid var(--hu-detail-row-line);
     }
 }
 
