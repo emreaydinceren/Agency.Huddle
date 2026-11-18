@@ -20,8 +20,7 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(!this.CanSubmit)" OnClick="this.SubmitAsyncCore">@this.ConfirmText</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="@this.ConfirmText" PrimaryDisabled="@(!this.CanSubmit)" Busy="@this.busy" OnPrimary="this.SubmitAsyncCore" />
     </DialogActions>
 </MudDialog>
 

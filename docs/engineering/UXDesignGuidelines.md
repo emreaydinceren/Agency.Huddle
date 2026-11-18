@@ -144,6 +144,8 @@ component here, move it onto the component rather than writing another copy.
 | A presence badge on an avatar | `PresenceAnchor` around the avatar, with a `PresenceCue` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
 | A two- to five-way mode switch | `SegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
+| A button | `ActionButton` with a `Role`: `Primary` (the one filled action), `Secondary`, `Quiet` (Cancel, Close, a row action), `Danger` (the confirm that destroys) or `DangerQuiet` (a trigger that asks first). Never a raw `MudButton` (CV15) | [House defaults](design-system.md#house-defaults) |
+| A dialog's Cancel and primary buttons | `DialogFooter` inside `<DialogActions>`: `CancelText`, `OnCancel`, `PrimaryText`, `OnPrimary`, `PrimaryDisabled`, `Busy`, `Destructive` | [Dialog anatomy](design-system.md#dialog-anatomy) |
 | Filter chips | `ChipCloud` | [Chips](design-system.md#chips) |
 | A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip` | [Catalog: actions and input](#actions-and-input) |
 | To save a page's own setup | Save each change as it is made, through `ViewStore` | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
@@ -250,6 +252,7 @@ shapes that have no component yet.
 
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
+| `ActionButton` | `Components/Shared/ActionButton.razor` | Every button | `Role` (`ButtonRole`), `ChildContent`, `StartIcon`, `EndIcon`, `Disabled`, `Busy`, `Href`, `Submit`, `FullWidth`, `Class` (layout and hooks only), `OnClick`, any other attribute; `FocusAsync()` | Any button. The role fixes the variant, colour and the 28 px Small size, at the control radius. A raw `MudButton` elsewhere fails convention rule CV15 against a shrinking per-file baseline |
 | `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Narrow`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row: Cancel, then the verb (`ConfirmText`, default "Delete"). `Narrow="true"` with `Prompt="Delete?"` is the one-line sidebar form. Confirm takes focus, Escape cancels |
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class`, `Compact` | Any search box: outlined, dense, clearable, one debounce. `Compact="true"` wears `.toolbar-compact` (a 28px box with 13px text) for a toolbar row. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
@@ -278,6 +281,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 | Dialog | Path | Parameters | Pattern worth copying |
 | --- | --- | --- | --- |
 | `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync`, `Location`, `ChildContent` | Any one-field name (`Location` names the place in the title: "New note in Platform"): live validation, Enter submits, focus on open. Used for New project (`NewProjectPrompt`), Rename view (`ViewActions.RenameAsync`) and the Library's New note, New folder and Rename note or folder (`LibraryFileOps`). A multi-field flow such as Duplicate team stays bespoke. `NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed |
+| `DialogFooter` | `Components/Shared/DialogFooter.razor` | `CancelText`, `OnCancel`, `ShowCancel`, `CancelTooltip`, `OnBack`, `ChildContent` (a middle option), `PrimaryText`, `OnPrimary`, `PrimaryDisabled`, `PrimaryIcon`, `Busy`, `BusyText`, `Destructive`, `CancelClass`, `PrimaryClass` | Every dialog's actions row: Cancel, Back, a middle option, then the one primary (Filled Primary, or Filled Error when `Destructive`). Busy disables the primary and shows a spinner. A picker has no actions row |
 | `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
 | `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `ShortPicker`, `Picker` | The options for every dialog: `SmallForm` (600px) for forms and confirms, `ShortPicker` (600px) for a one-column picker under about 12 items, `Picker` (960px) for two-pane or tabular pickers only |
 | `MenuDialogs`, `ConfirmCopy` | `Components/Shared/Dialogs/` | `MenuDialogs.AfterClosingAsync(menu, open)`, `MenuDialogs.ActivatorLabel(target)`; `ConfirmCopy.Quote(name)`, `ConfirmCopy.DeleteTitle(name)` | The menu-opens-dialog idiom: an item that opens a dialog wraps the call in `AfterClosingAsync` so the menu closes first, and the menu's activator carries `ActivatorLabel` ("Actions for {target}") as its `aria-label` with no hover tooltip. `ConfirmCopy` writes the one quote style ("x") |
@@ -371,7 +375,6 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.menu-item-destructive` | A destructive `MudMenuItem`: Error ink on the text and icon. It goes last, after a divider |
 | `.nav-action-link` | A sidebar action link ("New room"): secondary text colour; its "+" and label sit on the sidebar grid like any row |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
-| `.btn-action-tight` | A button whose start icon sits close to its label |
 | `.agent-dot` with `.online`, `.degraded`, `.starting`, `.awake`, `.on-avatar` and `.presence-glyph-*` | The badge behind `PresenceBadge` (10px, 12px beside a 40px avatar; the pulse animation is `presence-pulse`); use the component |
 | `.presence-anchor` | The frame `PresenceAnchor` draws around an avatar |
 | `.status-chip-*`, `.tag-chip`, `.filter-chip` with `.is-set`, `.chip-meta` | The three chip looks of `Chip`: tinted (24px), quiet (24px, with a Line) and filter (28px, dashed until set), and the plain caption text of a count or meta |
@@ -513,7 +516,7 @@ change.
 
 Check these first. Each links to the rule that owns it.
 
-1. **Density on every control:** `Size.Small` on buttons and icon buttons (a chip is the one
+1. **Density on every control:** a button is an `ActionButton` (always Small), `Size.Small` on icon buttons (a chip is the one
    `Chip`); `Variant.Outlined` and `Margin.Dense` on inputs
    ([Spacing, density and size](design-system.md#spacing-density-and-size)).
 2. **Every page has one `h1`**, a `Typo.h5`, inside `MudContainer pa-4`, and the breadcrumb

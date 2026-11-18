@@ -45,7 +45,8 @@ public sealed partial class SkillsHelpTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Equal(title, cut.Find(".mud-dialog-title").TextContent.Trim()));
         Assert.Equal(Normalise(StripMarkdown(SkillGuide.HelpFor(view))), Normalise(cut.Find(".skills-help-text").TextContent));
-        Assert.NotEmpty(cut.FindAll(".skills-help-close"));
+        Assert.Empty(cut.FindAll(".skills-help-dialog .mud-dialog-actions"));
+        Assert.NotEmpty(cut.FindAll(".skills-help-dialog .mud-button-close"));
         Assert.Equal(address, navigation.Uri);
     }
 

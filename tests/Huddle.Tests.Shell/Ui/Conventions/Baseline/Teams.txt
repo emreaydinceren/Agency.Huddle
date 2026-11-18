@@ -1,0 +1,8 @@
+CV15|src/Huddle.App/Components/Pages/TeamPage.razor|6
+CV15|src/Huddle.App/Components/Teams/DuplicateTeamDialog.razor|1
+CV15|src/Huddle.App/Components/Teams/ProcessStep.razor|2
+CV15|src/Huddle.App/Components/Teams/ProcessTab.razor|2
+CV15|src/Huddle.App/Components/Teams/RoleCard.razor|1
+CV15|src/Huddle.App/Components/Teams/RoleFormDialog.razor|2
+CV15|src/Huddle.App/Components/Teams/TeamDetails.razor|2
+CV15|src/Huddle.App/Components/Teams/TeamShortcutButton.razor|1

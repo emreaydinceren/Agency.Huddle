@@ -73,11 +73,9 @@
         <MudText Typo="Typo.caption" Class="d-block mt-2 mud-text-secondary">@SkillGuide.For("Update")</MudText>
     </DialogContent>
     <DialogActions>
-        <MudTooltip Text="@SkillGuide.For("Not now")" ShowOnFocus="true">
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="update-dialog-not-now" OnClick="this.Close">Not now</MudButton>
-        </MudTooltip>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="@(this.ReplacesEdits ? Color.Warning : Color.Primary)" Disabled="@(this.plan.IsEmpty || this.applying)"
-                   Class="update-dialog-apply" OnClick="this.ApplyAsync">@this.ApplyLabel</MudButton>
+        <DialogFooter CancelText="Not now" CancelTooltip="@SkillGuide.For("Not now")" CancelClass="update-dialog-not-now" OnCancel="this.Close"
+                      PrimaryText="@this.ApplyLabel" Destructive="@this.ReplacesEdits" PrimaryDisabled="@this.plan.IsEmpty" Busy="@this.applying"
+                      PrimaryClass="update-dialog-apply" OnPrimary="this.ApplyAsync" />
     </DialogActions>
 </MudDialog>
 

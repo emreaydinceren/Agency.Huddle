@@ -381,4 +381,34 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv14("src/Huddle.App/Components/Shared/SegmentedControl.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv14("src/Huddle.App/Components/Shared/RoomList.razor", source).Count);
     }
+
+    /// <summary>CV15: a raw <c>MudButton</c> is counted, but not an <c>ActionButton</c>, an icon button, a button group or the type name in code.</summary>
+    [Fact]
+    public void Cv15_RawMudButton_IsCounted()
+    {
+        const string source = """
+            <MudButton Size="Size.Small" Variant="Variant.Text">a</MudButton>
+            <ActionButton Role="ButtonRole.Quiet">b</ActionButton>
+            <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.Close" aria-label="Close" />
+            <MudButtonGroup Size="Size.Small"></MudButtonGroup>
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Filled" />
+            @code { private MudButton? button; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv15(RazorPath, source);
+
+        Assert.Equal("CV15", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV15: the one <c>ActionButton</c> component is the only file allowed to draw a <c>MudButton</c>.</summary>
+    [Fact]
+    public void Cv15_ActionButtonRazor_IsExempt()
+    {
+        const string source = """<MudButton Variant="@this.Variant" Size="Size.Small">x</MudButton>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv15("src/Huddle.App/Components/Shared/ActionButton.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv15("src/Huddle.App/Components/Shared/DialogFooter.razor", source).Count);
+    }
 }

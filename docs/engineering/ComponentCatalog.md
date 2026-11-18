@@ -250,6 +250,60 @@ Edit and Preview, and the Needs You level choice. Convention rule CV14 fails the
 
 ## Page furniture
 
+### Buttons
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `ActionButton` | `Components/Shared/ActionButton.razor` | 33 tags in 21 files, plus the 4 inside `DialogFooter` | `Role` (`ButtonRole`), `ChildContent`, `StartIcon`, `EndIcon`, `Disabled`, `Busy`, `Href`, `Submit`, `FullWidth`, `Class`, `OnClick`, any other attribute (`aria-label`, `id`, `data-*`); `FocusAsync()` |
+
+A caller names what the button is for and the role fixes the rest: always Small (28 px, 13 px at
+500), at the control radius step (`--hu-radius-control`: 4.5 px in Lumen and Fluent, 6 px in
+Nordic and Cobalt Soft). No caller writes `Variant`, `Color` or `Size`. `Busy` disables the
+button and draws a spinner where the start icon would be. `Class` is for layout (margin, flex,
+alignment) and a test or script hook only, never a colour, size, padding or radius. Built in
+wave 2 (B2, 2026-11-18); convention rule CV15 counts a raw `MudButton` anywhere else.
+
+| Role | Look | Use it for |
+| --- | --- | --- |
+| `Primary` | Filled, accent | The one primary action of a view or dialog |
+| `Secondary` | Outlined | A secondary action, or a standalone action in a list or card |
+| `Quiet` | Text | Cancel, Close, Back, and a quiet or link-like action in a row (the default) |
+| `Danger` | Filled Error | The confirm that destroys (`InlineConfirm`, `ConfirmDialog` with `Danger`, Remove from Agents too) |
+| `DangerQuiet` | Text in Error ink | A destructive trigger that asks first (Delete in Archived, Reset all to defaults, Remove a device) |
+
+Two danger roles because a trigger and its confirm look different (`Q-B2-2`): a `Danger` flag on
+the other roles would allow an Outlined Error, which is gone. A Warning button is gone too: the
+Feed's Review in Needs You is `Secondary` with its warning icon, and the Skills update that
+replaces local edits is `Danger`.
+
+How the 136 per-site `Class` values split (measured before the move): 127 sites carry only hooks for tests and
+scripts, with no rule or a layout-only one (`feed-show-more`, `library-document-save`, `role-card-add` and
+`role-grid-toggle` set a margin or flex), or one of 11 layout utilities (`mt-1` to `mt-3`, `mb-1`, `mb-2`,
+`ml-2`, `ml-3`, `ml-auto`): both stay as `Class`. 9 sites carry one of seven classes that restyled the button,
+which are defects: `btn-action-tight` (a 2 px icon gap, removed) and `task-detail-save` and
+`task-detail-cancel` (the card radius in `task-form.css`, removed) are folded into the component;
+`task-detail-library-add` (recoloured, 12 px text) waits for the Tasks migration to become `Quiet`; and
+`question-card-option`, `invite-agent-option` and `tags-tree-row` are not role buttons (an answer choice, an
+option card, a tree row) and stay raw `MudButton`s in the baseline until their own component exists.
+
+**Still to migrate.** 141 raw `MudButton` tags in 59 files, the CV15 baseline per area (each
+area's migration PR lowers its file in `tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/`):
+
+| Area | Files | Tags |
+| --- | --- | --- |
+| `Settings` | 19 | 43 |
+| `Shared` | 15 | 46 |
+| `Teams` | 8 | 17 |
+| `Room` | 7 | 15 |
+| `Tasks` | 6 | 13 |
+| `Library` | 2 | 4 |
+| `Shell` | 2 | 3 |
+| `Css` | 0 | 0 |
+
+The map from the old combinations: Filled Primary is `Primary`, Outlined (default or Primary)
+is `Secondary`, Text or no `Variant` is `Quiet`, Filled Error `Danger`, Text or Outlined Error
+`DangerQuiet`. A Medium button becomes Small (all 15 moved in wave 2).
+
 ### Page header
 
 ![A Team page header: a Team avatar, the name, a Team chip, four quiet action buttons, then the Members, Library, Process and Details tabs](../images/components/page-header-team-tabs.png)
@@ -501,8 +555,7 @@ restores.
 ![The New job dialog: a title and close button, a scrolling body of labelled fields with helper text, and a footer with Cancel and a purple Schedule](../images/components/dialog-job-editor.png)
 
 Every dialog has the same three parts: a title row with a close button, a body, and a footer with
-Cancel and one primary button. The footer is written by hand in each of the 21 dialogs (see
-[Patterns still built by hand](#patterns-still-built-by-hand)).
+Cancel and one primary button, drawn by [`DialogFooter`](#dialog-footer). A picker has no footer.
 
 | Dialog | Path | Opened from |
 | --- | --- | --- |
@@ -516,6 +569,30 @@ Cancel and one primary button. The footer is written by hand in each of the 21 d
 Open every dialog with `IDialogService.ShowAsync<T>` and the options from `HuddleDialogOptions`
 (`SmallForm`, `ShortPicker` or `Picker`, 32 uses). Pass an id or a snapshot: an open dialog
 ignores new parameters.
+
+### Dialog footer
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `DialogFooter` | `Components/Shared/DialogFooter.razor` | 19 in 18 dialogs | `CancelText` (default "Cancel"), `OnCancel`, `ShowCancel`, `CancelTooltip`, `OnBack`, `ChildContent` (a middle option), `PrimaryText`, `OnPrimary`, `PrimaryDisabled`, `PrimaryIcon`, `Busy`, `BusyText`, `Destructive`, `CancelClass`, `PrimaryClass` |
+
+Placed inside `<DialogActions>`, it draws Cancel (Quiet), Back when `OnBack` has a handler, a middle
+option, then the one primary: `Primary`, or `Danger` with `Destructive`. All four were Medium in
+the Task dialogs (30.2 px) and are 28 px now. `Busy` disables the primary and draws a spinner; Cancel stays
+live. With no `PrimaryText` it is a Close- or Cancel-only row (`AddWithAiDialog`, `LibraryFilePickerDialog`,
+`TaskDecisionDialog`). The cancel word varies ("Close", "Not now", "Skip", `HumanGateCopy.CancelButton`);
+the look does not. `CancelClass` and `PrimaryClass` keep a dialog's test hooks. Of the 21 dialogs that had
+`<DialogActions>`: 18 use it (Duplicate team twice, once per state, so its two primaries are never shown
+together), `SkillsHelpDialog` and `NeedsYouLevelDialog` became pickers with no actions row (`Q-A2-1`), and
+`PackDetailsDialog` writes three Quiet `ActionButton`s (Remove is `DangerQuiet`), because Close there is not a
+Cancel.
+
+`Busy` is set where the primary awaits real work: `NameDialog` (its `SubmitAsync`, a Library or Team write),
+`MoveDialog` (the Library move, "Moving…"), `UpdateDialog` (applying a Pack update) and `AgentProfileCard`
+(copying an Agent). The others close with an in-memory result for the caller to act on (`ConfirmDialog`,
+`AvatarEditorDialog`, `FolderPickerDialog`, `DuplicatePickerDialog`, `ReasonDialog`, `RoleFormDialog`,
+`RemovePackDialog`, `SkillSourcesFolderDialog`), or save synchronously, so a busy state could never render
+(`JobEditorDialog`, `FieldsDialog`, `DuplicateTeamDialog`).
 
 ### Name dialog
 
@@ -627,7 +704,6 @@ ships, move its row to the entry for the new component and delete it here.
 | # | Planned component | Reuse cases | What it fixes | Size | Status |
 | --- | --- | --- | --- | --- | --- |
 | A1 | **Notice**, wrapping `MudAlert` with severity, role and density | 87 uses in 38 files | 59 use `Dense`. All 21 Error notices are `role="alert"` and all 29 Info notices are `role="status"`, but the 36 Warning notices split 15 `alert` and 21 `status`; one more (`PromptsPanel`) picks Error or Warning at runtime and is `alert` | M | Planned |
-| A2 | **DialogFooter**: Cancel plus one primary button, with a disabled test and a busy state | 21 dialogs have `<DialogActions>`; 19 write the Cancel or Close button by hand; at least 11 pair it with a `Color.Primary` confirm | `FieldsDialog`, `TaskDecisionDialog`, `DuplicatePickerDialog` and `ReasonDialog` use medium buttons where the rest use small text buttons | M | Planned |
 | A3 | **RowActionsMenu**: a `MoreVert` menu with the hover-reveal classes and the "Actions for {name}" label | 11 hand-built (the Teams nav twice, Tasks, the board, the Views nav, `RoomNavRow`, Scheduled, and four in Skills settings); 9 files repeat the `hover-reveal-menu-button` class | The rule is in [UXDesignGuidelines.md](UXDesignGuidelines.md#i-need-use-this) but names no component. A twelfth `MoreVert` menu, on `TaskDecisionCard`, offers other decisions and is a different thing | S | Planned |
 | A4 | **One Adapter, Model and Effort picker**, and a `ProbedSelect` for the select-with-progress-bar block | The cascade is written 2 times (`AdapterModelEffortPicker`, used once, and `AgentProfileCard`); the probe block appears 5 times | `AgentProfileCard` (2,359 lines) re-implements the shared picker, and adds a Work mode select the picker lacks | L | Planned |
 | A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
@@ -639,7 +715,6 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned component | Reuse cases | Evidence | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| B2 | **Buttons by role**: primary, secondary, quiet and danger | 205 uses in 83 files | 169 (82%) fall in three combos: Text and Small (71), Outlined and Small (59), Filled, Small and Primary (39). 136 carry a per-site `Class`. 15 are medium, 14 set no variant, about 10 are coloured danger or warning, 3 of them chosen at runtime | L | Planned |
 | B3 | **Text field**: defaults, a `Long` option and a `Compact` option | 62 uses in 29 files | 100% Outlined and Dense. 57 have a `Label`, 29 a `HelperText`, 35 use `Immediate`. 12 use `Lines`, but only 7 use the `long-text-field` class | M | Planned |
 | B4 | **Select** | 34 uses in 14 files | 100% Outlined and Dense; defaults only | S | Planned |
 | B5 | **Icon button** with its tooltip pairing | 55 uses in 32 files | `aria-label` is already on all 55, and 26 sit beside a `MudTooltip`. Low gain, because the rule already holds | S | Planned |
@@ -719,39 +794,6 @@ anatomy). No rule decides the role of a Warning, the icon size or the spacing be
 - `Q-A1-2` Icon at 18 px (the largest icon size) or keep MudBlazor's 22 px? Recommended: 18 px.
 - `Q-A1-3` Is a multi-line notice dense too? Recommended: yes, everywhere, so there is one notice
   size; the rule then reads "always `Dense`".
-
-#### A2 DialogFooter
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Small, Cancel then Filled primary | 10 of 21 dialogs, for example `Shared/Dialogs/NameDialog.razor:22` | 28 px, Cancel padding 5 px, primary 10 px (*measured*) |
-| Medium | `Tasks/DuplicatePickerDialog.razor:13`, `Tasks/FieldsDialog.razor:61`, `Tasks/ReasonDialog.razor:14`, `Tasks/TaskDecisionDialog.razor:29` | 30.2 px; Cancel padding 8 px, Save 16 px (*measured* in Fields). Cancel has no `Variant` |
-| Close only, Text | `AddWithAiDialog.razor:93`, `SkillsHelpDialog.razor:11`, `Teams/NeedsYouLevelDialog.razor:13`, `Library/LibraryFilePickerDialog.razor:41` (Cancel) | One quiet button |
-| Close only, Filled | `Settings/Skills/PackDetailsDialog.razor:109` | Close is the filled primary, beside a Text Error Remove |
-| Three buttons | `RemovePackDialog.razor:17`, `Teams/DuplicateTeamDialog.razor:43` | Outlined middle option; Duplicate writes two Filled primaries (`:47`, `:51`) |
-| Cancel wording | "Not now" `UpdateDialog.razor:77`, "Skip" `ReasonDialog.razor:17`, `HumanGateCopy.CancelButton` `TaskDecisionDialog.razor:30` | The rest say Cancel or Close |
-| Busy | Spinner and label `Shared/AgentProfileCard.razor:665`; disable only `UpdateDialog.razor:79`; none in the other 19 | |
-
-**Which is right.** design-system.md Dialog anatomy: Cancel (`Variant.Text`), then Back, then the
-one primary (`Filled`, `Primary`, or `Error` when it destroys), all `Size.Small`; Busy disables
-the primary and shows a busy label or a spinner. A picker dialog has no actions row.
-
-**Fix:**
-
-1. The four Medium dialogs move to `DialogFooter` at Small. `visual`
-2. `PackDetailsDialog.razor:122`: Close becomes Text; Remove stays the destructive action. `visual`
-3. `DuplicateTeamDialog.razor:47`, `:51`: check the two primaries are never shown together (lead). `markup only`
-4. `DialogFooter` takes `Busy`; the 19 dialogs with none get it where the action awaits. `visual`
-
-**How to prove.** Open each dialog and compare `.mud-dialog-actions .mud-button-root` height and
-padding; Css-Snapshot does not open dialogs. `base.css:341`, `:801` and `:940` restyle the row.
-
-**Open questions for the owner:**
-
-- `Q-A2-1` Is a Close-only info dialog a picker (no actions row, the close button only)?
-  Recommended: yes for `SkillsHelpDialog` and `NeedsYouLevelDialog`; keep Close where it ends work.
-- `Q-A2-2` May the cancel word differ ("Not now", "Skip")? Recommended: yes, `DialogFooter` takes
-  the text; the look is fixed.
 
 #### A3 RowActionsMenu
 
@@ -930,45 +972,6 @@ rule picks one.
 - `Q-A8-1` In a button, spinner or "…ing" text? Recommended: the text ("Reloading…") with no
   spinner, as four sites already do; a spinner only where there is no button.
 
-#### B2 Buttons by role
-
-| Variant | Where | How it looks different (*measured*) |
-| --- | --- | --- |
-| Small Text, Outlined, Filled | 190 sites | 28 px, 13 px at 500; padding 5, 9 and 10 px; radius 6 px |
-| Medium | 15 sites: the 7 in A2's four dialogs, `TaskDetail.razor:118`, `:156`, `:346`, `Pages/Tasks.razor:198`, `TaskEditPage.razor:41`, `Settings.razor:36`, `BuildTeam.razor:319`, `:323` | 30.2 px; padding 8 px (text) and 16 px (filled) |
-| No `Variant` | 14 sites, for example `LibraryDocument.razor:90-91`, `NotificationsPanel.razor:55` | Text by default; the intent is not written |
-| Outlined fill | Outlined default and Primary against Outlined Error | `#ffffff` against transparent: `base.css:874-875` and `:732-733` list default and Primary only |
-| Danger | Text Error 3 (`ArchivedPage.razor:66`, `RemoteAccessPanel.razor:238`, `PackDetailsDialog.razor:113`), Outlined Error 2 (`ResetAllControl.razor:28`, `AgentProfileCard.razor:227`), Filled Error 3 (`InlineConfirm.razor:23`, `RemovePackDialog.razor:20`, `ConfirmDialog.razor:23`) | Three looks for one role |
-| Warning | `FeedCard.razor:165` Outlined, `UpdateDialog.razor:79` Filled at runtime | |
-| Icon gap | `btn-action-tight`, 1 site (`TaskToolbar.razor:232`, `shell.css:1347`) | 2 px between icon and word; MudBlazor's elsewhere |
-
-Every button measures a 6 px radius, the card step; the segmented items beside them measure 4.5 px.
-In Lumen Dark the three Small looks keep 28 px and the outlined fill is Surface (`#111117`).
-
-**Which is right.** design-system.md House defaults: `Size.Small`, Filled for the one primary,
-Outlined secondary, Text quiet and Cancel. Shape: a button takes `--hu-radius-control`. Confirming:
-a destructive confirm is `Color.Error`. No rule decides how a destructive trigger looks.
-
-**Fix:**
-
-1. The 15 Medium buttons become Small. `visual`
-2. The 14 with no `Variant` take their role. `markup only`
-3. Buttons take `--hu-radius-control` in `base.css:391`; drop `task-form.css:557`. `visual` in
-   every Theme (6 to 4.5 px in Lumen and Fluent, 8 to 6 px in Nordic and Cobalt Soft)
-4. Add the Outlined Error look to `base.css:732` and `:874`. `visual` in Nordic and Lumen
-5. Move the global `.mud-button-filled` shadow out of `tasks.css:1258` into `base.css`. `markup only`
-
-**How to prove.** Css-Snapshot Report on every route; declare `.mud-button-root | border-radius`
-and the 15 Medium sites' `height` and `padding*`.
-
-**Open questions for the owner:**
-
-- `Q-B2-1` Button radius: the control step (the rule) or the card step (the screen today)?
-  Recommended: control; cost, a 1.5 to 2 px change on all 205 buttons in every Theme.
-- `Q-B2-2` How does a destructive trigger look? Recommended: Text in Error ink for a trigger that
-  asks first, Filled Error only on the confirm; Outlined Error goes.
-- `Q-B2-3` Keep the 2 px icon gap? Recommended: no; one gap from the component.
-
 #### B3 Text field
 
 | Variant | Where | How it looks different (*measured*) |
@@ -1094,8 +1097,8 @@ The order:
    new ones (D1, checked): the per-file baseline only shrinks.
 2. **Pilot with B1.** The segmented control is both a composite and a primitive, so it proves the
    options list, the `Look`, the convention rule and the visual check on six sites.
-3. **B2, the button roles, with A2 (`DialogFooter`) as its first user.** The other buttons move
-   over a few files at a time.
+3. **B2, the button roles, with A2 (`DialogFooter`) as its first user.** **Built 2026-11-18** as
+   [`ActionButton`](#buttons) and [`DialogFooter`](#dialog-footer); the other buttons move area by area.
 4. **A1 (`Notice`), then B3 (text field) and B4 (select).**
 5. **The composites that contain them:** A4 (the picker, which contains selects), A7 (`SettingSwitch`),
    A6 (`PropertyList`) and A3 (`RowActionsMenu`, with B5, the icon button, built as its first user).

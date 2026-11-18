@@ -12,12 +12,8 @@
         <MudTextField T="string" Label="@(this.Required ? HumanGateCopy.ReasonLabel : "Reason (optional)")" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Immediate="true" />
     </DialogContent>
     <DialogActions>
-        @if (!this.Required)
-        {
-            <MudButton Size="Size.Medium" OnClick="this.Skip">Skip</MudButton>
-        }
-        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save"
-                   Disabled="@(this.Required && string.IsNullOrWhiteSpace(this.reason))">@this.ConfirmText</MudButton>
+        <DialogFooter CancelText="Skip" ShowCancel="@(!this.Required)" OnCancel="this.Skip" PrimaryText="@this.ConfirmText"
+                      PrimaryDisabled="@(this.Required && string.IsNullOrWhiteSpace(this.reason))" OnPrimary="this.Save" />
     </DialogActions>
 </MudDialog>
 

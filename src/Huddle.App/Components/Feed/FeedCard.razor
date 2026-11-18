@@ -163,7 +163,7 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="feed-btn feed-btn-open" OnClick="this.OpenTarget">@this.OpenLabel</MudButton>
                     @if (this.CanReview)
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" StartIcon="@Icons.Material.Filled.Warning" Class="feed-btn feed-btn-review" OnClick="this.ReviewInNeedsYou">Review in Needs you</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Warning" Class="feed-btn feed-btn-review" OnClick="this.ReviewInNeedsYou">Review in Needs you</ActionButton>
                     }
                     @if (this.WakeName is { } wakeName)
                     {

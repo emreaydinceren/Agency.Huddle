@@ -84,7 +84,7 @@ another reason for one migration per area at a time.
 | Wave | Work | Owners at once | Why this order |
 | --- | --- | --- | --- |
 | 1 | **Done 2026-11-18.** **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14` (zero-tolerance from the start: all six sites moved in the build PR). Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
-| 2 | **B2** buttons by role, with **A2** `DialogFooter` as its first user. Then migrate by area | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
+| 2 | **Build done 2026-11-18.** **B2** `ActionButton` (roles `Primary`, `Secondary`, `Quiet`, `Danger`, `DangerQuiet`), with **A2** `DialogFooter` as its first user: rule `CV15`, control radius on every button, 65 tags moved (18 dialogs, the 15 Medium, the 14 with no variant, every Danger and Warning site). Migrate by area next: the CV15 baseline holds 141 tags, `Shared` 46, `Settings` 43, `Teams` 17, `Room` 15, `Tasks` 13, `Library` 4, `Shell` 3, `Css` 0 | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
 | 3 | **A1** `Notice`, then **B3** text field and **B4** select. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
 | 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList`, **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
 | 5 | Opportunistic: **A5**, **A8**, the browser scripts (group C); fix D2 and D3 when in those files | as convenient | Small gains; do them when passing |
@@ -106,7 +106,7 @@ confirms it with a search before starting.
 | `wwwroot/css/sidebar.css` | A3, B1 (theme variants) |
 | `wwwroot/css/room.css` | A1 |
 | `wwwroot/css/library.css`, `FeedPage.razor.css` | B1 |
-| `wwwroot/css/shell.css` | B2 (the 2 px icon gap) |
+| `wwwroot/css/shell.css` | B2 (the 2 px icon gap; removed in wave 2) |
 | `tests/.../Conventions/Baseline/*.txt`, `UiConventionScanner.cs`, `UiConventionSource.cs`, `UiConventionTests.cs` | every component |
 
 That last row is why the build step is one owner at a time, and why the waves above never put two
@@ -157,7 +157,7 @@ are in the catalog.
 
 | Before | Questions |
 | --- | --- |
-| Wave 2 | `Q-B2-1` button radius (changes all 205 buttons), `Q-B2-2` destructive look, `Q-B2-3` icon gap; `Q-A2-1`, `Q-A2-2` |
+| Wave 2 | Answered 2026-11-18, each at the catalog's recommendation: `Q-B2-1` control radius, `Q-B2-2` Text Error trigger and Filled Error confirm, `Q-B2-3` no 2 px gap; `Q-A2-1` Close-only info dialogs are pickers, `Q-A2-2` the cancel word may vary |
 | Wave 3 | `Q-A1-1` to `Q-A1-3`; `Q-B3-1` |
 | Wave 4 | `Q-A4-1`, `Q-A4-2`; `Q-A6-1`, `Q-A6-2`; `Q-A7-1`, `Q-A7-2`; `Q-A3-1`, `Q-A3-2`; `Q-B5-1` |
 | Wave 5 | `Q-A5-1`; `Q-A8-1` |
@@ -191,7 +191,27 @@ B1 (`SegmentedControl`, 2026-11-18) set the pattern. What the plan did not say:
 - **The shell hooks block `sed -i`**, and the Write tool and heredocs emit LF. A rename across many
   files is a PowerShell `[IO.File]::ReadAllText` and `.Replace` loop, which keeps CRLF.
 
-Commands that worked (PowerShell, from the repo root; `$s` is a scratch folder outside the repo):
+B2 (`ActionButton` and `DialogFooter`, 2026-11-18) added:
+
+- **The baseline writer rewrites every area file, CV11 included.** `HUDDLE_WRITE_BASELINES=1` wrote
+  `Css.txt` from the raw CV11 counts, which `Exceptions.txt` already covers; restore that file with
+  `git checkout` and keep only the files whose diff is the new rule's lines.
+- **Development serves `wwwroot` from the source tree.** A Capture runs the app with `--no-build`, so a
+  `.razor` edit during the 7-minute baseline is safe but a stylesheet edit lands in it. Edit the
+  stylesheets only after the baseline finishes, and do not `dotnet build` while a Capture's app holds
+  the binaries.
+- **A wrapper's parameter must not share a name with an HTML attribute it may be given**, because Blazor
+  matches parameters ignoring case: `Role` on `ActionButton` means a `role="…"` attribute cannot be
+  passed through (a button needs none). `UserAttributes` there is splatted with `@attributes`; MudBlazor's
+  own `UserAttributes` wants a mutable `Dictionary`.
+- **`<DialogActions>` is the dialog's own fragment**, so a footer component goes inside it, not in place of
+  it, and draws its buttons with no wrapper element so MudBlazor's row layout still applies.
+- **Keep the sites' hook classes.** Tests and scripts find dialog buttons by class (`fields-dialog-save`);
+  `DialogFooter` takes `CancelClass` and `PrimaryClass` for them, so no test selector had to move.
+- **Hand-edit migrations in a script, not one Edit per site.** B2 moved 65 tags with two PowerShell scripts
+  that match each tag by an anchor, map Variant and Color to the role, fail on anything unmapped and keep
+  CRLF; each printed the new tag for review.
+, from the repo root; `$s` is a scratch folder outside the repo):
 
 ```powershell
 pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Capture -Screens -Reseed -SeedRoot C:\seeds\huddle\css-snap-b1 -Port 5320 -Out "$s\baseline"

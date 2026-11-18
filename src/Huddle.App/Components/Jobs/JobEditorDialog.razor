@@ -93,10 +93,7 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="job-editor-save" OnClick="this.Save">
-            @(this.JobId is null ? "Schedule" : "Save")
-        </MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="@(this.JobId is null ? "Schedule" : "Save")" PrimaryClass="job-editor-save" OnPrimary="this.Save" />
     </DialogActions>
 </MudDialog>
 

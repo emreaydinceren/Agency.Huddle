@@ -108,7 +108,7 @@ public sealed partial class R3ShellTests
 
         // The attributes hold lambdas ("=>"), so each pattern spans them lazily rather than stopping at the first '>'.
         Assert.Matches(@"<MudButton Variant=""Variant\.Filled"" Color=""Color\.Primary""[^<]*?Class=""archived-restore""[^<]*?>Restore</MudButton>", source);
-        Assert.Matches(@"<MudButton Variant=""Variant\.Text""[^<]*?Color=""Color\.Error""[^<]*?Class=""archived-delete""[^<]*?>Delete…</MudButton>", source);
+        Assert.Matches(@"<ActionButton Role=""ButtonRole\.DangerQuiet""[^<]*?Class=""archived-delete""[^<]*?>Delete…</ActionButton>", source);
         Assert.Matches(@"<InlineConfirm Class=""archived-delete-confirm""", source);
     }
 

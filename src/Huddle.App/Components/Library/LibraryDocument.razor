@@ -61,7 +61,7 @@
     @if (this.outsideScope)
     {
         <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="library-document-outside-scope">Outside this view</MudAlert>
-        <MudButton Size="Size.Small" Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</MudButton>
+        <ActionButton Role="ButtonRole.Quiet" Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</ActionButton>
     }
     else if (this.missing)
     {
@@ -83,8 +83,8 @@
             <MudAlert Severity="Severity.Warning" Class="library-document-freshness" role="alert">
                 <p class="library-document-freshness-notice">This file changed on disk since you opened it.</p>
                 <MudStack Row="true" Class="library-document-freshness-notice" Spacing="2">
-                    <MudButton Size="Size.Small" OnClick="@this.OnReloadFreshnessAsync">Reload</MudButton>
-                    <MudButton Size="Size.Small" OnClick="@this.OnKeepMine">Keep mine</MudButton>
+                    <ActionButton Role="ButtonRole.Quiet" OnClick="@this.OnReloadFreshnessAsync">Reload</ActionButton>
+                    <ActionButton Role="ButtonRole.Quiet" OnClick="@this.OnKeepMine">Keep mine</ActionButton>
                 </MudStack>
             </MudAlert>
         }
@@ -142,7 +142,7 @@
                 @* Starts a process on the host, so it is not drawn while remote access is configured (Spec 6.15). *@
                 @if (!this.RemoteAccess.IsConfigured)
                 {
-                    <MudButton Size="Size.Small" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</MudButton>
+                    <ActionButton Role="ButtonRole.Quiet" Class="library-document-open-default" OnClick="@this.OpenInDefaultAppAsync">Open in default app</ActionButton>
                 }
             </div>
         }

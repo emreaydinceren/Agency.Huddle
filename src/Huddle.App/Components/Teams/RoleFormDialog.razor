@@ -80,9 +80,8 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.title.Trim().Length == 0)" OnClick="this.Save"
-                   Class="custom-role-save">@(this.Id is null ? "Add" : "Save")</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="@(this.Id is null ? "Add" : "Save")" PrimaryDisabled="@(this.title.Trim().Length == 0)"
+                      PrimaryClass="custom-role-save" OnPrimary="this.Save" />
     </DialogActions>
 </MudDialog>
 

@@ -115,7 +115,7 @@ else if (this.loaded is { } task)
             <span class="task-detail-gate-refusal-text">@refusal.Message</span>
             @if (this.CanMoveAnyway(refusal))
             {
-                <MudButton Size="Size.Medium" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</MudButton>
+                <ActionButton Role="ButtonRole.Quiet" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</ActionButton>
             }
         </MudAlert>
     }
@@ -153,7 +153,7 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-budget-banner">
             <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Agents.")</span>
-            <MudButton Size="Size.Medium" OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</MudButton>
+            <ActionButton Role="ButtonRole.Quiet" OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</ActionButton>
         </MudAlert>
     }
 
@@ -343,7 +343,7 @@ else if (this.loaded is { } task)
                                         <MudTooltip Text="Not in sprints.md">
                                             <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="Not in sprints.md" />
                                         </MudTooltip>
-                                        <MudButton Size="Size.Medium" Class="task-detail-sprint-clear" Variant="Variant.Text" OnClick="this.ClearSprint">Clear</MudButton>
+                                        <ActionButton Role="ButtonRole.Quiet" Class="task-detail-sprint-clear" OnClick="this.ClearSprint">Clear</ActionButton>
                                     }
                                 </div>
                             </div>

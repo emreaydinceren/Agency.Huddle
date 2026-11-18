@@ -57,9 +57,7 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(!this.listing.CanSelect)" OnClick="this.Select"
-                   Class="folder-picker-select">Select</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="Select" PrimaryDisabled="@(!this.listing.CanSelect)" PrimaryClass="folder-picker-select" OnPrimary="this.Select" />
     </DialogActions>
 </MudDialog>
 

@@ -224,7 +224,7 @@
                     }
                     else
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" @ref="this.resetButton" OnClick="this.BeginReset">Reset to default</MudButton>
+                        <ActionButton Role="ButtonRole.DangerQuiet" @ref="this.resetButton" OnClick="this.BeginReset">Reset to default</ActionButton>
                     }
                 }
                 else
@@ -658,14 +658,7 @@
     <DialogActions>
         @if (this.mode != AgentProfileCardMode.View)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Close">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@this.copying" OnClick="this.SaveAsync">
-                @if (this.copying)
-                {
-                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                }
-                @this.SaveLabel
-            </MudButton>
+            <DialogFooter OnCancel="this.Close" PrimaryText="@this.SaveLabel" Busy="@this.copying" OnPrimary="this.SaveAsync" />
         }
     </DialogActions>
 </MudDialog>
@@ -837,7 +830,7 @@
     // Empty when it offers none or is not running.
     private IReadOnlyList<AdapterCommand> offeredCommands = [];
     private string? error;
-    private MudButton? resetButton;
+    private ActionButton? resetButton;
     private MudIconButton? removeButton;
     private bool restoreActionFocus;
     private bool confirmingRemove;

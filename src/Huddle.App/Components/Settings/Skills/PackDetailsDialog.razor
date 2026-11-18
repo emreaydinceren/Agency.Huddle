@@ -110,16 +110,16 @@
         @if (this.View is { Pack.File: not null } removable)
         {
             <MudTooltip Text="@SkillGuide.For("Remove Pack")" ShowOnFocus="true">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" Class="pack-details-remove" OnClick="@(() => this.RemoveAsync(removable))">Remove</MudButton>
+                <ActionButton Role="ButtonRole.DangerQuiet" Class="pack-details-remove" OnClick="@(() => this.RemoveAsync(removable))">Remove</ActionButton>
             </MudTooltip>
         }
         @if (this.View is { } shown && this.LibraryPath(shown) is { } file)
         {
             <MudTooltip Text="@SkillGuide.For("Show in Library")" ShowOnFocus="true">
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="pack-details-show-in-library" OnClick="@(() => this.Open(file))">Show in Library</MudButton>
+                <ActionButton Role="ButtonRole.Quiet" Class="pack-details-show-in-library" OnClick="@(() => this.Open(file))">Show in Library</ActionButton>
             </MudTooltip>
         }
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="pack-details-close" OnClick="this.Close">Close</MudButton>
+        <ActionButton Role="ButtonRole.Quiet" Class="pack-details-close" OnClick="this.Close">Close</ActionButton>
     </DialogActions>
 </MudDialog>
 

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Shared.Dialogs;
 
 namespace Agency.Huddle.Tests.Ui.Dialogs;
@@ -210,6 +211,48 @@ public sealed class NameDialogTests
         Assert.NotNull(result);
         Assert.True(result.Canceled);
         Assert.Equal(0, calls);
+    }
+
+    /// <summary>While the action runs, the primary is disabled and shows the busy spinner, Cancel stays live, and both return when the action ends.</summary>
+    [Fact]
+    public async Task Primary_WhileSubmitting_IsBusyAndDisabled()
+    {
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(static _ => { });
+        TaskCompletionSource<string?> pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        IDialogReference reference = await OpenAsync(ctx, cut, "New team", "Team name", "Create", "Research", null, _ => pending.Task);
+
+        // Not awaited yet: the click's handler waits on the pending action, which completes below.
+        Task click = cut.InvokeAsync(() => cut.FindAll(Actions)[1].ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.True(cut.FindAll(Actions)[1].HasAttribute("disabled")));
+        Assert.NotEmpty(cut.FindAll(".mud-dialog-actions .dialog-footer-primary .action-button-spinner"));
+        Assert.False(cut.FindAll(Actions)[0].HasAttribute("disabled"));
+
+        pending.SetResult("That name is taken.");
+        await click;
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-actions .action-button-spinner")));
+        Assert.False(cut.FindAll(Actions)[1].HasAttribute("disabled"));
+        Assert.False(reference.Result.IsCompleted);
+    }
+
+    /// <summary>A busy <see cref="DialogFooter"/> draws its <c>BusyText</c> in place of the verb, on a disabled primary.</summary>
+    [Fact]
+    public async Task DialogFooter_Busy_ShowsBusyText_OnADisabledPrimary()
+    {
+        await using MudBunitContext ctx = new();
+
+        IRenderedComponent<DialogFooter> cut = ctx.Render<DialogFooter>(parameters => parameters
+            .Add(x => x.OnCancel, static () => { })
+            .Add(x => x.PrimaryText, "Move")
+            .Add(x => x.BusyText, "Moving…")
+            .Add(x => x.Busy, true));
+
+        IElement primary = cut.Find(".dialog-footer-primary");
+        Assert.Equal("Moving…", primary.TextContent.Trim());
+        Assert.True(primary.HasAttribute("disabled"));
+        Assert.Contains("mud-button-filled-primary", primary.ClassList);
     }
 
     /// <summary>Optional child content renders inside the dialog body.</summary>

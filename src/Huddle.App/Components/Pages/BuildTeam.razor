@@ -316,11 +316,11 @@
                 </MudAlert>
             }
             <div class="build-team-approve-row">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
-                           OnClick="this.ApproveAsync" Class="build-team-approve-button">@this.ApproveLabel</MudButton>
+                <ActionButton Role="ButtonRole.Primary" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
+                           OnClick="this.ApproveAsync" Class="build-team-approve-button">@this.ApproveLabel</ActionButton>
                 @if (this.continueTeam is not null)
                 {
-                    <MudButton Variant="Variant.Text" Size="Size.Medium" Href="@this.TeamHref(this.continueTeam)" Class="build-team-open-team">Open team</MudButton>
+                    <ActionButton Role="ButtonRole.Quiet" Href="@this.TeamHref(this.continueTeam)" Class="build-team-open-team">Open team</ActionButton>
                 }
                 <MudText Typo="Typo.body2" Class="build-team-intro build-team-approve-hint">@this.ApproveHint</MudText>
             </div>

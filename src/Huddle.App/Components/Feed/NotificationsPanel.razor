@@ -52,7 +52,7 @@
 
     @if (this.Pager.HasMore)
     {
-        <MudButton Size="Size.Small" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+        <ActionButton Role="ButtonRole.Quiet" Class="feed-show-more" OnClick="this.ShowMore">Show more</ActionButton>
     }
 
     <NavTabLink Href="@("/feed?category=" + FeedCategories.ToWire(this.category))" TabTitle="Feed" Match="NavLinkMatch.All" Class="feed-see-all">See all activity</NavTabLink>

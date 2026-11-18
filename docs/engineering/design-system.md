@@ -376,7 +376,7 @@ renders taller than the 28px row size a Small one has (UX-V01).
 
 | Control | Required |
 | --- | --- |
-| `MudButton`, `MudIconButton`, `MudChip`, `MudToggleGroup` | `Size="Size.Small"` |
+| `MudIconButton` | `Size="Size.Small"` (an `ActionButton`, a `Chip` and a `SegmentedControl` are Small already) |
 | `MudTextField`, `MudSelect`, `MudAutocomplete`, `MudNumericField`, `MudDatePicker` | `Variant="Variant.Outlined"`, `Margin="Margin.Dense"` |
 | `MudToolBar` | `Dense="true"`, `Gutters="false"` so it lines up with the page title (UX-005) |
 | `MudAlert` with one line | `Dense="true"` (UX-040) |
@@ -941,9 +941,9 @@ above the rail or the nav (UX-010).
 | Fields | `Variant.Outlined`, `Margin.Dense`. `AutoFocus` on the first field. In a single-field dialog, Enter submits (UX-024) |
 | Validation | Live, through the feature's pure validator, shown with `Error` and `ErrorText` on the field. Disable the primary action while invalid |
 | An error from the action | `MudAlert Severity.Error Dense role="alert"` above the actions. Not a raw `<p>` or a `MudText` (UX-025) |
-| Actions | Right-aligned in this order: **Cancel** (`Variant.Text`), then **Back** if there is one, then the **primary action** (`Variant.Filled`, `Color.Primary`, or `Color.Error` when it destroys). All `Size.Small` (UX-020, UX-021) |
-| Busy | The primary action disables and shows a busy label ("Saving…") or a spinner |
-| Picker dialog | No actions row; `CloseButton = true` is the way out |
+| Actions | `DialogFooter` inside `<DialogActions>`. Right-aligned in this order: **Cancel** (Quiet; its word may be "Close", "Not now" or "Skip", the look is fixed), then **Back** if there is one, then a middle option (Secondary) if there is one, then the **primary action** (Primary, or Danger when it destroys: `Destructive`). All 28 px (UX-020, UX-021) |
+| Busy | `DialogFooter.Busy`: the primary action disables and shows a spinner, with `BusyText` ("Saving…") when given |
+| Picker dialog | No actions row; `CloseButton = true` is the way out. A Close-only info dialog (Skills help, a Project's Needs You level) is a picker; a viewer whose Close ends work keeps a Quiet Close |
 | Close button | 28px, an 18px icon, `ActionDefault`; restyled once in the Global MudBlazor overrides |
 | Padding | Title `16px 24px 8px`; content `8px 24px`; actions `12px 24px 16px` |
 | Width | 600px for forms, confirms and pickers under about 12 items (`HuddleDialogOptions.SmallForm` for a form, `ShortPicker` for a picker); 960px (`HuddleDialogOptions.Picker`) only for two-pane or tabular pickers |
@@ -1052,7 +1052,7 @@ Start from the pattern in the file the table names; the full list is in
 
 | Need | Component and defaults |
 | --- | --- |
-| Button | `MudButton Size="Size.Small"`. `Variant.Filled` for the one primary action per view, `Variant.Outlined` for secondary, `Variant.Text` for quiet and for Cancel |
+| Button | `ActionButton` with a `Role`; it is always Small (28 px) at `--hu-radius-control`, and a raw `MudButton` fails CV15. `Primary` (Filled, accent) for the one primary action per view, `Secondary` (Outlined) for secondary, `Quiet` (Text) for quiet actions and for Cancel. A destructive action has two roles: `Danger` (Filled Error) only on the confirm that destroys, `DangerQuiet` (Text in Error ink) on a trigger that asks first; there is no Outlined Error. A dialog's actions row is `DialogFooter` |
 | Icon button | `MudIconButton Size="Size.Small"`, with an `aria-label`, and a `MudTooltip` when it is not obvious |
 | Text input | `MudTextField Variant="Variant.Outlined" Margin="Margin.Dense"` |
 | Search field | The same, with a `Filled.Search` start adornment, `Clearable`, `Immediate`, one debounce constant, a placeholder ("Search members") and an `aria-label` (UX-055) |

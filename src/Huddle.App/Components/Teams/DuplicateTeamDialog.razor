@@ -41,14 +41,13 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
         @if (this.result is null)
         {
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" Disabled="@(string.IsNullOrWhiteSpace(this.title))" OnClick="this.Submit">Duplicate</MudButton>
+            <DialogFooter OnCancel="this.Cancel" PrimaryText="Duplicate" PrimaryClass="duplicate-team-submit" PrimaryDisabled="@(string.IsNullOrWhiteSpace(this.title))" OnPrimary="this.Submit" />
         }
         else
         {
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-open" OnClick="this.OpenNewTeam">Open Team</MudButton>
+            <DialogFooter OnCancel="this.Cancel" PrimaryText="Open Team" PrimaryClass="duplicate-team-open" OnPrimary="this.OpenNewTeam" />
         }
     </DialogActions>
 </MudDialog>

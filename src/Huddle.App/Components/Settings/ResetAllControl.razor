@@ -14,9 +14,8 @@
 
     Stage 3 (the MudBlazor migration) keeps this inline-confirm pattern exactly as designed - no
     IDialogService, no JS confirm() - and only restyles the three buttons per the migration brief's
-    Part A mapping: the danger button (formerly styled with the now-deleted .agents-danger class)
-    becomes an outlined MudButton with Color.Error, and the plain Cancel button becomes a plain
-    outlined MudButton.
+    Part A mapping. The trigger is an ActionButton in the DangerQuiet role (Text in Error ink): it asks first,
+    so only InlineConfirm's confirm is Filled Error (ComponentCatalog, ActionButton).
 *@
 
 @if (this.Confirming)
@@ -25,7 +24,7 @@
 }
 else
 {
-    <MudButton Variant="Variant.Outlined" Size="Size.Small" Color="Color.Error" Disabled="@(!this.AnyModified)" OnClick="this.OnBeginReset">Reset all to defaults</MudButton>
+    <ActionButton Role="ButtonRole.DangerQuiet" Disabled="@(!this.AnyModified)" OnClick="this.OnBeginReset">Reset all to defaults</ActionButton>
 }
 
 @code {

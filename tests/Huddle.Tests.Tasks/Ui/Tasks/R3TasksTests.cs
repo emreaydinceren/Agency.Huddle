@@ -304,7 +304,7 @@ public sealed class R3TasksTests
         IElement create = cut.Find(".tasks-header .task-toolbar-header .tasks-new-task");
         Assert.Equal("New task", create.TextContent.Trim());
         Assert.Contains("mud-button-filled", create.ClassList);
-        Assert.Contains("btn-action-tight", create.ClassList);
+        Assert.Contains("mud-button-filled-primary", create.ClassList);
     }
 
     /// <summary>

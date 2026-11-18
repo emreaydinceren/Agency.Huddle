@@ -59,9 +59,8 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Size="Size.Medium" OnClick="this.Cancel" Class="fields-dialog-cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save"
-                   Disabled="@(this.view is null || this.ViewStore.LoadError is not null)" Class="fields-dialog-save">Save</MudButton>
+        <DialogFooter CancelClass="fields-dialog-cancel" OnCancel="this.Cancel" PrimaryText="Save" PrimaryDisabled="@(this.view is null || this.ViewStore.LoadError is not null)"
+                      PrimaryClass="fields-dialog-save" OnPrimary="this.Save" />
     </DialogActions>
 </MudDialog>
 

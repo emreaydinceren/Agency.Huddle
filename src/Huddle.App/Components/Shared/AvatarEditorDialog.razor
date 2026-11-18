@@ -40,8 +40,7 @@
     <DialogActions>
         @if (!this.libraryOpen)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.Commit">@(this.Deferred ? "Apply" : "Save")</MudButton>
+            <DialogFooter OnCancel="this.Cancel" PrimaryText="@(this.Deferred ? "Apply" : "Save")" OnPrimary="this.Commit" />
         }
     </DialogActions>
 </MudDialog>

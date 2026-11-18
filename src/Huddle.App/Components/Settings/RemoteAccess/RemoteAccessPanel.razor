@@ -235,7 +235,7 @@
                             <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Rotate(device.DeviceId))">Rotate</MudButton>
                             <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Revoke(device.DeviceId))">Revoke</MudButton>
                         }
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => this.BeginRemove(device.DeviceId))">Remove</MudButton>
+                        <ActionButton Role="ButtonRole.DangerQuiet" OnClick="@(() => this.BeginRemove(device.DeviceId))">Remove</ActionButton>
                     }
                 }
             </div>

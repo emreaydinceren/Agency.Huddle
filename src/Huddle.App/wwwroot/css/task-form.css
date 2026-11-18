@@ -554,12 +554,6 @@
     border-radius: var(--hu-radius-card);
 }
 
-.task-edit-page .mud-button-root,
-.task-detail-save,
-.task-detail-cancel {
-    border-radius: var(--hu-radius-card);
-}
-
 .task-edit-page .task-detail-group {
     padding: var(--hu-form-group-padding);
     background: var(--hu-form-group-background);

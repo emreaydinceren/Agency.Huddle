@@ -1,0 +1,2 @@
+CV15|src/Huddle.App/Components/Pages/ArchivedPage.razor|1
+CV15|src/Huddle.App/Components/Shared/NewChat.razor|2

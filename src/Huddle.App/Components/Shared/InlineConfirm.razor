@@ -18,14 +18,14 @@
     {
         <MudProgressCircular Size="Size.Small" Indeterminate="true" />
     }
-    <MudButton Size="Size.Small" Variant="Variant.Text" Class="inline-confirm-cancel"
-               Disabled="this.Busy" OnClick="this.OnCancel">Cancel</MudButton>
-    <MudButton @ref="this.confirmButton" Size="Size.Small" Variant="Variant.Filled" Color="Color.Error"
-               Class="inline-confirm-confirm" Disabled="this.Busy" OnClick="this.OnConfirm">@this.ConfirmText</MudButton>
+    <ActionButton Role="ButtonRole.Quiet" Class="inline-confirm-cancel"
+               Disabled="this.Busy" OnClick="this.OnCancel">Cancel</ActionButton>
+    <ActionButton Role="ButtonRole.Danger" @ref="this.confirmButton"
+               Class="inline-confirm-confirm" Disabled="this.Busy" OnClick="this.OnConfirm">@this.ConfirmText</ActionButton>
 </div>
 
 @code {
-    private MudButton? confirmButton;
+    private ActionButton? confirmButton;
 
     /// <summary>The question shown before the buttons, and the group's accessible name; omit for buttons only.</summary>
     [Parameter]

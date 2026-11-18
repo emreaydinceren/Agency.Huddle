@@ -386,8 +386,9 @@ b {
     font-weight: 600;
 }
 
-/* A Small button is a row-sized control: 28px high, in the Button role (13px, 500). MudBlazor sizes Small in rem
-   and not from the role, so the rule points it at the role. A Large one is body1. */
+/* A Small button is a row-sized control: 28px high, in the Button role (13px, 500), at the control radius step like a row or a
+   segment (design-system.md Shape; ComponentCatalog ActionButton). MudBlazor sizes Small in rem and not from the role, so the rule
+   points it at the role. A Large one is body1. */
 .mud-button-text-size-small,
 .mud-button-outlined-size-small,
 .mud-button-filled-size-small {
@@ -395,6 +396,19 @@ b {
     height: 28px;
     padding-block: 0;
     font-size: var(--mud-typography-button-size);
+    border-radius: var(--hu-radius-control);
+}
+
+/* Every filled button carries the Theme's filled-button shadow (it lived in tasks.css, but reaches every page). */
+.mud-button-root.mud-button-filled {
+    box-shadow: var(--hu-button-filled-shadow);
+}
+
+/* ActionButton's Busy spinner sits where the start icon would, one label-height ring. */
+.mud-button-root .action-button-spinner {
+    width: 1em;
+    height: 1em;
+    margin-inline-end: 8px;
 }
 
 .mud-button-text-size-large,
@@ -747,16 +761,6 @@ a.team-ref,
 :root:has([data-hu-surface="paper"]) .mud-button-text:hover {
     background: var(--hu-hover);
     color: var(--mud-palette-text-primary);
-}
-
-:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-error {
-    color: var(--mud-palette-error);
-    border-color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--hu-line-region));
-    background: var(--hu-ground-raised);
-}
-
-:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-error:hover {
-    background: var(--hu-tone-error-soft);
 }
 
 /* -- surface=paper: inputs, hover line, label ink, one-line height, helper text (15.2) ----------------------- */

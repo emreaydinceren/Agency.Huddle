@@ -33,7 +33,7 @@
         <PageHeader Title="Settings" />
         <MudAlert Severity="Severity.Warning" Dense="true" role="alert">Settings need admin access.</MudAlert>
         <p class="mt-2">This browser is paired without the admin scope. Ask for it and approve the request from a device that already has it.</p>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" OnClick="this.RequestAdmin">Request admin</MudButton>
+        <ActionButton Role="ButtonRole.Primary" OnClick="this.RequestAdmin">Request admin</ActionButton>
     </MudContainer>
 }
 else if (this.isAdmin == true)

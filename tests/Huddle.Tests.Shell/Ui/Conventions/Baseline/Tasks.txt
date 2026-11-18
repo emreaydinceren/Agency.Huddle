@@ -1,0 +1,6 @@
+CV15|src/Huddle.App/Components/Tasks/TaskBoard.razor|1
+CV15|src/Huddle.App/Components/Tasks/TaskDecisionCard.razor|2
+CV15|src/Huddle.App/Components/Tasks/TaskDetail.razor|6
+CV15|src/Huddle.App/Components/Tasks/TaskProofList.razor|1
+CV15|src/Huddle.App/Components/Tasks/TaskReadView.razor|2
+CV15|src/Huddle.App/Components/Tasks/TaskTimeline.razor|1

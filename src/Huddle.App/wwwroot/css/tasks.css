@@ -1218,12 +1218,6 @@
     padding: 4px;
 }
 
-.task-toolbar .btn-action-tight,
-.task-toolbar-header .btn-action-tight {
-    height: 28px;
-    min-height: 0;
-}
-
 .task-toolbar-filter-state-group .mud-list-item-text {
     font-weight: 600;
 }
@@ -1246,10 +1240,6 @@
     row-gap: 8px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--hu-toolbar-line);
-}
-
-.mud-button-root.mud-button-filled {
-    box-shadow: var(--hu-button-filled-shadow);
 }
 
 .task-toolbar-search .mud-input-outlined-border {

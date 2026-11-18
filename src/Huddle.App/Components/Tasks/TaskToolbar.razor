@@ -229,7 +229,7 @@
     public EventCallback<string?> SearchChanged { get; set; }
 
     /// <summary>The page's one primary action, filled and Small like every toolbar control, so the Tasks page and a Team page's Tasks tab draw the same button.</summary>
-    private RenderFragment NewTaskButton => @<MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="tasks-new-task btn-action-tight">New task</MudButton>;
+    private RenderFragment NewTaskButton => @<ActionButton Role="ButtonRole.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="this.OnNewTaskClickedAsync" Class="tasks-new-task">New task</ActionButton>;
 
     /// <summary>The text a Group by value shows: the field's name, with the State field called Status as everywhere the Human reads it.</summary>
     /// <param name="field">The grouping field, or null for no grouping.</param>

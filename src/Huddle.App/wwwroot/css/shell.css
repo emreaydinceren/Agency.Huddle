@@ -1360,12 +1360,6 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
-/* Page toolbars: tighten the gap between the "+" icon and label on action buttons. */
-.btn-action-tight .mud-button-icon-start {
-    margin-right: 2px;
-    margin-inline-end: 2px;
-}
-
 /* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
    .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
    the NavLink can grow and the "..." button sits absolutely on the right; the button stays in the

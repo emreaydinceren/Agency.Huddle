@@ -63,8 +63,8 @@
                     else
                     {
                         @this.RestoreButton(this.selectedChat, this.RestoreChatAsync)
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete"
-                                   Class="archived-delete" Disabled="@(this.selectedChat is null || this.busy)" OnClick="this.BeginDelete">Delete…</MudButton>
+                        <ActionButton Role="ButtonRole.DangerQuiet" StartIcon="@Icons.Material.Filled.Delete"
+                                   Class="archived-delete" Disabled="@(this.selectedChat is null || this.busy)" OnClick="this.BeginDelete">Delete…</ActionButton>
                     }
                 </Actions>
             </ArchivedEntryList>

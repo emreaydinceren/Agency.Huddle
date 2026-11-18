@@ -1,0 +1,15 @@
+CV15|src/Huddle.App/Components/Chat/GoldfishChip.razor|1
+CV15|src/Huddle.App/Components/Feed/FeedCard.razor|3
+CV15|src/Huddle.App/Components/Jobs/ScheduledPage.razor|3
+CV15|src/Huddle.App/Components/Pages/BuildTeam.razor|8
+CV15|src/Huddle.App/Components/Pages/FeedPage.razor|1
+CV15|src/Huddle.App/Components/Pages/TaskEditPage.razor|3
+CV15|src/Huddle.App/Components/Shared/AgentProfileCard.razor|10
+CV15|src/Huddle.App/Components/Shared/AvatarEditor.razor|6
+CV15|src/Huddle.App/Components/Shared/FollowUpsNotice.razor|1
+CV15|src/Huddle.App/Components/Shared/NeedsYouCapAskCard.razor|2
+CV15|src/Huddle.App/Components/Shared/NeedsYouLevelControl.razor|1
+CV15|src/Huddle.App/Components/Shared/ProfileCard.razor|2
+CV15|src/Huddle.App/Components/Shared/ProfilePopover.razor|3
+CV15|src/Huddle.App/Components/Shared/WaitingNotice.razor|1
+CV15|src/Huddle.App/Components/Sidebar/TagsPanel.razor|1

@@ -38,7 +38,7 @@ else if (this.missing)
     @* K5: an id that does not parse, or names no Task. *@
     <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.TaskAlt" Title="@($"There is no Task {this.TaskIdText}")" Text="It may have been deleted or moved.">
         <Action>
-            <MudButton Variant="Variant.Text" Size="Size.Medium" Href="/tasks" Class="task-edit-page-open-tasks">Open Tasks</MudButton>
+            <ActionButton Role="ButtonRole.Quiet" Href="/tasks" Class="task-edit-page-open-tasks">Open Tasks</ActionButton>
         </Action>
     </EmptyState>
 }
