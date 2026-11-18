@@ -380,6 +380,68 @@ margin classes, so a notice's spacing is now the 12 px between siblings; the Roo
 column (`reply-note`, `fresh-start-note`, `continue-note`, `WaitingNotice`, `FollowUpsNotice`) take that gap
 too.
 
+### Text field and select
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `TextField` | `Components/Shared/TextField.razor` | 48 tags in 19 files, plus `SearchField`; 14 raw `MudTextField` tags still to move | `Value`, `ValueChanged` (or `@bind-Value`), `Label`, `AriaLabel`, `Shape` (`TextFieldShape`: `Line` (the default), `Compact`, `LongText`, `Markdown`), `Rows`, `MaxRows`, `HelperText`, `Placeholder`, `Immediate`, `DebounceInterval`, `Disabled`, `Required`, `Error`, `ErrorText`, `MaxLength`, `InputType`, `InputMode`, `AutoFocus`, `Clearable`, `StartIcon`, `EndIcon`, `EndIconLabel`, `OnEndIconClick`, `OnKeyDown`, `OnBlur`, `Class`, any other attribute (`autocomplete`, `role`, `id`); `FocusAsync()` |
+| `SelectField<T>` | `Components/Shared/SelectField.razor` | 28 tags in 12 files; 6 raw `MudSelect` tags still to move | `Value`, `ValueChanged` (or `@bind-Value`), `MultiSelection`, `SelectedValues`, `SelectedValuesChanged`, `ChildContent` (the `MudSelectItem`s), `Label`, `AriaLabel`, `HelperText`, `Disabled`, `Error`, `ErrorText`, `Compact`, `DenseItems`, `Class`, any other attribute (`title`, `aria-busy`) |
+
+Both are always Outlined and Dense, so no caller writes `Variant` or `Margin`, and neither offers
+`ReadOnly` (CV5: a field that cannot be edited is `Disabled`). A field with neither a `Label` nor
+an `AriaLabel` (or a passed `aria-label`) throws on its first render, which closes D5. Built in
+wave 3 (B3 and B4, 2026-11-18); convention rules CV17 and CV18 count a raw `MudTextField` or
+`MudSelect` anywhere else. `SearchField` is now a `TextField` with a start search icon.
+
+**The shape sets the look** (`Q-B3-1`). `Line` is the 32 px box with 14 px text. `Compact` is the
+28 px toolbar box with 13 px text (it writes `toolbar-compact`). `LongText` is a 4-row textarea in
+body1 (it writes `long-text-field`), and `Markdown` the same box in monospace at 13 px (it adds
+`markdown-field`). `Rows` is only for a field whose content sets its height, and `MaxRows` makes it
+grow with its text. One shape, not flags, so a compact multi-line field cannot be asked for. The
+value is `LongText`, not `Long`, because CA1720 refuses a type name as an identifier.
+
+How the 12 multi-line sites map (old `Lines`, then the new shape):
+
+| Site | Before | After |
+| --- | --- | --- |
+| `JobEditorDialog` instruction, `AgentProfileCard` persona text | 4 | `LongText`, `Markdown` (4 rows) |
+| `BuildTeam` purpose, `RoleFormDialog` instructions | 6 | `LongText`, `Markdown` (4 rows) |
+| `ProfilePanel` description, `TaskTimeline` comment | 3 | `LongText`, `Markdown` (4 rows) |
+| `RemoteAccessPanel` trusted proxies and allowed origins | 2, no class | `LongText` (4 rows; gains the body line height) |
+| `ConflictRow` theirs and yours | 6, no class | `LongText`, `Rows="6"` (the whole text side by side; gains the body line height) |
+| `PromptsPanel` prompt | from the text (`RowsFor`) | `Markdown`, `Rows` from the text |
+| `TaskDetail` Description | 10, auto-grow to 30 | `Markdown`, `Rows="10"`, `MaxRows="30"` |
+
+The other old parameters map one to one: `aria-label` is `AriaLabel`; `Adornment` with
+`AdornmentIcon` is `StartIcon` or `EndIcon`; `AdornmentAriaLabel` is `EndIconLabel` and
+`OnAdornmentClick` is `OnEndIconClick`; `UserAttributes` is splatted with `@attributes`;
+`Sizing="InputSizing.Auto"` with `MaxLines` is `MaxRows`; `HelperTextOnFocus="false"` was the
+default and is gone; the `long-text-field`, `markdown-field` and `toolbar-compact` classes are the
+shape. On a select, `Dense="true"` (compact list rows) is `DenseItems`, `toolbar-compact` is
+`Compact`, and the Feed's Team filter is now `Compact` too (28 px, like the Agents page's). The
+Theme Lab's "Base Theme" is "Base theme".
+
+The four fields that had no accessible name now do: the Prompts panel's prompt (its visible
+`prompts-field-label`), the conflict's two texts ("Their Description", "Your Description") and the
+board's column rename ("Column name"). The fifth the audit counted, the global search, was already
+named through its attributes.
+
+**Still to migrate.** The CV17 and CV18 baselines in
+`tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/` are the backlog, one owner per area:
+
+| Area | Raw `MudTextField` (CV17) | Raw `MudSelect` (CV18) | Files |
+| --- | --- | --- | --- |
+| Room | 4 | 1 | `ElicitationCard` (2), `RetroProposalCard`, `SprintProposalCard`; `InviteAgent` |
+| Settings | 6 | 0 | `AddWithAiDialog` (3), `SkillSourcesFolderDialog`, `ThemeLab` (2) |
+| Shared | 3 | 4 | `AvatarLibraryPicker`, `FolderPickerDialog`, `NeedsYouLevelControl`; `AgentProfileCard` (4) |
+| Tasks | 1 | 0 | `ReasonDialog` |
+| Teams | 0 | 1 | `ProcessStep` |
+
+Two of those are not plain tag swaps. `ElicitationCard` hides its label when the question already
+shows it, so its owner must pass the question text as `AriaLabel` there. `AgentProfileCard`'s four
+selects (Adapter, Model, Effort and Work mode) are its own copy of the picker, and Work mode needs
+`ToStringFunc`, which `SelectField` does not offer; they move with A4, which replaces that copy.
+
 ### Settings intro and stored-at line
 
 ![A Settings panel head: the title, an intro paragraph and a Stored at line with a monospace path](../images/components/settings-intro-stored-at.png)
@@ -754,8 +816,6 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned component | Reuse cases | Evidence | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| B3 | **Text field**: defaults, a `Long` option and a `Compact` option | 62 uses in 29 files | 100% Outlined and Dense. 57 have a `Label`, 29 a `HelperText`, 35 use `Immediate`. 12 use `Lines`, but only 7 use the `long-text-field` class | M | Planned |
-| B4 | **Select** | 34 uses in 14 files | 100% Outlined and Dense; defaults only | S | Planned |
 | B5 | **Icon button** with its tooltip pairing | 55 uses in 32 files | `aria-label` is already on all 55, and 26 sit beside a `MudTooltip`. Low gain, because the rule already holds | S | Planned |
 | B6 | **Switch or checkbox**: state the rule first, then decide whether one component serves both | 14 switches, 6 checkboxes (`AddWithAiDialog`, `AgentProfileCard`, `ElicitationCard`, `JobEditorDialog`, `NewChat`, `UpdateDialog`) | `design-system.md`'s House defaults table has no row for either | S | Planned |
 
@@ -776,7 +836,7 @@ ships, move its row to the entry for the new component and delete it here.
 | D2 | Conflicting `.task-toolbar-kind` rules in `task-form.css` and `tasks.css`. **Done in B1, 2026-11-18**: the geometry and icon rules in both went to `SegmentedControl`; `tasks.css` keeps only the toolbar's layout (`flex: none` and the 5 rem item floor), `task-form.css` none | Padding 2px against 1px, indicator inset 2px against 1px, and the icon size set in both. Which one wins is not checked |
 | D3 | A dead CSS hook, `needs-you-level-choice` | The class is on `NeedsYouLevelControl` and has no rules anywhere |
 | D4 | One naming convention for the wrappers. **Ruled 2026-11-18: no prefix**, named for what it is (`Notice`, `SegmentedControl`, `DialogFooter`); a name that would clash with HTML or MudBlazor gets a sharper word (`ActionButton`). **Done in B1, 2026-11-18**: `HuddleSegmentedControl` is now `SegmentedControl`, its classes lost the `huddle-` prefix | `HuddleSegmentedControl` has a prefix; `Chip`, `EmptyState` and `SearchField` do not |
-| D5 | Text fields with neither `Label` nor `aria-label` | 5 of 62; not yet checked whether they have another accessible name |
+| D5 | Text fields with neither `Label` nor `aria-label`. **Done in B3, 2026-11-18**: `TextField` and `SelectField` throw on a render with no name, and the four nameless sites got one (the fifth, the global search, was named by its attributes) | 5 of 62 at `3b592c70` |
 
 ### Inconsistencies to fix, per planned component
 
@@ -969,56 +1029,6 @@ rule picks one.
 
 - `Q-A8-1` In a button, spinner or "…ing" text? Recommended: the text ("Reloading…") with no
   spinner, as four sites already do; a spinner only where there is no button.
-
-#### B3 Text field
-
-| Variant | Where | How it looks different (*measured*) |
-| --- | --- | --- |
-| Dense outlined | most of 62 | Box 32 px, 14 px text |
-| `toolbar-compact` | `LibraryPanel.razor:81-82`, `SearchField` with `Compact` | Box 28 px, 13 px text, no floating label |
-| Long, with the class | 6 of the 12 fields with `Lines`: `JobEditorDialog.razor:33`, `BuildTeam.razor:118`, `PromptsPanel.razor:54`, `AgentProfileCard.razor:353`, `TaskTimeline.razor:68`, `RoleFormDialog.razor:25` | 14 px at 400 with the body line height (`base.css:176`) |
-| Long, without it | `ProfilePanel.razor:55`, `RemoteAccessPanel.razor:130-131`, `ConflictRow.razor:13`, `:23`, `TaskDetail.razor:479` | MudBlazor's 1.1876em line height; Remote access's 2-line box 54.3 px |
-| Rows | 2, 3, 4, 6 and 10 to 30 | Five heights for long text |
-
-The catalog's "7 use the `long-text-field` class" counts a `<pre>` (`AddWithAiDialog.razor:77`);
-6 text fields do.
-
-**Which is right.** `base.css:172`: editable long text is body1, 14 px, 400, the body line height.
-design-system.md: Outlined and Dense on every field; a toolbar field is 28 px.
-
-**Fix:**
-
-1. `Long` sets the class and a default row count; the 6 fields without it move. `visual`
-2. `Compact` replaces the `toolbar-compact` class. `markup only`
-
-**How to prove.** Css-Snapshot Report on `/settings/remoteaccess`, `/settings/profile` and a Task's
-edit page; declare `textarea | line-height`.
-
-**Open questions for the owner:**
-
-- `Q-B3-1` Default rows for `Long`? Recommended: 4, with the Description's auto-grow kept.
-
-#### B4 Select
-
-| Variant | Where | How it looks different (*measured*) |
-| --- | --- | --- |
-| Form select | 32 of 34 | Box 32 px, 14 px, a label above |
-| Toolbar, compact | `Pages/Agents.razor:30` | 28 px, 13 px, `aria-label="Team"` |
-| Toolbar, not compact | `Pages/FeedPage.razor:68` | 32 px, 14 px: the same Team filter as Agents, 4 px taller |
-| Wording | `ThemeLab.razor:36` "Base Theme"; `AddWithAiDialog.razor:66` "Which row?" | Title case; a question as a label |
-| Spacing | `mb-3` 3, `mb-4` 1, `mb-2` 1 | |
-
-**Which is right.** design-system.md: one height per toolbar row, 28 px, a select with
-`toolbar-compact` included; sentence case.
-
-**Fix:**
-
-1. `FeedPage.razor:68` takes `Compact`. `visual`
-2. "Base theme". `visual`
-
-**How to prove.** Css-Snapshot Report on `/feed`; declare `.feed-team-select .mud-input | height`.
-
-**Open questions for the owner**: none.
 
 #### B5 Icon button
 

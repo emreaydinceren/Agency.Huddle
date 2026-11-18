@@ -78,8 +78,8 @@
 }
 
 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-2 library-panel-add-row">
-    <MudTextField T="string" Placeholder="Name" aria-label="Name" @bind-Value="this.name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-name-field toolbar-compact" />
-    <MudTextField T="string" Placeholder="Path" aria-label="Path" @bind-Value="this.path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-path-field toolbar-compact" />
+    <TextField Shape="TextFieldShape.Compact" Placeholder="Name" AriaLabel="Name" @bind-Value="this.name" Class="library-panel-name-field" />
+    <TextField Shape="TextFieldShape.Compact" Placeholder="Path" AriaLabel="Path" @bind-Value="this.path" Class="library-panel-path-field" />
     <ActionButton Role="ButtonRole.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</ActionButton>
 </MudStack>
 

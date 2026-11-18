@@ -16,17 +16,16 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="3">
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Title" Immediate="true"
+            <TextField Label="Title" Immediate="true"
                           HelperText="Names the role on its card."
-                          Value="this.title" ValueChanged="this.OnTitleChanged" MaxLength="60" Class="custom-role-title" />
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it does (optional)" Immediate="true"
+                          Value="@this.title" ValueChanged="this.OnTitleChanged" MaxLength="60" Class="custom-role-title" />
+            <TextField Label="What it does (optional)" Immediate="true"
                           HelperText="One line shown on the role card."
-                          Value="this.description" ValueChanged="this.OnDescriptionChanged" MaxLength="200" Class="custom-role-description" />
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Instructions (optional)" Immediate="true" Lines="6"
+                          Value="@this.description" ValueChanged="this.OnDescriptionChanged" MaxLength="200" Class="custom-role-description" />
+            <TextField Shape="TextFieldShape.Markdown" Label="Instructions (optional)" Immediate="true"
                           HelperText="What an Agent in this role is told to do."
-                          Value="this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions long-text-field markdown-field" />
-            <MudSelect T="string" Label="Skills (optional)" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged"
-                       Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Skills this Huddle has or can copy; an Agent in this role carries them." Class="custom-role-skills">
+                          Value="@this.instructions" ValueChanged="this.OnInstructionsChanged" Class="custom-role-instructions" />
+            <SelectField T="string" Label="Skills (optional)" MultiSelection="true" SelectedValues="@this.skills" SelectedValuesChanged="this.OnSkillsChanged" HelperText="Skills this Huddle has or can copy; an Agent in this role carries them." Class="custom-role-skills">
                 @foreach (Skill skill in this.InstalledSkills.All)
                 {
                     <MudSelectItem T="string" Value="@skill.Name">
@@ -54,7 +53,7 @@
                         <MudText Typo="Typo.caption" Class="d-block mud-text-secondary custom-role-not-downloaded">Not downloaded</MudText>
                     </MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
             @if (this.RegistrySkills(copyable: false).Count > 0)
             {
                 <MudText Typo="Typo.caption" Class="custom-role-skills-helper d-block mud-text-secondary">Skills not downloaded are listed below; ask your AI tool to fetch them.</MudText>
@@ -71,12 +70,12 @@
                     }
                 </MudCollapse>
             }
-            <MudSelect T="ModelTier" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Model strength" HelperText="How capable, and how costly, the Agent's model is."
+            <SelectField T="ModelTier" Label="Model strength" HelperText="How capable, and how costly, the Agent's model is."
                        Value="this.tier" ValueChanged="this.OnTierChanged" Class="custom-role-tier">
                 <MudSelectItem T="ModelTier" Value="ModelTier.Strongest">Strongest</MudSelectItem>
                 <MudSelectItem T="ModelTier" Value="ModelTier.Balanced">Balanced</MudSelectItem>
                 <MudSelectItem T="ModelTier" Value="ModelTier.Fast">Fast</MudSelectItem>
-            </MudSelect>
+            </SelectField>
         </MudStack>
     </DialogContent>
     <DialogActions>

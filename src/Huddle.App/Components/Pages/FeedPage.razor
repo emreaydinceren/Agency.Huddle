@@ -56,8 +56,7 @@
                     <TaskFilterChip Label="Agent" Value="@name" IsSet="true" NoMenu="true" OnClear="this.ClearAgent" Class="feed-agent-chip" />
                 }
 
-                <MudSelect T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" Dense="true" Variant="Variant.Outlined"
-                           Margin="Margin.Dense" Class="@("feed-team-select" + (this.team is null ? string.Empty : " feed-team-select-set"))" aria-label="Team">
+                <SelectField Compact="true" T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" DenseItems="true" Class="@("feed-team-select" + (this.team is null ? string.Empty : " feed-team-select-set"))" AriaLabel="Team">
                     <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                     @foreach (string teamName in this.TeamNames)
                     {
@@ -65,7 +64,7 @@
                             <TeamAvatar Team="@teamName" Avatar="this.Catalog.Find(teamName)?.Avatar ?? Avatar.None" Size="Size.Small" Class="feed-team-icon" /> <span class="feed-team-option-name">@teamName</span>
                         </MudSelectItem>
                     }
-                </MudSelect>
+                </SelectField>
             </div>
         </div>
 

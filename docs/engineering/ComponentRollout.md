@@ -86,7 +86,7 @@ another reason for one migration per area at a time.
 | --- | --- | --- | --- |
 | 1 | **Done 2026-11-18.** **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14` (zero-tolerance from the start: all six sites moved in the build PR). Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
 | 2 | **Done 2026-11-18** (build, then four area migrations in parallel worktrees: 136 of 141 raw tags moved; 5 stay raw and baselined, see the catalog's "Still raw"). **B2** `ActionButton` (roles `Primary`, `Secondary`, `Quiet`, `Danger`, `DangerQuiet`), with **A2** `DialogFooter` as its first user: rule `CV15`, control radius on every button, 65 tags moved (18 dialogs, the 15 Medium, the 14 with no variant, every Danger and Warning site). The migration then moved the CV15 backlog (141 tags) area by area, four owners at once | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
-| 3 | **A1 build done 2026-11-18** (`Notice`, `NoticeLevel`, `NoticeKind`, rule `CV16`, the 18 px icon and the notice's own 12 px spacing in `base.css`; 53 of 87 tags moved in the build: every Warning but the two Room banners, every non-dense site, the dialog errors, the Composer pair and the runtime-severity site). **Migration done 2026-11-18**: the other 32 tags moved in three parallel worktrees; only the two Room banners stay raw. Then **B3** text field and **B4** select. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
+| 3 | **A1 build done 2026-11-18** (`Notice`, `NoticeLevel`, `NoticeKind`, rule `CV16`, the 18 px icon and the notice's own 12 px spacing in `base.css`; 53 of 87 tags moved in the build: every Warning but the two Room banners, every non-dense site, the dialog errors, the Composer pair and the runtime-severity site). **Migration done 2026-11-18**: the other 32 tags moved in three parallel worktrees; only the two Room banners stay raw. **B3 and B4 build done 2026-11-18** (`TextField` with `TextFieldShape`, `SelectField<T>`, rules `CV17` and `CV18`, no stylesheet change): 48 of 62 text fields and 28 of 34 selects moved in the build, every multi-line, adorned, compact and nameless site among them. Backlog per area: Room 4 text fields and 1 select, Settings 6 and 0, Shared 3 and 4 (the 4 are `AgentProfileCard`'s picker, which moves with A4), Tasks 1 and 0, Teams 0 and 1. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
 | 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList`, **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
 | 5 | Opportunistic: **A5**, **A8**, the browser scripts (group C); fix D2 and D3 when in those files | as convenient | Small gains; do them when passing |
 
@@ -167,7 +167,7 @@ are in the catalog.
 | Before | Questions |
 | --- | --- |
 | Wave 2 | Answered 2026-11-18, each at the catalog's recommendation: `Q-B2-1` control radius, `Q-B2-2` Text Error trigger and Filled Error confirm, `Q-B2-3` no 2 px gap; `Q-A2-1` Close-only info dialogs are pickers, `Q-A2-2` the cancel word may vary |
-| Wave 3 | `Q-A1-1` to `Q-A1-3` answered 2026-11-18 at the catalog's recommendation (Warnings interrupt only when the Human must act now, an 18 px icon, always dense); `Q-B3-1` |
+| Wave 3 | `Q-A1-1` to `Q-A1-3` answered 2026-11-18 at the catalog's recommendation (Warnings interrupt only when the Human must act now, an 18 px icon, always dense); `Q-B3-1` answered 2026-11-18 at the recommendation (4 rows, the Description's auto-grow kept) |
 | Wave 4 | `Q-A4-1`, `Q-A4-2`; `Q-A6-1`, `Q-A6-2`; `Q-A7-1`, `Q-A7-2`; `Q-A3-1`, `Q-A3-2`; `Q-B5-1` |
 | Wave 5 | `Q-A5-1`; `Q-A8-1` |
 
@@ -259,6 +259,12 @@ merged the four branches into the working branch. What made it cheap, and what t
   by 2 to 3 px on 24 pages and no migrated site was involved. Result: 0 differences from the
   migration of 136 buttons (before `c77dd6c9`, after `21832e69`, 720 pages in 8 Theme and mode pairs).
   Treat that pill as known noise.
+- **A margin in a flex or grid container with a `gap` adds to the gap.** The `Notice` wave comparison
+  (720 pages, same seed root, 270 undeclared differences, every one traced to the Notice rules) found
+  one real defect: `.prompts-field` is a flex column with a 4 px gap, so the notice's 12 px above and
+  below added to it and each field grew by 20 px. Fixed with `.prompts-field > .mud-alert.notice {
+  margin-block: 0 }`. Put this in the owner brief for any component that carries its own margin:
+  list the flex and grid parents of its sites and zero the margin there.
 - **Merge main between waves, not during one.** Merging while owners worked would have invalidated
   their baselines; main was merged only when no owner had uncommitted edits.
 
@@ -290,3 +296,23 @@ A1 (`Notice`, 2026-11-18) added:
   stylesheet stays cached in an open tab after an edit: re-load the `link` with a query string to measure.
 - **A sandbox may refuse `npx` downloads**, so `markdownlint` may not run: check MD047 (one final
   newline) and table shapes by eye, and say so.
+
+B3 and B4 (`TextField` and `SelectField`, 2026-11-18) added:
+
+- **Count the parameters before naming the options.** All 62 text fields bind a `string`, so `TextField` is not generic;
+  the selects bind six types, so `SelectField<T>` is. Four looks (one line, toolbar, long, Markdown) became one
+  `TextFieldShape` value instead of `Long`, `Compact` and a class, so a compact multi-line field cannot be written.
+- **A rule name can be refused by an analyzer.** `CA1720` rejects `Long` as an identifier (a type name), so the option is
+  `LongText`. Build the enum first, before the call sites are scripted against its names.
+- **A required name is a render-time check, not `[EditorRequired]`.** "A `Label` or an `AriaLabel`" is an either-or that
+  the Razor compiler cannot express, so the component throws on its first render; every bUnit test that rendered a
+  nameless field (three in `SearchFieldTests`) had to name it, which is the point.
+- **Pass optional Mud parameters by branch, not by `null`.** MudSelect keeps its value in parameter state, so passing
+  `SelectedValues="null"` to a single select could reset it; `SelectField` renders one `MudSelect` for single and one for
+  multiple selection, and leaves `ToStringFunc` out rather than pass a default that might change the shown text.
+- **A wrapper's focus method returns what callers already await.** `MudTextField.FocusAsync` is a `ValueTask`, and a caller
+  wrapped it in a `Func<ValueTask>`; `TextField.FocusAsync` returns `ValueTask` too.
+- **The migration script needs the attribute regex to respect quotes.** A `Class="@(x ? "a" : null)"` is cut at the first
+  inner quote by `"[^"]*"`; the script rejoined the pieces with a missing space. Print every converted tag and read them.
+- **`/tasks/new` in a live lane creates a View**, not a Task: measure a Task's edit page at
+  `/tasks/item/<id>/edit` instead.

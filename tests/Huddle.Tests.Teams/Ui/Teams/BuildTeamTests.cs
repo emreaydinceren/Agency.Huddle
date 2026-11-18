@@ -198,7 +198,7 @@ public sealed class BuildTeamTests
         Assert.Equal("Type 01", cut.Find(".build-team-name input").GetAttribute("value"));
         Assert.Equal("Team name", cut.Find(".build-team-name label").TextContent.Trim());
         Assert.Equal("What it’s for", cut.Find(".build-team-purpose label").TextContent.Trim());
-        Assert.Equal("6", cut.Find(".build-team-purpose textarea").GetAttribute("rows"));
+        Assert.Equal("4", cut.Find(".build-team-purpose textarea").GetAttribute("rows")); // Q-B3-1: long text is 4 rows
         Assert.Equal("Library folder", cut.Find(".build-team-workspace label").TextContent.Trim());
         IReadOnlyList<IElement> steps = cut.FindAll("ol.build-stepper > li");
         Assert.Equal("build-step build-step-done", steps[1].ClassName);

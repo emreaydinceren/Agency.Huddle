@@ -46,14 +46,13 @@
     <ProfileCard Profile="this.Preview" OnAvatarClick="this.EditAvatarAsync" Class="profile-panel-card" />
 
     <form class="profile-panel-form" @onsubmit="this.Save">
-        <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="this.OnNameChanged" Immediate="true"
-                      Required="true" HelperText="How every Room and Task names you." Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Alias" Value="@this.alias" ValueChanged="this.OnAliasChanged" Immediate="true"
-                      HelperText="Optional. A second name that @@mentions you." Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Title" Value="@this.title" ValueChanged="this.OnTitleChanged" Immediate="true"
-                      HelperText="Optional. Shown under your Name, for example Site Reliability Engineer." Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="this.OnDescriptionChanged" Immediate="true"
-                      Lines="3" HelperText="Optional. A sentence about you." Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <TextField Label="Name" Value="@this.name" ValueChanged="this.OnNameChanged" Immediate="true"
+                      Required="true" HelperText="How every Room and Task names you." />
+        <TextField Label="Alias" Value="@this.alias" ValueChanged="this.OnAliasChanged" Immediate="true"
+                      HelperText="Optional. A second name that @@mentions you." />
+        <TextField Label="Title" Value="@this.title" ValueChanged="this.OnTitleChanged" Immediate="true"
+                      HelperText="Optional. Shown under your Name, for example Site Reliability Engineer." />
+        <TextField Shape="TextFieldShape.LongText" Label="Description" Value="@this.description" ValueChanged="this.OnDescriptionChanged" Immediate="true" HelperText="Optional. A sentence about you." />
 
         @if (this.problems.Count > 0)
         {

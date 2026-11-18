@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV16</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV18</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -52,6 +52,8 @@ internal static partial class UiConventionScanner
         "CV14" => Cv14(path, text),
         "CV15" => Cv15(path, text),
         "CV16" => Cv16(path, text),
+        "CV17" => Cv17(path, text),
+        "CV18" => Cv18(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -102,6 +104,25 @@ internal static partial class UiConventionScanner
     public static RuleCount Cv16(string path, string text) =>
         new("CV16", path, path.EndsWith("/Notice.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudAlert"], static _ => true));
 
+    /// <summary>
+    /// CV17: a raw <c>&lt;MudTextField&gt;</c> in a component other than <c>TextField.razor</c>. Every text field is the one <c>TextField</c>,
+    /// always Outlined and Dense, which takes a shape (Line, Compact, LongText, Markdown) and requires a label or an accessible name, so the
+    /// look and the naming rule live in one place (ComponentCatalog B3). Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv17(string path, string text) =>
+        new("CV17", path, path.EndsWith("/TextField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudTextField"], static _ => true));
+
+    /// <summary>
+    /// CV18: a raw <c>&lt;MudSelect&gt;</c> in a component other than <c>SelectField.razor</c>. Every select is the one <c>SelectField</c>,
+    /// always Outlined and Dense, with a <c>Compact</c> toolbar box and a required label or accessible name (ComponentCatalog B4). A
+    /// <c>MudSelectItem</c> is a different tag and is not counted. Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv18(string path, string text) =>
+        new("CV18", path, path.EndsWith("/SelectField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSelect"], static _ => true));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>

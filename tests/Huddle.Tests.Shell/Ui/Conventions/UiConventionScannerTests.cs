@@ -439,4 +439,61 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv16("src/Huddle.App/Components/Shared/Notice.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv16("src/Huddle.App/Components/Shared/Composer.razor", source).Count);
     }
+
+    /// <summary>CV17: a raw <c>MudTextField</c> is counted, across line breaks, but not a <c>TextField</c>, a <c>SearchField</c> or the type name in code.</summary>
+    [Fact]
+    public void Cv17_RawMudTextField_IsCounted()
+    {
+        const string source = """
+            <MudTextField T="string" Label="a" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <TextField Label="b" Shape="TextFieldShape.LongText" />
+            <SearchField Placeholder="c" AriaLabel="c" />
+            <MudTextField T="string"
+                          aria-label="d" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            @code { private MudTextField<string>? field; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv17(RazorPath, source);
+
+        Assert.Equal("CV17", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV17: the one <c>TextField</c> component is the only file allowed to draw a <c>MudTextField</c>.</summary>
+    [Fact]
+    public void Cv17_TextFieldRazor_IsExempt()
+    {
+        const string source = """<MudTextField T="string" Value="@this.Value" Variant="Variant.Outlined" Margin="Margin.Dense" />""";
+
+        Assert.Equal(0, UiConventionScanner.Cv17("src/Huddle.App/Components/Shared/TextField.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv17("src/Huddle.App/Components/Shared/SearchField.razor", source).Count);
+    }
+
+    /// <summary>CV18: a raw <c>MudSelect</c> is counted, but not its items, a <c>SelectField</c> or the type name in code.</summary>
+    [Fact]
+    public void Cv18_RawMudSelect_IsCounted()
+    {
+        const string source = """
+            <MudSelect T="string" Label="a" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelectItem T="string" Value="@("x")">x</MudSelectItem>
+            </MudSelect>
+            <SelectField T="string" Label="b"><MudSelectItem T="string" Value="@("y")">y</MudSelectItem></SelectField>
+            @code { private MudSelect<string>? select; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv18(RazorPath, source);
+
+        Assert.Equal("CV18", result.Rule);
+        Assert.Equal(1, result.Count);
+    }
+
+    /// <summary>CV18: the one <c>SelectField</c> component is the only file allowed to draw a <c>MudSelect</c>.</summary>
+    [Fact]
+    public void Cv18_SelectFieldRazor_IsExempt()
+    {
+        const string source = """<MudSelect T="T" Value="@this.Value" Variant="Variant.Outlined" Margin="Margin.Dense">x</MudSelect>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/SelectField.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/AdapterModelEffortPicker.razor", source).Count);
+    }
 }

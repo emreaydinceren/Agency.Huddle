@@ -61,6 +61,6 @@ public sealed class PageTitleLayoutTests
         string markup = Page("Chat.razor");
 
         Assert.Contains("title-inline-edit", markup, StringComparison.Ordinal); // contains-ok: Razor source text, not rendered markup
-        Assert.DoesNotContain("Label=\"Room name\"", markup, StringComparison.Ordinal);
+        Assert.DoesNotContain(" Label=\"Room name\"", markup, StringComparison.Ordinal);
     }
 }

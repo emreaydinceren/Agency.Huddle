@@ -72,8 +72,8 @@ public sealed class R3SharedComponentsTests
         await using MudBunitContext ctx = new();
 
         IRenderedComponent<SearchField> compact = ctx.Render<SearchField>(parameters => parameters
-            .Add(p => p.Compact, true).Add(p => p.Class, "mine"));
-        IRenderedComponent<SearchField> regular = ctx.Render<SearchField>(parameters => parameters.Add(p => p.Class, "mine"));
+            .Add(p => p.Compact, true).Add(p => p.Class, "mine").Add(p => p.AriaLabel, "Search"));
+        IRenderedComponent<SearchField> regular = ctx.Render<SearchField>(parameters => parameters.Add(p => p.Class, "mine").Add(p => p.AriaLabel, "Search"));
 
         Assert.Contains("toolbar-compact", compact.Find(".mud-input-control").ClassList);
         Assert.Contains("mine", compact.Find(".mud-input-control").ClassList);

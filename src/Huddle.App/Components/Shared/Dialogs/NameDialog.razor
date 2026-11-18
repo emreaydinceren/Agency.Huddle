@@ -9,8 +9,8 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField T="string" Label="@this.Label" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          AutoFocus="true" Immediate="true" Value="this.text" ValueChanged="this.OnTextChanged"
+            <TextField Label="@this.Label"
+                          AutoFocus="true" Immediate="true" Value="@this.text" ValueChanged="this.OnTextChanged"
                           Error="@(this.problem is not null)" ErrorText="@this.problem" OnKeyDown="this.OnKeyDown" />
             @this.ChildContent
             @if (this.submitError is not null)

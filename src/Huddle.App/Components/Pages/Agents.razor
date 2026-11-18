@@ -27,13 +27,13 @@
                semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
                PersonaStore's write path - selecting a team is pure display narrowing over state already
                loaded, the same "never probes" guarantee a plain page load has. *@
-            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" aria-label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="agents-filter toolbar-compact">
+            <SelectField Compact="true" T="string" AriaLabel="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="agents-filter">
                 <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                 @foreach (var team in this.teams)
                 {
                     <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
         </MudToolBar>
     }
 

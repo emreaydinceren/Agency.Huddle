@@ -87,7 +87,7 @@
 
         <div class="d-flex align-end gap-2 mt-3 flex-wrap">
             <div data-testid="new-password">
-                <MudTextField T="string" @bind-Value="this.newPassword" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                <TextField @bind-Value="this.newPassword" Label="New password" InputType="InputType.Password"
                               autocomplete="new-password" />
             </div>
             <ActionButton Role="ButtonRole.Secondary" Disabled="@string.IsNullOrWhiteSpace(this.newPassword)" OnClick="this.SetPassword">Set password</ActionButton>
@@ -98,38 +98,38 @@
         <div class="d-flex flex-wrap gap-3">
             <div>
                 <div data-testid="stored-bind">
-                    <MudSelect T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <SelectField T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning">
                         @foreach (string choice in BindChoices)
                         {
                             <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
                         }
-                    </MudSelect>
+                    </SelectField>
                 </div>
                 <MudText Typo="Typo.caption" data-testid="running-bind">Running: @this.settingsView.Running.Bind</MudText>
             </div>
-            <MudSelect T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <SelectField T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning">
                 @foreach (string choice in AuthChoices)
                 {
                     <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
             <MudNumericField T="int?" Label="Port" @bind-Value="this.port" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            <MudTextField T="string" Label="Custom bind host" @bind-Value="this.customBindHost" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            <MudSelect T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <TextField Label="Custom bind host" @bind-Value="this.customBindHost" Disabled="@this.StrictRunning" />
+            <SelectField T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning">
                 @foreach (string choice in TailscaleChoices)
                 {
                     <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
             <MudNumericField T="int?" Label="Tailscale HTTPS port" @bind-Value="this.tailscaleHttpsPort" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </div>
 
         <div data-testid="allow-tailscale">
             <MudSwitch T="bool" @bind-Value="this.allowTailscale" Disabled="@this.StrictRunning" Color="Color.Primary" Label="Use Tailscale sign-in" />
         </div>
-        <MudTextField T="string" Label="Trusted proxies" @bind-Value="this.trustedProxies" Disabled="@this.StrictRunning" HelperText="One address per line." Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Allowed origins" @bind-Value="this.allowedOrigins" Disabled="@this.StrictRunning" HelperText="One address per line." Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Public origin" @bind-Value="this.publicOrigin" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <TextField Shape="TextFieldShape.LongText" Label="Trusted proxies" @bind-Value="this.trustedProxies" Disabled="@this.StrictRunning" HelperText="One address per line." />
+        <TextField Shape="TextFieldShape.LongText" Label="Allowed origins" @bind-Value="this.allowedOrigins" Disabled="@this.StrictRunning" HelperText="One address per line." />
+        <TextField Label="Public origin" @bind-Value="this.publicOrigin" Disabled="@this.StrictRunning" />
 
         @if (this.settingsView.Pending.Count > 0)
         {
@@ -203,7 +203,7 @@
                 @if (this.renamingId == device.DeviceId)
                 {
                     <div data-testid="rename-input">
-                        <MudTextField T="string" @bind-Value="this.renameText" Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="Device name" />
+                        <TextField @bind-Value="this.renameText" AriaLabel="Device name" />
                     </div>
                     <ActionButton Role="ButtonRole.Primary" OnClick="this.SaveRename">Save</ActionButton>
                     <ActionButton OnClick="this.CancelEdit">Cancel</ActionButton>

@@ -274,8 +274,7 @@ else
     /// The inline rename field that replaces the title while renaming. It takes the title's own size and weight (h5) and has no
     /// floating label, so the header does not jump; only the outline shows it is editable.
     /// </summary>
-    private RenderFragment RenameEditor => @<MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
-                                                          Class="title-inline-edit" aria-label="Room name"
+    private RenderFragment RenameEditor => @<TextField @bind-Value="this.editingName" Immediate="true" AutoFocus="true" Class="title-inline-edit" AriaLabel="Room name"
                                                           OnKeyDown="this.OnRenameKeyDown" OnBlur="this.CommitRenameAsync" />;
 
     /// <summary>How many member avatars the Room header shows before the rest are counted in "+N".</summary>

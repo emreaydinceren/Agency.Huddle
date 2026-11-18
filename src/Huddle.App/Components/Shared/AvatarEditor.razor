@@ -100,11 +100,10 @@ else
                    overridden. This is the markup MudInputControl renders for a counter (the helper container, the d-flex helper text, the
                    right-aligned ms-auto line), so it looks the same, and it counts text elements as the limit does. Like the stock counter
                    it does not change colour past the limit. Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
-                <MudTextField @ref="this.labelField" T="string" aria-label="Avatar label" Class="avatar-label-field" Variant="Variant.Outlined" Margin="Margin.Dense"
+                <TextField @ref="this.labelField" AriaLabel="Avatar label" Class="avatar-label-field"
                               Value="@this.label" ValueChanged="this.OnLabelChangedAsync"
-                              Immediate="true"
-                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.EmojiEmotions"
-                              AdornmentAriaLabel="Choose an emoji" OnAdornmentClick="this.OpenEmojiPicker" />
+                              Immediate="true" EndIcon="@Icons.Material.Outlined.EmojiEmotions"
+                              EndIconLabel="Choose an emoji" OnEndIconClick="this.OpenEmojiPicker" />
                 <div class="mud-input-control-helper-container px-2">
                     <div class="d-flex mud-input-helper-text">
                         <div class="ms-auto">@this.LabelCounterText</div>
@@ -233,7 +232,7 @@ else
     /// <summary>The element id <c>emoji-picker.js</c> finds the picker by; one editor is open at a time, and the picker exists only while its popover is.</summary>
     private const string EmojiPickerId = "avatar-emoji-picker";
 
-    private MudTextField<string>? labelField;
+    private TextField? labelField;
     private bool emojiOpen;
     private bool emojiWire;
     private bool disposed;

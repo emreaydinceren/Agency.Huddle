@@ -17,9 +17,9 @@
 <MudDialog ContentClass="duplicate-team-content">
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="New team name" @bind-Value="this.title" Class="duplicate-team-title" />
+            <TextField Label="New team name" @bind-Value="this.title" Class="duplicate-team-title" />
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace flex-grow-1" />
+                <TextField Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace flex-grow-1" />
                 @if (!this.RemoteAccess.IsConfigured)
                 {
                     <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Folder" OnClick="this.BrowseAsync" Class="duplicate-team-browse">Browse</ActionButton>

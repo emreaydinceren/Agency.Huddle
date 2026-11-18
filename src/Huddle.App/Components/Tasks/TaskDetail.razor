@@ -200,8 +200,7 @@ else if (this.loaded is { } task)
     RenderFragment titleEditor = @<text>
             @* The inline edit keeps the title's size (16px/600) and replaces it: in the drawer the header's own copy is hidden while a saved Task's
                title is edited, and a draft opens here with the field focused (design-system "Task form anatomy"; audit B4j, B4p). *@
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Title" ValueChanged="this.OnTitleChanged"
-                          Class="task-detail-title" aria-label="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
+            <TextField Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" AriaLabel="Title" Placeholder="@(this.createMode ? "Task title" : null)" AutoFocus="true" Immediate="true" />
         </text>;
 
     RenderFragment titleContent = @<text>
@@ -282,13 +281,13 @@ else if (this.loaded is { } task)
                             <span class="task-detail-strip-label" aria-hidden="true">Status</span>
                             <div class="task-detail-prop-value">
                                 @* One mark per row, and none before the field: the Status row has no state dot, like every other row (#471). *@
-                                <MudSelect T="TaskState" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                                <SelectField T="TaskState" Value="effective.Status" ValueChanged="this.OnStatusChanged"
                                            Label="Status" Class="task-detail-status">
                                     @foreach (TaskState state in TaskStates.All)
                                     {
                                         <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
                                     }
-                                </MudSelect>
+                                </SelectField>
                             </div>
                         </div>
 
@@ -299,13 +298,13 @@ else if (this.loaded is { } task)
                                    select's own adornment: MudSelect draws its caret from AdornmentIcon, so setting it there removed the caret (#470). *@
                                 <div class="task-detail-priority-field">
                                     <MudIcon Icon="@TaskColors.Icon(effective.Priority)" Size="Size.Small" Class="task-detail-priority-icon" aria-hidden="true" />
-                                    <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+                                    <SelectField T="TaskPriority" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
                                                Label="Priority">
                                         <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
                                         <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
                                         <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
                                         <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
-                                    </MudSelect>
+                                    </SelectField>
                                 </div>
                             </div>
                         </div>
@@ -313,13 +312,13 @@ else if (this.loaded is { } task)
                         <div class="task-detail-strip-item">
                             <span class="task-detail-strip-label" aria-hidden="true">Team</span>
                             <div class="task-detail-prop-value">
-                                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
-                                           Label="Team" aria-label="Team">
+                                <SelectField T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
+                                           Label="Team" AriaLabel="Team">
                                     @foreach (string teamName in this.TeamOptions())
                                     {
                                         <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
                                     }
-                                </MudSelect>
+                                </SelectField>
                             </div>
                         </div>
                         <div class="task-detail-strip-item">
@@ -364,7 +363,7 @@ else if (this.loaded is { } task)
                             <div class="task-detail-strip-item">
                                 <span class="task-detail-strip-label" aria-hidden="true">Reason</span>
                                 <div class="task-detail-prop-value">
-                                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
+                                    <TextField Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
                                                   Label="Reason (optional)" Placeholder="Optional" Class="task-detail-reason" />
                                 </div>
                             </div>
@@ -421,7 +420,7 @@ else if (this.loaded is { } task)
                                         <Chip T="string" Look="ChipLook.Tag" Value="@tag" OnClose="this.OnRemoveTag">@tag</Chip>
                                     }
                                 </MudChipSet>
-                                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
+                                <TextField Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
                                               OnKeyDown="this.OnTagKeyDown" Label="Add tag" Placeholder="Add tag…" Class="task-detail-tags-add" />
                             </div>
                         </div>
@@ -476,8 +475,7 @@ else if (this.loaded is { } task)
                             <MarkdownToolbar ShowWikilink="false" />
                             @this.DescriptionToggle
                         </div>
-                        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
-                                      Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field long-text-field markdown-field" />
+                        <TextField Shape="TextFieldShape.Markdown" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged" Rows="10" MaxRows="30" Label="Description" Placeholder="Add a description…" Class="task-detail-description task-detail-description-field" />
                     </div>
                 }
                 else

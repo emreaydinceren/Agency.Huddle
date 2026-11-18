@@ -65,10 +65,9 @@
     {
         @* The comment box: independent of the form's pending edits, so it never saves or discards them. *@
         <div class="task-timeline-comment-box">
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Add a comment" Lines="3" Immediate="true"
+            <TextField Shape="TextFieldShape.Markdown" Label="Add a comment" Immediate="true"
                           Value="@this.commentText" ValueChanged="this.OnCommentChanged"
-                          Error="@(this.commentError is not null)" ErrorText="@this.commentError"
-                          Class="task-timeline-comment-field long-text-field markdown-field" />
+                          Error="@(this.commentError is not null)" ErrorText="@this.commentError" Class="task-timeline-comment-field" />
             <div class="task-timeline-comment-actions">
                 <ActionButton Role="ButtonRole.Secondary" Class="task-timeline-comment-send"
                               Disabled="@(string.IsNullOrWhiteSpace(this.commentText))" OnClick="this.AddComment">Comment</ActionButton>

@@ -33,13 +33,13 @@
         <PageHeader Title="Theme lab" Subtitle="Development only. Edits preview on this tab and are never saved. Export JSON copies what differs from the base Theme." />
 
         <div class="theme-lab-controls">
-            <MudSelect T="string" Label="Base Theme" Margin="Margin.Dense" Variant="Variant.Outlined"
+            <SelectField T="string" Label="Base theme"
                        Value="@this.model.Skin.Id" ValueChanged="this.OnSkinChangedAsync">
                 @foreach (Skin skin in this.skins)
                 {
                     <MudSelectItem T="string" Value="@skin.Id">@skin.Label</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
             <MudSwitch T="bool" id="theme-lab-inspect-toggle" Label="Inspect" Color="Color.Primary"
                        Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
             <ActionButton id="theme-lab-export" Role="ButtonRole.Secondary" OnClick="this.ExportAsync">Export JSON</ActionButton>

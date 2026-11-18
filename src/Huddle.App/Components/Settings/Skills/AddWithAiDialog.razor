@@ -41,13 +41,13 @@
                                   HelperText="Optional." Class="add-with-ai-purpose" />
                     break;
                 case SkillTask.FindForRole:
-                    <MudSelect T="string" @bind-Value="this.roleId" Label="Role" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="The role to find Packs for."
+                    <SelectField T="string" @bind-Value="this.roleId" Label="Role" HelperText="The role to find Packs for."
                                Error="@string.IsNullOrWhiteSpace(this.roleId)" Class="add-with-ai-role mb-2">
                         @foreach (RoleInfo role in this.Roles.List())
                         {
                             <MudSelectItem T="string" Value="@role.Id">@role.Title</MudSelectItem>
                         }
-                    </MudSelect>
+                    </SelectField>
                     <MudTextField T="string" @bind-Value="this.purpose" Immediate="true" Label="What should it get better at?" MaxLength="300" Variant="Variant.Outlined" Margin="Margin.Dense"
                                   HelperText="Optional." Class="add-with-ai-purpose" />
                     break;
@@ -63,13 +63,13 @@
                     }
                     break;
                 case SkillTask.Fix:
-                    <MudSelect T="string" @bind-Value="this.rowKey" Label="Which row?" Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Rows that are Broken or Not downloaded."
+                    <SelectField T="string" @bind-Value="this.rowKey" Label="Which row?" HelperText="Rows that are Broken or Not downloaded."
                                Error="@string.IsNullOrWhiteSpace(this.rowKey)" Class="add-with-ai-row">
                         @foreach (FixRow row in this.FixRows)
                         {
                             <MudSelectItem T="string" Value="@row.Key">@row.Label</MudSelectItem>
                         }
-                    </MudSelect>
+                    </SelectField>
                     break;
             }
         </div>

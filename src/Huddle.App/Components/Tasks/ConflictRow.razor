@@ -10,7 +10,7 @@
     RenderFragment theirs = @<text>
         @if (this.IsDescription)
         {
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.TheirsText" Disabled="true" Lines="6" Class="task-detail-conflict-theirs" />
+            <TextField Shape="TextFieldShape.LongText" Value="@this.TheirsText" AriaLabel="Their Description" Disabled="true" Rows="6" Class="task-detail-conflict-theirs" />
         }
         else
         {
@@ -20,7 +20,7 @@
     RenderFragment yours = @<text>
         @if (this.IsDescription)
         {
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Value="@this.YoursText" Disabled="true" Lines="6" Class="task-detail-conflict-yours" />
+            <TextField Shape="TextFieldShape.LongText" Value="@this.YoursText" AriaLabel="Your Description" Disabled="true" Rows="6" Class="task-detail-conflict-yours" />
         }
         else
         {

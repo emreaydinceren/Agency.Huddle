@@ -104,19 +104,15 @@
             @if (this.mode == AgentProfileCardMode.Create)
             {
                 <MudStack Spacing="2" Class="flex-grow-1">
-                    <MudTextField T="string" Label="Name" Placeholder="e.g. Chief of Staff" @bind-Value="this.name"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.RestartAlt"
-                                  AdornmentAriaLabel="New random name" OnAdornmentClick="this.PickAnotherName"
+                    <TextField Label="Name" Placeholder="e.g. Chief of Staff" @bind-Value="this.name" EndIcon="@Icons.Material.Filled.RestartAlt"
+                                  EndIconLabel="New random name" OnEndIconClick="this.PickAnotherName"
                                   HelperText="Letters, digits, spaces, - and _. Spaces are fine." />
                     @* UX-E15: Title and Alias share one row so the New agent dialog fits a 900px-high window. *@
                     <div class="agent-profile-card-row agent-profile-card-identity-row">
-                        <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Shown beside the name." />
-                        <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias"
-                                      Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="For @@mentions." />
+                        <TextField Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title" HelperText="Shown beside the name." />
+                        <TextField Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias" HelperText="For @@mentions." />
                     </div>
-                    <MudTextField T="string" Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" HelperText="Comma-separated. Leave blank for no team." />
+                    <TextField Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams" HelperText="Comma-separated. Leave blank for no team." />
                 </MudStack>
             }
             else
@@ -322,14 +318,11 @@
             @if (this.mode == AgentProfileCardMode.Edit)
             {
                 <MudStack Spacing="2" Class="mb-3">
-                    <MudTextField T="string" Label="Name" Placeholder="e.g. Chief of Staff" Value="@this.name" ValueChanged="this.OnNameChanged"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                    <TextField Label="Name" Placeholder="e.g. Chief of Staff" Value="@this.name" ValueChanged="this.OnNameChanged"
                                   Disabled="@this.nameLocked" HelperText="@this.NameHelperText" />
-                    <MudTextField T="string" Label="Title" Placeholder="e.g. Chief of Staff" Value="@this.title" ValueChanged="this.OnTitleChanged"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                    <TextField Label="Title" Placeholder="e.g. Chief of Staff" Value="@this.title" ValueChanged="this.OnTitleChanged"
                                   Disabled="@this.titleLocked" HelperText="@this.TitleHelperText" />
-                    <MudTextField T="string" Label="Alias" Placeholder="e.g. coo" Value="@this.alias" ValueChanged="this.OnAliasChanged"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                    <TextField Label="Alias" Placeholder="e.g. coo" Value="@this.alias" ValueChanged="this.OnAliasChanged"
                                   Disabled="@this.aliasLocked" HelperText="@this.AliasHelperText" />
                 </MudStack>
 
@@ -350,12 +343,10 @@
             }
 
             <div class="group-label">Persona</div>
-            <MudTextField T="string" Value="@this.text" ValueChanged="this.OnTextChanged"
+            <TextField Shape="TextFieldShape.Markdown" Value="@this.text" ValueChanged="this.OnTextChanged"
                           Label="Persona text"
                           Placeholder="e.g. You are the Chief of Staff. You keep the team honest."
-                          Lines="4" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          HelperText="@this.TextHelperText"
-                          Class="mb-3 long-text-field markdown-field" />
+                          HelperText="@this.TextHelperText" Class="mb-3" />
 
             @* Spec §6.7, §2 U7: next to the Adapter select, and the same WriteListField data flow -
                this.text is the source of truth, re-derived by ReadSkills whenever this.text changes
@@ -364,8 +355,8 @@
                select above reads/writes "adapter" through WriteScalarField. No count-gate unlike the
                Adapter select's "@if (AdapterChoices.Count > 1)": a MultiSelection picker with zero or
                one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
-            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
-                       SelectedValuesChanged="this.OnSkillsChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
+            <SelectField T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
+                       SelectedValuesChanged="this.OnSkillsChanged"
                        HelperText="Changing Skills restarts this Agent." Class="mb-3">
                 @foreach (var skill in this.OrderedSkills)
                 {
@@ -399,7 +390,7 @@
                         <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-unavailable-caption">Not on this computer yet. Untick it to go without it.</MudText>
                     </MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
 
             @* Skills a catalog or Pack lists but that have no folder on this computer: not choosable, but visible with their
                remedy, so a Skill the Human cannot pick yet is still in sight (Skill Packs spec §6.10.4). *@

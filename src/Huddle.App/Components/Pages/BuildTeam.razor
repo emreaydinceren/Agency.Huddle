@@ -112,25 +112,23 @@
             </div>
             <MudPaper Outlined="true" Elevation="0" Class="build-team-details-card pa-3">
                 <MudStack Spacing="3">
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team name" Immediate="true" Disabled="this.EditMode"
-                                  Value="this.name" ValueChanged="this.OnNameChanged"
+                    <TextField Label="Team name" Immediate="true" Disabled="this.EditMode"
+                                  Value="@this.name" ValueChanged="this.OnNameChanged"
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
-                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose long-text-field" />
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LibraryFolderLabel" Immediate="true"
-                                  Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
-                                  Adornment="@(this.RemoteAccess.IsConfigured ? Adornment.None : Adornment.End)" AdornmentIcon="@Icons.Material.Outlined.Folder"
-                                  AdornmentAriaLabel="Browse for library folder" OnAdornmentClick="this.BrowseAsync"
+                    <TextField Shape="TextFieldShape.LongText" Label="What it&#8217;s for" Immediate="true" Value="@this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                    <TextField Label="@LibraryFolderLabel" Immediate="true"
+                                  Value="@this.workspace" ValueChanged="this.OnWorkspaceChanged" EndIcon="@(this.RemoteAccess.IsConfigured ? null : Icons.Material.Outlined.Folder)"
+                                  EndIconLabel="Browse for library folder" OnEndIconClick="this.BrowseAsync"
                                   Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
                     @if (!this.EditMode && this.selected is { Processes.Count: > 1 } multiple)
                     {
-                        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Process" Value="this.processId" ValueChanged="this.OnProcessChanged"
+                        <SelectField T="string" Label="Process" Value="this.processId" ValueChanged="this.OnProcessChanged"
                                    HelperText="How this Team works. It becomes the Team's AGENTS.md, which you can edit afterwards." Class="build-team-process">
                             @foreach (ProcessRef process in multiple.Processes)
                             {
                                 <MudSelectItem T="string" Value="@process.Id">@process.Id</MudSelectItem>
                             }
-                        </MudSelect>
+                        </SelectField>
                     }
                 </MudStack>
             </MudPaper>
@@ -284,13 +282,13 @@
 
             @if (this.EditMode && this.ManagerChoices.Count > 0)
             {
-                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Manager" Dense="true"
+                <SelectField T="string" Label="Manager" DenseItems="true"
                            Value="this.managerKey" ValueChanged="this.OnManagerChanged" Class="build-team-manager">
                     @foreach (DraftMember choice in this.ManagerChoices)
                     {
                         <MudSelectItem T="string" Value="@choice.Key">@choice.Name</MudSelectItem>
                     }
-                </MudSelect>
+                </SelectField>
             }
         </section>
     }

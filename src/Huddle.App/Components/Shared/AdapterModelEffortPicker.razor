@@ -14,15 +14,15 @@
    installation with one Adapter looks like it always did (Spec §12, E-2). *@
 @if (this.AdapterChoices.Count > 1)
 {
-    <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
-               Disabled="@this.Disabled" Variant="Variant.Outlined" Margin="Margin.Dense"
+    <SelectField T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
+               Disabled="@this.Disabled"
                HelperText="@this.AdapterHelperText" Class="mb-3">
         <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
         @foreach (AdapterProfile choice in this.AdapterChoices)
         {
             <MudSelectItem T="string" Value="@choice.Id">@choice.DisplayName</MudSelectItem>
         }
-    </MudSelect>
+    </SelectField>
 }
 
 @if (this.adapterReset)
@@ -34,15 +34,14 @@
 
 <div class="agent-profile-card-row mb-1">
     <div class="agent-profile-card-cell">
-        <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
-                   Disabled="@(this.Disabled || this.modelsLoading)" aria-busy="@(this.modelsLoading ? "true" : null)"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
+        <SelectField T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
+                   Disabled="@(this.Disabled || this.modelsLoading)" aria-busy="@(this.modelsLoading ? "true" : null)" Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
             <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
             @foreach (AgentModelOption choice in this.ModelChoices)
             {
                 <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @if (this.modelsLoading)
         {
             <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the models this adapter offers" />
@@ -50,15 +49,14 @@
     </div>
 
     <div class="agent-profile-card-cell">
-        <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
-                   Disabled="@(this.Disabled || this.effortsLoading)" aria-busy="@(this.effortsLoading ? "true" : null)"
-                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
+        <SelectField T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
+                   Disabled="@(this.Disabled || this.effortsLoading)" aria-busy="@(this.effortsLoading ? "true" : null)" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
             <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
             @foreach (AgentEffortOption choice in this.EffortChoices)
             {
                 <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @if (this.effortsLoading)
         {
             <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the effort levels this model offers" />

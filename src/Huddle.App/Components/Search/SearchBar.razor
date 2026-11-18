@@ -20,17 +20,14 @@
 @inject IJSRuntime JS
 
 <div class="search-bar" @ref="this.host" @onclick="this.OpenAsync" @onfocusin="this.OpenAsync" @onfocusout="this.CloseAsync">
-    <MudTextField T="string"
+    <TextField
                   Value="@this.text"
                   ValueChanged="this.OnInputAsync"
                   Immediate="true"
-                  Variant="Variant.Outlined"
-                  Margin="Margin.Dense"
                   Placeholder="Search teams, agents, library, tasks, rooms…"
-                  Adornment="Adornment.Start"
-                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  StartIcon="@Icons.Material.Filled.Search"
                   OnKeyDown="this.OnKeyDownAsync"
-                  UserAttributes="@this.InputAttributes" />
+                  @attributes="this.InputAttributes" />
     <span aria-hidden="true"
           class="search-shortcut-hint mud-text-secondary">Ctrl K</span>
     <div aria-live="polite"

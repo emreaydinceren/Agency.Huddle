@@ -51,14 +51,10 @@
                     }
                 </div>
 
-                <MudTextField T="string"
+                <TextField Shape="TextFieldShape.Markdown" AriaLabel="@field.Label"
                               Value="@field.Value"
-                              ValueChanged="@(text => this.OnFieldInput(field.Key, text))"
-                              Lines="@PromptFieldFactory.RowsFor(field.Value)"
+                              ValueChanged="@(text => this.OnFieldInput(field.Key, text))" Rows="@PromptFieldFactory.RowsFor(field.Value)"
                               HelperText="@field.HelperText"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Class="long-text-field markdown-field"
                               Immediate="true" />
 
                 @if (field.ReliedWarning is not null)

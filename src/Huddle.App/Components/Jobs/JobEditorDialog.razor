@@ -20,20 +20,20 @@
             {
                 <Notice Severity="NoticeLevel.Error" Class="job-editor-error">@this.error</Notice>
             }
-            <MudSelect T="string" Label="For" Variant="Variant.Outlined" Margin="Margin.Dense" Class="job-editor-target"
+            <SelectField T="string" Label="For" Class="job-editor-target"
                        Disabled="this.followUp" Value="this.target" ValueChanged="this.OnTargetChanged">
                 <MudSelectItem T="string" Value="@HumanKey">@this.Human.Name (you)</MudSelectItem>
                 @foreach (string name in this.agentNames)
                 {
                     <MudSelectItem T="string" Value="@(AgentKey + name)">@name</MudSelectItem>
                 }
-            </MudSelect>
-            <MudTextField T="string" Label="Title" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="job-editor-title"
+            </SelectField>
+            <TextField Label="Title" Immediate="true" Class="job-editor-title"
                           HelperText="Names the job and its Room." @bind-Value="this.title" />
-            <MudTextField T="string" Label="Instruction" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Lines="4"
-                          HelperText="Posted into the job's Room each time it runs." Class="job-editor-instruction long-text-field"
+            <TextField Shape="TextFieldShape.LongText" Label="Instruction" Immediate="true"
+                          HelperText="Posted into the job's Room each time it runs." Class="job-editor-instruction"
                           @bind-Value="this.instruction" />
-            <MudSelect T="JobCadence" Label="Repeats" Variant="Variant.Outlined" Margin="Margin.Dense" Class="job-editor-cadence"
+            <SelectField T="JobCadence" Label="Repeats" Class="job-editor-cadence"
                        @bind-Value="this.form.Cadence">
                 <MudSelectItem T="JobCadence" Value="JobCadence.Once">Once</MudSelectItem>
                 <MudSelectItem T="JobCadence" Value="JobCadence.Daily">Every day</MudSelectItem>
@@ -41,11 +41,10 @@
                 <MudSelectItem T="JobCadence" Value="JobCadence.Weekly">On chosen days</MudSelectItem>
                 <MudSelectItem T="JobCadence" Value="JobCadence.Monthly">Every month</MudSelectItem>
                 <MudSelectItem T="JobCadence" Value="JobCadence.EveryHours">Every few hours</MudSelectItem>
-            </MudSelect>
+            </SelectField>
             @if (this.form.Cadence == JobCadence.Once)
             {
-                <MudTextField T="string" Label="Date" InputType="InputType.Date" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Class="job-editor-date" @bind-Value="this.form.Date" />
+                <TextField Label="Date" InputType="InputType.Date" Class="job-editor-date" @bind-Value="this.form.Date" />
             }
             @if (this.form.Cadence == JobCadence.Weekly)
             {
@@ -71,10 +70,9 @@
             }
             else
             {
-                <MudTextField T="string" Label="Time" InputType="InputType.Time" Variant="Variant.Outlined" Margin="Margin.Dense"
-                              Class="job-editor-time" @bind-Value="this.form.Time" />
+                <TextField Label="Time" InputType="InputType.Time" Class="job-editor-time" @bind-Value="this.form.Time" />
             }
-            <MudTextField T="string" Label="Time zone" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" Class="job-editor-zone"
+            <TextField Label="Time zone" Immediate="true" Class="job-editor-zone"
                           HelperText="An IANA name such as Europe/Berlin." @bind-Value="this.zone" />
             <div class="job-editor-preview" role="status">
                 <MudText Typo="Typo.subtitle1" Class="card-title job-editor-preview-heading">Next runs</MudText>

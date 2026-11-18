@@ -36,7 +36,7 @@ public sealed partial class R3OpenItemsTests
         int form = card.IndexOf("Label=\"Persona text\"", StringComparison.Ordinal);
         string tail = card[form..];
 
-        Assert.Contains("Lines=\"4\"", card[(form - 200)..(form + 400)], StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("Shape=\"TextFieldShape.Markdown\"", card[(form - 200)..(form + 400)], StringComparison.Ordinal); // contains-ok: component source text; Markdown is 4 rows by default
         Assert.DoesNotContain("Class=\"mb-4", tail[..tail.IndexOf("@code", StringComparison.Ordinal)], StringComparison.Ordinal);
     }
 

@@ -1,0 +1,179 @@
+@using MudBlazor
+
+@* The one text field: always Outlined and Dense, a caller names its shape (Line, Compact, LongText, Markdown) and never writes Variant,
+   Margin, Lines or a look class (ComponentCatalog, TextField). Long text is 4 rows by default (Q-B3-1). A field with no Label must
+   carry an AriaLabel, or the first render throws (D5). ReadOnly is not offered (CV5). *@
+<MudTextField @ref="this.field" T="string" Value="@this.Value" ValueChanged="this.ValueChanged" Variant="Variant.Outlined" Margin="Margin.Dense"
+              Label="@this.Label" HelperText="@this.HelperText" Placeholder="@this.Placeholder" Lines="@this.LinesShown"
+              Sizing="@(this.MaxRows is null ? InputSizing.Fixed : InputSizing.Auto)" MaxLines="@(this.MaxRows ?? 0)"
+              Immediate="@this.Immediate" DebounceInterval="@this.DebounceInterval" Disabled="@this.Disabled" Required="@this.Required"
+              Error="@this.Error" ErrorText="@this.ErrorText" MaxLength="@this.MaxLength" InputType="@this.InputType" InputMode="@this.InputMode"
+              AutoFocus="@this.AutoFocus" Clearable="@this.Clearable" Adornment="@this.AdornmentShown" AdornmentIcon="@(this.StartIcon ?? this.EndIcon)"
+              AdornmentAriaLabel="@this.EndIconLabel" OnAdornmentClick="@this.AdornmentClick" OnKeyDown="@this.OnKeyDown" OnBlur="@this.OnBlur"
+              Class="@this.CssClass" UserAttributes="@FieldAttributes.Merge(this.UserAttributes, this.AriaLabel)" />
+
+@code {
+    /// <summary>MudBlazor's own default for <see cref="MaxLength"/>: no limit a Human would meet.</summary>
+    private const int NoMaxLength = 524288;
+
+    private MudTextField<string>? field;
+
+    /// <summary>The text. Two-way bound with <c>@bind-Value</c>, or <see cref="Value"/> and <see cref="ValueChanged"/>.</summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>Raised with the new text: on blur or Enter, or on every keystroke when <see cref="Immediate"/>.</summary>
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>The visible label. A field without one must set <see cref="AriaLabel"/>.</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>The accessible name of a field with no visible label, such as an inline rename.</summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>A line under the field saying what to type, or why it is disabled.</summary>
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    /// <summary>Text shown in the empty field, such as an example value.</summary>
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    /// <summary>One line, a toolbar line, long text or Markdown. Defaults to <see cref="TextFieldShape.Line"/>.</summary>
+    [Parameter]
+    public TextFieldShape Shape { get; set; } = TextFieldShape.Line;
+
+    /// <summary>
+    /// The rows of a <see cref="TextFieldShape.LongText"/> or <see cref="TextFieldShape.Markdown"/> field, when its content sets them
+    /// (a conflict's two texts, a prompt sized to its text). Leave unset for the house 4 rows. Ignored on one line.
+    /// </summary>
+    [Parameter]
+    public int? Rows { get; set; }
+
+    /// <summary>When set, a long field grows with its text from <see cref="Rows"/> up to this many rows (the Task Description).</summary>
+    [Parameter]
+    public int? MaxRows { get; set; }
+
+    /// <summary>Whether <see cref="ValueChanged"/> fires on every keystroke rather than on blur.</summary>
+    [Parameter]
+    public bool Immediate { get; set; }
+
+    /// <summary>Milliseconds to wait after the last keystroke before <see cref="ValueChanged"/> fires, with <see cref="Immediate"/>.</summary>
+    [Parameter]
+    public double DebounceInterval { get; set; }
+
+    /// <summary>Whether the field is disabled.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Whether the field must be filled in; it marks the label.</summary>
+    [Parameter]
+    public bool Required { get; set; }
+
+    /// <summary>Whether the field shows as wrong; <see cref="ErrorText"/> then replaces the helper line.</summary>
+    [Parameter]
+    public bool Error { get; set; }
+
+    /// <summary>What is wrong, shown under the field while <see cref="Error"/> is true.</summary>
+    [Parameter]
+    public string? ErrorText { get; set; }
+
+    /// <summary>The most characters the field takes.</summary>
+    [Parameter]
+    public int MaxLength { get; set; } = NoMaxLength;
+
+    /// <summary>The input's type: text, a password, a date or a time.</summary>
+    [Parameter]
+    public InputType InputType { get; set; } = InputType.Text;
+
+    /// <summary>The keyboard a touch device shows, such as numeric or email.</summary>
+    [Parameter]
+    public InputMode InputMode { get; set; } = InputMode.text;
+
+    /// <summary>Whether the field takes focus when it first renders (a dialog's one field, an inline rename).</summary>
+    [Parameter]
+    public bool AutoFocus { get; set; }
+
+    /// <summary>Whether the field draws a clear button while it holds text.</summary>
+    [Parameter]
+    public bool Clearable { get; set; }
+
+    /// <summary>A decorative icon before the text, such as the search glass. Do not set with <see cref="EndIcon"/>.</summary>
+    [Parameter]
+    public string? StartIcon { get; set; }
+
+    /// <summary>An icon after the text; with <see cref="OnEndIconClick"/> it is a button named by <see cref="EndIconLabel"/>.</summary>
+    [Parameter]
+    public string? EndIcon { get; set; }
+
+    /// <summary>The accessible name of the end icon's button, such as "Browse for library folder".</summary>
+    [Parameter]
+    public string? EndIconLabel { get; set; }
+
+    /// <summary>Raised when the Human clicks the end icon; when set, the icon is a button.</summary>
+    [Parameter]
+    public EventCallback OnEndIconClick { get; set; }
+
+    /// <summary>Raised on each key press in the field, for Enter to commit or Escape to cancel.</summary>
+    [Parameter]
+    public EventCallback<KeyboardEventArgs> OnKeyDown { get; set; }
+
+    /// <summary>Raised when the field loses focus, for an inline edit that commits on blur.</summary>
+    [Parameter]
+    public EventCallback<FocusEventArgs> OnBlur { get; set; }
+
+    /// <summary>Extra classes, for a test or script hook and the caller's layout only; never a colour, size, font or padding.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Any other attribute (<c>id</c>, <c>autocomplete</c>, <c>role</c>, <c>data-*</c>), passed to the input element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    /// <summary>Moves the keyboard focus into the field.</summary>
+    /// <returns>A task that completes when the focus call returns; completed at once before the first render.</returns>
+    public ValueTask FocusAsync() => this.field?.FocusAsync() ?? ValueTask.CompletedTask;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() =>
+        FieldAttributes.RequireName(nameof(TextField), this.Label, this.AriaLabel, this.UserAttributes);
+
+    private bool IsLong => this.Shape is TextFieldShape.LongText or TextFieldShape.Markdown;
+
+    private int LinesShown => this.IsLong ? this.Rows ?? 4 : 1;
+
+    private Adornment AdornmentShown => (this.StartIcon, this.EndIcon) switch
+    {
+        (not null, _) => Adornment.Start,
+        (null, not null) => Adornment.End,
+        _ => Adornment.None,
+    };
+
+    private EventCallback<MouseEventArgs> AdornmentClick =>
+        this.OnEndIconClick.HasDelegate ? EventCallback.Factory.Create<MouseEventArgs>(this, this.EndIconClickedAsync) : default;
+
+    private string? CssClass
+    {
+        get
+        {
+            string? shape = this.Shape switch
+            {
+                TextFieldShape.Compact => "toolbar-compact",
+                TextFieldShape.LongText => "long-text-field",
+                TextFieldShape.Markdown => "long-text-field markdown-field",
+                _ => null,
+            };
+            if (string.IsNullOrWhiteSpace(this.Class))
+            {
+                return shape;
+            }
+
+            return shape is null ? this.Class : shape + " " + this.Class;
+        }
+    }
+
+    private Task EndIconClickedAsync(MouseEventArgs _) => this.OnEndIconClick.InvokeAsync();
+}

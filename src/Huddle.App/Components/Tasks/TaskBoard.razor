@@ -60,7 +60,7 @@
                 <span class="@StateDotClass(column)" aria-hidden="true"></span>
                 @if (this.renamingColumn == i)
                 {
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
+                    <TextField Class="task-board-column-rename" AriaLabel="Column name" Value="@column.Label" AutoFocus="true"
                                   ValueChanged="@(label => this.RenameAsync(i, label))" />
                 }
                 else
