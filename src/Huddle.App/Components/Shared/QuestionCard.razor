@@ -22,6 +22,7 @@
 *@
 @inherits AgentCardBase
 @using Agency.Huddle.App.Components.Shared.AgentCards
+@using Agency.Huddle.App.Goldfish
 @using Agency.Huddle.App.Questions
 
 @inject RoomEvents Events
@@ -168,7 +169,8 @@
 
         this.pending = next;
         User? asker = await this.TeamDirectory.GetUserAsync(next.AskerAgentId);
-        this.askerName = asker?.Name ?? next.AskerName;
+        string liveName = asker?.Name ?? next.AskerName;
+        this.askerName = GoldfishStamp.IsStamped(next.AskerName) ? GoldfishStamp.Apply(GoldfishStamp.AgentName(liveName)) : liveName;
         this.askerIsWriting = this.AskerHasDraft(next);
     }
 

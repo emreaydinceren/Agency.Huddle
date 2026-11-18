@@ -37,6 +37,7 @@
 @inject RoomEvents Events
 @inject ElicitationStore Elicitations
 @inject ElicitationService Service
+@inject Agency.Huddle.App.Goldfish.GoldfishLive Live
 
 @if (this.RoomIsOpen)
 {
@@ -44,8 +45,9 @@
     {
         PendingElicitation current = card;
         bool busy = this.IsBusy(current.Id);
+        string askerShown = this.Live.StampedIfPossessed(current.AskerName, this.RoomId);
 
-        <AgentCard @key="current.Id" Class="elicitation-card" TitleClass="elicitation-card-title" Title="@($"{current.AskerName} is asking")" AriaLabel="@($"Form from {current.AskerName}")">
+        <AgentCard @key="current.Id" Class="elicitation-card" TitleClass="elicitation-card-title" Title="@($"{askerShown} is asking")" AriaLabel="@($"Form from {current.AskerName}")">
             <ChildContent>
 
             @if (!string.IsNullOrWhiteSpace(current.Form.Message) && !current.Form.MessageRepeatsLabel)

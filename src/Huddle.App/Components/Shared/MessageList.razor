@@ -1,7 +1,9 @@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Components.References
+@using Agency.Huddle.App.Goldfish
 @using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Tabs
 @using Microsoft.Extensions.Options
 @implements IDisposable
 @inject IJSRuntime JS
@@ -12,6 +14,7 @@
 @inject ILibraryReferenceResolver LibraryResolver
 @inject ContextFill ContextFill
 @inject PersonaStore Personas
+@inject GoldfishLive Live
 
 <div class="message-list" @ref="this.container">
     @for (var messageIndex = 0; messageIndex < this.Messages.Count; messageIndex++)
@@ -69,6 +72,43 @@
                 continue;
             }
 
+            @* The rows the goldfish supervisor posts (Goldfish spec C4d, C4e): stamped Huddle Messages that parse as a start or a return line.
+               The result row carries the stamp too but parses as neither, so it stays an ordinary Huddle row. The brief is plain text, never Markdown. *@
+            @if (fromHuddle && message.Goldfish is not null && GoldfishLine.TryParseStartRow(message.Text, out var startSummary, out var startBrief))
+            {
+                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
+                    <summary>
+                        <MudIcon Icon="@MaterialSymbols.Fish" Size="Size.Small" />
+                        <span class="system-row-text">@startSummary</span>
+                        <span class="system-row-time">@time</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
+                    </summary>
+                    <div class="system-row-detail">
+                        <div>@GoldfishLine.BriefLabel</div>
+                        <div class="goldfish-brief">@startBrief</div>
+                    </div>
+                </details>
+                continue;
+            }
+
+            @if (fromHuddle && message.Goldfish is not null && GoldfishLine.TryParseReturnRow(message.Text, out var returnSummary))
+            {
+                Possession? possession = this.Live.Get(message.Goldfish);
+                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
+                    <summary>
+                        <MudIcon Icon="@MaterialSymbols.Fish" Size="Size.Small" />
+                        <span class="system-row-text">@returnSummary</span>
+                        <span class="system-row-time">@time</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
+                    </summary>
+                    @if (possession is not null)
+                    {
+                        <div class="system-row-detail">@GoldfishLine.ReturnDetail(possession.StartedAt, message.Timestamp, possession.Turns, possession.Spend, possession.Currency)</div>
+                    }
+                </details>
+                continue;
+            }
+
             @if (!fromHuddle)
             {
                 @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
@@ -113,7 +153,15 @@
                 @if (!continues)
                 {
                     <div class="message-meta">
-                        <span class="message-sender">@message.SenderName</span>
+                        @if (!fromHuddle && message.Goldfish is not null)
+                        {
+                            <span class="message-sender">@GoldfishStamp.Apply(message.SenderName)</span>
+                            <span class="message-goldfish" title="@GoldfishStamp.Tooltip"><MudIcon Icon="@MaterialSymbols.Fish" /></span>
+                        }
+                        else
+                        {
+                            <span class="message-sender">@message.SenderName</span>
+                        }
                         @if (this.TitleOf(message.SenderName) is { } title)
                         {
                             <span class="message-title">@title</span>
