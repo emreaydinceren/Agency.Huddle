@@ -60,6 +60,12 @@ internal sealed record RoomSessionHarnessOptions
 
     /// <summary>The clock the session and its watchdog use, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</summary>
     public TimeProvider? Time { get; init; }
+
+    /// <summary>Whether the session serves a goldfish possession: no Transcript Catch-up, enrichers told it is clean. <see langword="false"/> for an ordinary session.</summary>
+    public bool Clean { get; init; }
+
+    /// <summary>The enricher pipeline to use instead of the one <see cref="TurnHookTestFactory"/> builds from <see cref="LibraryDocs"/> and <see cref="ReadsFiles"/>, or <see langword="null"/> for that one.</summary>
+    public TurnEnricherPipeline? Enrichers { get; init; }
 }
 
 /// <summary>
@@ -114,13 +120,14 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             agentId: settings.AgentId,
             turnActivity: settings.TurnActivity,
             contextFill: settings.ContextFill,
-            enrichers: TurnHookTestFactory.Enrichers(settings.LibraryDocs, settings.ReadsFiles),
+            enrichers: settings.Enrichers ?? TurnHookTestFactory.Enrichers(settings.LibraryDocs, settings.ReadsFiles),
             roomSessions: settings.RoomSessions,
             host: settings.Host,
             sessionSettings: settings.SessionSettings,
             lastCatchUp: settings.LastCatchUp,
             time: settings.Time,
-            hooks: settings.Hooks);
+            hooks: settings.Hooks,
+            clean: settings.Clean);
         return new RoomSessionHarness(session, runCts);
     }
 

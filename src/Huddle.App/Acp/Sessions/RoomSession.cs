@@ -41,6 +41,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private readonly IPromptSource prompts;
     private readonly AcpOptions options;
     private readonly MemoryPaths? memoryPaths;
+    private readonly bool clean;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
@@ -200,6 +201,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="lastCatchUp">Receives the whole prompt text of the first ordinary Turn after a fresh start. <see langword="null"/> writes no file, like every caller that predates it.</param>
     /// <param name="hooks">The Turn hooks run around each Message Turn. <see langword="null"/> runs none, like every caller that predates it.</param>
     /// <param name="memoryPaths">Resolves an Agent's own <c>memory</c> writes to paths for <c>Touched</c>. <see langword="null"/> records none, like every caller that predates it.</param>
+    /// <param name="clean">Whether this is a goldfish possession's session: no Transcript Catch-up, and the enrichers are told the Turn is clean.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -222,8 +224,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         ISessionSettings? sessionSettings = null,
         LastCatchUpStore? lastCatchUp = null,
         TurnHookPipeline? hooks = null,
-        MemoryPaths? memoryPaths = null)
+        MemoryPaths? memoryPaths = null,
+        bool clean = false)
     {
+        this.clean = clean;
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(scheduler);
@@ -1511,14 +1515,22 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                 return null;
             }
 
-            item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, messageId, this.QueuedTriggerIds(item.RoomId), ct).ConfigureAwait(false);
+            if (!this.clean)
+            {
+                item = await this.transcriptCatchUp.AddAsync(item, this.FreshStartNotePending, messageId, this.QueuedTriggerIds(item.RoomId), ct).ConfigureAwait(false);
+            }
+
             if (this.enrichers is not null)
             {
-                item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, ct).ConfigureAwait(false);
+                item = await this.enrichers.EnrichAsync(item, this.owner.PersonaName, this.host, this.clean, ct).ConfigureAwait(false);
             }
 
             // The file is written here, before the watchdog is armed (traps.md TRAP 1): BuildPrompt is pure.
-            this.transcriptCatchUp.WriteLastCatchUp(item);
+            if (!this.clean)
+            {
+                this.transcriptCatchUp.WriteLastCatchUp(item);
+            }
+
             run = this.TryPublishTurn(item, hookResult, sequence, messageId, ct);
             return run;
         }
