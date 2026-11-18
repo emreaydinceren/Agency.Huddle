@@ -282,23 +282,20 @@ scripts, with no rule or a layout-only one (`feed-show-more`, `library-document-
 `ml-2`, `ml-3`, `ml-auto`): both stay as `Class`. 9 sites carry one of seven classes that restyled the button,
 which are defects: `btn-action-tight` (a 2 px icon gap, removed) and `task-detail-save` and
 `task-detail-cancel` (the card radius in `task-form.css`, removed) are folded into the component;
-`task-detail-library-add` (recoloured, 12 px text) waits for the Tasks migration to become `Quiet`; and
+`task-detail-library-add` (recoloured, 12 px text) stays raw until its rule goes; and
 `question-card-option`, `invite-agent-option` and `tags-tree-row` are not role buttons (an answer choice, an
 option card, a tree row) and stay raw `MudButton`s in the baseline until their own component exists.
 
-**Still to migrate.** 141 raw `MudButton` tags in 59 files, the CV15 baseline per area (each
-area's migration PR lowers its file in `tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/`):
+**Still raw.** The migration is done (136 of 141 tags moved, 2026-11-18). Five raw `MudButton` tags in
+four files stay in the CV15 baseline (`tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/`),
+because each is not a plain role button:
 
-| Area | Files | Tags |
+| File | Tags | Why it stays raw |
 | --- | --- | --- |
-| `Settings` | 19 | 43 |
-| `Shared` | 15 | 46 |
-| `Teams` | 8 | 17 |
-| `Room` | 7 | 15 |
-| `Tasks` | 6 | 13 |
-| `Library` | 2 | 4 |
-| `Shell` | 2 | 3 |
-| `Css` | 0 | 0 |
+| `Shared/QuestionCard.razor` | 1 | An answer option tile (`question-card-option`) |
+| `Shared/InviteAgent.razor` | 1 | An option card (`invite-agent-option`) |
+| `Sidebar/TagsPanel.razor` | 1 | A tree row (`tags-tree-row`, `shell.css`) that sets its own width, height, alignment and padding |
+| `Tasks/TaskDetail.razor` | 2 | "Link note" and "Add File" (`task-detail-library-add`, `task-form.css`): a recoloured button with 12 px text. It can become `Quiet` when its rule is deleted |
 
 The map from the old combinations: Filled Primary is `Primary`, Outlined (default or Primary)
 is `Secondary`, Text or no `Variant` is `Quiet`, Filled Error `Danger`, Text or Outlined Error

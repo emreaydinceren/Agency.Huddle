@@ -84,7 +84,7 @@ another reason for one migration per area at a time.
 | Wave | Work | Owners at once | Why this order |
 | --- | --- | --- | --- |
 | 1 | **Done 2026-11-18.** **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14` (zero-tolerance from the start: all six sites moved in the build PR). Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
-| 2 | **Build done 2026-11-18.** **B2** `ActionButton` (roles `Primary`, `Secondary`, `Quiet`, `Danger`, `DangerQuiet`), with **A2** `DialogFooter` as its first user: rule `CV15`, control radius on every button, 65 tags moved (18 dialogs, the 15 Medium, the 14 with no variant, every Danger and Warning site). Migrate by area next: the CV15 baseline holds 141 tags, `Shared` 46, `Settings` 43, `Teams` 17, `Room` 15, `Tasks` 13, `Library` 4, `Shell` 3, `Css` 0 | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
+| 2 | **Done 2026-11-18** (build, then four area migrations in parallel worktrees: 136 of 141 raw tags moved; 5 stay raw and baselined, see the catalog's "Still raw"). **B2** `ActionButton` (roles `Primary`, `Secondary`, `Quiet`, `Danger`, `DangerQuiet`), with **A2** `DialogFooter` as its first user: rule `CV15`, control radius on every button, 65 tags moved (18 dialogs, the 15 Medium, the 14 with no variant, every Danger and Warning site). The migration then moved the CV15 backlog (141 tags) area by area, four owners at once | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
 | 3 | **A1** `Notice`, then **B3** text field and **B4** select. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
 | 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList`, **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
 | 5 | Opportunistic: **A5**, **A8**, the browser scripts (group C); fix D2 and D3 when in those files | as convenient | Small gains; do them when passing |
@@ -222,3 +222,27 @@ pwsh -NoProfile -File agents/scripts/Css-Snapshot.ps1 -Mode Report -Baseline "$s
 # a convention baseline, only when a raw tag is left somewhere; B1 needed none (CV14 is 0 everywhere)
 $env:HUDDLE_WRITE_BASELINES = '1'; pwsh agents/scripts/Run-Tests.ps1 -FilterClass '*UiConventionTests'; Remove-Item Env:HUDDLE_WRITE_BASELINES
 ```
+
+## Lessons from the area migrations
+
+Wave 2's four migration owners ran at once, one git worktree and one branch each, and the manager
+merged the four branches into the working branch. What made it cheap, and what to repeat:
+
+- **The baseline file is the work list.** Each owner read its area's `CV15|path|count` lines,
+  moved what it could and regenerated the baseline. A site left raw stays in the file with its
+  reason in the owner's report, so nothing is lost and nothing is silently skipped.
+- **Create the worktrees from the working branch tip**, not from main, one per owner
+  (`git worktree add -b mig/<name> <path> HEAD`). An owner commits on its own branch and never
+  pushes; the manager merges. Four branches merged with no conflicts, because areas hold different
+  files and different baseline files.
+- **Leave a site raw rather than bend the component.** Five of 141 tags were not role buttons (an
+  answer tile, an option card, a tree row, a recoloured add button). Owners reported them with the
+  reason, which is the input for the next component, not a failure.
+- **Run whole test projects, not several `--filter-class` values.** `dotnet test` rejects more than
+  one filter-class argument, and `Run-Tests.ps1 -FilterClass` matched nothing for a pattern with a
+  middle `*`. One pattern per call, or the whole project, worked.
+- **Proof is one comparison, after the merge.** A pure migration should move nothing, so a single
+  snapshot of the commit before the migrations against the commit after them replaces four
+  per-owner captures.
+- **Merge main between waves, not during one.** Merging while owners worked would have invalidated
+  their baselines; main was merged only when no owner had uncommitted edits.
