@@ -216,6 +216,29 @@ filled once set; with `NoMenu` it is the same pill for a choice made elsewhere. 
 wrapping cloud of toggle chips with a "Show all" button past `Cap`. A raw `<MudChip` anywhere
 else fails the convention scan.
 
+### Chip radio group
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `ChipRadioGroup<T>` | `Components/Shared/ChipRadioGroup.razor` | 2 (2 files): the Feed panel's Categories (`NotificationsPanel`), the search scopes (`SearchBar`) | `Items` (required, in order), `Value`, `ValueChanged`, `Label` (required: the group's `aria-label`), `ItemLabel` (required: a chip's words), `ItemCount` (an optional count after the words, `null` for none), `Class` |
+
+One choice out of a few, drawn as `Chip Look=Filter` chips in a `role="radiogroup"`; each chip
+is a `role="radio"` with `aria-checked`, so the choice reads as state, never colour alone. One
+wrapping row, 4 px between chips and 8 px in from the group's edge, at both sites. The component
+owns the one keyboard behaviour (`Q-A5-1`): a roving tabindex, so only the chosen chip is a tab
+stop, and a plain arrow on the group moves the choice (Right and Down forward, Left and Up back,
+wrapping at the ends) and focuses the chosen chip. An arrow with Ctrl, Alt or Meta is left alone.
+Built in wave 5 (A5, 2026-11-18); convention rule CV25 counts a single-select `MudChipSet`
+anywhere but `ChipRadioGroup.razor`, and is zero everywhere. A hand-built `role="radiogroup"` of
+cards or swatches (the [Avatar editor](#avatar-editor)) is not a chip group and is not counted.
+
+**Behaviour changes.** `behaviour`: the search scopes become one tab stop with a roving tabindex,
+and a plain arrow on a focused scope chip now moves the scope; the search box keeps Ctrl+Left and
+Ctrl+Right (`search.js`), which stop at the ends, because the plain arrows belong to the box and
+focus stays there. `behaviour`: the Feed chips gain the roving tabindex (they were each a tab stop);
+its arrows and wrap are unchanged. `markup only`: a search chip's words come from a label
+function, not the enum's `ToString()`, and sit in a `span` as the Feed's do.
+
 ### Status chips on feed and board items
 
 ![Two Feed cards with an avatar, the sentence, a state chip such as Assigned to you and Waiting for you, and the age with an unread dot](../images/components/feed-cards.png)
@@ -582,6 +605,29 @@ built-in icon or activator is the ⋮ glyph (`MoreVert` or `ActionIcons.MoreActi
 | Shared | 3 | 1 | `FeedItemRow` (a dismiss inside a classed tooltip), `AgentProfileCard` (the menu's button holds an `@ref` for focus), `Chip` (its clear button) |
 | Shell | 2 | 0 | `ActivityBar` (the 40 px tile), `NeedsYouList` (a dismiss inside a classed tooltip) |
 | Tasks | 2 | 2 | `TaskActionsMenu` (binds `Open`), `TaskDecisionCard` (other decisions, not a row menu: stays raw) |
+
+### Busy label
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `BusyLabel` | `Components/Shared/BusyLabel.razor` | 6 (6 files): `SearchBar` ("Searching"), `ProfilePopover` ("Loading profile"), `LibraryTree` ("Loading"), `InlineConfirm` ("Working"), and two decorative ones, `AiReactingChip` and `MessageList` | `Label` (what is running; omit when the container already says it), `Class` (layout and hooks only) |
+
+The one standalone spinner: a 24 px indeterminate `MudProgressCircular` for work that no button
+owns. With a `Label` it is a `role="status"` span whose visually hidden words are the label, the
+spinner itself `aria-hidden`; without one the whole span is `aria-hidden` decoration, for a spot
+whose container names the state (the "Agent working" chip, a tool call's labelled status mark). A
+button never holds a `BusyLabel` (`Q-A8-1`): it sets `ActionButton`'s `Busy`, which disables it,
+hides its start icon and draws the button's own spinner, and its label says the "…ing" word. Built
+in wave 5 (A8, 2026-11-18); convention rule CV24 counts a raw `MudProgressCircular` anywhere but
+`BusyLabel.razor` and `ActionButton.razor`, and is zero everywhere.
+
+**What changed.** `visual`: the two Skills Reload buttons (`PackBar`, `SkillsTab`) no longer draw a
+spinner with `mr-2` beside the Refresh icon; they set `Busy`, so the icon goes, the button's own
+spinner shows and the label reads "Reloading…". `markup only`: the search group's spinner and the
+profile popover's are named by a `role="status"` region instead of an `aria-label` on the
+progressbar; the Library tree's labelled wrapper span is the `BusyLabel` itself
+(`library-tree-loading` kept); the inline confirm's busy spinner is now named "Working"; the chip
+and transcript spinners are hidden from assistive technology, since their containers name them.
 
 ### Settings intro and stored-at line
 
@@ -965,17 +1011,8 @@ component.** The names are working names, and none carries a prefix (D4, ruled).
 Counts were measured at `3b592c70`. Sizes (S, M, L) are estimates, not measurements. When one
 ships, move its row to the entry for the new component and delete it here.
 
-### Hand-built shapes
-
-| # | Planned component | Reuse cases | What it fixes | Size | Status |
-| --- | --- | --- | --- | --- | --- |
-| A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
-| A8 | **BusyLabel**: a small spinner beside text | 9 `MudProgressCircular` sites in 9 files | One line each, so the gain is consistency (`mr-2`, `aria-label`) rather than size | S | Planned |
-
-### Standard controls to wrap
-
-| # | Planned component | Reuse cases | Evidence | Size | Status |
-| --- | --- | --- | --- | --- | --- |
+No planned components remain: the last two, A5 and A8, shipped in wave 5 as
+[`ChipRadioGroup`](#chip-radio-group) and [`BusyLabel`](#busy-label).
 
 ### Browser scripts
 
@@ -992,7 +1029,7 @@ ships, move its row to the entry for the new component and delete it here.
 | --- | --- | --- |
 | D1 | A convention rule per wrapper that bans the raw Mud tag, as CV13 does for chips. **Checked 2026-11-18: it can allow what exists and block what is new.** The convention test holds each file to a per-file baseline that may only shrink (see [ComponentRollout.md](ComponentRollout.md#the-guard-that-stops-backsliding)) | The pattern exists: `Chip` plus CV13, whose baseline is empty because every chip has moved |
 | D2 | Conflicting `.task-toolbar-kind` rules in `task-form.css` and `tasks.css`. **Done in B1, 2026-11-18**: the geometry and icon rules in both went to `SegmentedControl`; `tasks.css` keeps only the toolbar's layout (`flex: none` and the 5 rem item floor), `task-form.css` none | Padding 2px against 1px, indicator inset 2px against 1px, and the icon size set in both. Which one wins is not checked |
-| D3 | A dead CSS hook, `needs-you-level-choice` | The class is on `NeedsYouLevelControl` and has no rules anywhere |
+| D3 | A dead CSS hook, `needs-you-level-choice`. **Done in wave 5, 2026-11-18**: the class is gone; `NeedsYouLevelControlTests` find the segments by `.needs-you-level .segmented-group` instead | The class is on `NeedsYouLevelControl` and has no rules anywhere |
 | D4 | One naming convention for the wrappers. **Ruled 2026-11-18: no prefix**, named for what it is (`Notice`, `SegmentedControl`, `DialogFooter`); a name that would clash with HTML or MudBlazor gets a sharper word (`ActionButton`). **Done in B1, 2026-11-18**: `HuddleSegmentedControl` is now `SegmentedControl`, its classes lost the `huddle-` prefix | `HuddleSegmentedControl` has a prefix; `Chip`, `EmptyState` and `SearchField` do not |
 | D5 | Text fields with neither `Label` nor `aria-label`. **Done in B3, 2026-11-18**: `TextField` and `SelectField` throw on a render with no name, and the four nameless sites got one (the fifth, the global search, was named by its attributes) | 5 of 62 at `3b592c70` |
 
@@ -1011,60 +1048,7 @@ are the overrides to check. `agents/scripts/Css-Snapshot.ps1 -Mode Capture` reco
 in all 8 Theme and mode pairs at 1280 and 768 px; `-Mode Report` with a `-Declared` file of the
 intended changes then lists anything else that moved.
 
-
-#### A5 ChipRadioGroup
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Feed categories | `Feed/NotificationsPanel.razor:22-40` | Group label "Category"; a count after Needs you; gap 4 px, padding 8 px (`NotificationsPanel.razor.css:2`); arrows move the choice (`:167`) |
-| Search scopes | `Search/SearchBar.razor:41-56` | Group label "Filter"; label text is the enum name (`filter.ToString()`); gap 4 px, padding 8 px (`gap-1 pa-2`); only Ctrl with an arrow moves it (`search.js:48`), because focus stays in the box |
-
-Both draw `Chip Look=Filter`, 28 px, so the chips match; not measured, the dropdown and panel were
-not opened.
-
-**Which is right.** design-system.md Chips: the Filter look; selection reads as text and state,
-never colour alone. No rule decides the keys.
-
-**Fix:**
-
-1. `ChipRadioGroup` takes the items, a label function and an optional count. `markup only`
-2. Search labels come from a label function, not `ToString()`. `markup only`
-
-**How to prove.** Read `role="radio"` and `aria-checked` on both after a change of choice.
-
-**Open questions for the owner:**
-
-- `Q-A5-1` Do plain arrows move the choice in both? Recommended: yes in the Feed; the search keeps
-  Ctrl because the arrows belong to the text box.
-
-
-#### A8 BusyLabel
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Spinner in a button | `PackBar.razor:29`, `SkillsTab.razor:48`, `AgentProfileCard.razor:665` | 24 px spinner and `mr-2` inside a 28 px button; Reload keeps its `Refresh` start icon too, so icon, spinner and text show at once |
-| Label only | `BuildTeam.razor:472`, `Chat.razor:223`, `ElicitationCard.razor:201`, `QuestionCard.razor:108` | "Saving…", "Continuing…", "Sending…", no spinner |
-| Spinner beside text | `SearchBar.razor:76` (`ml-2`, "Searching"), `ProfilePopover.razor:36` ("Loading profile") | Own `aria-label` |
-| Bare spinner | `InlineConfirm.razor:19`, `AiReactingChip.razor:19`, `LibraryTree.razor:106`, `MessageList.razor:187` | No label on the spinner; the tree and the transcript label a wrapper `span` |
-
-All nine are `Size.Small`, 24 px (MudBlazor 9.12.0). Not measured: a busy state needs a slow action.
-
-**Which is right.** design-system.md Dialog anatomy: "a busy label ('Saving…') or a spinner". No
-rule picks one.
-
-**Fix:**
-
-1. `BusyLabel` takes the busy text and hides the start icon while busy. `visual`
-2. The three button sites drop `mr-2` for the component's gap. `visual`
-3. Bare spinners get an `aria-label`. `markup only`
-
-**How to prove.** Reload Skills and read the button's children while it runs.
-
-**Open questions for the owner:**
-
-- `Q-A8-1` In a button, spinner or "…ing" text? Recommended: the text ("Reloading…") with no
-  spinner, as four sites already do; a spinner only where there is no button.
-
+No planned component is left, so no subsection remains: A5 and A8 went with their rows in wave 5.
 
 ### Suggested order
 
@@ -1096,7 +1080,8 @@ The order:
 4. **A1 (`Notice`), then B3 (text field) and B4 (select).**
 5. **The composites that contain them:** A4 (the picker, which contains selects), A7 (`SettingSwitch`),
    A6 (`PropertyList`) and A3 (`RowActionsMenu`, with B5, the icon button, built as its first user).
-6. **Opportunistic:** A5, A8 and group C. Fix D2 and D3 when working in those files.
+6. **Opportunistic:** A5, A8 and group C. Fix D2 and D3 when working in those files. **A5 and A8
+   built 2026-11-18** as [`ChipRadioGroup`](#chip-radio-group) and [`BusyLabel`](#busy-label), with D3.
 
 Prove each visual change with `agents/scripts/Css-Snapshot.ps1` before and after, because four
 themes restyle shared controls from outside them.

@@ -42,13 +42,7 @@
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
         <ActionButton Role="ButtonRole.Secondary" Class="skills-reload-button" StartIcon="@Icons.Material.Filled.Refresh"
-                      Disabled="@this.reloading" OnClick="this.ReloadAsync">
-            @if (this.reloading)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-            }
-            Reload
-        </ActionButton>
+                      Busy="@this.reloading" OnClick="this.ReloadAsync">@(this.reloading ? "Reloading…" : "Reload")</ActionButton>
     </MudTooltip>
 </div>
 

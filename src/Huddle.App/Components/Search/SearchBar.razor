@@ -35,23 +35,8 @@
          class="visually-hidden">@(this.open ? this.view.Announcement : null)</div>
     <MudPopover Open="@this.open" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter">
         <div class="search-dropdown" @onmousedown:preventDefault="true">
-            <div role="radiogroup" aria-label="Filter" class="d-flex flex-wrap gap-1 pa-2">
-                <MudChipSet T="SearchFilter"
-                            SelectionMode="SelectionMode.SingleSelection"
-                            SelectedValue="@this.chip"
-                            SelectedValueChanged="this.OnChipChangedAsync">
-                    @foreach (SearchFilter filter in ChipOrder)
-                    {
-                        <Chip T="SearchFilter"
-                              Look="ChipLook.Filter"
-                              Value="@filter"
-                              Text="@filter.ToString()"
-                              IsSet="@(filter == this.chip)"
-                              role="radio"
-                              aria-checked="@(filter == this.chip ? "true" : "false")" />
-                    }
-                </MudChipSet>
-            </div>
+            <ChipRadioGroup T="SearchFilter" Items="ChipOrder" Value="@this.chip" ValueChanged="this.OnChipChangedAsync" Label="Filter"
+                            ItemLabel="SearchBar.ChipLabel" />
             @if (this.view.Header is { } header)
             {
                 <MudText Typo="Typo.caption" Class="search-header px-3 py-1">@header</MudText>
@@ -70,7 +55,7 @@
                                 @group.Heading.Text
                                 @if (group.Heading.IsSearching)
                                 {
-                                    <MudProgressCircular Indeterminate="true" Size="Size.Small" Class="ml-2" aria-label="Searching" />
+                                    <BusyLabel Label="Searching" Class="ml-2" />
                                 }
                             </div>
                             @foreach (SearchDropdownRow item in group.Items)
@@ -276,6 +261,18 @@
         int target = Math.Clamp(Array.IndexOf(ChipOrder, this.chip) + Math.Sign(step), 0, ChipOrder.Length - 1);
         return this.SelectChipAsync(target + 1);
     }
+
+    /// <summary>A scope chip's words: the filter's own name, which is already the word spec §6.2 shows (All, Teams, Agents, Library, Tasks, Rooms).</summary>
+    private static string ChipLabel(SearchFilter filter) => filter switch
+    {
+        SearchFilter.All => "All",
+        SearchFilter.Teams => "Teams",
+        SearchFilter.Agents => "Agents",
+        SearchFilter.Library => "Library",
+        SearchFilter.Tasks => "Tasks",
+        SearchFilter.Rooms => "Rooms",
+        _ => filter.ToString(),
+    };
 
     private async Task RestoreFocusAsync()
     {

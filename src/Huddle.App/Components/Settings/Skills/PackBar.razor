@@ -23,13 +23,7 @@
         <ActionButton Role="ButtonRole.Secondary" Class="pack-bar-updates" OnClick="this.OnCheckForUpdates">Check for updates</ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
-        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Refresh" Class="pack-bar-reload" Disabled="@this.reloading" OnClick="this.ReloadAsync">
-            @if (this.reloading)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-            }
-            Reload
-        </ActionButton>
+        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Refresh" Class="pack-bar-reload" Busy="@this.reloading" OnClick="this.ReloadAsync">@(this.reloading ? "Reloading…" : "Reload")</ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
         <SettingSwitch Value="@this.ShowHidden" ValueChanged="this.ShowHiddenChanged" Label="Show hidden" Class="pack-bar-show-hidden" />

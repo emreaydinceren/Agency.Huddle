@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV23</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV25</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -59,6 +59,8 @@ internal static partial class UiConventionScanner
         "CV23" => Cv23(path, text),
         "CV21" => Cv21(path, text),
         "CV22" => Cv22(path, text),
+        "CV24" => Cv24(path, text),
+        "CV25" => Cv25(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -209,6 +211,34 @@ internal static partial class UiConventionScanner
 
         return new("CV22", path, count);
     }
+
+    /// <summary>
+    /// CV24: a raw <c>&lt;MudProgressCircular&gt;</c> in a component other than <c>BusyLabel.razor</c> and <c>ActionButton.razor</c>. Work
+    /// no button owns shows the one <c>BusyLabel</c>, a 24 px spinner that is a named <c>role="status"</c> or plain decoration; a button
+    /// shows its own busy state through <c>ActionButton</c>'s <c>Busy</c>, whose spinner is the other allowed tag (ComponentCatalog
+    /// BusyLabel). A <c>MudProgressLinear</c> is a different tag and is not counted. Zero-tolerance: every spinner had moved when the rule
+    /// was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv24(string path, string text) =>
+        new("CV24", path, path.EndsWith("/BusyLabel.razor", StringComparison.Ordinal) || path.EndsWith("/ActionButton.razor", StringComparison.Ordinal)
+            ? 0
+            : CountTags(text, ["MudProgressCircular"], static _ => true));
+
+    /// <summary>
+    /// CV25: a single-select <c>&lt;MudChipSet&gt;</c> (one whose attributes name <c>SelectionMode.SingleSelection</c>) in a component other
+    /// than <c>ChipRadioGroup.razor</c>. One choice out of a few drawn as chips is the one <c>ChipRadioGroup</c>, which writes the
+    /// <c>radiogroup</c> and <c>radio</c> roles and owns the arrow keys (ComponentCatalog ChipRadioGroup). A chip set that closes or
+    /// multi-selects chips, and a hand-built <c>role="radiogroup"</c> of cards or swatches, are not chip radio groups and are not counted.
+    /// Zero-tolerance: both groups had moved when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv25(string path, string text) =>
+        new("CV25", path, path.EndsWith("/ChipRadioGroup.razor", StringComparison.Ordinal)
+            ? 0
+            : CountTags(text, ["MudChipSet"], static attrs => attrs.Contains("SelectionMode.SingleSelection", StringComparison.Ordinal)));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
