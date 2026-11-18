@@ -616,19 +616,22 @@ An App Tool cannot tell which session called it (T-13); it can tell which Room, 
 
 The prompt and tool list are clean on every Adapter. On disk, a goldfish could still read its own Memory, the Teams'
 `memory/` folders and the Room Transcripts with the Adapter's file tools. O-2's recommendation: on a Claude Adapter, add a
-goldfish deny list to the session's `permissions` key, beside the ask rules (`DotAcpAgentHostFactory.cs:713-731`):
+goldfish deny list to the session's `permissions` key, beside the ask rules (`DotAcpAgentHostFactory.cs:713-731`).
+Settled by spike S-1 (2026-11-17, Claude Code 2.1.326): an absolute path is written with a leading `//` and forward
+slashes (`Read(//e/huddle/data/rooms/**)`; a single leading `/` is project-relative and matches nothing), and `Grep` and
+`Glob` honour a `Read` deny, so one `Read` rule per folder is enough:
 
 | Rule | Denies |
 | --- | --- |
-| `Read({WorkDir}/memory/**)` | The Agent's own Memory (T-15) |
-| `Read({TeamsRoot}/**/memory/**)` | Team, Project and Huddle-wide Memory |
-| `Read({DataDir}/rooms/**)` | Room Transcripts (ADR-0002) |
-| The same three for `Grep` and `Glob` | Searching instead of reading |
+| `Read(//{WorkDir}/memory/**)` | The Agent's own Memory (T-15) |
+| `Read(//{memory folder}/**)`, one per existing Team, Project and Huddle-wide `memory/` folder | Team, Project and Huddle-wide Memory. Listed folder by folder: a `**` in the middle of a path was not measured |
+| `Read(//{DataDir}/rooms/**)` | Room Transcripts (ADR-0002) |
 
-The exact rule syntax for an absolute path is **not measured**; spike S-1 (§14) settles it before slice 2. A `permissions`
-key replaces any other, so the deny list is added to the same dictionary the ask rules are in, never beside it (the rule
-in [rules.md](engineering/rules.md), connectors row). `Bash` (`cat memory/...`) is not stopped by a `Read` rule; this is an
-accepted limit (§10, E-9), as EGM's own reviewers can read any file on disk.
+`{…}` is the real path with forward slashes and no colon (`E:\Huddle\Data` becomes `e/Huddle/Data`). A test pins the
+exact strings. Paths with spaces were not measured. A `permissions` key replaces any other, so the deny list is added to
+the same dictionary the ask rules are in, never beside it (the rule in [rules.md](engineering/rules.md), connectors row).
+A `Read` deny also stops a plain `cat`, but not a script that opens the file (`python -c`); this is an accepted limit
+(§10, E-9), as EGM's own reviewers can read any file on disk.
 
 ### 8.5 What stays off and why
 
