@@ -5,8 +5,8 @@ namespace Agency.Huddle.App.Teams;
 /// <summary>
 /// Start-up step (#669, spec D-5): offers the Human a rewrite of an installed Team's <c>AGENTS.md</c> that still describes the Review
 /// stage, as pending retro proposals from <c>Huddle</c> (the existing card with a diff and Accept, ADR-0041). It matches only the
-/// exact wording in <see cref="OutdatedReviewWording"/> that occurs once in the file, offers it once per Team (the marker file
-/// <c>review-tasks.proposed</c> in the Team folder, kept after a Reject), and never writes <c>AGENTS.md</c> itself. A failure for one
+/// exact wording in <see cref="OutdatedReviewWording"/> that occurs once in the file, checks each Team once (the marker file
+/// <c>review-tasks.checked</c> in the Team folder, kept after a Reject; the older name <c>review-tasks.proposed</c> counts as checked too), and never writes <c>AGENTS.md</c> itself. A failure for one
 /// Team is logged and never stops the host.
 /// </summary>
 /// <param name="catalog">Lists the Teams.</param>
@@ -15,8 +15,11 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="logger">Receives a Team that could not be handled.</param>
 internal sealed class ReviewStageMigration(ITeamCatalog catalog, ITeamFolders folders, RetroProposalStore proposals, ILogger<ReviewStageMigration> logger) : IHostedService
 {
-    /// <summary>The file, in a Team folder, that records the offer was made.</summary>
-    internal const string MarkerName = "review-tasks.proposed";
+    /// <summary>The file, in a Team folder, that records the Team was checked once; its text says whether a rewrite was offered.</summary>
+    internal const string MarkerName = "review-tasks.checked";
+
+    /// <summary>The name earlier versions wrote for the same record, whether or not anything was offered; a Team holding it is already checked.</summary>
+    internal const string LegacyMarkerName = "review-tasks.proposed";
 
     /// <summary>The proposer the retro cards show.</summary>
     internal const string Proposer = "Huddle";
@@ -61,7 +64,7 @@ internal sealed class ReviewStageMigration(ITeamCatalog catalog, ITeamFolders fo
 
         string marker = Path.Combine(folder.FullPath, MarkerName);
         string agentsMd = Path.Combine(folder.FullPath, TeamPaths.AgentsMdFileName);
-        if (File.Exists(marker) || !File.Exists(agentsMd))
+        if (File.Exists(marker) || File.Exists(Path.Combine(folder.FullPath, LegacyMarkerName)) || !File.Exists(agentsMd))
         {
             return;
         }
@@ -75,7 +78,10 @@ internal sealed class ReviewStageMigration(ITeamCatalog catalog, ITeamFolders fo
             return;
         }
 
-        AtomicFile.WriteText(marker, "The Review-stage rewrite was offered to this Team once (#669); delete this file to offer it again.");
+        string record = found.Count > 0
+            ? "This Team was checked for Review-stage wording once and a rewrite was offered (#669); delete this file to check it again."
+            : "This Team was checked for Review-stage wording once and nothing was offered (#669); delete this file to check it again.";
+        AtomicFile.WriteText(marker, record);
     }
 
     private bool Store(string team, List<RetroChange> found)

@@ -1520,7 +1520,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     }
 
     /// <summary>The line a review or verify Task's assignee gets on every wake: the outcome is recorded on the Task, not in chat (D-9).</summary>
-    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it.";
+    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. When the owner comments that the work is ready again, review it again on this Task.";
 
     /// <summary>The line a release (ADR-0088) adds to the wake: the merge needs no Accept, a push still does.</summary>
     /// <param name="latest">The Task's latest state.</param>
