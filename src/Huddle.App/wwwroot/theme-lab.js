@@ -43,11 +43,6 @@ export function reset() {
     setNames = new Set();
 }
 
-/** Copies text to the clipboard. */
-export async function copy(text) {
-    await navigator.clipboard.writeText(text);
-}
-
 /**
  * Which --hu-* and --ink-* tokens an element's computed style reads: every stylesheet rule whose selector matches the element and
  * whose declarations use var(--hu-*) or var(--ink-*). Returns [{ property, tokens, selector }].

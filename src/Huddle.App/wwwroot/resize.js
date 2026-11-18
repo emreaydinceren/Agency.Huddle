@@ -2,6 +2,7 @@
 // reachable from outside, and module state (handlers, flags) stays private to it.
 
 import * as storage from "./storage.js";
+import { arrowStep, startDrag } from "./pointer-drag.js";
 
 const resize = {
   // Drag-to-resize for the left drawer's Sidebar (the Activity bar is fixed). MudBlazor's layout reads the drawer's
@@ -38,55 +39,42 @@ const resize = {
       commit(stored);
     }
 
+    // Arrow keys step by 16px (Shift: 64px) through the shared arrowStep; Home and End jump to the bounds.
     handle.addEventListener("keydown", (e) => {
-      const step = e.shiftKey ? 64 : 16;
       let next;
       switch (e.key) {
-        case "ArrowRight": next = currentWidth() + (dir * step); break;
-        case "ArrowLeft": next = currentWidth() - (dir * step); break;
         case "Home": next = minPx; break;
         case "End": next = maxPx; break;
-        default: return;
+        default: {
+          const delta = arrowStep(e, 16, 64);
+          if (delta === 0) {
+            return;
+          }
+          next = currentWidth() + (dir * delta);
+        }
       }
       e.preventDefault();
       commit(next);
     });
 
-    let dragging = false;
-    let startX = 0;
-    let startWidth = 0;
-    let lastWidth = 0;
-
+    // The drag itself is the shared startDrag; the page's CSS zoom, read on every move, turns pointer pixels into
+    // CSS pixels.
+    const zoom = () => parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
     handle.addEventListener("pointerdown", (e) => {
-      dragging = true;
-      startX = e.clientX;
-      startWidth = currentWidth();
-      lastWidth = startWidth;
-      handle.setPointerCapture(e.pointerId);
+      const startWidth = currentWidth();
+      let lastWidth = startWidth;
       document.body.classList.add("sidebar-resizing");
-      e.preventDefault();
+      startDrag(handle, e, {
+        scale: zoom,
+        onMove: (delta) => {
+          lastWidth = apply(startWidth + (dir * delta));
+        },
+        onEnd: () => {
+          document.body.classList.remove("sidebar-resizing");
+          commit(lastWidth);
+        },
+      });
     });
-
-    handle.addEventListener("pointermove", (e) => {
-      if (!dragging) {
-        return;
-      }
-      const zoom = parseFloat(getComputedStyle(document.documentElement).zoom) || 1;
-      lastWidth = apply(startWidth + (dir * (e.clientX - startX) / zoom));
-    });
-
-    const endDrag = (e) => {
-      if (!dragging) {
-        return;
-      }
-      dragging = false;
-      handle.releasePointerCapture(e.pointerId);
-      document.body.classList.remove("sidebar-resizing");
-      commit(lastWidth);
-    };
-
-    handle.addEventListener("pointerup", endDrag);
-    handle.addEventListener("pointercancel", endDrag);
   },
 };
 

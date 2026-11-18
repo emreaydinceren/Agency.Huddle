@@ -238,20 +238,40 @@ public sealed class ThemeLabTests : IDisposable
         Assert.NotEmpty(cut.FindAll("[data-token-key='ground.page'] .mud-input-helper-text.mud-input-error"));
     }
 
-    /// <summary>Export JSON copies the differing keys to the clipboard through the page script.</summary>
+    /// <summary>
+    /// Export JSON copies the differing keys through the app's one clipboard helper (<c>copy</c> in
+    /// <c>clipboard.js</c>, which has the non-secure-context fallback), not a copy of its own in the page script.
+    /// </summary>
     [Fact]
-    public async Task Export_CopiesTheJsonToTheClipboard()
+    public async Task Export_CopiesTheJsonThroughTheSharedClipboardHelper()
     {
         await using MudBunitContext ctx = this.NewContext("Development");
         BunitJSModuleInterop module = SetupModule(ctx);
+        BunitJSModuleInterop clipboard = SetupClipboard(ctx, accepted: true);
         IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
         await cut.InvokeAsync(() => cut.Find("[data-token-key='ground.page'] input").InputAsync("#abcdef"));
 
         await cut.InvokeAsync(() => cut.Find("#theme-lab-export").ClickAsync());
 
-        JSRuntimeInvocation call = Assert.Single(module.Invocations["copy"]);
+        JSRuntimeInvocation call = Assert.Single(clipboard.Invocations["copy"]);
+        Assert.Empty(module.Invocations["copy"]);
+        Assert.Equal("Copied to the clipboard.", cut.Find(".theme-lab-status").TextContent);
         using JsonDocument copied = JsonDocument.Parse(Assert.IsType<string>(call.Arguments[0]));
         Assert.Equal("#abcdef", copied.RootElement.GetProperty("tokens").GetProperty("ground.page").GetString());
+    }
+
+    /// <summary>When the browser refuses the clipboard, the lab says nothing was copied instead of claiming it was.</summary>
+    [Fact]
+    public async Task Export_ClipboardRefused_SaysNothingWasCopied()
+    {
+        await using MudBunitContext ctx = this.NewContext("Development");
+        SetupModule(ctx);
+        SetupClipboard(ctx, accepted: false);
+        IRenderedComponent<ContainerFragment> cut = RenderLab(ctx);
+
+        await cut.InvokeAsync(() => cut.Find("#theme-lab-export").ClickAsync());
+
+        Assert.Equal("The browser refused the clipboard; nothing was copied.", cut.Find(".theme-lab-status").TextContent);
     }
 
     /// <summary>The Inspect toggle switches the page script's hover inspection on, and leaving the page resets the preview.</summary>
@@ -283,7 +303,7 @@ public sealed class ThemeLabTests : IDisposable
     {
         List<string> calls = seen ?? [];
         BunitJSModuleInterop module = ctx.JSInterop.SetupModule(ModulePath);
-        foreach (string name in new[] { "apply", "reset", "copy", "inspect" })
+        foreach (string name in new[] { "apply", "reset", "inspect" })
         {
             // Complete each call: a planned invocation without SetVoidResult stays pending, and the lab's awaits then held
             // these tests for 20-30 s each.
@@ -295,6 +315,17 @@ public sealed class ThemeLabTests : IDisposable
         }
 
         return module;
+    }
+
+    /// <summary>Sets up the app's clipboard module, whose <c>copy</c> answers <paramref name="accepted"/>.</summary>
+    /// <param name="ctx">The test context.</param>
+    /// <param name="accepted">Whether the browser accepts the copy.</param>
+    /// <returns>The clipboard module, whose invocations the test reads.</returns>
+    private static BunitJSModuleInterop SetupClipboard(MudBunitContext ctx, bool accepted)
+    {
+        BunitJSModuleInterop clipboard = ctx.JSInterop.SetupModule("./clipboard.js");
+        clipboard.Setup<bool>("copy", static _ => true).SetResult(accepted);
+        return clipboard;
     }
 
     private static IRenderedComponent<ContainerFragment> RenderLab(MudBunitContext ctx) =>

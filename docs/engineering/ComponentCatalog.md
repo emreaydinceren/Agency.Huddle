@@ -924,15 +924,15 @@ included, so read them as a ranking rather than an exact number of call sites.
 | `ConfirmAsync` | 20 | A destructive confirmation through `ConfirmDialog` |
 | `ActionIcons` | 23 | The icon for each recurring action |
 | `TaskColors` | 14 | A Task's state, priority or presence colour and icon |
-| `ClipboardCopier` | 10 | The one call to the clipboard, with a snackbar |
+| `ClipboardCopier` | 11 | The one call to the clipboard, with a snackbar |
 | `TaskClipboard` | 8 | Copying a Task's id or link, wording only |
 | `ServerNavigator` | 5 | Navigating from a handler a server event started |
 | `StatusColors` | 5 | A colour for a Needs You reason or a search notice |
 | `RoomLinkCopier` | 2 | Copying a Room's link, wording only |
 
 Browser code is an `export` in a `wwwroot/` module reached through `JsModule`, never a `window.*`
-global. The app's own scripts total about 2,350 lines (the vendored `lib/` bundles are not
-counted).
+global. The app's own scripts total about 2,370 lines (the vendored `lib/` bundles are not
+counted). A module may also import another one: `pointer-drag.js` is reached only that way.
 
 | Module | Lines | What it does |
 | --- | --- | --- |
@@ -940,20 +940,21 @@ counted).
 | `library-editor.js` | 309 | The CodeMirror Markdown editor and its commands |
 | `auth.js`, `auth-core.js` | 311, 44 | The gateway sign-in page and its crypto helpers |
 | `markdown-commands.js` | 216 | The pure text plans behind each toolbar command |
-| `task-list-resize.js` | 179 | Drag and keyboard resize of Task list columns |
-| `theme-lab.js` | 151 | The Theme Lab inspector |
+| `task-list-resize.js` | 175 | Drag and keyboard resize of Task list columns, through `pointer-drag.js` |
+| `theme-lab.js` | 146 | The Theme Lab inspector; its Export copies through `clipboard.js` |
 | `markdown-textarea.js` | 132 | The Markdown toolbar on a Task's Description textarea |
-| `resize.js` | 93 | Drag and keyboard resize of the left and right drawers |
+| `resize.js` | 81 | Drag and keyboard resize of the left and right drawers, through `pointer-drag.js` |
 | `search.js` | 89 | Global search keys (`Ctrl+K` and `/`) |
 | `markdown-toolbar.js` | 88 | The toolbar's click, roving focus and keyboard behaviour, shared by the two editors above |
 | `sidebar.js` | 85 | Remembers which Right sidebar panels are collapsed |
 | `emoji-picker.js` | 78 | The avatar editor's emoji picker |
 | `scroll.js` | 43 | Scroll a Message into view |
 | `tabs.js` | 40 | Tab shortcuts (`Alt` based) |
+| `pointer-drag.js` | 41 | The one pointer drag (capture, move, release) and arrow-key step, imported by the two resize modules |
 | `feed.js` | 37 | The Feed list's scroll awareness |
 | `library-document.js` | 35 | Refresh an open document when the page is visible again |
 | `avatar-library.js` | 22 | Escape handling in the avatar library search |
-| `clipboard.js` | 20 | `copy`, with a fallback for a non-secure context |
+| `clipboard.js` | 20 | The one `copy`, with a fallback for a non-secure context |
 | `storage.js` | 9 | Guarded `localStorage` `get` and `set` |
 
 ## Patterns still built by hand
@@ -981,10 +982,27 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned change | Reuse cases | Evidence | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| C1 | One pointer-drag helper: capture, move, release, arrow-key step, commit to .NET | 2 modules: `resize.js` and `task-list-resize.js` | Both do the same drag and keyboard flow with different step sizes and zoom handling | S | Planned |
-| C2 | One roving-focus and arrow-key helper | Shared once in `markdown-toolbar.js`; written again in up to 6 places (`NotificationsPanel`, `ArchivedEntryList`, `MessageList`, `ReferencePicker`, `search.js`, `ActivityBar`) | A search for arrow keys and `tabindex`; each site was not read, so treat this as a lead | M | Planned |
-| C3 | One `copy` to the clipboard | 2: `clipboard.js` and `theme-lab.js` | `theme-lab.js` lacks the fallback for a non-secure context | S | Planned |
-| C4 | Shared guarded storage access | 2: `storage.js` and `auth.js` | `auth.js` also needs JSON and `sessionStorage`, so it may be right to keep apart | S | Planned |
+| C2 | One roving-focus and arrow-key helper | 2 of the 6 sites read alike (`ArchivedEntryList`, `NotificationsPanel`); the table below has all 6 | Read site by site in wave 5: the six use four different focus models, so one JS helper would fit none of them well | S | Decided: a small C# key-to-index step for the two list-like sites, after A5 lands |
+| C4 | Shared guarded storage access | 0: kept apart | `auth.js` runs on the signed-out `/auth` page, where only `auth.js`, `auth-core.js` and `auth.css` are served (`GatewayPaths.PublicFiles`), so importing `storage.js` would widen what a stranger can fetch. It also needs JSON values, `sessionStorage`, `removeItem` and a guard on reaching the store itself, none of which `storage.js` has | - | Decided: keep apart, no change |
+
+C1 (one pointer drag) and C3 (one `copy`) shipped in wave 5: `pointer-drag.js` holds the drag and
+the arrow-key step for `resize.js` and `task-list-resize.js`, each keeping its own step sizes,
+zoom or scale, Home and End and .NET callback; the Theme Lab's Export now copies through
+`ClipboardCopier` and says when the browser refuses.
+
+What each C2 site really does, read in wave 5:
+
+| Site | Keys | Focus and `tabindex` | Ends | Could share |
+| --- | --- | --- | --- | --- |
+| `ArchivedEntryList` | Up, Down, Home, End; Space selects | Roving `tabindex` (selected row, else first), `FocusAsync` on the new row | Clamps | Yes, with `NotificationsPanel` |
+| `NotificationsPanel` | Left, Right, Up, Down, as a `radiogroup` | Chips are `role="radio"`; focus follows the choice through `focusChecked` in `feed.js` | Wraps; no Home or End | Yes, but A5 (`ChipRadioGroup`) owns it first |
+| `ReferencePicker` | Up, Down from `composer.js`, sent to `Composer.MoveAsync` | Focus stays in the composer; the highlight is an index, not focus | Wraps | No: an active-descendant listbox |
+| `search.js` | `Ctrl`+Left or Right moves the scope chip, `Alt`+1 to 6 picks one | Focus stays in the search box; `SearchBar.MoveChipAsync` | Clamps | No: a global shortcut, not a focus move |
+| `MessageList` | None | Rows are `tabindex="-1"` only so `scroll.js` can focus a jumped-to Message | - | No: no arrow keys at all |
+| `ActivityBar` | None | A `role="toolbar"` whose buttons are each a Tab stop | - | Not today; it would if it gains toolbar arrows |
+
+Recommendation: no shared JS helper. When A5 lands, give `ArchivedEntryList` and the chip group
+one pure C# step (key, index, count, wrap or clamp, Home and End) and leave the other four alone.
 
 ### Rules and clean-up that come with them
 
