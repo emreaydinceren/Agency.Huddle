@@ -124,6 +124,7 @@ public static class ServiceCollectionExtensions
         });
         services.AddSingleton<Goldfish.IPossessionLookup>(static sp => sp.GetRequiredService<Goldfish.GoldfishSupervisor>());
         services.AddSingleton<Goldfish.GoldfishGuard>();
+        services.AddSingleton<Goldfish.GoldfishLive>();
         return services;
     }
 

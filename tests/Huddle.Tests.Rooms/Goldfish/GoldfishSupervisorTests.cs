@@ -379,6 +379,36 @@ public sealed class GoldfishSupervisorTests
         }
     }
 
+    /// <summary>The start row carries the possession id as its stamp, so the transcript can tell it from Huddle's other rows.</summary>
+    [Fact]
+    public async Task BeginAsync_StartRow_IsStampedWithThePossessionId()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+
+        Possession? row = await rig.Supervisor.BeginAsync(rig.Nova.Id, rig.Room.Id, null, "Look into it", ct);
+
+        Assert.NotNull(row);
+        ChatMessage start = Assert.Single(await rig.HuddleLinesAsync(ct));
+        Assert.Equal((GoldfishLine.StartRow("Nova", "Look into it"), row.Id), (start.Text, start.Goldfish));
+    }
+
+    /// <summary>The return row carries the possession id as its stamp and still Mentions the Agent, so the warm Agent is owed its Turn.</summary>
+    [Fact]
+    public async Task EndAsync_ReturnRow_IsStampedAndStillOwesTheAgentATurn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Queue.Subscribe(rig.Nova.Id);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+
+        _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, ct);
+
+        ChatMessage returnRow = (await rig.HuddleLinesAsync(ct))[1];
+        TurnQueueRowSnapshot owed = Assert.Single(TurnQueueRows.Read(rig.DataDir));
+        Assert.Equal(("p1", rig.Nova.Id, returnRow.Id), (returnRow.Goldfish, owed.AgentId, owed.MessageId));
+    }
+
     private sealed class Rig : IDisposable
     {
         private readonly TempDataDir dir;

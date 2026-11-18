@@ -237,9 +237,9 @@ public sealed class ChatServiceGoldfishTests
         Assert.Equal<string?>([null, null, null, null], [starting.Goldfish, elsewhere.Goldfish, peer.Goldfish, human.Goldfish]);
     }
 
-    /// <summary>The result Message is stamped with the explicit possession id, the return row after it is not.</summary>
+    /// <summary>The result Message and the return row after it are both stamped with the explicit possession id (slice 4, correction A1).</summary>
     [Fact]
-    public async Task EndAsync_ResultMessage_CarriesTheStampAndTheReturnRowDoesNot()
+    public async Task EndAsync_ResultMessageAndReturnRow_BothCarryTheStamp()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Rig rig = await Rig.CreateAsync(ct);
@@ -248,7 +248,7 @@ public sealed class ChatServiceGoldfishTests
         _ = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, ct);
 
         IReadOnlyList<ChatMessage> lines = await rig.HuddleLinesAsync(rig.Room.Id, ct);
-        Assert.Equal<string?>(["p1", null], [lines[0].Goldfish, lines[1].Goldfish]);
+        Assert.Equal<string?>(["p1", "p1"], [lines[0].Goldfish, lines[1].Goldfish]);
     }
 
     /// <summary>A Mention of a Waiting Agent in its possession's Room puts the possession back to Working.</summary>

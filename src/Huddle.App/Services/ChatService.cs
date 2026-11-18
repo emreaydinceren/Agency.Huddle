@@ -201,7 +201,8 @@ public sealed partial class ChatService
     /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
     /// <returns>The Message that was appended.</returns>
     /// <exception cref="ChatException">The Room does not exist, or <paramref name="text"/> is blank.</exception>
-    public async Task<ChatMessage> PostAsHuddleAsync(string roomId, string text, CancellationToken ct)
+    /// <param name="goldfish">The possession id to stamp the Message with, or <see langword="null"/>; the goldfish start and return rows pass it, and the Mentions still parse.</param>
+    public async Task<ChatMessage> PostAsHuddleAsync(string roomId, string text, CancellationToken ct, string? goldfish = null)
     {
         ArgumentNullException.ThrowIfNull(text);
 
@@ -210,7 +211,7 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, false, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, false, ct, goldfish).ConfigureAwait(false);
     }
 
     /// <summary>

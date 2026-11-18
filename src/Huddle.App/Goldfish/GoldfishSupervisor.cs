@@ -198,7 +198,7 @@ internal sealed class GoldfishSupervisor(
         {
             IReadOnlyList<User> members = await team.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
             string name = members.FirstOrDefault(member => string.Equals(member.Id, agentId, StringComparison.Ordinal))?.Name ?? agentId;
-            _ = await chat.PostAsHuddleQuietAsync(roomId, GoldfishLine.StartRow(name, brief), ct).ConfigureAwait(false);
+            _ = await chat.PostAsHuddleQuietAsync(roomId, GoldfishLine.StartRow(name, brief), ct, goldfish: row.Id).ConfigureAwait(false);
             await link.SendBeginAsync(agentId, new GoldfishBegin(row.Id, roomId, brief, taskId), ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -309,7 +309,7 @@ internal sealed class GoldfishSupervisor(
             TimeSpan elapsed = this.clock.GetUtcNow() - row.StartedAt;
             string? firstLine = result?.Text.Split('\n', 2)[0].Trim();
             string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null, result?.Findings.Count ?? 0, firstLine);
-            _ = await chat.PostAsHuddleAsync(row.RoomId, text, ct).ConfigureAwait(false);
+            _ = await chat.PostAsHuddleAsync(row.RoomId, text, ct, goldfish: row.Id).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -93,6 +93,7 @@ Singleton Agency.Huddle.App.FileChanges.FileChangeTracker -> Agency.Huddle.App.F
 Singleton Agency.Huddle.App.FileChanges.FileStateStore -> Agency.Huddle.App.FileChanges.FileStateStore
 Singleton Agency.Huddle.App.FileChanges.WatchedFolderResolver -> Agency.Huddle.App.FileChanges.WatchedFolderResolver
 Singleton Agency.Huddle.App.Goldfish.GoldfishGuard -> Agency.Huddle.App.Goldfish.GoldfishGuard
+Singleton Agency.Huddle.App.Goldfish.GoldfishLive -> Agency.Huddle.App.Goldfish.GoldfishLive
 Singleton Agency.Huddle.App.Goldfish.GoldfishStore -> Agency.Huddle.App.Goldfish.GoldfishStore
 Singleton Agency.Huddle.App.Goldfish.GoldfishSupervisor -> factory Agency.Huddle.App.Goldfish.GoldfishSupervisor
 Singleton Agency.Huddle.App.Goldfish.IGoldfishRunnerLink -> Agency.Huddle.App.Goldfish.AgentGatewayGoldfishLink

@@ -1,5 +1,6 @@
 using System.Globalization;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -69,13 +70,20 @@ internal sealed class GoldfishStore
 
     private readonly string connectionString;
 
+    private readonly ILogger<GoldfishStore>? logger;
+
     /// <summary>Opens (and if needed creates) the table in <c>team.db</c> under the configured data folder.</summary>
     /// <param name="options">The Team options carrying <see cref="TeamOptions.DataDir"/>.</param>
-    public GoldfishStore(IOptions<TeamOptions> options)
+    /// <param name="logger">Reports a subscriber of <see cref="Changed"/> that threw; optional.</param>
+    public GoldfishStore(IOptions<TeamOptions> options, ILogger<GoldfishStore>? logger = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         this.connectionString = SqliteTable.Open(options.Value, DdlCreate);
+        this.logger = logger;
     }
+
+    /// <summary>Raised, outside any lock, after a write that changed a row: an insert, a state move, a return claim, an end or a Turn.</summary>
+    internal event Action? Changed;
 
     /// <summary>Writes a possession row.</summary>
     /// <param name="possession">The row.</param>
@@ -104,12 +112,14 @@ internal sealed class GoldfishStore
         try
         {
             _ = command.ExecuteNonQuery();
-            return true;
         }
         catch (SqliteException ex) when (ex.SqliteErrorCode == SqliteConstraint && ex.SqliteExtendedErrorCode != SqliteConstraintCheck)
         {
             return false;
         }
+
+        this.RaiseChanged();
+        return true;
     }
 
     /// <summary>Reads one possession.</summary>
@@ -142,7 +152,7 @@ internal sealed class GoldfishStore
         }
 
         string sources = string.Join(", ", from.Select(source => $"'{Name(source)}'"));
-        return this.Run($"UPDATE goldfish_possessions SET state = $state WHERE id = $id AND state IN ({sources});", ("$id", id), ("$state", Name(to))) == 1;
+        return this.RunAndRaise($"UPDATE goldfish_possessions SET state = $state WHERE id = $id AND state IN ({sources});", ("$id", id), ("$state", Name(to))) == 1;
     }
 
     /// <summary>Remembers the posted result Message, so a restart does not post it twice.</summary>
@@ -165,7 +175,7 @@ internal sealed class GoldfishStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-        return this.Run(BeginReturnSql, ("$id", id), ("$exit", Name(exit)), ("$by", by)) == 1;
+        return this.RunAndRaise(BeginReturnSql, ("$id", id), ("$exit", Name(exit)), ("$by", by)) == 1;
     }
 
     /// <summary>Closes a row at the given time, keeping its exit.</summary>
@@ -175,7 +185,7 @@ internal sealed class GoldfishStore
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
 
-        this.Run("UPDATE goldfish_possessions SET state = 'ended', ended_at = $at WHERE id = $id AND exit IS NOT NULL;", ("$id", id), ("$at", Text(at)));
+        _ = this.RunAndRaise("UPDATE goldfish_possessions SET state = 'ended', ended_at = $at WHERE id = $id AND exit IS NOT NULL;", ("$id", id), ("$at", Text(at)));
     }
 
     /// <summary>Counts one more Turn on a row and adds its spend.</summary>
@@ -197,6 +207,7 @@ internal sealed class GoldfishStore
             ("$spend", Text(total)),
             ("$currency", currency));
         transaction.Commit();
+        this.RaiseChanged();
     }
 
     /// <summary>Deletes ended rows that ended before a time; an open row is never deleted.</summary>
@@ -279,6 +290,20 @@ internal sealed class GoldfishStore
         using SqliteConnection connection = SqliteTable.Connect(this.connectionString);
         return Execute(connection, null, sql, parameters);
     }
+
+    private int RunAndRaise(string sql, params (string Name, object? Value)[] parameters)
+    {
+        int rows = this.Run(sql, parameters);
+        if (rows > 0)
+        {
+            this.RaiseChanged();
+        }
+
+        return rows;
+    }
+
+    private void RaiseChanged() =>
+        EventRaise.Isolated(this.Changed, ex => this.logger?.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.Changed)));
 
     private List<Possession> Read(string sql, params (string Name, object? Value)[] parameters)
     {
