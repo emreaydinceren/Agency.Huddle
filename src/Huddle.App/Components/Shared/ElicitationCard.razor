@@ -164,34 +164,29 @@
 
                                 default:
                                     string? problem = ProblemOf(shown, this.EntriesOf(current));
-                                    <MudTextField T="string"
-                                                  Label="@shownLabel"
-                                                  HelperText="@HelperTextOf(shown)"
-                                                  Error="@(problem is not null)"
-                                                  ErrorText="@problem"
-                                                  Required="@shown.Required"
-                                                  Variant="Variant.Outlined"
-                                                  Margin="Margin.Dense"
-                                                  Immediate="true"
-                                                  InputMode="@InputModeOf(shown.Kind)"
-                                                  Disabled="@busy"
-                                                  Value="@this.EntryOf(current, shown)"
-                                                  ValueChanged="@(text => this.SetText(current, shown, text))" />
+                                    <TextField Label="@shownLabel"
+                                               AriaLabel="@loneName"
+                                               HelperText="@HelperTextOf(shown)"
+                                               Error="@(problem is not null)"
+                                               ErrorText="@problem"
+                                               Required="@shown.Required"
+                                               Immediate="true"
+                                               InputMode="@InputModeOf(shown.Kind)"
+                                               Disabled="@busy"
+                                               Value="@this.EntryOf(current, shown)"
+                                               ValueChanged="@(text => this.SetText(current, shown, text))" />
                                     break;
                             }
 
                             @if (companion is { } other)
                             {
-                                <MudTextField T="string"
-                                              Label="@other.Label"
-                                              HelperText="@other.Description"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense"
-                                              Immediate="true"
-                                              Disabled="@busy"
-                                              Class="elicitation-card-other"
-                                              Value="@this.EntryOf(current, other)"
-                                              ValueChanged="@(text => this.SetText(current, other, text))" />
+                                <TextField Label="@other.Label"
+                                           HelperText="@other.Description"
+                                           Immediate="true"
+                                           Disabled="@busy"
+                                           Class="elicitation-card-other"
+                                           Value="@this.EntryOf(current, other)"
+                                           ValueChanged="@(text => this.SetText(current, other, text))" />
                             }
                         </div>
                     }

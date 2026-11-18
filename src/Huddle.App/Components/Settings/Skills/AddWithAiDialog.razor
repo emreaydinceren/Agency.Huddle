@@ -35,10 +35,10 @@
             @switch (this.task)
             {
                 case SkillTask.Add:
-                    <MudTextField T="string" @bind-Value="this.where" Immediate="true" Label="Where are the Skills?" MaxLength="500" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  HelperText="A link or a folder." HelperTextOnFocus="false" Error="@string.IsNullOrWhiteSpace(this.where)" Class="add-with-ai-where mb-2" />
-                    <MudTextField T="string" @bind-Value="this.purpose" Immediate="true" Label="What are they for?" MaxLength="300" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  HelperText="Optional." Class="add-with-ai-purpose" />
+                    <TextField @bind-Value="this.where" Immediate="true" Label="Where are the Skills?" MaxLength="500"
+                               HelperText="A link or a folder." Error="@string.IsNullOrWhiteSpace(this.where)" Class="add-with-ai-where mb-2" />
+                    <TextField @bind-Value="this.purpose" Immediate="true" Label="What are they for?" MaxLength="300"
+                               HelperText="Optional." Class="add-with-ai-purpose" />
                     break;
                 case SkillTask.FindForRole:
                     <SelectField T="string" @bind-Value="this.roleId" Label="Role" HelperText="The role to find Packs for."
@@ -48,8 +48,8 @@
                             <MudSelectItem T="string" Value="@role.Id">@role.Title</MudSelectItem>
                         }
                     </SelectField>
-                    <MudTextField T="string" @bind-Value="this.purpose" Immediate="true" Label="What should it get better at?" MaxLength="300" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                  HelperText="Optional." Class="add-with-ai-purpose" />
+                    <TextField @bind-Value="this.purpose" Immediate="true" Label="What should it get better at?" MaxLength="300"
+                               HelperText="Optional." Class="add-with-ai-purpose" />
                     break;
                 case SkillTask.CheckForUpdates:
                     <MudSwitch T="bool" @bind-Value="this.allSources" Color="Color.Primary" Label="All Sources" Class="add-with-ai-all-sources" />

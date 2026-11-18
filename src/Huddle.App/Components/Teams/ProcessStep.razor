@@ -16,12 +16,12 @@
     <MudText Typo="Typo.caption" Class="group-label">Process</MudText>
     @if (this.Processes.Count > 0)
     {
-        <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Process" Value="this.selected" ValueChanged="this.OnSelected" Class="process-step-select">
+        <SelectField T="string" Label="Process" Value="@this.selected" ValueChanged="this.OnSelected" Class="process-step-select">
             @foreach (ProcessRef process in this.Processes)
             {
                 <MudSelectItem T="string" Value="@process.Id">@process.Id</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         <pre class="process-step-preview">@this.Preview</pre>
     }
     <MudStack Row="true" Spacing="2" Class="mt-2">

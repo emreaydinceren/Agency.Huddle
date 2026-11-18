@@ -1,5 +1,2 @@
 CV15|src/Huddle.App/Components/Sidebar/TagsPanel.razor|1
-CV17|src/Huddle.App/Components/Shared/AvatarLibraryPicker.razor|1
-CV17|src/Huddle.App/Components/Shared/FolderPickerDialog.razor|1
-CV17|src/Huddle.App/Components/Shared/NeedsYouLevelControl.razor|1
 CV18|src/Huddle.App/Components/Shared/AgentProfileCard.razor|4

@@ -9,7 +9,7 @@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField T="string" Label="@(this.Required ? HumanGateCopy.ReasonLabel : "Reason (optional)")" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Immediate="true" />
+        <TextField Label="@(this.Required ? HumanGateCopy.ReasonLabel : "Reason (optional)")" @bind-Value="this.reason" Immediate="true" />
     </DialogContent>
     <DialogActions>
         <DialogFooter CancelText="Skip" ShowCancel="@(!this.Required)" OnCancel="this.Skip" PrimaryText="@this.ConfirmText"

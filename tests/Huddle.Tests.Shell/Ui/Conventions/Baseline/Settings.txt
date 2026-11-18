@@ -1,3 +1,0 @@
-CV17|src/Huddle.App/Components/Settings/Skills/AddWithAiDialog.razor|3
-CV17|src/Huddle.App/Components/Settings/Skills/SkillSourcesFolderDialog.razor|1
-CV17|src/Huddle.App/Components/Settings/ThemeLab.razor|2

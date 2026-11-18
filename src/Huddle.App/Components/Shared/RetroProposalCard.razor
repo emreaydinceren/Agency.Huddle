@@ -22,7 +22,7 @@
         <AgentCard @key="set.Id" Class="retro-proposal-card" Title="@($"{set.Proposer} is proposing changes")" AriaLabel="@($"Retro changes from {set.Proposer}")">
             <p class="retro-proposal-intro">@set.Proposer proposes changes after the retro. Accept makes the edit; nothing changes until you do.</p>
 
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="retro-proposal-reason" Disabled="@this.Busy" />
+            <TextField @bind-Value="this.reason" Label="Reason if you decline" Class="retro-proposal-reason" Disabled="@this.Busy" />
 
             @foreach (var change in set.Changes)
             {

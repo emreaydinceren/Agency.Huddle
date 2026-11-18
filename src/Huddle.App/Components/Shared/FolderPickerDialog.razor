@@ -18,8 +18,8 @@
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
                 <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Up one folder"
                                Disabled="@(this.listing.Current is null)" OnClick="this.Up" Class="folder-picker-up" />
-                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Folder" Value="this.typed"
-                              ValueChanged="this.OnTyped" OnKeyDown="this.OnKeyDown" Immediate="true" Class="folder-picker-path flex-grow-1" />
+                <TextField Label="Folder" Value="@this.typed"
+                           ValueChanged="this.OnTyped" OnKeyDown="this.OnKeyDown" Immediate="true" Class="folder-picker-path flex-grow-1" />
             </MudStack>
             @if (this.trail.Count > 0)
             {

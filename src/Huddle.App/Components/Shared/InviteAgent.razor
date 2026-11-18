@@ -35,13 +35,13 @@
                 @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
                    has no Teams at all, so it only ever shows up under "All teams" - narrowing this
                    filter to a real Team simply never matches it, with no special case needed. *@
-                <MudSelect T="string" Variant="Variant.Outlined" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Margin="Margin.Dense" Class="mb-4">
+                <SelectField T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="mb-4">
                     <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                     @foreach (var team in this.Personas.Teams)
                     {
                         <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
                     }
-                </MudSelect>
+                </SelectField>
 
                 <SearchField Compact="true" Value="@this.search" ValueChanged="this.OnSearchChanged" Placeholder="Search agents" AriaLabel="Search agents" />
 

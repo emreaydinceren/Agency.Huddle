@@ -72,9 +72,9 @@
                     }
                     else
                     {
-                        <MudTextField T="string" Label="@key" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined"
-                                      Value="@this.PaletteText(key)" ValueChanged="@(value => this.OnPaletteChangedAsync(key, value))"
-                                      Error="@this.errors.ContainsKey(key)" ErrorText="@this.ErrorFor(key)" />
+                        <TextField Label="@key" Immediate="true"
+                                   Value="@this.PaletteText(key)" ValueChanged="@(value => this.OnPaletteChangedAsync(key, value))"
+                                   Error="@this.errors.ContainsKey(key)" ErrorText="@this.ErrorFor(key)" />
                     }
                 </div>
             }
@@ -87,10 +87,10 @@
                 @foreach (Token token in group)
                 {
                     <div data-token-key="@token.Key">
-                        <MudTextField T="string" Label="@token.Key" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined"
-                                      HelperText="@token.Description"
-                                      Value="@this.TokenText(token.Key)" ValueChanged="@(value => this.OnTokenChangedAsync(token.Key, value))"
-                                      Error="@this.errors.ContainsKey(token.Key)" ErrorText="@this.ErrorFor(token.Key)" />
+                        <TextField Label="@token.Key" Immediate="true"
+                                   HelperText="@token.Description"
+                                   Value="@this.TokenText(token.Key)" ValueChanged="@(value => this.OnTokenChangedAsync(token.Key, value))"
+                                   Error="@this.errors.ContainsKey(token.Key)" ErrorText="@this.ErrorFor(token.Key)" />
                     </div>
                 }
             </div>

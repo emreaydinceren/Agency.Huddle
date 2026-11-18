@@ -32,7 +32,7 @@
                 }
             </ul>
 
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.Busy" />
+            <TextField @bind-Value="this.reason" Label="Reason if you decline" Class="sprint-proposal-reason" Disabled="@this.Busy" />
         </ChildContent>
         <Actions>
             <ActionButton Role="ButtonRole.Primary" Class="sprint-proposal-approve" Disabled="@this.Busy" OnClick="this.ApproveAsync">@(this.IsBusy(ApproveKey) ? "Approving…" : "Approve")</ActionButton>

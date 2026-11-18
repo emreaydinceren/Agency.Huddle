@@ -22,9 +22,9 @@
         @if (this.choice == RunChoice)
         {
             <MudText Typo="Typo.caption" Class="needs-you-level-note">@NeedsYouLevelCopy.RunInsideNote</MudText>
-            <MudTextField T="string" Value="@this.capText" ValueChanged="this.OnCapChanged" Immediate="true" Label="Spend cap (USD)"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="needs-you-level-cap" Error="@(this.capError is not null)"
-                          ErrorText="@this.capError" HelperText="@NeedsYouLevelCopy.CapNote" />
+            <TextField Value="@this.capText" ValueChanged="this.OnCapChanged" Immediate="true" Label="Spend cap (USD)"
+                       Class="needs-you-level-cap" Error="@(this.capError is not null)"
+                       ErrorText="@this.capError" HelperText="@NeedsYouLevelCopy.CapNote" />
         }
         else if (this.choice == AskMeChoice)
         {

@@ -10,8 +10,8 @@
 
 <MudDialog Class="skill-sources-folder-dialog">
     <DialogContent>
-        <MudTextField T="string" @bind-Value="this.folder" Immediate="true" Label="Folder" Variant="Variant.Outlined" Margin="Margin.Dense"
-                      Error="@(this.error is not null)" ErrorText="@this.error" HelperText="An existing folder, such as a synced one." Class="skill-sources-folder-input" />
+        <TextField @bind-Value="this.folder" Immediate="true" Label="Folder"
+                   Error="@(this.error is not null)" ErrorText="@this.error" HelperText="An existing folder, such as a synced one." Class="skill-sources-folder-input" />
         <MudText Typo="Typo.caption" Class="d-block mt-1 mud-text-secondary">Changing the folder re-reads everything. It never moves files.</MudText>
     </DialogContent>
     <DialogActions>

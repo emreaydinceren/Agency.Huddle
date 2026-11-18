@@ -37,9 +37,9 @@ else if (this.catalog is not null && this.results is not null)
                 }
             </div>
             <div class="avatar-library-search-wrap" @ref="this.searchWrap" @onkeydown:stopPropagation="true">
-                <MudTextField T="string" Class="avatar-library-search" Label="Search" Placeholder="type a tag, for example beard"
-                              Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
-                              OnKeyDown="this.OnSearchKeyDown" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                <TextField Class="avatar-library-search" Label="Search" Placeholder="type a tag, for example beard"
+                           Value="@this.text" ValueChanged="this.SetText" Immediate="true" DebounceInterval="200"
+                           OnKeyDown="this.OnSearchKeyDown" />
             </div>
             <ChipCloud Title="Tags" Pool="this.TagPool()" Selected="this.selectedTags" Cap="TagCap"
                        OnToggle="this.ToggleTag" />
