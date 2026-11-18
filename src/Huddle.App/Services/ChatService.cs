@@ -182,7 +182,7 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, false, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, false, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -206,7 +206,28 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
-        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, false, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Posts Huddle's own Message like <see cref="PostAsHuddleAsync"/>, but parses no Mentions, so quoted text that holds a
+    /// <c>@Member</c> addresses nobody and owes no Turn. The goldfish result Message uses it to quote a brief word for word.
+    /// </summary>
+    /// <param name="roomId">The Room to post into.</param>
+    /// <param name="text">The Message text.</param>
+    /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    /// <returns>The Message that was appended.</returns>
+    /// <exception cref="ChatException">The Room does not exist, or <paramref name="text"/> is blank.</exception>
+    public async Task<ChatMessage> PostAsHuddleQuietAsync(string roomId, string text, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (text.TrimEnd().Length == 0)
+        {
+            throw new ChatException(ErrorCodes.BadMessage, "empty message");
+        }
+
+        return await this.PostCoreAsync(roomId, KnownIds.Huddle, text, null, null, true, true, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -240,7 +261,7 @@ public sealed partial class ChatService
             return null;
         }
 
-        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, false, ct).ConfigureAwait(false);
+        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, false, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -259,9 +280,10 @@ public sealed partial class ChatService
     /// Whether the Message is Huddle's own (ADR-0065). It needs no Membership and, being neither the Human nor an Agent, neither
     /// spends nor resets the Budget and drops no waiting card.
     /// </param>
+    /// <param name="mentionsNobody">Whether the text is quoted, not addressed, so no Mention in it is parsed and no Turn is owed.</param>
     /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
     private async Task<ChatMessage> PostCoreAsync(
-        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, bool asHuddle, CancellationToken ct)
+        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, bool asHuddle, bool mentionsNobody, CancellationToken ct)
     {
         var room = await this.teamDirectory.GetRoomAsync(roomId, ct).ConfigureAwait(false)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
@@ -300,8 +322,8 @@ public sealed partial class ChatService
             }
 
             var id = messageId ?? Guid.CreateVersion7().ToString("N");
-            IReadOnlyList<User> mentions = withheldFromAgentId is null
-                ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
+            IReadOnlyList<User> mentions = withheldFromAgentId is null && !mentionsNobody
+                ?MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
             var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot };
             await this.AppendRecordingOwedTurnsAsync(room, members, mentions, message, RoomBudgets.After(budget, budgetSender, this.agentMessageBudget), withheldFromAgentId, ct).ConfigureAwait(false);

@@ -151,12 +151,11 @@ internal sealed class GoldfishStore
     /// <summary>Claims a row for its return, writing its exit and who chose it.</summary>
     /// <param name="id">The possession id.</param>
     /// <param name="exit">How it ends.</param>
-    /// <param name="by">Who chose the exit.</param>
+    /// <param name="by">Who chose the exit, or <see langword="null"/> when nobody did (a failure or a restart).</param>
     /// <returns><see langword="true"/> when this call claimed the row; <see langword="false"/> when it is already returning, ended or unknown.</returns>
-    public bool BeginReturn(string id, GoldfishExit exit, string by)
+    public bool BeginReturn(string id, GoldfishExit exit, string? by)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
-        ArgumentException.ThrowIfNullOrWhiteSpace(by);
 
         return this.Run(BeginReturnSql, ("$id", id), ("$exit", Name(exit)), ("$by", by)) == 1;
     }

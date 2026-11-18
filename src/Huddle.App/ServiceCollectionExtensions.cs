@@ -63,6 +63,7 @@ public static class ServiceCollectionExtensions
             .AddStartupHostedServices()
             .AddBackgroundHostedServices()
             .AddTurnQueueServices()
+            .AddGoldfishServices()
             .AddHelperServices()
             .AddFeatureModules()
             .AddMemoryTidyServices();
@@ -105,6 +106,17 @@ public static class ServiceCollectionExtensions
         service.OwedTurns = sp.GetRequiredService<IOwedTurnPolicy>();
         service.Ledger = sp.GetRequiredService<ITurnLedger>();
         return service;
+    }
+
+    /// <summary>Registers goldfish mode: the ledger, the runner link and the supervisor, which is started as a hosted service elsewhere.</summary>
+    /// <param name="services">The collection to add to.</param>
+    /// <returns>The same collection, for chaining.</returns>
+    private static IServiceCollection AddGoldfishServices(this IServiceCollection services)
+    {
+        services.AddSingleton<Goldfish.GoldfishStore>();
+        services.AddSingleton<Goldfish.IGoldfishRunnerLink, Goldfish.AgentGatewayGoldfishLink>();
+        services.AddSingleton<Goldfish.GoldfishSupervisor>();
+        return services;
     }
 
     /// <summary>Registers the Turn Queue: one singleton behind each interface a later task adds, and the owed-Turn policy ChatService asks at post time.</summary>
@@ -985,6 +997,7 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IOptions<TeamOptions>>(),
             sp.GetRequiredService<ILogger<Services.TurnQueueRecovery>>(),
             sp.GetService<TimeProvider>()));
+        services.AddHostedService(static sp => sp.GetRequiredService<Goldfish.GoldfishSupervisor>());
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
 

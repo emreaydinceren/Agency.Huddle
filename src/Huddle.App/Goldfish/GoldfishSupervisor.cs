@@ -1,0 +1,204 @@
+using System.Collections.Concurrent;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
+using Agency.Huddle.Contracts;
+using Microsoft.Extensions.Options;
+
+namespace Agency.Huddle.App.Goldfish;
+
+/// <summary>
+/// Owns the end of a possession (spec §6.5, §6.6) and the small state moves in between. It has no loop and no timer: a
+/// possession ends when it is told to, and the start-up pass ends whatever a restart left open. The store is the one source of
+/// truth, so every call reads it. Only <see cref="EndAsync"/> takes a lock, one per possession.
+/// </summary>
+internal sealed class GoldfishSupervisor(
+    GoldfishStore store,
+    ITeamDirectory team,
+    ChatService chat,
+    IGoldfishRunnerLink link,
+    IOptions<TeamOptions> options,
+    ILogger<GoldfishSupervisor> logger,
+    TimeProvider? timeProvider = null) : IHostedService, IDisposable
+{
+    private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
+
+    private readonly ConcurrentDictionary<string, SemaphoreSlim> locks = new(StringComparer.Ordinal);
+
+    /// <summary>Ends every row a restart left open as Restarted and prunes old ended rows; a failure is logged and never stops Huddle.</summary>
+    /// <param name="cancellationToken">Cancels the pass.</param>
+    /// <returns>A task that completes when the pass is done.</returns>
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            foreach (Possession row in store.Open())
+            {
+                await this.RestartOneAsync(row.Id, cancellationToken).ConfigureAwait(false);
+            }
+
+            DateTimeOffset cutoff = this.clock.GetUtcNow().AddDays(-options.Value.Goldfish.KeepDays);
+            _ = store.PruneBefore(cutoff);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "The goldfish start-up pass failed; Huddle starts without it.");
+        }
+    }
+
+    /// <inheritdoc />
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        foreach (SemaphoreSlim gate in this.locks.Values)
+        {
+            gate.Dispose();
+        }
+    }
+
+    /// <summary>Returns a possession: claims the exit, tells the runner, posts the result, posts the return row, closes the row.</summary>
+    /// <param name="possessionId">The possession to end.</param>
+    /// <param name="exit">How it ends.</param>
+    /// <param name="by">Who chose the exit, or <see langword="null"/>.</param>
+    /// <param name="ct">Cancels the work.</param>
+    /// <returns><see langword="true"/> when this call did the return; <see langword="false"/> when it was already returning, ended or unknown.</returns>
+    public async Task<bool> EndAsync(string possessionId, GoldfishExit exit, string? by, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(possessionId);
+
+        SemaphoreSlim gate = this.locks.GetOrAdd(possessionId, static _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            if (!store.BeginReturn(possessionId, exit, by))
+            {
+                return false;
+            }
+
+            Possession? row = store.Get(possessionId);
+            if (row is null)
+            {
+                return false;
+            }
+
+            await this.TellRunnerAsync(row, exit, ct).ConfigureAwait(false);
+            await this.PostResultAsync(row, ct).ConfigureAwait(false);
+            await this.PostReturnRowAsync(row, exit, by, ct).ConfigureAwait(false);
+            store.End(possessionId, this.clock.GetUtcNow());
+            return true;
+        }
+        finally
+        {
+            _ = gate.Release();
+        }
+    }
+
+    /// <summary>A turn ended: when the Agent is not done, a Starting or Working possession waits. Nothing is sent.</summary>
+    /// <param name="possessionId">The possession.</param>
+    /// <param name="done">Whether the Agent said it is done.</param>
+    /// <param name="ct">Cancels the call.</param>
+    /// <returns>A completed task.</returns>
+    public Task OnTurnEndedAsync(string possessionId, bool done, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (!done && store.Get(possessionId) is { State: PossessionState.Starting or PossessionState.Working })
+        {
+            store.SetState(possessionId, PossessionState.Waiting);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The Agent was Mentioned in a Room: a waiting possession in that Room works again.</summary>
+    /// <param name="agentId">The Agent.</param>
+    /// <param name="roomId">The Room of the Mention.</param>
+    /// <param name="ct">Cancels the call.</param>
+    /// <returns>A completed task.</returns>
+    public Task OnMentionAsync(string agentId, string roomId, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        if (this.FindOpen(agentId) is { State: PossessionState.Waiting } waiting && string.Equals(waiting.RoomId, roomId, StringComparison.Ordinal))
+        {
+            store.SetState(waiting.Id, PossessionState.Working);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The Agent's runner connection was lost: its open possession ends as Failed.</summary>
+    /// <param name="agentId">The Agent.</param>
+    /// <param name="ct">Cancels the work.</param>
+    /// <returns>A task that completes when the possession has ended, or at once when there is none.</returns>
+    public async Task OnRunnerLostAsync(string agentId, CancellationToken ct)
+    {
+        if (this.FindOpen(agentId) is { } open)
+        {
+            _ = await this.EndAsync(open.Id, GoldfishExit.Failed, null, ct).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Finds the Agent's open possession.</summary>
+    /// <param name="agentId">The Agent.</param>
+    /// <returns>The row, or <see langword="null"/> when the Agent is not possessed.</returns>
+    public Possession? FindOpen(string agentId) =>
+        store.Open().FirstOrDefault(row => string.Equals(row.AgentId, agentId, StringComparison.Ordinal));
+
+    private async Task RestartOneAsync(string possessionId, CancellationToken ct)
+    {
+        try
+        {
+            _ = await this.EndAsync(possessionId, GoldfishExit.Restarted, null, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Possession {PossessionId} could not be ended by the start-up pass; the rest continue.", possessionId);
+        }
+    }
+
+    private async Task TellRunnerAsync(Possession row, GoldfishExit exit, CancellationToken ct)
+    {
+        try
+        {
+            await link.SendEndAsync(row.AgentId, row.Id, exit, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "The runner of {AgentId} could not be told possession {PossessionId} ended; the return goes on.", row.AgentId, row.Id);
+        }
+    }
+
+    private async Task PostResultAsync(Possession row, CancellationToken ct)
+    {
+        if (row.ResultMessageId is not null)
+        {
+            return;
+        }
+
+        try
+        {
+            ChatMessage result = await chat.PostAsHuddleQuietAsync(row.RoomId, GoldfishLine.ResultText(row.Brief, null, null, false), ct).ConfigureAwait(false);
+            store.SetResultMessage(row.Id, result.Id);
+        }
+        catch (ChatException ex)
+        {
+            logger.LogWarning(ex, "The result of possession {PossessionId} could not be posted to Room {RoomId}.", row.Id, row.RoomId);
+        }
+    }
+
+    private async Task PostReturnRowAsync(Possession row, GoldfishExit exit, string? by, CancellationToken ct)
+    {
+        try
+        {
+            IReadOnlyList<User> members = await team.GetRoomMembersAsync(row.RoomId, ct).ConfigureAwait(false);
+            User? agent = members.FirstOrDefault(member => string.Equals(member.Id, row.AgentId, StringComparison.Ordinal));
+            TimeSpan elapsed = this.clock.GetUtcNow() - row.StartedAt;
+            string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null);
+            _ = await chat.PostAsHuddleAsync(row.RoomId, text, ct).ConfigureAwait(false);
+        }
+        catch (ChatException ex)
+        {
+            logger.LogWarning(ex, "The return row of possession {PossessionId} could not be posted to Room {RoomId}.", row.Id, row.RoomId);
+        }
+    }
+}

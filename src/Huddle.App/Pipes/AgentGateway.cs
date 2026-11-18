@@ -70,6 +70,24 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         await connection.SendAsync(new StartAfresh(roomId), cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>Sends one message to an Agent's runner; a silent no-op when the Agent is offline.</summary>
+    /// <param name="agentId">The Agent to send to.</param>
+    /// <param name="message">The message.</param>
+    /// <param name="cancellationToken">Cancels the send.</param>
+    /// <returns>A task that completes when the message is sent or there was no connection.</returns>
+    internal async Task SendAsync(string agentId, ProtocolMessage message, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentNullException.ThrowIfNull(message);
+
+        if (!this.connections.TryGetValue(agentId, out var connection))
+        {
+            return;
+        }
+
+        await connection.SendAsync(message, cancellationToken).ConfigureAwait(false);
+    }
+
     internal void Register(AgentConnection connection)
     {
         ArgumentNullException.ThrowIfNull(connection);
