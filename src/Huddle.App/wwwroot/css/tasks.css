@@ -1208,16 +1208,6 @@
     padding: 16px;
 }
 
-/* Both toolbar rows are one height: the controls are 28px boxes, so the row reads level. Not the switch's thumb
-   (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
-   5px above the track's centre. */
-.task-toolbar .mud-icon-button:not(.mud-switch-base),
-.task-toolbar-header .mud-icon-button:not(.mud-switch-base) {
-    width: 28px;
-    height: 28px;
-    padding: 4px;
-}
-
 .task-toolbar-filter-state-group .mud-list-item-text {
     font-weight: 600;
 }

@@ -162,17 +162,14 @@ else if (this.loaded is { } task)
     RenderFragment titleIcons = @<text>
                 @if (!this.titleEditing)
                 {
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" aria-label="Edit title" OnClick="this.BeginEditTitle" />
+                    <ActionIconButton Icon="@Icons.Material.Filled.Edit" Label="Edit title" OnClick="this.BeginEditTitle" />
                     @if (!this.createMode)
                     {
                         @if (task.Location.Closed)
                         {
                             <StatusChip Icon="@Icons.Material.Filled.Lock" Class="task-detail-closed-chip">Closed</StatusChip>
                         }
-                        <MudTooltip Text="Copy id">
-                            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {effective.Id}")"
-                                           Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(effective.Id))" />
-                        </MudTooltip>
+                        <ActionIconButton Icon="@Icons.Material.Outlined.ContentCopy" Label="@($"Copy task id {effective.Id}")" Tooltip="Copy id" Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(effective.Id))" />
                     }
                 }
 

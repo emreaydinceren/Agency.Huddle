@@ -496,4 +496,68 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/SelectField.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/AdapterModelEffortPicker.razor", source).Count);
     }
+
+    /// <summary>CV21: a raw <c>MudIconButton</c> is counted, but not an <c>ActionIconButton</c>, a commented-out tag or the type name in code.</summary>
+    [Fact]
+    public void Cv21_RawMudIconButton_IsCounted()
+    {
+        const string source = """
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" />
+            <ActionIconButton Icon="@Icons.Material.Filled.Add" Label="Add" />
+            @* <MudIconButton Icon="x" /> *@
+            @code { private MudIconButton? button; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv21(RazorPath, source);
+
+        Assert.Equal("CV21", result.Rule);
+        Assert.Equal(1, result.Count);
+    }
+
+    /// <summary>CV21: the one <c>ActionIconButton</c> component is the only file allowed to draw a <c>MudIconButton</c>.</summary>
+    [Fact]
+    public void Cv21_ActionIconButtonRazor_IsExempt()
+    {
+        const string source = """<MudIconButton Icon="@this.Icon" Size="Size.Small" aria-label="@this.Label" />""";
+
+        Assert.Equal(0, UiConventionScanner.Cv21("src/Huddle.App/Components/Shared/ActionIconButton.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv21("src/Huddle.App/Components/Shared/Composer.razor", source).Count);
+    }
+
+    /// <summary>
+    /// CV22: a raw <c>MudMenu</c> is counted when its built-in icon or its activator is the ⋮ glyph, and not when it opens from a
+    /// labelled button, a filter icon or a right-click, nor when an item further down happens to name the glyph.
+    /// </summary>
+    [Fact]
+    public void Cv22_RawRowMenu_IsCountedByItsGlyph()
+    {
+        const string source = """
+            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="a"><MudMenuItem>x</MudMenuItem></MudMenu>
+            <MudMenu Dense="true">
+                <ActivatorContent Context="c"><MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small" aria-label="b" /></ActivatorContent>
+                <ChildContent><MudMenuItem>y</MudMenuItem></ChildContent>
+            </MudMenu>
+            <MudMenu Label="Add field"><MudMenuItem>z</MudMenuItem></MudMenu>
+            <MudMenu Icon="@Icons.Material.Outlined.FilterAlt" Size="Size.Small" AriaLabel="Filter"><MudMenuItem>MoreVert</MudMenuItem></MudMenu>
+            <MudMenu @ref="this.menu" PositionAtCursor="true"><MudMenuItem>w</MudMenuItem></MudMenu>
+            <RowActionsMenu Name="c"><MudMenuItem>v</MudMenuItem></RowActionsMenu>
+            """;
+
+        RuleCount result = UiConventionScanner.Cv22(RazorPath, source);
+
+        Assert.Equal("CV22", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV22: the one <c>RowActionsMenu</c> component is the only file allowed to draw a ⋮ <c>MudMenu</c>.</summary>
+    [Fact]
+    public void Cv22_RowActionsMenuRazor_IsExempt()
+    {
+        const string source = """
+            <MudMenu Dense="true"><ActivatorContent Context="c"><ActionIconButton Icon="@ActionIcons.MoreActions" Label="x" /></ActivatorContent></MudMenu>
+            """;
+
+        Assert.Equal(0, UiConventionScanner.Cv22("src/Huddle.App/Components/Shared/RowActionsMenu.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv22("src/Huddle.App/Components/Tasks/TaskDecisionCard.razor", source).Count);
+    }
 }

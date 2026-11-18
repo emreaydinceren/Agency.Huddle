@@ -148,7 +148,7 @@ public sealed class R3TeamsSourceTests
         string buildTeam = Source("Components", "Pages", "BuildTeam.razor");
 
         Assert.DoesNotContain("EndIcon=\"@Icons.Material.Filled.ArrowDropDown\"", buildTeam, StringComparison.Ordinal);
-        Assert.Contains("MenuDialogs.ActivatorLabel(draft.Name)", buildTeam, StringComparison.Ordinal); // contains-ok: haystack is the razor source
+        Assert.Contains("<RowActionsMenu Name=\"@draft.Name\"", buildTeam, StringComparison.Ordinal); // contains-ok: haystack is the razor source
         Assert.True(
             buildTeam.IndexOf("roster-leave", StringComparison.Ordinal) < buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal)
             && buildTeam.IndexOf("<MudDivider />", StringComparison.Ordinal) < buildTeam.IndexOf("menu-item-destructive", StringComparison.Ordinal),

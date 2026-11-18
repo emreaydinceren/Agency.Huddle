@@ -128,7 +128,7 @@ public sealed partial class ChromeTraitsTests
         Assert.Contains("color: var(--hu-text-subtle);", row, StringComparison.Ordinal);
         Assert.Contains("background-color: var(--hu-hover);", rowHover, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-text-subtle);", settings, StringComparison.Ordinal);
-        Assert.Contains("width: 32px;", topBar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-radius: var(--hu-radius-card);", topBar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("background: var(--hu-tone-primary-soft);", tree, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-accent-ink);", tree, StringComparison.Ordinal);
     }

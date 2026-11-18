@@ -72,14 +72,14 @@
                 <ActionButton Role="ButtonRole.Secondary" Class="scheduled-edit" OnClick="@(() => this.EditAsync(job.Id))">Edit…</ActionButton>
                 <ActionButton Role="ButtonRole.Secondary" Class="scheduled-pause" OnClick="@(() => this.SetPaused(job, !job.Paused))">@(job.Paused ? "Resume" : "Pause")</ActionButton>
                 <ActionButton Role="ButtonRole.Secondary" Class="scheduled-run" Disabled="this.running" OnClick="@(() => this.RunNowAsync(job))">Run now</ActionButton>
-                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="@MenuDialogs.ActivatorLabel(job.Title)">
+                <RowActionsMenu Name="@job.Title" Reveal="RowActionsReveal.Always">
                     @if (this.JobRooms.RoomOf(job.Id) is { } roomId)
                     {
                         <MudMenuItem Href="@($"/rooms/{roomId}")">Open Room</MudMenuItem>
                         <MudDivider />
                     }
                     <MudMenuItem Class="menu-item-destructive" OnClick="@(() => this.DeleteAsync(job))">Delete job…</MudMenuItem>
-                </MudMenu>
+                </RowActionsMenu>
             </Actions>
         </PageHeader>
 

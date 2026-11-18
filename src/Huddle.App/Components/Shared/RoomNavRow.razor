@@ -73,19 +73,7 @@
             }
             <NeedsYouPill RoomId="@this.Room.Id" />
         </NavTabLink>
-        <MudMenu @ref="this.menu" Class="hover-reveal-menu" Dense="true">
-            @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-               MudMenu does not wire a click listener around it automatically - the
-               supplied MenuContext.ToggleAsync is how custom activator content opens
-               the menu, which is why the button's OnClick calls it explicitly rather
-               than relying on MudMenu's default ActivationEvent handling. The activator
-               has no hover tooltip (it would stay up over the first item); its aria-label
-               names the Room (design-system "Menus"). *@
-            <ActivatorContent Context="menuContext">
-                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                               aria-label="@MenuDialogs.ActivatorLabel(this.Room.Name)" Class="hover-reveal-menu-button"
-                               OnClick="menuContext.ToggleAsync" />
-            </ActivatorContent>
+        <RowActionsMenu @ref="this.menu" Name="@this.Room.Name" Class="hover-reveal-menu">
             <ChildContent>
                 @* One icon weight in this menu (#477): Copy link has only a line glyph, so Archive and Delete take their outlined forms. *@
                 <MudMenuItem Icon="@Icons.Material.Outlined.Link" OnClick="this.CopyLinkAsync">Copy link</MudMenuItem>
@@ -93,12 +81,12 @@
                 <MudDivider />
                 <MudMenuItem Icon="@Icons.Material.Outlined.Delete" Class="menu-item-destructive" Disabled="this.busy" OnClick="this.BeginDeleteAsync">Delete</MudMenuItem>
             </ChildContent>
-        </MudMenu>
+        </RowActionsMenu>
     }
 </div>
 
 @code {
-    private MudMenu? menu;
+    private RowActionsMenu? menu;
     private bool confirmingDelete;
     private bool busy;
     private int uploadCount;
@@ -164,9 +152,9 @@
     /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
     private async Task OnRowContextMenuAsync(MouseEventArgs e)
     {
-        if (this.menu is not null)
+        if (this.menu?.Menu is { } inner)
         {
-            await this.menu.OpenMenuAsync(e);
+            await inner.OpenMenuAsync(e);
         }
     }
 

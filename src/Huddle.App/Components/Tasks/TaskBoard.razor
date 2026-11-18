@@ -69,16 +69,12 @@
                     <span class="@(this.IsRail(i) ? "task-board-column-label visually-hidden" : "task-board-column-label")">@column.Label</span>
                 }
                 <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
-                <MudMenu Class="task-board-column-menu">
-                    <ActivatorContent Context="menuContext">
-                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                       aria-label="@($"{column.Label} column menu")" OnClick="menuContext.ToggleAsync" />
-                    </ActivatorContent>
+                <RowActionsMenu Label="@($"{column.Label} column menu")" Reveal="RowActionsReveal.Always" Class="task-board-column-menu">
                     <ChildContent>
                         <MudMenuItem OnClick="@(() => this.StartRename(i))">Rename</MudMenuItem>
                         <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
                     </ChildContent>
-                </MudMenu>
+                </RowActionsMenu>
                 @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
                 {
                     <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>

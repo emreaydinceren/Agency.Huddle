@@ -35,7 +35,7 @@
         @* Every host names the open file the same way: its path relative to its Library root (the breadcrumb's own
            trail, forward slashes) on the toolbar's left, shortened past LibraryPathDisplay.MaxLength, with Copy full
            path just before it. The absolute system path stays in the tooltip and is what the button copies. *@
-        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy full path" title="Copy full path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
+        <ActionIconButton Icon="@Icons.Material.Filled.ContentCopy" Label="Copy full path" title="Copy full path" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudText Typo="Typo.caption" Class="library-document-path library-document-path-inline" title="@this.Path.FullPath">@this.FullPathText()</MudText>
         @* Archived: read through the fallback from an old Teams path, or opened in the Archive root itself (SB-R20). *@
         @if (this.Path.Archived || this.Path.Root.Kind == LibraryRootKind.Archive)
@@ -52,10 +52,10 @@
             <SegmentedControl T="LibraryMode" Options="ModeOptions" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync"
                               Class="library-document-mode-toggle" />
         }
-        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" OnClick="@this.PopOut" />
+        <ActionIconButton Icon="@Icons.Material.Filled.OpenInNew" Label="Pop out" Class="library-document-pop-out" OnClick="@this.PopOut" />
         @if (this.OnClose.HasDelegate)
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" Class="library-document-close" OnClick="@this.OnClose" />
+            <ActionIconButton Icon="@Icons.Material.Filled.Close" Label="Close" Class="library-document-close" OnClick="@this.OnClose" />
         }
     </MudToolBar>
     @if (this.outsideScope)

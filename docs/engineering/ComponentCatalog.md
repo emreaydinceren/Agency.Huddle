@@ -442,6 +442,44 @@ shows it, so its owner must pass the question text as `AriaLabel` there. `AgentP
 selects (Adapter, Model, Effort and Work mode) are its own copy of the picker, and Work mode needs
 `ToStringFunc`, which `SelectField` does not offer; they move with A4, which replaces that copy.
 
+### Icon button and row menu
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `ActionIconButton` | `Components/Shared/ActionIconButton.razor` | 51 tags: 39 direct in 19 files, plus the activator of every `RowActionsMenu`; 9 raw `MudIconButton` tags still to move | `Icon`, `Label` (required: the `aria-label`), `Tooltip`, `TooltipPlacement`, `TooltipClass` (the tooltip's root, for the Composer's Send), `Pressed` (a toggle: writes `aria-pressed`, accent while on), `Disabled`, `Href`, `Class` (layout and hooks only), `OnClick`, any other attribute (`title`, `tabindex`, `data-*`, `aria-controls`); `FocusAsync()` |
+| `RowActionsMenu` | `Components/Shared/RowActionsMenu.razor` | 12 menus in 11 files (the 11 hand-built ones plus the Build a team roster); 3 raw ⋮ `MudMenu`s still to move | `Name` (the activator reads "Actions for {Name}"), `Label` (a whole name instead, for the board column's "{column} column menu"), `ChildContent` (the items), `Reveal` (`RowActionsReveal`: `OnHover`, the default, or `Always`), `Disabled`, `Class` (the menu root: its place in the row and a hook), `ActivatorClass` (a hook on the button); `Menu` (the inner `MudMenu`, for `MenuDialogs.AfterClosingAsync` and a right-click open) |
+
+Built in wave 4 (A3 and B5, 2026-11-18). Every icon button is Small, and `base.css` makes a Small
+icon button one 28 px round box everywhere (`Q-B5-1`): the 23.5 px default, the Teams "+" (24 px)
+and the top bar (32 px) all moved to 28 px, and the Tasks toolbar rule went. A site's own box still
+wins (the Activity bar's 40 px tile, the Send looks), and a switch's base keeps MudBlazor's. The
+top bar follows the size ladder, which names 28 px for an icon button and no top-bar exception.
+A label is required: a button without one throws on its first render.
+
+A row menu is always `Dense`, so its items are 32 px rows of 13 px text (`base.css`, every menu).
+Its activator is the round icon button at every site (`Q-A3-1`), so the sidebar's 6 px radius is
+gone. `OnHover` hides it until the row is hovered or holds keyboard focus, and shows it at once on a
+touch screen. The row is a sidebar `.hover-reveal-row` or carries `.row-actions-host` (`Q-A3-2`):
+the Skills table rows, the Pack, Source and catalog cards and the Teams scope rows. The Tasks and
+Scheduled page headers, the board column and the Build a team roster keep their menu shown
+(`Always`): a page header's ⋮ sits beside visible header buttons and is not a row, so the old
+Fix 2 is applied to the Skills menus only. The board column keeps its "{column} column menu" wording, so
+Fix 3 of the old entry is not applied. The Teams scope menu's own reveal block in `sidebar.css`
+went.
+
+CV21 counts a raw `MudIconButton` outside `ActionIconButton`. CV22 counts a raw `MudMenu` whose
+built-in icon or activator is the ⋮ glyph (`MoreVert` or `ActionIcons.MoreActions`) outside
+`RowActionsMenu`: a menu behind a labelled button, a filter icon or a right-click is not counted.
+
+**Still to migrate.** The CV21 and CV22 baselines are the backlog:
+
+| Area | Raw `MudIconButton` (CV21) | Raw ⋮ `MudMenu` (CV22) | Files |
+| --- | --- | --- | --- |
+| Room | 2 | 0 | `QuestionCard` (2, `Size.Medium` arrows) |
+| Shared | 3 | 1 | `FeedItemRow` (a dismiss inside a classed tooltip), `AgentProfileCard` (the menu's button holds an `@ref` for focus), `Chip` (its clear button) |
+| Shell | 2 | 0 | `ActivityBar` (the 40 px tile), `NeedsYouList` (a dismiss inside a classed tooltip) |
+| Tasks | 2 | 2 | `TaskActionsMenu` (binds `Open`), `TaskDecisionCard` (other decisions, not a row menu: stays raw) |
+
 ### Settings intro and stored-at line
 
 ![A Settings panel head: the title, an intro paragraph and a Stored at line with a monospace path](../images/components/settings-intro-stored-at.png)
@@ -805,7 +843,6 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned component | Reuse cases | What it fixes | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| A3 | **RowActionsMenu**: a `MoreVert` menu with the hover-reveal classes and the "Actions for {name}" label | 11 hand-built (the Teams nav twice, Tasks, the board, the Views nav, `RoomNavRow`, Scheduled, and four in Skills settings); 9 files repeat the `hover-reveal-menu-button` class | The rule is in [UXDesignGuidelines.md](UXDesignGuidelines.md#i-need-use-this) but names no component. A twelfth `MoreVert` menu, on `TaskDecisionCard`, offers other decisions and is a different thing | S | Planned |
 | A4 | **One Adapter, Model and Effort picker**, and a `ProbedSelect` for the select-with-progress-bar block | The cascade is written 2 times (`AdapterModelEffortPicker`, used once, and `AgentProfileCard`); the probe block appears 5 times | `AgentProfileCard` (2,359 lines) re-implements the shared picker, and adds a Work mode select the picker lacks | L | Planned |
 | A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
 | A6 | **PropertyList** and **PropertyRow**: a label and a value per row | 30 `<dt>` rows in 5 files (`TaskReadView` 14, `FeedTaskPreview` 7, `FeedHelperPreview` 5, `ProfileCard` 3, `LibraryProperties` 1), plus 25 `.task-detail-prop` rows in `TaskDetail` | The edit and read views of a Task use different markup for the same fields | M | Planned |
@@ -816,7 +853,6 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned component | Reuse cases | Evidence | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| B5 | **Icon button** with its tooltip pairing | 55 uses in 32 files | `aria-label` is already on all 55, and 26 sit beside a `MudTooltip`. Low gain, because the rule already holds | S | Planned |
 | B6 | **Switch or checkbox**: state the rule first, then decide whether one component serves both | 14 switches, 6 checkboxes (`AddWithAiDialog`, `AgentProfileCard`, `ElicitationCard`, `JobEditorDialog`, `NewChat`, `UpdateDialog`) | `design-system.md`'s House defaults table has no row for either | S | Planned |
 
 ### Browser scripts
@@ -852,39 +888,6 @@ Four Themes restyle shared controls through their `surface` trait: Lumen is `hai
 are the overrides to check. `agents/scripts/Css-Snapshot.ps1 -Mode Capture` records every route
 in all 8 Theme and mode pairs at 1280 and 768 px; `-Mode Report` with a `-Declared` file of the
 intended changes then lists anything else that moved.
-
-#### A3 RowActionsMenu
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Sidebar, hover reveal | `Shared/RoomNavRow.razor:85`, `Tasks/TaskViewNav.razor:42`, `Teams/TeamsNav.razor:106` | 23.5 px, radius 6 px (`shell.css:1381` card step), opacity 0 until hover (*measured*) |
-| Teams scope row | `Teams/TeamsNav.razor:393`, `sidebar.css:308-321` | Same look, written a second time with its own classes |
-| Built-in activator | `ScheduledPage.razor:75`, `PackCard.razor:74`, `SkillsTab.razor:123`, `SourceRow.razor:30`, `SourcesTab.razor:78` | 23.5 px, radius 50%, always visible (*measured* on Skills: the class sits outside a `.hover-reveal-row`) |
-| Page header | `Pages/Tasks.razor:147` | 28 px, radius 50% (`tasks.css:1221`) |
-| Board column | `Tasks/TaskBoard.razor:74` | Label "{column} column menu", not "Actions for {name}"; menu not `Dense`: items 45.7 px against 30.2 px (*measured*) |
-| Not dense | `TaskViewNav.razor:33`, `TaskBoard.razor:72` | `Dense` missing on the `MudMenu` |
-
-Dense items measure 30.2 px at 14 px; the rule says 32 px at 13 px.
-
-**Which is right.** design-system.md Menus: a `Dense` 32 px, 13 px item; the activator's label is
-`MenuDialogs.ActivatorLabel`; Patterns worth copying: actions "revealed on hover or focus".
-
-**Fix:**
-
-1. `RowActionsMenu` owns the activator, `Dense`, the label and the reveal. `markup only`
-2. The four Skills menus and `ScheduledPage` reveal on hover like the sidebar. `visual`
-3. `TaskBoard.razor:74` takes `ActivatorLabel(column.Label)`. `markup only` (wording heard)
-4. Delete `sidebar.css:308-330` once `TeamsNav.razor:393` uses the component. `markup only`
-5. Menu items to 32 px and 13 px in `base.css`. `visual`
-
-**How to prove.** Css-Snapshot Report on `/`, `/tasks/all-tasks`, `/settings/skills`,
-`/scheduled`; declare `opacity` on the five built-in activators. Open one menu and read item height.
-
-**Open questions for the owner:**
-
-- `Q-A3-1` Activator radius: 50% (icon button) or the card step (sidebar today)? Recommended: 50%,
-  the icon button's shape, so B5 decides it once.
-- `Q-A3-2` Hover reveal in a table (Skills) as in the sidebar? Recommended: yes; touch keeps it shown.
 
 #### A4 One Adapter, Model and Effort picker
 
@@ -1029,30 +1032,6 @@ rule picks one.
 
 - `Q-A8-1` In a button, spinner or "…ing" text? Recommended: the text ("Reloading…") with no
   spinner, as four sites already do; a spinner only where there is no button.
-
-#### B5 Icon button
-
-| Variant | Where | How it looks different (*measured*) |
-| --- | --- | --- |
-| Small, default | most of 55, for example the Room header, Task list rows, row menus | 23.5 px, padding 3 px |
-| Small at 28 px | the Tasks toolbars (`tasks.css:1221`), Send | 28 px |
-| Small at 24 px | `TeamsNav.razor:273` "Start a project" and its two siblings | 24 px, padding 0 |
-| Top bar | `TopBar.razor` | 32 px |
-| Radius | sidebar row menus 6 px; everything else 50% | |
-
-**Which is right.** design-system.md size ladder: an icon button is 28 px. 23.5 px is off the
-ladder, and only the Tasks toolbar applies 28 px.
-
-**Fix:**
-
-1. A global 28 px Small icon button in `base.css`; delete `tasks.css:1221-1226`. `visual`
-2. One radius, with Q-A3-1. `visual`
-
-**How to prove.** Css-Snapshot Report on every route; declare `.mud-icon-button | width`, `height`.
-
-**Open questions for the owner:**
-
-- `Q-B5-1` 28 px everywhere, a sidebar row included? Recommended: yes; the 32 px row holds it.
 
 #### B6 Switch or checkbox
 

@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV21", "CV22"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV18</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c>, <c>CV13</c> to <c>CV18</c>, <c>CV21</c> and <c>CV22</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -54,6 +54,8 @@ internal static partial class UiConventionScanner
         "CV16" => Cv16(path, text),
         "CV17" => Cv17(path, text),
         "CV18" => Cv18(path, text),
+        "CV21" => Cv21(path, text),
+        "CV22" => Cv22(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -123,6 +125,56 @@ internal static partial class UiConventionScanner
     /// <param name="text">The file text.</param>
     public static RuleCount Cv18(string path, string text) =>
         new("CV18", path, path.EndsWith("/SelectField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSelect"], static _ => true));
+
+    /// <summary>
+    /// CV21: a raw <c>&lt;MudIconButton&gt;</c> in a component other than <c>ActionIconButton.razor</c>. Every icon button is the one
+    /// <c>ActionIconButton</c>, always Small (28 px) and round, with a required accessible label and its tooltip built in
+    /// (ComponentCatalog B5). A <c>MudMenu</c>'s built-in <c>Icon</c> activator is a different tag, counted by CV22 when it is a row
+    /// menu. Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv21(string path, string text) =>
+        new("CV21", path, path.EndsWith("/ActionIconButton.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudIconButton"], static _ => true));
+
+    /// <summary>
+    /// CV22: a raw <c>&lt;MudMenu&gt;</c> used as a row menu, in a component other than <c>RowActionsMenu.razor</c>. A row menu is told
+    /// apart by its ⋮ glyph: the tag's own attributes, or its activator (the text up to the first <c>&lt;/ActivatorContent&gt;</c> or
+    /// <c>&lt;/MudMenu&gt;</c>), name <c>MoreVert</c> or <c>ActionIcons.MoreActions</c>. A menu behind a labelled button, a filter icon or
+    /// a right-click is not counted (ComponentCatalog A3). Its baseline holds the ⋮ menus that are not row menus yet, such as the Human
+    /// gate's other decisions.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv22(string path, string text)
+    {
+        if (path.EndsWith("/RowActionsMenu.razor", StringComparison.Ordinal))
+        {
+            return new("CV22", path, 0);
+        }
+
+        string source = StripRazorComments(text);
+        int count = 0;
+        foreach (Match tag in MudTag().Matches(source))
+        {
+            if (!string.Equals(tag.Groups["name"].Value, "MudMenu", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int start = tag.Index + tag.Length;
+            int activatorEnd = source.IndexOf("</ActivatorContent>", start, StringComparison.Ordinal);
+            int menuEnd = source.IndexOf("</MudMenu>", start, StringComparison.Ordinal);
+            bool ownActivator = activatorEnd >= 0 && (menuEnd < 0 || activatorEnd < menuEnd);
+            string activator = ownActivator ? tag.Groups["attrs"].Value + source[start..activatorEnd] : tag.Groups["attrs"].Value;
+            if (activator.Contains("MoreVert", StringComparison.Ordinal) || activator.Contains("ActionIcons.MoreActions", StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+
+        return new("CV22", path, count);
+    }
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>

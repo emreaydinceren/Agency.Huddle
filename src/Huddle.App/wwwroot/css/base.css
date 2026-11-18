@@ -422,6 +422,34 @@ b {
     border-radius: var(--hu-radius-control);
 }
 
+/* A Small icon button is one 28px round box on the size ladder, everywhere (ComponentCatalog ActionIconButton; Q-B5-1): MudBlazor's
+   own Small is 23.5px. :where() keeps the rule at one class, so a site's own box (the Activity bar's 40px tile, a Send look) still
+   wins; a switch's base is an icon button too and keeps MudBlazor's geometry, which its track is placed for. */
+:where(.mud-icon-button.mud-icon-button-size-small):not(.mud-switch-base) {
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+/* RowActionsMenu's activator, revealed on hover or keyboard focus of its row: a sidebar .hover-reveal-row, or a table row or card
+   marked .row-actions-host. Only the opacity is gated, so the button stays in the tab order (ComponentCatalog
+   RowActionsMenu; Q-A3-2). The @media (hover: none) block in agents.css shows it on a touch screen. */
+:is(.hover-reveal-row, .row-actions-host) .hover-reveal-menu-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+:is(.hover-reveal-row, .row-actions-host):is(:hover, :focus-within) .hover-reveal-menu-button {
+    opacity: 1;
+}
+
+/* A menu item is a 32px row in 13px text (design-system.md Menus); MudBlazor's Dense item is 30px at 14px. */
+.mud-menu-item {
+    min-height: 32px;
+    font-size: var(--mud-typography-body2-size);
+}
+
 /* Every filled button carries the Theme's filled-button shadow (it lived in tasks.css, but reaches every page). */
 .mud-button-root.mud-button-filled {
     box-shadow: var(--hu-button-filled-shadow);

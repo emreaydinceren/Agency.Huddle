@@ -36,12 +36,9 @@
                     <div class="view-editor-field-row">
                         <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary"
                                    Label="@TaskFieldView.Label(context)" Class="@($"view-editor-field-switch-{context}")" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} up")"
-                                       Disabled="@this.IsFirst(context)" Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} down")"
-                                       Disabled="@this.IsLast(context)" Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {TaskFieldView.Label(context)}")"
-                                       Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.Remove(context))" />
+                        <ActionIconButton Icon="@Icons.Material.Filled.ArrowUpward" Label="@($"Move {TaskFieldView.Label(context)} up")" Disabled="@this.IsFirst(context)" Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
+                        <ActionIconButton Icon="@Icons.Material.Filled.ArrowDownward" Label="@($"Move {TaskFieldView.Label(context)} down")" Disabled="@this.IsLast(context)" Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
+                        <ActionIconButton Icon="@Icons.Material.Filled.Close" Label="@($"Remove {TaskFieldView.Label(context)}")" Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.Remove(context))" />
                     </div>
                 </ItemRenderer>
             </MudDropContainer>

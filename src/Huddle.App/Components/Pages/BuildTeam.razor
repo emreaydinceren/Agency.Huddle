@@ -236,17 +236,13 @@
                                         @* A destructive action is never a top-level button with a caret (design-system "Menus"):
                                            Edit and Message lead, and the removals sit under the more-actions button. The activator
                                            names its target and carries no hover tooltip; neither item opens a dialog. *@
-                                        <MudMenu Class="roster-more" Dense="true">
-                                            <ActivatorContent Context="menuContext">
-                                                <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small"
-                                                               aria-label="@MenuDialogs.ActivatorLabel(draft.Name)" OnClick="menuContext.ToggleAsync" />
-                                            </ActivatorContent>
+                                        <RowActionsMenu Name="@draft.Name" Reveal="RowActionsReveal.Always" Class="roster-more">
                                             <ChildContent>
                                                 <MudMenuItem Icon="@ActionIcons.RemoveMember" OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
                                                 <MudDivider />
                                                 <MudMenuItem Icon="@ActionIcons.Delete" OnClick="@(() => this.RemoveDraft(draft.Key))" Class="menu-item-destructive">Delete agent</MudMenuItem>
                                             </ChildContent>
-                                        </MudMenu>
+                                        </RowActionsMenu>
                                     }
                                     else
                                     {

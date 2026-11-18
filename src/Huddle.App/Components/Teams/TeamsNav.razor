@@ -87,38 +87,24 @@
                 <div class="hover-reveal-row" @key="team.Name"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(team.Name, e))"
                      @oncontextmenu:preventDefault="true">
-                    <MudIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
-                                   Size="Size.Small" Class="teams-nav-chevron"
-                                   aria-label="@(isExpanded ? $"Collapse {team.Name}" : $"Expand {team.Name}")"
-                                   aria-expanded="@(isExpanded ? "true" : "false")"
-                                   OnClick="@(() => this.ToggleAsync(team.Name))" />
+                    <ActionIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" Label="@(isExpanded ? $"Collapse {team.Name}" : $"Expand {team.Name}")" Class="teams-nav-chevron" aria-expanded="@(isExpanded ? "true" : "false")" OnClick="@(() => this.ToggleAsync(team.Name))" />
                     <NavTabLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" TabTitle="@team.Name" Match="NavLinkMatch.Prefix"
                                 Class="hover-reveal-link"><TeamAvatar Team="@team.Name" Avatar="team.Avatar" Size="Size.Small" Class="teams-nav-avatar" /><span class="sidebar-row-label" title="@team.Name">@team.Name</span></NavTabLink>
                     @* Meta never takes the row's text: the member count trails the name, and its tooltip says what it counts. *@
                     <span class="sidebar-row-meta" title="@(team.HasMembers ? Plural.Of(team.Members.Count, "member", "members") : "No members")">@team.Members.Count</span>
-                    <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu" Dense="true">
-                        @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-                           MudMenu does not wire a click listener around it automatically - the
-                           supplied MenuContext.ToggleAsync is how custom activator content opens
-                           the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
-                        <ActivatorContent Context="menuContext">
-                            @* No hover tooltip (it would stay up over the first item); the label names the Team. *@
-                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                           aria-label="@MenuDialogs.ActivatorLabel(team.Name)" Class="hover-reveal-menu-button"
-                                           OnClick="menuContext.ToggleAsync" />
-                        </ActivatorContent>
+                    <RowActionsMenu @ref="@this.menuRefs[team.Name]" Name="@team.Name" Class="hover-reveal-menu">
                         <ChildContent>
                             <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.ToggleNewChat(team.Name))">New room</MudMenuItem>
                             @if (this.ProjectsAllowed)
                             {
-                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">New project…</MudMenuItem>
+                                <MudMenuItem Icon="@Icons.Material.Filled.Add" OnClick="@(() => this.NewProjectAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)?.Menu))">New project…</MudMenuItem>
                             }
                             <MudMenuItem Icon="@RenameIcon" Class="teams-nav-rename-team"
-                                         OnClick="@(() => this.RenameTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">Rename team…</MudMenuItem>
+                                         OnClick="@(() => this.RenameTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)?.Menu))">Rename team…</MudMenuItem>
                             <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
-                                         OnClick="@(() => this.ArchiveTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)))">Archive team…</MudMenuItem>
+                                         OnClick="@(() => this.ArchiveTeamAsync(team.Name, this.menuRefs.GetValueOrDefault(team.Name)?.Menu))">Archive team…</MudMenuItem>
                         </ChildContent>
-                    </MudMenu>
+                    </RowActionsMenu>
                 </div>
                 @* The Team's own panel sits under its row, unless its Rooms section is on screen to hold it. *@
                 @if (this.IsNewChatOpen(team.Name, null) && !(isExpanded && scope is null))
@@ -215,7 +201,7 @@
 
     /// <summary>Folder keys (see <see cref="FolderKey"/>) whose list the Human opened with "Show all".</summary>
     private readonly HashSet<string> showAllRows = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, RowActionsMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
 
     private const string ExpandedKey = "teamsNav:expanded";
 
@@ -270,10 +256,7 @@
     /// <summary>The PROJECTS header's "+" (tooltip "Start a project"), the same button as the ROOMS and TASKS headers' "+": it opens the New project prompt.</summary>
     /// <param name="team">The Team the Project is started in.</param>
     private RenderFragment StartProjectButton(string team) =>
-        @<MudTooltip Text="Start a project">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add teams-nav-start-project"
-                           aria-label="Start a project" OnClick="@(() => this.NewProjectAsync(team, null))" />
-        </MudTooltip>;
+        @<ActionIconButton Icon="@Icons.Material.Filled.Add" Label="Start a project" Tooltip="Start a project" Class="teams-nav-section-add teams-nav-start-project" OnClick="@(() => this.NewProjectAsync(team, null))" />;
 
     /// <summary>
     /// The quiet "No project" row: selecting it narrows the sections below to the Team's Rooms and Tasks that belong to no Project.
@@ -325,7 +308,7 @@
         string href = ScopeHref(team.Name, project);
         string key = project ?? string.Empty;
         int open = counts.GetValueOrDefault(key);
-        string rowClass = (project is null ? "teams-nav-scope-row teams-nav-scope-header" : "teams-nav-scope-row") + (selected ? " selected-shape" : string.Empty);
+        string rowClass = (project is null ? "row-actions-host teams-nav-scope-row teams-nav-scope-header" : "row-actions-host teams-nav-scope-row") + (selected ? " selected-shape" : string.Empty);
         string kind = project is null ? "team" : "project";
         return @<div class="@rowClass" @key="key" data-scope="@kind">
             @* A plain link, not a NavLink: the selected look is the row's own, so NavLink's active class never doubles it. *@
@@ -371,7 +354,7 @@
     /// a ref is set only when its menu is created, so clearing would lose the refs of menus that stay on screen; a gone row's entry is
     /// never looked up again.
     /// </summary>
-    private readonly Dictionary<string, MudMenu> scopeMenuRefs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, RowActionsMenu> scopeMenuRefs = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The key of a scope row's menu: the Team, then the Project after a control character no name holds.</summary>
     private static string ScopeMenuKey(string team, string? project) => team + "\u0001" + project;
@@ -388,28 +371,24 @@
         string label = project ?? team;
         // Keyed by Team and Project: Blazor sets @ref only when it creates the instance, so a menu reused for another Team's
         // header (the row keeps its place when the Team changes) would leave this key without a ref and the menu could not close first.
-        RenderFragment menu = @<MudMenu @key="key" @ref="@this.scopeMenuRefs[key]" Class="teams-nav-scope-menu" Dense="true">
-            <ActivatorContent Context="menuContext">
-                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Class="teams-nav-scope-menu-button"
-                               aria-label="@MenuDialogs.ActivatorLabel(label)" OnClick="menuContext.ToggleAsync" />
-            </ActivatorContent>
+        RenderFragment menu = @<RowActionsMenu @key="key" @ref="@this.scopeMenuRefs[key]" Name="@label" Class="teams-nav-scope-menu" ActivatorClass="teams-nav-scope-menu-button">
             <ChildContent>
                 @if (project is null)
                 {
                     <MudMenuItem Icon="@RenameIcon" Class="teams-nav-rename-team"
-                                 OnClick="@(() => this.RenameTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)))">Rename team…</MudMenuItem>
+                                 OnClick="@(() => this.RenameTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)?.Menu))">Rename team…</MudMenuItem>
                     <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-team"
-                                 OnClick="@(() => this.ArchiveTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)))">Archive team…</MudMenuItem>
+                                 OnClick="@(() => this.ArchiveTeamAsync(team, this.scopeMenuRefs.GetValueOrDefault(key)?.Menu))">Archive team…</MudMenuItem>
                 }
                 else
                 {
                     <MudMenuItem Icon="@RenameIcon" Class="teams-nav-rename-project"
-                                 OnClick="@(() => this.RenameProjectAsync(team, project, this.scopeMenuRefs.GetValueOrDefault(key)))">Rename project…</MudMenuItem>
+                                 OnClick="@(() => this.RenameProjectAsync(team, project, this.scopeMenuRefs.GetValueOrDefault(key)?.Menu))">Rename project…</MudMenuItem>
                     <MudMenuItem Icon="@ArchiveIcon" Class="teams-nav-archive-project"
                                  OnClick="@(() => this.ArchiveProjectAsync(team, project))">Archive project</MudMenuItem>
                 }
             </ChildContent>
-        </MudMenu>;
+        </RowActionsMenu>;
         return menu;
     }
 
@@ -487,9 +466,7 @@
     /// click on it never opens the Team page.
     /// </summary>
     private RenderFragment TeamSwitcher() =>
-        @<MudIconButton Icon="@(this.switcherOpen ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)" Size="Size.Small"
-                        Class="teams-nav-switcher-button" aria-label="Switch team" title="Switch team"
-                        aria-expanded="@(this.switcherOpen ? "true" : "false")" OnClick="this.ToggleSwitcher" />;
+        @<ActionIconButton Icon="@(this.switcherOpen ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)" Label="Switch team" Class="teams-nav-switcher-button" title="Switch team" aria-expanded="@(this.switcherOpen ? "true" : "false")" OnClick="this.ToggleSwitcher" />;
 
     /// <summary>
     /// Every Team in catalog order, unfolded under the header card while <see cref="switcherOpen"/>, then "Build a team".
@@ -587,11 +564,7 @@
         string scopeKey = ScopeFolderSuffix(project, noProject);
         string roomsKey = FolderKey(team.Name, RoomsFolder + scopeKey);
         string newChatLabel = $"New room in {project ?? team.Name}";
-        RenderFragment add = @<MudTooltip Text="@newChatLabel">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add"
-                           aria-label="@newChatLabel"
-                           OnClick="@(() => this.ToggleNewChat(team.Name, project))" />
-        </MudTooltip>;
+        RenderFragment add = @<ActionIconButton Icon="@Icons.Material.Filled.Add" Label="@newChatLabel" Tooltip="@newChatLabel" Class="teams-nav-section-add" OnClick="@(() => this.ToggleNewChat(team.Name, project))" />;
         return @<div class="teams-nav-section teams-nav-section-rooms" data-section="rooms">
             @SectionHeader("Rooms", add)
             @if (this.IsNewChatOpen(team.Name, project))
@@ -658,10 +631,7 @@
     {
         string tasksKey = FolderKey(team, TasksFolder + ScopeFolderSuffix(project, noProject));
         string? titleScope = noProject ? Tasks.NoProjectLabel : project;
-        RenderFragment add = @<MudTooltip Text="New task view">
-            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Class="teams-nav-section-add teams-nav-new-view"
-                           aria-label="New task view" OnClick="@(() => this.NewTaskView(team, project, noProject))" />
-        </MudTooltip>;
+        RenderFragment add = @<ActionIconButton Icon="@Icons.Material.Filled.Add" Label="New task view" Tooltip="New task view" Class="teams-nav-section-add teams-nav-new-view" OnClick="@(() => this.NewTaskView(team, project, noProject))" />;
         return @<div class="teams-nav-section teams-nav-section-tasks" data-section="tasks">
             @SectionHeader("Tasks", add)
             @foreach (TaskView view in SidebarRows.Visible(this.Views.Views, this.showAllRows.Contains(tasksKey), candidate => this.IsActiveView(team, project, noProject, candidate)))
@@ -1325,7 +1295,7 @@
     /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
     private async Task OnRowContextMenuAsync(string team, MouseEventArgs e)
     {
-        if (this.menuRefs.TryGetValue(team, out MudMenu? menu))
+        if (this.menuRefs.TryGetValue(team, out RowActionsMenu? row) && row.Menu is { } menu)
         {
             await menu.OpenMenuAsync(e);
         }

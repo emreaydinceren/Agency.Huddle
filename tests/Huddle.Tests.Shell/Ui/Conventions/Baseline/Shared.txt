@@ -3,3 +3,7 @@ CV17|src/Huddle.App/Components/Shared/AvatarLibraryPicker.razor|1
 CV17|src/Huddle.App/Components/Shared/FolderPickerDialog.razor|1
 CV17|src/Huddle.App/Components/Shared/NeedsYouLevelControl.razor|1
 CV18|src/Huddle.App/Components/Shared/AgentProfileCard.razor|4
+CV21|src/Huddle.App/Components/Feed/FeedItemRow.razor|1
+CV21|src/Huddle.App/Components/Shared/AgentProfileCard.razor|1
+CV21|src/Huddle.App/Components/Shared/Chip.razor|1
+CV22|src/Huddle.App/Components/Shared/AgentProfileCard.razor|1

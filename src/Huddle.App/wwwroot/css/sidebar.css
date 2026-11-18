@@ -269,19 +269,8 @@
     transform: none;
 }
 
-.teams-nav-host .teams-nav-scope-menu-button {
-    opacity: 0;
-    border-radius: var(--hu-radius-card);
-    transition: opacity 120ms ease;
-}
-
 .teams-nav-host .teams-nav-scope-count {
     transition: opacity 120ms ease;
-}
-
-.teams-nav-host .teams-nav-scope-row:hover .teams-nav-scope-menu-button,
-.teams-nav-host .teams-nav-scope-row:focus-within .teams-nav-scope-menu-button {
-    opacity: 1;
 }
 
 .teams-nav-host .teams-nav-scope-row:hover .teams-nav-scope-count,
@@ -291,9 +280,6 @@
 
 /* On touch there is no hover: the button is always shown and the count steps in before it. */
 @media (hover: none) {
-    .teams-nav-host .teams-nav-scope-menu-button {
-        opacity: 1;
-    }
 
     .teams-nav-host .teams-nav-scope-row:not(.teams-nav-scope-header) .teams-nav-scope-link {
         padding-inline-end: calc(var(--nav-end) + var(--nav-step));
@@ -443,9 +429,6 @@
 }
 
 .teams-nav-host .teams-nav-section-add.mud-icon-button {
-    width: var(--nav-slot);
-    height: var(--nav-slot);
-    padding: 0;
     color: var(--mud-palette-text-secondary);
 }
 

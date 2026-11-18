@@ -141,12 +141,7 @@
                     @* The View's own actions (T2a), the same MoreVert menu as the sidebar row: Rename and Fields for every
                        View, Delete only for a non-built-in one (ViewStore.Delete refuses the two built-ins).
                        Disabled while views.json cannot be read, since the store refuses every write then. *@
-                    <MudMenu @ref="this.viewMenu" Dense="true" Class="tasks-view-menu">
-                        <ActivatorContent Context="menuContext">
-                            @* No hover tooltip: it would stay up over the menu's first item. The activator names the View instead (design-system "Menus"). *@
-                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="@MenuDialogs.ActivatorLabel(this.effectiveView.Name)"
-                                           Disabled="@(this.Views.LoadError is not null)" OnClick="menuContext.ToggleAsync" />
-                        </ActivatorContent>
+                    <RowActionsMenu @ref="this.viewMenu" Name="@this.effectiveView.Name" Reveal="RowActionsReveal.Always" Disabled="@(this.Views.LoadError is not null)" Class="tasks-view-menu">
                         <ChildContent>
                             @* Every item opens a dialog, so each ends in "…" and the menu closes before the dialog opens. None has an icon, so all are alike; Delete view… is last, after a divider, in Error ink. *@
                             <MudMenuItem OnClick="this.OnRenameClickedAsync">Rename…</MudMenuItem>
@@ -157,7 +152,7 @@
                                 <MudMenuItem Class="menu-item-destructive" OnClick="this.DeleteViewAsync">Delete view…</MudMenuItem>
                             }
                         </ChildContent>
-                    </MudMenu>
+                    </RowActionsMenu>
                 </HeaderTrailing>
             </TaskToolbar>
         </div>
@@ -240,7 +235,7 @@
     private InvalidView? invalidView;
     private string? itemNotFoundText;
     private TaskId? selectedTaskId;
-    private MudMenu? viewMenu;
+    private RowActionsMenu? viewMenu;
 
     /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
     protected override void OnInitialized()
@@ -416,14 +411,14 @@
 
     /// <summary>The title menu's <i>Rename…</i>: closes the menu, then opens the rename dialog for the effective View; the page follows the saved name through <c>ViewsChanged</c>.</summary>
     private Task OnRenameClickedAsync() =>
-        MenuDialogs.AfterClosingAsync(this.viewMenu, () => ViewActions.RenameAsync(this.DialogService, this.Views, this.effectiveView.Id));
+        MenuDialogs.AfterClosingAsync(this.viewMenu?.Menu, () => ViewActions.RenameAsync(this.DialogService, this.Views, this.effectiveView.Id));
 
     /// <summary>The title menu's <i>Fields…</i>: closes the menu, then opens <see cref="FieldsDialog"/> for the effective View's saved copy, titled "Fields in {View}".</summary>
     private Task OnFieldsClickedAsync()
     {
         DialogParameters<FieldsDialog> parameters = new() { { dialog => dialog.ViewId, this.effectiveView.Id } };
         string title = $"Fields in {this.effectiveView.Name}";
-        return MenuDialogs.AfterClosingAsync(this.viewMenu, () => this.DialogService.ShowAsync<FieldsDialog>(title, parameters, HuddleDialogOptions.SmallForm));
+        return MenuDialogs.AfterClosingAsync(this.viewMenu?.Menu, () => this.DialogService.ShowAsync<FieldsDialog>(title, parameters, HuddleDialogOptions.SmallForm));
     }
 
     /// <summary>
@@ -435,7 +430,7 @@
     private async Task DeleteViewAsync()
     {
         TaskView view = this.effectiveView;
-        if (!await MenuDialogs.AfterClosingAsync(this.viewMenu, () => ViewActions.ConfirmDeleteAsync(this.DialogService, view)))
+        if (!await MenuDialogs.AfterClosingAsync(this.viewMenu?.Menu, () => ViewActions.ConfirmDeleteAsync(this.DialogService, view)))
         {
             return;
         }

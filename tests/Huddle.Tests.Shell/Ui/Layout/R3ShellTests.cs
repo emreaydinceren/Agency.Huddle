@@ -133,8 +133,8 @@ public sealed partial class R3ShellTests
 
         Assert.DoesNotContain("MudTooltip Text=\"Room actions\"", room, StringComparison.Ordinal);
         Assert.DoesNotContain("MudTooltip Text=\"Team actions\"", teams, StringComparison.Ordinal);
-        Assert.Contains("MenuDialogs.ActivatorLabel(this.Room.Name)", room, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label
-        Assert.Contains("MenuDialogs.ActivatorLabel(team.Name)", teams, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label
+        Assert.Contains("<RowActionsMenu @ref=\"this.menu\" Name=\"@this.Room.Name\"", room, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label ("Actions for {Name}")
+        Assert.Contains("Name=\"@team.Name\" Class=\"hover-reveal-menu\"", teams, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label ("Actions for {Name}")
         Assert.Contains("MenuDialogs.AfterClosingAsync(menu,", teams, StringComparison.Ordinal); // contains-ok: a source pin on the menu-closes-first call
         Assert.Matches(@"<MudDivider />\s*<MudMenuItem[^>]*menu-item-destructive[^>]*>Delete</MudMenuItem>", room);
         Assert.Contains("Narrow=\"true\" Prompt=\"Delete?\"", room, StringComparison.Ordinal); // contains-ok: a source pin on the sidebar's narrow confirm

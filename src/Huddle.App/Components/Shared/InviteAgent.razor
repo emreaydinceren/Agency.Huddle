@@ -11,9 +11,7 @@
 @inject AvatarStore Avatars
 
 <div class="invite-agent">
-    <MudTooltip Text="Invite agent" Placement="Placement.Start">
-        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Invite agent" OnClick="this.TogglePanel" />
-    </MudTooltip>
+    <ActionIconButton Icon="@Icons.Material.Filled.PersonAddAlt" Label="Invite agent" Tooltip="Invite agent" TooltipPlacement="Placement.Start" OnClick="this.TogglePanel" />
     <MudCollapse Expanded="@this.isOpen">
         <MudStack Class="invite-panel pa-2" Spacing="2">
             <MudText Typo="Typo.subtitle2" Class="invite-title">@this.PanelTitle</MudText>

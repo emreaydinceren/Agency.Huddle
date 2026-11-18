@@ -35,10 +35,8 @@
     @if (this.Custom)
     {
         <span class="role-card-actions">
-            <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small" aria-label="@($"Edit {this.Title}")"
-                           OnClick="this.OnEditClick" Class="role-card-edit" />
-            <MudIconButton Icon="@Icons.Material.Outlined.Delete" Size="Size.Small" aria-label="@($"Delete {this.Title}")"
-                           OnClick="this.OnDeleteClick" Class="role-card-delete" />
+            <ActionIconButton Icon="@Icons.Material.Outlined.Edit" Label="@($"Edit {this.Title}")" OnClick="this.OnEditClick" Class="role-card-edit" />
+            <ActionIconButton Icon="@Icons.Material.Outlined.Delete" Label="@($"Delete {this.Title}")" OnClick="this.OnDeleteClick" Class="role-card-delete" />
         </span>
     }
 </div>

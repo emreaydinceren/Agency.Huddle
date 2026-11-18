@@ -193,12 +193,7 @@
                     {
                         <span class="message-title">@draftTitle</span>
                     }
-                    <MudTooltip Text="Stop">
-                        <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Size="Size.Small"
-                                       Class="draft-stop" aria-label="Stop"
-                                       Disabled="@this.StoppingAgentIds.Contains(draft.AgentId)"
-                                       OnClick="() => this.OnStop.InvokeAsync(draft)" />
-                    </MudTooltip>
+                    <ActionIconButton Icon="@Icons.Material.Filled.StopCircle" Label="Stop" Tooltip="Stop" Class="draft-stop" Disabled="@this.StoppingAgentIds.Contains(draft.AgentId)" OnClick="() => this.OnStop.InvokeAsync(draft)" />
                 </div>
                 @* A Draft is rendered as plain text, through Razor's own default @ escaping, never through
                    MarkdownRenderer - white-space: pre-wrap in app.css does the rest. Two reasons, both in

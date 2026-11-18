@@ -17,14 +17,7 @@
 {
     <MudTooltip Text="Notifications">
         <MudBadge Content="@this.count" Max="99" Visible="@(this.count > 0)" Overlap="true" Color="Color.Primary" Class="notifications-badge">
-            <MudIconButton Icon="@Icons.Material.Outlined.Notifications"
-                           Size="Size.Small"
-                           Color="@(this.Showing ? Color.Primary : Color.Inherit)"
-                           Class="notifications-button"
-                           aria-label="@this.Label"
-                           aria-pressed="@(this.Showing ? "true" : "false")"
-                           aria-controls="@RightSidebar.ElementId"
-                           OnClick="this.Toggle" />
+            <ActionIconButton Icon="@Icons.Material.Outlined.Notifications" Label="@this.Label" Pressed="@(this.Showing)" Class="notifications-button" aria-controls="@RightSidebar.ElementId" OnClick="this.Toggle" />
         </MudBadge>
     </MudTooltip>
 }

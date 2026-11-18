@@ -22,19 +22,18 @@
 
 @if (this.Source is { } source)
 {
-    <MudPaper Outlined="true" Class="source-row pa-3 mb-2" data-source="@source.Id">
+    <MudPaper Outlined="true" Class="row-actions-host source-row pa-3 mb-2" data-source="@source.Id">
         <div class="d-flex flex-wrap align-center gap-2">
             <MudIcon Icon="@KindIcon(source.File?.Kind)" Size="Size.Small" aria-hidden="true" />
             <MudText Typo="Typo.subtitle2" Class="source-row-id">@source.Id</MudText>
             <StatusChip Color="@StatusColor(source.Status)" Icon="@StatusIcon(source.Status)" Class="source-row-status">@source.Status</StatusChip>
-            <MudMenu @ref="this.menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button source-row-menu ml-auto"
-                     AriaLabel="@MenuDialogs.ActivatorLabel(source.Id)">
+            <RowActionsMenu @ref="this.menu" Name="@source.Id" Class="source-row-menu ml-auto">
                 @foreach (string item in this.MenuItems(source))
                 {
                     string chosen = item;
                     <MudMenuItem Class="@($"source-row-menu-{chosen.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(chosen))">@chosen</MudMenuItem>
                 }
-            </MudMenu>
+            </RowActionsMenu>
         </div>
         @if (source.File?.Url is { } url)
         {
@@ -64,7 +63,7 @@
     private const string CopyPromptItem = "Copy prompt";
     private const string RemoveItem = "Remove";
 
-    private MudMenu? menu;
+    private RowActionsMenu? menu;
 
     /// <summary>The Source id.</summary>
     [Parameter]
@@ -164,13 +163,13 @@
                 this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, notes));
                 break;
             case CheckItem:
-                await MenuDialogs.AfterClosingAsync(this.menu, () => SkillDialogs.OpenAddWithAiAsync(this.DialogService, "update", sourceIds: source.Id));
+                await MenuDialogs.AfterClosingAsync(this.menu?.Menu, () => SkillDialogs.OpenAddWithAiAsync(this.DialogService, "update", sourceIds: source.Id));
                 break;
             case CopyPromptItem:
                 await this.CopyMovedPromptAsync();
                 break;
             case RemoveItem:
-                await MenuDialogs.AfterClosingAsync(this.menu, () => this.RemoveAsync(source));
+                await MenuDialogs.AfterClosingAsync(this.menu?.Menu, () => this.RemoveAsync(source));
                 break;
             default:
                 break;

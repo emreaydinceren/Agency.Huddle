@@ -40,7 +40,7 @@ else
                     string word = status.ToWire();
                     <span class="@StateDotClass(status)" role="img" aria-label="@word" title="@word"></span>
                 }
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Show where it was mentioned" OnClick="@(() => this.Jump(row))" />
+                <ActionIconButton Icon="@Icons.Material.Filled.ArrowUpward" Label="Show where it was mentioned" OnClick="@(() => this.Jump(row))" />
             </div>
         }
         else
