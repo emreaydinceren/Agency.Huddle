@@ -1509,8 +1509,18 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             text = text + "\n" + ReleaseSentence(latest, releasedScope);
         }
 
-        return this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine ? text + "\n" + confirmLine : text;
+        if (this.ConfirmLine(batch, latest, assigneeName) is { } confirmLine)
+        {
+            text = text + "\n" + confirmLine;
+        }
+
+        // A review Task's assignee is told where the outcome goes (D-9); it is the last line, after any decision, release or confirm line.
+        bool outcomeWake = string.Equals(latest.Assignee, assigneeName, StringComparison.OrdinalIgnoreCase) && ReviewTags.IsReviewTask(latest.Tags);
+        return outcomeWake ? text + "\n" + ReviewSentence : text;
     }
+
+    /// <summary>The line a review or verify Task's assignee gets on every wake: the outcome is recorded on the Task, not in chat (D-9).</summary>
+    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it.";
 
     /// <summary>The line a release (ADR-0088) adds to the wake: the merge needs no Accept, a push still does.</summary>
     /// <param name="latest">The Task's latest state.</param>

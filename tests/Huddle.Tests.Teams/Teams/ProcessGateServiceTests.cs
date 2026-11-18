@@ -12,7 +12,7 @@ public sealed class ProcessGateServiceTests
 {
     private const string Team = "Apollo";
     private const string Check = "dotnet test";
-    private const string QaDone = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.";
+    private const string QaDone = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer), or a child Task tagged verify that is Done, is needed before this Task can be Done.";
     private const string SpecFirst = "Gate spec-approved-before-build: the parent spec Task must be approved before this Task can move to In Progress.";
     private const string FailFirst = "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move on.";
     private const string ChecksFirst = "Gate checks-before-merge: an Evidence line with exit code 0 for 'dotnet test' is needed before merging or pushing.";

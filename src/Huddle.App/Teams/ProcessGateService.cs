@@ -22,6 +22,9 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
     /// </summary>
     internal const string ReviewStateRefusal = "Huddle has no Review state. To ask for a review, create a Task tagged review, assigned to the reviewer, as a child of this Task, and add it to this Task's blocked_by.";
 
+    /// <summary>The refusal of <c>qa-evidence-before-done</c> (D-16): it names both ways to meet the gate.</summary>
+    internal const string QaRefusal = "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer), or a child Task tagged verify that is Done, is needed before this Task can be Done.";
+
     private readonly ConcurrentDictionary<string, bool> warned = new(StringComparer.Ordinal);
 
     /// <summary>The one-sentence risk shown when a gate is turned off.</summary>
@@ -61,7 +64,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
         if (toDone && enabled.Contains(GateId.QaEvidenceBeforeDone) && !HasVerifierEvidence(context))
         {
-            return new GateRefusal(GateId.QaEvidenceBeforeDone, "Gate qa-evidence-before-done: an Evidence line from a member who verifies (for example QA Engineer) is needed before this Task can be Done.");
+            return new GateRefusal(GateId.QaEvidenceBeforeDone, QaRefusal);
         }
 
         if (toInProgress && enabled.Contains(GateId.SpecApprovedBeforeBuild) && !context.ParentSpecApproved)
@@ -167,6 +170,11 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
 
     private bool HasVerifierEvidence(GateContext context)
     {
+        if (context.HasDoneVerifyChild)
+        {
+            return true;
+        }
+
         bool notesCount = !DoneRule.NamesCommand(this.ProcessOf(context.Team)?.DefinitionOfDone ?? []);
         return context.Evidence.Any(line =>
             (line.Command.Length > 0 || notesCount)

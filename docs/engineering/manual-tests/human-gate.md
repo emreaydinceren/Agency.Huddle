@@ -285,7 +285,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 **Pass if — all of these**
 
-- At step 3 no Task goes to Needs You for a merge, and no Accept is asked for one. After its Proof is complete in Review the Developer merges the branch named after the Task's id into the local `main` and moves the Task to Done.
+- At step 3 no Task goes to Needs You for a merge, and no Accept is asked for one. After its Proof is complete the Developer merges the branch named after the Task's id into the local `main` and moves the Task to Done.
 - At step 4 the timeline holds one entry by Huddle, `proceeded under Team level Run inside the Team: its merge into main needs no Accept`, the Feed shows it as Activity, and `main` holds the merge.
 - At step 5 the push is refused and nothing reaches the remote. A feature-branch push waits like any other push.
 - At step 6 the push goes through only after the Human accepts the Task whose Action names the push, and not before.

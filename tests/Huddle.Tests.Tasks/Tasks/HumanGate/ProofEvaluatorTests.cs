@@ -122,16 +122,16 @@ public sealed class ProofEvaluatorTests
         Assert.Equal("not run", item.Detail);
     }
 
-    /// <summary>#550: the QA evidence gate item follows the same rule; with no command in the Definition of Done a verify member's note meets it.</summary>
+    /// <summary>#669: the QA evidence gate item is a Task tagged verify, so a verify member's note alone does not meet it.</summary>
     [Fact]
-    public void QaGateEnabled_NoCommandInDefinition_NoteFromVerifyMember_IsMet()
+    public void QaGateEnabled_NoCommandInDefinition_NoteFromVerifyMember_IsNotMet()
     {
         ProofContext context = Context([], gates: [GateId.QaEvidenceBeforeDone], evidence: [Note(Quinn, "Checked every flag against its source")]);
 
         ProofItem item = Single(context);
 
         Assert.Equal(ProofItemSource.Gate, item.Source);
-        Assert.True(item.Met);
+        Assert.False(item.Met);
     }
 
     /// <summary>A command by a member whose role does not cover the step does not meet it.</summary>
@@ -479,11 +479,11 @@ public sealed class ProofEvaluatorTests
         Assert.Equal("Huddle can't read this rule", item.Detail);
     }
 
-    /// <summary>The enabled QA gate adds "QA evidence" from the Gate source, met by an Evidence line from a member who verifies.</summary>
+    /// <summary>The enabled QA gate adds "QA evidence" from the Gate source, met by a Done child Task tagged verify.</summary>
     [Fact]
     public void QaGateEnabled_AddsQaEvidenceOnce()
     {
-        ProofContext context = Context([], gates: [GateId.QaEvidenceBeforeDone], evidence: [Run(Quinn, "dotnet test", 0)]);
+        ProofContext context = Context([], gates: [GateId.QaEvidenceBeforeDone], children: [Child("RSH-0211", TaskState.Done, "Quinn", "verify", string.Empty)]);
 
         ProofItem item = Single(context);
 
@@ -492,16 +492,16 @@ public sealed class ProofEvaluatorTests
         Assert.True(item.Met);
     }
 
-    /// <summary>Open "QA evidence" is owned by the first member covering verify.</summary>
+    /// <summary>Open "QA evidence" has no owner and says no Task yet, until a Task tagged verify exists.</summary>
     [Fact]
-    public void QaGateEnabled_NoEvidence_IsOpenWithOwner()
+    public void QaGateEnabled_NoVerifyTask_IsOpenWithNoTaskYet()
     {
         ProofContext context = Context([], gates: [GateId.QaEvidenceBeforeDone]);
 
         ProofItem item = Single(context);
 
         Assert.False(item.Met);
-        Assert.Equal(Quinn, item.Owner);
+        Assert.Equal("no Task yet", item.Detail);
     }
 
     /// <summary>An item that already says <c>evidence from verify</c> suppresses the gate's own "QA evidence".</summary>

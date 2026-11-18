@@ -550,7 +550,7 @@ internal sealed class TaskService : IDisposable
     /// brought in too, with the merge named as its Action in the same write (#416): that Team's merge waits for an Accept, and
     /// an Agent that asks in chat instead of setting the Action would otherwise leave nothing to accept. It does nothing for the
     /// Human's own change, for any other ungated Task, for a Task not In Progress, closed or already accepted, or whose Proof is
-    /// open. The caller raises the returned change after it has left the lock, as every other mutation does.
+    /// open or empty, or that has an open blocker (a review still pending, #669). The caller raises the returned change after it has left the lock, as every other mutation does.
     /// </summary>
     /// <param name="task">The Task as just written (or as stored now, from <see cref="MoveIfReady"/>).</param>
     /// <param name="by">Who made the write that may have made the Task ready; Huddle when a Proof input outside the Task file changed.</param>
@@ -578,6 +578,8 @@ internal sealed class TaskService : IDisposable
         Proof proof = this.ProofOf(task);
         TaskItem candidate = gated with { Status = TaskState.NeedsYou };
         if (!proof.IsComplete
+            || proof.Total == 0
+            || this.OpenBlockersOf(task).Count > 0
             || HumanGateRules.Check(task, candidate, TaskActors.Huddle, proof, this.human.Name) is not null
             || this.store.ReadText(task.Id) is not { } text)
         {
@@ -1391,11 +1393,15 @@ internal sealed class TaskService : IDisposable
 
         // The stored blockers decide, never the candidate's: an update that clears blocked_by while it starts the Task must not pass.
         IReadOnlyList<OpenBlocker> openBlockers = this.OpenBlockersOf(current);
+        bool hasDoneVerifyChild = this.store.All.Any(child => child.Parent == current.Id
+            && child.Status == TaskState.Done
+            && child.Tags.Contains(ReviewTags.Verify, StringComparer.OrdinalIgnoreCase));
         foreach (string team in new[] { current.Location.Team, candidate.Location.Team }.Distinct(StringComparer.Ordinal))
         {
             GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name)
             {
                 OpenBlockers = openBlockers,
+                HasDoneVerifyChild = hasDoneVerifyChild,
             };
             if (this.gates.CheckTaskChange(context) is { } refusal)
             {

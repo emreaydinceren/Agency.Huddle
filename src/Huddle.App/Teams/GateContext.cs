@@ -25,4 +25,7 @@ internal sealed record GateContext(
 {
     /// <summary>The Tasks in the stored <c>blocked_by</c> that are not finished (Done, Cancelled, Duplicate or Rejected); empty when none.</summary>
     public IReadOnlyList<OpenBlocker> OpenBlockers { get; init; } = [];
+
+    /// <summary>Whether a child of the Task tagged <c>verify</c> is Done (#669, D-16): a QA check is a Task, and it meets <c>qa-evidence-before-done</c>.</summary>
+    public bool HasDoneVerifyChild { get; init; }
 }
