@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Teams;
 
@@ -43,7 +44,7 @@ internal sealed class ChallengerWakeRule(ITeamCatalog? teams, IHumanIdentity hum
         }
 
         if (manager is { Length: > 0 }
-            && !string.Equals(manager, round.Actor.Name, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(manager, GoldfishStamp.AgentName(round.Actor.Name),StringComparison.OrdinalIgnoreCase)
             && !string.Equals(manager, latest.Assignee, StringComparison.OrdinalIgnoreCase))
         {
             // The manager was woken for this entry and hands it to whoever reviews; only an entry that reached nobody capable needs this wake.
@@ -53,7 +54,7 @@ internal sealed class ChallengerWakeRule(ITeamCatalog? teams, IHumanIdentity hum
         IReadOnlyList<string> members = teams?.Find(team)?.Members ?? [];
         string? challenger = members.FirstOrDefault(member =>
             challengers.IsChallengerOf(team, member)
-            && !string.Equals(member, round.Actor.Name, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(member, GoldfishStamp.AgentName(round.Actor.Name),StringComparison.OrdinalIgnoreCase)
             && !string.Equals(member, latest.Assignee, StringComparison.OrdinalIgnoreCase)
             && !string.Equals(member, manager, StringComparison.OrdinalIgnoreCase)
             && !human.Matches(member)

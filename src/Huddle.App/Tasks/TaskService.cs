@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Tasks.HumanGate;
 using Agency.Huddle.App.Teams;
@@ -1374,7 +1375,7 @@ internal sealed class TaskService : IDisposable
 
         IReadOnlyList<EvidenceLine> evidence = TaskFileFormat.ReadEvidence(text);
         Dictionary<string, string> covers = new(StringComparer.Ordinal);
-        foreach (string author in evidence.Select(static line => line.Author).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
+        foreach (string author in evidence.Select(static line => GoldfishStamp.AgentName(line.Author)).Where(static name => name.Length > 0).Distinct(StringComparer.Ordinal))
         {
             if (this.personas.Get(author) is { } persona
                 && PersonaFrontmatter.TryReadIdentity(persona.Text, out PersonaIdentity? identity, out _)
@@ -1452,7 +1453,7 @@ internal sealed class TaskService : IDisposable
             return false;
         }
 
-        return !string.Equals(this.gates.ManagerOf(current.Location.Team), actor.Name, StringComparison.OrdinalIgnoreCase);
+        return !string.Equals(this.gates.ManagerOf(current.Location.Team), GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Refusal for an Agent other than the Team's manager taking a blocker off a Task in a Team with the <c>blockers-done-before-start</c> gate (#538).</summary>

@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 
@@ -17,9 +18,10 @@ internal sealed class CloseTaskTool(
     TaskTriggerService triggers,
     ITeamDirectory directory,
     IPromptSource prompts,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
-    private readonly TaskTransition transition = new(store, triggers, directory, callerAgentId, "Closed", target => tasks.Close(target.Task.Id, target.Actor));
+    private readonly TaskTransition transition = new(store, triggers, directory, callerAgentId, "Closed", target => tasks.Close(target.Task.Id, target.Actor), goldfish);
 
     /// <inheritdoc />
     public string Name => "close_task";

@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
 
@@ -15,7 +16,8 @@ internal sealed class AddCommentTool(
     TaskStore store,
     ITeamDirectory directory,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "add_comment";
@@ -42,7 +44,7 @@ internal sealed class AddCommentTool(
     /// <inheritdoc />
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
-        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskToolTarget? target, string refusal) = await TaskToolText.StartAsync(arguments, store, directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         if (target is null)
         {
             return refusal;

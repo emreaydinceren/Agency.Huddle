@@ -61,12 +61,13 @@ internal sealed class DocHistoryRecorder
     /// <param name="agentName">The Name the tool was built for.</param>
     /// <param name="kind">What the Agent says it did.</param>
     /// <param name="summary">The Agent's one line, already checked by the tool.</param>
+    /// <param name="goldfish">Whether the Agent logged it as a goldfish.</param>
     /// <returns>Whether the entry was written.</returns>
-    internal bool AgentLogged(LibraryPath file, string agentName, DocChangeKind kind, string summary)
+    internal bool AgentLogged(LibraryPath file, string agentName, DocChangeKind kind, string summary, bool goldfish = false)
     {
         try
         {
-            this.store.Append(file, new DocHistoryEntry(this.clock.GetUtcNow(), agentName, DocActorKind.Agent, kind, summary));
+            this.store.Append(file, new DocHistoryEntry(this.clock.GetUtcNow(), agentName, DocActorKind.Agent, kind, summary, goldfish));
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

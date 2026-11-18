@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
@@ -40,7 +41,8 @@ internal sealed class CreateTaskTool(
     NeedsYouLevels? levels = null,
     ProcessGateService? gates = null,
     ITeamCatalog? catalog = null,
-    TaskStore? store = null) : IAppTool
+    TaskStore? store = null,
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The optional string arguments read straight after <c>team</c>, in check order.</summary>
     private static readonly string[] LeadingNames = ["project", "description", "status", "priority", "assignee", "originRoomId", "parent"];
@@ -130,7 +132,7 @@ internal sealed class CreateTaskTool(
             return valuesRefusal;
         }
 
-        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken, goldfish).ConfigureAwait(false);
         if (actor is null)
         {
             return actorRefusal;

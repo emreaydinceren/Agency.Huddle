@@ -1,5 +1,6 @@
 using System.Globalization;
 using Agency.Huddle.App.DocHistory;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks.HumanGate;
@@ -56,7 +57,7 @@ internal static class ProofEvaluator
     private static (bool Met, string? Owner, string? Detail) EvidenceFrom(ProofContext context, string step)
     {
         bool notesCount = !DoneRule.NamesCommand(context.Definition);
-        bool met = context.Evidence.Any(line => (line.Command.Length > 0 || notesCount) && Covers(context, line.Author, step));
+        bool met = context.Evidence.Any(line => (line.Command.Length > 0 || notesCount) && Covers(context, GoldfishStamp.AgentName(line.Author), step));
         string detail = notesCount
             ? $"no Evidence from a member covering {step}"
             : $"no Evidence with a command from a member covering {step}";

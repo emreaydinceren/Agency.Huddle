@@ -2,6 +2,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Feed;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Prompts;
@@ -273,7 +274,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return new WakePreview(assignee, null, WakeBlock.AssigneeIsHuman);
         }
 
-        if (string.Equals(assignee, actor.Name, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(assignee, GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase))
         {
             return new WakePreview(assignee, null, WakeBlock.AssigneeIsActor);
         }
@@ -702,7 +703,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         {
             string? manager = this.teams?.Find(blocked.Location.Team)?.Manager;
             bool usable = !string.IsNullOrEmpty(manager)
-                && !string.Equals(manager, actor.Name, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(manager, GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase)
                 && !this.human.Matches(manager)
                 && this.personas.Get(manager) is not null;
             recipient = usable ? manager : null;
@@ -881,7 +882,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         if (!this.teamOptions.Tasks.Enabled
             || !this.teamOptions.Tasks.WakeEnabled
-            || string.Equals(recipient, actor.Name, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(recipient, GoldfishStamp.AgentName(actor.Name),StringComparison.OrdinalIgnoreCase)
             || this.human.Matches(recipient)
             || this.personas.Get(recipient) is null)
         {
@@ -1347,7 +1348,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return userId;
         }
 
-        User? user = await this.directory.FindUserByNameAsync(actor.Name, ct).ConfigureAwait(false);
+        User? user = await this.directory.FindUserByNameAsync(GoldfishStamp.AgentName(actor.Name), ct).ConfigureAwait(false);
         return user?.Id;
     }
 

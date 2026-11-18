@@ -17,8 +17,10 @@
             <span class="doc-byline-label">Written by</span>
             <DocHistoryActor Name="@line.Writer" Kind="this.KindOf(line.Writer)" />
         </span>
-        @this.Part("Edited by", line.EditedBy)
-        @this.Part("Reviewed by", line.ReviewedBy)
+        @this.Part(DocHistoryView.BylineLabel(DocChangeKind.Edited, goldfish: false), line.EditedBy)
+        @this.Part(DocHistoryView.BylineLabel(DocChangeKind.Edited, goldfish: true), line.GoldfishEditedBy)
+        @this.Part(DocHistoryView.BylineLabel(DocChangeKind.Reviewed, goldfish: false), line.ReviewedBy)
+        @this.Part(DocHistoryView.BylineLabel(DocChangeKind.Reviewed, goldfish: true), line.GoldfishReviewedBy)
         @this.Part("Objected by", line.ObjectedBy)
         <span class="doc-byline-sep" aria-hidden="true">·</span>
         <button type="button" class="doc-byline-time" @onclick="this.OnOpenHistory" @onclick:stopPropagation title="@($"{this.FullTime(line.When)}. Show the history of this document")">@DocHistoryView.RelativeTime(line.When, this.Clock.GetUtcNow(), this.Clock.LocalTimeZone)</button>

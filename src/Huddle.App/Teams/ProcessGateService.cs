@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Globalization;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.TeamTypes;
@@ -165,7 +166,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         bool notesCount = !DoneRule.NamesCommand(this.ProcessOf(context.Team)?.DefinitionOfDone ?? []);
         return context.Evidence.Any(line =>
             (line.Command.Length > 0 || notesCount)
-            && context.AuthorRoleCovers.TryGetValue(line.Author, out string? covers)
+            && context.AuthorRoleCovers.TryGetValue(GoldfishStamp.AgentName(line.Author), out string? covers)
             && covers.Split(',', StringSplitOptions.TrimEntries).Contains(VerifyCoverage, StringComparer.OrdinalIgnoreCase));
     }
 

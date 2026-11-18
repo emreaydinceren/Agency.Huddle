@@ -2,7 +2,9 @@ namespace Agency.Huddle.App.Acp.Tools;
 
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Data;
 using Agency.Huddle.App.DocHistory;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Microsoft.Extensions.Options;
@@ -19,7 +21,9 @@ internal sealed class LogChangeTool(
     IOptions<TeamOptions> options,
     AgentPaths paths,
     string agentName,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    GoldfishGuard? goldfish = null,
+    ITeamDirectory? directory = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "log_change";
@@ -49,16 +53,32 @@ internal sealed class LogChangeTool(
     };
 
     /// <inheritdoc />
-    public Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
+    public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
-        return Task.FromResult(this.Log(arguments));
+        bool isGoldfish = await this.IsGoldfishAsync(cancellationToken).ConfigureAwait(false);
+        return this.Log(arguments, isGoldfish);
+    }
+
+    /// <summary>Whether the caller's Turn is possessed. A failed lookup of the caller means not a goldfish.</summary>
+    /// <param name="cancellationToken">Propagated to the directory lookup.</param>
+    /// <returns><see langword="true"/> while the caller is a goldfish.</returns>
+    private async Task<bool> IsGoldfishAsync(CancellationToken cancellationToken)
+    {
+        if (goldfish is null || directory is null)
+        {
+            return false;
+        }
+
+        User? user = await directory.FindUserByNameAsync(agentName, cancellationToken).ConfigureAwait(false);
+        return user is not null && goldfish.PossessionOf(user.Id) is not null;
     }
 
     /// <summary>Checks the arguments in the order of the spec's refusal table and records the entry.</summary>
     /// <param name="arguments">The call's arguments.</param>
+    /// <param name="isGoldfish">Whether the caller is a goldfish, so the entry is flagged.</param>
     /// <returns>The text the Agent reads.</returns>
-    private string Log(JsonObject arguments)
+    private string Log(JsonObject arguments, bool isGoldfish)
     {
         if (!TaskToolText.TryGetString(arguments, "path", out string? path, out string pathRefusal))
         {
@@ -103,7 +123,7 @@ internal sealed class LogChangeTool(
             return $"'summary' is required, one line of at most {max} characters.";
         }
 
-        return recorder.AgentLogged(file, agentName, kind, summary)
+        return recorder.AgentLogged(file, agentName, kind, summary, isGoldfish)
             ? "Logged."
             : "The change could not be recorded. The document itself is unchanged.";
     }
