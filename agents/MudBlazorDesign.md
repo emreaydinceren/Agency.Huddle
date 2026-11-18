@@ -1,5 +1,13 @@
 # MudBlazor for design and planning
 
+## Contents
+
+- Choosing components for a design
+- Finding a component by what you need
+- The catalogue
+- Services, theming and CSS utilities
+- Keeping this page current
+
 Use this page while writing a spec or a project plan for UI in `src/Huddle.App`. It tells
 you, in one scan, whether MudBlazor already ships what a feature needs, and links straight to
 the official example that shows it. It does not re-document MudBlazor: every row is a pointer,

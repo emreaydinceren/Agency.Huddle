@@ -1,5 +1,12 @@
 # MudBlazor for implementation
 
+## Contents
+
+- Components Huddle already uses
+- Huddle rules that bite MudBlazor code
+- Checking an API against the pinned package
+- Keeping this page current
+
 Use this page while writing or testing a component in `src/Huddle.App`: the house patterns to
 copy, the Huddle rules that MudBlazor's own examples lead you to break, and how to check an API
 against the pinned package, with the facts already checked. Choosing components belongs to the

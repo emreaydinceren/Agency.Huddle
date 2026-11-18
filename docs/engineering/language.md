@@ -1,5 +1,20 @@
 # Language
 
+## Contents
+
+- People and processes
+- Conversations
+- Agents and Personas
+- Library
+- Tasks
+- Jobs
+- Messages and storage
+- Remote access
+- Model-facing text
+- Search
+- References
+- Appearance
+
 The binding glossary for `Huddle.App` and `Huddle.Contracts`. Read it before naming
 anything, writing interface copy, or writing prose about this codebase. Match
 this vocabulary in code and in prose. Each entry lists words to avoid; those are

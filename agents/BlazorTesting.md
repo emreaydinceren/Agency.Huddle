@@ -1,5 +1,14 @@
 # Testing Blazor components with bUnit
 
+## Contents
+
+- Setting up a test
+- Clicking without racing a re-render
+- Finding elements and asserting text
+- Reading component state
+- Writing a red for a component that doesn't exist yet
+- Avoiding Razor authoring traps
+
 How to test Razor components in the feature test project for the component's feature (see *Where a test goes* in `agents/Testing.md`) with bUnit 2.13.3 and MudBlazor 9.12, and
 the Razor authoring traps those tests keep catching. Read it before writing a component or its
 tests. General test practice is in [Testing.md](Testing.md); per-component MudBlazor facts (which

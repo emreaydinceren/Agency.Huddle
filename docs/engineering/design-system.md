@@ -1,5 +1,21 @@
 # Design system
 
+## Contents
+
+- The one idea
+- Foundations
+- Layout containers
+- Overlays
+- Components
+- Interface copy
+- Writing the stylesheet
+- Adding a Theme or changing a palette
+- How the rules are enforced
+- Checklist for a new or changed screen
+- Known gaps
+- Keeping this document current
+- See also
+
 How Huddle looks and the rules that keep it consistent: tokens, type, spacing,
 components, layout containers, overlays and copy. Read it before you design a screen, add
 a component or write a stylesheet for `src/Huddle.App`.

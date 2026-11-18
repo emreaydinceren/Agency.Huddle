@@ -1,5 +1,15 @@
 # Gitea → GitHub: the public mirror
 
+## Contents
+
+- The model
+- The three workflows
+- What the scrub removes
+- One-time setup
+- Dry-running a rule change locally
+- Taking a GitHub pull request
+- Not part of this mirror
+
 How Agency.Huddle reaches `github.com/emreaydinceren/Agency.Huddle`, and how a GitHub pull
 request gets back in. Ported from the Agency.NET playbook, with everything NuGet-shaped
 removed: Huddle publishes no packages, so there is no release workflow, no environment

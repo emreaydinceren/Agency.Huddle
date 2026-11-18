@@ -1,5 +1,20 @@
 # Seeding Huddle with test data
 
+## Contents
+
+- What the `software-co` seed contains for the newer features
+- The rules
+- Overview
+- Phase 1: Plan the scenario
+- Phase 2: Prepare
+- Phase 3: First start on an empty folder
+- Phase 4: Write the files
+- Phase 5: Bring the Agents online
+- Phase 6: Web UI steps
+- Phase 7: Write the chat history
+- Phase 8: Verify
+- Troubleshooting
+
 This guide is for an AI agent that turns a written **scenario**, such as "a
 two-person business with a website project running late", into a complete,
 testable Huddle data folder. It covers Agents and their personalities, Teams,

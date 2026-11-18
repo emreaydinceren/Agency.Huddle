@@ -1,5 +1,16 @@
 # Working With the Remote (Gitea Home Lab)
 
+## Contents
+
+- Resolved 2026-09-15: `origin` was moved off the stale mDNS host
+- Connectivity / auth troubleshooting
+- Branches
+- Pull Requests
+- Issues
+- Actions (workflow runs)
+- Validation status
+- Related
+
 `origin` for this repo is a self-hosted Gitea instance, **not GitHub**. GitHub, if this repo
 is ever mirrored there, would be a one-way push target only — never open PRs or trigger
 Actions there. Everything below talks to the Gitea instance directly via its REST API
