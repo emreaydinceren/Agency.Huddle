@@ -48,7 +48,45 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(204,PromptCatalog.All.Count);
+        Assert.Equal(219,PromptCatalog.All.Count);
+    }
+
+    /// <summary>Goldfish tools (slice 3 step 2): each of the fifteen Prompts exists with the placeholders its text takes, and none names the tool prefix.</summary>
+    [Theory]
+    [InlineData("tool.goldfish.description", "")]
+    [InlineData("tool.goldfish.started", "{{room}} {{silentToken}}")]
+    [InlineData("tool.goldfish.briefEmpty", "")]
+    [InlineData("tool.goldfish.briefTooLong", "{{count}} {{limit}}")]
+    [InlineData("tool.goldfish.noTurn", "")]
+    [InlineData("tool.goldfish.already", "{{room}}")]
+    [InlineData("tool.goldfish.nested", "")]
+    [InlineData("tool.goldfish.concurrent", "{{count}}")]
+    [InlineData("tool.goldfish.refused", "")]
+    [InlineData("tool.goldfish.warmBlocked", "{{agent}} {{room}}")]
+    [InlineData("tool.goldfishDone.description", "")]
+    [InlineData("tool.goldfishDone.done", "{{agent}}")]
+    [InlineData("tool.goldfishDone.notPossessed", "")]
+    [InlineData("turn.goldfishBrief", "{{brief}} {{roomLabel}}")]
+    [InlineData("turn.goldfishMessage", "{{sender}} {{text}}")]
+    public void GoldfishToolPrompts_TakeTheirPlaceholdersAndCarryNoPrefix(string key, string placeholders)
+    {
+        ArgumentNullException.ThrowIfNull(placeholders);
+        PromptDefinition prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(placeholders.Split(' ', StringSplitOptions.RemoveEmptyEntries), prompt.Placeholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>Goldfish: the refusal a tool gives inside a possession is the spec's text word for word (5.4), and the warm-Agent refusal names the Agent and the Room (6.9).</summary>
+    [Fact]
+    public void GoldfishRefusals_AreTheSpecText()
+    {
+        Assert.Equal(
+            "Not in goldfish mode: this tool reads what you must not know. Work from your brief and the files it names.",
+            PromptCatalog.Get("tool.goldfish.refused").Default);
+        Assert.Equal(
+            "{{agent}} is in goldfish mode in {{room}}; post there after they are back.",
+            PromptCatalog.Get("tool.goldfish.warmBlocked").Default);
     }
 
     /// <summary>Goldfish: <c>systemPrompt.goldfish</c> takes and requires the done tool's name, is read at the next session, and carries no tool prefix.</summary>

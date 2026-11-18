@@ -323,6 +323,21 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.serviceProvider.GetService<NeedsYouLevels>());
     }
 
+    /// <summary>Adds <c>goldfish</c> and <c>goldfish_done</c> when goldfish mode is on and the Adapter is Claude with isolated settings; shared mode is not offered.</summary>
+    /// <param name="chatTools">The tools so far.</param>
+    /// <param name="agentId">The Agent id the tools are bound to.</param>
+    /// <param name="profile">The resolved Adapter Profile.</param>
+    /// <returns><paramref name="chatTools"/>, with the two goldfish tools when offered.</returns>
+    private IReadOnlyList<IAppTool> OfferGoldfishTools(IReadOnlyList<IAppTool> chatTools, string agentId, AdapterProfile profile) =>
+        this.options.Goldfish.Enabled && profile.IsolateUserSettings && AdapterCatalog.RunsClaude(profile)
+            ?
+            [
+                .. chatTools,
+                ActivatorUtilities.CreateInstance<GoldfishTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<GoldfishDoneTool>(this.serviceProvider, agentId),
+            ]
+            : chatTools;
+
     /// <summary>What <see cref="BuildToolSet"/> built: the offered tools and the model-facing names the system prompt cites.</summary>
     /// <param name="Tools">The tools the session is offered, <c>get_help</c> first.</param>
     /// <param name="Prompts">The prompt source resolved from the application's container.</param>
@@ -368,6 +383,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
         var askHumanTool = ActivatorUtilities.CreateInstance<AskHumanTool>(this.serviceProvider, agentId);
         IReadOnlyList<IAppTool> chatTools = this.CreateChatTools(persona.Name, agentId, readSkillTool, askHumanTool);
+        chatTools = this.OfferGoldfishTools(chatTools, agentId, profile);
+
         if (proposesTeamMemory)
         {
             chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<ProposeTeamMemoryTool>(this.serviceProvider, persona.Name)];
