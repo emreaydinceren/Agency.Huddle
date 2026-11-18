@@ -44,6 +44,7 @@
             'Helpers'         = 'Rooms'
             'Feed'            = 'Rooms'
             'Ui/Helpers'      = 'Rooms'
+            'Goldfish'        = 'Rooms'
 
             'Gateway'         = 'Gateway'
             'Desktop'         = 'Gateway'
