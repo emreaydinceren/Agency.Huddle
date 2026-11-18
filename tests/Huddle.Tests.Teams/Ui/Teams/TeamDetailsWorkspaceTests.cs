@@ -10,9 +10,9 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// <summary>Pins the missing-workspace warning on the Team page's Details tab (Spec §6.4, Settled text T18).</summary>
 public sealed class TeamDetailsWorkspaceTests
 {
-    private const string WarningSelector = ".team-details-workspace-warning[role='alert']";
+    private const string WarningSelector = ".team-details-workspace-warning[role='status']";
 
-    /// <summary>A Team whose workspace folder cannot be read shows exactly the T18 sentence, with the path, as an alert.</summary>
+    /// <summary>A Team whose workspace folder cannot be read shows exactly the T18 sentence, with the path, as a <c>role="status"</c> Warning: it reports a state to fix later, not an act now (Q-A1-1).</summary>
     [Fact]
     public async Task DetailsTab_UnreadableWorkspace_ShowsT18()
     {

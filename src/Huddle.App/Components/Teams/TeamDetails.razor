@@ -16,7 +16,7 @@
 
 @if (this.UnreadableWorkspace is { } workspace)
 {
-    <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="team-details-workspace-warning">The workspace folder @workspace can't be read, so Agents aren't told to use it.</MudAlert>
+    <Notice Severity="NoticeLevel.Warning" Class="team-details-workspace-warning">The workspace folder @workspace can't be read, so Agents aren't told to use it.</Notice>
 }
 
 <BuildTeam Team="@this.Team" />

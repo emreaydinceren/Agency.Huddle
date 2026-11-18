@@ -53,19 +53,19 @@
 
         @if (this.CurrentError is { } error)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-error" role="status">
+            <Notice Severity="NoticeLevel.Warning" Class="helper-card-error">
                 @HelpersCopy.LastError(this.TimeOfDay(error.At), error.Message)
-            </MudAlert>
+            </Notice>
         }
 
         @if (this.IsPaused)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-paused" role="status">
+            <Notice Severity="NoticeLevel.Warning" Class="helper-card-paused">
                 <span>@HelpersCopy.Paused</span>
                 <ActionButton Role="ButtonRole.Secondary" Class="ml-3 helper-card-continue" OnClick="this.OnContinue">
                     @HelpersCopy.Continue(this.baseline.ContinueGrant)
                 </ActionButton>
-            </MudAlert>
+            </Notice>
         }
 
         <MudStack Row="true" Spacing="2" Class="mt-3">

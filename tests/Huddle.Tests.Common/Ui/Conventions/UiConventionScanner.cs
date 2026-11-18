@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV15</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV16</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -51,6 +51,7 @@ internal static partial class UiConventionScanner
         "CV13" => Cv13(path, text),
         "CV14" => Cv14(path, text),
         "CV15" => Cv15(path, text),
+        "CV16" => Cv16(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -89,6 +90,17 @@ internal static partial class UiConventionScanner
     /// <param name="text">The file text.</param>
     public static RuleCount Cv15(string path, string text) =>
         new("CV15", path, path.EndsWith("/ActionButton.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudButton"], static _ => true));
+
+    /// <summary>
+    /// CV16: a raw <c>&lt;MudAlert&gt;</c> in a component other than <c>Notice.razor</c>. Every notice is the one <c>Notice</c>, which
+    /// takes a severity and a kind (interruption or consequence), writes the <c>role</c> itself and is always dense with an 18 px icon,
+    /// so the look and the announcement rule live in one place (ComponentCatalog A1). Its baseline is the migration backlog, one count
+    /// per file; the two Room banners (<c>budget-prompt</c>, <c>member-health-alert</c>) stay raw there by design.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv16(string path, string text) =>
+        new("CV16", path, path.EndsWith("/Notice.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudAlert"], static _ => true));
 
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>

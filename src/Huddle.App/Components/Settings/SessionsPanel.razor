@@ -22,7 +22,7 @@
 
 @if (this.Settings.LoadError is { } loadError)
 {
-    <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="sessions-panel-load-error mb-2">session-settings.json could not be read, so the defaults apply: @loadError</MudAlert>
+    <Notice Severity="NoticeLevel.Warning" Class="sessions-panel-load-error">session-settings.json could not be read, so the defaults apply: @loadError</Notice>
 }
 
 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Start" Class="mb-4 sessions-panel-cap-row">

@@ -36,7 +36,7 @@
 <div class="task-read-view">
 @if (this.deleted)
 {
-    <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
+    <Notice Severity="NoticeLevel.Warning" Class="task-detail-deleted">This Task was deleted</Notice>
     <div class="task-read-view-actions">
         <ActionButton Role="ButtonRole.Primary" Class="task-read-view-close" OnClick="this.OnClose">Close</ActionButton>
     </div>

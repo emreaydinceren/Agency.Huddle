@@ -27,16 +27,16 @@
             </MudStack>
             @if (this.error is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="duplicate-team-error">@this.error</MudAlert>
+                <Notice Severity="NoticeLevel.Error" Class="duplicate-team-error">@this.error</Notice>
             }
             @if (this.result is { Skipped.Count: > 0 })
             {
-                <MudAlert role="status" Severity="Severity.Warning" Dense="true" Class="duplicate-team-skipped">
+                <Notice Severity="NoticeLevel.Warning" Class="duplicate-team-skipped">
                     @foreach (SkippedMember skipped in this.result.Skipped)
                     {
                         <div>@skipped.Name: @skipped.Reason</div>
                     }
-                </MudAlert>
+                </Notice>
             }
         </MudStack>
     </DialogContent>

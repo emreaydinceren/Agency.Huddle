@@ -191,7 +191,7 @@ else
 
     @if (this.error is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2" role="alert">@this.error</MudAlert>
+        <Notice Severity="NoticeLevel.Error">@this.error</Notice>
     }
 
     @* Under an image card the Background is hidden, not removed: it keeps its space, so the dialog does not change height

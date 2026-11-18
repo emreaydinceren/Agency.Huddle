@@ -49,7 +49,7 @@
 
         @if (this.Downgraded)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2" role="status" data-testid="downgraded-notice">@RemoteAccessCopy.DowngradedNotice</MudAlert>
+            <Notice Severity="NoticeLevel.Warning" data-testid="downgraded-notice">@RemoteAccessCopy.DowngradedNotice</Notice>
         }
 
         @if (this.RuntimeView.ListenerReason is { } reason)

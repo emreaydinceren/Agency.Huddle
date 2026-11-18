@@ -55,7 +55,7 @@
 
         @if (this.problem is not null)
         {
-            <MudAlert Severity="Severity.Error" role="alert" Class="fields-dialog-problem">@this.problem</MudAlert>
+            <Notice Severity="NoticeLevel.Error" Class="fields-dialog-problem">@this.problem</Notice>
         }
     </DialogContent>
     <DialogActions>

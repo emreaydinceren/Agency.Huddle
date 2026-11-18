@@ -13,7 +13,7 @@
 <div class="needs-you-level" data-scope="@this.ScopeKind">
     @if (!this.canSet)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="needs-you-level-unavailable">@this.UnavailableText</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Class="needs-you-level-unavailable">@this.UnavailableText</Notice>
     }
     else
     {

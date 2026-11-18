@@ -15,11 +15,11 @@
 <div class="composer">
     @if (this.errorText is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="composer-error" role="alert">@this.errorText</MudAlert>
+        <Notice Severity="NoticeLevel.Error" Class="composer-error">@this.errorText</Notice>
     }
     else if (this.infoText is not null)
     {
-        <MudAlert Severity="Severity.Info" Dense="true" Class="composer-info" role="status">@this.infoText</MudAlert>
+        <Notice Severity="NoticeLevel.Info" Class="composer-info">@this.infoText</Notice>
     }
     @if (this.Chips.Count > 0)
     {

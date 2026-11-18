@@ -42,18 +42,18 @@
     @if (summary is null)
     {
         <FocusedPageTitle Title="Huddle" />
-        <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
             <MudLink Href="/agents" Class="team-page-notice-link">Agents</MudLink>
-        </MudAlert>
+        </Notice>
     }
     else if (isProject && project is null)
     {
         <FocusedPageTitle Title="Huddle" />
-        <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Project named "@this.Project" in Team "@summary.Name".</span>
             <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>
-        </MudAlert>
+        </Notice>
     }
     else if (this.NoProjectRoute)
     {
@@ -67,9 +67,9 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info" role="status" Class="team-page-notice">
+            <Notice Severity="NoticeLevel.Info" Class="team-page-notice">
                 <span class="team-page-notice-text">The Library is turned off in this installation.</span>
-            </MudAlert>
+            </Notice>
         }
     }
     else
@@ -161,9 +161,9 @@
 
         @if (available.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" role="status" Class="team-page-notice">
+            <Notice Severity="NoticeLevel.Info" Class="team-page-notice">
                 <span class="team-page-notice-text">Files and Tasks are turned off in this installation.</span>
-            </MudAlert>
+            </Notice>
         }
         else
         {

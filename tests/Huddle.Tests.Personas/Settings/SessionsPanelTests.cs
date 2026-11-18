@@ -222,7 +222,10 @@ public sealed class SessionsPanelTests : IAsyncDisposable
         Assert.Empty(ResetButtons(cut));
     }
 
-    /// <summary>A corrupt file shows T9 with the store's error, in an alert with <c>role="alert"</c>.</summary>
+    /// <summary>
+    /// A corrupt file shows T9 with the store's error, in a Warning notice with <c>role="status"</c>: the defaults apply, so it
+    /// reports a state the Human can fix later rather than interrupting (Q-A1-1).
+    /// </summary>
     [Fact]
     public void CorruptFile_ShowsTheErrorInAnAlert()
     {
@@ -232,7 +235,7 @@ public sealed class SessionsPanelTests : IAsyncDisposable
 
         string? error = this.Store.LoadError;
         Assert.NotNull(error);
-        Assert.Equal("session-settings.json could not be read, so the defaults apply: " + error, cut.Find("[role=alert]").TextContent.Trim());
+        Assert.Equal("session-settings.json could not be read, so the defaults apply: " + error, cut.Find(".sessions-panel-load-error[role=status]").TextContent.Trim());
     }
 
     /// <summary>A hand edit of the file re-renders the panel with the new value.</summary>

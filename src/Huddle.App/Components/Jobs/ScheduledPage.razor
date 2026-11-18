@@ -25,7 +25,7 @@
         <PageHeader Title="Scheduled" CreateText="New job" CreateIcon="@Icons.Material.Filled.Add" OnCreate="this.NewAsync" />
         @if (this.Store.Problems.Count > 0)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-4 scheduled-problems">
+            <Notice Severity="NoticeLevel.Warning" Class="scheduled-problems">
                 @Plural.Of(this.Store.Problems.Count, "section", "sections") of a schedule could not be read, so @(this.Store.Problems.Count == 1 ? "it does" : "they do") not run:
                 <ul>
                     @foreach (JobProblem problem in this.Store.Problems)
@@ -33,7 +33,7 @@
                         <li>@JobText.OwnerName(problem.Owner, this.Human.Name), "@problem.Title": @problem.Reason</li>
                     }
                 </ul>
-            </MudAlert>
+            </Notice>
         }
 
         @if (this.Store.Jobs.Count == 0)

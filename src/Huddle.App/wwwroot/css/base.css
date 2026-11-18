@@ -237,6 +237,29 @@ button:focus-visible {
     border-inline-start: 3px solid transparent;
 }
 
+/* A notice's icon is 18px, the largest icon size, not MudBlazor's 22px (ComponentCatalog Notice, Q-A1-2). 8px of block
+   padding plus a 2px nudge puts its centre on the centre of a dense notice's first 38px line (9px padding, 20px line). */
+.mud-alert .mud-alert-icon {
+    font-size: var(--icon-size-row);
+    padding-block: 8px;
+    margin-block-start: 2px;
+}
+
+/* The glyph itself: MudBlazor sizes it 1.5rem (21px here) through .mud-icon-size-medium, not from its parent. */
+.mud-alert .mud-alert-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+/* A notice owns its spacing, not its call site: 12px from a sibling before or after it, none at its container's edges. Two
+   notices in a row collapse to one 12px in block flow. Only Notice carries the class, so a raw MudAlert is unchanged. */
+.mud-alert.notice:not(:first-child) {
+    margin-block-start: 12px;
+}
+
+.mud-alert.notice:not(:last-child) {
+    margin-block-end: 12px;
+}
+
 .mud-alert[class*="mud-alert-text-"] .mud-alert-message,
 .mud-alert[class*="mud-alert-outlined-"] .mud-alert-message {
     color: var(--mud-palette-text-primary);

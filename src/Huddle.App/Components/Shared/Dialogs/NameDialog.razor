@@ -15,7 +15,7 @@
             @this.ChildContent
             @if (this.submitError is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.submitError</MudAlert>
+                <Notice Severity="NoticeLevel.Error">@this.submitError</Notice>
             }
         </MudStack>
     </DialogContent>

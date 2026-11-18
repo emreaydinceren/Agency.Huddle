@@ -38,7 +38,7 @@
             }
             @if (this.listing.Error is not null)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="folder-picker-error">@this.listing.Error</MudAlert>
+                <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="folder-picker-error">@this.listing.Error</Notice>
             }
             <MudList T="string" Dense="true" Class="folder-picker-list" aria-label="Folders">
                 @foreach (BrowsedFolder folder in this.listing.Folders)

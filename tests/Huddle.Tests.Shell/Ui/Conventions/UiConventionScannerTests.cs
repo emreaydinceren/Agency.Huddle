@@ -411,4 +411,32 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv15("src/Huddle.App/Components/Shared/ActionButton.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv15("src/Huddle.App/Components/Shared/DialogFooter.razor", source).Count);
     }
+
+    /// <summary>CV16: a raw <c>MudAlert</c> is counted, across line breaks, but not a <c>Notice</c> or the type name in code.</summary>
+    [Fact]
+    public void Cv16_RawMudAlert_IsCounted()
+    {
+        const string source = """
+            <MudAlert Severity="Severity.Error" Dense="true" role="alert">a</MudAlert>
+            <Notice Severity="NoticeLevel.Warning">b</Notice>
+            <MudAlert Severity="Severity.Info"
+                      role="status">c</MudAlert>
+            @code { private MudAlert? alert; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv16(RazorPath, source);
+
+        Assert.Equal("CV16", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV16: the one <c>Notice</c> component is the only file allowed to draw a <c>MudAlert</c>.</summary>
+    [Fact]
+    public void Cv16_NoticeRazor_IsExempt()
+    {
+        const string source = """<MudAlert Severity="@this.MudSeverity" Dense="true" role="@this.Role">x</MudAlert>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv16("src/Huddle.App/Components/Shared/Notice.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv16("src/Huddle.App/Components/Shared/Composer.razor", source).Count);
+    }
 }

@@ -379,7 +379,7 @@ renders taller than the 28px row size a Small one has (UX-V01).
 | `MudIconButton` | `Size="Size.Small"` (an `ActionButton`, a `Chip` and a `SegmentedControl` are Small already) |
 | `MudTextField`, `MudSelect`, `MudAutocomplete`, `MudNumericField`, `MudDatePicker` | `Variant="Variant.Outlined"`, `Margin="Margin.Dense"` |
 | `MudToolBar` | `Dense="true"`, `Gutters="false"` so it lines up with the page title (UX-005) |
-| `MudAlert` with one line | `Dense="true"` (UX-040) |
+| A notice | `Notice`, always dense, one line or many (UX-040; `Q-A1-3`) |
 | `Size.Large` | Avatars on a profile card and an empty pane's icon only. No large buttons |
 
 **A Small button is a row-sized control**: 28px high, in the Button role (13px, weight 500), for text,
@@ -614,8 +614,9 @@ that shows the control, or it can't be reached on a touch screen (UX-075).
   `Primary` border plus a 0.5px inset accent ring, which reads as 1.5px and moves no text.
   `Primary` clears 3:1 against Surface in every Theme (`SkinContrastTests`), where the Chrome line would
   not.
-- **Every `MudAlert` has a role**: `role="alert"` for an interruption, `role="status"` for
-  a consequence (UX-V05).
+- **Every notice has a role**: `role="alert"` for an interruption, `role="status"` for
+  a consequence (UX-V05). `Notice` writes it from its `Kind`; see
+  [Notices and snackbars](#notices-and-snackbars).
 - **An icon-only control has an `aria-label` that names its target** ("Delete Grace",
   not "Delete") when it repeats per row. A tooltip alone is not enough (UX-V09).
 - **State is never shown by colour alone.** Use text, an icon or `aria-pressed` with it
@@ -940,7 +941,7 @@ above the rail or the nav (UX-010).
 | Title | `Typo.h6`, sentence case, and the item's name: a verb phrase naming the item for an action ("Duplicate Platform", "Rename note"), the item itself for a view ("Alan's avatar", "Fields in Awaiting review"). When a caller passes a title, show it |
 | Fields | `Variant.Outlined`, `Margin.Dense`. `AutoFocus` on the first field. In a single-field dialog, Enter submits (UX-024) |
 | Validation | Live, through the feature's pure validator, shown with `Error` and `ErrorText` on the field. Disable the primary action while invalid |
-| An error from the action | `MudAlert Severity.Error Dense role="alert"` above the actions. Not a raw `<p>` or a `MudText` (UX-025) |
+| An error from the action | `Notice Severity="NoticeLevel.Error"` (an interruption, so `role="alert"`) above the actions. Not a raw `<p>` or a `MudText` (UX-025) |
 | Actions | `DialogFooter` inside `<DialogActions>`. Right-aligned in this order: **Cancel** (Quiet; its word may be "Close", "Not now" or "Skip", the look is fixed), then **Back** if there is one, then a middle option (Secondary) if there is one, then the **primary action** (Primary, or Danger when it destroys: `Destructive`). All 28 px (UX-020, UX-021) |
 | Busy | `DialogFooter.Busy`: the primary action disables and shows a spinner, with `BusyText` ("Saving…") when given |
 | Picker dialog | No actions row; `CloseButton = true` is the way out. A Close-only info dialog (Skills help, a Project's Needs You level) is a picker; a viewer whose Close ends work keeps a Quiet Close |
@@ -1033,8 +1034,17 @@ A menu is a `MudMenu` of `Dense` 32px, 13px items.
 
 ### Notices and snackbars
 
-- **A notice is a `MudAlert`** with a role, `Dense` when it is one line, placed in the
-  page's notice zone (`C9`, `T9`, `L3d`). Not a styled `<div>` (UX-056, UX-V13).
+- **A notice is a `Notice`**, placed in the page's notice zone (`C9`, `T9`, `L3d`). Not a
+  styled `<div>` and not a raw `MudAlert` (UX-056, UX-V13; convention rule CV16).
+- **Its kind decides the role.** `role="alert"` only when the Human must act now: a
+  conflict, a refusal, a failed action, a missing Team or Project. Every other notice,
+  Warnings included, is `role="status"`: a fact, a state or the result of something. An
+  Error interrupts by default and every other severity reports, so a caller writes `Kind`
+  only for a Warning that interrupts (`Q-A1-1`).
+- **One notice size.** Always dense (padding `0 12px`), one line or many, with an 18 px
+  icon, not MudBlazor's 22 px (`Q-A1-2`, `Q-A1-3`).
+- **The notice owns its spacing**, not the call site: 12 px from a sibling before or after
+  it, none at the start or end of its container. A call site writes no `mb-*` or `mt-*`.
 - **A notice's sentence is `TextPrimary`.** Only its icon and its 3px leading bar carry the
   status colour. MudBlazor derives a coloured text from the severity; the override lives in
   `base.css` "Global MudBlazor overrides", so every notice gets it.
@@ -1053,6 +1063,7 @@ Start from the pattern in the file the table names; the full list is in
 | Need | Component and defaults |
 | --- | --- |
 | Button | `ActionButton` with a `Role`; it is always Small (28 px) at `--hu-radius-control`, and a raw `MudButton` fails CV15. `Primary` (Filled, accent) for the one primary action per view, `Secondary` (Outlined) for secondary, `Quiet` (Text) for quiet actions and for Cancel. A destructive action has two roles: `Danger` (Filled Error) only on the confirm that destroys, `DangerQuiet` (Text in Error ink) on a trigger that asks first; there is no Outlined Error. A dialog's actions row is `DialogFooter` |
+| Notice | `Notice` with a `Severity`; it is always dense with an 18 px icon and writes its own role, and a raw `MudAlert` fails CV16. See [Notices and snackbars](#notices-and-snackbars) |
 | Icon button | `MudIconButton Size="Size.Small"`, with an `aria-label`, and a `MudTooltip` when it is not obvious |
 | Text input | `MudTextField Variant="Variant.Outlined" Margin="Margin.Dense"` |
 | Search field | The same, with a `Filled.Search` start adornment, `Clearable`, `Immediate`, one debounce constant, a placeholder ("Search members") and an `aria-label` (UX-055) |

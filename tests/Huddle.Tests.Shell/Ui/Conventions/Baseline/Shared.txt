@@ -1,1 +1,7 @@
 CV15|src/Huddle.App/Components/Sidebar/TagsPanel.razor|1
+CV16|src/Huddle.App/Components/Pages/BuildTeam.razor|1
+CV16|src/Huddle.App/Components/Shared/AdapterModelEffortPicker.razor|2
+CV16|src/Huddle.App/Components/Shared/AgentProfileCard.razor|5
+CV16|src/Huddle.App/Components/Shared/FollowUpsNotice.razor|1
+CV16|src/Huddle.App/Components/Shared/NeedsYouLevelControl.razor|1
+CV16|src/Huddle.App/Components/Shared/WaitingNotice.razor|1

@@ -18,7 +18,7 @@
         <MudStack Spacing="3">
             @if (this.error is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="job-editor-error">@this.error</MudAlert>
+                <Notice Severity="NoticeLevel.Error" Class="job-editor-error">@this.error</Notice>
             }
             <MudSelect T="string" Label="For" Variant="Variant.Outlined" Margin="Margin.Dense" Class="job-editor-target"
                        Disabled="this.followUp" Value="this.target" ValueChanged="this.OnTargetChanged">

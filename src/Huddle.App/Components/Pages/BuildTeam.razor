@@ -59,7 +59,7 @@
 @if (this.EditMode && this.missingTeam)
 {
     <MudContainer MaxWidth="MaxWidth.Large" Class="build-team page-reading pa-4">
-        <MudAlert Severity="Severity.Warning" role="alert" Class="build-team-missing">There is no Team named "@this.Team".</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="build-team-missing">There is no Team named "@this.Team".</Notice>
     </MudContainer>
     return;
 }
@@ -170,7 +170,7 @@
             }
             @if (this.CustomRoles.LoadError is not null)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</MudAlert>
+                <Notice Severity="NoticeLevel.Warning" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</Notice>
             }
             <div class="role-grid" role="group" aria-label="Roles">
                 <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">

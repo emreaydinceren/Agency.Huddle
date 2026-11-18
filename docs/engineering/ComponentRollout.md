@@ -18,6 +18,7 @@ page adds only what is particular to this work.
 - The owner brief
 - Questions to answer before each wave
 - Lessons from the pilot
+- Lessons from the area migrations
 
 ## What is decided
 
@@ -85,7 +86,7 @@ another reason for one migration per area at a time.
 | --- | --- | --- | --- |
 | 1 | **Done 2026-11-18.** **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14` (zero-tolerance from the start: all six sites moved in the build PR). Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
 | 2 | **Done 2026-11-18** (build, then four area migrations in parallel worktrees: 136 of 141 raw tags moved; 5 stay raw and baselined, see the catalog's "Still raw"). **B2** `ActionButton` (roles `Primary`, `Secondary`, `Quiet`, `Danger`, `DangerQuiet`), with **A2** `DialogFooter` as its first user: rule `CV15`, control radius on every button, 65 tags moved (18 dialogs, the 15 Medium, the 14 with no variant, every Danger and Warning site). The migration then moved the CV15 backlog (141 tags) area by area, four owners at once | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
-| 3 | **A1** `Notice`, then **B3** text field and **B4** select. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
+| 3 | **A1 build done 2026-11-18** (`Notice`, `NoticeLevel`, `NoticeKind`, rule `CV16`, the 18 px icon and the notice's own 12 px spacing in `base.css`; 53 of 87 tags moved: every Warning but the two Room banners, every non-dense site, the dialog errors, the Composer pair and the runtime-severity site). The CV16 backlog, 34 raw tags, is in the catalog's [Notice](ComponentCatalog.md#notice) "Still to migrate" table, per area. Then **B3** text field and **B4** select. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
 | 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList`, **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
 | 5 | Opportunistic: **A5**, **A8**, the browser scripts (group C); fix D2 and D3 when in those files | as convenient | Small gains; do them when passing |
 
@@ -104,7 +105,7 @@ confirms it with a search before starting.
 | `wwwroot/css/tasks.css` | B1, B2, B5 |
 | `wwwroot/css/task-form.css` | B1, B2 |
 | `wwwroot/css/sidebar.css` | A3, B1 (theme variants) |
-| `wwwroot/css/room.css` | A1 |
+| `wwwroot/css/room.css` | A1 (done: the Composer pair's colour, size and margin) |
 | `wwwroot/css/library.css`, `FeedPage.razor.css` | B1 |
 | `wwwroot/css/shell.css` | B2 (the 2 px icon gap; removed in wave 2) |
 | `tests/.../Conventions/Baseline/*.txt`, `UiConventionScanner.cs`, `UiConventionSource.cs`, `UiConventionTests.cs` | every component |
@@ -127,6 +128,14 @@ Every `visual` item changes pixels on purpose, so the proof is that nothing else
 
 All four Themes restyle shared controls from outside them (`paper`, `hairline`, `card`, `flat`), so
 the capture covers all eight Theme and mode pairs, not only Lumen Light.
+
+**When it runs.** A capture is the slowest stage of a build (about 720 pages, in two captures), so
+it does not run for every component. A build owner runs it only when the component makes a wide
+visual change on purpose (the segmented control, the button roles, `Notice`). A component whose
+change is small, or limited to a few sites, is proved by live `getComputedStyle` measurements of
+those sites and the convention tests, and the manager runs one snapshot comparison for the whole
+wave after its builds and migrations are merged: the commit before the wave against the commit
+after it. A pure migration is always proved that way, once, never per owner.
 
 ## The owner brief
 
@@ -158,7 +167,7 @@ are in the catalog.
 | Before | Questions |
 | --- | --- |
 | Wave 2 | Answered 2026-11-18, each at the catalog's recommendation: `Q-B2-1` control radius, `Q-B2-2` Text Error trigger and Filled Error confirm, `Q-B2-3` no 2 px gap; `Q-A2-1` Close-only info dialogs are pickers, `Q-A2-2` the cancel word may vary |
-| Wave 3 | `Q-A1-1` to `Q-A1-3`; `Q-B3-1` |
+| Wave 3 | `Q-A1-1` to `Q-A1-3` answered 2026-11-18 at the catalog's recommendation (Warnings interrupt only when the Human must act now, an 18 px icon, always dense); `Q-B3-1` |
 | Wave 4 | `Q-A4-1`, `Q-A4-2`; `Q-A6-1`, `Q-A6-2`; `Q-A7-1`, `Q-A7-2`; `Q-A3-1`, `Q-A3-2`; `Q-B5-1` |
 | Wave 5 | `Q-A5-1`; `Q-A8-1` |
 
@@ -244,5 +253,40 @@ merged the four branches into the working branch. What made it cheap, and what t
 - **Proof is one comparison, after the merge.** A pure migration should move nothing, so a single
   snapshot of the commit before the migrations against the commit after them replaces four
   per-owner captures.
+- **A comparison needs the same `-SeedRoot` for both captures.** The seed embeds absolute file paths,
+  so a different root made 38,618 differences on 178 pages. The one real residue of the wave 2
+  comparison was the Feed's `Done · HH:MM` pill, whose width follows the clock at app start; it moved
+  by 2 to 3 px on 24 pages and no migrated site was involved. Result: 0 differences from the
+  migration of 136 buttons (before `c77dd6c9`, after `21832e69`, 720 pages in 8 Theme and mode pairs).
+  Treat that pill as known noise.
 - **Merge main between waves, not during one.** Merging while owners worked would have invalidated
   their baselines; main was merged only when no owner had uncommitted edits.
+
+A1 (`Notice`, 2026-11-18) added:
+
+- **Move every site whose look changes in the build, so the migrations stay pure.** The always-dense
+  ruling changes 26 sites' height and the spacing ruling every site with a margin class; the build moved
+  all of those (53 tags), so each area migration of the 34 left is a tag swap whose only pixel change is
+  the margin classes it removes, which its owner declares.
+- **A behaviour rule the component enforces is a classification, and it changes tests.** Moving the role
+  into `Kind` meant reading all 36 Warnings: four `alert` sites became `status`, and a test that found
+  the notice by `[role=alert]` (`SessionsPanelTests`) had to find it by its hook class instead. Read the
+  message and what the Human can do about it, not the severity.
+- **A wrapper's spacing rule is a rule about siblings.** A margin on the notice adds to a flex
+  container's `gap`, so the snapshot is where a doubled gap shows; the rule spaces a notice from its
+  siblings only, never from its container's edges.
+- **A shared treatment is a different component.** The Room banners look like notices but carry a
+  hairline, a tint and a second bar; they stay raw and baselined rather than giving `Notice` a banner
+  flag.
+- **Search the whole solution for a parameter type's name, not only `Huddle.App`.** `NoticeSeverity`
+  already existed in `Huddle.Acp.Abstractions`, which two components import, so the build failed with
+  CS0104; the enum is `NoticeLevel`.
+- **CV11 checks the wrapper's own CSS.** A literal `font-size: 18px` and a 9 px padding failed it; the
+  icon uses `--icon-size-row` and on-scale spacing (8 px plus a 2 px nudge). Run the convention class
+  before a Capture, because a stylesheet fix after it starts invalidates the run.
+- **Measure the glyph, not its box.** MudBlazor sizes an icon's `svg` itself (`.mud-icon-size-medium`,
+  1.5rem, so 21 px here), so a `font-size` on `.mud-alert-icon` shrank only the line box and the first
+  capture missed it; only `getComputedStyle` on the `svg` in a live tab showed it. A fingerprinted
+  stylesheet stays cached in an open tab after an edit: re-load the `link` with a query string to measure.
+- **A sandbox may refuse `npx` downloads**, so `markdownlint` may not run: check MD047 (one final
+  newline) and table shapes by eye, and say so.

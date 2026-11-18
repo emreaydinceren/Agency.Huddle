@@ -68,7 +68,8 @@ a MudBlazor example won't warn you about:
 
 - **`MudAlert` has no `role`.** It emits no role and no aria. Add `role="alert"`
   for an interruption and `role="status"` for a consequence, yourself
-  ([traps.md](../docs/engineering/traps.md), the `MudAlert` entry).
+  ([traps.md](../docs/engineering/traps.md), the `MudAlert` entry). In this app you do not
+  write a `MudAlert` at all: `Notice` writes the role from its `Kind` (convention rule CV16).
 - **An open dialog's parameters are frozen.** MudBlazor ignores every
   `SetParametersAsync` after `IDialogService.ShowAsync` opens it. Pass an id or
   a snapshot, and let the dialog load and subscribe for itself. The reasoning is

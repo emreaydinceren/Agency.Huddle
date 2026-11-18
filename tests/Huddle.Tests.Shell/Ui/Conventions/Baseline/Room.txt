@@ -1,2 +1,4 @@
 CV15|src/Huddle.App/Components/Shared/InviteAgent.razor|1
 CV15|src/Huddle.App/Components/Shared/QuestionCard.razor|1
+CV16|src/Huddle.App/Components/Pages/Chat.razor|9
+CV16|src/Huddle.App/Components/Shared/InviteAgent.razor|2

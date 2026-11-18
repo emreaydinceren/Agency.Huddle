@@ -127,8 +127,8 @@ component here, move it onto the component rather than writing another copy.
 | A destructive confirmation on a list row | `InlineConfirm` with `ConfirmText` set to the verb | [Confirming](design-system.md#confirming) |
 | Context for a page beside it, in the Right sidebar | `PageSubjectSource` anywhere in the page's markup, with the page's Subject as `Value`. The Right sidebar draws the panels for that Subject. Never a drawer of the page's own | [wireframes.md `S4`](wireframes.md#figure-1-the-shell) |
 | Two resizable panes | `MudSplitPanel`, as `LibraryExplorer` uses it | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md) |
-| A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
-| A notice in a Room | The same `MudAlert`, between the Transcript and the Composer, inside the 760px column | [Notices and snackbars](design-system.md#notices-and-snackbars) |
+| A notice on the page | `Notice` with a `Severity`, and `Kind="NoticeKind.Interruption"` only for a Warning the Human must act on now | [Notices and snackbars](design-system.md#notices-and-snackbars) |
+| A notice in a Room | The same `Notice`, between the Transcript and the Composer, inside the 760px column | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | An editable long-text field (a prompt, instructions, a Skill's body) | `MudTextField` with `Lines` and the `long-text-field` class, so it is `body1` at 400 | [Typography](design-system.md#typography) |
 | A date on screen | `HumanDate.Format(date, today)`, with `HumanDate.Full(date)` in the tooltip; never a format string at the call site | [Dates and times](design-system.md#dates-and-times) |
 | A transient result | `ISnackbar.Add(…, key: …)` | [Notices and snackbars](design-system.md#notices-and-snackbars) |
@@ -253,6 +253,7 @@ shapes that have no component yet.
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
 | `ActionButton` | `Components/Shared/ActionButton.razor` | Every button | `Role` (`ButtonRole`), `ChildContent`, `StartIcon`, `EndIcon`, `Disabled`, `Busy`, `Href`, `Submit`, `FullWidth`, `Class` (layout and hooks only), `OnClick`, any other attribute; `FocusAsync()` | Any button. The role fixes the variant, colour and the 28 px Small size, at the control radius. A raw `MudButton` elsewhere fails convention rule CV15 against a shrinking per-file baseline |
+| `Notice` | `Components/Shared/Notice.razor` | Every notice (`C9`, `T9`, `L3d`) | `Severity` (`NoticeLevel`: `Error`, `Warning`, `Info`, `Success`), `Kind` (`NoticeKind`: `Interruption` or `Consequence`), `ChildContent`, `OnDismiss`, `Class` (hooks and layout only), any other attribute | Any notice on a page, in a dialog or in a Room. Always dense with an 18 px icon; the kind writes `role="alert"` or `role="status"` (Error interrupts, the rest report, unless `Kind` says otherwise); `OnDismiss` draws a close button; the notice owns its 12 px spacing. A raw `MudAlert` elsewhere fails convention rule CV16 against a shrinking per-file baseline |
 | `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Narrow`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row: Cancel, then the verb (`ConfirmText`, default "Delete"). `Narrow="true"` with `Prompt="Delete?"` is the one-line sidebar form. Confirm takes focus, Escape cancels |
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class`, `Compact` | Any search box: outlined, dense, clearable, one debounce. `Compact="true"` wears `.toolbar-compact` (a 28px box with 13px text) for a toolbar row. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
@@ -524,7 +525,7 @@ Check these first. Each links to the rule that owns it.
    ([A page](design-system.md#a-page), step 3). Don't copy it to another page.
 3. **Dialog actions run Cancel, then a Filled primary**
    ([Dialog anatomy](design-system.md#dialog-anatomy)).
-4. **Every `MudAlert` has a role, every snackbar a `key`, every icon-only control an
+4. **Every notice is a `Notice` (which writes its role), every snackbar a `key`, every icon-only control an
    `aria-label` that names its target**
    ([Focus and accessibility](design-system.md#focus-and-accessibility)).
 5. **No text under 11px; prose no wider than 75 characters; a heading never smaller than

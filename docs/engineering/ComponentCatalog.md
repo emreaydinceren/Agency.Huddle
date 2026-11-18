@@ -328,14 +328,69 @@ page's single create button, filled by default and outlined with `CreatePrimary=
 
 Any "nothing here" state. Write the next step in `Text`, not just "No items".
 
-### Notices
+### Notice
 
 ![An Info notice with a left bar, an icon, a sentence and a close button](../images/components/notice-info-dismissable.png)
 
 ![A Warning notice with a bulleted list of two schedule sections that could not be read](../images/components/notice-warning-list.png)
 
-Notices are `MudAlert` with a `role`, used 87 times in 38 files with no wrapper. They are the
-largest [hand-built pattern](#patterns-still-built-by-hand).
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `Notice` | `Components/Shared/Notice.razor` | 53 tags in 29 files; 34 raw `MudAlert` tags still to move | `Severity` (`NoticeLevel`: `Error`, `Warning`, `Info` (the default), `Success`), `Kind` (`NoticeKind`: `Interruption` or `Consequence`), `ChildContent`, `OnDismiss`, `Class`, any other attribute (`data-testid`, `id`) |
+
+A caller names how serious the notice is and the component fixes the rest: always dense (padding
+`0 12px`, one line or many), an 18 px icon in the severity colour, the 3 px leading bar, the
+sentence in TextPrimary, and 12 px from a sibling before or after it but none at the start or end
+of its container (`base.css` "Global MudBlazor overrides"). No caller writes `Dense`, `role`, an
+icon or a margin class. `OnDismiss` draws a close button. `Class` is a test or script hook and
+layout only. Built in wave 3 (A1, 2026-11-18); convention rule CV16 counts a raw `MudAlert`
+anywhere else.
+
+**The kind writes the role** (`Q-A1-1`). `role="alert"` only when the Human must act now: a
+conflict, a refusal, a failed action, a missing Team or Project. Every other notice is
+`role="status"`. Left unset, an Error is an interruption and Info, Success and Warning are
+consequences, so a caller writes `Kind` only for a Warning that interrupts. The 36 Warning sites,
+classified when they moved:
+
+| Kind | Sites |
+| --- | --- |
+| Interruption (9) | `Library/LibraryDocument` freshness (changed on disk: Reload or Keep mine), `Pages/BuildTeam` missing Team, `Pages/Settings` admin access, `Settings/Skills/UpdateDialog` "You edited …", `Shared/FolderPickerDialog` listing error, `Tasks/TaskDetail` gate refusal and save conflict, `Pages/TeamPage` missing Team and missing Project |
+| Consequence (25) | `Jobs/ScheduledPage` problems, `Library/LibraryDocument` moved or deleted, `Library/LibraryExplorer` unavailable, `Pages/Agents` files that didn't load, `Pages/BuildTeam` custom roles unreadable, `Pages/Tasks` (5: invalid View, View not found, rejected files, Sprint problems, item not found), `Settings/Helpers/HelperCard` (2), `Settings/PromptsPanel` relied-on warning, `Settings/RemoteAccess/RemoteAccessPanel` downgraded, `Settings/SessionsPanel` load error, `Settings/Skills/UpdateDialog` status, `Shared/NeedsYouLevelControl` unavailable, `Shared/AgentProfileCard` (3), `Teams/DuplicateTeamDialog` skipped, `Tasks/TaskDetail` deleted and budget, `Tasks/TaskReadView` deleted, `Teams/TeamDetails` workspace unreadable |
+| Not a `Notice` (2) | The Room banners in `Pages/Chat`, below |
+
+Four of the consequences were `role="alert"` before and are now `status`: the custom roles file
+(`BuildTeam`), `SessionsPanel`'s load error, `NeedsYouLevelControl`'s "follows the Team" line and
+`TeamDetails`'s workspace line; each reports a state the Human can fix later. Two are close calls:
+the custom roles file blocks adding roles, and `NeedsYouLevelControl` names a missing Team; both
+explain a fallback rather than ask for an act, so they are `status`. `FolderPickerDialog`'s listing
+error stays an interruption: the folder the Human just opened cannot be read. `PromptsPanel`'s
+issue list picks its severity at run time and leaves `Kind` unset, so an Error issue interrupts
+and a Warning issue (before: also `alert`) reports.
+
+**The Room banners stay raw.** `.budget-prompt` and `.member-health-alert` (`Pages/Chat.razor`)
+carry a treatment no other notice gets: a 1 px top hairline shared with the Composer and the
+Room strip, and in `paper` and `hairline` a warning tint, the panel radius and a second left bar
+(`base.css`), with their own padding and an action row (`room.css`). They are banners, not notices,
+so they keep `MudAlert` and their two CV16 counts in the Room baseline until a banner component
+exists. They take the 18 px icon, which is global.
+
+**Still to migrate.** 34 raw `MudAlert` tags in 16 files, in the CV16 baseline
+(`tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/`). Every one is a dense Error or Info whose
+current role is already its kind's default, so a migration is a tag swap; the margin classes
+listed must go too, which moves pixels (declare them):
+
+| Area | Tags | Files (tags), margin classes to remove |
+| --- | --- | --- |
+| Room | 11 | `Pages/Chat` (9: 7 plus the 2 banners, which stay), `Shared/InviteAgent` (2) |
+| Shared | 11 | `Shared/AgentProfileCard` (5: `mb-4`, `mb-3` x3, `mt-3`), `Shared/AdapterModelEffortPicker` (2: `mb-3` x2), `Pages/BuildTeam` (1), `Shared/FollowUpsNotice` (1), `Shared/NeedsYouLevelControl` (1), `Shared/WaitingNotice` (1) |
+| Settings | 6 | `Settings/ProfilePanel` (2: `mb-3`, `mt-2`), `Pages/Settings` (1), `Settings/Helpers/HelpersPanel` (1: `mb-3`), `Settings/LibraryPanel` (1), `Settings/RemoteAccess/RemoteAccessPanel` (1: `mb-3`) |
+| Library | 4 | `Library/LibraryDocument` (4) |
+| Shell | 1 | `Shared/RoomList` (1) |
+| Tasks | 1 | `Tasks/TaskDetail` (1, the unsaved-changes Info) |
+
+The Room notices in the 760 px column (`reply-note`, `fresh-start-note`, `continue-note`,
+`WaitingNotice`, `FollowUpsNotice`) sit in a flex column; check their gap in the snapshot when they
+move, since the notice's own 12 px margin then applies.
 
 ### Settings intro and stored-at line
 
@@ -700,7 +755,6 @@ ships, move its row to the entry for the new component and delete it here.
 
 | # | Planned component | Reuse cases | What it fixes | Size | Status |
 | --- | --- | --- | --- | --- | --- |
-| A1 | **Notice**, wrapping `MudAlert` with severity, role and density | 87 uses in 38 files | 59 use `Dense`. All 21 Error notices are `role="alert"` and all 29 Info notices are `role="status"`, but the 36 Warning notices split 15 `alert` and 21 `status`; one more (`PromptsPanel`) picks Error or Warning at runtime and is `alert` | M | Planned |
 | A3 | **RowActionsMenu**: a `MoreVert` menu with the hover-reveal classes and the "Actions for {name}" label | 11 hand-built (the Teams nav twice, Tasks, the board, the Views nav, `RoomNavRow`, Scheduled, and four in Skills settings); 9 files repeat the `hover-reveal-menu-button` class | The rule is in [UXDesignGuidelines.md](UXDesignGuidelines.md#i-need-use-this) but names no component. A twelfth `MoreVert` menu, on `TaskDecisionCard`, offers other decisions and is a different thing | S | Planned |
 | A4 | **One Adapter, Model and Effort picker**, and a `ProbedSelect` for the select-with-progress-bar block | The cascade is written 2 times (`AdapterModelEffortPicker`, used once, and `AgentProfileCard`); the probe block appears 5 times | `AgentProfileCard` (2,359 lines) re-implements the shared picker, and adds a Work mode select the picker lacks | L | Planned |
 | A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
@@ -750,47 +804,6 @@ Four Themes restyle shared controls through their `surface` trait: Lumen is `hai
 are the overrides to check. `agents/scripts/Css-Snapshot.ps1 -Mode Capture` records every route
 in all 8 Theme and mode pairs at 1280 and 768 px; `-Mode Report` with a `-Declared` file of the
 intended changes then lists anything else that moved.
-
-#### A1 Notice
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Dense | 59 sites | Padding `0 12px` (MudBlazor 9.12.0); one line measured 38 px, Agents notice 58.6 px |
-| Not dense | 28 sites, for example `Tasks/FieldsDialog.razor:58`, `Pages/Tasks.razor:60` to `208` (7), `Tasks/TaskDetail.razor:66` to `154` (5), `Pages/TeamPage.razor` (4) | Padding `6px 16px`, so 6 px taller and 4 px wider inset than a dense one |
-| Warning as `alert` | 15 sites, for example `Pages/Chat.razor:123`, `Pages/BuildTeam.razor:62`, `Tasks/TaskDetail.razor:114` | Announced at once by a screen reader |
-| Warning as `status` | 21 sites, for example `Pages/Tasks.razor:66`, `Settings/Helpers/HelperCard.razor:56` | Announced politely |
-| Composer pair | `Shared/Composer.razor:18`, `:22`, styled at `wwwroot/css/room.css:572` and `:578` | Root `color` set to Error and **Success** ink, text 13 px. The sentence's TextPrimary override wins, so the 13 px shows; where the root colour still reaches (the close icon) is a lead |
-| Room banners | `.budget-prompt` and `.member-health-alert`, `base.css:601`, `:705`, `:857` | A 1 px top hairline, and in `paper` and `hairline` a warning tint, panel radius and a second left bar; no other notice gets them |
-| Margin by class | `mb-1` 2, `mb-2` 4, `mb-3` 9, `mb-4` 4, `mt-1` 1, `mt-2` 5, `mt-3` 2 | Five spacings around the same part |
-
-Shared by all, *measured*: sentence 14 px in TextPrimary (`#0f0f14`), icon 22 px in the severity
-colour, a 3 px leading bar, radius 6 px. 22 px is not on the icon sizes (14, 16, 18).
-
-**Which is right.** design-system.md "Notices and snackbars" and Spacing: `Dense` when the notice
-is one line, a role on every notice, `role="alert"` for an interruption and `role="status"` for a
-consequence (line 614). A dialog's action error is `Severity.Error Dense role="alert"` (Dialog
-anatomy). No rule decides the role of a Warning, the icon size or the spacing between notices.
-
-**Fix:**
-
-1. `Notice` takes `Severity` and a `Kind` (interruption or consequence) and writes the role; no
-   caller writes `role`. `markup only`
-2. `Tasks/FieldsDialog.razor:58` becomes dense, as every other dialog error is. `visual`
-3. Drop the colour and font size in `room.css:572-582`; `Composer.razor:22` keeps Info. `visual`
-4. Spacing comes from the notice zone, not `Class`: remove the `mb-*`/`mt-*` at the 27 sites. `visual`
-5. Decide the icon size (Q-A1-2) in `base.css` "Global MudBlazor overrides". `visual`
-
-**How to prove.** Css-Snapshot Report on `/agents`, `/scheduled`, `/settings/helpers`,
-`/settings/prompts` and a Room; declare `.mud-alert | padding*` and `margin*`. `paper` and
-`hairline` restyle `.budget-prompt` and `.member-health-alert`.
-
-**Open questions for the owner:**
-
-- `Q-A1-1` Which Warnings interrupt? Recommended: `alert` only when the Human must act now (a
-  conflict, a refusal, a missing Team); every other Warning is `status`.
-- `Q-A1-2` Icon at 18 px (the largest icon size) or keep MudBlazor's 22 px? Recommended: 18 px.
-- `Q-A1-3` Is a multi-line notice dense too? Recommended: yes, everywhere, so there is one notice
-  size; the rule then reads "always `Dense`".
 
 #### A3 RowActionsMenu
 

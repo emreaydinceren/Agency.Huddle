@@ -63,7 +63,7 @@
 
                 @if (field.ReliedWarning is not null)
                 {
-                    <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-1">@field.ReliedWarning</MudAlert>
+                    <Notice Severity="NoticeLevel.Warning">@field.ReliedWarning</Notice>
                 }
 
                 @if (field.Placeholders.Count > 0)
@@ -81,7 +81,7 @@
                 {
                     @foreach (var issue in field.Issues)
                     {
-                        <MudAlert Severity="@(issue.Severity == PromptIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" role="alert" Class="mb-1">@issue.Message</MudAlert>
+                        <Notice Severity="@(issue.Severity == PromptIssueSeverity.Error ? NoticeLevel.Error : NoticeLevel.Warning)">@issue.Message</Notice>
                     }
                 }
 

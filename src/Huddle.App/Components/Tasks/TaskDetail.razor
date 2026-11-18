@@ -63,7 +63,7 @@
 <div class="task-detail">
 @if (this.deleted)
 {
-    <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
+    <Notice Severity="NoticeLevel.Warning" Class="task-detail-deleted">This Task was deleted</Notice>
     <div class="task-detail-actions">
         <ActionButton Role="ButtonRole.Primary" OnClick="this.CancelAsync">Close</ActionButton>
     </div>
@@ -97,7 +97,7 @@ else if (this.loaded is { } task)
 
     @if (this.saveError is not null || this.saveProblems.Count > 0)
     {
-        <MudAlert Severity="Severity.Error" role="alert" Class="task-detail-save-error">
+        <Notice Severity="NoticeLevel.Error" Class="task-detail-save-error">
             @if (this.saveError is not null)
             {
                 <div class="task-detail-save-error-problem">@this.saveError</div>
@@ -106,18 +106,18 @@ else if (this.loaded is { } task)
             {
                 <div class="task-detail-save-error-problem">@problem</div>
             }
-        </MudAlert>
+        </Notice>
     }
 
     @if (this.gateRefusal is { } refusal)
     {
-        <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-gate-refusal">
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="task-detail-gate-refusal">
             <span class="task-detail-gate-refusal-text">@refusal.Message</span>
             @if (this.CanMoveAnyway(refusal))
             {
                 <ActionButton Role="ButtonRole.Quiet" Class="task-detail-gate-override" OnClick="this.MoveAnywayAsync">Move anyway</ActionButton>
             }
-        </MudAlert>
+        </Notice>
     }
 
     @if (this.conflict is { } activeConflict)
@@ -130,9 +130,9 @@ else if (this.loaded is { } task)
         }
         string conflictFieldList = string.Join(", ", activeConflict.Fields.Select(TaskDiff.FieldLabel));
 
-        <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-conflict-alert">
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="task-detail-conflict-alert">
             @TaskDetail.ConflictBannerText(activeConflict, conflictFieldList)
-        </MudAlert>
+        </Notice>
 
         <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
             <tbody>
@@ -151,10 +151,10 @@ else if (this.loaded is { } task)
 
     @if (budgetExhausted)
     {
-        <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-budget-banner">
+        <Notice Severity="NoticeLevel.Warning" Class="task-detail-budget-banner">
             <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Agents.")</span>
             <ActionButton Role="ButtonRole.Quiet" OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</ActionButton>
-        </MudAlert>
+        </Notice>
     }
 
     IReadOnlyList<GateId> teamGates = this.Gates?.EnabledGates(effective.Location.Team) ?? [];

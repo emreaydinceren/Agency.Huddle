@@ -57,22 +57,22 @@
     @if (!this.Options.Value.Tasks.Enabled)
     {
         @* corrections-B4 D11 item 13: Tasks turned off shows only this notice. *@
-        <MudAlert Severity="Severity.Info" role="status" Class="tasks-disabled-alert">Tasks are turned off.</MudAlert>
+        <Notice Severity="NoticeLevel.Info" Class="tasks-disabled-alert">Tasks are turned off.</Notice>
     }
     else if (this.invalidView is { } invalid)
     {
         @* corrections-B7 §13.2 item 4: an invalid View (parses, fails ViewValidator) shows its
            reason - never "no longer exists", which means no such id at all. *@
-        <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
+        <Notice Severity="NoticeLevel.Warning" Class="tasks-invalid-view-alert">
             This View is invalid: @string.Join(" ", invalid.Problems)
-        </MudAlert>
+        </Notice>
     }
     else if (this.viewNotFound)
     {
-        <MudAlert Severity="Severity.Warning" role="status" Class="tasks-view-not-found-alert">
+        <Notice Severity="NoticeLevel.Warning" Class="tasks-view-not-found-alert">
             That View no longer exists.
             <MudLink Href="/tasks">All Tasks</MudLink>
-        </MudAlert>
+        </Notice>
     }
     else
     {
@@ -85,15 +85,15 @@
         @if (this.Views.LoadError is { } loadError)
         {
             @* Spec §13.12: the exact wording, with the parse error's own line/column and message. *@
-            <MudAlert Severity="Severity.Error" role="alert" Class="tasks-views-load-error-alert">
+            <Notice Severity="NoticeLevel.Error" Class="tasks-views-load-error-alert">
                 views.json could not be read (line @loadError.Line, column @loadError.Column): @loadError.Message. Views are read-only until the file is fixed; nothing has been lost.
-            </MudAlert>
+            </Notice>
         }
 
         @if (this.Store.RejectedFiles.Count > 0)
         {
             @* Agents.razor:32-48's precedent, with role="status" added per traps.md L22-27. *@
-            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-rejected-alert">
+            <Notice Severity="NoticeLevel.Warning" Class="tasks-rejected-alert">
                 <MudText Typo="Typo.subtitle2" Class="tasks-rejected-heading">Tasks that didn't load</MudText>
                 <ul class="tasks-rejected-list">
                     @foreach (RejectedTaskFile rejected in this.Store.RejectedFiles)
@@ -104,13 +104,13 @@
                         </li>
                     }
                 </ul>
-            </MudAlert>
+            </Notice>
         }
 
         @if (this.Sprints.Problems.Count > 0)
         {
             @* Sprints spec §12.4: the only Sprint UI on the page. Same shape as the rejected-file alert above. *@
-            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-sprints-alert">
+            <Notice Severity="NoticeLevel.Warning" Class="tasks-sprints-alert">
                 <MudText Typo="Typo.subtitle2" Class="tasks-sprints-heading">sprints.md has lines that were ignored</MudText>
                 <ul class="tasks-sprints-list">
                     @foreach (SprintProblem problem in this.Sprints.Problems)
@@ -118,7 +118,7 @@
                         <li class="tasks-sprints-problem">@problem.Text</li>
                     }
                 </ul>
-            </MudAlert>
+            </Notice>
         }
 
         <div class="tasks-header">
@@ -205,7 +205,7 @@
         @if (this.itemNotFoundText is not null)
         {
             @* Spec §13.13.3 step 1: an item-route id that is invalid or names no Task, over the last View. *@
-            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-item-not-found-alert">@this.itemNotFoundText</MudAlert>
+            <Notice Severity="NoticeLevel.Warning" Class="tasks-item-not-found-alert">@this.itemNotFoundText</Notice>
         }
     }
 

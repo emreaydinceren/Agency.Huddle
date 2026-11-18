@@ -22,7 +22,7 @@
     <DialogContent>
         @if (this.StatusLine is { } status)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="update-dialog-status mb-2">@status</MudAlert>
+            <Notice Severity="NoticeLevel.Warning" Class="update-dialog-status">@status</Notice>
         }
 
         @if (this.plan.FromVersion.Length > 0 || this.plan.ToVersion.Length > 0)
@@ -40,7 +40,7 @@
                     <MudText Typo="Typo.caption" Class="update-dialog-affected d-block mud-text-secondary">@Affected(change)</MudText>
                     @if (change.ModifiedLocally)
                     {
-                        <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="update-dialog-modified mt-1">You edited @change.Name on this computer. Updating replaces your edits.</MudAlert>
+                        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="update-dialog-modified">You edited @change.Name on this computer. Updating replaces your edits.</Notice>
                     }
                 </div>
             }

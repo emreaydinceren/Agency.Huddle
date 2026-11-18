@@ -71,7 +71,7 @@
     }
     @if (this.unavailable)
     {
-        <MudAlert Severity="Severity.Warning" role="status" Class="library-explorer-unavailable">@this.unavailableReason</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Class="library-explorer-unavailable">@this.unavailableReason</Notice>
     }
     else
     {
@@ -101,7 +101,7 @@
                     <div class="library-search-results">
                         @if (this.truncated)
                         {
-                            <MudAlert Severity="Severity.Info" role="status" Class="library-search-truncated">@TruncatedText</MudAlert>
+                            <Notice Severity="NoticeLevel.Info" Class="library-search-truncated">@TruncatedText</Notice>
                         }
                         @if (this.hits.Count == 0)
                         {

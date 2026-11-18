@@ -65,7 +65,7 @@
     }
     else if (this.missing)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="library-document-banner">This file was moved or deleted.</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Class="library-document-banner">This file was moved or deleted.</Notice>
     }
     else if (this.content is not null)
     {
@@ -80,13 +80,13 @@
                notice text and the button row carry the SAME class so both are reachable through
                ".library-document-freshness-notice", while the outer MudAlert itself does not, keeping
                the text element's own TextContent free of the button labels. *@
-            <MudAlert Severity="Severity.Warning" Class="library-document-freshness" role="alert">
+            <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="library-document-freshness">
                 <p class="library-document-freshness-notice">This file changed on disk since you opened it.</p>
                 <MudStack Row="true" Class="library-document-freshness-notice" Spacing="2">
                     <ActionButton Role="ButtonRole.Quiet" OnClick="@this.OnReloadFreshnessAsync">Reload</ActionButton>
                     <ActionButton Role="ButtonRole.Quiet" OnClick="@this.OnKeepMine">Keep mine</ActionButton>
                 </MudStack>
-            </MudAlert>
+            </Notice>
         }
         @if (this.saveError is not null)
         {

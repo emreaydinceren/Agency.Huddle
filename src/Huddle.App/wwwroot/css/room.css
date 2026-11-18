@@ -587,18 +587,6 @@
     margin-left: 4px;
 }
 
-.composer-error {
-    color: var(--mud-palette-error);
-    margin-bottom: 8px;
-    font-size: var(--mud-typography-body2-size);
-}
-
-.composer-info {
-    color: var(--mud-palette-success);
-    margin-bottom: 8px;
-    font-size: var(--mud-typography-body2-size);
-}
-
 /* One left edge for the Transcript, the notices and the Composer. The message list scrolls and draws a
    scrollbar on its right; the notices and the Composer do not, so each centred its 760px column in a pane the
    scrollbar's width wider than the Transcript's, and the columns sat half that width apart. The list now always

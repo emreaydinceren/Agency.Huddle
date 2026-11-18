@@ -483,10 +483,10 @@
                 @foreach (var pack in this.rolePacks.Where(pack => this.PackState(pack) == Agency.Huddle.SkillPacks.Resolving.ItemState.Withdrawn && this.IsPackActive(pack.Id)))
                 {
                     Agency.Huddle.SkillPacks.Resolving.PackEntry entry = pack;
-                    <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-2 agent-profile-card-warning agent-profile-card-pack-withdrawn-warning">
+                    <Notice Severity="NoticeLevel.Warning" Class="agent-profile-card-warning agent-profile-card-pack-withdrawn-warning">
                         <span class="agent-profile-card-pack-withdrawn-text">Pack "@entry.Title" was withdrawn by its Source: @this.ReasonOf(entry). @this.name keeps working.</span>
                         <ActionButton Class="agent-profile-card-pack-remove ml-2" OnClick="@(() => this.TogglePack(entry))">Remove from this Agent</ActionButton>
-                    </MudAlert>
+                    </Notice>
                 }
             }
             @if (this.roleSpec is { } findRole && this.Services.GetService<Agency.Huddle.App.SkillSources.SkillRegistry>() is not null)
@@ -503,7 +503,7 @@
             @* MS-5: too many skills, or two sharing a catalog Sub Category. *@
             @foreach (var warning in this.SetupWarnings.Skills)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3 agent-profile-card-warning" role="status">@warning</MudAlert>
+                <Notice Severity="NoticeLevel.Warning" Class="agent-profile-card-warning">@warning</Notice>
             }
 
             <div class="group-label">Model</div>
@@ -640,7 +640,7 @@
             @* MS-3: a vendor shared with a role this one must differ from. *@
             @foreach (var warning in this.SetupWarnings.Model)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-3 agent-profile-card-warning" role="status">@warning</MudAlert>
+                <Notice Severity="NoticeLevel.Warning" Class="agent-profile-card-warning">@warning</Notice>
             }
 
             @* ADR-0033. Same role="status" reasoning as the notes above: a consequence of what the Human

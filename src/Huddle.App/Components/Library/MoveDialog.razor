@@ -30,7 +30,7 @@
         </MudList>
         @if (this.error is not null)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="mt-2">@this.error</MudAlert>
+            <Notice Severity="NoticeLevel.Error">@this.error</Notice>
         }
     </DialogContent>
     <DialogActions>
