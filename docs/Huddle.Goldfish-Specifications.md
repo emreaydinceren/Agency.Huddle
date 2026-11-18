@@ -768,7 +768,7 @@ reviewer calls goldfish with a brief naming the spec." A Team created before tha
 | E-6 | The goldfish ends a Turn without `goldfish_done` and nobody Mentions Ruth | It waits, holding the body in that Room, indefinitely; the chip says so. Accepted by D-17 and D-18: the comeback is the guardrail. A restart ends it as Restarted (E-1) |
 | E-7 | The Room's Budget, or the Agent's per-Persona token budget, is spent and a goldfish post or Turn is refused | Refused as for any Agent; the possession stays open. A Continue or a Human Message lets it go on; a comeback ends it, and the result is then posted as Huddle, which spends no Budget |
 | E-8 | Two comebacks in a row | The first ends it; the second finds the Agent not in goldfish mode and gets "Ruth isn't in goldfish mode." |
-| E-9 | The goldfish reads Memory through `Bash`, or the Work Dir's own `CLAUDE.md` loads | Not stopped: the Work Dir is not a jail, and `settingSources` includes `project` (`DotAcpAgentHostFactory.cs:708`). Accepted limit, in known-limits when built |
+| E-9 | The goldfish reads Memory through a `Bash` script (`python -c`; a plain `cat` is refused), or the Work Dir's own `CLAUDE.md` loads | Not stopped: the Work Dir is not a jail, and `settingSources` includes `project` (`DotAcpAgentHostFactory.cs:708`). Accepted limit, in known-limits when built |
 | E-10 | The goldfish uses `post_message` to say "@Ruth comeback" | Ignored (§6.7) |
 | E-11 | An answer Mentioning Ruth arrives after the goldfish was called back | It goes to the warm Agent, by the ordinary Reply Gate |
 | E-12 | The warm Agent's Turn that called `goldfish` fails after the call | The possession goes on: the brief is already posted. The warm failure is reported as today |
@@ -916,7 +916,7 @@ when built.
 | GF-M11 | Let the goldfish ask and do not answer | It ends its Turn and waits; the chip reads "Ruth (goldfish) is waiting · n min"; nothing more until a Mention of Ruth or **Call Ruth back** |
 | GF-M12 | A goldfish `log_change` with `reviewed` on a spec | The document's History reads "Goldfish review by Ruth" |
 | GF-M13 | In a Team created from the `spec-driven` template, assign Ruth a review Task whose parent holds a spec | Ruth, following the process text, calls `goldfish`; the brief is a comment on the review Task too |
-| GF-M14 | As the goldfish, try `cat` and `Read` of `memory/` (Claude, after S-1) | `Read` refused; `cat` succeeds (E-9, accepted) |
+| GF-M14 | As the goldfish, try `cat` and `Read` of `memory/` (Claude, after S-1) | `Read` refused; `cat` refused too (measured twice); a script (`python -c`) is the open route (E-9, accepted) |
 | GF-M15 | Brief the goldfish so it must ask the Human (for example, "ask the Human which environment to test"); it calls `ask_human` | The Question card reads "Ruth · goldfish is asking" and Needs You lists the Room; answer it: the goldfish continues with the answer, the warm Ruth gets no Turn for it; the result lists the question and answer |
 | GF-M16 | Set `Team:Acp:MaxConcurrentTurns` to 2 and ask Ruth to goldfish a spec | `goldfish` refuses with the one-Turn-at-a-time sentence; nothing is posted and Ruth is not possessed |
 

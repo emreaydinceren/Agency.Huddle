@@ -323,7 +323,9 @@ Those are different diagnoses.
 
 `O-WIRE` is the echo-bot console only. It never sees an in-process Agent, so it
 cannot observe a Persona's prompt or tool calls; use `O-TOOLCALLS` or the mock
-adapter's echo for those (see [Never set TraceWire](#standing-conventions)).
+adapter's echo for those (see [Never set TraceWire](#standing-conventions)). Where a test does need the in-process wire trace,
+it is `Team__Acp__TraceWire=true` plus `Logging__Console__LogLevel__Agency.Huddle.Acp.Wire=Trace`: the `Console` segment is the one that
+works, because `appsettings.json` filters the console provider by itself.
 
 ### O-TOOLCALLS
 

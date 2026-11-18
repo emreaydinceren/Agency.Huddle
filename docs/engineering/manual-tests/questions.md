@@ -52,7 +52,7 @@ Run [`P-BUILD`](common.md#p-build) then `P-LAUNCH-PAID` from [Common procedures]
 5. QUESTIONS-06 and QUESTIONS-08 read the wire, which nothing but the trace shows. Like
    [work-mode.md](work-mode.md), they are a stated exception to the "never set `Team__Acp__TraceWire`"
    convention in [Common procedures](common.md#standing-conventions): set **`Team__Acp__TraceWire`** and
-   `Logging__LogLevel__Agency.Huddle.Acp.Wire` to `Trace` exactly as work-mode.md setup step 4 does, in a
+   `Logging__Console__LogLevel__Agency.Huddle.Acp.Wire` to `Trace` exactly as work-mode.md setup step 4 does, in a
    throwaway terminal, and close it afterwards. The trace holds the tool server's bearer token and lands in
    `O-LOG`, not in `O-WIRE` (which is the echo-bot console only): redirect the output to a file, search it
    with `Select-String`, delete it afterwards and never paste it into a result. The trace shows an

@@ -261,6 +261,53 @@ public sealed class GoldfishRowsTests
         cut.WaitForAssertion(() => Assert.Equal("Ruth is asking", cut.Find(".elicitation-card-title").TextContent.Trim()));
     }
 
+    /// <summary>B2: the goldfish's first Message keeps its header, stamp and fish when the warm Agent's Message is directly before it.</summary>
+    [Fact]
+    public async Task AgentMessage_StampedAfterTheSameAgentsPlainOne_KeepsItsHeaderAndStamp()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        await using MudBunitContext ctx = rig.NewContext();
+        ChatMessage warm = new("m-1", T0, rig.Ruth.Id, "Ruth", "The goldfish copy is running.");
+        ChatMessage goldfish = new("m-2", T0.AddSeconds(5), rig.Ruth.Id, "Ruth", "Found two issues.") { Goldfish = "p1" };
+
+        IRenderedComponent<MessageList> cut = RenderList(ctx, warm, goldfish);
+
+        Assert.Equal(
+            ("Ruth · goldfish", 1, 0),
+            (cut.Find("[data-message-id='m-2'] .message-sender").TextContent.Trim(), cut.FindAll("[data-message-id='m-2'] .message-goldfish").Count, cut.FindAll("[data-message-id='m-2'].grouped").Count));
+    }
+
+    /// <summary>B2: the warm Agent's Message after a goldfish one also starts a group, so the plain name shows again.</summary>
+    [Fact]
+    public async Task AgentMessage_PlainAfterAStampedOne_StartsANewGroup()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        await using MudBunitContext ctx = rig.NewContext();
+        ChatMessage goldfish = new("m-1", T0, rig.Ruth.Id, "Ruth", "Found two issues.") { Goldfish = "p1" };
+        ChatMessage warm = new("m-2", T0.AddSeconds(5), rig.Ruth.Id, "Ruth", "Thanks, I have it.");
+
+        IRenderedComponent<MessageList> cut = RenderList(ctx, goldfish, warm);
+
+        Assert.Equal(("Ruth", 0), (cut.Find("[data-message-id='m-2'] .message-sender").TextContent.Trim(), cut.FindAll("[data-message-id='m-2'] .message-goldfish").Count));
+    }
+
+    /// <summary>B7: a stamped Question card whose asker has no Draft left in the Room has its options enabled, so the card can answer the goldfish.</summary>
+    [Fact]
+    public async Task QuestionCard_StampedAndTheAskerHasNoDraft_OptionsAreEnabled()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        await rig.PossessAsync("p1", PossessionState.Waiting, rig.Room.Id, ct);
+        _ = rig.Questions.TryPut(rig.QuestionCard(GoldfishStamp.Apply("Ruth")));
+        await using MudBunitContext ctx = rig.NewCardContext();
+
+        IRenderedComponent<QuestionCard> cut = ctx.Render<QuestionCard>(parameters => parameters.Add(p => p.RoomId, rig.Room.Id));
+
+        Assert.Equal((false, 0), (cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Postgres", StringComparison.Ordinal)).HasAttribute("disabled"), cut.FindAll(".question-card-writing").Count));
+    }
+
     private static ChatMessage StartRowMessage(string id, string brief) =>
         new(id, T0, KnownIds.Huddle, "Huddle", GoldfishLine.StartRow("Ruth", brief)) { Goldfish = "p1" };
 

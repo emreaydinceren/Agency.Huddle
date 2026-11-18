@@ -378,11 +378,17 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         return RoomSessionPool.CloseSlotAsync(session, cts, prior, done);
     }
 
+    /// <summary>How long closing the goldfish slot waits for its running Turn to end after the Stop.</summary>
+    private static readonly TimeSpan StopGrace = TimeSpan.FromSeconds(10);
+
     private static async Task CloseSlotAsync(RoomSession session, CancellationTokenSource cts, Task prior, TaskCompletionSource done)
     {
         try
         {
             await prior.ConfigureAwait(false);
+
+            // The Turn that called goldfish_done is still open: end it as a Stop does, so its Draft ends and nothing reads as a failure.
+            await session.StopRunningTurnAsync(RoomSessionPool.StopGrace, cts.Token).ConfigureAwait(false);
             await cts.CancelAsync().ConfigureAwait(false);
             await session.DisposeAsync().ConfigureAwait(false);
 

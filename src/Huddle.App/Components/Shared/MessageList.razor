@@ -28,8 +28,7 @@
                 <span>@MessageDisplay.DayLabel(message.Timestamp, this.Clock.GetLocalNow())</span>
             </div>
         }
-        var continues = previousMessage is not null
-            && MessageDisplay.ContinuesGroup(previousMessage.SenderId, previousMessage.Timestamp, message.SenderId, message.Timestamp);
+        var continues = MessageDisplay.ContinuesGroup(previousMessage, message);
         bool fromHuddle = string.Equals(message.SenderId, KnownIds.Huddle, StringComparison.Ordinal);
         @if (this.HumanIds.Contains(message.SenderId) || fromHuddle)
         {
@@ -396,9 +395,7 @@
             }
 
             ChatMessage? previous = index > 0 ? messages[index - 1] : null;
-            bool continues = previous is not null
-                && MessageDisplay.ContinuesGroup(previous.SenderId, previous.Timestamp, message.SenderId, message.Timestamp);
-            if (!continues)
+            if (!MessageDisplay.ContinuesGroup(previous, message))
             {
                 headerBySender[message.SenderId] = index;
             }

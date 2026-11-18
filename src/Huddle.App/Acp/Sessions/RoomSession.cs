@@ -45,6 +45,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private readonly CleanSessionSpec? goldfish;
     private decimal? runningSpend;
     private string? spendCurrency;
+    private TaskCompletionSource? turnDrained;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
@@ -817,6 +818,39 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Ends the Turn this session is running, the way a Human's Stop does, and waits until it has finished, so its Draft is ended and it counts
+    /// as stopped, not failed. A goldfish slot closes through this while the Turn that called <c>goldfish_done</c> is still open; every Turn
+    /// still queued is dropped too.
+    /// </summary>
+    /// <param name="timeout">How long to wait for the Turn to finish; a Turn that does not is left to the teardown that follows.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    /// <returns>A task that completes when no Turn is running, or when the wait ends.</returns>
+    internal async Task StopRunningTurnAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        Task drained;
+        lock (this.gate)
+        {
+            if (!this.running || this.RoomId is null)
+            {
+                return;
+            }
+
+            this.turnDrained ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            drained = this.turnDrained.Task;
+        }
+
+        await this.StopAsync(this.RoomId, long.MaxValue, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await drained.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is TimeoutException or OperationCanceledException)
+        {
+            // The Turn did not end in time, or the run is shutting down: the teardown that follows ends it the hard way.
+        }
+    }
+
     /// <summary>Sends <c>session/close</c> and keeps the stored id, so the session can be resumed. Only acts while <see cref="RoomSessionState.Idle"/>.</summary>
     internal async Task CloseAsync()
     {
@@ -1379,6 +1413,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         lock (this.gate)
         {
             this.running = false;
+            _ = this.turnDrained?.TrySetResult();
+            this.turnDrained = null;
             this.RememberEndedTrigger(this.runningTriggerId);
             this.runningTriggerId = null;
             this.state = this.state == RoomSessionState.Busy ? RoomSessionState.Idle : this.state;

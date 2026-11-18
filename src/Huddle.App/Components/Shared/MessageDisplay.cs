@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Components.Shared;
 
@@ -119,6 +120,17 @@ internal static partial class MessageDisplay
         && string.Equals(previousSenderId, senderId, StringComparison.Ordinal)
         && !StartsNewDay(before, current)
         && (current - before) <= GroupWindow;
+
+    /// <summary>
+    /// Whether <paramref name="message"/> continues <paramref name="previous"/>'s header: <see cref="ContinuesGroup(string?, DateTimeOffset?, string, DateTimeOffset)"/>,
+    /// and the two carry the same goldfish stamp (none, or the same possession), so a goldfish's first Message keeps its header and stamp.
+    /// </summary>
+    /// <param name="previous">The previous Message, or <see langword="null"/> for the first.</param>
+    /// <param name="message">This Message.</param>
+    internal static bool ContinuesGroup(ChatMessage? previous, ChatMessage message) =>
+        previous is not null
+        && string.Equals(previous.Goldfish, message.Goldfish, StringComparison.Ordinal)
+        && ContinuesGroup(previous.SenderId, previous.Timestamp, message.SenderId, message.Timestamp);
 
     /// <summary>
     /// The time a Message shows: <c>HH:mm</c> when it falls on the same day as <paramref name="now"/> in
