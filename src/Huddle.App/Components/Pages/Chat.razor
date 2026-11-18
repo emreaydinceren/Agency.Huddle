@@ -89,9 +89,8 @@ else
             </PageHeader>
             @if (this.renameError is not null)
             {
-                @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
-                   so role="alert" is added explicitly to keep the message announced, per rules.md. *@
-                <MudAlert Severity="Severity.Error" Dense="true" Class="rename-error" role="alert">@this.renameError</MudAlert>
+                @* An Error Notice interrupts by default, so it is announced as role="alert" (ComponentCatalog, Notice). *@
+                <Notice Severity="NoticeLevel.Error" Class="rename-error">@this.renameError</Notice>
             }
         </div>
         <MessageList
@@ -139,15 +138,14 @@ else
            ask for a reply" rendered beside a streaming row is a worse lie than silence. *@
         @if (this.outlook == RoomReply.ContextOnly && this.drafts.Count == 0)
         {
-            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
-               so role="status" is added explicitly, per rules.md. status rather than alert per
+            @* An Info Notice is a consequence, announced as role="status" rather than alert per
                ADR-0011's precedent: this is a consequence of the Human's own Message, not an
                interruption. Says "No agent" rather than "Nobody", because @@You is itself a
                Mention, and so is any handle that resolved to the Human - the claim has to be about
                agents or it is false in its own test case. *@
-            <MudAlert Severity="Severity.Info" Dense="true" Class="reply-note room-notice-column" role="status">
+            <Notice Severity="NoticeLevel.Info" Class="reply-note room-notice-column">
                 No agent was @@-mentioned — name one to ask for a reply.
-            </MudAlert>
+            </Notice>
         }
         @* Directly above the Budget prompt, per Spec §6.11: a waiting Proposal is the thing you need
            to read before deciding whether to grant another Budget, the same reasoning that places
@@ -179,14 +177,13 @@ else
            and written through to disk (correction C12), so it outlives a restart. Rendered inline rather
            than as a component for the same reason every other strip on this page is: a string Parameter
            missing its leading @ passes the literal text, compiles clean and fails only on screen - see
-           docs/engineering/rules.md. MudAlert renders no role by default - verified against the rendered
-           markup, not assumed - so role="status" is added explicitly, per rules.md; status rather than
-           alert, as for the ContextOnly strip: it is a consequence of the Human's own click. The button
+           docs/engineering/rules.md. An Info Notice is announced as role="status" rather than alert,
+           as for the ContextOnly strip: it is a consequence of the Human's own click. The button
            shows only when a reread file exists (LR-R22). *@
         @foreach ((string noteAgent, FreshStartNote note) in this.Notes.For(this.room.Id))
         {
             string noteAgentName = noteAgent;
-            <MudAlert Severity="Severity.Info" Dense="true" Class="fresh-start-note room-notice-column" role="status">
+            <Notice Severity="NoticeLevel.Info" Class="fresh-start-note room-notice-column">
                 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
                     <span>@Agency.Huddle.App.Components.Chat.FreshStartNoteText.Format(noteAgentName, note)</span>
                     @if (this.CatchUp.Has(noteAgentName, this.room.Id))
@@ -195,7 +192,7 @@ else
                     }
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss" OnClick="@(() => this.DismissFreshStartNote(noteAgentName))" />
                 </MudStack>
-            </MudAlert>
+            </Notice>
         }
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
@@ -244,30 +241,29 @@ else
            strip saying the same thing is noise nobody asked for. *@
         @if (this.continueResult is ExtendResult.Granted && this.continueOutlook is RoomReply.NoRecipients)
         {
-            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
-               so role="status" is added explicitly, per rules.md; status rather than alert per
-               ADR-0011's precedent, since this is a consequence of the Human's own click. *@
-            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+            @* An Info Notice is announced as role="status" rather than alert per ADR-0011's precedent,
+               since this is a consequence of the Human's own click. *@
+            <Notice Severity="NoticeLevel.Info" Class="continue-note">
                 Budget granted, but there was nobody to wake. Say something to start the room again.
-            </MudAlert>
+            </Notice>
         }
         else if (this.continueResult is ExtendResult.Granted && this.continueOutlook is RoomReply.ContextOnly)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+            <Notice Severity="NoticeLevel.Info" Class="continue-note">
                 Budget granted and the last message was delivered again, but it names no agent. Mention one by name to get an answer.
-            </MudAlert>
+            </Notice>
         }
         else if (this.continueResult is ExtendResult.NotPaused)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+            <Notice Severity="NoticeLevel.Info" Class="continue-note">
                 This room was no longer paused, so nothing was granted.
-            </MudAlert>
+            </Notice>
         }
         else if (this.continueResult is ExtendResult.NothingToRedeliver)
         {
-            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+            <Notice Severity="NoticeLevel.Info" Class="continue-note">
                 There is nothing to re-deliver in this room yet.
-            </MudAlert>
+            </Notice>
         }
         <Composer RoomId="@this.room.Id" RoomName="@this.room.Name" />
     </MudStack>

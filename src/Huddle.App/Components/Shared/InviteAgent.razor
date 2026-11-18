@@ -19,11 +19,11 @@
             <MudText Typo="Typo.subtitle2" Class="invite-title">@this.PanelTitle</MudText>
             @if (this.errorText is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.errorText</MudAlert>
+                <Notice Severity="NoticeLevel.Error">@this.errorText</Notice>
             }
             else if (this.infoText is not null)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" role="status">@this.infoText</MudAlert>
+                <Notice Severity="NoticeLevel.Info">@this.infoText</Notice>
             }
 
             @if (this.candidates.Count == 0)
