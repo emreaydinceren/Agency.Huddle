@@ -1,5 +1,19 @@
 # Testing in Huddle.Tests
 
+## Contents
+
+- Running tests
+- Where a test goes
+- Deciding what a test must pin
+- Proving a test can fail
+- Treating a flaky test
+- Passing on Linux CI
+- Writing concurrency tests
+- Using the shared test infrastructure
+- Shared helpers
+- Changing prompts and golden files
+- Avoiding analyzer traps in test code
+
 How to write, run and trust the chat surface's tests, which live in the eleven `tests/Huddle.Tests.*`
 projects ([where a test goes](#where-a-test-goes)).
 Read it before adding or changing a test. It complements [CSharpPrinciples.md](CSharpPrinciples.md),

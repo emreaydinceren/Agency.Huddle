@@ -1,5 +1,21 @@
 # Installer
 
+## Contents
+
+- Purpose and quick start
+- Installation layout
+- Prerequisite checks
+- Idempotency and state
+- Options and environment variables
+- Exit codes and output
+- Starting and stopping
+- Desktop host mode
+- Testing
+- Releasing a new version
+- Verifying integrity
+- First run and Claude sign-in
+- Files in the installer folder
+
 How to install and run Agency.Huddle, verify its integrity, and cut a release.
 
 ## Purpose and quick start

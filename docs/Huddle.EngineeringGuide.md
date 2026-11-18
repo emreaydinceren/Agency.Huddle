@@ -1,5 +1,17 @@
 # Agency.Huddle
 
+## Contents
+
+- The map
+- The one big idea
+- What a team is for
+- Relationships
+- Solution layout
+- Configuration
+- Remote access command line
+- Build, test, run
+- Repository and toolchain rules
+
 Agency.Huddle is a Slack-shaped chat app where the other participants in the conversation
 are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow

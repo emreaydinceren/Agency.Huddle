@@ -1,5 +1,21 @@
 # Analyzer decisions
 
+## Contents
+
+- How a rule gets its severity
+- Why so many rules are denied
+- What was measured
+- Proof: the analyzer probes
+- Enabled
+- Denied
+- Meziantou.Analyzer
+- Huddle.Analyzers
+- MudBlazor analyzers
+- Non-Sonar settings
+- Deferred
+- Inline suppressions audited
+- Changing a rule
+
 Which compiler and analyzer rules are switched off or turned up in this solution, what was
 decided about each, and what the decision rested on. Read it before enabling, disabling or
 "cleaning up" a rule, so the answer is a lookup and not a guess.

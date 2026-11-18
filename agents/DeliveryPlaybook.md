@@ -1,5 +1,20 @@
 # Running a multi-agent delivery in this repo
 
+## Contents
+
+- Preparing before the first dispatch
+- Dispatching work
+- Keeping the token cost down
+- Spelling out the hard rules
+- Reviewing each report
+- Getting an independent review
+- Holding retrospectives
+- Moving work between worktrees and the main checkout
+- Sharing the checkout with other sessions
+- Keeping CI and lanes green when owners run in parallel
+- Knowing the Windows and shell traps
+- Notes
+
 How to run a test-first project plan in Huddle with parallel coding subagents, and what the
 delivery manager (the session that dispatches, reviews and commits) must do so the result can be
 trusted. Read it before executing a plan with the `/Execute-Project-Plan` command or any similar

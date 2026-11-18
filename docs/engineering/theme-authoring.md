@@ -1,5 +1,20 @@
 # Writing a Theme
 
+## Contents
+
+- A Theme in one paragraph
+- Adding a Theme
+- The token registry and expression grammar
+- Traits
+- Customizations
+- The Theme lab
+- How a Theme reaches the screen
+- Choosing palette values
+- The guards
+- What a Theme cannot do
+- Checklist
+- See also
+
 How Themes work in Huddle, and how to add or change one. It is for an engineer or designer who
 edits a skin file under `src/Huddle.App/Themes/Skins/`, and it applies to the skin model of
 [ADR-0058](../adr/0058-a-theme-is-a-palette-a-skin-and-traits.md). It does not decide anything:

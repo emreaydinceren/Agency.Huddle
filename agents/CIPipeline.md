@@ -1,5 +1,15 @@
 # CI Pipeline
 
+## Contents
+
+- Topology
+- Reproducing a CI run locally
+- Local runner
+- Known failure modes
+- Reflection — 2026-09-12: the first run died on a cached image
+- Reading CI results from a session
+- Related
+
 How Gitea Actions validates this repo, and how to reproduce a failing run on your own
 machine in about two minutes. Read this before debugging a red run — the failure modes
 recorded here are environmental, and none of them are code regressions.
