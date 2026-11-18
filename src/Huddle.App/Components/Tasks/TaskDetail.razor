@@ -65,7 +65,7 @@
 {
     <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
     <div class="task-detail-actions">
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.CancelAsync">Close</MudButton>
+        <ActionButton Role="ButtonRole.Primary" OnClick="this.CancelAsync">Close</ActionButton>
     </div>
 }
 else if (this.archivedView && this.loaded is { } archivedTask)
@@ -585,7 +585,7 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
             <span class="task-detail-unsaved-text">Unsaved edits</span>
-            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
+            <ActionButton OnClick="this.Revert">Revert</ActionButton>
         </MudAlert>
     }
 
@@ -603,8 +603,8 @@ else if (this.loaded is { } task)
     @if (!this.ExternalFooter)
     {
         <div class="task-detail-actions">
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
+            <ActionButton Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</ActionButton>
+            <ActionButton Role="ButtonRole.Primary" OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</ActionButton>
         </div>
     }
 

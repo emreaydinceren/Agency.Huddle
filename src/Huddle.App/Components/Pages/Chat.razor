@@ -191,7 +191,7 @@ else
                     <span>@Agency.Huddle.App.Components.Chat.FreshStartNoteText.Format(noteAgentName, note)</span>
                     @if (this.CatchUp.Has(noteAgentName, this.room.Id))
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.ShowRereadAsync(noteAgentName))">See what it reread</MudButton>
+                        <ActionButton OnClick="@(() => this.ShowRereadAsync(noteAgentName))">See what it reread</ActionButton>
                     }
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss" OnClick="@(() => this.DismissFreshStartNote(noteAgentName))" />
                 </MudStack>
@@ -220,12 +220,12 @@ else
                     </p>
                 }
                 <MudStack Row="true" Spacing="2" Class="budget-prompt-actions">
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.extending" OnClick="this.ContinueAsync">
+                    <ActionButton Role="ButtonRole.Primary" Disabled="@this.extending" OnClick="this.ContinueAsync">
                         @(this.extending ? "Continuing…" : "Continue")
-                    </MudButton>
-                    <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@this.extending" OnClick="this.DismissBudgetPrompt">
+                    </ActionButton>
+                    <ActionButton Role="ButtonRole.Secondary" Disabled="@this.extending" OnClick="this.DismissBudgetPrompt">
                         Leave paused
-                    </MudButton>
+                    </ActionButton>
                 </MudStack>
             </MudAlert>
         }

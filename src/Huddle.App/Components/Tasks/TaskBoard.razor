@@ -620,8 +620,8 @@
             <span>@notice</span>
             @if (canAsk)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" aria-label="@HumanGateCopy.AskAccessibleName(open.Owner, open.Label)"
-                           OnClick="@(() => this.AskAsync(current, open))">@HumanGateCopy.AskButton(open.Owner)</MudButton>
+                <ActionButton aria-label="@HumanGateCopy.AskAccessibleName(open.Owner, open.Label)"
+                              OnClick="@(() => this.AskAsync(current, open))">@HumanGateCopy.AskButton(open.Owner)</ActionButton>
             }
         </div>;
         this.Snackbar.Add(content, Severity.Warning, configure: null, key: $"board-gate-locked:{current.Id}");
