@@ -1,0 +1,57 @@
+@using MudBlazor
+
+@* <summary>
+     A select whose choices come from an Adapter probe: while Probing is true it is Disabled (never ReadOnly, CV5), says so to a
+     screen reader with aria-busy, is styled busy rather than off (agent-profile-card-probing) and has a thin progress bar
+     under it named by ProbeLabel. An unread catalog is an empty one, so the select must not offer it as the whole truth.
+     Built on SelectField, so the select itself keeps one home. The class names are the hooks the stylesheet and tests use.
+   </summary> *@
+<SelectField T="string" Label="@this.Label" Value="@this.Value" ValueChanged="this.ValueChanged" ToStringFunc="@this.ToStringFunc"
+             Disabled="@(this.Disabled || this.Probing)" aria-busy="@(this.Probing ? "true" : null)"
+             Class="@(this.Probing ? "agent-profile-card-probing" : null)" @attributes="this.UserAttributes">
+    @this.ChildContent
+</SelectField>
+@if (this.Probing)
+{
+    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="@this.ProbeLabel" />
+}
+
+@code {
+    /// <summary>The visible label.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>The chosen value, blank for the default.</summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    /// <summary>Raised with the value the Human picked.</summary>
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    /// <summary>Whether the choices are being read; the select waits and the progress bar shows.</summary>
+    [Parameter]
+    public bool Probing { get; set; }
+
+    /// <summary>What the progress bar says to a screen reader, such as "Reading the models this adapter offers".</summary>
+    [Parameter]
+    [EditorRequired]
+    public string ProbeLabel { get; set; } = string.Empty;
+
+    /// <summary>Whether the select is disabled for a reason other than the probe.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>The text the closed select shows for a value, when it is not the value itself.</summary>
+    [Parameter]
+    public Func<string?, string?>? ToStringFunc { get; set; }
+
+    /// <summary>The items: one <c>MudSelectItem</c> per choice.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Any other attribute (<c>title</c>, <c>data-*</c>), passed to the select's input.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+}

@@ -353,7 +353,7 @@
                out from under it (BeginEditAsync, a successful Save), and written back through
                PersonaFrontmatter.WriteListField on every selection change, mirroring how the Adapter
                select above reads/writes "adapter" through WriteScalarField. No count-gate unlike the
-               Adapter select's "@if (AdapterChoices.Count > 1)": a MultiSelection picker with zero or
+               Adapter select's one-choice rule (AdapterModelEffortPicker): a MultiSelection picker with zero or
                one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
             <SelectField T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
                        SelectedValuesChanged="this.OnSkillsChanged"
@@ -499,149 +499,20 @@
 
             <div class="group-label">Model</div>
 
-            @* Configuration, not a probe (Spec §6.6): AdapterCatalog is frozen at startup and read
-               synchronously, so unlike the Model and Effort selects below there is no loading state
-               to guard here. Wrapped in @if rather than shown Disabled when there is only one
-               profile: Spec §4 (P6) requires a stock installation - which configures no Adapters and
-               therefore always has exactly one synthesised profile - to look byte-for-byte like it
-               did before this feature existed, and a dropdown offering a single option is a control
-               nobody could ever use anyway (Spec §12, E-2). *@
-            @if (this.AdapterChoices.Count > 1)
-            {
-                <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           HelperText="@this.AdapterHelperText" Class="mb-3">
-                    <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
-                    @foreach (var choice in this.AdapterChoices)
-                    {
-                        <MudSelectItem T="string" Value="@choice.Id">@choice.DisplayName</MudSelectItem>
-                    }
-                </MudSelect>
-            }
-
-            @* Spec §6.6/§8.3: the Adapter counterpart of the effortResetByModelChange note below -
-               same reasoning, one control to the left. role="status" rather than role="alert" because
-               MudAlert renders no role by default (rules.md) and this is a consequence of what the
-               human just did, not an interruption. *@
-            @if (this.adapterResetModelAndEffort)
-            {
-                <Notice Severity="NoticeLevel.Info">
-                    Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
-                </Notice>
-            }
-
-            @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
-               "change" semantics the old <select>'s @onchange comment called out - see
-               OnModelChangedAsync below for why the Effort catalog must be re-read from here.
-
-               Disabled while the probe is in flight (issue #39), but styled as busy rather than off (.agent-profile-card-probing) with a progress bar under it (audit E5; ReadOnly is banned by convention CV5). An unread catalog is an EMPTY one, so
-               ModelChoices renders exactly two options - the blank default and the synthesised entry for
-               the stored id - and an interactive select offers that two-item list as though it were the
-               whole truth.
-
-               Disabled, NOT ReadOnly, the same as the locked identity boxes above.
-               Both refuse to open the popover, but MudBlazor 9.10.0 styles only the disabled one:
-               .mud-input.mud-disabled dims the text and dots the underline, while the read-only case has
-               no input rule at all. A read-only select would therefore look live and silently swallow
-               the click - worse than the incomplete list it replaced. Verified against the shipped
-               MudBlazor.min.css, not assumed. The cost is the tab order; ModelRowHelperText carries the
-               reason on screen either way, and the window is one adapter spawn long. *@
-            @* UX-E15: Model, Effort and Work mode are one row of equal selects under the one Model label. *@
-            <div class="agent-profile-card-row agent-profile-card-model-row mb-1">
-            <div class="agent-profile-card-cell">
-            <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
-                       Disabled="@this.modelsLoading" aria-busy="@(this.modelsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       title="Which model this agent thinks with." Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
-                <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
-                @foreach (var choice in this.ModelChoices)
-                {
-                    <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
-                }
-            </MudSelect>
-            @if (this.modelsLoading)
-            {
-                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the models this agent offers" />
-            }
-            </div>
-
-            <div class="agent-profile-card-cell">
-            @* Disabled while its own probe is in flight, for the reason spelled out on the Model select
-               above. Note the flag is effortsLoading, not modelsLoading: the two catalogs are probed by
-               two separate adapter spawns and land at different moments, so each select waits only on
-               the list it is actually offering. *@
-            <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChanged"
-                       Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" Variant="Variant.Outlined" Margin="Margin.Dense"
-                       title="How hard this agent thinks." Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
-                <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
-                @foreach (var choice in this.EffortChoices)
-                {
-                    <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
-                }
-            </MudSelect>
-            @if (this.effortsLoading)
-            {
-                <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the effort levels this model offers" />
-            }
-            </div>
-
-            @* Work mode: how much the Agent may do before it must ask (ADR-0033). Offered from the
-               Adapter's own advertised list, so there is no list of modes in this file. Hidden when the
-               Adapter advertises none and nothing is stored (ShowWorkModePicker): a picker with only a
-               blank option is a control nobody can use, but a STORED value keeps it so the Human can
-               still see and clear it. Disabled, not ReadOnly, while the probe is out, for the reason
-               spelled out on the Model select above. The same probe answers this and Effort, so it
-               waits on effortsLoading. ToStringFunc shows the mode's name rather than its id (an id such
-               as "acceptEdits" is for the wire); the selected mode's own description is the helper text. *@
-            @if (this.ShowWorkModePicker)
-            {
-                <div class="agent-profile-card-cell">
-                <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
-                           Disabled="@this.effortsLoading" aria-busy="@(this.effortsLoading ? "true" : null)" ToStringFunc="@this.WorkModeLabel"
-                           Variant="Variant.Outlined" Margin="Margin.Dense"
-                           title="@this.WorkModeTitle" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
-                    <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
-                    @foreach (var choice in this.WorkModeChoices)
-                    {
-                        <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
-                    }
-                </MudSelect>
-                @if (this.effortsLoading)
-                {
-                    <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the work modes this agent offers" />
-                }
-                </div>
-            }
-            </div>
-            @* One shared line for the three selects (UX-E15): per-select helper text wrapped to 4-5 lines in
-               the narrow columns. Each select's own explanation is its title. *@
-            <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary agent-profile-card-row-helper">@this.ModelRowHelperText</MudText>
-
-            @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
-               only because it used to happen invisibly (issue #45). role="status" is written out
-               because MudAlert renders no role by default (rules.md), and "status" rather than
-               "alert" for the same reason the rename note above uses it: this is a consequence of
-               what the user just did, not an interruption. *@
-            @if (this.effortResetByModelChange)
-            {
-                <Notice Severity="NoticeLevel.Info">
-                    Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
-                </Notice>
-            }
+            @* The Adapter, Model, Effort and Work mode cascade is AdapterModelEffortPicker's (A4): it probes the catalogs, keeps
+               a stored id the probe no longer lists, clears what an Adapter or Model change invalidates and says so, and raises
+               what it holds. This card writes the Adapter into the Persona text's front matter and saves the values with the
+               rest. The Adapter select shows only when there is a choice (Spec §4 P6, §12 E-2). *@
+            <AdapterModelEffortPicker Adapter="@this.adapter" Model="@this.model" Effort="@this.effort"
+                                      OfferWorkMode="true" WorkMode="@this.workMode" DefaultOptionText="@DefaultOptionText"
+                                      AdapterHelperText="@this.AdapterHelperText"
+                                      Caption="Changing any of these restarts the agent, which clears what it remembers."
+                                      SelectionChanged="this.OnPickerChanged" OptionsRead="this.OnOptionsRead" />
 
             @* MS-3: a vendor shared with a role this one must differ from. *@
             @foreach (var warning in this.SetupWarnings.Model)
             {
                 <Notice Severity="NoticeLevel.Warning" Class="agent-profile-card-warning">@warning</Notice>
-            }
-
-            @* ADR-0033. Same role="status" reasoning as the notes above: a consequence of what the Human
-               just did, never role="alert". Its own note, rather than a third clause in the Model/Effort
-               one, so the text those tests pin does not move. *@
-            @if (this.adapterResetWorkMode)
-            {
-                <Notice Severity="NoticeLevel.Info">
-                    Changing the adapter reset Work mode to its default. Each adapter advertises its own modes, so a mode chosen for the previous adapter does not carry across — pick one again if you want a specific mode.
-                </Notice>
             }
 
         }
@@ -850,52 +721,11 @@
     // RefreshStatus call rather than cached status alone, because IAgentGateway.IsOnline needs it.
     private string? agentId;
 
-    // Only populated while this card is showing its Create/Edit form - see LoadModelsAsync for why
-    // the probe never runs before then.
+    // What the Edit form's picker last read, for the read view's names (ModelDisplayText and the like). Filled by
+    // OnOptionsRead, so only once this card has shown its Create or Edit form: the probe never runs from just browsing
+    // to /agents.
     private IReadOnlyList<AgentModelOption> availableModels = [];
-    private bool modelsLoading;
-
-    // Only populated while this card is showing its Create/Edit form - see LoadEffortsAsync for why
-    // the probe never runs before then.
     private IReadOnlyList<AgentEffortOption> availableEfforts = [];
-    private bool effortsLoading;
-
-    // Guards a superseded probe. Unlike the model catalog, the effort catalog is re-read whenever the
-    // Model select changes, so a user can start a second probe while the first is still in flight;
-    // without this, a slow answer for the abandoned model lands on the new choice.
-    private int effortProbeGeneration;
-
-    // The model-catalog counterpart of effortProbeGeneration above, added by Task 8.3 (Spec §12,
-    // E-4): changing the Adapter twice quickly starts two model probes, and this stops the slower
-    // one (for the Adapter no longer selected) from overwriting the faster one.
-    private int modelProbeGeneration;
-
-    /// <summary>
-    /// Set when a Model change has just discarded a stored Effort, and cleared the moment the user
-    /// makes a fresh Effort choice, re-enters Edit, or saves. The discard itself is deliberate - the
-    /// effort ladder belongs to the model (see <see cref="OnModelChangedAsync"/>) - so what this flag
-    /// drives is the notice, not the behaviour: issue #45 was that the selection vanished silently.
-    /// </summary>
-    private bool effortResetByModelChange;
-
-    /// <summary>
-    /// Set when an Adapter change has just discarded a stored Model and/or Effort, and cleared the
-    /// moment the user re-enters Edit, chooses a fresh Effort, or saves — the same lifecycle as
-    /// <see cref="effortResetByModelChange"/>, one control to the left (Spec §6.6, §8.3).
-    /// </summary>
-    private bool adapterResetModelAndEffort;
-
-    /// <summary>
-    /// Set when an Adapter change has just discarded a stored Work Mode (ADR-0033, extending
-    /// ADR-0015), and cleared on the same occasions as <see cref="adapterResetModelAndEffort"/>.
-    /// </summary>
-    private bool adapterResetWorkMode;
-
-    /// <summary>
-    /// The Work Modes the Adapter advertises, after the hidden-modes policy. Read by the same probe
-    /// as <see cref="availableEfforts"/>, so it loads and is superseded with it; see
-    /// <see cref="LoadEffortsAsync"/>.
-    /// </summary>
     private IReadOnlyList<AgentModeOption> availableWorkModes = [];
 
     /// <summary>Draws an Agent name from the pool that no existing Agent has and that is not the Human's Name or Alias.</summary>
@@ -986,29 +816,6 @@
             var agent = await this.TeamDirectory.FindUserByNameAsync(this.name);
             this.agentId = agent?.Id;
             this.RefreshStatus();
-        }
-
-        if (this.mode is AgentProfileCardMode.Create or AgentProfileCardMode.Edit)
-        {
-            // Sequential, not parallel: the probe's single SemaphoreSlim serialises them anyway, and
-            // on Create the second call is a pure cache hit (no model chosen yet means the
-            // default-model effort ladder, which the model probe's own session already populated).
-            await this.LoadModelsAsync();
-
-            // Issue #39: without the StateHasChanged below, the Model select does not repaint when ITS
-            // catalog lands - it repaints when this whole method does, which is after the second adapter
-            // spawn has also answered. ComponentBase renders a handler at two points only, its first
-            // yield and its completion, and both awaits here sit between them. StateHasChanged flushes a
-            // batch synchronously, so no yield is needed to make the render happen.
-            //
-            // Started before the repaint and awaited after it, deliberately: LoadEffortsAsync sets
-            // effortsLoading on its way in, so kicking it off first is what makes the intermediate
-            // render say "Reading the effort levels…" instead of briefly asserting "This model offers no
-            // effort choice" about a ladder nobody has read yet - the same false claim this issue is
-            // about, moved one control to the right.
-            Task efforts = this.LoadEffortsAsync();
-            this.StateHasChanged();
-            await efforts;
         }
     }
 
@@ -1228,25 +1035,6 @@
             string.Equals(entry.Name, this.name, StringComparison.Ordinal)
             && string.Equals(entry.Builtin, BuiltinAgent.ChiefOfStaffMarker, StringComparison.Ordinal));
 
-    // AdapterCatalog is configuration read once at startup, never a probe (Spec §6.6 - "LoadAdapters()
-    // - synchronous; configuration, not a probe"), so unlike ModelChoices/EffortChoices below there is
-    // no loading state to guard here. Still synthesises an entry for a stored-but-unconfigured id,
-    // exactly as ModelChoices does, so the card shows what the file says rather than silently
-    // resetting it - see AdapterHelperText for the note that names the mismatch.
-    private IReadOnlyList<AdapterProfile> AdapterChoices
-    {
-        get
-        {
-            var profiles = this.Adapters.Profiles;
-            if (this.adapter is null || profiles.Any(p => string.Equals(p.Id, this.adapter, StringComparison.OrdinalIgnoreCase)))
-            {
-                return profiles;
-            }
-
-            return [new AdapterProfile(this.adapter, this.adapter, null, string.Empty, null, null, UsesToolNamePrefix: false), .. profiles];
-        }
-    }
-
     private string AdapterHelperText
     {
         get
@@ -1257,23 +1045,6 @@
             }
 
             return "Which agent runs this agent. Changing it restarts the agent, which clears what it remembers.";
-        }
-    }
-
-    // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
-    // stored Model is no longer (or never was) in AvailableModels — the probe failed, or the
-    // adapter's own catalog changed — synthesise an entry for it so the select still shows and keeps
-    // the stored value instead of falling back to the first option.
-    private IReadOnlyList<AgentModelOption> ModelChoices
-    {
-        get
-        {
-            if (this.model is null || this.availableModels.Any(m => string.Equals(m.Id, this.model, StringComparison.Ordinal)))
-            {
-                return this.availableModels;
-            }
-
-            return [new AgentModelOption(this.model, this.model, null), .. this.availableModels];
         }
     }
 
@@ -1294,42 +1065,6 @@
     /// <summary>The blank option of the Model, Effort and Work mode selects; short enough to read in full in a one-third column.</summary>
     private const string DefaultOptionText = "Agent default";
 
-    /// <summary>The one line under the Model, Effort and Work mode row: what is being read while a probe is out, otherwise the restart note that applies to all three.</summary>
-    private string ModelRowHelperText
-    {
-        get
-        {
-            if (this.modelsLoading)
-            {
-                return "Reading the models this agent offers...";
-            }
-
-            if (this.effortsLoading)
-            {
-                return "Reading the effort levels this model offers...";
-            }
-
-            return "Changing any of these restarts the agent, which clears what it remembers.";
-        }
-    }
-
-    // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
-    // stored Effort is no longer (or never was) in AvailableEfforts — the probe failed, or the
-    // adapter's own catalog changed — synthesise an entry for it so the select still shows and keeps
-    // the stored value instead of falling back to the first option.
-    private IReadOnlyList<AgentEffortOption> EffortChoices
-    {
-        get
-        {
-            if (this.effort is null || this.availableEfforts.Any(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal)))
-            {
-                return this.availableEfforts;
-            }
-
-            return [new AgentEffortOption(this.effort, this.effort, null), .. this.availableEfforts];
-        }
-    }
-
     // "Model default", not "Agent default": effort is resolved by the model, not the agent, so the
     // null sentinel hands resolution back to the model's own default.
     private string EffortDisplayText
@@ -1343,29 +1078,6 @@
 
             var match = this.availableEfforts.FirstOrDefault(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal));
             return match?.Name ?? this.effort;
-        }
-    }
-
-    /// <summary>
-    /// Whether the Work mode select is rendered: while the probe is out (the catalog is unread, so
-    /// "empty" would be a false claim), when the Adapter advertises at least one mode, or when one is
-    /// stored. Hidden only when the Adapter advertises none and nothing is stored.
-    /// </summary>
-    private bool ShowWorkModePicker => this.effortsLoading || this.availableWorkModes.Count > 0 || this.workMode is not null;
-
-    // Opening Edit must not silently reset a stored choice when saved: a stored mode the Adapter no
-    // longer advertises (an upgrade, a failed probe) is synthesised, so the select still shows and keeps
-    // it - the same rule as EffortChoices.
-    private IReadOnlyList<AgentModeOption> WorkModeChoices
-    {
-        get
-        {
-            if (this.workMode is null || this.availableWorkModes.Any(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal)))
-            {
-                return this.availableWorkModes;
-            }
-
-            return [new AgentModeOption(this.workMode, this.workMode, null), .. this.availableWorkModes];
         }
     }
 
@@ -1383,21 +1095,6 @@
 
     // "Agent default", like Model: the mode is the Adapter's own when none is chosen.
     private string WorkModeDisplayText => this.workMode is null ? "Agent default" : this.WorkModeLabel(this.workMode);
-
-    // The selected mode's own description - what the Adapter says it does - because the names alone
-    // ("Auto", "Plan") do not say what they permit. A title, not helper text: it must not wrap the row.
-    private string WorkModeTitle
-    {
-        get
-        {
-            var description = this.availableWorkModes
-                .FirstOrDefault(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal))?.Description;
-
-            return description is { Length: > 0 }
-                ? $"{description}."
-                : "How much this agent may do before it must ask.";
-        }
-    }
 
     private string TextHelperText => this.mode == AgentProfileCardMode.Create
         ? "Markdown. Becomes the agent's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here."
@@ -1418,7 +1115,7 @@
         ? "This is written as a multi-line value in the Persona text below and can only be edited there."
         : "A short working handle, for mentions and quick reference.";
 
-    private async Task BeginEditAsync()
+    private Task BeginEditAsync()
     {
         this.mode = AgentProfileCardMode.Edit;
         var persona = this.Personas.Get(this.name);
@@ -1435,21 +1132,12 @@
         this.error = null;
         this.confirmingRemove = false;
         this.confirmingReset = false;
-        this.effortResetByModelChange = false;
-        this.adapterResetModelAndEffort = false;
-        this.adapterResetWorkMode = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
 
-        await this.LoadModelsAsync();
-
-        // Same three lines, and the same reasoning, as OnInitializedAsync - read the comment there. An
-        // event handler gets the two render points a lifecycle method does, so without this the Model
-        // select would wait on the effort probe before showing its own list.
-        Task efforts = this.LoadEffortsAsync();
-        this.StateHasChanged();
-        await efforts;
+        // The Edit form's AdapterModelEffortPicker probes the catalogs when it first renders (issue #39 is handled there).
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -1585,37 +1273,24 @@
     }
 
     /// <summary>
-    /// Sets the selected Adapter, keeps <see cref="text"/>'s frontmatter in step through
-    /// <see cref="PersonaFrontmatter.WriteScalarField"/> - the same mechanism
-    /// <see cref="OnTitleChanged"/> and <see cref="OnAliasChanged"/> use (Spec §7.2, "The
-    /// WriteScalarField path") and a no-op in Create mode, where <see cref="text"/> is the Persona
-    /// BODY only and has no frontmatter yet to rewrite - and runs the full cascade Spec §6.6/§8.3
-    /// describes: a Model and an Effort chosen for the previous Adapter mean nothing against this
-    /// one's catalog, so both are discarded and both catalogs are re-probed against the NEW
-    /// Adapter. Mirrors <see cref="OnModelChangedAsync"/>'s two-probes-in-a-row shape exactly,
-    /// including the mandatory intermediate <c>StateHasChanged</c> call (rules.md / issue #39):
-    /// without it, the Model select would repaint only once the Effort probe also answered.
+    /// Takes the picker's values as they now stand (its cascade already cleared what a changed Adapter or Model invalidates,
+    /// ADR-0015 and ADR-0033) and, when the Adapter moved, keeps <see cref="text"/>'s frontmatter in step through
+    /// <see cref="PersonaFrontmatter.WriteScalarField"/> - the same mechanism <see cref="OnTitleChanged"/> and
+    /// <see cref="OnAliasChanged"/> use (Spec §7.2, "The WriteScalarField path"), and a no-op in Create mode, where
+    /// <see cref="text"/> is the Persona BODY only and has no frontmatter yet to rewrite. Nothing is written to disk here.
     /// </summary>
-    /// <param name="value">The Adapter select's newly chosen id, or blank for the installation's default.</param>
-    private async Task OnAdapterChangedAsync(string value)
+    /// <param name="choice">The Adapter, Model, Effort and Work mode now chosen.</param>
+    private void OnPickerChanged(AdapterModelEffortChoice choice)
     {
-        this.adapter = string.IsNullOrWhiteSpace(value) ? null : value;
-        this.text = PersonaFrontmatter.WriteScalarField(this.text, "adapter", this.adapter ?? string.Empty);
-        this.adapterResetModelAndEffort = this.model is not null || this.effort is not null;
+        if (!string.Equals(choice.Adapter, this.adapter, StringComparison.Ordinal))
+        {
+            this.text = PersonaFrontmatter.WriteScalarField(this.text, "adapter", choice.Adapter ?? string.Empty);
+        }
 
-        // A mode chosen for one Adapter means nothing against another's list, so it is discarded with
-        // Model and Effort (ADR-0033, extending ADR-0015). Model and Effort ARE restricted to the
-        // Adapter that advertised them; the mode list is too, since each Adapter has its own.
-        this.adapterResetWorkMode = this.workMode is not null;
-        this.model = null;
-        this.effort = null;
-        this.workMode = null;
-        this.effortResetByModelChange = false;
-
-        await this.LoadModelsAsync();
-        Task efforts = this.LoadEffortsAsync();
-        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
-        await efforts;
+        this.adapter = choice.Adapter;
+        this.model = choice.Model;
+        this.effort = choice.Effort;
+        this.workMode = choice.WorkMode;
     }
 
     /// <summary>
@@ -1640,7 +1315,7 @@
     /// <summary>
     /// Sets the selected Skills, keeping <see cref="text"/>'s frontmatter in step through
     /// <see cref="PersonaFrontmatter.WriteListField"/> - the list-field counterpart of
-    /// <see cref="OnAdapterChangedAsync"/>'s <see cref="PersonaFrontmatter.WriteScalarField"/> write,
+    /// <see cref="OnPickerChanged"/>'s <see cref="PersonaFrontmatter.WriteScalarField"/> write,
     /// and a no-op in Create mode for the same reason that one is (Spec §6.7). Unlike the Adapter
     /// select, picking a Skill starts no probe: this is a synchronous, in-memory rewrite only.
     /// </summary>
@@ -1899,101 +1574,13 @@
         }
     }
 
-    private async Task OnModelChangedAsync(string value)
+    /// <summary>Keeps what the picker last read, so the read view can show a stored id by its name after an Edit or a Create.</summary>
+    /// <param name="options">The Models, Efforts and Work modes the Adapter offers.</param>
+    private void OnOptionsRead(AdapterModelEffortOptions options)
     {
-        this.model = string.IsNullOrWhiteSpace(value) ? null : value;
-
-        // The effort ladder belongs to the model. The adapter rebuilds thought_level on every model
-        // switch and silently clamps a level the new model does not support, so a level chosen
-        // against the old model is not a level for this one: clear it rather than carry a choice
-        // across that the user never made for this model.
-
-        // Plain assignment, never |=: a second Model change made while no Effort is chosen must clear
-        // a notice left over from the first, not leave it standing over a reset that did not happen.
-        this.effortResetByModelChange = this.effort is not null;
-        this.effort = null;
-
-        await this.LoadEffortsAsync();
-    }
-
-    private void OnEffortChanged(string value)
-    {
-        this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
-        this.effortResetByModelChange = false;
-        this.adapterResetModelAndEffort = false;
-        this.adapterResetWorkMode = false;
-    }
-
-    private void OnWorkModeChanged(string value)
-    {
-        this.workMode = string.IsNullOrWhiteSpace(value) ? null : value;
-        this.adapterResetWorkMode = false;
-    }
-
-    // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs a
-    // real process, so it must never happen just from browsing to /agents. Awaiting it here yields
-    // at least once, so Blazor renders this card (with modelsLoading true) before the probe answers -
-    // ENTERING the loading state needs no manual StateHasChanged(). Leaving it does, because both
-    // callers await a second probe afterwards: see the StateHasChanged in each of them (issue #39).
-    //
-    // Guards a superseded probe, mirroring LoadEffortsAsync's own effortProbeGeneration below.
-    // Changing the Adapter twice quickly starts two model probes (Spec §8.3, "Generation counters"),
-    // and without this a slower answer for the abandoned Adapter can land after a faster one for the
-    // Adapter actually selected and overwrite it - a new defect class this feature introduces
-    // (Spec §12, E-4). Nothing could re-enter this method before an Adapter select existed, which is
-    // why it had no equivalent until now.
-    private async Task LoadModelsAsync()
-    {
-        var generation = ++this.modelProbeGeneration;
-        this.modelsLoading = true;
-        try
-        {
-            var models = await this.ModelCatalog.GetAsync(this.adapter, CancellationToken.None);
-            if (generation == this.modelProbeGeneration)
-            {
-                this.availableModels = models;
-            }
-        }
-        finally
-        {
-            if (generation == this.modelProbeGeneration)
-            {
-                this.modelsLoading = false;
-            }
-        }
-    }
-
-    // Runs on card-open AND on every Model change - the effort catalog is per model, so unlike the
-    // model catalog it cannot be read once and reused. Awaiting yields at least once, so Blazor
-    // renders with effortsLoading true before the probe answers; entering the loading state needs no
-    // manual StateHasChanged. Leaving it needs none either, unlike LoadModelsAsync above: this is the
-    // LAST await in all three of its callers, so the completion render already covers it.
-    //
-    // Also reads the Work Modes (ADR-0033), because the same throwaway session answers both: the second
-    // call is a cache hit on the entry the first filled, so it costs no extra spawn. One generation
-    // counter and one loading flag cover both, which is what keeps the faster-probe-wins rule intact
-    // with no second in-flight path to repaint.
-    private async Task LoadEffortsAsync()
-    {
-        var generation = ++this.effortProbeGeneration;
-        this.effortsLoading = true;
-        try
-        {
-            var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.adapter, this.model, CancellationToken.None);
-            var workModes = await this.ModelCatalog.GetWorkModesAsync(this.adapter, this.model, CancellationToken.None);
-            if (generation == this.effortProbeGeneration)
-            {
-                this.availableEfforts = efforts;
-                this.availableWorkModes = workModes;
-            }
-        }
-        finally
-        {
-            if (generation == this.effortProbeGeneration)
-            {
-                this.effortsLoading = false;
-            }
-        }
+        this.availableModels = options.Models;
+        this.availableEfforts = options.Efforts;
+        this.availableWorkModes = options.WorkModes;
     }
 
     // One handler for both writing modes: Create adds a file, Edit overwrites one. A failure keeps
@@ -2084,9 +1671,6 @@
         this.RefreshStatus();
         this.confirmingRemove = false;
         this.confirmingReset = false;
-        this.effortResetByModelChange = false;
-        this.adapterResetModelAndEffort = false;
-        this.adapterResetWorkMode = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;

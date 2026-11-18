@@ -385,7 +385,7 @@ too.
 | Component | Path | Sites | Key parameters |
 | --- | --- | --- | --- |
 | `TextField` | `Components/Shared/TextField.razor` | 48 tags in 19 files, plus `SearchField`; 14 raw `MudTextField` tags still to move | `Value`, `ValueChanged` (or `@bind-Value`), `Label`, `AriaLabel`, `Shape` (`TextFieldShape`: `Line` (the default), `Compact`, `LongText`, `Markdown`), `Rows`, `MaxRows`, `HelperText`, `Placeholder`, `Immediate`, `DebounceInterval`, `Disabled`, `Required`, `Error`, `ErrorText`, `MaxLength`, `InputType`, `InputMode`, `AutoFocus`, `Clearable`, `StartIcon`, `EndIcon`, `EndIconLabel`, `OnEndIconClick`, `OnKeyDown`, `OnBlur`, `Class`, any other attribute (`autocomplete`, `role`, `id`); `FocusAsync()` |
-| `SelectField<T>` | `Components/Shared/SelectField.razor` | 28 tags in 12 files; 6 raw `MudSelect` tags still to move | `Value`, `ValueChanged` (or `@bind-Value`), `MultiSelection`, `SelectedValues`, `SelectedValuesChanged`, `ChildContent` (the `MudSelectItem`s), `Label`, `AriaLabel`, `HelperText`, `Disabled`, `Error`, `ErrorText`, `Compact`, `DenseItems`, `Class`, any other attribute (`title`, `aria-busy`) |
+| `SelectField<T>` | `Components/Shared/SelectField.razor` | 28 tags in 12 files, plus `ProbedSelect`; 2 raw `MudSelect` tags still to move | `Value`, `ValueChanged` (or `@bind-Value`), `MultiSelection`, `SelectedValues`, `SelectedValuesChanged`, `ChildContent` (the `MudSelectItem`s), `Label`, `AriaLabel`, `HelperText`, `Disabled`, `Error`, `ErrorText`, `Compact`, `DenseItems`, `ToStringFunc` (the shown text for a value; left out, MudBlazor's own), `Class`, any other attribute (`title`, `aria-busy`) |
 
 Both are always Outlined and Dense, so no caller writes `Variant` or `Margin`, and neither offers
 `ReadOnly` (CV5: a field that cannot be edited is `Disabled`). A field with neither a `Label` nor
@@ -433,14 +433,14 @@ named through its attributes.
 | --- | --- | --- | --- |
 | Room | 4 | 1 | `ElicitationCard` (2), `RetroProposalCard`, `SprintProposalCard`; `InviteAgent` |
 | Settings | 6 | 0 | `AddWithAiDialog` (3), `SkillSourcesFolderDialog`, `ThemeLab` (2) |
-| Shared | 3 | 4 | `AvatarLibraryPicker`, `FolderPickerDialog`, `NeedsYouLevelControl`; `AgentProfileCard` (4) |
+| Shared | 3 | 0 | `AvatarLibraryPicker`, `FolderPickerDialog`, `NeedsYouLevelControl` |
 | Tasks | 1 | 0 | `ReasonDialog` |
 | Teams | 0 | 1 | `ProcessStep` |
 
-Two of those are not plain tag swaps. `ElicitationCard` hides its label when the question already
-shows it, so its owner must pass the question text as `AriaLabel` there. `AgentProfileCard`'s four
-selects (Adapter, Model, Effort and Work mode) are its own copy of the picker, and Work mode needs
-`ToStringFunc`, which `SelectField` does not offer; they move with A4, which replaces that copy.
+`ElicitationCard` is not a plain tag swap: it hides its label when the question already shows it,
+so its owner must pass the question text as `AriaLabel` there. `AgentProfileCard`'s four selects
+(Adapter, Model, Effort and Work mode) moved with A4 onto `AdapterModelEffortPicker`, and
+`SelectField` gained `ToStringFunc` for Work mode.
 
 ### Switch and checkbox
 
@@ -630,14 +630,37 @@ themselves are not shared: see [Patterns still built by hand](#patterns-still-bu
 
 | Component | Path | Sites | Key parameters |
 | --- | --- | --- | --- |
-| `AgentProfileCard` | `Components/Shared/AgentProfileCard.razor` (2,359 lines) | opened from 3 sites | `Mode`, `Name`, `Title`, `Alias`, `Model`, `Effort`, `WorkMode`, `Adapter` |
-| `AdapterModelEffortPicker` | `Components/Shared/AdapterModelEffortPicker.razor` | 1 (the Helper card) | `Adapter`, `Model`, `Effort`, `Disabled`, `SelectionChanged` |
+| `AgentProfileCard` | `Components/Shared/AgentProfileCard.razor` (1,927 lines) | opened from 3 sites | `Mode`, `Name`, `Title`, `Alias`, `Model`, `Effort`, `WorkMode`, `Adapter` |
+| `AdapterModelEffortPicker` | `Components/Shared/AdapterModelEffortPicker.razor` | 2 (the Helper card and the Agent card's Create and Edit form) | `Adapter`, `Model`, `Effort`, `OfferWorkMode`, `WorkMode`, `Disabled`, `DefaultOptionText` (default "Adapter default"), `AdapterHelperText`, `Caption`, `SelectionChanged` (an `AdapterModelEffortChoice`: `Adapter`, `Model`, `Effort`, `WorkMode`), `OptionsRead` (an `AdapterModelEffortOptions`: `Models`, `Efforts`, `WorkModes`) |
+| `ProbedSelect` | `Components/Shared/ProbedSelect.razor` | 3, all in the picker (Model, Effort, Work mode) | `Label`, `Value`, `ValueChanged`, `Probing`, `ProbeLabel`, `Disabled`, `ToStringFunc`, `ChildContent` (the `MudSelectItem`s), any other attribute (`title`) |
 | `AgentConnectorsRow`, `AgentBrowserRow` | `Components/Shared/` | 1 each | `Name`, `Adapter`, `Restarting` |
 
-`AdapterModelEffortPicker` holds the Adapter, Model and Effort cascade (a changed Adapter clears
-Model and Effort and says so). `AgentProfileCard` does **not** use it: it writes its own Model,
-Effort and Work mode selects, so the cascade exists twice (see
-[Patterns still built by hand](#patterns-still-built-by-hand)).
+`AdapterModelEffortPicker` is the one Adapter, Model and Effort cascade (A4, built in wave 4,
+2026-11-18). A changed Adapter clears Model, Effort and Work mode and says so; a changed Model clears
+Effort and says so; a stored id the probe does not list stays as an entry; a superseded probe never
+overwrites a newer one; the Model list repaints before the Effort probe answers (issue #39). The
+Adapter select shows only when there is more than one Adapter (`Q-A4-1`). It speaks in values: it
+raises an `AdapterModelEffortChoice` after each choice, and the caller decides what is saved. The
+Agent card turns on `OfferWorkMode` (a third select, read with the Efforts and shown only when the
+Adapter advertises a mode or one is stored), passes its own `AdapterHelperText` (an Agent on an
+unconfigured Adapter falls back to the default one, a Helper's call fails), `DefaultOptionText`
+"Agent default" and a restart `Caption`, writes the Adapter into the Persona front matter from
+`SelectionChanged`, and keeps the lists from `OptionsRead` to name a stored id in its read view.
+
+`ProbedSelect` is the select-with-progress-bar block: a `SelectField` that is Disabled, `aria-busy`
+and styled busy (`agent-profile-card-probing`) while `Probing`, with a thin progress bar named by
+`ProbeLabel` under it. It is used only by the picker today. The hook classes keep their
+`agent-profile-card-*` names because the stylesheet and tests find them by those names.
+
+What changed on screen when the Agent card moved onto the picker (the Helper card is unchanged except
+for the extra `agent-profile-card-model-row` class, which has no rule):
+
+- The Model and Effort selects lost their `title` tooltips (`Q-A4-2`). Work mode keeps its title,
+  because it carries the chosen mode's own description, which nothing else shows.
+- One probe wording: the progress bars and the caption say "this adapter offers" in both cards (the
+  Agent card said "this agent offers").
+- The Work mode reset note now sits straight after the Effort reset note, above the Model setup
+  warnings (MS-3), instead of below them.
 
 ## Library
 
@@ -866,7 +889,6 @@ ships, move its row to the entry for the new component and delete it here.
 | # | Planned component | Reuse cases | What it fixes | Size | Status |
 | --- | --- | --- | --- | --- | --- |
 | A3 | **RowActionsMenu**: a `MoreVert` menu with the hover-reveal classes and the "Actions for {name}" label | 11 hand-built (the Teams nav twice, Tasks, the board, the Views nav, `RoomNavRow`, Scheduled, and four in Skills settings); 9 files repeat the `hover-reveal-menu-button` class | The rule is in [UXDesignGuidelines.md](UXDesignGuidelines.md#i-need-use-this) but names no component. A twelfth `MoreVert` menu, on `TaskDecisionCard`, offers other decisions and is a different thing | S | Planned |
-| A4 | **One Adapter, Model and Effort picker**, and a `ProbedSelect` for the select-with-progress-bar block | The cascade is written 2 times (`AdapterModelEffortPicker`, used once, and `AgentProfileCard`); the probe block appears 5 times | `AgentProfileCard` (2,359 lines) re-implements the shared picker, and adds a Work mode select the picker lacks | L | Planned |
 | A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
 | A6 | **PropertyList** and **PropertyRow**: a label and a value per row | 30 `<dt>` rows in 5 files (`TaskReadView` 14, `FeedTaskPreview` 7, `FeedHelperPreview` 5, `ProfileCard` 3, `LibraryProperties` 1), plus 25 `.task-detail-prop` rows in `TaskDetail` | The edit and read views of a Task use different markup for the same fields | M | Planned |
 | A8 | **BusyLabel**: a small spinner beside text | 9 `MudProgressCircular` sites in 9 files | One line each, so the gain is consistency (`mr-2`, `aria-label`) rather than size | S | Planned |
@@ -943,33 +965,6 @@ Dense items measure 30.2 px at 14 px; the rule says 32 px at 13 px.
 - `Q-A3-1` Activator radius: 50% (icon button) or the card step (sidebar today)? Recommended: 50%,
   the icon button's shape, so B5 decides it once.
 - `Q-A3-2` Hover reveal in a table (Skills) as in the sidebar? Recommended: yes; touch keeps it shown.
-
-#### A4 One Adapter, Model and Effort picker
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Shared picker | `Shared/AdapterModelEffortPicker.razor:17-64` | Adapter select always shown; probe labels "…this adapter offers"; no tooltips |
-| Agent card copy | `Shared/AgentProfileCard.razor:520-626` | Adapter hidden with one choice (`:518`); `title` tooltips on Model and Effort; probe label "…this agent offers"; a Work mode select (`:607`) disabled by the Effort probe; a caption under the row (`:626`) |
-
-Both use the same classes (`agent-profile-card-row`, `-cell`, `-probe`, `-probing`), so they look
-alike on screen; the differences are the hidden Adapter, the tooltips and the caption. Not measured:
-the picker sits on the Helper card, the copy in the Agent card dialog.
-
-**Which is right.** No rule decides whether a one-choice Adapter select is shown. The
-Agent card's comment above `:518` argues for hiding it.
-
-**Fix:**
-
-1. `AgentProfileCard` uses the picker with a `WorkMode` slot. `markup only`
-2. Rename the shared classes off `agent-profile-card-*`. `markup only`
-3. One probe wording. `markup only` (heard)
-
-**How to prove.** Open the Helper card and an Agent card in Edit and compare the row heights.
-
-**Open questions for the owner:**
-
-- `Q-A4-1` Hide the Adapter select when only one Adapter exists? Recommended: yes, in both.
-- `Q-A4-2` Keep the `title` tooltips? Recommended: no; the caption under the row says it.
 
 #### A5 ChipRadioGroup
 

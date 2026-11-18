@@ -639,7 +639,7 @@ Helpers — background agents that make one stateless judgement and let Huddle a
 | `Helpers/HelperFeed.cs`, `HelperFeedStartup.cs`, `Feed/HelperPausedPayload.cs`, `HelperFailingPayload.cs` | Tells the Feed when a Helper pauses at its cap (`helper-paused`, once per pause) or fails three times in a row (`helper-failing`, once per streak) and resolves each when the condition ends; the dispatcher and the Helpers card only report what happened. `HelperFeedStartup` reconciles once at startup. ([Helpers in the Feed](../Huddle.HelpersInFeed-Specifications.md)) |
 | `Data/NeedsHumanOverrideStore.cs` | The Tasks the Human turned the gate off on, loaded into memory and written through. |
 | `Components/Settings/Helpers/HelpersPanel.razor`, `HelperCard.razor`, `HelpersCopy.cs` | Settings › Helpers (wireframes `G9`, `G9a`) and every string on it. |
-| `Components/Shared/AdapterModelEffortPicker.razor` | The Adapter, Model and Effort cascade as one control (ADR-0015, rules.md). Used by the Helper card; `AgentProfileCard` still has its own copy of the same rules. |
+| `Components/Shared/AdapterModelEffortPicker.razor` | The Adapter, Model and Effort cascade as one control (ADR-0015, rules.md), with an optional Work mode select (ADR-0033). Used by the Helper card and by `AgentProfileCard`'s Create and Edit form; its probed selects are `ProbedSelect.razor`. |
 | `Components/Feed/FeedHelperPreview.razor` | The read-only Helper preview in an expanded Feed card (state, what it runs on, today's usage, last result and error). |
 | `Components/Tasks/HelperGateNote.cs` | The Task panel line "Turned on by the Needs Human Helper: …", from the latest `human gate on` Change log entry. |
 

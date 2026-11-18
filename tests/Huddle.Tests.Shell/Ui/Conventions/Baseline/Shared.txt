@@ -1,2 +1,1 @@
 CV15|src/Huddle.App/Components/Sidebar/TagsPanel.razor|1
-CV18|src/Huddle.App/Components/Shared/AgentProfileCard.razor|4
