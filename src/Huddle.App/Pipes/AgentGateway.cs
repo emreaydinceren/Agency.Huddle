@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -18,7 +19,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
     private readonly Action<MessagePostedEvent> onMessagePosted;
 
     /// <summary>The goldfish supervisor told when an Agent's runner connection is lost or replaced; set by the composition root.</summary>
-    internal Agency.Huddle.App.Goldfish.GoldfishSupervisor? Goldfish { get; set; }
+    internal GoldfishSupervisor? Goldfish { get; set; }
 
     public AgentGateway(RoomEvents events,Drafts drafts, ILogger<AgentGateway> logger)
     {
@@ -154,7 +155,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         }
     }
 
-    private async Task EndLostPossessionAsync(Agency.Huddle.App.Goldfish.GoldfishSupervisor supervisor, string agentId)
+    private async Task EndLostPossessionAsync(GoldfishSupervisor supervisor, string agentId)
     {
         try
         {

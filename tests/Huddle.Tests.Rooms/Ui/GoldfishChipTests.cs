@@ -219,6 +219,25 @@ public sealed class GoldfishChipTests
         cut.WaitForAssertion(() => Assert.False(CallButton(cut).HasAttribute("disabled")));
     }
 
+    /// <summary>After the chip is disposed a store change and a clock advance neither re-render it nor throw.</summary>
+    [Fact]
+    public async Task Chip_Disposed_StoreChangeAndClockAdvanceAreIgnored()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        await rig.PossessAsync("p1", PossessionState.Working, rig.Room.Id, ct);
+        await using MudBunitContext ctx = rig.NewContext();
+        IRenderedComponent<ContainerFragment> cut = rig.Render(ctx);
+        int renders = cut.RenderCount;
+
+        await ctx.DisposeComponentsOnDispatcherAsync();
+        Assert.True(rig.Store.BeginReturn("p1", GoldfishExit.Finished, null));
+        await rig.Live.RefreshAsync(ct);
+        rig.Clock.Advance(TimeSpan.FromMinutes(5));
+
+        Assert.Equal(renders, cut.RenderCount);
+    }
+
     private static IElement CallButton(IRenderedComponent<ContainerFragment> cut) =>
         cut.FindAll("button").Single(button => button.TextContent.Trim() == "Call Ruth back");
 

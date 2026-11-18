@@ -131,7 +131,7 @@ internal sealed class GoldfishLive : IDisposable
     {
         lock (this.gate)
         {
-            if (ticket < this.applied)
+            if (this.disposed || ticket < this.applied)
             {
                 return false;
             }

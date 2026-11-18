@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
@@ -21,7 +22,7 @@ internal sealed class AskHumanTool(
     TimeProvider clock,
     string callerAgentId,
     IPromptSource prompts,
-    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     private const int MaxQuestions = 3;
     private const int MinOptions = 2;
@@ -114,7 +115,7 @@ internal sealed class AskHumanTool(
             Guid.NewGuid().ToString("N"),
             roomId,
             callerAgentId,
-            goldfish?.PossessionOf(callerAgentId) is null ? askerName : Agency.Huddle.App.Goldfish.GoldfishStamp.Apply(askerName),
+            goldfish?.PossessionOf(callerAgentId) is null ? askerName : GoldfishStamp.Apply(askerName),
             parsed,
             clock.GetUtcNow());
 

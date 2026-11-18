@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Search;
 using Agency.Huddle.App.Tasks;
@@ -36,7 +37,7 @@ internal sealed class SearchTool(
     ILogger<SearchTool> logger,
     IPromptSource prompts,
     string callerAgentId,
-    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The most characters one call returns.</summary>
     private const int MaxCharacters = 12000;

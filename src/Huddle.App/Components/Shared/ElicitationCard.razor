@@ -33,11 +33,12 @@
 @using System.Globalization
 @using Agency.Huddle.App.Components.Shared.AgentCards
 @using Agency.Huddle.App.Elicitation
+@using Agency.Huddle.App.Goldfish
 
 @inject RoomEvents Events
 @inject ElicitationStore Elicitations
 @inject ElicitationService Service
-@inject Agency.Huddle.App.Goldfish.GoldfishLive Live
+@inject GoldfishLive Live
 
 @if (this.RoomIsOpen)
 {
@@ -220,12 +221,24 @@
     protected override void Subscribe()
     {
         this.Events.ElicitationsChanged += this.RefreshOnChange;
+        this.Live.Changed += this.OnGoldfishChanged;
     }
 
-    /// <summary>Lets go of <see cref="RoomEvents.ElicitationsChanged"/>.</summary>
+    /// <summary>Lets go of <see cref="RoomEvents.ElicitationsChanged"/> and <see cref="GoldfishLive.Changed"/>.</summary>
     protected override void Unsubscribe()
     {
         this.Events.ElicitationsChanged -= this.RefreshOnChange;
+        this.Live.Changed -= this.OnGoldfishChanged;
+    }
+
+    /// <summary>Redraws the titles when an Agent enters or leaves goldfish mode, so the stamp follows the possession.</summary>
+    private void OnGoldfishChanged()
+    {
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>Reads the forms waiting in this card's Room.</summary>

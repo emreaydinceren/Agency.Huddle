@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Memory;
 using Agency.Huddle.App.Prompts;
@@ -48,7 +49,7 @@ internal sealed class MemoryTool(
     ITeamRenames? renames = null,
     TimeProvider? timeProvider = null,
     string? callerAgentId = null,
-    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "memory";

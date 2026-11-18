@@ -357,7 +357,8 @@ public sealed partial class ChatService
     /// <param name="Mentions">The Mentions the Message keeps; none when it is a comeback attempt.</param>
     /// <param name="ComebackOf">The Agent a comeback names, or <see langword="null"/>.</param>
     /// <param name="Open">That Agent's open possession, or <see langword="null"/> when it is not in goldfish mode.</param>
-    private sealed record GoldfishPost(string? Stamp, IReadOnlyList<User> Mentions, User? ComebackOf, Possession? Open);
+    /// <param name="LookupFailed">Whether reading <paramref name="Open"/> failed, so "not in goldfish mode" is unknown and nothing may be said about it.</param>
+    private sealed record GoldfishPost(string? Stamp, IReadOnlyList<User> Mentions, User? ComebackOf, Possession? Open, bool LookupFailed = false);
 
     /// <summary>Refuses an Agent's post when the Room's Budget is spent.</summary>
     private void RefuseExhaustedAgent(User? sender, RoomBudget budget, string roomId)
@@ -390,7 +391,8 @@ public sealed partial class ChatService
         {
             if (GoldfishComeback.Matches(text, agent, members, this.aliasSource.Aliases, stamp is not null))
             {
-                return new GoldfishPost(stamp, [], agent, this.SafeFindOpen(supervisor, agent.Id));
+                bool found = this.TryFindOpen(supervisor, agent.Id, out Possession? open);
+                return new GoldfishPost(stamp, [], agent, open, LookupFailed: !found);
             }
         }
 
@@ -410,16 +412,18 @@ public sealed partial class ChatService
         }
     }
 
-    private Possession? SafeFindOpen(GoldfishSupervisor supervisor, string agentId)
+    private bool TryFindOpen(GoldfishSupervisor supervisor, string agentId, out Possession? open)
     {
         try
         {
-            return supervisor.FindOpen(agentId);
+            open = supervisor.FindOpen(agentId);
+            return true;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            this.logger.LogWarning(ex, "The possession of {AgentId} could not be read for a comeback.", agentId);
-            return null;
+            this.logger.LogWarning(ex, "The possession of {AgentId} could not be read for a comeback; nothing is posted.", agentId);
+            open = null;
+            return false;
         }
     }
 
@@ -440,7 +444,7 @@ public sealed partial class ChatService
                 {
                     _ = await supervisor.EndAsync(open.Id, GoldfishExit.CalledBack, sender?.Name, ct).ConfigureAwait(false);
                 }
-                else
+                else if (!decision.LookupFailed)
                 {
                     _ = await this.PostAsHuddleQuietAsync(roomId, GoldfishLine.NotInMode(called.Name), ct).ConfigureAwait(false);
                 }

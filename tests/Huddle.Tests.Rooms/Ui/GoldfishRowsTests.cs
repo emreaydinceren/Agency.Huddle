@@ -244,6 +244,23 @@ public sealed class GoldfishRowsTests
         Assert.Equal("Ruth is asking", cut.Find(".elicitation-card-title").TextContent.Trim());
     }
 
+    /// <summary>The Elicitation card follows <see cref="GoldfishLive.Changed"/>: when the possession ends the title loses the stamp with no other event.</summary>
+    [Fact]
+    public async Task ElicitationCard_PossessionEnds_TitleLosesTheStamp()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        await rig.PossessAsync("p1", PossessionState.Working, rig.Room.Id, ct);
+        _ = rig.Elicitations.Add(rig.Room.Id, rig.Ruth.Id, rig.Ruth.Name, FormOf(SingleQuestionSchema, SingleQuestionMessage));
+        await using MudBunitContext ctx = rig.NewCardContext();
+        IRenderedComponent<ContainerFragment> cut = RenderElicitation(ctx, rig.Room.Id);
+        Assert.Equal("Ruth · goldfish is asking", cut.Find(".elicitation-card-title").TextContent.Trim());
+
+        Assert.True(rig.Store.BeginReturn("p1", GoldfishExit.Finished, null));
+
+        cut.WaitForAssertion(() => Assert.Equal("Ruth is asking", cut.Find(".elicitation-card-title").TextContent.Trim()));
+    }
+
     private static ChatMessage StartRowMessage(string id, string brief) =>
         new(id, T0, KnownIds.Huddle, "Huddle", GoldfishLine.StartRow("Ruth", brief)) { Goldfish = "p1" };
 

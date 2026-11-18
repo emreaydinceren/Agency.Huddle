@@ -794,6 +794,11 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
     }
 
+    /// <summary>Whether a Message is owed to this Agent in a Room where it is possessed: it Mentions the Agent, or the Room is one-to-one.</summary>
+    /// <param name="posted">The delivered Message.</param>
+    /// <returns><see langword="true"/> when the goldfish owes it a reply.</returns>
+    private static bool OwedToGoldfish(MessagePosted posted) => posted.Mentioned || posted.Members.Count == 2;
+
     /// <summary>
     /// Sends a Message owed to this Agent in the possession Room to the goldfish: the Message joins the warm Catch-up, so the warm Agent reads
     /// it when it returns, and the goldfish gets it alone. Nothing is taken from the Catch-up or the own posts, and a Command is an ordinary
@@ -806,7 +811,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     {
         if (this.pool is not { } goldfishPool
             || !string.Equals(goldfishPool.GoldfishRoomId, posted.RoomId, StringComparison.Ordinal)
-            || !(posted.Mentioned || posted.Members.Count == 2))
+            || !OwedToGoldfish(posted))
         {
             return false;
         }
@@ -1011,7 +1016,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         // A Message that is not owed to the goldfish (a followed Room's, say) starts no warm Turn while the Agent is possessed there:
         // it is read as context and waits in the Catch-up for the Agent's return.
-        if (string.Equals(this.pool?.GoldfishRoomId, posted.RoomId, StringComparison.Ordinal) && !(posted.Mentioned || posted.Members.Count == 2))
+        if (string.Equals(this.pool?.GoldfishRoomId, posted.RoomId, StringComparison.Ordinal) && !OwedToGoldfish(posted))
         {
             this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
             this.ReportDeclined(posted);

@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 
@@ -19,7 +20,7 @@ internal sealed class PostMessageTool(
     string callerAgentId,
     IPromptSource prompts,
     OwnPosts ownPosts,
-    Agency.Huddle.App.Goldfish.IPossessionLookup? possessions = null,
+    IPossessionLookup? possessions = null,
     TurnActivity? activity = null,
     Agency.Huddle.App.Data.ITeamDirectory? directory = null) : IAppTool
 {

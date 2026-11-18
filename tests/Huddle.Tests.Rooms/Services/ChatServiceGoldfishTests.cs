@@ -279,6 +279,19 @@ public sealed class ChatServiceGoldfishTests
         Assert.Contains(await rig.File.ReadAllAsync(rig.Room.Id, ct), message => message.Id == posted.Id); // contains-ok: the Message id is unique
     }
 
+    /// <summary>A comeback whose possession lookup fails posts nothing from Huddle: the not-in-mode line would be untrue, so it is only logged.</summary>
+    [Fact]
+    public async Task PostAsync_ComebackLookupFails_PostsNoNotInModeLine()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.DropGoldfishTable();
+
+        _ = await rig.Chat.PostAsync(rig.Room.Id, KnownIds.Human, "@Nova comeback", ct: ct);
+
+        Assert.Empty(await rig.HuddleLinesAsync(rig.Room.Id, ct));
+    }
+
     private sealed class RecordingLink : IGoldfishRunnerLink
     {
         public List<(string AgentId, string PossessionId, GoldfishExit Exit)> Ends { get; } = [];

@@ -20,6 +20,7 @@
 @code {
     private ITimer? timer;
     private bool called;
+    private string? shownRoomId;
 
     /// <summary>The Room whose header carries the chip.</summary>
     [Parameter, EditorRequired]
@@ -55,29 +56,48 @@
     private int MinutesSince(LivePossession possession) =>
         Math.Max(0, (int)(this.Clock.GetUtcNow() - possession.Row.StartedAt).TotalMinutes);
 
+    /// <summary>Starts a new Room's chip enabled: a button disabled for the last Room's call-back says nothing about this one.</summary>
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(this.shownRoomId, this.RoomId, StringComparison.Ordinal))
+        {
+            this.shownRoomId = this.RoomId;
+            this.called = false;
+        }
+    }
+
     private async Task CallBackAsync(string name)
     {
         this.called = true;
+        bool posted = false;
         try
         {
             _ = await this.Chat.SubmitFromComposerAsync(this.RoomId, KnownIds.Human, GoldfishComeback.Text(name));
+            posted = true;
         }
         catch (ChatException ex)
         {
-            this.called = false;
             this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "goldfish-callback-" + this.RoomId);
+        }
+        finally
+        {
+            // Any failure, not only a refusal, gives the button back; the click handler's own re-render shows it.
+            if (!posted)
+            {
+                this.called = false;
+            }
         }
     }
 
     private void OnChanged()
     {
-        if (this.Live.InRoom(this.RoomId) is null)
-        {
-            this.called = false;
-        }
-
         _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
         {
+            if (this.Live.InRoom(this.RoomId) is null)
+            {
+                this.called = false;
+            }
+
             this.StateHasChanged();
             return Task.CompletedTask;
         });

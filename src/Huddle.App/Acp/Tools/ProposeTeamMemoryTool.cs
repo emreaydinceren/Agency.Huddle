@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Helpers;
 using Agency.Huddle.App.Helpers.TeamMemory;
 using Agency.Huddle.App.Memory;
@@ -37,7 +38,7 @@ internal sealed class ProposeTeamMemoryTool(
     IOptions<TeamOptions> options,
     ITeamRenames? renames = null,
     string? callerAgentId = null,
-    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
+    GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The tool's name, without any Adapter prefix.</summary>
     public const string ToolName = "propose_team_memory";
