@@ -600,7 +600,7 @@
     padding: 4px 8px;
 }
 
-/* Search match: MudHighlighter draws the match as a mark, which the browser paints #ffff00 with black
+/* Search match: SearchHighlight draws the match as a mark, which the browser paints #ffff00 with black
    text in every Theme. Take the Attention tint at 24% over the surface with Ink text at weight 600, so it follows the Theme. */
 .search-card mark {
     background-color: color-mix(in srgb, var(--mud-palette-warning) 24%, var(--mud-palette-surface));

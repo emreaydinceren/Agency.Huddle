@@ -316,7 +316,7 @@ there, such as closing an Ask.
                …we should drop the **login** cookie…
 ```
 
-The match is bolded with `MudHighlighter` (`Text` and `HighlightedText`, ignoring case). An
+The match is bolded with `SearchHighlight` (`Text` and `Term`, ignoring case, no regular expression). An
 Archived Room's or Closed Task's card is dimmed and its group heading says so in words, so the
 state never rests on colour alone (§11).
 
@@ -336,7 +336,7 @@ need*. Confirm each parameter against 9.10.0 before building
 | Group headings, card text | `MudText` | |
 | Avatars | `AgentAvatar` | The house component |
 | Status chip on a Task card | `MudChip` with the Board's status-to-`Color` helper (`TaskColors.For`) | Reuse the one helper, do not add a second mapping |
-| Bold match | `MudHighlighter` | |
+| Bold match | `SearchHighlight` | |
 | A group still searching | `MudProgressCircular Indeterminate="true" Size="Size.Small"` | |
 | A failed or truncated group | `MudText` with `Color.Warning` and an icon | Not a `MudAlert`: it is one line inside a list |
 

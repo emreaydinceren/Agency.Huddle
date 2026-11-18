@@ -4,3 +4,5 @@
 // Reasons live in agents/CSharpPrinciples.md ("Inject ambient dependencies too").
 
 M:System.Random.#ctor();A parameterless new Random() makes tests flaky; take an injected source of randomness, or a seeded Random from the caller.
+
+T:MudBlazor.MudHighlighter;MudHighlighter builds its regex with a fixed 1 s match timeout that throws RegexMatchTimeoutException from OnParametersSet when a loaded server stalls a scan, which ends the circuit. Use SearchHighlight, which matches with ordinal string search.

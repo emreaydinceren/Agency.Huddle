@@ -20,7 +20,7 @@ using Agency.Huddle.Tests.Tasks;
 /// <see cref="TaskView.Grouping"/> and uses <see cref="TaskQuery.GroupLabel"/> for its labels, a
 /// header click reorders the grid without touching the <see cref="TaskView"/>, an overdue
 /// non-terminal row is flagged, a row click raises <see cref="TaskListView.OnOpenTask"/>, and a
-/// search term is highlighted with <c>MudHighlighter</c>.
+/// search term is highlighted with <c>SearchHighlight</c>.
 /// </summary>
 public sealed class TaskListViewTests : IDisposable
 {
@@ -144,9 +144,9 @@ public sealed class TaskListViewTests : IDisposable
         Assert.Equal(task.Id, opened[0]);
     }
 
-    /// <summary>A search term is wrapped in <c>&lt;mark&gt;</c> by <c>MudHighlighter</c> in the Title cell.</summary>
+    /// <summary>A search term is wrapped in <c>&lt;mark&gt;</c> by <c>SearchHighlight</c> in the Title cell.</summary>
     [Fact]
-    public async Task SearchTerm_IsWrappedByMudHighlighterInTheTitleCell()
+    public async Task SearchTerm_IsWrappedBySearchHighlightInTheTitleCell()
     {
         TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "Widget Alpha Release");
         TaskView view = MakeView();
