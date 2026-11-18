@@ -177,7 +177,32 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             roleBlock,
             sources,
             agentMeta.BrowserPassed,
-            this.options.Memory.Reported.KeepDays, this.MemoryTidyOn);
+            this.options.Memory.Reported.KeepDays, this.MemoryTidyOn, () => this.ReadDenyFolders(workDir));
+    }
+
+    /// <summary>
+    /// The folders a goldfish session may not read: the Persona's own memory, the Huddle-wide memory, each Team's and Project's memory and the
+    /// Rooms' history, as <see cref="SessionPromptInputs"/> names them. The catalog is read once into a local, because its snapshot is swapped atomically.
+    /// </summary>
+    /// <param name="workDir">The Persona's Work Dir, which holds <c>memory</c>.</param>
+    /// <returns>The folders, whether or not they exist yet; the deny builder drops the missing ones.</returns>
+    private List<string> ReadDenyFolders(string workDir)
+    {
+        string teamsRoot = this.TeamsRoot();
+        List<string> folders =
+        [
+            Path.Combine(workDir, TeamNames.MemoryFolder),
+            Path.Combine(teamsRoot, TeamNames.MemoryFolder),
+        ];
+        foreach (TeamSummary team in this.teamCatalog.Teams)
+        {
+            string teamFolder = Path.Combine(teamsRoot, team.Name);
+            folders.Add(Path.Combine(teamFolder, TeamNames.MemoryFolder));
+            folders.AddRange(team.Projects.Select(project => Path.Combine(teamFolder, project, TeamNames.MemoryFolder)));
+        }
+
+        folders.Add(Path.Combine(this.options.DataDir, "rooms"));
+        return folders;
     }
 
     /// <summary>What <see cref="BuildAgentMeta"/> decided for one session start.</summary>
@@ -695,12 +720,17 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// never passed without its ask rule (<c>mcp__playwright__*</c>) and its deny rule (<c>browser_run_code_unsafe</c>, denied outright, which removes
     /// the tool from the Agent's tool list), because both live in the same <c>permissions</c> key. In every other case the meta is exactly what it is without it.
     /// </param>
+    /// <param name="readDeny">
+    /// The goldfish read-deny rules from the goldfish deny builder, or <see langword="null"/> for none. They follow the browser's
+    /// deny rule in the same <c>deny</c> list and only when <paramref name="askRules"/> is <see langword="true"/>; null or empty leaves the meta exactly as it is without them.
+    /// </param>
     /// <returns>The isolation <c>_meta</c>, or <see langword="null"/> when the profile does not ask for it.</returns>
     internal static Dictionary<string, object>? BuildIsolationMeta(
         AdapterProfile profile,
         bool connectors,
         bool askRules = true,
-        IReadOnlyDictionary<string, object>? browserServer = null)
+        IReadOnlyDictionary<string, object>? browserServer = null,
+        IReadOnlyList<string>? readDeny = null)
     {
         Dictionary<string, object> options = new(StringComparer.Ordinal);
         if (profile.IsolateUserSettings)
@@ -718,9 +748,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 {
                     ["ask"] = AskRules(connectors, browserServer is not null),
                 };
+                string[] deny = [.. browserServer is not null ? DenyRules() : [], .. readDeny ?? []];
+                if (deny.Length > 0)
+                {
+                    permissions["deny"] = deny;
+                }
+
                 if (browserServer is not null)
                 {
-                    permissions["deny"] = DenyRules();
                     options["mcpServers"] = new Dictionary<string, object>(StringComparer.Ordinal)
                     {
                         [BrowserServerConfig.ServerName] = browserServer,
