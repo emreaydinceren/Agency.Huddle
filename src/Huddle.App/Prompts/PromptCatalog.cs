@@ -100,7 +100,35 @@ internal static class PromptCatalog
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
         ..BuildPart53(),
-        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(),
+        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(),
+    ];
+
+    /// <summary>Builds the goldfish closing prompt, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
+    /// <returns>The prompt definitions of the goldfish slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildGoldfishParts() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.goldfish",
+            Label: "Goldfish mode",
+            HelperText:
+                "Goldfish: the closing part of a clean session, in place of Room Sessions. It is the Agent's " +
+                "whole orientation in goldfish mode. Must keep {{goldfishDoneTool}}, the name of the tool that " +
+                "leaves goldfish mode: without it the Agent cannot finish and stays waiting. Must not name any " +
+                "one Room: the brief in the first Turn says where the work is.",
+            Default:
+                """
+                You are in goldfish mode. The brief in your first Turn is your only context: you have no Room
+                history and no Memory, and you cannot see what was said before it. Work from the brief alone.
+                If you need something more from a person, post an ordinary Message that asks for it and end your
+                Turn. A Message that Mentions you starts your next Turn, so you wait there for the answer. Ending
+                a Turn without calling {{goldfishDoneTool}} means you are waiting. When you have what you need,
+                or never needed to ask, call {{goldfishDoneTool}} to leave goldfish mode with your result.
+                Anyone may call you back later. Everything you write here is marked as goldfish work.
+                """,
+            Placeholders: ["{{goldfishDoneTool}}"],
+            RequiredPlaceholders: ["{{goldfishDoneTool}}"],
+            Timing: PromptTiming.NextSession,
+            ReliedWarning: "Agents rely on this to know they are in goldfish mode and how to wait and how to leave."),
     ];
 
     /// <summary>Builds the Turn Queue prompts, which keeps <see cref="BuildAll"/> within the method length limit.</summary>

@@ -201,5 +201,6 @@
   "turn.laterHeader": "Posted after that Message, while it waited:",
   "turn.cutOffNote": "Huddle stopped while you were answering the Message below, and this is a second try. Your conversation may show what you had started: a tool call that had not returned may have finished, may have stopped partway, or may still be running. Anything you did before it stopped (a file, a Task, a post in this or another Room) may already be done: check before you do it again.",
   "turn.foldedHeader": "{{roomLabel}} Since your last reply the Human sent {{count}} Messages. Answer them together, once:",
-  "turn.foldedLine": "{{sender}}: {{text}}"
+  "turn.foldedLine": "{{sender}}: {{text}}",
+  "systemPrompt.goldfish": "You are in goldfish mode. The brief in your first Turn is your only context: you have no Room\nhistory and no Memory, and you cannot see what was said before it. Work from the brief alone.\nIf you need something more from a person, post an ordinary Message that asks for it and end your\nTurn. A Message that Mentions you starts your next Turn, so you wait there for the answer. Ending\na Turn without calling {{goldfishDoneTool}} means you are waiting. When you have what you need,\nor never needed to ask, call {{goldfishDoneTool}} to leave goldfish mode with your result.\nAnyone may call you back later. Everything you write here is marked as goldfish work."
 }

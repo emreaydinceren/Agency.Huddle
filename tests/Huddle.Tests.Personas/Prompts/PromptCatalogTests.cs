@@ -48,7 +48,19 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(203,PromptCatalog.All.Count);
+        Assert.Equal(204,PromptCatalog.All.Count);
+    }
+
+    /// <summary>Goldfish: <c>systemPrompt.goldfish</c> takes and requires the done tool's name, is read at the next session, and carries no tool prefix.</summary>
+    [Fact]
+    public void GoldfishPrompt_TakesDoneToolAndCarriesNoPrefix()
+    {
+        PromptDefinition prompt = PromptCatalog.Get("systemPrompt.goldfish");
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(["{{goldfishDoneTool}}"], prompt.Placeholders);
+        Assert.Equal(["{{goldfishDoneTool}}"], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>
