@@ -79,7 +79,7 @@
         <div class="d-flex flex-wrap gap-2 mt-2">
             <CopyPathMenu Disabled="@(this.Prompt is null)" FormatChanged="@((PathFormat _) => this.StateHasChanged())" />
             <MudTooltip Text="Copies the prompt to your clipboard. Paste it into your AI tool." ShowOnFocus="true">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Disabled="@(this.Prompt is null)" Class="add-with-ai-copy" OnClick="this.CopyAsync">Copy prompt</MudButton>
+                <ActionButton Role="ButtonRole.Primary" Disabled="@(this.Prompt is null)" Class="add-with-ai-copy" OnClick="this.CopyAsync">Copy prompt</ActionButton>
             </MudTooltip>
         </div>
 

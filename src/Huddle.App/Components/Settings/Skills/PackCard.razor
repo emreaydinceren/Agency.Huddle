@@ -62,13 +62,13 @@
             @if (view.State == ItemState.UpdateAvailable)
             {
                 <MudTooltip Text="@SkillGuide.For("Review update")" ShowOnFocus="true">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-review-update" OnClick="@(() => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id))">Review update</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Class="pack-card-review-update" OnClick="@(() => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id))">Review update</ActionButton>
                 </MudTooltip>
             }
             @if (view.CanCopyFix)
             {
                 <MudTooltip Text="@SkillGuide.For("Copy fix prompt")" ShowOnFocus="true">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-copy-fix" OnClick="this.CopyFixPromptAsync">Copy fix prompt</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Class="pack-card-copy-fix" OnClick="this.CopyFixPromptAsync">Copy fix prompt</ActionButton>
                 </MudTooltip>
             }
             <MudMenu @ref="this.menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button pack-card-menu ml-auto"

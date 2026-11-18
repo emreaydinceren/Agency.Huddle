@@ -15,7 +15,7 @@
 <MudTooltip Text="@SkillGuide.For("Copy path")" ShowOnFocus="true">
     <MudMenu Dense="true" Disabled="@this.Disabled" Class="copy-path-menu">
         <ActivatorContent Context="menuContext">
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" EndIcon="@Icons.Material.Filled.ArrowDropDown" Disabled="@this.Disabled" OnClick="menuContext.ToggleAsync" Class="copy-path-button">Copy path</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" EndIcon="@Icons.Material.Filled.ArrowDropDown" Disabled="@this.Disabled" OnClick="menuContext.ToggleAsync" Class="copy-path-button">Copy path</ActionButton>
         </ActivatorContent>
         <ChildContent>
             @foreach ((PathFormat format, string label) in Choices)

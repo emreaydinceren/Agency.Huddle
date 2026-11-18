@@ -93,9 +93,9 @@
             {
                 <MudText Typo="Typo.subtitle2" Class="mt-3">Notes from your AI tool</MudText>
                 <MudTooltip Text="@SkillGuide.For("Show notes")" ShowOnFocus="true">
-                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="pack-details-show-notes" OnClick="@(() => this.Open(notes))">Show notes</MudButton>
+                    <ActionButton Class="pack-details-show-notes" OnClick="@(() => this.Open(notes))">Show notes</ActionButton>
                 </MudTooltip>
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="pack-details-notes-toggle" OnClick="@(() => this.notesOpen = !this.notesOpen)">@(this.notesOpen ? "Hide the first lines" : "Show the first lines")</MudButton>
+                <ActionButton Class="pack-details-notes-toggle" OnClick="@(() => this.notesOpen = !this.notesOpen)">@(this.notesOpen ? "Hide the first lines" : "Show the first lines")</ActionButton>
                 <MudCollapse Expanded="@this.notesOpen">
                     <pre class="pack-details-notes-text">@this.FirstNoteLines(view)</pre>
                 </MudCollapse>

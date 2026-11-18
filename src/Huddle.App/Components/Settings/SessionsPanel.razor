@@ -30,7 +30,7 @@
                      Value="@this.CapShown" ValueChanged="@this.SaveCap" Validation="@((Func<int, string?>)SessionSettingsRules.CheckMessages)" Error="@(this.capError is not null)" ErrorText="@this.capError" />
     @if (this.Settings.MessagesOverride is not null)
     {
-        <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-2" OnClick="this.ResetCap">Reset</MudButton>
+        <ActionButton Class="mt-2" OnClick="this.ResetCap">Reset</ActionButton>
     }
 </MudStack>
 
@@ -41,7 +41,7 @@
                      Error="@(this.budgetError is not null)" ErrorText="@this.budgetError" />
     @if (this.Settings.TokensOverride is not null)
     {
-        <MudButton Variant="Variant.Text" Size="Size.Small" Class="mt-2" OnClick="this.ResetBudget">Reset</MudButton>
+        <ActionButton Class="mt-2" OnClick="this.ResetBudget">Reset</ActionButton>
     }
 </MudStack>
 

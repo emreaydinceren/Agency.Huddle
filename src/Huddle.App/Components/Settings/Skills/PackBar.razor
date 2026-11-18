@@ -17,19 +17,19 @@
 
 <MudToolBar Dense="true" Gutters="false" Class="toolbar-hairline pack-bar flex-wrap gap-2 mb-3">
     <MudTooltip Text="@SkillGuide.For("Add with your AI tool")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@ActionIcons.Add" Class="pack-bar-add" OnClick="this.OnAddWithAi">Add with your AI tool</MudButton>
+        <ActionButton Role="ButtonRole.Primary" StartIcon="@ActionIcons.Add" Class="pack-bar-add" OnClick="this.OnAddWithAi">Add with your AI tool</ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Check for updates")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-bar-updates" OnClick="this.OnCheckForUpdates">Check for updates</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="pack-bar-updates" OnClick="this.OnCheckForUpdates">Check for updates</ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh" Class="pack-bar-reload" Disabled="@this.reloading" OnClick="this.ReloadAsync">
+        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Refresh" Class="pack-bar-reload" Disabled="@this.reloading" OnClick="this.ReloadAsync">
             @if (this.reloading)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
             }
             Reload
-        </MudButton>
+        </ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
         <MudSwitch T="bool" Value="@this.ShowHidden" ValueChanged="this.ShowHiddenChanged" Color="Color.Primary" Size="Size.Small" Label="Show hidden" Class="pack-bar-show-hidden" />

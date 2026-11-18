@@ -38,17 +38,17 @@
 
 <div class="skills-tab-actions d-flex flex-wrap gap-2 mb-2">
     <MudTooltip Text="@SkillGuide.For("Import skill")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-import-button" OnClick="this.ImportSkillAsync">Import skill</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="skills-import-button" OnClick="this.ImportSkillAsync">Import skill</ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-reload-button" StartIcon="@Icons.Material.Filled.Refresh"
-                   Disabled="@this.reloading" OnClick="this.ReloadAsync">
+        <ActionButton Role="ButtonRole.Secondary" Class="skills-reload-button" StartIcon="@Icons.Material.Filled.Refresh"
+                      Disabled="@this.reloading" OnClick="this.ReloadAsync">
             @if (this.reloading)
             {
                 <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
             }
             Reload
-        </MudButton>
+        </ActionButton>
     </MudTooltip>
 </div>
 
