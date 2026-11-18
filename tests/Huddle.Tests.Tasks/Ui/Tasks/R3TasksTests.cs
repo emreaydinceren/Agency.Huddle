@@ -742,9 +742,9 @@ public sealed class R3TasksTests
         await opening;
 
         Assert.Equal("Fields in Sprint board", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal(["Status", "Due date", "Blocked by"], cut.FindAll(".view-editor-field-row .mud-switch").Select(s => s.TextContent.Trim()));
+        Assert.Equal(["Status", "Due date", "Blocked by"], cut.FindAll(".view-editor-field-row .mud-checkbox").Select(s => s.TextContent.Trim()));
         Assert.DoesNotContain("due_date", cut.Find(".mud-dialog-content").TextContent, StringComparison.Ordinal);
-        Assert.All(cut.FindComponents<MudSwitch<bool>>(), s => Assert.Equal(Color.Primary, s.Instance.Color));
+        Assert.All(cut.FindComponents<MudCheckBox<bool>>(), s => Assert.Equal(Color.Primary, s.Instance.Color));
         Assert.True(cut.Find("button[aria-label='Move Status up']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[aria-label='Move Status down']").HasAttribute("disabled"));
         Assert.True(cut.Find("button[aria-label='Move Blocked by down']").HasAttribute("disabled"));

@@ -39,7 +39,7 @@
                         var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
                         var agentId = agent.Id;
                         <div class="new-chat-agent">
-                            <MudCheckBox T="bool" Dense="true" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
+                            <MudCheckBox T="bool" Color="Color.Primary" Dense="true" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
                                 <AgentLabel Name="@agent.Name" State="status.State" Avatar="this.Avatars.Get(agent.Name)" />
                             </MudCheckBox>
                         </div>

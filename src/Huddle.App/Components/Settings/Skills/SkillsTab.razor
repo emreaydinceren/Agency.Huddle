@@ -62,8 +62,7 @@
         }
     </TaskFilterChip>
     <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
-        <MudSwitch T="bool" Value="@this.showHidden" ValueChanged="@((bool value) => this.showHidden = value)" Color="Color.Primary" Size="Size.Small"
-                   Label="Show hidden" Class="skills-tab-show-hidden" />
+        <SettingSwitch Value="@this.showHidden" ValueChanged="@((bool value) => this.showHidden = value)" Label="Show hidden" Class="skills-tab-show-hidden" />
     </MudTooltip>
 </div>
 

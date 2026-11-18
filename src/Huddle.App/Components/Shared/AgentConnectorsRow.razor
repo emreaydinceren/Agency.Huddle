@@ -14,8 +14,7 @@
     {
         @* MudSwitch keeps its own value once the Human flips it. When the Agent stays off (Cancel, or a refused Work Mode) the bound
            value never changed, so nothing resets it and it stays drawn on beside an "Off" line (AGCONN-02). A new key replaces it. *@
-        <MudSwitch @key="this.switchKey" T="bool" Value="@this.on" ValueChanged="this.OnSwitchChanged" Color="Color.Primary" Class="agent-connectors-switch"
-                   Label="Account connectors" />
+        <SettingSwitch @key="this.switchKey" Value="@this.on" ValueChanged="this.OnSwitchChanged" Class="agent-connectors-switch" Label="Account connectors" />
         @if (this.ModeSkipsPrompt)
         {
             <MudText Typo="Typo.body2" Class="d-block mb-1 agent-connectors-mode-note" role="status">This Agent's Work Mode never asks before a tool runs, so account connectors stay off. Choose another Work Mode first.</MudText>

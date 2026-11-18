@@ -28,7 +28,7 @@ public sealed class TaskHumanGateTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, gated, null, "Ruth", "Emre");
 
-        IRenderedComponent<MudSwitch<bool>> toggle = cut.FindComponent<MudSwitch<bool>>();
+        IRenderedComponent<MudCheckBox<bool>> toggle = cut.FindComponent<MudCheckBox<bool>>();
         Assert.Equal(gated, toggle.Instance.GetState(x => x.Value));
         Assert.False(toggle.Instance.Disabled);
         Assert.Equal(HumanGateCopy.SwitchLabel, toggle.Instance.Label);
@@ -43,7 +43,7 @@ public sealed class TaskHumanGateTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, true, SomeAction, "Ruth", "Emre");
 
-        IRenderedComponent<MudSwitch<bool>> toggle = cut.FindComponent<MudSwitch<bool>>();
+        IRenderedComponent<MudCheckBox<bool>> toggle = cut.FindComponent<MudCheckBox<bool>>();
         Assert.True(toggle.Instance.GetState(x => x.Value));
         Assert.True(toggle.Instance.Disabled);
         Assert.Equal("This Task names an Action that leaves the team.", HumanGateCopy.LockedTooltip);
@@ -58,7 +58,7 @@ public sealed class TaskHumanGateTests
         List<bool> raised = [];
         IRenderedComponent<ContainerFragment> cut = Render(ctx, false, null, "Ruth", "Emre", onGate: raised.Add);
 
-        IRenderedComponent<MudSwitch<bool>> toggle = cut.FindComponent<MudSwitch<bool>>();
+        IRenderedComponent<MudCheckBox<bool>> toggle = cut.FindComponent<MudCheckBox<bool>>();
         await cut.InvokeAsync(() => toggle.Instance.ValueChanged.InvokeAsync(true));
 
         Assert.Equal([true], raised);
@@ -72,7 +72,7 @@ public sealed class TaskHumanGateTests
         List<bool> raised = [];
         IRenderedComponent<ContainerFragment> cut = Render(ctx, true, null, "Ruth", "Emre", onGate: raised.Add);
 
-        IRenderedComponent<MudSwitch<bool>> toggle = cut.FindComponent<MudSwitch<bool>>();
+        IRenderedComponent<MudCheckBox<bool>> toggle = cut.FindComponent<MudCheckBox<bool>>();
         await cut.InvokeAsync(() => toggle.Instance.ValueChanged.InvokeAsync(false));
 
         Assert.Equal([false], raised);

@@ -135,7 +135,7 @@ public sealed class HelperCardTests : IDisposable
         Assert.Equal("Helpers run on an Adapter, and Adapters are off in this installation.", panel.Find("[role='status']").TextContent.Trim());
         Assert.True(panel.Find(".helper-card-save").HasAttribute("disabled"));
         Assert.True(panel.Find(".helper-card-reset").HasAttribute("disabled"));
-        Assert.True(panel.Find(".mud-switch input").HasAttribute("disabled"));
+        Assert.True(panel.Find(".mud-checkbox input").HasAttribute("disabled"));
         Assert.Equal("Helpers are small background agents that make one judgement and let Huddle act on it. They don't chat, keep memory or use tools.", panel.Find(".settings-intro").TextContent.Trim());
     }
 
@@ -215,7 +215,7 @@ public sealed class HelperCardTests : IDisposable
         await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
         Assert.Empty(this.feed.Resolutions);
 
-        await cut.InvokeAsync(() => cut.Find(".mud-switch input").ChangeAsync(new ChangeEventArgs { Value = false }));
+        await cut.InvokeAsync(() => cut.Find(".mud-checkbox input").ChangeAsync(new ChangeEventArgs { Value = false }));
         cut.WaitForAssertion(() => Assert.False(cut.Find(".helper-card-save").HasAttribute("disabled")));
         await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
 
@@ -276,7 +276,7 @@ public sealed class HelperCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx);
         Assert.True(cut.Find(".helper-card-save").HasAttribute("disabled"));
 
-        await cut.InvokeAsync(() => cut.Find(".mud-switch input").ChangeAsync(new ChangeEventArgs { Value = false }));
+        await cut.InvokeAsync(() => cut.Find(".mud-checkbox input").ChangeAsync(new ChangeEventArgs { Value = false }));
         cut.WaitForAssertion(() => Assert.False(cut.Find(".helper-card-save").HasAttribute("disabled")));
         await cut.InvokeAsync(() => cut.Find(".helper-card-save").ClickAsync());
 

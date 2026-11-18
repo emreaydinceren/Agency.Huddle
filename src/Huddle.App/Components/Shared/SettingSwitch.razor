@@ -1,0 +1,71 @@
+@using MudBlazor
+
+@* The one switch: a setting that takes effect the moment it is flipped (ComponentCatalog, SettingSwitch; the B6 rule). A setting that
+   waits for Save, Create or Apply, or a pick from a list, is a MudCheckBox with Color.Primary instead (CV20). Always Small and Primary,
+   so every switch is the same 44 x 24 px and a switched-on track is never grey (Q-A7-1). The label names the setting, never its state
+   (Q-A7-2). One caption line follows the switch: the disabled reason while it is disabled and has one, otherwise the helper. No wrapper
+   element, so the switch and its line stay direct children of the caller's layout. *@
+<MudSwitch T="bool" Value="@this.Value" ValueChanged="this.ValueChanged" Label="@this.Label" Disabled="@this.Disabled"
+           Size="Size.Small" Color="Color.Primary" Class="@this.Class" @attributes="this.UserAttributes" />
+@if (this.LineText is { } line)
+{
+    <MudText Typo="Typo.caption" Class="@this.LineClass" role="@(this.ShowsReason ? "status" : null)">@line</MudText>
+}
+
+@code {
+    /// <summary>Whether the setting is on. Bound with <c>@bind-Value</c>, or <see cref="Value"/> and <see cref="ValueChanged"/>.</summary>
+    [Parameter]
+    public bool Value { get; set; }
+
+    /// <summary>Raised with the new state the moment the Human flips the switch; the caller applies it at once.</summary>
+    [Parameter]
+    public EventCallback<bool> ValueChanged { get; set; }
+
+    /// <summary>The setting's name in sentence case ("Show hidden", "Browser"), never "On" or "Off".</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>One caption line under the switch saying what the setting does; hidden while a <see cref="DisabledReason"/> shows.</summary>
+    [Parameter]
+    public string? Helper { get; set; }
+
+    /// <summary>Whether the switch is disabled.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Why the switch is disabled, announced as a status line in place of the <see cref="Helper"/> while <see cref="Disabled"/>.</summary>
+    [Parameter]
+    public string? DisabledReason { get; set; }
+
+    /// <summary>Extra classes on the switch, for a test or script hook and the caller's layout only; never a colour, size or font.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>A class on the caption line, so a test or the caller's layout can find it (<c>process-tab-gate-note</c>).</summary>
+    [Parameter]
+    public string? LineHookClass { get; set; }
+
+    /// <summary>Any other attribute (<c>id</c>, <c>data-*</c>), passed to the switch.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    private bool ShowsReason => this.Disabled && !string.IsNullOrWhiteSpace(this.DisabledReason);
+
+    private string? LineText
+    {
+        get
+        {
+            if (this.ShowsReason)
+            {
+                return this.DisabledReason;
+            }
+
+            return string.IsNullOrWhiteSpace(this.Helper) ? null : this.Helper;
+        }
+    }
+
+    private string LineClass =>
+        string.Join(' ', new[] { "d-block", "mud-text-secondary", this.ShowsReason ? "setting-switch-reason" : "setting-switch-helper", this.LineHookClass }
+            .Where(static part => !string.IsNullOrWhiteSpace(part)));
+}

@@ -35,7 +35,8 @@
         </div>
 
         <div data-testid="strict-local">
-            <MudSwitch T="bool" @bind-Value="this.strictLocal" Color="Color.Primary" Label="Strict local" />
+            @* Checkboxes on this card, not switches: every setting here waits for Save (the B6 rule). *@
+            <MudCheckBox T="bool" @bind-Value="this.strictLocal" Color="Color.Primary" Dense="true" Label="Strict local" />
         </div>
         <MudText Typo="Typo.caption" data-testid="strict-local-helper">@RemoteAccessCopy.StrictLocalHelper</MudText>
         @if (this.StrictRunning)
@@ -125,7 +126,7 @@
         </div>
 
         <div data-testid="allow-tailscale">
-            <MudSwitch T="bool" @bind-Value="this.allowTailscale" Disabled="@this.StrictRunning" Color="Color.Primary" Label="Use Tailscale sign-in" />
+            <MudCheckBox T="bool" @bind-Value="this.allowTailscale" Disabled="@this.StrictRunning" Color="Color.Primary" Dense="true" Label="Use Tailscale sign-in" />
         </div>
         <TextField Shape="TextFieldShape.LongText" Label="Trusted proxies" @bind-Value="this.trustedProxies" Disabled="@this.StrictRunning" HelperText="One address per line." />
         <TextField Shape="TextFieldShape.LongText" Label="Allowed origins" @bind-Value="this.allowedOrigins" Disabled="@this.StrictRunning" HelperText="One address per line." />

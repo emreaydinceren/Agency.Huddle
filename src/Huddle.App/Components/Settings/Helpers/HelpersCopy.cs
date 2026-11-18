@@ -20,8 +20,8 @@ internal static class HelpersCopy
     /// <summary>The chip on a Helper that reached its daily cap.</summary>
     public const string ChipPaused = "Paused";
 
-    /// <summary>The label of the on switch.</summary>
-    public const string SwitchLabel = "On";
+    /// <summary>The label of the checkbox that turns the Helper on when the card is saved; it names the setting, not a state (Q-A7-2).</summary>
+    public const string EnabledLabel = "Helper on";
 
     /// <summary>The label of the daily cap field.</summary>
     public const string CapLabel = "Daily cap";

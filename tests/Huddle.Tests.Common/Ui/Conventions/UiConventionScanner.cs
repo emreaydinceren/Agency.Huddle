@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV18</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV20</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -54,6 +54,8 @@ internal static partial class UiConventionScanner
         "CV16" => Cv16(path, text),
         "CV17" => Cv17(path, text),
         "CV18" => Cv18(path, text),
+        "CV19" => Cv19(path, text),
+        "CV20" => Cv20(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -123,6 +125,26 @@ internal static partial class UiConventionScanner
     /// <param name="text">The file text.</param>
     public static RuleCount Cv18(string path, string text) =>
         new("CV18", path, path.EndsWith("/SelectField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSelect"], static _ => true));
+
+    /// <summary>
+    /// CV19: a raw <c>&lt;MudSwitch&gt;</c> in a component other than <c>SettingSwitch.razor</c>. A switch is for a setting that takes
+    /// effect the moment it is flipped (the B6 rule), and every one is the one <c>SettingSwitch</c>, always Small and Primary with one
+    /// caption line for its helper or disabled reason (ComponentCatalog A7). A setting that waits for Save is a checkbox (CV20).
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv19(string path, string text) =>
+        new("CV19", path, path.EndsWith("/SettingSwitch.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSwitch"], static _ => true));
+
+    /// <summary>
+    /// CV20: a <c>&lt;MudCheckBox&gt;</c> without <c>Color="Color.Primary"</c>. A checkbox picks items or holds an option saved with a form
+    /// (the B6 rule) and stays the raw MudBlazor tag, because no site needs more than its label; a ticked box is never grey, so the
+    /// colour is the one thing the rule holds (ComponentCatalog B6).
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv20(string path, string text) =>
+        new("CV20", path, CountTags(text, ["MudCheckBox"], static attrs => !PrimaryColor().IsMatch(attrs)));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
@@ -420,6 +442,9 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex(@"(?<![\w-])Margin\s*=\s*""Margin\.Dense""", RegexOptions.CultureInvariant)]
     private static partial Regex DenseMargin();
+
+    [GeneratedRegex(@"(?<![\w-])Color\s*=\s*""Color\.Primary""", RegexOptions.CultureInvariant)]
+    private static partial Regex PrimaryColor();
 
     [GeneratedRegex(@"(?<![\w-])role\s*=", RegexOptions.CultureInvariant)]
     private static partial Regex RoleAttribute();

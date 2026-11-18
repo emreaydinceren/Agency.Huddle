@@ -40,8 +40,7 @@
                     <MudSelectItem T="string" Value="@skin.Id">@skin.Label</MudSelectItem>
                 }
             </SelectField>
-            <MudSwitch T="bool" id="theme-lab-inspect-toggle" Label="Inspect" Color="Color.Primary"
-                       Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
+            <SettingSwitch id="theme-lab-inspect-toggle" Label="Inspect" Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
             <ActionButton id="theme-lab-export" Role="ButtonRole.Secondary" OnClick="this.ExportAsync">Export JSON</ActionButton>
             <ActionButton id="theme-lab-reset" OnClick="this.ResetAsync">Reset edits</ActionButton>
             <span role="status" class="theme-lab-status">@this.status</span>

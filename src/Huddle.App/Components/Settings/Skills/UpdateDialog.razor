@@ -60,7 +60,7 @@
             @foreach (AgentChange change in this.plan.Agents)
             {
                 string name = change.Name;
-                <MudCheckBox T="bool" Value="@this.ticked.Contains(name)" ValueChanged="@((bool on) => this.Tick(name, on))" Dense="true" Class="update-dialog-agent"
+                <MudCheckBox T="bool" Value="@this.ticked.Contains(name)" ValueChanged="@((bool on) => this.Tick(name, on))" Color="Color.Primary" Dense="true" Class="update-dialog-agent"
                              Label="@($"{change.Name}   {change.Role}   {change.Summary}")" />
             }
         }

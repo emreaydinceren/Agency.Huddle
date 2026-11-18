@@ -403,7 +403,7 @@
                     {
                         Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
                         <div class="agent-profile-card-not-here-row d-flex flex-wrap align-center gap-2 mb-1" data-skill="@shown.Name">
-                            <MudCheckBox T="bool" Value="@this.skills.Contains(shown.Name, StringComparer.Ordinal)" Disabled="true" Dense="true" aria-label="@($"{shown.Name} is not on this computer yet")" />
+                            <MudCheckBox T="bool" Value="@this.skills.Contains(shown.Name, StringComparer.Ordinal)" Disabled="true" Color="Color.Primary" Dense="true" aria-label="@($"{shown.Name} is not on this computer yet")" />
                             <div>
                                 <MudText Typo="Typo.body2">@shown.Name</MudText>
                                 <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@shown.Description</MudText>

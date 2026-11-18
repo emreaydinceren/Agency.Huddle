@@ -22,8 +22,9 @@
     else
     {
         <div class="task-human-gate-switch">
-            <MudSwitch T="bool" Value="@(this.HumanGate || this.HasAction)" ValueChanged="@this.HumanGateChanged"
-                       Disabled="@this.HasAction" Color="Color.Primary" Label="@HumanGateCopy.SwitchLabel" />
+            @* A checkbox, not a switch: the Task panel buffers the change until Save (the B6 rule). *@
+            <MudCheckBox T="bool" Value="@(this.HumanGate || this.HasAction)" ValueChanged="@this.HumanGateChanged"
+                         Disabled="@this.HasAction" Color="Color.Primary" Dense="true" Label="@HumanGateCopy.SwitchLabel" />
             @if (this.HasAction)
             {
                 <MudTooltip Text="@HumanGateCopy.LockedTooltip">

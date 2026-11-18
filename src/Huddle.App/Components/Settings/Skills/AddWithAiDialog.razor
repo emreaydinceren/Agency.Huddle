@@ -52,13 +52,13 @@
                                HelperText="Optional." Class="add-with-ai-purpose" />
                     break;
                 case SkillTask.CheckForUpdates:
-                    <MudSwitch T="bool" @bind-Value="this.allSources" Color="Color.Primary" Label="All Sources" Class="add-with-ai-all-sources" />
+                    <MudCheckBox T="bool" @bind-Value="this.allSources" Color="Color.Primary" Dense="true" Label="All sources" Class="add-with-ai-all-sources" />
                     @if (!this.allSources)
                     {
                         @foreach (ResolvedSource source in this.Registry.Current.Resolved.Sources)
                         {
                             string id = source.Id;
-                            <MudCheckBox T="bool" Value="@this.pickedSources.Contains(id)" ValueChanged="@((bool on) => this.Pick(id, on))" Label="@id" Dense="true" Class="add-with-ai-source" />
+                            <MudCheckBox T="bool" Value="@this.pickedSources.Contains(id)" ValueChanged="@((bool on) => this.Pick(id, on))" Label="@id" Color="Color.Primary" Dense="true" Class="add-with-ai-source" />
                         }
                     }
                     break;

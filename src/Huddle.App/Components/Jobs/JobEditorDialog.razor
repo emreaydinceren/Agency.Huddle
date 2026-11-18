@@ -52,7 +52,7 @@
                     @foreach (DayOfWeek day in JobForm.Week)
                     {
                         DayOfWeek shown = day;
-                        <MudCheckBox T="bool" Label="@JobForm.ShortName(shown)" Dense="true" Value="this.form.Has(shown)"
+                        <MudCheckBox T="bool" Label="@JobForm.ShortName(shown)" Color="Color.Primary" Dense="true" Value="this.form.Has(shown)"
                                      ValueChanged="@(chosen => this.form.Set(shown, chosen))" />
                     }
                 </div>

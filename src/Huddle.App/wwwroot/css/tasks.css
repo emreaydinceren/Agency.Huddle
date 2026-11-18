@@ -861,13 +861,13 @@
     gap: 4px;
 }
 
-.view-editor-field-row > .mud-switch {
+.view-editor-field-row > .mud-checkbox {
     flex: 1 1 auto;
     min-width: 0;
     margin: 0;
 }
 
-.view-editor-field-row > .mud-switch .mud-typography {
+.view-editor-field-row > .mud-checkbox .mud-typography {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;

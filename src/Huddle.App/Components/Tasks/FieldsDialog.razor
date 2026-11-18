@@ -31,11 +31,12 @@
                     <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
                 </ChildContent>
                 <ItemRenderer>
-                    @* The switch is Accent when on, and its label is the field's display name, so it has an accessible name.
-                       The first row cannot move up and the last cannot move down. *@
+                    @* A checkbox, not a switch, because the choice waits for Save (the B6 rule). It is Accent when ticked, and its
+                       label is the field's display name, so it has an accessible name. The first row cannot move up and the last
+                       cannot move down. The hook class keeps its old name for the tests. *@
                     <div class="view-editor-field-row">
-                        <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary"
-                                   Label="@TaskFieldView.Label(context)" Class="@($"view-editor-field-switch-{context}")" />
+                        <MudCheckBox T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary" Dense="true"
+                                     Label="@TaskFieldView.Label(context)" Class="@($"view-editor-field-switch-{context}")" />
                         <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} up")"
                                        Disabled="@this.IsFirst(context)" Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
                         <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} down")"
