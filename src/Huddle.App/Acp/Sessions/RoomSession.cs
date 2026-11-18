@@ -42,6 +42,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private readonly AcpOptions options;
     private readonly MemoryPaths? memoryPaths;
     private readonly bool clean;
+    private readonly CleanSessionSpec? goldfish;
+    private decimal? runningSpend;
+    private string? spendCurrency;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
@@ -202,6 +205,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="hooks">The Turn hooks run around each Message Turn. <see langword="null"/> runs none, like every caller that predates it.</param>
     /// <param name="memoryPaths">Resolves an Agent's own <c>memory</c> writes to paths for <c>Touched</c>. <see langword="null"/> records none, like every caller that predates it.</param>
     /// <param name="clean">Whether this is a goldfish possession's session: no Transcript Catch-up, and the enrichers are told the Turn is clean.</param>
+    /// <param name="goldfish">The possession this session serves; it reports the possession's Turns to the server and passes its Task id with each Spend. <see langword="null"/> for every session but a goldfish's.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -225,9 +229,11 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         LastCatchUpStore? lastCatchUp = null,
         TurnHookPipeline? hooks = null,
         MemoryPaths? memoryPaths = null,
-        bool clean = false)
+        bool clean = false,
+        CleanSessionSpec? goldfish = null)
     {
         this.clean = clean;
+        this.goldfish = goldfish;
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
         ArgumentNullException.ThrowIfNull(scheduler);
@@ -1322,6 +1328,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             await this.SendAckAsync(head.Item, QueueAckKind.Finished, null, QueueOutcome.Failed, ct).ConfigureAwait(false);
+            await this.SendGoldfishReportAsync(GoldfishReportKind.Failed, null, ex.Message, null, ct).ConfigureAwait(false);
             await this.HandleLazyOpenFailureAsync(head, ex).ConfigureAwait(false);
             return false;
         }
@@ -1786,6 +1793,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             run.Failed = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, run.Item.RoomId);
         }
+
+        // Reached by every Turn that ended without shutdown: completed, stopped, timed out or failed. Never claims Done; the tool does.
+        await this.SendGoldfishReportAsync(GoldfishReportKind.TurnEnded, this.runningSpend, null, false, ct).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -1814,6 +1824,36 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
             if (this.logger.IsEnabled(LogLevel.Debug))
             {
                 this.logger.LogDebug(ex, "Persona '{PersonaName}' could not send a queue ack for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes one goldfish report for this session's possession. A session that serves no possession writes nothing; a write the pipe
+    /// cannot take is swallowed, like a queue ack: the server learns of a lost runner another way.
+    /// </summary>
+    /// <param name="kind">What the report says.</param>
+    /// <param name="runningSpend">The session's running cost, for a <see cref="GoldfishReportKind.TurnEnded"/>.</param>
+    /// <param name="detail">The reason, for a <see cref="GoldfishReportKind.Failed"/>.</param>
+    /// <param name="done">Whether the brief is finished, for a <see cref="GoldfishReportKind.TurnEnded"/>.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task SendGoldfishReportAsync(GoldfishReportKind kind, decimal? runningSpend, string? detail, bool? done, CancellationToken ct)
+    {
+        if (this.goldfish is null || ct.IsCancellationRequested)
+        {
+            return;
+        }
+
+        try
+        {
+            string? currency = runningSpend is null ? null : this.spendCurrency;
+            await this.owner.WriteAsync(new GoldfishReport(this.goldfish.PossessionId, kind, runningSpend, currency, detail, done), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug(ex, "Persona '{PersonaName}' could not send a goldfish report for room {RoomId}.", this.owner.PersonaName, this.RoomId);
             }
         }
     }
@@ -1882,6 +1922,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     {
         WorkItem item = run.Item;
         var prompt = TurnPromptFramer.BuildPrompt(item, this.prompts);
+        await this.SendGoldfishReportAsync(GoldfishReportKind.TurnStarted, null, null, null, ct).ConfigureAwait(false);
         await this.SendAckAsync(item, QueueAckKind.Started, run.MessageId, null, ct).ConfigureAwait(false);
         await run.ActiveSession.PromptAsync(new AgentPrompt(prompt, TurnPromptFramer.BuildPromptBlocks(item)), run.TurnCancellation.Token).ConfigureAwait(false);
         run.PromptReturned = true;
@@ -2518,7 +2559,9 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         // last update of a Turn, as a running total for this session.
         if (usage.Cost is { } cost)
         {
-            this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency, this.RoomId);
+            this.runningSpend = cost.Amount;
+            this.spendCurrency = cost.Currency;
+            this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency, this.RoomId, this.goldfish?.TaskId);
         }
     }
 

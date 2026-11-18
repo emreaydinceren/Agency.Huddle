@@ -72,6 +72,11 @@ internal static class TurnPromptFramer
 
     private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
     {
+        if (item.Kind is WorkItemKind.GoldfishBrief or WorkItemKind.GoldfishMessage)
+        {
+            return TurnPromptFramer.BuildGoldfishPrompt(item, TurnPromptFramer.RoomLabel(item, prompts), prompts);
+        }
+
         string framed = TurnPromptFramer.BuildFramedPromptBody(item, prompts);
         if (item.LaterMessages is not { Count: > 0 } later)
         {
@@ -92,6 +97,12 @@ internal static class TurnPromptFramer
 
         return builder.ToString();
     }
+
+    /// <summary>Goldfish spec 6.3: the brief, or the Message, and nothing else, so no Catch-up, own-post lines or hook blocks.</summary>
+    private static string BuildGoldfishPrompt(WorkItem item, string room, IPromptSource prompts) =>
+        item.Kind == WorkItemKind.GoldfishBrief
+            ? prompts.Render("turn.goldfishBrief", new Dictionary<string, string> { ["{{roomLabel}}"] = room, ["{{brief}}"] = item.Text })
+            : prompts.Render("turn.goldfishMessage", new Dictionary<string, string> { ["{{sender}}"] = item.SenderName, ["{{text}}"] = item.Text });
 
     private static string BuildFramedPromptBody(WorkItem item, IPromptSource prompts)
     {

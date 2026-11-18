@@ -15,4 +15,10 @@ internal enum WorkItemKind
     /// neither collects File Changes nor drains Catch-up.
     /// </summary>
     Command,
+
+    /// <summary>A goldfish possession's first Turn: the brief, framed by <c>turn.goldfishBrief</c> and nothing else.</summary>
+    GoldfishBrief,
+
+    /// <summary>A Message owed to the Agent while a goldfish possesses it: the sender and the text, framed by <c>turn.goldfishMessage</c> and nothing else.</summary>
+    GoldfishMessage,
 }

@@ -389,7 +389,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             elicitationBridge: this.elicitationBridge,
             sessionSettings: this.sessionSettings,
             hooks: this.hooks?.ForClean(),
-            clean: true);
+            clean: true,
+            goldfish: spec);
 
     /// <summary>Closes every <c>Idle</c>, empty-queue Room Session whose <see cref="RoomSession.LastActivity"/> is older than <see cref="AcpOptions.SessionIdleMinutes"/>. A no-op in shared mode (finding P-20) or when the threshold is zero or less.</summary>
     internal Task SweepIdleAsync()

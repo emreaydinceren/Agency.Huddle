@@ -16,6 +16,7 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     private readonly List<string> reportCalls = [];
     private readonly List<(string SessionId, decimal RunningTotal, string Currency)> spendAdded = [];
     private readonly List<string?> spendRoomIds = [];
+    private readonly List<string?> spendTaskIds = [];
 
     /// <inheritdoc />
     /// <remarks>
@@ -110,7 +111,7 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     /// <inheritdoc />
     public void AddTokens(long delta) => this.TokensAdded += delta;
 
-    /// <summary>Every <see cref="AddSpend"/> call's arguments, in call order.</summary>
+    /// <summary>Every <c>AddSpend</c> call's arguments, in call order.</summary>
     public IReadOnlyList<(string SessionId, decimal RunningTotal, string Currency)> SpendAdded
     {
         get
@@ -122,7 +123,7 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
         }
     }
 
-    /// <summary>The <c>roomId</c> every <see cref="AddSpend"/> call carried, in call order; <see langword="null"/> for the shared session.</summary>
+    /// <summary>The <c>roomId</c> every <c>AddSpend</c> call carried, in call order; <see langword="null"/> for the shared session.</summary>
     public IReadOnlyList<string?> SpendRoomIds
     {
         get
@@ -134,13 +135,26 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
         }
     }
 
+    /// <summary>The <c>taskId</c> every <see cref="AddSpend(string, decimal, string, string?, string?)"/> call carried, in call order; <see langword="null"/> for a warm session.</summary>
+    public IReadOnlyList<string?> SpendTaskIds
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.spendTaskIds];
+            }
+        }
+    }
+
     /// <inheritdoc />
-    public void AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId)
+    public void AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId, string? taskId = null)
     {
         lock (this.gate)
         {
             this.spendAdded.Add((sessionId, runningTotal, currency));
             this.spendRoomIds.Add(roomId);
+            this.spendTaskIds.Add(taskId);
         }
     }
 

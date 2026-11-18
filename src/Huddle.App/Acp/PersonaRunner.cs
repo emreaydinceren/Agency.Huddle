@@ -230,8 +230,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     void IRoomSessionOwner.AddTokens(long delta) => Interlocked.Add(ref this.tokensConsumed, delta);
 
     /// <inheritdoc />
-    void IRoomSessionOwner.AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId) =>
-        this.spend?.Add(this.persona.Name, sessionId, runningTotal, currency, roomId: roomId);
+    void IRoomSessionOwner.AddSpend(string sessionId, decimal runningTotal, string currency, string? roomId, string? taskId) =>
+        this.spend?.Add(this.persona.Name, sessionId, runningTotal, currency, taskId, roomId);
 
     /// <inheritdoc />
     void IRoomSessionOwner.SetCommands(string sessionId, IReadOnlyList<AvailableCommandInfo> advertised)
@@ -688,11 +688,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                         await this.pool.StartAfreshAsync(afresh.RoomId, ct).ConfigureAwait(false);
                     }
                 }
+                else if (message is GoldfishBegin or GoldfishEnd)
+                {
+                    await this.OnGoldfishMessageAsync(message, ct).ConfigureAwait(false);
+                }
                 else if (message is StopTurn stop)
                 {
-                    // The mark is the runner's own sequence counter as of right now (D22 correction
-                    // 2): the counter itself stays on this runner - it also numbers the Greeting - but
-                    // what it drops is entirely RoomSession's own business now (finding P-6).
+                    // The mark is the runner's sequence counter right now (D22 correction 2); what it drops is RoomSession's business (P-6).
                     var mark = Interlocked.Read(ref this.sequenceCounter);
                     if (this.pool is not null)
                     {
@@ -714,6 +716,123 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             this.ReportLoopEndedUnlessShuttingDown("read loop", terminatingException, ct);
         }
+    }
+
+    /// <summary>Handles the server's goldfish messages: a Begin opens the slot, an End closes it when it is held.</summary>
+    /// <param name="message">A <see cref="GoldfishBegin"/> or a <see cref="GoldfishEnd"/>.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task OnGoldfishMessageAsync(ProtocolMessage message, CancellationToken ct)
+    {
+        if (message is GoldfishBegin begin)
+        {
+            await this.OnGoldfishBeginAsync(begin, ct).ConfigureAwait(false);
+        }
+        else if (this.pool is { GoldfishRoomId: not null } endPool)
+        {
+            await endPool.CloseGoldfishAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
+    /// Opens the goldfish slot for a possession, queues its brief and reports Opened. A slot that cannot be opened (the host has one session
+    /// for every Room, or the slot is taken) reports Failed and leaves the slot as it was; a failure after this Begin's own open reports Failed
+    /// and closes the slot it opened.
+    /// </summary>
+    /// <param name="begin">The server's request.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task OnGoldfishBeginAsync(GoldfishBegin begin, CancellationToken ct)
+    {
+        RoomSessionPool? goldfishPool = this.pool;
+        if (goldfishPool is null)
+        {
+            await this.WriteGoldfishReportAsync(new GoldfishReport(begin.PossessionId, GoldfishReportKind.Failed, Detail: "The runner has no session pool yet."), ct).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            goldfishPool.OpenGoldfish(begin.RoomId, new CleanSessionSpec(begin.PossessionId, begin.RoomId, begin.TaskId));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+            // Nothing of this Begin was opened: a slot already held by another possession is left undisturbed.
+            await this.WriteGoldfishReportAsync(new GoldfishReport(begin.PossessionId, GoldfishReportKind.Failed, Detail: ex.Message), ct).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            string roomName = this.knownRoomNames.TryGetValue(begin.RoomId, out string? known) ? known : begin.RoomId;
+            WorkItem brief = new(
+                begin.RoomId, RoomLabels.Distinguish(begin.RoomId, roomName, this.knownRoomNames), "Huddle", begin.Brief, [], WorkItemKind.GoldfishBrief);
+            goldfishPool.EnqueueGoldfish(new QueuedWork(Interlocked.Increment(ref this.sequenceCounter), brief));
+            await this.WriteGoldfishReportAsync(new GoldfishReport(begin.PossessionId, GoldfishReportKind.Opened), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+            await this.WriteGoldfishReportAsync(new GoldfishReport(begin.PossessionId, GoldfishReportKind.Failed, Detail: ex.Message), ct).ConfigureAwait(false);
+            await goldfishPool.CloseGoldfishAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>Writes one goldfish report, swallowing a write the pipe cannot take: the server learns of a lost runner another way.</summary>
+    /// <param name="report">The report.</param>
+    /// <param name="ct">The run's own cancellation token.</param>
+    private async Task WriteGoldfishReportAsync(GoldfishReport report, CancellationToken ct)
+    {
+        try
+        {
+            await ((IRoomSessionOwner)this).WriteAsync(report, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException or InvalidOperationException)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug(ex, "Persona '{PersonaName}' could not send a goldfish report for possession {PossessionId}.", this.persona.Name, report.PossessionId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sends a Message owed to this Agent in the possession Room to the goldfish: the Message joins the warm Catch-up, so the warm Agent reads
+    /// it when it returns, and the goldfish gets it alone. Nothing is taken from the Catch-up or the own posts, and a Command is an ordinary
+    /// Message here.
+    /// </summary>
+    /// <param name="posted">The delivered Message.</param>
+    /// <returns><see langword="true"/> when the goldfish took it; <see langword="false"/> when it is not owed to this Agent, there is no
+    /// possession in its Room, or the slot closed meanwhile.</returns>
+    private bool TryRouteToGoldfish(MessagePosted posted)
+    {
+        if (this.pool is not { } goldfishPool
+            || !string.Equals(goldfishPool.GoldfishRoomId, posted.RoomId, StringComparison.Ordinal)
+            || !(posted.Mentioned || posted.Members.Count == 2))
+        {
+            return false;
+        }
+
+        WorkItem item = new(
+            posted.RoomId,
+            RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames),
+            posted.Message.SenderName,
+            posted.Message.Text,
+            [],
+            WorkItemKind.GoldfishMessage,
+            TriggerMessageId: posted.Message.Id,
+            Team: posted.Team,
+            Redelivery: posted.Redelivery);
+        try
+        {
+            goldfishPool.EnqueueGoldfish(new QueuedWork(Interlocked.Increment(ref this.sequenceCounter), item));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ObjectDisposedException)
+        {
+            // The possession ended between the check and the queue: the warm path takes the Message instead.
+            return false;
+        }
+
+        // Added only once the goldfish has the Message, so the warm path never reads it twice.
+        this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
+        return true;
     }
 
     /// <summary>Routes one posted Message by the <see cref="ReplyGate"/>'s decision: reply, read as context only, or decline.</summary>
@@ -881,7 +1000,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // Decided BEFORE anything is drained: building an ordinary item takes the
         // Catch-up buffer and own-post lines as a side effect, and a bare command
         // prompt has nowhere to put them, so a command item must leave both queued
-        // for the next ordinary Turn (Commands spec, section 6.5).
+        // for the next ordinary Turn (Commands spec, section 6.5). A possessed Agent's Messages go to the goldfish first: a Command there
+        // is an ordinary Message.
+        if (this.TryRouteToGoldfish(posted))
+        {
+            return;
+        }
+
         if (this.TryBuildCommandItem(posted, out var commandItem))
         {
             this.pool?.Enqueue(new QueuedWork(Interlocked.Increment(ref this.sequenceCounter), commandItem));

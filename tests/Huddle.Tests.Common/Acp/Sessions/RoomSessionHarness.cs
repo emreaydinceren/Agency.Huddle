@@ -55,6 +55,9 @@ internal sealed record RoomSessionHarnessOptions
     /// <summary>The store the first Turn after a fresh start writes its whole prompt text to, or <see langword="null"/> for none (no file is written).</summary>
     public LastCatchUpStore? LastCatchUp { get; init; }
 
+    /// <summary>The possession the session serves (it then reports to the owner and passes the Task id with its Spend), or <see langword="null"/> for an ordinary session; set <see cref="Clean"/> with it.</summary>
+    public CleanSessionSpec? Goldfish { get; init; }
+
     /// <summary>The Turn hook pipeline the session runs around each Message Turn, or <see langword="null"/> for none.</summary>
     public TurnHookPipeline? Hooks { get; init; }
 
@@ -127,7 +130,8 @@ internal sealed class RoomSessionHarness : IAsyncDisposable
             lastCatchUp: settings.LastCatchUp,
             time: settings.Time,
             hooks: settings.Hooks,
-            clean: settings.Clean);
+            clean: settings.Clean,
+            goldfish: settings.Goldfish);
         return new RoomSessionHarness(session, runCts);
     }
 
