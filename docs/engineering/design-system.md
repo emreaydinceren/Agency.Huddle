@@ -482,6 +482,7 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 | A note or document | `Filled.Description` |
 | Settings | `Filled.Settings` |
 | Skill, including the Settings Skills section | `Outlined.AutoAwesome` |
+| Goldfish mode (a fresh-eyes Agent) | `MaterialSymbols.Fish`, for this concept only |
 
 | Action | Icon | Not this |
 | --- | --- | --- |
@@ -541,7 +542,8 @@ accent through the same recipe. The contrast tests sweep and sample both modes.
 | Text label | Up to six characters, in place of the monogram. Under 40px the first three are drawn, at 40px five and at 72px all six; a long label shrinks to fit, a single character grows to 55% of the diameter |
 | Image | A photo or illustration keeps the same circle on one neutral fill, never the Agent's colour: `TextPrimary` 10% over Surface in a Light Theme, 24% in a Dark one. Its 1px inset ring is the monogram's recipe, the fill mixed 20% toward `TextPrimary` (Light) or white (Dark), so mixed kinds sit together. The Agent's stored colour stays for the monogram. It shows from 32px up; at 24px (`Size.Small`) every avatar is the monogram, because an image at that size reads as a blur beside the letters. So a 1:1 Room's sidebar row shows the monogram |
 | Stacked members | The Room header's stack is 24px avatars, each with a 2px Surface ring |
-| Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Agent, solid (`Existing`) for one that already exists. Nowhere else |
+| Profile ring | On a `ProfileCard`, the avatar sits in a ring: 1px `TextSecondary`, 2px clear of the avatar. Dashed for a proposed Agent, solid (`Existing`) for one that already exists. Nowhere else, except the goldfish ring (Huddle.Goldfish §7.4) |
+| Goldfish ring | An Agent in goldfish mode (a live possession) wears a 2px solid `Info` ring, 2px clear of the avatar and outside it (`.presence-anchor.goldfish`), and a fish badge in place of its Health badge: the fish in `Info` mixed 20% toward black. The badge alone, with no ring, on a `ProfileCard`. `aria-label` "{Name}, in goldfish mode". Drawn only through `PresenceAnchor` (`AgentName`, `BadgeOnly`) |
 
 **The presence badge.** A badge is a circle at the avatar's bottom-right rim, ringed in 2px
 of Surface, with a glyph as well as a colour. It is 10px, and 12px beside an avatar of 40px or
@@ -556,6 +558,7 @@ children. Standalone, `StatusDot` draws the same 10px badge inline.
 | Blue (`Info`) circle, white pulse | | Awake (a Turn is running). Working is not attention, so it is not amber |
 | Red circle, white dash | Degraded | |
 | Hollow grey ring | Offline | Asleep; Offline |
+| Blue (`Info`) circle, white fish | In goldfish mode (replaces the Health badge) | |
 
 A filled tone is the palette colour mixed 20% toward black, so the white glyph keeps at least
 3:1 against it in every Theme (a test holds it). Both rings are the neutral grey. The

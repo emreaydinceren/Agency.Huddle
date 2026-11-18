@@ -93,7 +93,7 @@
                                    card's border belongs to the <li>, so the "Working on" Task link can sit inside
                                    the card without being nested in the button (a link in a button is invalid). *@
                                 <button type="button" class="agent-tile" @onclick="() => this.OpenCard(entry.Name)">
-                                    <PresenceAnchor Cue="PresenceCue.From(status.State)" Detail="@status.Reason">
+                                    <PresenceAnchor Cue="PresenceCue.From(status.State)" AgentName="@entry.Name" Detail="@status.Reason">
                                         <AgentAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Medium" />
                                     </PresenceAnchor>
                                     <span class="agent-tile-text">

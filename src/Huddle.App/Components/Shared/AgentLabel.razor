@@ -7,7 +7,7 @@
 @using Agency.Huddle.App.Avatars
 
 <span class="agent-label">
-    <PresenceAnchor Cue="this.IsUser ? null : PresenceCue.From(this.State)">
+    <PresenceAnchor AgentName="@this.Name" Cue="this.IsUser ? null : PresenceCue.From(this.State)">
         <AgentAvatar Name="@this.Name" Avatar="this.Avatar" Size="Size.Small" />
     </PresenceAnchor>
     <span>@this.Name</span>

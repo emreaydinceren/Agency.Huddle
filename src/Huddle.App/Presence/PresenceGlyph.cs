@@ -14,4 +14,7 @@ public enum PresenceGlyph
 
     /// <summary>A hollow ring: offline, or idle.</summary>
     Ring,
+
+    /// <summary>A fish: the Agent is in goldfish mode.</summary>
+    Fish,
 }
