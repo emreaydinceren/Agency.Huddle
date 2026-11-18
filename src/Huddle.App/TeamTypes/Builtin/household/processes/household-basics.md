@@ -1,6 +1,6 @@
 ---
 title: 'Household basics'
-template: 'household-basics@1.1.0'
+template: 'household-basics@1.2.0'
 gates: []
 digest: { every: 7, unit: 'days' }
 retro: { every: 28, unit: 'days' }
@@ -25,8 +25,6 @@ This Team runs the everyday life of one family's home: school mail, meals and gr
 4. **Done**: a parent orders, pays, books, signs or sends what is needed, and the Human marks the Task Done after reading the Evidence line.
 
 A recurring job is one Task per occurrence. Huddle has no repeating Tasks, so the owner opens the next Task a week before it is due, from the dates in Team Memory, and writes the date after that when the Task is Done.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 
@@ -67,7 +65,6 @@ Each job has one owner from noticing that it needs doing to getting it done, nev
 ## Escalation
 
 - Money, a signature, a school commitment, a health question or a change to a standing arrangement goes to the Human. A health question also goes to a clinician.
-- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 

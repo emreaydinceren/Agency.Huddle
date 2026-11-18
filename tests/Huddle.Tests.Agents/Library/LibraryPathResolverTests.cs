@@ -367,6 +367,45 @@ public sealed class LibraryPathResolverTests
         Assert.Equal(LibraryNodeRole.File, path.Role);
     }
 
+    /// <summary>PLAYBOOK-02: a Team's two Playbook files, though underscore-prefixed, resolve as Files directly under the Team folder, so the Library opens and lists them.</summary>
+    [Theory]
+    [InlineData("_member-playbook.md")]
+    [InlineData("_manager-playbook.md")]
+    public void TryResolve_TeamPlaybookFile_IsFile(string fileName)
+    {
+        using Fixture fixture = BuildFixture();
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir, "Teams", "Marketing"));
+        File.WriteAllText(Path.Combine(fixture.DataDir, "Teams", "Marketing", fileName), "x");
+
+        bool resolved = fixture.Resolver.TryResolve("teams", "Marketing/" + fileName, out LibraryPath? path, out string? error);
+
+        Assert.True(resolved);
+        Assert.Null(error);
+        Assert.NotNull(path);
+        Assert.Equal(LibraryNodeRole.File, path.Role);
+        Assert.Equal("Marketing/" + fileName, path.RelativePath);
+    }
+
+    /// <summary>PLAYBOOK-02: the tree's child resolution also accepts a Playbook file, so the listing shows it.</summary>
+    [Theory]
+    [InlineData("_member-playbook.md")]
+    [InlineData("_manager-playbook.md")]
+    public void TryResolveChild_TeamPlaybookFile_IsFile(string fileName)
+    {
+        using Fixture fixture = BuildFixture();
+        Assert.True(fixture.Resolver.TryResolve("teams", "Marketing", out LibraryPath? parent, out _));
+        Assert.NotNull(parent);
+        FileInfo child = new(Path.Combine(fixture.DataDir, "Teams", "Marketing", fileName));
+        File.WriteAllText(child.FullName, "x");
+
+        bool resolved = fixture.Resolver.TryResolveChild(parent, child, out LibraryPath? path, out string? error);
+
+        Assert.True(resolved);
+        Assert.Null(error);
+        Assert.NotNull(path);
+        Assert.Equal(LibraryNodeRole.File, path.Role);
+    }
+
     /// <summary>Addendum A2: a junction child whose target lies outside the root is refused.</summary>
     [Fact]
     public void TryResolveChild_JunctionOutOfRoot_Refused()

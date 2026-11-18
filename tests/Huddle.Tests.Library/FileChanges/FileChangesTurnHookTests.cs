@@ -351,6 +351,31 @@ public sealed class FileChangesTurnHookTests
         Assert.Null(addition.Text);
     }
 
+    /// <summary>A Playbook file edited in the Agent's Team folder is not in the File Changes report, so the Agent is not told twice (Team Playbooks spec §6.4); another file is.</summary>
+    /// <param name="fileName">The Playbook file name.</param>
+    [Theory]
+    [InlineData("_member-playbook.md")]
+    [InlineData("_manager-playbook.md")]
+    public async Task FileChanges_PlaybookFileEdit_NotInTheReport(string fileName)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomId = await CreateRoomAsync(fixture, "RoomA", ct);
+        (FileChangesTurnHook hook, string teamsRoot) = ScopedHook(fixture);
+        await BaselineAsync(hook, teamsRoot, roomId, ct);
+        string playbook = Path.Combine(teamsRoot, "Home", fileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(playbook) ?? teamsRoot);
+        File.WriteAllText(playbook, "Own way of working");
+        string note = Path.Combine(teamsRoot, "notes.md");
+        File.WriteAllText(note, "note");
+
+        TurnAddition? addition = await hook.BeforeTurnAsync(new TurnStarting(ScopeWatching(teamsRoot), roomId, null), ct);
+
+        Assert.NotNull(addition);
+        Assert.Contains(note, addition.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup.
+        Assert.DoesNotContain(fileName, addition.Text, StringComparison.Ordinal);
+    }
+
     /// <summary>Builds a hook that filters by the real Scopes of the fixture's Persona, and the Teams root it watches.</summary>
     private static (FileChangesTurnHook Hook, string TeamsRoot) ScopedHook(Fixture fixture)
     {

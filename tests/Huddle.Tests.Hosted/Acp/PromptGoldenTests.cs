@@ -131,6 +131,87 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// Team Playbooks (spec §6.1): pins the prompt of a plain member of one Team on the default Playbook, with the Huddle rules filled with the
+    /// prefixed tool names.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_MemberPlaybook_MatchesGolden()
+    {
+        string actual = ComposeWithPlaybooks("Bea", "mcp__team__", "mcp__team__get_help");
+
+        AssertMatchesGolden("systemPrompt.memberPlaybook.txt", actual);
+        Assert.Contains("A note goes on the Task with mcp__team__add_comment.", actual, StringComparison.Ordinal); // contains-ok: proves the rules were rendered into the golden, which pins the whole prompt
+        Assert.DoesNotContain("## Huddle rules for managers", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>Team Playbooks (spec §6.1): the same member prompt for an Adapter whose tool names carry no prefix.</summary>
+    [Fact]
+    public void SystemPrompt_MemberPlaybook_Unprefixed_MatchesGolden()
+    {
+        string actual = ComposeWithPlaybooks("Bea", string.Empty, "get_help");
+
+        AssertMatchesGolden("systemPrompt.memberPlaybook.unprefixed.txt", actual);
+        Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>Team Playbooks (spec §6.1): pins the prompt of the manager of the Team: the Member parts, then the Manager rules and the default Manager Playbook.</summary>
+    [Fact]
+    public void SystemPrompt_ManagerPlaybook_MatchesGolden()
+    {
+        string actual = ComposeWithPlaybooks("Nova", "mcp__team__", "mcp__team__get_help");
+
+        AssertMatchesGolden("systemPrompt.managerPlaybook.txt", actual);
+        Assert.Contains("Triage one in your Backlog with mcp__team__triage_request:", actual, StringComparison.Ordinal); // contains-ok: proves the rules were rendered into the golden, which pins the whole prompt
+    }
+
+    /// <summary>Team Playbooks (spec §6.1): the same manager prompt for an Adapter whose tool names carry no prefix.</summary>
+    [Fact]
+    public void SystemPrompt_ManagerPlaybook_Unprefixed_MatchesGolden()
+    {
+        string actual = ComposeWithPlaybooks("Nova", string.Empty, "get_help");
+
+        AssertMatchesGolden("systemPrompt.managerPlaybook.unprefixed.txt", actual);
+        Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>Composes the prompt of <paramref name="agent"/>, a member of Team Ops that Nova manages, on the default Playbooks (no Team file exists).</summary>
+    /// <param name="agent">The Persona's name; <c>Nova</c> is the manager.</param>
+    /// <param name="prefix">The tool name prefix of the Adapter, or empty.</param>
+    /// <param name="helpToolName">The help tool's name, with the same prefix.</param>
+    /// <returns>The composed system prompt.</returns>
+    private static string ComposeWithPlaybooks(string agent, string prefix, string helpToolName)
+    {
+        string[] playbookTools = ["add_comment", "add_evidence", "log_change", "triage_request"];
+        IReadOnlyList<string> toolNames =
+        [
+            .. (prefix.Length == 0 ? UnprefixedToolNames : ToolNames),
+            .. playbookTools.Select(tool => prefix + tool),
+        ];
+        IReadOnlyList<TeamSummary> catalog = [new TeamSummary("Ops", [], ["Nova", "Bea"], true) { Manager = "Nova" }];
+        FakePromptSource prompts = new();
+        PlaybookSnapshot playbooks = PlaybookSnapshotBuilder.Build(
+            prompts,
+            catalog,
+            agent,
+            ["Ops"],
+            Path.Combine(Path.GetTempPath(), "huddle-golden-no-teams"),
+            new PlaybookOptions(),
+            filesReadable: true,
+            NullLogger.Instance);
+
+        return SystemPromptComposer.Compose(
+            new Persona(agent, "You are " + agent + "."),
+            prompts,
+            helpToolName,
+            toolNames,
+            [],
+            string.Empty,
+            memory: null,
+            SessionScope.Shared,
+            playbooks: playbooks);
+    }
+
+    /// <summary>
     /// 5.5.t (SB-R06, correction C5): pins the AGENTS.md block for an Agent in Teams A and B, with a
     /// Huddle-wide, a Team A, a Project A/Alpha and a Team B file. The golden is seeded by the first green run.
     /// </summary>

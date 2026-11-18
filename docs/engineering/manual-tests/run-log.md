@@ -3077,6 +3077,14 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
+### PROMPTSSETTINGS-42 — The Playbooks group has two live keys with their helper texts
+
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-42--the-playbooks-group-has-two-live-keys-with-their-helper-texts)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Playbooks group has exactly Member and Manager Playbook with the spec 7.5 helper texts, no Next session pill; typing showed Modified and Unsaved. |
+
 ## Appearance tab, Themes, Tokens and overrides
 
 ### APPEARANCETHEME-01 — The Appearance tab is on the Settings tab bar and is reachable by its own route
@@ -7472,3 +7480,110 @@ File: [`docs/engineering/manual-tests/goldfish.md`](goldfish.md#goldfish-16--gol
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-17 | Pass | `feat/goldfish-mode` | #627 | Lane A: with `MaxConcurrentTurns=2` the tool refused with the one-Turn-at-a-time sentence; no possession row, nothing posted. |
+
+## Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Project missions
+
+### PLAYBOOK-01 — The tab on a fresh Team shows both sections with the Huddle default and read-only rules
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-01--the-tab-on-a-fresh-team-shows-both-sections-with-the-huddle-default-and-read-only-rules)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Tab strip Members, Library, Playbooks, Details (no Process: Blank Team has none), URL /teams/Sales/playbooks, Manager then Member, chip Huddle default, caption and buttons as 7.3, rules box not editable, Project page has Library and Tasks only. |
+| 2026-11-18 | Pass | 891f9848 |  | Second run, fresh seed, Sales and Ops built through Build a team (Development Team). Tab strip Members, Library, Process, Playbooks, Details (Process now before Playbooks), URL /teams/Sales/playbooks, Manager then Member, chip Huddle default, rules box has no textarea or editable element, Customize for this Team and Edit the default on both. No Project existed, step 4 skipped. |
+
+### PLAYBOOK-02 — Customize opens the Library editor and a save turns the chip to Customized
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-02--customize-opens-the-library-editor-and-a-save-turns-the-chip-to-customized)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Fail | 120ab384 |  | Customize wrote Teams/Sales/_member-playbook.md (basedOn sha256:31b04cf23a26bd8d) and the chip became Customized with Edit and Reset, but the Library opened at ?root=teams&path=Sales%2F_member-playbook.md shows No note open (the file is not in the Library tree), so it cannot be edited there. Library-off tooltip not run. |
+| 2026-11-18 | Pass | 891f9848 |  | Second run. Customize opened the Library at root=teams&path=Sales%2F_member-playbook.md, the file is listed under Teams/Sales and its body is the default. Appended Always end with the word Sales. and saved with Ctrl+S in Edit mode: file starts with ---, basedOn 'sha256:31b04cf23a26bd8d', ---, then the body. Tab chip Customized for this Team, text ends with the line, buttons Edit and Reset to default…, Manager section still Huddle default. Library-off tooltip not exercised: hiding the Teams Root in Settings > Library (library-roots.json hidden: teams) leaves Customize for this Team enabled with no tooltip, because PlaybooksTab disables it on Library:Enabled (config), not on a hidden Root. Root unhidden again. |
+
+### PLAYBOOK-03 — A member hears a changed Playbook once per Room at its next Turn
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-03--a-member-hears-a-changed-playbook-once-per-room-at-its-next-turn)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Blocked | 120ab384 |  | Blocked by PLAYBOOK-02: the Library cannot open the file, so the step 1 edit was not made. Observed without the edit: first Turn after Customize carried one notice per Room (A and B), a later Turn in Room A carried none. |
+| 2026-11-18 | Pass | 891f9848 |  | Second run. Edited the last line to Sales! in the Library, waited 15 s, no Message arrived. Room A: Bo reply opens once with Your Playbooks changed since you last read them. then The Member Playbook (Huddle default) for Ops changed… and The Member Playbook for Sales (this Team's own) changed… with the whole body ending Always end with the word Sales!. Room B: same notice. Room A next Turn (name an animal): no notice. Notice absent from What this Agent reads. Observation: the notice also re-told the Ops default section (its heading changed from the shared default to for Ops), and the mock Ada and Bo echo each other until Agents have sent 4 replies and are paused. |
+
+### PLAYBOOK-04 — Editing the default on Settings Prompts reaches an uncustomized Team and marks a customized one Default updated
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-04--editing-the-default-on-settings-prompts-reaches-an-uncustomized-team-and-marks-a-customized-one-default-updated)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Settings save of Member Playbook: Bo reply notice headed Member Playbook (Huddle default) for Ops with the new line, no Sales section; Ops chip Huddle default; Sales chip Default updated with the info text and three actions; Show changes diff held +Also keep every reply short. and toggled. P-RESET-SETTINGS done. |
+
+### PLAYBOOK-05 — Keep my version and Reset to default with its confirm
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-05--keep-my-version-and-reset-to-default-with-its-confirm)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Keep my version: chip Customized, basedOn 31b04cf23a26bd8d to cafd0e73a33b0ee0, body unchanged. Reset dialog title, message, Cancel first and Reset red as 7.4; Cancel kept the file; Reset deleted it, chip Huddle default; next reply told Member Playbook (Huddle default) for Sales and Ops. Last line was not Human-edited because of PLAYBOOK-02. |
+
+### PLAYBOOK-06 — An Agent in two Teams sees the Playbook order and labels on the Prompt blocks page
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-06--an-agent-in-two-teams-sees-the-playbook-order-and-labels-on-the-prompt-blocks-page)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Fail | 120ab384 |  | Step 3: the Huddle rules (Member) row on the Agent card What this Agent reads has an empty source; Built in, not editable is not shown anywhere. Steps 2 and 4 held (Playbooks, Huddle rules once, Ops default part then Sales own part; then Sales own then Ops own). Ada manager parts not checked: no manager line in _team.md. |
+| 2026-11-18 | Pass | 891f9848 |  | Second run. Bo What this Agent reads: Playbooks, Huddle rules (Member) once, source Built in, not editable, Member Playbook headed ## Member Playbook (Huddle default) for Ops, then ## Member Playbook for Sales (this Team's own); no Manager parts. After customizing Ops and Start afresh: default part gone, then Sales own and Ops own in teams order. Manager parts checked on Sal (Ada is not offered as Manager, she has no role): Huddle rules (Manager) Built in, not editable, then ## Manager Playbook (Huddle default) for Sales, after the Member parts and before Identity. |
+
+### PLAYBOOK-07 — An Agent cannot write a Playbook file
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-07--an-agent-cannot-write-a-playbook-file)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Inconclusive | 120ab384 |  | The mock adapter only echoes the prompt and cannot attempt a Write, Delete or Move. Automated guard tests cover the refusal. |
+| 2026-11-18 | Pass | 891f9848 |  | Third run, paid lane (Sal, Claude Haiku 5.5, low; Direct Room). Write on `_member-playbook.md` was refused: the server log reads `WorkDirPermissionHandler Refused a tool call for 'Sal' ... _member-playbook.md: This file is the Human's. Propose a change in a retro, or ask the Human.`; the Agent itself saw only `User refused permission to run tool` and the Room never shows the guard text. Read succeeded (Sal read the file first). File on disk unchanged. Delete and Move were not exercised, to hold the cost down. Sal declined the first ask on its own judgement; a second, confirming Message made it attempt. |
+
+### PLAYBOOK-08 — A Task moved into a Project and assigned to the manager is treated as the goal
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-08--a-task-moved-into-a-project-and-assigned-to-the-manager-is-treated-as-the-goal)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | SALE-0001 moved to Launch and assigned to Ada: Task shows Woken in Room Ada and the wake Message names SALE-0001 and the change. mission.md written by hand is listed with its description; no mission field, picker or tag in the app. Ada has no manager line, the wake needs none. |
+
+### PLAYBOOK-09 — A member sees the Project mission in Team Memory on its Prompt blocks page
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-09--a-member-sees-the-project-mission-in-team-memory-on-its-prompt-blocks-page)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | After Restart and a new Turn, Bo Team Memory part lists Sales > Launch (folder: Sales/Launch): mission.md with the spec description; no other new part carries it. |
+
+### PLAYBOOK-10 — A retro proposal to an uncustomized Member Playbook customizes it on Accept
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-10--a-retro-proposal-to-an-uncustomized-member-playbook-customizes-it-on-accept)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Inconclusive | 120ab384 |  | The mock adapter cannot file a retro proposal; not run. Rerun on the paid lane. |
+| 2026-11-18 | Pass | 891f9848 |  | Third run, paid lane. Sales had no `_member-playbook.md`. Retro Agent Cal (Haiku 5.5, low) was told the exact change and filed it; the Sales Team Room card read `Cal is proposing changes`, `Name the Team in Scope _member-playbook.md (customizes this Team's Playbook)` with a unified diff `-## Scope` / `+## Scope (Sales)`. Accept wrote `_member-playbook.md` with `basedOn: 'sha256:31b04cf23a26bd8d'` and `## Scope (Sales)` at line 35; Sales > Playbooks Member chip read `Customized for this Team`. Nothing landed in Settings > Prompts. A full retro was not run, so this proves the proposal tool and the Accept path. |
+
+### PLAYBOOK-11 — Live Haiku follows the Playbook loop and the mission 💰
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-11--live-haiku-follows-the-playbook-loop-and-the-mission-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Fail | 891f9848 |  | Third run, Claude Haiku 5.5, low, manager Sal (Ada has no role, so the Manager picker does not offer her). Q-2 half held: after the goal comment Sal wrote `Launch/memory/mission.md` (`description: 'Read for the Launch project's goal: shipping the spring catalogue by 31 March, Task SALE-0002, and what finished looks like.'`, then the goal, `Finished: each partner confirmed receipt.` and `Task: SALE-0002.`) and commented on SALE-0002: `Recorded as the Launch mission in Sales/Launch/mission.md. Next: I need the list of partners so I can split this into one child Task per partner, plus the catalogue build. Waiting for the Human on the partner list and the year of the 31 March deadline.` Failed pass line: no child Task exists (`_tasks` holds only SALE-0001 and SALE-0002); Sal asked the Human for a partner list first and was not prompted again. Q-1 half: Bo ended both passes with a Task comment but not in the Playbook's state words: `Step 1 and step 2 done in one draft: ...spring-two-lines.md. Checked: exactly two lines, both about spring. Left for the business manager to verify before it is marked done.` and `Draft is ready for verify: ...spring-two-lines.md. ... @Sal, please check it there.` Bo did both steps in one pass. Setup notes: an assigned Task left in Backlog woke the manager, not Bo, until Status was set to To Do; Sal and Bo then spent the Room Budget talking (`Paused: the Room's Budget is spent`). No Continue clicked, no `go on` sent. |
+| 2026-11-18 | Pass | 9c5945ea |  | Fourth run, paid lane, Claude Sonnet 5.5, low (Sal, Bo, Chief of Staff; Ada was not used and stays on the seed). Manager is Sal (Small Business type, Ada has no role). Steps 1 and 2: Bo's first pass ended `Not checked against a brief, because the Task has none. Next: the Human reads it and marks the Task Done.` / `State: waiting for the Human`; his second pass, started by himself after Sal's Evidence, ended `Sal, please review the file and post the second Evidence line.` / `State: handed off`. The Task stayed In Progress waiting for the Human; no `go on` was sent. Step 4: SALE-0002 `Ship the spring catalogue by 31 March` in Launch, assigned to Sal in To Do, then the goal comment. Sal's decision comment on SALE-0002: `Mission recorded in Launch memory (mission.md). Child Tasks created in Backlog: ... Waiting for the Human: the partner list, the brief and the product list. ...` / `State: waiting for the Human`. `Launch/memory/mission.md` starts with a `description:` line, then the goal, `Finished: each partner confirmed receipt.` and `Task: SALE-0002.` (short). Child Tasks, all `parent: SALE-0002`, all in Launch, all unassigned in Backlog: SALE-0003 `Confirm the partner list and contacts for the spring catalogue`, SALE-0004 `Draft the spring catalogue copy from the brief`, SALE-0005 `Track partner receipt confirmations for the spring catalogue`. First pass already made the children although part waits on the Human. Setup notes: the Task form's Project list stayed empty when Team was picked in the same form (open **New task** from the Launch Tasks tab instead); Sal woke on save before the goal comment, so the comment cost one more pass. |
+
+### PLAYBOOK-12 — The Chief of Staff files the goal Task for a new Team 💰
+
+File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#playbook-12--the-chief-of-staff-files-the-goal-task-for-a-new-team-)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-18 | Fail | 891f9848 |  | Third run, Chief of Staff on Haiku 5.5, low. Said `Build me a Team that launches a spring catalogue.`, answered its three questions, approved the Proposal card (two Agents, Catalogue Writer and Catalogue Editor, Teams `Spring Catalogue`; no manager role). Its last Message asks for the product brief and holds none of `When you create this Team's first Project, move`, `into it;` or `will treat it as the Project's goal.` No Task was filed: `Teams/Spring Catalogue/` has no `_tasks` folder and no Task exists beyond SALE-0001 and SALE-0002. Possible cause: the CoS used the Agent-proposal path with no manager to assign. The two new Agents came up on the default Model, not Haiku. Step 4 not run (no Task). |
+| 2026-11-18 | Fail | 9c5945ea |  | Fourth run, paid lane, Chief of Staff on Sonnet 5.5, low (it was seeded on Opus, Medium). Said `Build me a Team that launches a spring catalogue.`, answered its three questions (plus `Please build the Team with a manager.`), approved the Proposal card (Mara Lead, Wren, Pixel, Sage; Team `Spring Catalogue`). Goal Task filed: SPRI-0001 `Launch the spring catalogue web page (about 20 products)`, assigned to Mara Lead, Backlog, description `Finished means: a responsive, accessible catalogue web page ...`. Chief of Staff's last Message: `When you create this Team's first Project, move SPRI-0001 into it. Mara will treat it as the Project's goal.` (wording differs from the Pass-if: `into it.` not `into it;`, and `Mara`, not the full name). Step 4 failed: created Project `Spring` and set SPRI-0001's Project; the move saved (timeline `moved: Spring Catalogue -> Spring Catalogue/Spring`) but no manager woke and no `mission.md` appeared: `Teams/Spring Catalogue/` has no `_team.md`, and Mara's card lists Huddle rules (Member), not (Manager). The Agent-proposal path makes a Team with no manager role even when asked for one. Mara had already triaged the Task in Backlog on approval (`State: waiting for the Human`). Wren, Pixel, Sage were never used and keep the hire default (Sonnet, Effort default); Mara was changed to Sonnet 5.5, low before step 4. |
+

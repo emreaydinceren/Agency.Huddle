@@ -258,12 +258,14 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd,
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
+        services.AddSingleton<PlaybooksTurnHook>();
         services.AddSingleton<HuddleMemoryTurnHook>();
         services.AddSingleton<TeamRenamedTurnHook>();
 
         // The pipeline sorts these by its own production order, so the order here does not matter.
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<TeamRenamedTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<AgentsMdTurnHook>());
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<PlaybooksTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<HuddleMemoryTurnHook>());
     }
 
@@ -465,6 +467,33 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers the Team Playbook stores (spec §5.2): the Teams folder holds a Team's own Playbook files, <c>{DataDir}/playbook-defaults/</c> the
+    /// defaults they were made from.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    private static void AddPlaybookStores(IServiceCollection services)
+    {
+        services.AddSingleton(static sp => new Agency.Huddle.App.Teams.PlaybookBaseStore(sp.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir));
+        services.AddSingleton(static sp =>
+        {
+            TeamOptions options = sp.GetRequiredService<IOptions<TeamOptions>>().Value;
+            IPromptSource prompts = sp.GetRequiredService<IPromptSource>();
+            Agency.Huddle.App.Teams.PlaybookStore store = new(
+                Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)),
+                sp.GetRequiredService<Agency.Huddle.App.Teams.PlaybookBaseStore>(),
+                prompts,
+                options.Playbooks,
+                sp.GetRequiredService<ILogger<Agency.Huddle.App.Teams.PlaybookStore>>());
+            if (prompts is Agency.Huddle.App.Prompts.PromptStore promptStore)
+            {
+                store.FollowPromptSaves(promptStore);
+            }
+
+            return store;
+        });
+    }
+
     /// <summary>Registers the mention alias source, the Human profile, the agent host factory and the per-Persona stores.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, for chaining.</returns>
@@ -510,6 +539,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RoomSpendStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
         services.AddSingleton<Agency.Huddle.App.Teams.RetroFileStore>();
+        AddPlaybookStores(services);
 
         // Retro proposals (Task 76): held under _proposals/retro/ in the Team folder; Huddle applies an accepted edit.
         services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalStore>();

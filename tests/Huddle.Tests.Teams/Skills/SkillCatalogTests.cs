@@ -80,6 +80,35 @@ public sealed class SkillCatalogTests
         Assert.Contains("If `close_task` says the Task is already closed, the one who asked closed it first, and there is nothing more to do.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
+    /// <summary>Playbooks S6: for every Team the Chief of Staff builds, from a type or from proposed Agents, <c>team-building</c> files the collected goal as one Task for the manager and tells the Human to move it into the first Project.</summary>
+    [Fact]
+    public void TeamBuilding_FilesTheGoalAsTheFirstMission()
+    {
+        string text = string.Join(' ', SkillCatalog.All["team-building"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("For every Team you build, from a type or from proposed Agents, file the goal you collected in step 1 as one Task in that Team with `create_task`: the title is the goal, the description says what a finished result looks like, and the assignee is the Team's manager.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("When the Team has no manager, leave the Task unassigned in the Backlog and tell the Human to assign it once they name a manager.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("\"When you create this Team's first Project, move {Id} into it; {Manager} will treat it as the Project's goal.\"", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>Playbooks S5: the <c>retrospective</c> Skill says the Huddle rules part of a Playbook cannot be changed.</summary>
+    [Fact]
+    public void Retrospective_SaysTheHuddleRulesCannotBeChanged()
+    {
+        string text = string.Join(' ', SkillCatalog.All["retrospective"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("The Huddle rules part of a Playbook cannot be changed; propose changes to the Playbook text only.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
+    /// <summary>Playbooks S4: the <c>team-management</c> Skill points a manager to the Manager Playbook for how to manage and keeps itself the tool manual.</summary>
+    [Fact]
+    public void TeamManagement_PointsToTheManagerPlaybook()
+    {
+        string text = string.Join(' ', SkillCatalog.All["team-management"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        Assert.Contains("# Team management How to manage, from triage to running a mission, is in your Manager Playbook; this Skill covers the tools.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+    }
+
     /// <summary>#536: the catalog holds <c>browser-check</c>: valid, one file, and it grants no tools.</summary>
     [Fact]
     public void All_ContainsBrowserCheck_GrantingNoTools()

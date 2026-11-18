@@ -1,0 +1,206 @@
+@using System.Globalization
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Teams
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject PlaybookStore Playbooks
+@inject ITeamFolders Folders
+@inject IOptions<TeamOptions> Options
+@inject IDialogService Dialogs
+@inject NavigationManager Navigation
+
+@*
+    Team Playbooks spec §7.2 to §7.4: the Playbooks tab of a Team page. Two sections, Manager first, each with its state chip, the Huddle rules
+    (read-only), the Default updated notice, the text and the actions. Customize writes the Team's own file and opens it in the Library, Edit opens it
+    there (the Library's editor is the one Markdown editor), Keep my version restamps it and Reset deletes it after the shared confirm.
+*@
+
+<section class="playbooks-tab">
+    @foreach (PlaybookKind kind in Kinds)
+    {
+        PlaybookKind current = kind;
+        bool manager = current == PlaybookKind.Manager;
+        string label = KindLabel(current);
+        PlaybookState state = this.states[current];
+        bool updated = state.Status == PlaybookStatus.DefaultUpdated;
+        bool unknownBase = state.Status == PlaybookStatus.UnknownBase;
+        bool ownFile = state.Status is PlaybookStatus.Customized or PlaybookStatus.DefaultUpdated or PlaybookStatus.UnknownBase;
+        <section class="playbook-section" data-kind="@(manager ? "manager" : "member")" aria-label="@($"{label} Playbook")">
+            <div class="playbook-header">
+                <div class="group-label">@($"{label} Playbook")</div>
+                @if (updated)
+                {
+                    <Chip T="string" Look="ChipLook.Status" Color="Color.Info" Text="Default updated" />
+                }
+                else
+                {
+                    <Chip T="string" Look="ChipLook.Status" Text="@(ownFile ? "Customized for this Team" : "Huddle default")" />
+                }
+            </div>
+            <MudPaper Outlined="true" Class="playbook-rules">
+                <div class="playbook-rules-caption">
+                    <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" />
+                    <MudText Typo="Typo.caption">Huddle enforces these. They are always sent and can't be edited.</MudText>
+                </div>
+                <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(RulesOf(current)))</div>
+            </MudPaper>
+            @if (updated)
+            {
+                <MudAlert Severity="Severity.Info" role="status" Class="playbook-updated">
+                    <div>@($"Huddle's default {label} Playbook changed after this Team customized it.")</div>
+                    @if (state.Diff is null)
+                    {
+                        <MudText Typo="Typo.caption">Huddle no longer has the earlier default, so it can't show what changed.</MudText>
+                    }
+                    <MudStack Row="true" Spacing="1" Class="mt-2">
+                        @if (state.Diff is not null)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.ToggleDiff(current))">Show changes</MudButton>
+                        }
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.KeepMyVersion(current))">Keep my version</MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.Reset(current))">Reset to default…</MudButton>
+                    </MudStack>
+                    @if (state.Diff is not null && this.diffShown.Contains(current))
+                    {
+                        <pre class="playbook-diff">@state.Diff</pre>
+                    }
+                </MudAlert>
+            }
+            @if (state.Status == PlaybookStatus.Unreadable)
+            {
+                <MudAlert Severity="Severity.Error" role="alert">@($"Huddle couldn't read {state.Path}. Agents get the Huddle default until it can be read.")</MudAlert>
+            }
+            @if (state.OverLimitLength > 0)
+            {
+                <MudAlert Severity="Severity.Warning" role="status">@OverLimitText(state.OverLimitLength)</MudAlert>
+            }
+            <div class="playbook-text library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(state.Text))</div>
+            @if (unknownBase)
+            {
+                <MudText Typo="Typo.caption" Class="playbook-unknown-base">Huddle can't tell which default this started from.</MudText>
+            }
+            <MudStack Row="true" Spacing="1" Class="playbook-actions">
+                @if (!ownFile)
+                {
+                    <MudTooltip Text="Turn on the Library to customize a Playbook." Disabled="@this.LibraryEnabled">
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" Disabled="@(!this.LibraryEnabled)"
+                                   OnClick="@(() => this.Customize(current))">Customize for this Team</MudButton>
+                    </MudTooltip>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.EditTheDefault(current))">Edit the default</MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.Edit(current))">Edit</MudButton>
+                    @if (unknownBase)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.KeepMyVersion(current))">Keep my version</MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.Reset(current))">Reset to default…</MudButton>
+                }
+            </MudStack>
+        </section>
+    }
+</section>
+
+@code {
+    private static readonly PlaybookKind[] Kinds = [PlaybookKind.Manager, PlaybookKind.Member];
+
+    private readonly Dictionary<PlaybookKind, PlaybookState> states = [];
+    private readonly HashSet<PlaybookKind> diffShown = [];
+
+    /// <summary>The Team whose Playbooks are shown.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    private bool LibraryEnabled => this.Options.Value.Library.Enabled;
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => this.Playbooks.Changed += this.OnStoreChanged;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Load();
+
+    /// <inheritdoc />
+    public void Dispose() => this.Playbooks.Changed -= this.OnStoreChanged;
+
+    private static string KindLabel(PlaybookKind kind) => kind == PlaybookKind.Manager ? "Manager" : "Member";
+
+    private static string RulesOf(PlaybookKind kind) =>
+        kind == PlaybookKind.Manager ? HuddleRules.RenderManager(HuddleRules.BareToolNames) : HuddleRules.RenderMember(HuddleRules.BareToolNames);
+
+    private string OverLimitText(int length) =>
+        string.Create(CultureInfo.InvariantCulture, $"This Playbook is {length:N0} characters. Agents read the first {this.Options.Value.Playbooks.MaxChars:N0}; shorten it.");
+
+    private void Load()
+    {
+        foreach (PlaybookKind kind in Kinds)
+        {
+            this.states[kind] = this.Playbooks.GetState(this.Team, kind);
+        }
+    }
+
+    private void OnStoreChanged() => _ = this.InvokeAsync(() =>
+    {
+        this.Load();
+        this.StateHasChanged();
+    });
+
+    private void ToggleDiff(PlaybookKind kind)
+    {
+        if (!this.diffShown.Remove(kind))
+        {
+            _ = this.diffShown.Add(kind);
+        }
+    }
+
+    private void OpenInLibrary(PlaybookKind kind)
+    {
+        if (this.Folders.FindTeam(this.Team).Value is { } folder)
+        {
+            string relative = $"{folder.RelativePath}/{PlaybookFile.FileName(kind == PlaybookKind.Manager)}";
+            this.Navigation.NavigateTo($"/library?root={Uri.EscapeDataString(folder.Root.Id)}&path={Uri.EscapeDataString(relative)}");
+        }
+    }
+
+    private void Edit(PlaybookKind kind) => this.OpenInLibrary(kind);
+
+    private void EditTheDefault(PlaybookKind kind)
+    {
+        string key = kind == PlaybookKind.Manager ? "systemPrompt.managerPlaybook" : "systemPrompt.memberPlaybook";
+        this.Navigation.NavigateTo($"/settings/prompts?highlight={Uri.EscapeDataString(key)}");
+    }
+
+    private async Task Customize(PlaybookKind kind)
+    {
+        _ = await this.Playbooks.CustomizeAsync(this.Team, kind, CancellationToken.None);
+        this.Load();
+        this.OpenInLibrary(kind);
+    }
+
+    private async Task KeepMyVersion(PlaybookKind kind)
+    {
+        await this.Playbooks.KeepMyVersionAsync(this.Team, kind, CancellationToken.None);
+        this.Load();
+    }
+
+    private async Task Reset(PlaybookKind kind)
+    {
+        string label = KindLabel(kind);
+        bool confirmed = await this.Dialogs.ConfirmAsync(
+            $"Reset the {label} Playbook of {this.Team}?",
+            $"This Team's own {label} Playbook is deleted, and its members read the Huddle default from their next Turn.",
+            "Reset",
+            danger: true);
+        if (!confirmed)
+        {
+            return;
+        }
+
+        await this.Playbooks.ResetAsync(this.Team, kind, CancellationToken.None);
+        this.Load();
+    }
+}

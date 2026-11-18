@@ -30,21 +30,25 @@ internal static class PromptFieldFactory
     private const int MinRows = 2;
     private const int MaxRows = 14;
 
+    // The two default Playbooks (Team Playbooks spec §7.5): a group of their own, Member then Manager, not part of "System prompt".
+    private static readonly string[] PlaybookKeys = ["systemPrompt.memberPlaybook", "systemPrompt.managerPlaybook"];
+
     // The display order and labels the Settings page's groups appear in. A key that matches no
     // prefix here contributes to no group, which cannot happen while PromptCatalog only ever adds
     // keys under one of these five areas.
-    private static readonly (string Prefix, string Label)[] GroupOrder =
+    private static readonly (Func<string, bool> Matches, string Label)[] GroupOrder =
     [
-        (SystemPromptPrefix, "System prompt"),
-        (TurnPrefix, "Turn"),
-        (RoomPrefix, "Team Room lines"),
-        (GetHelpPrefix, "Get help"),
-        (ToolPrefix, "Tool descriptions"),
-        (TaskPrefix, "Tasks"),
-        (PromptPrefix, "Cadence"),
-        (InstallSkillPackPrefix, "Skill Packs: install file"),
-        (SkillPromptPrefix, "Skill Packs: prompts you paste"),
-        (HelperPrefix, "Helpers"),
+        (static key => key.StartsWith(SystemPromptPrefix, StringComparison.Ordinal) && Array.IndexOf(PlaybookKeys, key) < 0, "System prompt"),
+        (static key => Array.IndexOf(PlaybookKeys, key) >= 0, "Playbooks"),
+        (static key => key.StartsWith(TurnPrefix, StringComparison.Ordinal), "Turn"),
+        (static key => key.StartsWith(RoomPrefix, StringComparison.Ordinal), "Team Room lines"),
+        (static key => key.StartsWith(GetHelpPrefix, StringComparison.Ordinal), "Get help"),
+        (static key => key.StartsWith(ToolPrefix, StringComparison.Ordinal), "Tool descriptions"),
+        (static key => key.StartsWith(TaskPrefix, StringComparison.Ordinal), "Tasks"),
+        (static key => key.StartsWith(PromptPrefix, StringComparison.Ordinal), "Cadence"),
+        (static key => key.StartsWith(InstallSkillPackPrefix, StringComparison.Ordinal), "Skill Packs: install file"),
+        (static key => key.StartsWith(SkillPromptPrefix, StringComparison.Ordinal), "Skill Packs: prompts you paste"),
+        (static key => key.StartsWith(HelperPrefix, StringComparison.Ordinal), "Helpers"),
     ];
 
     /// <summary>
@@ -66,13 +70,14 @@ internal static class PromptFieldFactory
 
         var groups = new List<PromptFieldGroup>();
 
-        foreach (var (prefix, label) in GroupOrder)
+        foreach (var (matches, label) in GroupOrder)
         {
             var fields = new List<PromptFieldState>();
 
-            foreach (var definition in PromptCatalog.All)
+            // A stable sort on the Playbook keys' position: it puts Member before Manager and leaves every other group in catalog order.
+            foreach (var definition in PromptCatalog.All.OrderBy(static definition => Array.IndexOf(PlaybookKeys, definition.Key)))
             {
-                if (definition.Key.StartsWith(prefix, StringComparison.Ordinal))
+                if (matches(definition.Key))
                 {
                     fields.Add(ToFieldState(definition, prompts, pendingEdits));
                 }

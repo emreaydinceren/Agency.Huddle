@@ -48,7 +48,94 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(219,PromptCatalog.All.Count);
+        Assert.Equal(228, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// Team Playbooks (spec §6.4): the three Turn notice Prompts of <c>PlaybooksTurnHook</c> exist with their label, Timing and placeholders
+    /// (count 224 to 227), and none names the tool prefix.
+    /// </summary>
+    [Theory]
+    [InlineData("turn.playbookHeader", "Playbooks changed: Turn notice header", PromptTiming.Live, "")]
+    [InlineData("turn.playbookChanged", "Playbook changed: Turn notice", PromptTiming.Live, "{{playbook}} {{text}}")]
+    [InlineData("turn.playbookGone", "Playbook gone: Turn notice", PromptTiming.Live, "{{playbook}}")]
+    public void PlaybookTurnPrompts_HaveTheirLabelTimingAndPlaceholders_AndCarryNoPrefix(string key, string label, PromptTiming timing, string placeholders)
+    {
+        ArgumentNullException.ThrowIfNull(placeholders);
+        PromptDefinition prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(label, prompt.Label);
+        Assert.Equal(timing, prompt.Timing);
+        Assert.Equal(placeholders.Split(' ', StringSplitOptions.RemoveEmptyEntries), prompt.Placeholders);
+        Assert.Equal(prompt.Placeholders, prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>The three Playbook Turn notices are the spec's text word for word (§6.4).</summary>
+    [Fact]
+    public void PlaybookTurnPrompts_DefaultsAreTheSpecText()
+    {
+        Assert.Equal("Your Playbooks changed since you last read them.", PromptCatalog.Get("turn.playbookHeader").Default);
+        Assert.Equal(
+            "The {{playbook}} changed. It applies from now on and replaces what you read before:\n\n{{text}}",
+            PromptCatalog.Get("turn.playbookChanged").Default.Replace("\r\n", "\n", StringComparison.Ordinal));
+        Assert.Equal("The {{playbook}} no longer applies to you.", PromptCatalog.Get("turn.playbookGone").Default);
+    }
+
+    /// <summary>
+    /// Team Playbooks (spec §4, §6.1, §6.3): the five new Prompts exist with their label, Timing and placeholders, and none names the tool
+    /// prefix. The frame is <c>Live</c> with no placeholders; the cut line takes the path of the file that holds the rest.
+    /// </summary>
+    [Theory]
+    [InlineData("systemPrompt.playbooks", "Playbooks", PromptTiming.Live, "")]
+    [InlineData("systemPrompt.memberPlaybook", "Member Playbook", PromptTiming.Live, "")]
+    [InlineData("systemPrompt.managerPlaybook", "Manager Playbook", PromptTiming.Live, "")]
+    [InlineData("systemPrompt.playbookCut", "Playbook cut", PromptTiming.Live, "{{path}}")]
+    [InlineData("systemPrompt.playbookCutNoFiles", "Playbook cut (no files)", PromptTiming.Live, "")]
+    public void PlaybookPrompts_HaveTheirLabelTimingAndPlaceholders_AndCarryNoPrefix(string key, string label, PromptTiming timing, string placeholders)
+    {
+        ArgumentNullException.ThrowIfNull(placeholders);
+        PromptDefinition prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(label, prompt.Label);
+        Assert.Equal(timing, prompt.Timing);
+        Assert.Equal(placeholders.Split(' ', StringSplitOptions.RemoveEmptyEntries), prompt.Placeholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>The Playbooks frame, the cut line and the no-files line are the spec's text word for word (§6.1, §6.3).</summary>
+    [Fact]
+    public void PlaybookPrompts_DefaultsAreTheSpecText()
+    {
+        Assert.Equal(
+            "Your Teams' Playbooks follow. They say how to work in a Team, whatever the work. The Huddle rules are enforced by Huddle. " +
+            "The Playbook text is the Human's; where a Team has its own, it replaces the default for that Team only.",
+            PromptCatalog.Get("systemPrompt.playbooks").Default);
+        Assert.Equal(
+            "The rest of this Playbook is in `{{path}}`; read it before you work on this Team's Tasks.",
+            PromptCatalog.Get("systemPrompt.playbookCut").Default);
+        Assert.Equal(
+            "The rest was cut; ask the Human to shorten this Playbook.",
+            PromptCatalog.Get("systemPrompt.playbookCutNoFiles").Default);
+    }
+
+    /// <summary>The two Playbook defaults open with their first heading and name no tool, only actions (spec §4, D-7).</summary>
+    [Fact]
+    public void PlaybookDefaults_StartWithTheirHeading_AndNameNoTool()
+    {
+        string member = PromptCatalog.Get("systemPrompt.memberPlaybook").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
+        string manager = PromptCatalog.Get("systemPrompt.managerPlaybook").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
+
+        Assert.StartsWith("## How to work on a Task\n\nWork in passes. Each pass is one loop:", member, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.StartsWith("## How to run the Team\n\nYou are also a member: the Member Playbook applies to you.", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.Contains("### Running a mission", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.Contains("Evidence. End the comment with a line `State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`.", member, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Name it on the last line of the comment, as `State: handed off`.", member, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Break the Task into child Tasks under it on your first pass, even when part of it waits on the Human.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("A Task that needs the Human's input is a child Task assigned to no one, or a question to the Human. It never stops the rest of the plan.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("End it with a `State:` line, as the Member Playbook says.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.DoesNotContain("{{", member, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", manager, StringComparison.Ordinal);
     }
 
     /// <summary>Goldfish tools (slice 3 step 2): each of the fifteen Prompts exists with the placeholders its text takes, and none names the tool prefix.</summary>
@@ -546,7 +633,7 @@ public sealed partial class PromptCatalogTests
     [InlineData("tool.triageRequest.description", "Triages a Request filed with your Team. Decision 'accept' moves it to To Do (optionally name the assignee); 'decline' rejects it and needs a reason; 'needs_info' keeps it in Backlog and needs a reason saying what is missing.")]
     [InlineData("tool.proposeSprint.description", "Proposes a Sprint to the Human: a name and the Tasks to put in it. Nothing is created until the Human approves, unless every Task runs inside the Team: then Huddle approves it at once and says so. Only the manager of the Team can propose, and every Task must belong to that Team and not be Done.")]
     [InlineData("tool.markRetroRow.description", "Marks a Done or Partial row of the Team's Retro register as Verified, Partial or Changed after checking it against later evidence. Verified needs evidence that links a Task id, a logs/... line (logs/...#L12) or a _retros/ file.")]
-    [InlineData("tool.proposeRetroChanges.description", "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.")]
+    [InlineData("tool.proposeRetroChanges.description", "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md, _member-playbook.md, _manager-playbook.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.")]
     public void ToolDescriptionPrompts_AreNextSessionWithTodaysDefault(string key, string expectedDefault)
     {
         var prompt = PromptCatalog.Get(key);

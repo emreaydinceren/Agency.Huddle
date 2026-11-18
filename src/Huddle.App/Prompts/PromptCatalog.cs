@@ -100,7 +100,70 @@ internal static class PromptCatalog
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
         ..BuildPart53(),
-        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(), ..BuildGoldfishToolParts(), ..BuildGoldfishRefusalParts(), ..BuildGoldfishDoneParts(),
+        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(), ..BuildGoldfishToolParts(), ..BuildGoldfishRefusalParts(), ..BuildGoldfishDoneParts(), ..BuildPlaybookParts(), ..BuildPlaybookTurnParts(),
+    ];
+
+    /// <summary>Builds the Team Playbooks Turn notices: the header, a changed Playbook and one that no longer applies (Team Playbooks spec §6.4).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPlaybookTurnParts() =>
+    [
+        new PromptDefinition(
+            Key: "turn.playbookHeader",
+            Label: "Playbooks changed: Turn notice header",
+            HelperText: "Opens a block telling an Agent that its Playbooks changed. Said once per block.",
+            Default: "Your Playbooks changed since you last read them.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.playbookChanged",
+            Label: "Playbook changed: Turn notice",
+            HelperText: "Tells an Agent a Playbook changed and gives its whole new text. {{playbook}} names the Playbook, {{text}} is its text.",
+            Default: "The {{playbook}} changed. It applies from now on and replaces what you read before:\n\n{{text}}",
+            Placeholders: ["{{playbook}}", "{{text}}"], RequiredPlaceholders: ["{{playbook}}", "{{text}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.playbookGone",
+            Label: "Playbook gone: Turn notice",
+            HelperText: "Tells an Agent a Playbook no longer applies to it. {{playbook}} names the Playbook.",
+            Default: "The {{playbook}} no longer applies to you.",
+            Placeholders: ["{{playbook}}"], RequiredPlaceholders: ["{{playbook}}"], Timing: PromptTiming.Live),
+    ];
+
+    /// <summary>Builds the Team Playbooks frame and the two cut lines; the default Playbook texts are overlay files (Team Playbooks spec §4, §6.1, §6.3).</summary>
+    /// <returns>The prompt definitions of the Playbook slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPlaybookParts() =>
+    [
+        new PromptDefinition(
+            Key: "systemPrompt.playbooks",
+            Label: "Playbooks",
+            HelperText:
+                "Said once before the Huddle rules and the Playbooks in the system prompt. Takes no placeholders. Left out for an " +
+                "Agent in no Team.",
+            Default:
+                "Your Teams' Playbooks follow. They say how to work in a Team, whatever the work. The Huddle rules are enforced by Huddle. " +
+                "The Playbook text is the Human's; where a Team has its own, it replaces the default for that Team only.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+        new PromptDefinition(
+            Key: "systemPrompt.playbookCut",
+            Label: "Playbook cut",
+            HelperText:
+                "Follows a Playbook that was cut at Team:Playbooks:MaxChars, or dropped for Team:Playbooks:MaxTotalChars. Must keep " +
+                "{{path}}: it says where the rest is.",
+            Default: "The rest of this Playbook is in `{{path}}`; read it before you work on this Team's Tasks.",
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+        new PromptDefinition(
+            Key: "systemPrompt.playbookCutNoFiles",
+            Label: "Playbook cut (no files)",
+            HelperText:
+                "Follows a Playbook that was cut when the Adapter has no file tools, so there is no file to point at. Takes no placeholders.",
+            Default: "The rest was cut; ask the Human to shorten this Playbook.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds the goldfish closing prompt, which keeps <see cref="BuildAll"/> within the method length limit.</summary>
@@ -1618,7 +1681,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
+                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md, _member-playbook.md, _manager-playbook.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2603,6 +2666,17 @@ internal static class PromptCatalog
                 "The reason logged when an Agent's tool call that edits, deletes or moves an AGENTS.md " +
                 "file is refused (Second Brain §6.6).",
             Default: "AGENTS.md is the Human's file. Propose a change in a retrospective instead.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.teamFileRefusal",
+            Label: "Team file write refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that edits, writes, deletes or moves a Team's Playbook file " +
+                "is refused (Team Playbooks §7.6).",
+            Default: "This file is the Human's. Propose a change in a retro, or ask the Human.",
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),

@@ -6,6 +6,8 @@ tools: [list_teams, file_request, triage_request, propose_sprint]
 
 # Team management
 
+How to manage, from triage to running a mission, is in your Manager Playbook; this Skill covers the tools.
+
 This Skill is for the manager of a Team. It covers working with other Teams,
 answering the questions they send you, and the planning steps that need the
 Human's say-so.

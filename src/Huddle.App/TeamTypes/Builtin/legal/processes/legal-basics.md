@@ -1,6 +1,6 @@
 ---
 title: 'Legal basics'
-template: 'legal-basics@1.0.0'
+template: 'legal-basics@1.1.0'
 gates: ['qa-evidence-before-done']
 retro: { every: 14, unit: 'days' }
 ---
@@ -22,8 +22,6 @@ This Team reads the contracts, leases, policies, notices and terms the Human has
 2. **In progress**: the Legal Drafter drafts the text, or the Policy Researcher summarises the rules, each point with its source. Done when the draft is attached to the Task.
 3. **Verify**: the Contract Reviewer flags the clauses in the draft or the document, then the Compliance Lead checks every flag against its source, adds the questions for a lawyer and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 
@@ -56,7 +54,6 @@ A draft that the Definition of Done reviews is a file, not text in the Task: its
 ## Escalation
 
 - A signing deadline, a notice period about to run out, or a clause that needs a judgement goes to the Human at once.
-- A disagreement between agents goes to the Human with both views written on the Task.
 
 ## Onboarding
 
