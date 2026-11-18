@@ -1,9 +1,11 @@
 @* <summary>
      The Adapter, Model and Effort selects as one control, with the cascade rules of ADR-0015 and rules.md in one place:
-     changing the Adapter clears Model and Effort and says so in a role="status" note; changing the Model clears Effort the
-     same way; a select whose catalog is being probed is Disabled (not ReadOnly) with a progress bar under it; and
-     StateHasChanged() runs between the two probes so the Model list repaints before the Effort list arrives (issue #39).
-     Each catalog is read by IModelCatalog, which spawns an adapter process only on a miss and never sends a prompt.
+     changing the Adapter clears Model and Effort (and Work mode) and says so in a role="status" note; changing the Model clears
+     Effort the same way; a select whose catalog is being probed is a ProbedSelect, Disabled (not ReadOnly) with a progress bar
+     under it; and StateHasChanged() runs between the two probes so the Model list repaints before the Effort list arrives
+     (issue #39). Each catalog is read by IModelCatalog, which spawns an adapter process only on a miss and never sends a
+     prompt. The Helper card uses it as it is; the Agent card adds the Work mode select (ADR-0033) and the caption under the
+     row. It speaks in values: it raises what it holds, and the caller decides what is saved and when.
    </summary> *@
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
@@ -11,12 +13,12 @@
 @inject AdapterCatalog Adapters
 
 @* Configuration, not a probe: AdapterCatalog is read synchronously. Shown only when there is a choice to make, so a stock
-   installation with one Adapter looks like it always did (Spec §12, E-2). *@
+   installation with one Adapter looks like it always did (Spec §4 P6, §12 E-2; Q-A4-1). *@
 @if (this.AdapterChoices.Count > 1)
 {
     <SelectField T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
                Disabled="@this.Disabled"
-               HelperText="@this.AdapterHelperText" Class="mb-3">
+               HelperText="@(this.AdapterHelperText ?? this.OwnAdapterHelperText)" Class="mb-3">
         <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
         @foreach (AdapterProfile choice in this.AdapterChoices)
         {
@@ -32,38 +34,60 @@
     </Notice>
 }
 
-<div class="agent-profile-card-row mb-1">
+@* UX-E15: Model, Effort and Work mode are one row of equal selects. No title tooltips on Model and Effort: they said what the
+   label says (Q-A4-2). Work mode keeps its title, because it carries the chosen mode's own description, which nothing else shows. *@
+<div class="agent-profile-card-row agent-profile-card-model-row mb-1">
     <div class="agent-profile-card-cell">
-        <SelectField T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
-                   Disabled="@(this.Disabled || this.modelsLoading)" aria-busy="@(this.modelsLoading ? "true" : null)" Class="@(this.modelsLoading ? "agent-profile-card-probing" : null)">
-            <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+        <ProbedSelect Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
+                      Disabled="@this.Disabled" Probing="@this.modelsLoading" ProbeLabel="Reading the models this adapter offers">
+            <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
             @foreach (AgentModelOption choice in this.ModelChoices)
             {
                 <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
             }
-        </SelectField>
-        @if (this.modelsLoading)
-        {
-            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the models this adapter offers" />
-        }
+        </ProbedSelect>
     </div>
 
+    @* Waits on effortsLoading, not modelsLoading: the two catalogs are probed by two adapter spawns and land at different
+       moments, so each select waits only on the list it offers. *@
     <div class="agent-profile-card-cell">
-        <SelectField T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
-                   Disabled="@(this.Disabled || this.effortsLoading)" aria-busy="@(this.effortsLoading ? "true" : null)" Class="@(this.effortsLoading ? "agent-profile-card-probing" : null)">
-            <MudSelectItem T="string" Value="@string.Empty">@DefaultOptionText</MudSelectItem>
+        <ProbedSelect Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
+                      Disabled="@this.Disabled" Probing="@this.effortsLoading" ProbeLabel="Reading the effort levels this model offers">
+            <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
             @foreach (AgentEffortOption choice in this.EffortChoices)
             {
                 <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
             }
-        </SelectField>
-        @if (this.effortsLoading)
-        {
-            <MudProgressLinear Indeterminate="true" Size="Size.Small" Class="agent-profile-card-probe" aria-label="Reading the effort levels this model offers" />
-        }
+        </ProbedSelect>
     </div>
+
+    @* Work mode: how much the Agent may do before it must ask (ADR-0033), offered from the Adapter's own list. Hidden when the
+       Adapter advertises none and nothing is stored: a picker with only a blank option is a control nobody can use, but a
+       stored value keeps it so the Human can still see and clear it. The same probe answers this and Effort, so it waits on
+       effortsLoading. ToStringFunc shows the mode's name rather than its id (an id such as "acceptEdits" is for the wire). *@
+    @if (this.ShowWorkMode)
+    {
+        <div class="agent-profile-card-cell">
+            <ProbedSelect Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChangedAsync"
+                          Disabled="@this.Disabled" Probing="@this.effortsLoading" ProbeLabel="Reading the work modes this adapter offers"
+                          ToStringFunc="@this.WorkModeLabel" title="@this.WorkModeTitle">
+                <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
+                @foreach (AgentModeOption choice in this.WorkModeChoices)
+                {
+                    <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+                }
+            </ProbedSelect>
+        </div>
+    }
 </div>
 
+@* One shared line under the row (UX-E15): per-select helper text wrapped to 4-5 lines in the narrow columns. *@
+@if (this.Caption is not null)
+{
+    <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary agent-profile-card-row-helper">@this.CaptionText</MudText>
+}
+
+@* Deliberate, and asserted by PERSONALIFECYCLE-29: the note exists only because the reset used to happen invisibly (issue #45). *@
 @if (this.effortReset)
 {
     <Notice Severity="NoticeLevel.Info">
@@ -71,22 +95,30 @@
     </Notice>
 }
 
-@code {
-    /// <summary>The blank option of the Model and Effort selects.</summary>
-    private const string DefaultOptionText = "Adapter default";
+@* ADR-0033: its own note rather than a third clause in the Model and Effort one, so the text those tests pin does not move. *@
+@if (this.workModeReset)
+{
+    <Notice Severity="NoticeLevel.Info">
+        Changing the adapter reset Work mode to its default. Each adapter advertises its own modes, so a mode chosen for the previous adapter does not carry across — pick one again if you want a specific mode.
+    </Notice>
+}
 
+@code {
     private IReadOnlyList<AgentModelOption> availableModels = [];
     private IReadOnlyList<AgentEffortOption> availableEfforts = [];
+    private IReadOnlyList<AgentModeOption> availableWorkModes = [];
     private bool modelsLoading;
     private bool effortsLoading;
     private int modelProbeGeneration;
     private int effortProbeGeneration;
     private bool adapterReset;
     private bool effortReset;
+    private bool workModeReset;
     private bool loadedOnce;
     private string? adapter;
     private string? model;
     private string? effort;
+    private string? workMode;
 
     /// <summary>The Adapter id, or <see langword="null"/> for the default Adapter. A change made from outside (a Reset to defaults) is adopted and re-probed.</summary>
     [Parameter]
@@ -100,13 +132,40 @@
     [Parameter]
     public string? Effort { get; set; }
 
+    /// <summary>Whether the Work mode select is offered (the Agent card); the Work modes are then read with the Efforts.</summary>
+    [Parameter]
+    public bool OfferWorkMode { get; set; }
+
+    /// <summary>The Work mode id, or <see langword="null"/> for the Adapter's own. Read only when <see cref="OfferWorkMode"/> is set.</summary>
+    [Parameter]
+    public string? WorkMode { get; set; }
+
     /// <summary>Whether every select is disabled, as for a card whose Helper cannot run.</summary>
     [Parameter]
     public bool Disabled { get; set; }
 
-    /// <summary>Raised after each choice, with the three values as they now stand (a cascade clears the ones after it).</summary>
+    /// <summary>The blank option of the Model, Effort and Work mode selects; short enough to read in full in a one-third column.</summary>
     [Parameter]
-    public EventCallback<(string? Adapter, string? Model, string? Effort)> SelectionChanged { get; set; }
+    public string DefaultOptionText { get; set; } = "Adapter default";
+
+    /// <summary>
+    /// The Adapter select's helper text, when the caller's wording differs from the picker's own. An Agent on an unconfigured
+    /// Adapter falls back to the default one, while a Helper's call fails, so each caller says what is true for it.
+    /// </summary>
+    [Parameter]
+    public string? AdapterHelperText { get; set; }
+
+    /// <summary>The one line under the row, such as a restart note; while a probe is out it says what is being read. Left out, no line.</summary>
+    [Parameter]
+    public string? Caption { get; set; }
+
+    /// <summary>Raised after each choice with every value as it now stands (a cascade clears the ones after it).</summary>
+    [Parameter]
+    public EventCallback<AdapterModelEffortChoice> SelectionChanged { get; set; }
+
+    /// <summary>Raised after each probe that is still current, with the lists the Adapter offers.</summary>
+    [Parameter]
+    public EventCallback<AdapterModelEffortOptions> OptionsRead { get; set; }
 
     /// <inheritdoc/>
     protected override async Task OnParametersSetAsync()
@@ -116,6 +175,8 @@
             || !string.Equals(this.effort, this.Effort, StringComparison.Ordinal);
         if (this.loadedOnce && !outside)
         {
+            // A Work mode set from outside needs no probe: its list belongs to the Adapter and Model, which have not moved.
+            this.workMode = this.WorkMode;
             return;
         }
 
@@ -123,12 +184,11 @@
         this.adapter = this.Adapter;
         this.model = this.Model;
         this.effort = this.Effort;
+        this.workMode = this.WorkMode;
         this.adapterReset = false;
         this.effortReset = false;
-        await this.LoadModelsAsync();
-        Task efforts = this.LoadEffortsAsync();
-        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
-        await efforts;
+        this.workModeReset = false;
+        await this.ProbeBothAsync();
     }
 
     /// <summary>The configured Adapters, plus the stored id when it names one that is no longer configured, so the select shows what the file says rather than silently resetting it.</summary>
@@ -147,13 +207,27 @@
     }
 
     /// <summary>
-    /// The Adapter select's helper text. A stored Adapter that is not configured runs nothing: <c>HelperRunner</c> fails the call
+    /// The Adapter select's own helper text. A stored Adapter that is not configured runs nothing: <c>HelperRunner</c> fails the call
     /// rather than falling back to the default Adapter, so the text must not promise a fallback.
     /// </summary>
-    private string AdapterHelperText =>
+    private string OwnAdapterHelperText =>
         this.adapter is not null && this.Adapters.Find(this.adapter) is null
             ? $"The adapter '{this.adapter}' is not configured, so nothing runs until you pick another."
             : "Which agent runs this. Changing it clears Model and Effort.";
+
+    /// <summary>The line under the row: what is being read while a probe is out, otherwise the caller's <see cref="Caption"/>.</summary>
+    private string? CaptionText
+    {
+        get
+        {
+            if (this.modelsLoading)
+            {
+                return "Reading the models this adapter offers...";
+            }
+
+            return this.effortsLoading ? "Reading the effort levels this model offers..." : this.Caption;
+        }
+    }
 
     /// <summary>The probed Models, plus the stored one when the probe failed or no longer lists it.</summary>
     private IReadOnlyList<AgentModelOption> ModelChoices =>
@@ -167,18 +241,58 @@
             ? this.availableEfforts
             : [new AgentEffortOption(this.effort, this.effort, null), .. this.availableEfforts];
 
+    /// <summary>
+    /// Whether the Work mode select is shown: only when offered, and then while the probe is out (an unread list is not an empty
+    /// one), when the Adapter advertises a mode, or when one is stored.
+    /// </summary>
+    private bool ShowWorkMode =>
+        this.OfferWorkMode && (this.effortsLoading || this.availableWorkModes.Count > 0 || this.workMode is not null);
+
+    /// <summary>The advertised Work modes, plus the stored one when the Adapter no longer lists it (an upgrade, a failed probe).</summary>
+    private IReadOnlyList<AgentModeOption> WorkModeChoices =>
+        this.workMode is null || this.availableWorkModes.Any(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal))
+            ? this.availableWorkModes
+            : [new AgentModeOption(this.workMode, this.workMode, null), .. this.availableWorkModes];
+
+    /// <summary>The selected mode's own description, because the names alone ("Auto", "Plan") do not say what they permit.</summary>
+    private string WorkModeTitle
+    {
+        get
+        {
+            string? description = this.availableWorkModes
+                .FirstOrDefault(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal))?.Description;
+
+            return description is { Length: > 0 }
+                ? $"{description}."
+                : "How much this agent may do before it must ask.";
+        }
+    }
+
+    /// <summary>The name to show for a mode id: the Adapter's own name for it when it is advertised, otherwise the id itself.</summary>
+    /// <param name="id">The mode id, or blank for the Adapter's own mode.</param>
+    private string? WorkModeLabel(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return string.Empty;
+        }
+
+        return this.availableWorkModes.FirstOrDefault(mode => string.Equals(mode.Id, id, StringComparison.Ordinal))?.Name ?? id;
+    }
+
     private async Task OnAdapterChangedAsync(string value)
     {
         this.adapter = string.IsNullOrWhiteSpace(value) ? null : value;
         this.adapterReset = this.model is not null || this.effort is not null;
+
+        // A mode chosen for one Adapter means nothing against another's list (ADR-0033, extending ADR-0015).
+        this.workModeReset = this.workMode is not null;
         this.model = null;
         this.effort = null;
+        this.workMode = null;
         this.effortReset = false;
         await this.RaiseAsync();
-        await this.LoadModelsAsync();
-        Task efforts = this.LoadEffortsAsync();
-        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
-        await efforts;
+        await this.ProbeBothAsync();
     }
 
     private async Task OnModelChangedAsync(string value)
@@ -198,10 +312,33 @@
         this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
         this.effortReset = false;
         this.adapterReset = false;
+        this.workModeReset = false;
         await this.RaiseAsync();
     }
 
-    private Task RaiseAsync() => this.SelectionChanged.InvokeAsync((this.adapter, this.model, this.effort));
+    private async Task OnWorkModeChangedAsync(string value)
+    {
+        this.workMode = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.workModeReset = false;
+        await this.RaiseAsync();
+    }
+
+    private Task RaiseAsync() => this.SelectionChanged.InvokeAsync(new AdapterModelEffortChoice(this.adapter, this.model, this.effort, this.workMode));
+
+    private Task RaiseOptionsAsync() => this.OptionsRead.InvokeAsync(new AdapterModelEffortOptions(this.availableModels, this.availableEfforts, this.availableWorkModes));
+
+    /// <summary>
+    /// Reads the Models, then the Efforts. Started before the repaint and awaited after it, deliberately: LoadEffortsAsync sets
+    /// effortsLoading on its way in, so the repaint between them shows the Model list and "Reading the effort levels…" rather
+    /// than claim that the model offers no effort choice (issue #39).
+    /// </summary>
+    private async Task ProbeBothAsync()
+    {
+        await this.LoadModelsAsync();
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
+        await efforts;
+    }
 
     // Guards a superseded probe: changing the Adapter twice quickly starts two, and the slower answer for the abandoned Adapter must not
     // overwrite the faster one for the Adapter actually selected (Spec §12, E-4).
@@ -209,12 +346,14 @@
     {
         int generation = ++this.modelProbeGeneration;
         this.modelsLoading = true;
+        bool current = false;
         try
         {
             IReadOnlyList<AgentModelOption> models = await this.ModelCatalog.GetAsync(this.adapter, CancellationToken.None);
             if (generation == this.modelProbeGeneration)
             {
                 this.availableModels = models;
+                current = true;
             }
         }
         finally
@@ -224,19 +363,31 @@
                 this.modelsLoading = false;
             }
         }
+
+        if (current)
+        {
+            await this.RaiseOptionsAsync();
+        }
     }
 
-    // The effort catalog is per model, so it is read on every Model change as well as on open.
+    // The effort catalog is per model, so it is read on every Model change as well as on open. The Work modes come from the same
+    // throwaway session (the second call is a cache hit), so one generation and one loading flag cover both.
     private async Task LoadEffortsAsync()
     {
         int generation = ++this.effortProbeGeneration;
         this.effortsLoading = true;
+        bool current = false;
         try
         {
             IReadOnlyList<AgentEffortOption> efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.adapter, this.model, CancellationToken.None);
+            IReadOnlyList<AgentModeOption> workModes = this.OfferWorkMode
+                ? await this.ModelCatalog.GetWorkModesAsync(this.adapter, this.model, CancellationToken.None)
+                : [];
             if (generation == this.effortProbeGeneration)
             {
                 this.availableEfforts = efforts;
+                this.availableWorkModes = workModes;
+                current = true;
             }
         }
         finally
@@ -245,6 +396,11 @@
             {
                 this.effortsLoading = false;
             }
+        }
+
+        if (current)
+        {
+            await this.RaiseOptionsAsync();
         }
     }
 }

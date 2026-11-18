@@ -195,7 +195,7 @@ public sealed class AgentProfileCardModelEffortTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New agent");
 
-        Assert.Equal("Reading the models this agent offers...", cut.Find(".agent-profile-card-row-helper").TextContent.Trim());
+        Assert.Equal("Reading the models this adapter offers...", cut.Find(".agent-profile-card-row-helper").TextContent.Trim());
     }
 
     [Fact]

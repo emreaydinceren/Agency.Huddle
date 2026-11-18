@@ -13,6 +13,15 @@
         @this.ChildContent
     </MudSelect>
 }
+else if (this.ToStringFunc is not null)
+{
+    <MudSelect T="T" Value="@this.Value" ValueChanged="this.ValueChanged" ToStringFunc="@this.ToStringFunc"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="@this.DenseItems" Label="@this.Label" HelperText="@this.HelperText"
+               Disabled="@this.Disabled" Error="@this.Error" ErrorText="@this.ErrorText" Class="@this.CssClass"
+               UserAttributes="@FieldAttributes.Merge(this.UserAttributes, this.AriaLabel)">
+        @this.ChildContent
+    </MudSelect>
+}
 else
 {
     <MudSelect T="T" Value="@this.Value" ValueChanged="this.ValueChanged"
@@ -75,6 +84,13 @@ else
     /// <summary>True in a toolbar: the 28 px box with 13 px text, level with the buttons and chips beside it.</summary>
     [Parameter]
     public bool Compact { get; set; }
+
+    /// <summary>
+    /// The text the closed select shows for a value, when it is not the value itself (a Work mode's name for its id). Left
+    /// out, the select is rendered without one, so MudBlazor's own default text is untouched.
+    /// </summary>
+    [Parameter]
+    public Func<T?, string?>? ToStringFunc { get; set; }
 
     /// <summary>Whether the open list uses compact rows, for a long list of short names.</summary>
     [Parameter]

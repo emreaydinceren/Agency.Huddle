@@ -45,28 +45,33 @@ public sealed partial class R3OpenItemsTests
     public void AgentProfileCard_ModelRow_HasOneSharedHelperAndAShortDefault()
     {
         string card = ReadSource("src", "Huddle.App", "Components", "Shared", "AgentProfileCard.razor");
-        int start = card.IndexOf("agent-profile-card-model-row", StringComparison.Ordinal);
-        int end = card.IndexOf("agent-profile-card-row-helper", StringComparison.Ordinal);
-        string row = card[start..end];
+        string picker = ReadSource("src", "Huddle.App", "Components", "Shared", "AdapterModelEffortPicker.razor");
+        int start = picker.IndexOf("agent-profile-card-model-row", StringComparison.Ordinal);
+        int end = picker.IndexOf("agent-profile-card-row-helper", StringComparison.Ordinal);
+        string row = picker[start..end];
 
         Assert.True(end > start);
         Assert.DoesNotContain("HelperText=", row, StringComparison.Ordinal);
-        Assert.Equal(3, Regex.Count(row, "@DefaultOptionText", RegexOptions.CultureInvariant));
+        Assert.Equal(3, Regex.Count(row, "@this.DefaultOptionText", RegexOptions.CultureInvariant));
         Assert.Contains("DefaultOptionText = \"Agent default\"", card, StringComparison.Ordinal); // contains-ok: component source text
+        Assert.Contains("DefaultOptionText=\"@DefaultOptionText\"", card, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("Changing any of these restarts the agent, which clears what it remembers.", card, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("HelperText=\"Shown beside the name.\"", card, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("HelperText=\"For @@mentions.\"", card, StringComparison.Ordinal); // contains-ok: component source text
     }
 
-    /// <summary>UX-E15: the row container is a flex row whose cells share the width, and the card puts Model, Effort and Work mode in it.</summary>
+    /// <summary>UX-E15: the row container is a flex row whose cells share the width, and the picker the card uses puts Model, Effort and Work mode in it.</summary>
     [Fact]
     public void AgentProfileCard_ModelEffortWorkModeAreOneRow()
     {
         string card = ReadSource("src", "Huddle.App", "Components", "Shared", "AgentProfileCard.razor");
+        string picker = ReadSource("src", "Huddle.App", "Components", "Shared", "AdapterModelEffortPicker.razor");
         string css = Whitespace().Replace(CssText.AppCss(CssNewlines.AsIs), " ");
-        int row = card.IndexOf("agent-profile-card-model-row", StringComparison.Ordinal);
-        string rowTail = card[row..];
-        string rowBody = rowTail[..rowTail.IndexOf("The reset below is deliberate", StringComparison.Ordinal)];
+        int row = picker.IndexOf("agent-profile-card-model-row", StringComparison.Ordinal);
+        string rowTail = picker[row..];
+        string rowBody = rowTail[..rowTail.IndexOf("agent-profile-card-row-helper", StringComparison.Ordinal)];
+
+        Assert.Contains("OfferWorkMode=\"true\"", card, StringComparison.Ordinal); // contains-ok: component source text
 
         Assert.Contains("Label=\"Model\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text
         Assert.Contains("Label=\"Effort\"", rowBody, StringComparison.Ordinal); // contains-ok: component source text

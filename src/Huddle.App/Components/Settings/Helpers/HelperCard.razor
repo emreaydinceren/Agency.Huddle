@@ -204,7 +204,7 @@
 
     private void OnCapChanged(int value) => this.dailyCap = Math.Max(1, value);
 
-    private void OnSelectionChanged((string? Adapter, string? Model, string? Effort) selection)
+    private void OnSelectionChanged(AdapterModelEffortChoice selection)
     {
         this.adapter = selection.Adapter;
         this.model = selection.Model;
