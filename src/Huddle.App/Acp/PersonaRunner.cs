@@ -727,8 +727,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             await this.OnGoldfishBeginAsync(begin, ct).ConfigureAwait(false);
         }
-        else if (this.pool is { GoldfishRoomId: not null } endPool)
+        else if (message is GoldfishEnd end && this.pool is { } endPool && string.Equals(endPool.GoldfishPossessionId, end.PossessionId, StringComparison.Ordinal))
         {
+            // Only the open slot's own possession closes it: an End for a Begin this runner refused must leave the slot alone.
             await endPool.CloseGoldfishAsync().ConfigureAwait(false);
         }
     }
@@ -937,7 +938,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
 
         // A Message already queued or running here sends nothing: its own Turn acks it (spec 5.8), and a Held would park its row.
-        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id, posted.Redelivery is not null) == true)
+        if (this.pool?.SessionFor(posted.RoomId)?.HasMessage(posted.Message.Id, posted.Redelivery is not null) == true
+            || this.pool?.GoldfishHasMessage(posted.RoomId, posted.Message.Id, resent: true) == true)
         {
             return true;
         }
@@ -1004,6 +1006,15 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // is an ordinary Message.
         if (this.TryRouteToGoldfish(posted))
         {
+            return;
+        }
+
+        // A Message that is not owed to the goldfish (a followed Room's, say) starts no warm Turn while the Agent is possessed there:
+        // it is read as context and waits in the Catch-up for the Agent's return.
+        if (string.Equals(this.pool?.GoldfishRoomId, posted.RoomId, StringComparison.Ordinal) && !(posted.Mentioned || posted.Members.Count == 2))
+        {
+            this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
+            this.ReportDeclined(posted);
             return;
         }
 

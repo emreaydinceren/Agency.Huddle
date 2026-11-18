@@ -1143,7 +1143,7 @@ internal sealed class TaskService : IDisposable
             Title = draft.Title,
             Status = draft.Status,
             Priority = draft.Priority,
-            Creator = actor.Name,
+            Creator = GoldfishStamp.AgentName(actor.Name),
             Assignee = assignee,
             OriginRoomId = draft.OriginRoomId,
             Parent = draft.Parent,

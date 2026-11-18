@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Teams;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Options;
@@ -299,8 +300,10 @@ internal sealed class FeedStore
     {
         if (agent is not null)
         {
-            _ = sql.Append(" AND actor = $agent COLLATE NOCASE");
+            // A goldfish's rows carry the stamped name; both are the one Agent's.
+            _ = sql.Append(" AND (actor = $agent COLLATE NOCASE OR actor = $stamped COLLATE NOCASE)");
             _ = command.Parameters.AddWithValue("$agent", agent);
+            _ = command.Parameters.AddWithValue("$stamped", GoldfishStamp.Apply(agent));
         }
 
         if (team is not null)

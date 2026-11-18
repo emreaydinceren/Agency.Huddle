@@ -49,6 +49,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     // sweep never see it. Guarded by poolLock.
     private RoomSession? goldfish;
     private string? goldfishRoomId;
+    private string? goldfishPossessionId;
 
     // The goldfish session's own run token, linked to runToken: a session ends only when its run token is cancelled, so
     // closing the slot while the app runs cancels this one.
@@ -265,6 +266,34 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         }
     }
 
+    /// <summary>The possession the goldfish session serves, or <see langword="null"/> when the slot is empty.</summary>
+    internal string? GoldfishPossessionId
+    {
+        get
+        {
+            lock (this.poolLock)
+            {
+                return this.goldfishPossessionId;
+            }
+        }
+    }
+
+    /// <summary>Whether the goldfish session serves <paramref name="roomId"/> and already holds a Turn for the Message, queued, running or (when re-sent) ended.</summary>
+    /// <param name="roomId">The Room the Message was posted in.</param>
+    /// <param name="messageId">The Message id.</param>
+    /// <param name="resent"><see langword="true"/> for a delivery the server sends again.</param>
+    /// <returns><see langword="true"/> when the goldfish already holds it.</returns>
+    internal bool GoldfishHasMessage(string roomId, string messageId, bool resent)
+    {
+        RoomSession? session;
+        lock (this.poolLock)
+        {
+            session = string.Equals(this.goldfishRoomId, roomId, StringComparison.Ordinal) ? this.goldfish : null;
+        }
+
+        return session?.HasMessage(messageId, resent) == true;
+    }
+
     /// <summary>Opens the goldfish slot: a clean session that opens through <see cref="IPersonaHost.OpenCleanAsync"/> and shares this pool's Turn gate.</summary>
     /// <param name="roomId">The Room the possession lives in.</param>
     /// <param name="spec">What the clean session is opened for.</param>
@@ -293,6 +322,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             this.goldfishCts = cts;
             this.goldfish = session;
             this.goldfishRoomId = roomId;
+            this.goldfishPossessionId = spec.PossessionId;
             return session;
         }
     }
@@ -341,6 +371,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             this.goldfish = null;
             this.goldfishCts = null;
             this.goldfishRoomId = null;
+            this.goldfishPossessionId = null;
             this.goldfishClosing = done.Task;
         }
 
