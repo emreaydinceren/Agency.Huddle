@@ -51,10 +51,9 @@ internal sealed class GoldfishSupervisor(
     /// <inheritdoc />
     public void Dispose()
     {
-        foreach (SemaphoreSlim gate in this.locks.Values)
-        {
-            gate.Dispose();
-        }
+        // The per-possession semaphores are deliberately not disposed: they hold no unmanaged handle (nothing touches
+        // AvailableWaitHandle), and a call still holding one would throw on release if it were disposed under it.
+        this.locks.Clear();
     }
 
     /// <summary>Returns a possession: claims the exit, tells the runner, posts the result, posts the return row, closes the row.</summary>
@@ -82,16 +81,33 @@ internal sealed class GoldfishSupervisor(
                 return false;
             }
 
-            await this.TellRunnerAsync(row, exit, ct).ConfigureAwait(false);
-            await this.PostResultAsync(row, ct).ConfigureAwait(false);
-            await this.PostReturnRowAsync(row, exit, by, ct).ConfigureAwait(false);
-            store.End(possessionId, this.clock.GetUtcNow());
-            return true;
+            return await this.ReturnClaimedAsync(row, exit, by, ct).ConfigureAwait(false);
         }
         finally
         {
             _ = gate.Release();
         }
+    }
+
+    /// <summary>Runs the steps after the claim. The row ends even when a step fails; on cancellation it stays Returning, and the start-up pass ends it Restarted.</summary>
+    private async Task<bool> ReturnClaimedAsync(Possession row, GoldfishExit exit, string? by, CancellationToken ct)
+    {
+        try
+        {
+            await this.TellRunnerAsync(row, exit, ct).ConfigureAwait(false);
+            await this.PostResultAsync(row, ct).ConfigureAwait(false);
+            await this.PostReturnRowAsync(row, exit, by, ct).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (!ct.IsCancellationRequested)
+            {
+                store.End(row.Id, this.clock.GetUtcNow());
+                _ = this.locks.TryRemove(row.Id, out _);
+            }
+        }
+
+        return true;
     }
 
     /// <summary>A turn ended: when the Agent is not done, a Starting or Working possession waits. Nothing is sent.</summary>
@@ -102,9 +118,9 @@ internal sealed class GoldfishSupervisor(
     public Task OnTurnEndedAsync(string possessionId, bool done, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (!done && store.Get(possessionId) is { State: PossessionState.Starting or PossessionState.Working })
+        if (!done)
         {
-            store.SetState(possessionId, PossessionState.Waiting);
+            _ = store.SetState(possessionId, PossessionState.Waiting, PossessionState.Starting, PossessionState.Working);
         }
 
         return Task.CompletedTask;
@@ -118,9 +134,9 @@ internal sealed class GoldfishSupervisor(
     public Task OnMentionAsync(string agentId, string roomId, CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
-        if (this.FindOpen(agentId) is { State: PossessionState.Waiting } waiting && string.Equals(waiting.RoomId, roomId, StringComparison.Ordinal))
+        if (this.FindOpen(agentId) is { } open && string.Equals(open.RoomId, roomId, StringComparison.Ordinal))
         {
-            store.SetState(waiting.Id, PossessionState.Working);
+            _ = store.SetState(open.Id, PossessionState.Working, PossessionState.Waiting);
         }
 
         return Task.CompletedTask;
@@ -180,7 +196,7 @@ internal sealed class GoldfishSupervisor(
             ChatMessage result = await chat.PostAsHuddleQuietAsync(row.RoomId, GoldfishLine.ResultText(row.Brief, null, null, false), ct).ConfigureAwait(false);
             store.SetResultMessage(row.Id, result.Id);
         }
-        catch (ChatException ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "The result of possession {PossessionId} could not be posted to Room {RoomId}.", row.Id, row.RoomId);
         }
@@ -196,7 +212,7 @@ internal sealed class GoldfishSupervisor(
             string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null);
             _ = await chat.PostAsHuddleAsync(row.RoomId, text, ct).ConfigureAwait(false);
         }
-        catch (ChatException ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "The return row of possession {PossessionId} could not be posted to Room {RoomId}.", row.Id, row.RoomId);
         }

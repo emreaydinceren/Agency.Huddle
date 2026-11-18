@@ -127,14 +127,22 @@ internal sealed class GoldfishStore
     public IReadOnlyList<Possession> Open() =>
         this.Read(SelectOpen);
 
-    /// <summary>Moves a row to a state; a row that has ended is left alone.</summary>
+    /// <summary>Moves a row to a state only while it is in one of the allowed source states, so a move cannot land on a row the return has claimed.</summary>
     /// <param name="id">The possession id.</param>
-    /// <param name="state">The new state.</param>
-    public void SetState(string id, PossessionState state)
+    /// <param name="to">The new state.</param>
+    /// <param name="from">The states the row may be in for the move to apply.</param>
+    /// <returns><see langword="true"/> when the row moved; <see langword="false"/> when it was in another state or unknown.</returns>
+    public bool SetState(string id, PossessionState to, params PossessionState[] from)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(from);
+        if (from.Length == 0)
+        {
+            return false;
+        }
 
-        this.Run("UPDATE goldfish_possessions SET state = $state WHERE id = $id AND state <> 'ended';", ("$id", id), ("$state", Name(state)));
+        string sources = string.Join(", ", from.Select(source => $"'{Name(source)}'"));
+        return this.Run($"UPDATE goldfish_possessions SET state = $state WHERE id = $id AND state IN ({sources});", ("$id", id), ("$state", Name(to))) == 1;
     }
 
     /// <summary>Remembers the posted result Message, so a restart does not post it twice.</summary>

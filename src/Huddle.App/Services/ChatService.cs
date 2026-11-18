@@ -323,7 +323,7 @@ public sealed partial class ChatService
 
             var id = messageId ?? Guid.CreateVersion7().ToString("N");
             IReadOnlyList<User> mentions = withheldFromAgentId is null && !mentionsNobody
-                ?MentionParser.Parse(text, members, this.aliasSource.Aliases)
+                ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
             var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender?.Id ?? KnownIds.Huddle, sender?.Name ?? KnownIds.HuddleName, text) { References = snapshot };
             await this.AppendRecordingOwedTurnsAsync(room, members, mentions, message, RoomBudgets.After(budget, budgetSender, this.agentMessageBudget), withheldFromAgentId, ct).ConfigureAwait(false);

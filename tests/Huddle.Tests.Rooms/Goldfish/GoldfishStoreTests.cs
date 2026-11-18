@@ -229,9 +229,36 @@ public sealed class GoldfishStoreTests
         Possession possession = Make("p1", "a1", "r1");
         Assert.True(store.TryInsert(possession));
 
-        store.SetState("p1", PossessionState.Waiting);
+        bool changed = store.SetState("p1", PossessionState.Waiting, PossessionState.Starting, PossessionState.Working);
 
+        Assert.True(changed);
         Assert.Equal(possession with { State = PossessionState.Waiting }, store.Get("p1"));
+    }
+
+    /// <summary><c>SetState</c> refuses a row in a state outside the allowed sources, leaving it unchanged and returning false, so it cannot race the return claim into the CHECK.</summary>
+    [Theory]
+    [InlineData("Returning")]
+    [InlineData("Ended")]
+    [InlineData("Waiting")]
+    public void SetState_SourceStateNotAllowed_LeavesRowUnchangedAndReturnsFalse(string stateName)
+    {
+        PossessionState state = Enum.Parse<PossessionState>(stateName);
+        using TempDataDir dir = new();
+        GoldfishStore store = new(dir.Options());
+        bool hasExit = state is PossessionState.Returning or PossessionState.Ended;
+        Possession possession = Make("p1", "a1", "r1") with
+        {
+            State = state,
+            Exit = hasExit ? GoldfishExit.Finished : null,
+            ExitBy = hasExit ? "a1" : null,
+            EndedAt = state == PossessionState.Ended ? T0.AddMinutes(3) : null,
+        };
+        Assert.True(store.TryInsert(possession));
+
+        bool changed = store.SetState("p1", PossessionState.Working, PossessionState.Starting, PossessionState.Working);
+
+        Assert.False(changed);
+        Assert.Equal(possession, store.Get("p1"));
     }
 
     /// <summary><c>SetResultMessage</c> remembers the posted result Message so a restart does not post it twice.</summary>

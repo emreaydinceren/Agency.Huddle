@@ -200,6 +200,22 @@ public sealed class GoldfishSupervisorTests
         Assert.Equal(PossessionState.Ended, rig.Row("p1").State);
     }
 
+    /// <summary>A Transcript write that throws something other than a chat error still ends the row, and the Agent is free to be possessed again.</summary>
+    [Fact]
+    public async Task EndAsync_PostThrowsIOException_StillEndsRowAndFreesTheAgent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Rig rig = await Rig.CreateAsync(ct);
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+        rig.Transcript.FailAppend = true;
+
+        bool ended = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, ct);
+
+        Assert.True(ended);
+        Assert.Equal((PossessionState.Ended, GoldfishExit.Finished), (rig.Row("p1").State, rig.Row("p1").Exit));
+        Assert.True(rig.Store.TryInsert(Rig.Make("p2", rig.Nova.Id, rig.Room.Id, rig.Now)));
+    }
+
     /// <summary>A turn that ends without the Agent saying it is done moves a Starting or Working possession to Waiting, and sends nothing.</summary>
     [Theory]
     [InlineData("Starting")]
@@ -242,7 +258,6 @@ public sealed class GoldfishSupervisorTests
         rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
 
         rig.Clock.Advance(TimeSpan.FromDays(7));
-        await Task.Delay(50, ct);
 
         Assert.Equal(PossessionState.Working, rig.Row("p1").State);
         Assert.Equal("p1", rig.Supervisor.FindOpen(rig.Nova.Id)?.Id);
@@ -330,6 +345,20 @@ public sealed class GoldfishSupervisorTests
         Assert.Equal(loud.Id, owed.MessageId);
     }
 
+    private sealed class FailableChatStore(IChatStore inner) : IChatStore
+    {
+        public bool FailAppend { get; set; }
+
+        public Task AppendAsync(string roomId, ChatMessage message, CancellationToken ct = default) =>
+            this.FailAppend ? Task.FromException(new IOException("The Transcript could not be written.")) : inner.AppendAsync(roomId, message, ct);
+
+        public Task<IReadOnlyList<ChatMessage>> ReadAllAsync(string roomId, CancellationToken ct = default) => inner.ReadAllAsync(roomId, ct);
+
+        public Task DeleteAsync(string roomId, CancellationToken ct = default) => inner.DeleteAsync(roomId, ct);
+
+        public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default) => inner.HasMessagesAsync(roomId, ct);
+    }
+
     private sealed class RecordingLink : IGoldfishRunnerLink
     {
         public List<(string AgentId, string PossessionId, GoldfishExit Exit)> Ends { get; } = [];
@@ -369,10 +398,11 @@ public sealed class GoldfishSupervisorTests
             });
             FileChatStore file = dir.CreateChatStore();
             this.File = file;
+            this.Transcript = new FailableChatStore(file);
             RoomEvents events = new(NullLogger<RoomEvents>.Instance);
             this.Chat = new ChatService(
                 team,
-                file,
+                this.Transcript,
                 events,
                 new FakeMentionAliasSource(),
                 this.Options,
@@ -389,6 +419,8 @@ public sealed class GoldfishSupervisorTests
         }
 
         public FileChatStore File { get; }
+
+        public FailableChatStore Transcript { get; }
 
         public TurnQueueStore Queue { get; }
 
