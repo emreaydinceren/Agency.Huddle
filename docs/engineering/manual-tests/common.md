@@ -390,8 +390,10 @@ finds where `Team:DataDir` actually resolved.
   area restates it.
 - **Never set `TEAM_E2E`.** It gates eight money-spending tests in
   `tests/Huddle.Acp.Tests` and has nothing to do with the app.
-- **Never set `Team__Acp__TraceWire`.** It prints the tool server's bearer token
-  into `O-LOG`. It stays forbidden; use the oracle that replaces what you wanted
+- **Set `Team__Acp__TraceWire` only where a test page names it, and never in a shared lane.** It prints the tool server's bearer token
+  into `O-LOG`, so set it in a throwaway terminal in an isolated lane (a test page that needs it says so: `work-mode.md`,
+  `questions.md`, the `O-WIRE` text above), run `Remove-Item Env:Team__Acp__TraceWire` afterwards, and delete or scrub the
+  token from any log you keep. Everywhere else it stays off; use the oracle that replaces what you wanted
   from it: tool calls and the file-changes block through `O-TOOLCALLS`; the prompt
   text a Persona received through the mock adapter's echo under `P-LAUNCH-UAT`
   (the reply is the whole prompt); a Persona's stored definition through `O-FILE`.

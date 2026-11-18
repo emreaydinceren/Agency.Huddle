@@ -216,6 +216,40 @@ public sealed class GoldfishSupervisorTests
         Assert.True(rig.Store.TryInsert(Rig.Make("p2", rig.Nova.Id, rig.Room.Id, rig.Now)));
     }
 
+    /// <summary>A caller's token cancelled after the claim (the Adapter cancelling the tool call, #627 B10) still ends the row Ended and frees the Agent.</summary>
+    [Fact]
+    public async Task EndAsync_TokenCancelledAfterTheClaim_StillEndsTheRowAndFreesTheAgent()
+    {
+        CancellationToken test = TestContext.Current.CancellationToken;
+        using CancellationTokenSource caller = CancellationTokenSource.CreateLinkedTokenSource(test);
+        using Rig rig = await Rig.CreateAsync(test);
+        rig.Link.OnEnd = caller.Cancel;
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+
+        bool ended = await rig.Supervisor.EndAsync("p1", GoldfishExit.CalledBack, "Quinn", caller.Token);
+
+        Assert.True(ended);
+        Assert.Equal((PossessionState.Ended, GoldfishExit.CalledBack), (rig.Row("p1").State, rig.Row("p1").Exit));
+        Assert.True(rig.Store.TryInsert(Rig.Make("p2", rig.Nova.Id, rig.Room.Id, rig.Now)));
+    }
+
+    /// <summary>The goldfish_done shape: a result, and a token cancelled mid-return, still posts the result and the return row and ends the row.</summary>
+    [Fact]
+    public async Task EndAsync_DoneWithResultTokenCancelledMidReturn_EndsTheRowAndPostsBothRows()
+    {
+        CancellationToken test = TestContext.Current.CancellationToken;
+        using CancellationTokenSource caller = CancellationTokenSource.CreateLinkedTokenSource(test);
+        using Rig rig = await Rig.CreateAsync(test);
+        rig.Link.OnEnd = caller.Cancel;
+        rig.Insert(Rig.Make("p1", rig.Nova.Id, rig.Room.Id, rig.Now));
+
+        bool ended = await rig.Supervisor.EndAsync("p1", GoldfishExit.Finished, null, caller.Token, new GoldfishResult("Done.", []));
+
+        Assert.True(ended);
+        Assert.Equal(PossessionState.Ended, rig.Row("p1").State);
+        Assert.Equal(2, (await rig.HuddleLinesAsync(test)).Count);
+    }
+
     /// <summary>A turn that ends without the Agent saying it is done moves a Starting or Working possession to Waiting, and sends nothing.</summary>
     [Theory]
     [InlineData("Starting")]
@@ -365,10 +399,14 @@ public sealed class GoldfishSupervisorTests
 
         public bool Throws { get; set; }
 
+        /// <summary>Runs when the end is sent, after the claim: a test cancels the caller's token here, as the Adapter does when the tool call's Turn is stopped.</summary>
+        public Action? OnEnd { get; set; }
+
         public Task SendBeginAsync(string agentId, GoldfishBegin begin, CancellationToken ct) => Task.CompletedTask;
 
         public Task SendEndAsync(string agentId, string possessionId, GoldfishExit exit, CancellationToken ct)
         {
+            this.OnEnd?.Invoke();
             if (this.Throws)
             {
                 throw new InvalidOperationException("runner link down");

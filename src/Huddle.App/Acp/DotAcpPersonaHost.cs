@@ -260,6 +260,16 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.Profile.IsolateUserSettings, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
 
     /// <summary>
+    /// Whether a profile can carry a goldfish's clean session: it isolates the user's settings and the host really launches claude-agent-acp for it
+    /// (<see cref="AdapterCatalog.LaunchesClaude"/>, the test the offer uses, so the stock install's synthesised profile passes). Goldfish only:
+    /// <see cref="AdapterCatalog.RunsClaude"/> stays what the ordinary sessions use. The isolation meta needs no such test on an isolating profile.
+    /// </summary>
+    /// <param name="profile">The profile to judge.</param>
+    /// <returns><see langword="true"/> when the clean session can be opened.</returns>
+    internal static bool CanOpenClean(AdapterProfile profile) =>
+        profile.IsolateUserSettings && AdapterCatalog.LaunchesClaude(profile);
+
+    /// <summary>
     /// Opens a clean session for a goldfish possession (spec 8.4): <see cref="SystemPromptComposer.ComposeClean"/>'s prompt, the connectors off
     /// and the Agent's memory and the Rooms' history denied to <c>Read</c>, <c>Grep</c> and <c>Glob</c>. Only a Claude Adapter that isolates the
     /// user's settings can carry those rules, so any other profile is refused here as well as by the tool.
@@ -270,7 +280,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     public async Task<IAgentSession> OpenCleanAsync(CleanSessionSpec spec, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(spec);
-        if (!this.Profile.IsolateUserSettings || !AdapterCatalog.RunsClaude(this.Profile))
+        if (!DotAcpPersonaHost.CanOpenClean(this.Profile))
         {
             throw new InvalidOperationException($"Goldfish needs a Claude Adapter that isolates user settings; '{this.Profile.Id}' does not.");
         }

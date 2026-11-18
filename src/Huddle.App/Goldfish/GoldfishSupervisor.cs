@@ -22,6 +22,12 @@ internal sealed class GoldfishSupervisor(
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
+    /// <summary>
+    /// The supervisor's own lifetime: a return runs under it, so a caller's token never interrupts one. It is stopped by <see cref="Dispose"/>
+    /// only, not by <see cref="StopAsync"/>: a return in flight when the host begins to stop finishes, as it did under no token at all.
+    /// </summary>
+    private readonly StopSignal stop = new();
+
     private readonly ConcurrentDictionary<string, SemaphoreSlim> locks = new(StringComparer.Ordinal);
 
     /// <summary>Ends every row a restart left open as Restarted and prunes old ended rows; a failure is logged and never stops Huddle.</summary>
@@ -51,6 +57,7 @@ internal sealed class GoldfishSupervisor(
     /// <inheritdoc />
     public void Dispose()
     {
+        this.stop.Dispose();
         // The per-possession semaphores are deliberately not disposed: they hold no unmanaged handle (nothing touches
         // AvailableWaitHandle), and a call still holding one would throw on release if it were disposed under it.
         this.locks.Clear();
@@ -89,7 +96,7 @@ internal sealed class GoldfishSupervisor(
                 row = row with { Turns = row.Turns + 1 };
             }
 
-            return await this.ReturnClaimedAsync(row, exit, by, result, ct).ConfigureAwait(false);
+            return await this.ReturnClaimedAsync(row, exit, by, result).ConfigureAwait(false);
         }
         finally
         {
@@ -97,9 +104,14 @@ internal sealed class GoldfishSupervisor(
         }
     }
 
-    /// <summary>Runs the steps after the claim. The row ends even when a step fails; on cancellation it stays Returning, and the start-up pass ends it Restarted.</summary>
-    private async Task<bool> ReturnClaimedAsync(Possession row, GoldfishExit exit, string? by, GoldfishResult? result, CancellationToken ct)
+    /// <summary>
+    /// Runs the steps after the claim under the supervisor's own lifetime, not the caller's token: <c>goldfish_done</c> is called inside the
+    /// possession's Turn, and step 1 stops that Turn, which cancels the tool call's token (#627 B10). Only Huddle stopping leaves the row
+    /// Returning, and the start-up pass ends it Restarted. The row ends even when a step fails.
+    /// </summary>
+    private async Task<bool> ReturnClaimedAsync(Possession row, GoldfishExit exit, string? by, GoldfishResult? result)
     {
+        CancellationToken ct = this.stop.Token;
         try
         {
             await this.TellRunnerAsync(row, exit, ct).ConfigureAwait(false);
@@ -108,7 +120,7 @@ internal sealed class GoldfishSupervisor(
         }
         finally
         {
-            if (!ct.IsCancellationRequested)
+            if (!this.stop.IsStopped)
             {
                 store.End(row.Id, this.clock.GetUtcNow());
                 _ = this.locks.TryRemove(row.Id, out _);
