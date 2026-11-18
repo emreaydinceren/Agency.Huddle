@@ -32,7 +32,7 @@
         </ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
-        <MudSwitch T="bool" Value="@this.ShowHidden" ValueChanged="this.ShowHiddenChanged" Color="Color.Primary" Size="Size.Small" Label="Show hidden" Class="pack-bar-show-hidden" />
+        <SettingSwitch Value="@this.ShowHidden" ValueChanged="this.ShowHiddenChanged" Label="Show hidden" Class="pack-bar-show-hidden" />
     </MudTooltip>
     <MudText Typo="Typo.caption" Class="pack-bar-status mud-text-secondary ml-auto">@this.Status</MudText>
 </MudToolBar>

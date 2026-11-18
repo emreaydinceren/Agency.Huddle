@@ -33,8 +33,9 @@
             <DynamicComponent Type="@section.Component" Parameters="@(new Dictionary<string, object> { [nameof(this.HelperId)] = this.helper.Id.Value })" />
         }
 
-        <MudSwitch T="bool" Value="@this.enabled" ValueChanged="this.OnEnabledChanged" Disabled="@(!this.AdaptersOn)"
-                   Color="Color.Primary" Label="@HelpersCopy.SwitchLabel" />
+        @* A checkbox, not a switch: turning the Helper on or off waits for Save with the card's other fields (the B6 rule). *@
+        <MudCheckBox T="bool" Value="@this.enabled" ValueChanged="this.OnEnabledChanged" Disabled="@(!this.AdaptersOn)"
+                     Color="Color.Primary" Dense="true" Label="@HelpersCopy.EnabledLabel" Class="helper-card-enabled" />
 
         <AdapterModelEffortPicker Adapter="@this.adapter" Model="@this.model" Effort="@this.effort"
                                   Disabled="@(!this.AdaptersOn)" SelectionChanged="this.OnSelectionChanged" />

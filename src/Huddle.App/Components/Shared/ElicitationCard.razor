@@ -96,12 +96,14 @@
                                     break;
 
                                 case ElicitationFieldKind.Boolean:
-                                    <MudSwitch T="bool"
-                                               Color="Color.Primary"
-                                               Required="@shown.Required"
-                                               Disabled="@busy"
-                                               Value="@(this.EntryOf(current, shown) == "true")"
-                                               ValueChanged="@(on => this.SetBoolean(current, shown, on))">
+                                    @* A checkbox, not a switch: the answer is sent with the card's Submit (the B6 rule). *@
+                                    <MudCheckBox T="bool"
+                                                 Color="Color.Primary"
+                                                 Dense="true"
+                                                 Required="@shown.Required"
+                                                 Disabled="@busy"
+                                                 Value="@(this.EntryOf(current, shown) == "true")"
+                                                 ValueChanged="@(on => this.SetBoolean(current, shown, on))">
                                         @if (!labelHidden)
                                         {
                                             <span class="elicitation-card-field-label">@shown.Label</span>
@@ -110,7 +112,7 @@
                                         {
                                             <span class="elicitation-card-required" aria-hidden="true"> *</span>
                                         }
-                                    </MudSwitch>
+                                    </MudCheckBox>
                                     if (shown.Description is not null)
                                     {
                                         <MudText Typo="Typo.caption" Class="elicitation-card-field-description">@shown.Description</MudText>

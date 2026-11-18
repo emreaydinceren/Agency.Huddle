@@ -44,12 +44,8 @@
                     string id = ProcessDocument.ToId(current);
                     string name = ProcessDocument.DisplayName(current);
                     <div class="process-tab-gate" data-gate="@id">
-                        <MudSwitch T="bool" @key="@($"{id}:{this.version}")" Value="true" Color="Color.Primary" Label="@name"
-                                   ValueChanged="@(on => this.OnGateChanged(current, on))" />
-                        @if (current == GateId.ChecksBeforeMerge)
-                        {
-                            <MudText Typo="Typo.caption" Class="process-tab-gate-note">Checks before merge only works in work modes where the adapter asks before running shell commands.</MudText>
-                        }
+                        <SettingSwitch @key="@($"{id}:{this.version}")" Value="true" Label="@name" ValueChanged="@(on => this.OnGateChanged(current, on))"
+                                       Helper="@(current == GateId.ChecksBeforeMerge ? ChecksBeforeMergeNote : null)" LineHookClass="process-tab-gate-note" />
                     </div>
                 }
             </MudStack>
@@ -63,6 +59,8 @@
 
 @code {
     private const string SaveFailed = "Team settings could not be saved.";
+
+    private const string ChecksBeforeMergeNote = "Checks before merge only works in work modes where the adapter asks before running shell commands.";
 
     private string? text;
     private IReadOnlyList<GateId> gates = [];

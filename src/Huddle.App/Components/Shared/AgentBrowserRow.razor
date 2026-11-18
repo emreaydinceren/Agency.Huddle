@@ -25,28 +25,29 @@
     }
     else
     {
-        <MudSwitch T="bool" Value="@(this.on && !this.ModeSkipsPrompt)" ValueChanged="this.OnSwitchChanged" Disabled="this.ModeSkipsPrompt"
-                   Color="Color.Primary" Class="agent-browser-switch" Label="Browser" />
-        @if (this.ModeSkipsPrompt)
+        <SettingSwitch Value="@(this.on && !this.ModeSkipsPrompt)" ValueChanged="this.OnSwitchChanged" Disabled="this.ModeSkipsPrompt" Class="agent-browser-switch"
+                       Label="Browser" DisabledReason="This Agent's Work Mode never asks before a tool runs, so the browser stays off. Choose another Work Mode first."
+                       LineHookClass="agent-browser-mode-note" />
+        @* While the switch is disabled it draws its own reason line, so no state line follows it. *@
+        @if (!this.ModeSkipsPrompt)
         {
-            <MudText Typo="Typo.body2" Class="d-block mb-1 agent-browser-mode-note" role="status">This Agent's Work Mode never asks before a tool runs, so the browser stays off. Choose another Work Mode first.</MudText>
-        }
-        else if (this.Restarting)
-        {
-            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper" role="status">Restarting @this.Name to apply this.</MudText>
-        }
-        else if (this.on && this.Facts.NoDisplay)
-        {
-            @* The no-display sentence replaces the On line's window and sign-in sentences, which would promise what this computer cannot show. *@
-            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">On. This computer has no display, so @(this.Name)'s browser runs without a window and you can't sign in to sites for it. Reading pages runs freely; every click, typing or form step asks you first.</MudText>
-        }
-        else if (this.on)
-        {
-            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">On. @this.Name has its own browser window on this computer. Reading pages runs freely; every click, typing or form step asks you first. Sites signed in to in that window stay signed in for @this.Name only.</MudText>
-        }
-        else
-        {
-            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">Off. @this.Name has no browser.</MudText>
+            @if (this.Restarting)
+            {
+                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper" role="status">Restarting @this.Name to apply this.</MudText>
+            }
+            else if (this.on && this.Facts.NoDisplay)
+            {
+                @* The no-display sentence replaces the On line's window and sign-in sentences, which would promise what this computer cannot show. *@
+                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">On. This computer has no display, so @(this.Name)'s browser runs without a window and you can't sign in to sites for it. Reading pages runs freely; every click, typing or form step asks you first.</MudText>
+            }
+            else if (this.on)
+            {
+                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">On. @this.Name has its own browser window on this computer. Reading pages runs freely; every click, typing or form step asks you first. Sites signed in to in that window stay signed in for @this.Name only.</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-browser-helper">Off. @this.Name has no browser.</MudText>
+            }
         }
     }
 </section>

@@ -496,4 +496,49 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/SelectField.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/AdapterModelEffortPicker.razor", source).Count);
     }
+
+    /// <summary>CV19: a raw <c>MudSwitch</c> is counted, even a Small Primary one, but not a <c>SettingSwitch</c> or the type name in code.</summary>
+    [Fact]
+    public void Cv19_RawMudSwitch_IsCounted()
+    {
+        const string source = """
+            <MudSwitch T="bool" Size="Size.Small" Color="Color.Primary" Label="a"
+                       Value="@this.on" />
+            <SettingSwitch Label="b" @bind-Value="this.on" />
+            @code { private MudSwitch<bool>? toggle; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv19(RazorPath, source);
+
+        Assert.Equal("CV19", result.Rule);
+        Assert.Equal(1, result.Count);
+    }
+
+    /// <summary>CV19: the one <c>SettingSwitch</c> component is the only file allowed to draw a <c>MudSwitch</c>.</summary>
+    [Fact]
+    public void Cv19_SettingSwitchRazor_IsExempt()
+    {
+        const string source = """<MudSwitch T="bool" Value="@this.Value" Size="Size.Small" Color="Color.Primary" />""";
+
+        Assert.Equal(0, UiConventionScanner.Cv19("src/Huddle.App/Components/Shared/SettingSwitch.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv19("src/Huddle.App/Components/Shared/AgentBrowserRow.razor", source).Count);
+    }
+
+    /// <summary>CV20: a checkbox without <c>Color.Primary</c> is counted, across a line break, and a Primary one is not.</summary>
+    [Fact]
+    public void Cv20_CheckBoxWithoutPrimary_IsCounted()
+    {
+        const string source = """
+            <MudCheckBox T="bool" Dense="true" Label="a" />
+            <MudCheckBox T="bool" Dense="true" Color="Color.Default" Label="b" />
+            <MudCheckBox T="bool" Dense="true"
+                         Color="Color.Primary" Label="c" />
+            @code { private MudCheckBox<bool>? box; }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv20(RazorPath, source);
+
+        Assert.Equal("CV20", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
 }

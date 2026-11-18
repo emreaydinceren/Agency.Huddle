@@ -442,6 +442,66 @@ shows it, so its owner must pass the question text as `AriaLabel` there. `AgentP
 selects (Adapter, Model, Effort and Work mode) are its own copy of the picker, and Work mode needs
 `ToStringFunc`, which `SelectField` does not offer; they move with A4, which replaces that copy.
 
+### Switch and checkbox
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `SettingSwitch` | `Components/Shared/SettingSwitch.razor` | 7 tags in 7 files; no raw `MudSwitch` left | `Value`, `ValueChanged` (or `@bind-Value`), `Label` (required), `Helper`, `Disabled`, `DisabledReason`, `Class`, `LineHookClass`, any other attribute (`id`) |
+| `MudCheckBox` (raw, by design) | wherever a checkbox is | 13 tags in 12 files | `Color="Color.Primary"` and `Dense="true"` on every one |
+
+**The rule (B6, ruled 2026-11-18).** A switch acts at once; a checkbox waits for Save, Create or
+Apply, or picks items. `SettingSwitch` is always Small (44 × 24 px, `Q-A7-1`) and Primary, so no
+caller writes `Size` or `Color`, and the Library's "Hide" is no longer grey when on. Its label
+names the setting, never "On" (`Q-A7-2`). One caption line in TextSecondary follows it: the
+`DisabledReason` while it is disabled, announced as a status, otherwise the `Helper`.
+`LineHookClass` keeps a site's own class on that line for its tests. The component draws no
+wrapper element, so the switch and its line stay children of the caller's layout. Built in wave 4
+(A7 and B6, 2026-11-18); convention rule CV19 counts a raw `MudSwitch` outside the component.
+
+A checkbox needs nothing but its label, so it stays the raw MudBlazor tag rather than gaining a
+wrapper; rule CV20 counts a `MudCheckBox` without `Color="Color.Primary"`, which is the one thing
+the rule holds. In Lumen (`hairline`) the small switch is the same pill as the medium one was,
+30 × 18 with a 14 px thumb 2 px in from each end (`base.css`), measured on 2026-11-18: off
+`rgb(212, 212, 219)`, on `rgb(115, 104, 211)`; before, the 14 px thumb overhung a 36 × 22 track by
+2 px.
+
+How the 20 controls were classified (by reading what each change does, not its look):
+
+| Site | Was | Now | Why |
+| --- | --- | --- | --- |
+| `AgentBrowserRow` Browser | Switch | `SettingSwitch`, `DisabledReason` | Acts at once (restarts the Agent); the Work Mode note is now its caption reason |
+| `AgentConnectorsRow` Account connectors | Switch | `SettingSwitch` | Acts at once after an inline confirm; its state lines stay outside the component, because they branch on the confirm |
+| `ProcessTab` gates | Switch | `SettingSwitch`, `Helper` | Turning a gate off writes `_team.md` after a confirm; the Checks before merge note is its helper |
+| `LibraryPanel` Hide (7 rows) | Switch, no colour | `SettingSwitch` | Hides the root at once; now Primary |
+| `PackBar` Show hidden | Switch, Small | `SettingSwitch` | A view filter, at once |
+| `SkillsTab` Show hidden | Switch, Small | `SettingSwitch` | A view filter, at once |
+| `ThemeLab` Inspect | Switch | `SettingSwitch` | Starts the inspector at once |
+| `HelperCard` "On" | Switch | Checkbox "Helper on" | Waits for the card's Save; the label named the state |
+| `RemoteAccessPanel` Strict local | Switch | Checkbox | Waits for Save |
+| `RemoteAccessPanel` Use Tailscale sign-in | Switch | Checkbox | Waits for Save |
+| `TaskHumanGate` Requires your acceptance | Switch | Checkbox | The Task panel buffers it until Save; the lock icon and its tooltip stay |
+| `FieldsDialog` field rows | Switch | Checkbox | Waits for the dialog's Save; the hook class `view-editor-field-switch-{key}` is kept |
+| `AddWithAiDialog` All sources | Switch "All Sources" | Checkbox "All sources" | Waits for the dialog's action, beside the source checkboxes |
+| `ElicitationCard` yes-or-no field | Switch | Checkbox | Sent with the card's Submit |
+| `AddWithAiDialog` sources | Checkbox, no colour | Checkbox, Primary | Picks items |
+| `AgentProfileCard` Skills (disabled) | Checkbox, no colour | Checkbox, Primary | Shows a pick |
+| `ElicitationCard` options | Checkbox, Primary | unchanged | Picks items |
+| `JobEditorDialog` weekdays | Checkbox, no colour | Checkbox, Primary | Saved with the Job |
+| `NewChat` Agents | Checkbox, no colour | Checkbox, Primary | Picks items |
+| `UpdateDialog` Agents | Checkbox, no colour | Checkbox, Primary | Picks items |
+
+So 7 of the 14 switches became checkboxes and every checkbox is Primary.
+
+**Still to migrate.** Nothing: the CV19 and CV20 baselines are empty in every area, so both rules
+are zero-tolerance from the build.
+
+| Area | Raw `MudSwitch` (CV19) | `MudCheckBox` without Primary (CV20) |
+| --- | --- | --- |
+| Room, Settings, Shared, Shell, Tasks, Teams, Library | 0 | 0 |
+
+One difference stays: `AgentConnectorsRow`'s Work Mode note is still a body2 line of its own, not
+the switch's caption, because that switch is not disabled while the note shows.
+
 ### Settings intro and stored-at line
 
 ![A Settings panel head: the title, an intro paragraph and a Stored at line with a monospace path](../images/components/settings-intro-stored-at.png)
@@ -809,7 +869,6 @@ ships, move its row to the entry for the new component and delete it here.
 | A4 | **One Adapter, Model and Effort picker**, and a `ProbedSelect` for the select-with-progress-bar block | The cascade is written 2 times (`AdapterModelEffortPicker`, used once, and `AgentProfileCard`); the probe block appears 5 times | `AgentProfileCard` (2,359 lines) re-implements the shared picker, and adds a Work mode select the picker lacks | L | Planned |
 | A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
 | A6 | **PropertyList** and **PropertyRow**: a label and a value per row | 30 `<dt>` rows in 5 files (`TaskReadView` 14, `FeedTaskPreview` 7, `FeedHelperPreview` 5, `ProfileCard` 3, `LibraryProperties` 1), plus 25 `.task-detail-prop` rows in `TaskDetail` | The edit and read views of a Task use different markup for the same fields | M | Planned |
-| A7 | **SettingSwitch**: a `MudSwitch` with a helper line and a disabled reason | 14 switches in 13 files; about half carry a caption (estimate) | `AgentBrowserRow`, `AgentConnectorsRow`, `RemoteAccessPanel`, `TaskHumanGate` and `ProcessTab` each write their own | S | Planned |
 | A8 | **BusyLabel**: a small spinner beside text | 9 `MudProgressCircular` sites in 9 files | One line each, so the gain is consistency (`mr-2`, `aria-label`) rather than size | S | Planned |
 
 ### Standard controls to wrap
@@ -817,7 +876,6 @@ ships, move its row to the entry for the new component and delete it here.
 | # | Planned component | Reuse cases | Evidence | Size | Status |
 | --- | --- | --- | --- | --- | --- |
 | B5 | **Icon button** with its tooltip pairing | 55 uses in 32 files | `aria-label` is already on all 55, and 26 sit beside a `MudTooltip`. Low gain, because the rule already holds | S | Planned |
-| B6 | **Switch or checkbox**: state the rule first, then decide whether one component serves both | 14 switches, 6 checkboxes (`AddWithAiDialog`, `AgentProfileCard`, `ElicitationCard`, `JobEditorDialog`, `NewChat`, `UpdateDialog`) | `design-system.md`'s House defaults table has no row for either | S | Planned |
 
 ### Browser scripts
 
@@ -971,38 +1029,6 @@ other lists.
 - `Q-A6-2` A hairline between rows everywhere, or only in the Task read view? Recommended: only in
   long lists (more than 6 rows).
 
-#### A7 SettingSwitch
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Medium, Primary | 11 sites, for example `HelperCard.razor:36`, `RemoteAccessPanel.razor:38` | Span 58 × 38 px, thumb 18 px, label 14 px (*measured*) |
-| Small | `Settings/Skills/PackBar.razor:35`, `SkillsTab.razor:65` (both "Show hidden") | Span 44 × 24 px, 14 px label (*measured*) |
-| No colour | `Settings/LibraryPanel.razor:64` ("Hide", 7 rows) | `Color.Default`: grey when on |
-| Wording | "All Sources" `AddWithAiDialog.razor:55`; "On" `HelperCard.razor:36` | Title case; a label that names the state, not the setting |
-| Helper line | caption: `RemoteAccessPanel.razor:40`, `AgentBrowserRow.razor:36`, `ProcessTab.razor:20`, `:51`; body2: `RemoteAccessPanel.razor:43`, `AgentBrowserRow.razor:32`, `AgentConnectorsRow.razor:21` | Two sizes for the line under a switch |
-| Disabled reason | body2 note `AgentBrowserRow.razor:32`; lock icon and tooltip `TaskHumanGate.razor:29`; none beside `RemoteAccessPanel.razor:128` (lead) | |
-
-**Which is right.** design-system.md Spacing has no row for a switch; Interface copy: sentence
-case (UX-078). `Size.Small` is required on buttons, icon buttons, chips and toggle groups, not on
-switches.
-
-**Fix:**
-
-1. `AddWithAiDialog.razor:55` "All sources". `visual`
-2. `LibraryPanel.razor:64` takes `Color.Primary`. `visual`
-3. One size (Q-A7-1) at all 14 sites. `visual`
-4. `SettingSwitch` takes `Helper` (caption, TextSecondary) and `DisabledReason`. `visual`
-
-**How to prove.** Css-Snapshot Report on `/settings/helpers`, `/settings/skills`,
-`/settings/library`, `/settings/remoteaccess`; declare `.mud-switch-span | width` and `height`. In
-Lumen Dark an on track measured `#8379d8`.
-
-**Open questions for the owner:**
-
-- `Q-A7-1` Small (44 × 24) or Medium (58 × 38) switches? Recommended: Small everywhere; Medium is
-  taller than a 32 px row.
-- `Q-A7-2` May a switch label be "On"? Recommended: no; name the setting ("Helper on").
-
 #### A8 BusyLabel
 
 | Variant | Where | How it looks different |
@@ -1053,32 +1079,6 @@ ladder, and only the Tasks toolbar applies 28 px.
 **Open questions for the owner:**
 
 - `Q-B5-1` 28 px everywhere, a sidebar row included? Recommended: yes; the 32 px row holds it.
-
-#### B6 Switch or checkbox
-
-| Variant | Where | How it looks different |
-| --- | --- | --- |
-| Switch | 14 sites | Acts at once in `AgentBrowserRow` and `AgentConnectorsRow`; waits for Save in `HelperCard` and `RemoteAccessPanel` |
-| Checkbox, Primary | `ElicitationCard.razor:145` | Accent box when ticked |
-| Checkbox, no colour | `JobEditorDialog.razor:56`, `AddWithAiDialog.razor:61`, `UpdateDialog.razor:63`, `AgentProfileCard.razor:415`, `NewChat.razor:42` | `Color.Default`: grey when ticked |
-
-All 6 checkboxes are `Dense`. Not measured: none was on the pages swept.
-
-**Which is right.** No rule decides this (design-system.md House defaults has no row).
-
-**Fix:**
-
-1. Write the rule in design-system.md House defaults. `markup only`
-2. The five checkboxes take `Color.Primary`. `visual`
-
-**How to prove.** Open the New chat picker and the Job editor and read the ticked box's colour.
-
-**Open questions for the owner:**
-
-- `Q-B6-1` **Ruled 2026-11-18: by when it applies.** A switch is for a setting that takes effect
-  the moment it is flipped; a checkbox is for picking items from a list, or a field saved with a
-  form. The owner lists which of the 20 controls move: `HelperCard` and `RemoteAccessPanel`
-  switches wait for Save, so they are the first candidates to become checkboxes.
 
 ### Suggested order
 

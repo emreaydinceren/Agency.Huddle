@@ -1047,6 +1047,31 @@ a.team-ref,
     box-shadow: none;
 }
 
+/* Every switch is a Small SettingSwitch (Q-A7-1), so the same pill at 30 x 18: the track keeps the medium rule's place, and the 14px
+   thumb is moved 4px right to sit 2px in from the track's ends; on, it travels the 12px between them. */
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-span-small .mud-switch-track {
+    flex: 0 0 30px;
+    width: 30px;
+    min-width: 30px;
+    height: 18px;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-base-small {
+    left: 4px;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-base-small.mud-checked {
+    transform: translateX(12px);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-thumb-small {
+    box-shadow: 0 0 0 1px var(--hu-line-control);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-checked .mud-switch-thumb-small {
+    box-shadow: none;
+}
+
 :root:has([data-hu-surface="hairline"]) .mud-checkbox .mud-checked,
 :root:has([data-hu-surface="hairline"]) .mud-radio .mud-checked {
     color: var(--mud-palette-primary);
