@@ -65,6 +65,7 @@ The issue's five open questions were settled by the delivery manager; the rest w
 | D-19 | **The shipped processes, personas, prompts, Skills, wireframes, Index and docs are rewritten** (section 3.4). Goldens are regenerated with the repo scripts and every changed golden is read | The issue's verification list |
 | D-20 | **Out of scope, as the issue says:** goldfish mode (#627, PR #670; the sentence "Spec reviews are done in goldfish mode" is not added here), enforcement beyond the current gates (ADR-0062: Human-gated Tasks only), a new kind of Task |  |
 | D-21 | **No shared root file is changed** (`.gitea/**`, `Directory.*.props`, `.editorconfig`, `README.md`) unless slice 5 finds `README.md` states the Review column | The brief |
+| D-22 | **`qa-evidence-before-done` and the Proof's `QA evidence` item do not apply to a Task tagged `review` or `verify`.** A check Task is closed by its reviewer's approval, and the reviewer (who covers `challenge`) posts no verifier Evidence on it | Found in slice 4: the gate would otherwise refuse the reviewer closing their own review Task |
 
 ## 3. Inventory
 

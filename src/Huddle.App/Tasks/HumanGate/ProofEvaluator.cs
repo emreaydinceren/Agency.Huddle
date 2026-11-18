@@ -28,7 +28,7 @@ internal static class ProofEvaluator
         bool alreadyVerifies = context.Definition.Any(static item =>
             (item.Rule is DoneRule.EvidenceFrom from && string.Equals(from.Step, Verify, StringComparison.OrdinalIgnoreCase))
             || (item.Rule is DoneRule.TaskTagged tagged && string.Equals(tagged.Tag, ReviewTags.Verify, StringComparison.OrdinalIgnoreCase)));
-        if (context.Gates.Contains(GateId.QaEvidenceBeforeDone) && !alreadyVerifies)
+        if (context.Gates.Contains(GateId.QaEvidenceBeforeDone) && !alreadyVerifies && !ReviewTags.IsReviewTask(task.Tags))
         {
             items.Add(EvaluateItem(task, context, QaLabel, new DoneRule.TaskTagged(ReviewTags.Verify), ProofItemSource.Gate));
         }

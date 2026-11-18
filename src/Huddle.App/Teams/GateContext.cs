@@ -28,4 +28,7 @@ internal sealed record GateContext(
 
     /// <summary>Whether a child of the Task tagged <c>verify</c> is Done (#669, D-16): a QA check is a Task, and it meets <c>qa-evidence-before-done</c>.</summary>
     public bool HasDoneVerifyChild { get; init; }
+
+    /// <summary>Whether the Task is itself a review or verify Task (#669, D-22): it is the check, so <c>qa-evidence-before-done</c> does not apply to it.</summary>
+    public bool IsCheckTask { get; init; }
 }

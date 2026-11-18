@@ -231,20 +231,18 @@ public sealed class TeamsPhase4EndToEndTests
     {
         TaskActor reviewer = await team.ActorAsync(run, ReviewerRole, ct);
         TaskActor qa = await team.ActorAsync(run, QaRole, ct);
-        CompleteChild(service, id, "review", reviewer, qa);
-        CompleteChild(service, id, "verify", qa, qa);
+        CompleteChild(service, id, "review", reviewer);
+        CompleteChild(service, id, "verify", qa);
     }
 
-    /// <summary>Creates a child Task owned by <paramref name="owner"/> with the tag, has a verifier post the run the Team's <c>qa-evidence-before-done</c> gate asks of any Task, and moves it to Done.</summary>
+    /// <summary>Creates a child Task owned by <paramref name="owner"/> with the tag and moves it to Done; a review or verify Task is the check, so the <c>qa-evidence-before-done</c> gate asks it for no Evidence (#669, D-22).</summary>
     /// <param name="service">Creates and moves the Task.</param>
     /// <param name="parent">The Request the child checks.</param>
     /// <param name="tag">The tag, review or verify.</param>
     /// <param name="owner">The checker, who creates, owns and finishes the Task.</param>
-    /// <param name="verifier">The member whose role covers verify, who posts the Evidence line.</param>
-    private static void CompleteChild(TaskService service, TaskId parent, string tag, TaskActor owner, TaskActor verifier)
+    private static void CompleteChild(TaskService service, TaskId parent, string tag, TaskActor owner)
     {
         TaskItem child = Saved(service.Create(new TaskDraft("Check " + parent, ApiTeam, null, TaskState.InProgress, Assignee: owner.Name, Parent: parent, Tags: [tag]), owner));
-        _ = Saved(service.AddEvidence(child.Id, new EvidenceLine(DateTimeOffset.UtcNow, verifier.Name, CheckCommand, 0, null, null, "Checked."), verifier));
         _ = Saved(service.Update(child.Id, new TaskPatch { Status = TaskState.Done }, null, owner));
     }
 

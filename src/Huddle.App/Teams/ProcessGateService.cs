@@ -62,7 +62,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             return new GateRefusal(GateId.BlockersDoneBeforeStart, BlockerRefusal(context.OpenBlockers));
         }
 
-        if (toDone && enabled.Contains(GateId.QaEvidenceBeforeDone) && !HasVerifierEvidence(context))
+        if (toDone && enabled.Contains(GateId.QaEvidenceBeforeDone) && !context.IsCheckTask && !HasVerifierEvidence(context))
         {
             return new GateRefusal(GateId.QaEvidenceBeforeDone, QaRefusal);
         }

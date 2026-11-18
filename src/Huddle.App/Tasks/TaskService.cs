@@ -1402,6 +1402,7 @@ internal sealed class TaskService : IDisposable
             {
                 OpenBlockers = openBlockers,
                 HasDoneVerifyChild = hasDoneVerifyChild,
+                IsCheckTask = ReviewTags.IsReviewTask(current.Tags),
             };
             if (this.gates.CheckTaskChange(context) is { } refusal)
             {
