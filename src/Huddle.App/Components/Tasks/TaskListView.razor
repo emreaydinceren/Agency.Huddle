@@ -52,7 +52,7 @@
                 case "title":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("title")" InitialDirection="@this.DirectionFor("title")" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)" CellClass="task-list-title-cell" HeaderClass="task-list-title-header">
                         <CellTemplate>
-                            <span class="task-list-title" title="@context.Item.Title" aria-current="@(this.IsSelected(context.Item) ? "true" : null)"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
+                            <span class="task-list-title" title="@context.Item.Title" aria-current="@(this.IsSelected(context.Item) ? "true" : null)"><SearchHighlight Text="@context.Item.Title" Term="@this.Search" /></span>
                         </CellTemplate>
                     </TemplateColumn>
                     break;
@@ -221,7 +221,7 @@
     [Parameter, EditorRequired]
     public required IReadOnlyList<TaskItem> Tasks { get; set; }
 
-    /// <summary>The active search term, highlighted in the Title cell by <c>MudHighlighter</c>. Null or empty highlights nothing.</summary>
+    /// <summary>The active search term, highlighted in the Title cell by <c>SearchHighlight</c>. Null or empty highlights nothing.</summary>
     [Parameter]
     public string? Search { get; set; }
 

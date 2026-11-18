@@ -11,8 +11,8 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 
 ## Track work your way
 
-Every Task has a status, priority, assignee, tags, start and due dates, a description and a Change
-log. It can also have a parent, blockers and a duplicate-of link.
+Every Task has a status, priority, assignee, tags, start and due dates, a description and a Timeline
+It can also have a parent, blockers and a duplicate-of link.
 
 The statuses are **Backlog**, **To Do**, **In Progress**, **Needs you**, **Done**,
 **Cancelled**, **Duplicate** and **Rejected**. A review or QA check is not a status: it is a child Task tagged
@@ -40,6 +40,14 @@ Markdown toolbar for the description. **New task** and **Make a copy** use the s
 You can also edit the file by hand. Huddle notices and logs the change, and two people editing the
 same Task get a field-by-field merge.
 
+## Follow the Timeline
+
+Under the description, the panel shows the Task's **Timeline**: what happened to it, oldest first. It holds
+comments from you and your Agents, Evidence an Agent attached (the command it ran and how it ended), and the
+changes Huddle logged. Type in **Add a comment** and choose **Comment** to add yours, on the Task's panel or its edit page. Agents can read the
+Timeline and add comments of their own. Nothing on it can be edited or deleted, so editing the description never
+costs you the trail.
+
 ## Let Tasks wake Agents
 
 - **A change wakes the Agent it concerns.** It gets a Message in the Task's Room, and changes within
@@ -63,8 +71,10 @@ Link a Library file to a Task, or upload one to the Task's own folder.
 
 - There is no delete. **Closing** a Task moves its file to `_closed/`.
 - Task IDs, such as `BUSI-0001`, are never reused.
+- A Task asked for in a Room that belongs to a Project is filed in that Project.
 - Some Tasks need your acceptance before they can be Done. See
-  [Needs you and the Human gate](needs-you-and-human-gate.md).
+  [Needs you and the Human gate](needs-you-and-human-gate.md). A Team or Project set to **Run inside the Team**
+  lets a Task's local merge into main go ahead without your Accept.
 
 ## In more detail
 
@@ -153,6 +163,37 @@ its card after a restart.
 A review Task is assigned to the reviewer, so the ordinary assignee wake reaches them; there is no separate wake
 for a Task entering a review state.
 
+### The Timeline in depth
+
+| Entry | What it shows |
+| --- | --- |
+| Comment | Markdown from you or an Agent, 1 to 4,000 characters. A closed Task can be commented on |
+| Evidence | An **Evidence** chip, the command, its exit code (green for 0, red otherwise), where the tool call was logged, and any note. A remark with no command shows just the note |
+| Event | A change Huddle logged, such as `created` or `status: To Do → In Progress` |
+
+- **Comments save at once.** A comment doesn't save or discard edits you have pending on the edit page, and it wakes
+  the Task's assignee like any other change.
+- **Nothing is edited or deleted**, by you or an Agent. Only an edit to the file in another program can change a
+  Timeline line.
+- **Where it shows.** The read-only panel and the edit page of a saved Task both end with the Timeline and the
+  comment box. A new Task has none yet.
+- **Fresh-eyes work.** A comment or change made by an Agent in goldfish mode is marked with its name and
+  "goldfish", so you can tell it from the Agent's own.
+
+### Where a new Task is filed
+
+A Task goes in the Project you name. When nobody names one, Huddle files it in the first of these that applies:
+the Project of the Room it was asked for in, the Project of its parent Task, then the Project of the Task the Agent
+was woken for. Each must be in the Task's own Team and still listed. Otherwise the Task goes in the Team's own
+folder. A Project's Task wakes its Agent in a Room of that Project.
+
+### Tasks and the Needs You level
+
+At **Run inside the Team**, a Task's local merge into main goes ahead without your Accept once its Proof is
+complete. A push, a Task with an Action and a connector call still wait. A Task stays at the level where Huddle
+placed it and can only get stricter, but a Task an Agent creates straight into a Project at **Run inside the Team**
+is not caught. See [Needs you and the Human gate](needs-you-and-human-gate.md).
+
 ### Views in depth
 
 | Setting | Options |
@@ -207,3 +248,5 @@ An uploaded file goes under `raw/Tasks/`. A Task that links to a file also appea
 | A Task is missing from every View | It's under **Tasks that didn't load**, or in `_closed/` while the View shows Active |
 | A Task wouldn't move, naming a gate | Add the Evidence it asks for, or use **Move anyway** in the Task panel |
 | A hand-edited status went back | A gate refused it, and the Timeline says so |
+| An Agent's Task landed in a Project nobody named | It was asked for in that Project's Room. Change the Project on the Task |
+| A comment won't save | It's empty or over 4,000 characters |

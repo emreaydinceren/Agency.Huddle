@@ -131,14 +131,20 @@ public sealed class GoldfishSlotTests
         Assert.Equal("B", rig.Pool.GoldfishRoomId);
     }
 
-    /// <summary>The goldfish takes its Turn from the pool's one gate: with a single slot held by a warm Turn, it prompts only after that Turn has been released.</summary>
+    /// <summary>The goldfish takes its Turn from the pool's one gate: with a single slot held by a warm Turn, it does not prompt while the warm Turn is held, and prompts only after that Turn has been released.</summary>
     [Fact]
     public async Task GoldfishTurn_WaitsForTheSharedTurnGate()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource goldfishPrompted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         bool warmReleasedWhenGoldfishPrompted = false;
-        await using Rig rig = Rig.Create(scriptClean: session => session.OnPrompt = _ => warmReleasedWhenGoldfishPrompted = release.Task.IsCompleted);
+        await using Rig rig = Rig.Create(scriptClean: session => session.OnPrompt = _ =>
+        {
+            // Recorded before the signal, and read only after it: the fake adds the prompt to its list before this runs, so the list count is no proof it has run.
+            warmReleasedWhenGoldfishPrompted = release.Task.IsCompleted;
+            goldfishPrompted.TrySetResult();
+        });
         rig.Warm.EnqueueGatedReply(release.Task, "warm done");
         try
         {
@@ -147,8 +153,15 @@ public sealed class GoldfishSlotTests
 
             rig.Pool.OpenGoldfish("B", Spec with { RoomId = "B" });
             rig.Pool.EnqueueGoldfish(Work(2, "B", "the brief"));
+
+            // The goldfish Turn is queued behind the held warm Turn. A bounded wait that can only strengthen the check: a correct gate never lets
+            // the goldfish prompt, so a loaded runner shortens nothing and fails nothing; a goldfish that skipped the gate would prompt within it.
+            Task winner = await Task.WhenAny(goldfishPrompted.Task, Task.Delay(TimeSpan.FromMilliseconds(300), ct));
+            Assert.NotSame(goldfishPrompted.Task, winner);
+            Assert.False(goldfishPrompted.Task.IsCompleted);
+
             release.SetResult();
-            await Eventually.UntilAsync(() => rig.Host.CleanSessions.Count == 1 && rig.Host.CleanSessions[0].Prompts.Count == 1, ct, timeout: TestBudgets.Standard);
+            await goldfishPrompted.Task.WaitAsync(TestBudgets.Standard, ct);
         }
         finally
         {

@@ -720,13 +720,14 @@ public sealed class PersonaRunnerTests
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
-        var post1 = chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
-        var post2 = chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
-        await Task.WhenAll(post1, post2);
+        // The second Message is posted only once the first Turn has reached the session: two posted back to back fold
+        // into one Turn when the runner has not yet started the first (Turn Queue spec, section 6).
+        await chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
+        await WaitForPromptCountAsync(factory.Session, 1, ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
 
         // Each Turn holds its reply for 300 ms of fake time; the second may not start until the first
         // has ended, so the clock is moved once per Turn. The watchdog is the second armed timer.
-        await WaitForPromptCountAsync(factory.Session, 1, ct);
         await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromMilliseconds(300), ct);
         await WaitForPromptCountAsync(factory.Session, 2, ct);
         await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromMilliseconds(300), ct);
@@ -2607,15 +2608,15 @@ public sealed class PersonaRunnerTests
         var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
-        // Each Message waits for the Turn before it: a one-to-one Room folds Messages queued during a Turn into one (ADR-0092),
-        // so three quick posts can reach the Agent as two Turns, and three failures would never happen under load.
-        string[] texts = ["one", "two", "three"];
-        for (int turn = 0; turn < texts.Length; turn++)
-        {
-            int expected = turn + 1;
-            await chat.PostAsync(roomId, KnownIds.Human, texts[turn], ct: ct);
-            await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= expected, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
-        }
+        // One Message per Turn: Messages posted while a Turn is pending fold into one Turn (Turn Queue spec, section 6),
+        // so three quick posts on a loaded runner make two prompts, never three. Post the next only once the previous
+        // Turn has reached the session, which makes each its own Turn.
+        await chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
+        _ = await WaitForPromptCountAsync(factory.Session, 1, ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
+        _ = await WaitForPromptCountAsync(factory.Session, 2, ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "three", ct: ct);
+        _ = await WaitForPromptCountAsync(factory.Session, 3, ct);
 
         await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded &&

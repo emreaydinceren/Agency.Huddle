@@ -11,6 +11,10 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 
 ## Browse your files
 
+Select **Library** in the Activity bar and the folders and files of every root appear in the left sidebar, with a
+search box, **New note** and **New folder** above them. Select a file and its page opens in a tab, showing only
+the document, so the page keeps all its room for reading and writing.
+
 The built-in roots are:
 
 | Root | Holds |
@@ -21,8 +25,10 @@ The built-in roots are:
 | **Archive** | Archived Teams and Projects, read-only |
 | **Skill Sources** | Where Skills come from, read-only |
 | **Prompts** | Your changes to the text Huddle sends to models |
+| **Memory backups** | What each Memory Tidy pass changed, read-only |
 
-Pin any other folder in **Settings > Library**.
+Pin any other folder in **Settings > Library**. A Team's or Project's page has a **Library** tab that shows just its
+own folder.
 
 ## Write and read notes
 
@@ -67,7 +73,7 @@ on `/`. Huddle reads these and writes nothing back.
 
 ### Managing roots
 
-- **Add a folder** with **Add folder** or in **Settings > Library**, which can also hide the built-in roots.
+- **Pin a folder** in **Settings > Library**, which can also hide the built-in roots.
 - **Where it's saved.** Pinned folders are in `library-roots.json`, created the first time you add, remove or
   hide a root. Hand edits to it are read only at startup.
 - **Start over.** **Reset pinned folders** deletes the file and returns to the configured list.
@@ -123,11 +129,13 @@ A note's history shows as a byline under its heading and a **History** timeline 
 
 | Who | How it's recorded |
 | --- | --- |
-| You | Saves, creates, renames and moves log themselves |
+| You | Saves, creates, renames and moves log themselves. A file you attach in a chat or to a Task is logged as created when it is saved to the Library |
 | Agents | They record entries with a tool, and are reminded when they create or edit without one |
 | Reviewers | Only an Agent whose role verifies is reminded about reads |
 
-An edit made in another editor leaves no history entry.
+An edit made in another editor leaves no history entry. If you remove an attachment before sending it, its
+history goes too, so a later file of the same name starts clean. A review an Agent makes in goldfish mode reads
+"Goldfish review by" its name.
 
 ### If something goes wrong
 

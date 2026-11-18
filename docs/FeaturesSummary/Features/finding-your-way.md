@@ -22,12 +22,12 @@ their contents, Tasks, and Rooms down to the matching Message.
 
 ## Move between areas
 
-The **Activity bar** at the far left switches the sidebar between **Chats**, **Teams**, **Agents**,
-**Tasks**, **Library**, **Scheduled** and **Remote access**. It also has a **Feed** icon, with
+The **Activity bar** at the far left starts with the **Feed** icon, always first. Below it come the buttons that
+switch the sidebar between **Rooms**, **Teams**, **Agents**, **Tasks**, **Library** and **Scheduled**, with
 **Archived** and **Settings** at the bottom. Selecting the active button folds the sidebar away.
 
-Team tiles at the top of the bar narrow the sidebar to one Team. Right-click a tile to remove it or turn
-them all off.
+A tile for each Team sits between the Feed and those buttons. It narrows the sidebar to that one Team. Right-click
+a tile to remove it or turn them all off, or open the Team's page and choose **Hide shortcut** or **Show shortcut**.
 
 ## Work in tabs
 
@@ -76,28 +76,47 @@ Notifications bell and the Right sidebar toggle.
 - **Older items.** Closed Tasks and archived chats come last, in grey.
 - **What opens.** An Agent opens its card. A Room opens at the matching Message, highlighted for a moment.
 - **No index.** Every search reads fresh, so new Messages and files appear straight away.
+- **Agents search too.** An Agent's search lists every matching Message, not only the newest one in each Room, and
+  can match a pattern. The Chief of Staff searches every Room; other Agents search the Rooms they are in unless they ask for all.
 - **`Results may be incomplete.`** A limit was reached, so narrow the search or pick one chip.
 
 ### Sidebar views
 
 | Button | What the sidebar shows |
 | --- | --- |
-| **Chats** | The **Needs you** card, then **Group by: All \| Team**. **All** has **Needs you** and **All** folders. **Team** puts every chat in a folder per Team, in name order |
-| **Teams** | Each Team as a root row, with **Rooms**, **Library** and **Tasks** folders. **Build a team** is at the bottom. Archived Teams are on the **Archived** page |
+| **Rooms** | The **Needs you** card, then **Group by: All \| Team**. **All** has **Needs you** and **All** folders. **Team** puts every Room in a folder per Team, in name order |
+| **Teams** | One Team at a time, the one whose page you have open, with a Team selector, its **Projects**, and the **Rooms**, **Tasks** and **Library** of what you select. See [The Teams sidebar](#the-teams-sidebar) |
 | **Agents** | A link to the page listing every Agent |
-| **Tasks** | **All Tasks**, **My Tasks**, your Views and **New view** |
-| **Library** | A link to the Library page |
+| **Tasks** | **All Tasks**, **My Tasks**, your Views and **New view**, listed right at the top with no group over them |
+| **Library** | The folders and files of every root, with a search box, **New note** and **New folder** |
 | **Scheduled** | Every Job, and **New job** |
-| **Remote access** | Who may reach Huddle from other devices |
+
+**Archived** opens one page with **Teams**, **Projects** and **Rooms** tabs, where you **Restore** what you
+archived. Remote access is a tab in **Settings**.
 
 The sidebar resizes from 200 to 480 px, and the Right sidebar from 240 to 560 px. Both remember their state per
 browser. The whole UI is drawn at 90% zoom.
 
+### The Teams sidebar
+
+The **Teams** button and a Team's tile show the same view, for one Team. The **Teams** button follows the Team of
+the page you have open, and keeps the last one you used when the page has no Team.
+
+- **Team selector.** The Team's name sits in a card at the top. Select **Switch team** (the arrows at its right) to
+  list every Team and **Build a team**, then pick one.
+- **Projects.** Under the card, **PROJECTS** lists the Team's Projects, each with its open Tasks, and its "+" starts
+  a Project. Once a Project exists, a **No project** row narrows what is below to the Rooms, Tasks and files that
+  belong to no Project. Select it again to go back to the whole Team.
+- **Sections below.** **ROOMS**, **TASKS** and **LIBRARY** show the Team, the selected Project or **No project**.
+  **ROOMS** splits into **Needs you** and **All** while a Room is waiting, and its "+" starts a new chat. **TASKS**
+  lists the Task Views for that scope, and its "+" creates a View. **LIBRARY** links to the files of that scope.
+- **Archiving.** The More (⋮) menus on a Team and on a Project archive it. Restore it from the **Archived** page.
+
 ### Team tiles
 
-Clicking a tile narrows the sidebar to that Team's list of itself and its Projects, with the selected one's **ROOMS**, **TASKS** and **LIBRARY** below.
-**ROOMS** splits into **Needs you** and **All** while a Room is waiting, and its "+" starts a new chat. A Team page has **Show shortcut** / **Hide shortcut**,
-and the choice is remembered per browser.
+Selecting a tile shows that Team in the sidebar. To hide or bring back a tile, open the Team's page and choose
+**Hide shortcut** or **Show shortcut** in its header, next to **Edit avatar...**, **Duplicate** and **Archive**. The
+choice is remembered per browser.
 
 ### Tabs in depth
 
@@ -127,9 +146,14 @@ Every page has its own address:
 | --- | --- |
 | `/rooms/{roomId}` | A chat Room |
 | `/agents` | Agents |
-| `/teams/{Team}`, `/teams/{Team}/files`, `/teams/{Team}/tasks` | A Team and its tabs |
+| `/teams/{Team}`, `/teams/{Team}/files` | A Team and its **Library** tab |
+| `/teams/{Team}/no-project/files` | The files of a Team that belong to no Project |
 | `/teams/{Team}/projects/{Project}` | A Project |
 | `/teams/{Team}/tasks/{View}` | A View, narrowed to a Team |
+| `/teams/{Team}/projects/{Project}/tasks/{View}` | A View, narrowed to a Project |
+| `/teams/{Team}/no-project/tasks/{View}` | A View, narrowed to a Team's Tasks that belong to no Project |
+| `/feed`, `/archived` | The Feed, and the Archived page |
+| `/library` | The Library page, showing a document |
 | `/tasks/{viewId}` | A saved View |
 | `/tasks/item/{TaskId}` | One Task, over your last View |
 | `/tasks/item/{TaskId}/edit` | One Task in its edit tab |

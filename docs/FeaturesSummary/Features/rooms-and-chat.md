@@ -49,21 +49,33 @@ Limits: 25 MiB per file and 10 files per Message. SVGs and programs are refused.
 ## Answer an Agent's questions
 
 An Agent can ask you a question with options, drawn as a card in the Room. Your answer comes back to
-it as a Message. Questions, retry dialogs and forms from its tools use the same kind of card.
+it as a Message. Questions, retry dialogs and forms from its tools use the same kind of card. A question
+with option buttons is still waiting if Huddle restarts.
 
 ## Keep long chats under control
 
 - **Budget.** After a set number of Agent replies without you, a Room pauses and offers **Continue**
-  or **Leave paused**. Your next Message resets it.
+  or **Leave paused**. Your next Message resets it, and Messages that were waiting are answered.
 - **Sessions.** Each Agent keeps a separate conversation per Room and catches up from the transcript
   when it needs to. **Settings > Sessions** changes how much it rereads.
 - **Start afresh.** Gives an Agent a new session in this Room and shows **See what it reread**, the
   exact text it was sent.
 
-## Work in Team chats
+## Pick up where you left off
+
+- **Nothing you sent is lost.** A Message an Agent hadn't answered yet survives Huddle closing or crashing. On
+  the next start the Agent answers it, and the Room says "Picked up after a restart."
+- **Waiting is visible.** A row such as "Waiting for Nova: 2 Messages" has **Don't answer** to call them off.
+- **Quick Messages get one reply.** In an Agent's one-to-one Room, several Messages sent while it is busy are
+  answered together.
+- **Agents can come back.** An Agent that says it will check something later sets a **Follow-up**. The Room
+  shows it with **Cancel**, and at that time the Agent picks the conversation up again.
+
+## Work in Team Rooms
 
 Every Team has a **Team Room** holding you and all its members. It is created with the first member.
-A member's **Message** button opens that Team's own one-to-one Room.
+A member's **Message** button opens that Team's own one-to-one Room, labelled with the Team's icon and name
+and listed under **All**.
 
 ## Good to know
 
@@ -71,6 +83,7 @@ A member's **Message** button opens that Team's own one-to-one Room.
   a confirmation.
 - Half-written Messages are kept per Room.
 - Team Rooms can't be renamed.
+- The Chief of Staff can search every Room.
 
 ## In more detail
 
@@ -82,6 +95,41 @@ A member's **Message** button opens that Team's own one-to-one Room.
    [Second Brain and Memory](second-brain-and-memory.md#file-changes).
 
 Agents can also reply to each other, which is why Rooms have a Budget.
+
+### Messages that wait
+
+A Message waits when its Agent is busy, offline, or in a Room whose Budget is spent. Waiting Messages are kept,
+so they survive Huddle closing, crashing or the computer restarting.
+
+| Situation | What happens |
+| --- | --- |
+| Messages are waiting | The Room shows "Waiting for Nova: 2 Messages". **Don't answer** calls them off before they cost anything |
+| An Agent is already answering | Its **Stop** button also calls off what waits behind that Turn |
+| Huddle starts again | Each Agent answers its waiting Messages once it is online. The Room says "Picked up after a restart." and lists what is waiting and for whom |
+| A Turn was cut off half way | It runs once more, and the Agent is told to check what it already did. A reply is never posted twice |
+| A Message is older than a day | It isn't picked up, and the Room says so. Team:TurnQueue:ResumeWithin changes the limit |
+| You had stopped a Turn | It stays stopped |
+| The Room's Budget is spent | Waiting Messages are answered when you press **Continue** or type in the Room |
+
+A Question an Agent asked with option buttons is still waiting after a restart.
+
+### Quick Messages get one reply
+
+In an Agent's one-to-one Room, Messages you send while the Agent is still busy are answered together, in one
+reply, instead of one reply each. This also applies to Messages picked up after a restart. A Room with more
+Agents answers each Mention on its own. A command such as @nova /compact ends the group, so Messages before
+and after it are separate Turns.
+
+### Follow-ups
+
+When an Agent says it will come back to something ("I'll look at the build in an hour"), it can set a
+**Follow-up**. The Room shows a row such as "Nova will follow up Mon 16 Nov, 15:40: Check the build" with
+**Cancel**. At that time Huddle mentions the Agent in that Room and it carries on the conversation.
+
+- Follow-ups are also listed under **Scheduled**, where **Delete job...** cancels one.
+- An Agent can hold 5 Follow-ups at a time. Team:Jobs:MaxFollowUpsPerAgent changes that.
+- A Follow-up due while its Room is paused waits until you type or press **Continue**.
+- One that is more than a day late is dropped, and the Feed says it did not run.
 
 ### Sessions and catch-up
 
@@ -140,7 +188,7 @@ so they can read it. Set `Team:References:ExpandInPrompt` to false to stop that.
 | You send while a file is uploading | Send waits, and your text stays in the box |
 | You reload with chips pending | The chips are lost. Files already saved stay in the Room's folder |
 
-- **Where files land.** A Team chat uses the Team's `raw/` folder. Other Rooms use the **Raw** root, one
+- **Where files land.** A Team Room uses the Team's `raw/` folder. Other Rooms use the **Raw** root, one
   folder per Room.
 - **Who is told.** The Message carrying the path is the only notice. File Changes doesn't report uploads.
 - **Without a Library.** The paperclip, paste and drop appear only when the Library is on.
@@ -164,30 +212,31 @@ and disappear when the reply finishes or the app restarts.
 ### When an Agent says nothing
 
 An Agent with nothing to add replies `NO_REPLY`, and Huddle posts nothing. Every Agent is also told that a
-promise of later work needs a way back, such as a Task, a Job or a Mention. Otherwise the work is done now.
+promise of later work needs a way back, such as a Task, a Job, a Follow-up or a Mention. Otherwise the work is done now.
 
 ### Renaming, archiving and deleting
 
 | Action | Result |
 | --- | --- |
 | **Rename** | A name you type is kept even when members change |
-| **Archive** | The Room moves to the **Chats** tab of the **Archived** page. It still works and can still be woken, and its files stay |
+| **Archive** | The Room moves to the **Rooms** tab of the **Archived** page. It still works and can still be woken, and its files stay |
 | **Delete** | The transcript is permanently deleted, and the Room's **Raw** files go to the Recycle Bin |
 
 > [!WARNING]
 > Deleting a Room can't be undone, because the transcript skips the Recycle Bin. Archive it if you might want
 > it later.
 
-### Team chats in depth
+### Team Rooms in depth
 
-- **New chats.** Use **New chat** in a Team's More (⋮) menu. Its members are listed first, and you can still
+- **New Rooms.** Use **New room** in a Team's More (⋮) menu. Its members are listed first, and you can still
   select an Agent from another Team.
 - **The Team Room.** A later joiner is invited automatically. Leaving a Team doesn't remove an Agent from
   the Room.
-- **Two one-to-ones.** A Team's one-to-one is separate from the one under **Chats**, so they don't mix.
+- **Two one-to-ones.** A Team's one-to-one is separate from the one under **Rooms**, so they don't mix. It reads
+  like "Rhea · Development Team", with the Team's icon.
 - **Digests and retros.** These post in the Team Room, or in the Agent's one-to-one if the Team Room is
   archived.
-- **When a Team goes away,** its chats are archived with their history.
+- **When a Team goes away,** its Rooms are archived with their history.
 
 ### If something goes wrong
 
@@ -196,4 +245,6 @@ promise of later work needs a way back, such as a Task, a Job or a Mention. Othe
 | `@nova /compact` got an ordinary reply | The Agent doesn't offer that command, wasn't online yet, or another Agent wrote it |
 | `/compact` says *Unknown command* | Write the mention first: `@nova /compact` |
 | Nobody replied | The Room says why. In a group Room, mention an Agent or use `@all` |
+| A Message was not answered after a restart | It was more than a day old, and the Room says so. Send it again |
+| "Waiting for Nova" stays on screen | Nova is offline or busy, or the Room's Budget is spent. Press **Continue**, or **Don't answer** to drop them |
 | Agents stopped replying to each other | The Room reached its Budget. Press **Continue** or post a Message |
