@@ -242,6 +242,24 @@ public sealed class PresenceAnchorGoldfishTests
         Assert.Contains("{Name}, in goldfish mode", doc, StringComparison.Ordinal); // contains-ok: the Avatars row's aria-label
     }
 
+    /// <summary>
+    /// The fish symbol is for the goldfish concept only: the chip and the transcript rows and stamp draw it, and the avatar badge
+    /// draws it from a stylesheet mask rather than the constant, so exactly these two sources reference it.
+    /// </summary>
+    [Fact]
+    public void MaterialSymbols_Fish_IsReferencedFromExactlyTheExpectedFiles()
+    {
+        string root = RepoPaths.App();
+        string[] users = [.. Directory.EnumerateFiles(root, "*.*", SearchOption.AllDirectories)
+            .Where(path => path.EndsWith(".razor", StringComparison.Ordinal) || path.EndsWith(".cs", StringComparison.Ordinal))
+            .Select(path => Path.GetRelativePath(root, path).Replace('\\', '/'))
+            .Where(path => !path.StartsWith("obj/", StringComparison.Ordinal) && !path.StartsWith("bin/", StringComparison.Ordinal) && path != "Tabs/MaterialSymbols.cs")
+            .Where(path => File.ReadAllText(Path.Combine(root, path)).Contains("MaterialSymbols.Fish", StringComparison.Ordinal)) // contains-ok: a source scan for a constant's name
+            .Order(StringComparer.Ordinal)];
+
+        Assert.Equal(["Components/Chat/GoldfishChip.razor", "Components/Shared/MessageList.razor"], users);
+    }
+
     private static IRenderedComponent<PresenceAnchor> RenderAnchor(MudBunitContext ctx, string name, bool badgeOnly) =>
         ctx.Render<PresenceAnchor>(parameters => parameters
             .Add(p => p.AgentName, name)
