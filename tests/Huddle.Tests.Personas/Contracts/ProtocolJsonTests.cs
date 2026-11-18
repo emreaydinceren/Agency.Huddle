@@ -457,6 +457,125 @@ public sealed class ProtocolJsonTests
         Assert.Null(Assert.IsType<PostMessage>(ProtocolJson.Deserialize(without)).InReplyTo);
     }
 
+    /// <summary>GoldfishBegin pins its JSON, type first and version last, and reads back.</summary>
+    [Fact]
+    public void GoldfishBegin_PinsTheJson()
+    {
+        string json = ProtocolJson.Serialize(new GoldfishBegin("p1", "r1", "b"));
+
+        Assert.Equal("{\"type\":\"goldfishBegin\",\"possessionId\":\"p1\",\"roomId\":\"r1\",\"brief\":\"b\",\"version\":3}", json);
+        GoldfishBegin back = Assert.IsType<GoldfishBegin>(ProtocolJson.Deserialize(json));
+        Assert.Equal("p1", back.PossessionId);
+        Assert.Equal("r1", back.RoomId);
+        Assert.Equal("b", back.Brief);
+    }
+
+    /// <summary>GoldfishEnd pins its JSON with a camelCase exit and reads back.</summary>
+    [Fact]
+    public void GoldfishEnd_PinsTheJson()
+    {
+        string json = ProtocolJson.Serialize(new GoldfishEnd("p1", GoldfishExit.CalledBack));
+
+        Assert.Equal("{\"type\":\"goldfishEnd\",\"possessionId\":\"p1\",\"exit\":\"calledBack\",\"version\":3}", json);
+        GoldfishEnd back = Assert.IsType<GoldfishEnd>(ProtocolJson.Deserialize(json));
+        Assert.Equal("p1", back.PossessionId);
+        Assert.Equal(GoldfishExit.CalledBack, back.Exit);
+    }
+
+    /// <summary>Every exit name is camelCase on the wire and reads back.</summary>
+    [Fact]
+    public void GoldfishEnd_EveryExit_IsCamelCase()
+    {
+        Assert.Equal(5, Enum.GetValues<GoldfishExit>().Length);
+        foreach (GoldfishExit exit in Enum.GetValues<GoldfishExit>())
+        {
+            string json = ProtocolJson.Serialize(new GoldfishEnd("p1", exit));
+            string expected = char.ToLowerInvariant(exit.ToString()[0]) + exit.ToString()[1..];
+
+            Assert.Equal(expected, WireString(json, "exit"));
+            Assert.Equal(exit, Assert.IsType<GoldfishEnd>(ProtocolJson.Deserialize(json)).Exit);
+        }
+    }
+
+    /// <summary>A TurnEnded report carries Done, omits the other nulls, and reads back.</summary>
+    [Fact]
+    public void GoldfishReport_TurnEnded_PinsTheJson()
+    {
+        string json = ProtocolJson.Serialize(new GoldfishReport("p1", GoldfishReportKind.TurnEnded, Done: true));
+
+        Assert.Equal("{\"type\":\"goldfishReport\",\"possessionId\":\"p1\",\"kind\":\"turnEnded\",\"done\":true,\"version\":3}", json);
+        GoldfishReport back = Assert.IsType<GoldfishReport>(ProtocolJson.Deserialize(json));
+        Assert.Equal(GoldfishReportKind.TurnEnded, back.Kind);
+        Assert.True(back.Done);
+        Assert.Null(back.RunningSpend);
+        Assert.Null(back.Currency);
+        Assert.Null(back.Detail);
+    }
+
+    /// <summary>A report with spend, currency and detail writes them in order and reads them back.</summary>
+    [Fact]
+    public void GoldfishReport_Failed_CarriesSpendAndDetail()
+    {
+        string json = ProtocolJson.Serialize(new GoldfishReport("p1", GoldfishReportKind.Failed, 1.25m, "USD", "boom"));
+
+        Assert.Equal("{\"type\":\"goldfishReport\",\"possessionId\":\"p1\",\"kind\":\"failed\",\"runningSpend\":1.25,\"currency\":\"USD\",\"detail\":\"boom\",\"version\":3}", json);
+        GoldfishReport back = Assert.IsType<GoldfishReport>(ProtocolJson.Deserialize(json));
+        Assert.Equal(1.25m, back.RunningSpend);
+        Assert.Equal("USD", back.Currency);
+        Assert.Equal("boom", back.Detail);
+        Assert.Null(back.Done);
+    }
+
+    /// <summary>Every report kind is camelCase on the wire and reads back.</summary>
+    [Fact]
+    public void GoldfishReport_EveryKind_IsCamelCase()
+    {
+        Assert.Equal(4, Enum.GetValues<GoldfishReportKind>().Length);
+        foreach (GoldfishReportKind kind in Enum.GetValues<GoldfishReportKind>())
+        {
+            string json = ProtocolJson.Serialize(new GoldfishReport("p1", kind));
+            string expected = char.ToLowerInvariant(kind.ToString()[0]) + kind.ToString()[1..];
+
+            Assert.Equal(expected, WireString(json, "kind"));
+            Assert.Equal(kind, Assert.IsType<GoldfishReport>(ProtocolJson.Deserialize(json)).Kind);
+        }
+    }
+
+    /// <summary>A goldfish line with an unknown extra property still reads.</summary>
+    [Fact]
+    public void GoldfishEnd_UnknownProperty_StillDeserialises()
+    {
+        const string json = "{\"type\":\"goldfishEnd\",\"possessionId\":\"p1\",\"exit\":\"failed\",\"extra\":1,\"version\":3}";
+
+        GoldfishEnd back = Assert.IsType<GoldfishEnd>(ProtocolJson.Deserialize(json));
+
+        Assert.Equal(GoldfishExit.Failed, back.Exit);
+    }
+
+    /// <summary>An unknown message type throws, which is why a server never sends a new type to an old runner.</summary>
+    [Fact]
+    public void Deserialize_UnknownType_Throws()
+    {
+        const string json = "{\"type\":\"goldfishNope\",\"possessionId\":\"p1\",\"version\":3}";
+
+        Assert.ThrowsAny<JsonException>(() => ProtocolJson.Deserialize(json));
+    }
+
+    /// <summary>A ChatMessage with a goldfish id writes it and reads it back; one without omits it.</summary>
+    [Fact]
+    public void ChatMessage_Goldfish_WithAndWithout()
+    {
+        ChatMessage with = new("m1", DateTimeOffset.UnixEpoch, "human", "You", "hi") { Goldfish = "p1" };
+        ChatMessage without = new("m1", DateTimeOffset.UnixEpoch, "human", "You", "hi");
+        string withJson = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", with, true, [], [], 0, 0));
+        string withoutJson = ProtocolJson.Serialize(new MessagePosted("room-1", "echo", without, true, [], [], 0, 0));
+
+        Assert.Contains("\"goldfish\":\"p1\"", withJson, StringComparison.Ordinal); // contains-ok: one property inside a MessagePosted envelope; the round trip below pins the value
+        Assert.DoesNotContain("goldfish", withoutJson, StringComparison.Ordinal);
+        Assert.Equal("p1", Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(withJson)).Message.Goldfish);
+        Assert.Null(Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(withoutJson)).Message.Goldfish);
+    }
+
     private static string? WireString(string json, string property)
     {
         using JsonDocument document = JsonDocument.Parse(json);
