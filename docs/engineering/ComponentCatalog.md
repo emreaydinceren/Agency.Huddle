@@ -24,7 +24,7 @@ catalog tables, and [wireframes.md](wireframes.md) names every screen container.
 
 | | |
 | --- | --- |
-| Taken | 2026-11-18, on `main` at `3b592c70` |
+| Taken | 2026-11-18, on `main` at `3b592c70`. Entries for components built afterwards (from `ActionButton` on) were re-measured with `grep` when they shipped, and their screenshots may predate the change |
 | Data | The `software-co` seed from `src/Huddle.Seeder`, in its own folder, so no real data was involved |
 | Agents | The free mock adapter, so every Agent shows Online and nothing is paid for |
 | Theme | Light. Dark and narrow layouts are not shown (see [Not captured](#not-captured)) |
@@ -1005,15 +1005,12 @@ counted). A module may also import another one: `pointer-drag.js` is reached onl
 
 ## Patterns still built by hand
 
-These are shapes the app repeats with no component behind them, plus the standard controls we
-want to wrap so that a change is made in one place. **Every row is planned to move into its own
-component.** The names are working names, and none carries a prefix (D4, ruled).
-
-Counts were measured at `3b592c70`. Sizes (S, M, L) are estimates, not measurements. When one
-ships, move its row to the entry for the new component and delete it here.
-
-No planned components remain: the last two, A5 and A8, shipped in wave 5 as
-[`ChipRadioGroup`](#chip-radio-group) and [`BusyLabel`](#busy-label).
+Every planned shared component has shipped (2026-11-18): the entries above are the result, and
+[ComponentRollout.md](ComponentRollout.md) records how they were built and what was decided by default.
+What is left is the browser-script work that was read and decided, the clean-up items, and the few
+raw tags that are not role buttons (listed under [Buttons](#buttons) and the other entries, as
+"Still raw"). A shape that is repeated and has no component yet is a new row here: add it, with its
+count, before you copy it a second time.
 
 ### Browser scripts
 
@@ -1051,58 +1048,23 @@ one pure C# step (key, index, count, wrap or clamp, Home and End) and leave the 
 | D4 | One naming convention for the wrappers. **Ruled 2026-11-18: no prefix**, named for what it is (`Notice`, `SegmentedControl`, `DialogFooter`); a name that would clash with HTML or MudBlazor gets a sharper word (`ActionButton`). **Done in B1, 2026-11-18**: `HuddleSegmentedControl` is now `SegmentedControl`, its classes lost the `huddle-` prefix | `HuddleSegmentedControl` has a prefix; `Chip`, `EmptyState` and `SearchField` do not |
 | D5 | Text fields with neither `Label` nor `aria-label`. **Done in B3, 2026-11-18**: `TextField` and `SelectField` throw on a render with no name, and the four nameless sites got one (the fifth, the global search, was named by its attributes) | 5 of 62 at `3b592c70` |
 
-### Inconsistencies to fix, per planned component
+### How the order worked out
 
-How the copies of each planned component differ today, so its owner fixes them while building it.
-Values marked *measured* were read with `getComputedStyle` on 2026-11-18 at `267f91f4`, in Lumen
-Light (the `hairline` surface) at 1,500 px, on the `catalog` seed with the mock adapter; the dark
-checks are Lumen Dark. Everything else is read from the code. Paths are under `src/Huddle.App/`,
-and `.razor` files under `Components/`. A lead is a reading of the code not yet seen on screen.
-
-Four Themes restyle shared controls through their `surface` trait: Lumen is `hairline`, Nordic
-`paper`, Fluent `card` and Cobalt Soft `flat` (`Themes/Skins/*.light.json`). The `paper` and
-`hairline` blocks in `wwwroot/css/base.css` (from line 700 and 852) and `sidebar.css` (from 786)
-are the overrides to check. `agents/scripts/Css-Snapshot.ps1 -Mode Capture` records every route
-in all 8 Theme and mode pairs at 1280 and 768 px; `-Mode Report` with a `-Declared` file of the
-intended changes then lists anything else that moved.
-
-No planned component is left, so no subsection remains: A5 and A8 went with their rows in wave 5.
-
-### Suggested order
-
-The waves, the owner brief and the visual proof are in [ComponentRollout.md](ComponentRollout.md).
-
-**Build bottom-up, adopt top-down.** Building a component is cheap, because it is one file. Moving
-call sites onto it is where the effort and the risk are. So a component is created when its first
-real user needs it, and the other sites move over gradually.
-
-Three rules for every wrapper:
+Build bottom-up, adopt top-down: a component is built when its first real user needs it, and the
+other sites move over area by area. Three rules held for every wrapper:
 
 - **Compose, do not inherit.** A wrapper is built from smaller parts, as `StatusChip` wraps `Chip`,
   which wraps `MudChip`. When a part changes, everything built from it follows.
 - **A composite speaks in roles and states, never in Mud parameters.** `DialogFooter` takes
-  confirm text, busy and disabled, not `Variant` or `Color`. Then swapping what is inside it later
-  is a change to one file.
-- **No primitive without a first real user.** Design its parameters from what that user needs. For
-  the button, that is 40 sites with a start icon, 55 with `Disabled` and 136 with a per-site class.
+  confirm text, busy and disabled, not `Variant` or `Color`.
+- **No primitive without a first real user.** Its parameters come from what the real sites need.
 
-The order:
-
-1. **Foundations, no component yet.** The naming convention (D4) and the switch-or-checkbox rule
-   (B6) are ruled; write the B6 rule into design-system.md. A convention rule can allow existing uses while blocking
-   new ones (D1, checked): the per-file baseline only shrinks.
-2. **Pilot with B1.** The segmented control is both a composite and a primitive, so it proves the
-   options list, the `Look`, the convention rule and the visual check on six sites.
-3. **B2, the button roles, with A2 (`DialogFooter`) as its first user.** **Built 2026-11-18** as
-   [`ActionButton`](#buttons) and [`DialogFooter`](#dialog-footer); the other buttons move area by area.
-4. **A1 (`Notice`), then B3 (text field) and B4 (select).**
-5. **The composites that contain them:** A4 (the picker, which contains selects), A7 (`SettingSwitch`),
-   A6 (`PropertyList`) and A3 (`RowActionsMenu`, with B5, the icon button, built as its first user).
-6. **Opportunistic:** A5, A8 and group C. Fix D2 and D3 when working in those files. **A5 and A8
-   built 2026-11-18** as [`ChipRadioGroup`](#chip-radio-group) and [`BusyLabel`](#busy-label), with D3.
-
-Prove each visual change with `agents/scripts/Css-Snapshot.ps1` before and after, because four
-themes restyle shared controls from outside them.
+The order was: the segmented control (the pilot), `ActionButton` with `DialogFooter`, `Notice`,
+`TextField` and `SelectField`, then the composites (the picker, `SettingSwitch`, `PropertyList`,
+`RowActionsMenu` with `ActionIconButton`), then `ChipRadioGroup`, `BusyLabel` and the browser
+scripts. Each one added a convention rule (CV14 to CV25) that holds every file to a baseline which
+may only shrink. Visual changes were proved with `agents/scripts/Css-Snapshot.ps1`, one comparison
+per wave; see [Proving a visual change](ComponentRollout.md#proving-a-visual-change).
 
 ## Not captured
 

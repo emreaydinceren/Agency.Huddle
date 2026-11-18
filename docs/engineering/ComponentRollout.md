@@ -1,11 +1,18 @@
 # Component rollout plan
 
-How the planned components in [ComponentCatalog.md](ComponentCatalog.md) are built and adopted
-by parallel owner agents, in what order, and how each step is proved. It is the plan for the
+How the planned components in [ComponentCatalog.md](ComponentCatalog.md) were built and adopted
+by parallel owner agents, in what order, and how each step was proved. It is the plan for the
 catalog's [Patterns still built by hand](ComponentCatalog.md#patterns-still-built-by-hand) and
-[Inconsistencies to fix](ComponentCatalog.md#inconsistencies-to-fix-per-planned-component).
+the inconsistencies the catalog listed per component, which each build fixed.
 Running owners in parallel follows [DeliveryPlaybook.md](../../agents/DeliveryPlaybook.md); this
 page adds only what is particular to this work.
+
+**Status, 2026-11-18: all five waves are done.** Fourteen planned components shipped (`SegmentedControl`,
+`ActionButton`, `DialogFooter`, `Notice`, `TextField`, `SelectField`, `SettingSwitch` with the on-or-off
+rule, `PropertyList`, `RowActionsMenu`, `ActionIconButton`, the Adapter, Model and Effort picker with
+`ProbedSelect`, `ChipRadioGroup`, `BusyLabel`), the shared browser-script helpers were done or decided
+(C1 to C4), and the convention test now holds files to rules CV14 to CV25. What is left raw is listed
+in the catalog's entries, as "Still raw".
 
 ## Contents
 
@@ -16,7 +23,7 @@ page adds only what is particular to this work.
 - Files that more than one component edits
 - Proving a visual change
 - The owner brief
-- Questions to answer before each wave
+- Defaults taken without a ruling
 - Lessons from the pilot
 - Lessons from the area migrations
 
@@ -29,9 +36,9 @@ page adds only what is particular to this work.
 | Segmented control text (B1) | 13 px, selected item at weight 500, on a 28 px row |
 | Build order | Bottom-up build, top-down adoption; a component is built when its first real user needs it |
 
-Rulings for each component live in its entry under
-[Inconsistencies to fix](ComponentCatalog.md#inconsistencies-to-fix-per-planned-component),
-next to the question they settle. An owner never decides an open `Q-` question; it stops and asks.
+Rulings by the human owner are the four above. Every other design question was answered at the
+catalog's recommended answer so the work could continue; they are listed under
+[Defaults taken without a ruling](#defaults-taken-without-a-ruling), to confirm or overturn.
 
 ## The rhythm for every component
 
@@ -159,17 +166,36 @@ ranges in it (regenerate them with `grep -n` when writing it, as the playbook sa
 - **Model:** Opus for B1 and B2, which set the pattern and carry design decisions; Sonnet for the
   area migrations, which are mechanical and checked by the baseline.
 
-## Questions to answer before each wave
+## Defaults taken without a ruling
 
-Ask these in time; an owner started without them guesses. The full text and recommended answers
-are in the catalog.
+The human owner ruled four questions (naming, switch or checkbox, segmented-control text size and
+weight). For every other open question the catalog had a recommended answer, and the owner who
+built the component applied it. None was reviewed by the human owner before the work landed:
+each is a default to confirm. Overturning one means a change in its component and, where noted,
+its sites.
 
-| Before | Questions |
-| --- | --- |
-| Wave 2 | Answered 2026-11-18, each at the catalog's recommendation: `Q-B2-1` control radius, `Q-B2-2` Text Error trigger and Filled Error confirm, `Q-B2-3` no 2 px gap; `Q-A2-1` Close-only info dialogs are pickers, `Q-A2-2` the cancel word may vary |
-| Wave 3 | `Q-A1-1` to `Q-A1-3` answered 2026-11-18 at the catalog's recommendation (Warnings interrupt only when the Human must act now, an 18 px icon, always dense); `Q-B3-1` answered 2026-11-18 at the recommendation (4 rows, the Description's auto-grow kept) |
-| Wave 4 | `Q-A4-1`, `Q-A4-2`; `Q-A6-1`, `Q-A6-2`; `Q-A7-1`, `Q-A7-2`; `Q-A3-1`, `Q-A3-2`; `Q-B5-1` |
-| Wave 5 | `Q-A5-1`; `Q-A8-1` |
+| Question | Default applied | Where it shows |
+| --- | --- | --- |
+| `Q-B2-1` Button radius | The control step (4.5 px in Lumen), not the card step (6 px) | Every button, in every Theme: a 1.5 to 2 px change on about 200 buttons |
+| `Q-B2-2` A destructive trigger | Text in Error ink for a trigger that asks first; Filled Error only on the confirm; the Outlined Error look is gone | `ResetAllControl`, `AgentProfileCard`, the Archived page |
+| `Q-B2-3` The 2 px icon gap | Dropped: one gap from the component | The New task button (2 px to 8 px) |
+| `Q-A2-1` Close-only info dialogs | Pickers with no actions row and a title close button | `SkillsHelpDialog`, `NeedsYouLevelDialog` |
+| `Q-A2-2` Cancel wording | May vary ("Not now", "Skip"); the look is fixed | `DialogFooter.CancelText` |
+| `Q-A1-1` Which Warnings interrupt | `alert` only when the Human must act now (9 of 36); the rest `status` (4 were `alert` before) | Warnings in BuildTeam, SessionsPanel, NeedsYouLevelControl, TeamDetails |
+| `Q-A1-2` Notice icon | 18 px (was 22 px) | Every notice |
+| `Q-A1-3` Notice size | Always Dense, so 28 formerly non-dense notices got shorter | Tasks, TeamPage, FieldsDialog |
+| `Q-B3-1` Multi-line rows | 4 rows by default (were 2, 3 or 6); three fields keep their own height | BuildTeam, RoleFormDialog, ProfilePanel, TaskTimeline, RemoteAccess |
+| `Q-A3-1` Row-menu activator | Round (50%), also in the sidebar (was 6 px) | Teams, Views and Room nav rows |
+| `Q-A3-2` Hover reveal in tables | Yes for the Skills table, cards and Teams scope rows; the Scheduled and Tasks page-header menus stay always shown, because they are page actions, not row menus | Skills table |
+| `Q-B5-1` Icon button size | 28 px everywhere, the top bar included (was 32 px; the design system names no exception) | Top bar, Teams "+" buttons, most Small icon buttons (were 23.5 px) |
+| `Q-A4-1` One-choice Adapter select | Hidden when there is only one Adapter | Agent card and Helper card |
+| `Q-A4-2` Select `title` tooltips | Dropped, except Work mode's, which carries the mode's description | Agent card |
+| `Q-A6-1` Label column | A fixed 120 px, in compact lists too | Task read and edit, roster card, Library properties, Feed previews |
+| `Q-A6-2` Row hairline | Only on the Task read view | Task read view |
+| `Q-A7-1` Switch size | Small (44 by 24 px) everywhere | Every switch |
+| `Q-A7-2` "On" as a label | Not allowed: "Helper on", "All sources" | `HelperCard`, `AddWithAiDialog` |
+| `Q-A5-1` Arrow keys on the chip group | Plain arrows move the choice and wrap; Ctrl or Alt arrows are ignored by the group | Feed notifications, search scopes |
+| `Q-A8-1` Spinner in a button | `ActionButton` `Busy` and "Reloading…", no second spinner | The two Skills Reload buttons |
 
 ## Lessons from the pilot
 
