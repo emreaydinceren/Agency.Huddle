@@ -355,7 +355,7 @@
 
 @media (hover: none) {
     .agent-profile-card-avatar-edit,
-    .hover-reveal-row .hover-reveal-menu-button,
+    :is(.hover-reveal-row, .row-actions-host) .hover-reveal-menu-button,
     /* [class] adds the specificity that beats the scoped sheet's .tab-close[b-xxxx] without the important flag. */
     .tab-item .tab-close[class],
     .tab-item .tab-actions[class] {

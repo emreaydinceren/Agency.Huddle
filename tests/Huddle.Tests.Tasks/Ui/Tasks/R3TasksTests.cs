@@ -811,7 +811,7 @@ public sealed class R3TasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("background-color: var(--hu-selected-background);", CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("height: 28px;", CssText.RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
+        Assert.Contains("height: 28px;", CssText.RuleBody(css, ":where(.mud-icon-button.mud-icon-button-size-small):not(.mud-switch-base)"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected"), StringComparison.Ordinal);
     }

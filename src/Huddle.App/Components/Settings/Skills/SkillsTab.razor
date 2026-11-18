@@ -71,7 +71,7 @@
     bool virtualize = rows.Count > VirtualizeAbove;
 }
 <MudDataGrid T="SkillRow" Items="@rows" ReadOnly="true" Dense="true" Hover="true" Virtualize="@virtualize" FixedHeader="@virtualize" Height="@(virtualize ? "60vh" : null)"
-             ColumnResizeMode="ResizeMode.None" ShowColumnOptions="false" Class="skills-grid" RowClass="skills-grid-row">
+             ColumnResizeMode="ResizeMode.None" ShowColumnOptions="false" Class="skills-grid" RowClass="row-actions-host skills-grid-row">
     <Columns>
         <TemplateColumn T="SkillRow" Title="Name" Sortable="false">
             <CellTemplate>
@@ -119,14 +119,13 @@
             <CellTemplate>
                 @if (this.MenuItemsFor(context.Item).Count > 0)
                 {
-                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button skills-row-menu"
-                             AriaLabel="@MenuDialogs.ActivatorLabel(SkillNames.Display(context.Item.Name))">
+                    <RowActionsMenu Name="@SkillNames.Display(context.Item.Name)" Class="skills-row-menu">
                         @foreach (string item in this.MenuItemsFor(context.Item))
                         {
                             SkillRow row = context.Item;
                             <MudMenuItem Class="@($"skills-menu-{item.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(row, item))">@item</MudMenuItem>
                         }
-                    </MudMenu>
+                    </RowActionsMenu>
                 }
             </CellTemplate>
         </TemplateColumn>

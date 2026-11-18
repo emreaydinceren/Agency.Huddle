@@ -65,10 +65,7 @@ else
                                 @if (this.editing is { } id)
                                 {
                                     <ActionButton Class="task-edit-page-view" OnClick="this.ViewTask">View task</ActionButton>
-                                    <MudTooltip Text="Copy id">
-                                        <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {id}")"
-                                                       Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
-                                    </MudTooltip>
+                                    <ActionIconButton Icon="@Icons.Material.Outlined.ContentCopy" Label="@($"Copy task id {id}")" Tooltip="Copy id" Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
                                 }
 
                                 @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@

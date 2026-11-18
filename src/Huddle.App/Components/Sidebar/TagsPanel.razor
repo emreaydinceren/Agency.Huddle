@@ -18,9 +18,7 @@
 @if (this.selectedTag is not null)
 {
     <div class="sidebar-row tags-result-header">
-        <MudTooltip Text="Back to tags">
-            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small" aria-label="Back to tags" OnClick="@this.Back" />
-        </MudTooltip>
+        <ActionIconButton Icon="@Icons.Material.Filled.ArrowBack" Label="Back to tags" Tooltip="Back to tags" OnClick="@this.Back" />
         <MudText Typo="Typo.subtitle2">#@this.selectedTag</MudText>
     </div>
 
@@ -48,9 +46,7 @@ else if (this.loaded)
 {
     <div class="sidebar-row tags-header">
         <MudText Typo="Typo.caption" Class="group-label tags-caption">This note</MudText>
-        <MudTooltip Text="Refresh tags">
-            <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" aria-label="Refresh tags" OnClick="@this.Refresh" />
-        </MudTooltip>
+        <ActionIconButton Icon="@Icons.Material.Filled.Refresh" Label="Refresh tags" Tooltip="Refresh tags" OnClick="@this.Refresh" />
     </div>
 
     @if (this.ownTags.Count == 0)

@@ -1,0 +1,107 @@
+@using MudBlazor
+
+@* The one icon button: always Small (28 px, base.css) and round, always named by its Label, and paired with its tooltip when the
+   caller gives one, so no site writes Size, aria-label or a MudTooltip around it (ComponentCatalog, ActionIconButton). *@
+@if (this.Tooltip is { } tooltip)
+{
+    <MudTooltip Text="@tooltip" Placement="@this.TooltipPlacement" RootClass="@this.TooltipClass">
+        @this.Button
+    </MudTooltip>
+}
+else
+{
+    @this.Button
+}
+
+@code {
+    private MudIconButton? button;
+
+    /// <summary>The icon, an SVG path from <c>Icons</c> or <c>ActionIcons</c>.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>The accessible name (<c>aria-label</c>): what pressing the button does, or the thing it acts on. Required, because the
+    /// button has no text; the component throws on a render without one.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Label { get; set; } = string.Empty;
+
+    /// <summary>A hover tooltip, when the icon alone is not obvious. Left out for a menu's activator, where it would stay up over the
+    /// first item.</summary>
+    [Parameter]
+    public string? Tooltip { get; set; }
+
+    /// <summary>Where the tooltip opens; MudBlazor's default (below) unless the button sits at an edge.</summary>
+    [Parameter]
+    public Placement TooltipPlacement { get; set; } = Placement.Bottom;
+
+    /// <summary>A class on the tooltip's root element, for a stylesheet that reaches the button through it (the Composer's Send).</summary>
+    [Parameter]
+    public string? TooltipClass { get; set; }
+
+    /// <summary>
+    /// For a toggle (the top bar's panel buttons): whether its panel is showing. A toggle writes <c>aria-pressed</c> and wears the
+    /// accent while pressed and the surrounding ink otherwise; left <see langword="null"/>, the button is not a toggle.
+    /// </summary>
+    [Parameter]
+    public bool? Pressed { get; set; }
+
+    /// <summary>Whether the button is disabled.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>A link target: the button navigates instead of raising <see cref="OnClick"/>.</summary>
+    [Parameter]
+    public string? Href { get; set; }
+
+    /// <summary>Extra classes, for the caller's layout and a test or script hook only; never a size, padding or radius, which the
+    /// component owns.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Raised on a click.</summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>Any other attribute (<c>id</c>, <c>title</c>, <c>tabindex</c>, <c>data-*</c>), passed to the button element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    private RenderFragment Button => @<MudIconButton @ref="this.button" Icon="@this.Icon" Size="Size.Small" Color="@this.Color" aria-label="@this.Label"
+                                                     aria-pressed="@this.AriaPressed" Disabled="@this.Disabled" Href="@this.Href" Class="@this.Class"
+                                                     OnClick="@this.OnClick" @attributes="this.UserAttributes" />;
+
+    private Color Color => this.Pressed switch
+    {
+        true => Color.Primary,
+        false => Color.Inherit,
+        null => Color.Default,
+    };
+
+    private string? AriaPressed => this.Pressed switch
+    {
+        true => "true",
+        false => "false",
+        null => null,
+    };
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(this.Label))
+        {
+            throw new InvalidOperationException("An ActionIconButton needs a Label: an icon-only button has no other accessible name.");
+        }
+    }
+
+    /// <summary>Moves keyboard focus to the button, as a confirm does when it closes.</summary>
+    /// <returns>A task that completes when focus has moved.</returns>
+    public async ValueTask FocusAsync()
+    {
+        if (this.button is not null)
+        {
+            await this.button.FocusAsync();
+        }
+    }
+}

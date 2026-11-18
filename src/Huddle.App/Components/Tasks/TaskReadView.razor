@@ -63,10 +63,7 @@ else if (this.loaded is { } task)
             <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Edit" Class="task-read-view-edit"
                           aria-label="@this.EditLabel(task)" OnClick="this.EditAsync">Edit</ActionButton>
         </MudTooltip>
-        <MudTooltip Text="Copy id">
-            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {task.Id}")"
-                           Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(task.Id))" />
-        </MudTooltip>
+        <ActionIconButton Icon="@Icons.Material.Outlined.ContentCopy" Label="@($"Copy task id {task.Id}")" Tooltip="Copy id" Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(task.Id))" />
         <TaskActionsMenu @ref="this.actionsMenu" Id="task.Id" OnCopyId="@(() => this.CopyIdAsync(task.Id))" OnCopyLink="@(() => this.CopyLinkAsync(task.Id))">
             <ExtraItems>
                 <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy…</MudMenuItem>

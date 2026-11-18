@@ -36,8 +36,7 @@ else
                 string messageId = row.Mention.LatestMessageId;
                 <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text"
                          Href="@LibraryLinkQuery.BuildPageUri(reference.RootId, reference.RelativePath)" title="@row.Mention.Key">@row.Mention.Label</MudLink>
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Show where it was mentioned"
-                               OnClick="@(() => this.Jump(messageId))" />
+                <ActionIconButton Icon="@Icons.Material.Filled.ArrowUpward" Label="Show where it was mentioned" OnClick="@(() => this.Jump(messageId))" />
             }
             else
             {

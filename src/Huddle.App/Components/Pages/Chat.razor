@@ -52,15 +52,9 @@ else
                     <span class="room-kind-chip">@this.RoomKind</span>
                     @if (!this.isRenaming && !this.isTeamRoom)
                     {
-                        <MudTooltip Text="Rename">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
-                                           aria-label="Rename room" OnClick="this.BeginRename" />
-                        </MudTooltip>
+                        <ActionIconButton Icon="@Icons.Material.Filled.Edit" Label="Rename room" Tooltip="Rename" OnClick="this.BeginRename" />
                     }
-                    <MudTooltip Text="Copy link">
-                        <MudIconButton Icon="@Icons.Material.Filled.Link" Size="Size.Small"
-                                       aria-label="Copy link to this Room" OnClick="this.CopyLinkAsync" />
-                    </MudTooltip>
+                    <ActionIconButton Icon="@Icons.Material.Filled.Link" Label="Copy link to this Room" Tooltip="Copy link" OnClick="this.CopyLinkAsync" />
                 </TitleTrailing>
                 <Aside>
                     <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="room-members">
@@ -190,7 +184,7 @@ else
                     {
                         <ActionButton OnClick="@(() => this.ShowRereadAsync(noteAgentName))">See what it reread</ActionButton>
                     }
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss" OnClick="@(() => this.DismissFreshStartNote(noteAgentName))" />
+                    <ActionIconButton Icon="@Icons.Material.Filled.Close" Label="Dismiss" OnClick="@(() => this.DismissFreshStartNote(noteAgentName))" />
                 </MudStack>
             </Notice>
         }

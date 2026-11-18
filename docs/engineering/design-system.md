@@ -999,7 +999,7 @@ are one-line 32px rows.
 
 ### Menus
 
-A menu is a `MudMenu` of `Dense` 32px, 13px items.
+A menu is a `MudMenu` of `Dense` 32px, 13px items. A row's ⋮ menu is `RowActionsMenu`, which owns the activator, `Dense`, the label and the reveal on hover or focus; a raw ⋮ `MudMenu` fails CV22.
 
 - Every item has an icon from the action table, or none does.
 - Dividers group items. A destructive item comes last, after a divider, in Error ink.
@@ -1064,7 +1064,7 @@ Start from the pattern in the file the table names; the full list is in
 | --- | --- |
 | Button | `ActionButton` with a `Role`; it is always Small (28 px) at `--hu-radius-control`, and a raw `MudButton` fails CV15. `Primary` (Filled, accent) for the one primary action per view, `Secondary` (Outlined) for secondary, `Quiet` (Text) for quiet actions and for Cancel. A destructive action has two roles: `Danger` (Filled Error) only on the confirm that destroys, `DangerQuiet` (Text in Error ink) on a trigger that asks first; there is no Outlined Error. A dialog's actions row is `DialogFooter` |
 | Notice | `Notice` with a `Severity`; it is always dense with an 18 px icon and writes its own role, and a raw `MudAlert` fails CV16. See [Notices and snackbars](#notices-and-snackbars) |
-| Icon button | `MudIconButton Size="Size.Small"`, with an `aria-label`, and a `MudTooltip` when it is not obvious |
+| Icon button | `ActionIconButton`: always Small, one 28 px round box (the top bar included), with a required `Label` (its `aria-label`) and a `Tooltip` when the icon is not obvious; `Pressed` for a toggle. A raw `MudIconButton` fails CV21 |
 | Text input | `TextField`: always Outlined and Dense; a `Label`, or an `AriaLabel` when nothing visible names it (a field with neither throws). `Shape`: `Line` (32 px), `Compact` (the 28 px toolbar box), `LongText` (4 rows of body1 text) or `Markdown` (4 rows of monospace at 13 px); `Rows` only when the content sets the height. Never `ReadOnly` (use `Disabled`). A raw `MudTextField` fails CV17 |
 | Search field | `SearchField`: a `TextField` with a `Filled.Search` start icon, `Clearable`, `Immediate`, one debounce constant, a placeholder ("Search members") and an `aria-label` (UX-055) |
 | Label and value | `PropertyList` of `PropertyRow`s: a fixed 120 px label column, a 32 px row with a 13 px label (`Compact`: 28 px, 12 px, for a card or preview), a hairline between rows only past six rows (`Divided`), `Editing` when the values are inputs. A raw `<dt>` fails CV23 |

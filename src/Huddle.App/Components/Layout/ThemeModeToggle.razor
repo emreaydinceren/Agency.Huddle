@@ -9,13 +9,7 @@
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
 
-<MudTooltip Text="@this.Label">
-    <MudIconButton Icon="@(this.ShowingDark ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)"
-                   Size="Size.Small"
-                   Class="theme-mode-toggle"
-                   aria-label="@this.Label"
-                   OnClick="this.Toggle" />
-</MudTooltip>
+<ActionIconButton Icon="@(this.ShowingDark ? Icons.Material.Outlined.LightMode : Icons.Material.Outlined.DarkMode)" Label="@this.Label" Tooltip="@this.Label" Class="theme-mode-toggle" OnClick="this.Toggle" />
 
 @code {
     /// <summary>Whether the theme being shown is a dark one.</summary>

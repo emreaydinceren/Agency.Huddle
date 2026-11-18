@@ -1,7 +1,7 @@
 namespace Agency.Huddle.Tests.Ui.Conventions;
 
 /// <summary>
-/// The UI convention test (plan section 3.2): scans <c>src/Huddle.App</c> for the rules CV1 to CV11, CV13 to CV20 and CV23
+/// The UI convention test (plan section 3.2): scans <c>src/Huddle.App</c> for the rules CV1 to CV11 and CV13 to CV23
 /// and holds each file to its baseline, which may only shrink. Also proves, against a copy of one
 /// real file per rule, that the scanner and the baseline check can fail.
 /// </summary>
@@ -36,6 +36,8 @@ public sealed class UiConventionTests
     [InlineData("CV19")]
     [InlineData("CV20")]
     [InlineData("CV23")]
+    [InlineData("CV21")]
+    [InlineData("CV22")]
     public void Source_HasNoViolationsBeyondItsBaseline(string rule)
     {
         IReadOnlyList<RuleCount> actual = Scanned.Value.Where(a => string.Equals(a.Rule, rule, StringComparison.Ordinal)).ToList();
@@ -107,6 +109,8 @@ public sealed class UiConventionTests
     [InlineData("CV19", """<MudSwitch T="bool" Size="Size.Small" Color="Color.Primary" Label="x" />""")]
     [InlineData("CV20", """<MudCheckBox T="bool" Dense="true" Label="x" />""")]
     [InlineData("CV23", "<dl><dt>x</dt><dd>y</dd></dl>")]
+    [InlineData("CV21", """<MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="x" />""")]
+    [InlineData("CV22", """<MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="x"><MudMenuItem>x</MudMenuItem></MudMenu>""")]
     public void Mutation_AddedViolation_IsCountedAndOverrunsTheBaseline(string rule, string snippet)
     {
         string path = string.Equals(rule, "CV11", StringComparison.Ordinal)
