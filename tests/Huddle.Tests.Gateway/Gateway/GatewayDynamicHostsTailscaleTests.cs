@@ -60,4 +60,25 @@ public sealed class GatewayDynamicHostsTailscaleTests
 
         Assert.False(token.HasChanged);
     }
+
+    /// <summary>
+    /// A Tailscale poll or a listener update that lands after the container disposed the hosts, as one can at shutdown, does not cancel
+    /// the disposed change source (issue 677): the update is kept and nothing throws.
+    /// </summary>
+    [Fact]
+    public void SetAndSetTailscale_AfterDispose_DoNotThrow()
+    {
+        GatewayDynamicHosts hosts = new();
+        hosts.Dispose();
+
+        Exception? thrown = Record.Exception(() =>
+        {
+            hosts.Set(["192.168.1.20"]);
+            hosts.SetTailscale(["desktop-a.tail1234.ts.net"]);
+            hosts.Dispose();
+        });
+
+        Assert.Null(thrown);
+        Assert.Equal(["192.168.1.20", "desktop-a.tail1234.ts.net"], hosts.Current);
+    }
 }

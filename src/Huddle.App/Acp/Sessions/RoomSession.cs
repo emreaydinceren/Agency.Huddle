@@ -799,11 +799,10 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
 
         // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without waiting on the
         // agent process to acknowledge the cancel notification below. A plain Cancel(), not
-        // CancelAsync(), so this call - and the read loop awaiting it - returns at once.
-#pragma warning disable CA1849, MA0042 // Deliberately synchronous: CancelAsync would let the callbacks finish after this returns, and the consumer's await on this Turn must be released before the cancel notification below is sent.
+        // CancelAsync(), so this call - and the read loop awaiting it - returns at once. The Turn may
+        // have ended on its own since it was read above, and its teardown disposed this source: the
+        // cancel is then a no-op, never an ObjectDisposedException (issue 677).
         turn.Cancellation.Cancel();
-#pragma warning restore MA0042
-#pragma warning restore CA1849
 
         // Safe from any thread: locks internally and no-ops when no prompt is in flight. NOT awaited
         // here - a queued Turn in a different Room must not reach PromptAsync on the shared session
@@ -1703,7 +1702,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     private TurnRun? TryPublishTurn(WorkItem item, TurnHookBeforeResult? hookResult, long sequence, string messageId, CancellationToken ct)
     {
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var turnCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        TurnCancellation turnCancellation = new(ct);
         lock (this.gate)
         {
             // Re-checked here, not only by the consumer, because a Stop can arrive while this item
@@ -2274,7 +2273,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     /// <param name="item">The fully prepared item.</param>
     /// <param name="messageId">The Message id minted for this Turn.</param>
     /// <param name="completion">Completed by the event reader when the Turn's outcome arrives.</param>
-    /// <param name="turnCancellation">The Turn's own cancellation source, disposed last.</param>
+    /// <param name="turnCancellation">The Turn's own cancellation, disposed last.</param>
     /// <param name="turn">The Turn published as the active one.</param>
     /// <param name="activeSession">The session the Turn was published against.</param>
     /// <param name="hookResult">What the Turn hooks' Before points produced, or <see langword="null"/> when none ran.</param>
@@ -2282,7 +2281,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         WorkItem item,
         string messageId,
         TaskCompletionSource<TurnOutcome> completion,
-        CancellationTokenSource turnCancellation,
+        TurnCancellation turnCancellation,
         ActiveTurn turn,
         IAgentSession activeSession,
         TurnHookBeforeResult? hookResult)
@@ -2299,8 +2298,8 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         /// <summary>Gets the completion the event reader completes with the Turn's outcome.</summary>
         public TaskCompletionSource<TurnOutcome> Completion { get; } = completion;
 
-        /// <summary>Gets the Turn's own cancellation source.</summary>
-        public CancellationTokenSource TurnCancellation { get; } = turnCancellation;
+        /// <summary>Gets the Turn's own cancellation.</summary>
+        public TurnCancellation TurnCancellation { get; } = turnCancellation;
 
         /// <summary>Gets the Turn published as the active one.</summary>
         public ActiveTurn Turn { get; } = turn;
@@ -2410,7 +2409,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
                     item.RoomId);
             }
 
-            await turn.Cancellation.CancelAsync().ConfigureAwait(false);
+            turn.Cancellation.Cancel();
         }
         catch (OperationCanceledException)
         {
@@ -2911,7 +2910,7 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
         string MessageId,
         StringBuilder Text,
         TaskCompletionSource<TurnOutcome> Completion,
-        CancellationTokenSource Cancellation,
+        TurnCancellation Cancellation,
         TimeProvider Time)
     {
         // lastActivityTimestamp, stopRequested and timedOut are each written by one thread and read by
