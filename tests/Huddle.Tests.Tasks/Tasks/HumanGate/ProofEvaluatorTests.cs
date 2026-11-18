@@ -606,43 +606,51 @@ public sealed class ProofEvaluatorTests
         Assert.Equal(ProofItemSource.Process, item.Source);
     }
 
-    /// <summary>#537: with only QA's passing run the shipped lightweight-flow Review item is open, owned by the reviewer, and the Proof is not complete.</summary>
+    /// <summary>#537, #669: with only a Done verify Task the shipped lightweight-flow Review item is open (no review Task yet) and the Proof is not complete.</summary>
     [Fact]
-    public void LightweightFlow_OnlyQaRun_ReviewIsOpenOwnedByReviewer()
+    public void LightweightFlow_OnlyVerifyTaskDone_ReviewIsOpen()
     {
-        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0)]);
+        TaskItem verify = Child("DEV-0002", TaskState.Done, Quinn, "verify", "- [x] checked");
+
+        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0)], [verify]);
 
         ProofItem review = Assert.Single(proof.Items, static item => string.Equals(item.Label, "Review", StringComparison.Ordinal));
         Assert.False(review.Met);
-        Assert.Equal(Ruth, review.Owner);
+        Assert.Equal("no Task yet", review.Detail);
         Assert.False(proof.IsComplete);
     }
 
-    /// <summary>#537: the reviewer's passing run on top of QA's meets every item of the shipped lightweight-flow Proof.</summary>
+    /// <summary>#537, #669: a Done review Task and a Done verify Task meet every item of the shipped lightweight-flow Proof.</summary>
     [Fact]
-    public void LightweightFlow_ReviewerAndQaRuns_EveryItemMet()
+    public void LightweightFlow_ReviewAndVerifyTasksDone_EveryItemMet()
     {
-        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0), Run(Ruth, "dotnet test", 0, minutes: 1)]);
+        TaskItem verify = Child("DEV-0002", TaskState.Done, Quinn, "verify", "- [x] checked");
+        TaskItem review = Child("DEV-0003", TaskState.Done, Ruth, "review", "- [x] read the diff");
+
+        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0)], [verify, review]);
 
         Assert.All(proof.Items, static item => Assert.True(item.Met, item.Label));
         Assert.True(proof.IsComplete);
     }
 
-    /// <summary>#537: a reviewer's note-only line leaves the shipped Review item open.</summary>
+    /// <summary>#537, #669: a review Task left open with findings keeps the shipped Review item open and owned by the reviewer.</summary>
     [Fact]
-    public void LightweightFlow_ReviewerNoteOnly_ReviewStaysOpen()
+    public void LightweightFlow_ReviewTaskOpen_ReviewStaysOpenOwnedByReviewer()
     {
-        EvidenceLine note = new(Noon, Ruth, string.Empty, null, null, null, "Looks good");
+        TaskItem verify = Child("DEV-0002", TaskState.Done, Quinn, "verify", "- [x] checked");
+        TaskItem review = Child("DEV-0003", TaskState.InProgress, Ruth, "review", "- [ ] findings fixed");
 
-        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0), note]);
+        Proof proof = ShippedLightweightProof([Run(Quinn, "dotnet test", 0)], [verify, review]);
 
-        ProofItem review = Assert.Single(proof.Items, static item => string.Equals(item.Label, "Review", StringComparison.Ordinal));
-        Assert.False(review.Met);
+        ProofItem item = Assert.Single(proof.Items, static i => string.Equals(i.Label, "Review", StringComparison.Ordinal));
+        Assert.False(item.Met);
+        Assert.Equal(Ruth, item.Owner);
     }
 
     /// <summary>Evaluates the shipped lightweight-flow Definition of Done with QA covering verify and a reviewer covering challenge.</summary>
     /// <param name="evidence">The Task's Evidence lines.</param>
-    private static Proof ShippedLightweightProof(IReadOnlyList<EvidenceLine> evidence)
+    /// <param name="children">The Task's child Tasks.</param>
+    private static Proof ShippedLightweightProof(IReadOnlyList<EvidenceLine> evidence, IReadOnlyList<TaskItem> children)
     {
         string text = ReadShippedProcess("TeamTypes/Builtin/development/processes/lightweight-flow.md");
         Assert.True(ProcessDocument.TryParse(text, out ProcessDocument? document));
@@ -653,7 +661,7 @@ public sealed class ProofEvaluatorTests
             [Quinn] = "verify",
             [Ruth] = "challenge",
         };
-        ProofContext context = new(document.DefinitionOfDone, [], false, evidence, covers, Roster, [], []);
+        ProofContext context = new(document.DefinitionOfDone, [], false, evidence, covers, Roster, children, []);
         return ProofEvaluator.Evaluate(TestTasks.Make(assignee: Dev), context);
     }
 

@@ -51,14 +51,14 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(203,PromptCatalog.All.Count);
     }
 
-    /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to Review, because Huddle moves only a Task in Review and never one in Backlog (#393).</summary>
+    /// <summary>create_task tells an Agent that a Task whose only step left is the Human's must be moved to In Progress, because Huddle moves only a Task in In Progress and never one in Backlog (#393, #669).</summary>
     [Fact]
-    public void CreateTaskDescription_TellsAgentToMoveHumanOnlyTaskToReview()
+    public void CreateTaskDescription_TellsAgentToMoveHumanOnlyTaskToInProgress()
     {
         string create = PromptCatalog.All.Single(p => p.Key == "tool.createTask.description").Default;
 
         Assert.Contains("only step left is the Human's", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
-        Assert.Contains("move it to Review", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("move it to In Progress yourself", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("never from Backlog", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
     }
 
@@ -70,10 +70,10 @@ public sealed partial class PromptCatalogTests
         string create = PromptCatalog.All.Single(p => p.Key == "tool.createTask.description").Default;
         string help = PromptCatalog.All.Single(p => p.Key == "getHelp.tasks").Default;
 
-        Assert.Contains("Review to Needs You; Huddle moves it there", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("In Progress to Needs You; Huddle moves it there", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("Never use it for hand-offs or status", update, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("don't ask for approval in chat", create, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
-        Assert.Contains("Huddle moves a Task in Review to Needs You", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("Huddle moves the Task from In Progress to Needs You", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("Huddle does not move the Task then, so move it yourself", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("only when its status is Needs You", help.ReplaceLineEndings(" "), StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
     }

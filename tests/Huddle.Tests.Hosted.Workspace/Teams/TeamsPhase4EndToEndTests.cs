@@ -173,8 +173,8 @@ public sealed class TeamsPhase4EndToEndTests
     }
 
     /// <summary>
-    /// #350 item 6, with an Action: file, triage, work, Review with Evidence carrying an exit code. QA's Evidence alone leaves the
-    /// Request in Review, because the Definition of Done's Review item is open (#537); with the reviewer's Evidence Huddle moves it to
+    /// #350 item 6, with an Action: file, triage, work, Evidence carrying an exit code. QA's Evidence alone leaves the
+    /// Request In Progress, because the Definition of Done's Review item is open (#537); once the reviewer's and QA's Tasks are Done Huddle moves it to
     /// Needs You, the Human Accepts, the assignee moves it to Done, the Team's QA confirms and it is closed. The Human's only
     /// move on the Request is Accept.
     /// </summary>
@@ -220,17 +220,32 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.StartsWith("accepted ", humanMove.Summary, StringComparison.Ordinal); // contains-ok: the rest of the entry is a content fingerprint of the Request text
     }
 
-    /// <summary>The Team's reviewer posts a passing check run, which the development Definition of Done's Review item needs (#537).</summary>
+    /// <summary>The Team's reviewer and QA each own a child Task of the Request, tagged review and verify, and move it to Done: what the development Definition of Done's Review and QA evidence items need (#669).</summary>
     /// <param name="run">The running host.</param>
     /// <param name="team">The Team that holds the Request.</param>
-    /// <param name="service">Adds the Evidence.</param>
+    /// <param name="service">Creates and moves the child Tasks.</param>
     /// <param name="id">The Request.</param>
     /// <param name="ct">The test's cancellation token.</param>
-    /// <returns>A task that completes when the Evidence is saved.</returns>
+    /// <returns>A task that completes when both child Tasks are Done.</returns>
     private static async Task ReviewAsync(Run run, TeamCast team, TaskService service, TaskId id, CancellationToken ct)
     {
         TaskActor reviewer = await team.ActorAsync(run, ReviewerRole, ct);
-        _ = Saved(service.AddEvidence(id, new EvidenceLine(DateTimeOffset.UtcNow, reviewer.Name, CheckCommand, 0, null, null, "Approved."), reviewer));
+        TaskActor qa = await team.ActorAsync(run, QaRole, ct);
+        CompleteChild(service, id, "review", reviewer, qa);
+        CompleteChild(service, id, "verify", qa, qa);
+    }
+
+    /// <summary>Creates a child Task owned by <paramref name="owner"/> with the tag, has a verifier post the run the Team's <c>qa-evidence-before-done</c> gate asks of any Task, and moves it to Done.</summary>
+    /// <param name="service">Creates and moves the Task.</param>
+    /// <param name="parent">The Request the child checks.</param>
+    /// <param name="tag">The tag, review or verify.</param>
+    /// <param name="owner">The checker, who creates, owns and finishes the Task.</param>
+    /// <param name="verifier">The member whose role covers verify, who posts the Evidence line.</param>
+    private static void CompleteChild(TaskService service, TaskId parent, string tag, TaskActor owner, TaskActor verifier)
+    {
+        TaskItem child = Saved(service.Create(new TaskDraft("Check " + parent, ApiTeam, null, TaskState.InProgress, Assignee: owner.Name, Parent: parent, Tags: [tag]), owner));
+        _ = Saved(service.AddEvidence(child.Id, new EvidenceLine(DateTimeOffset.UtcNow, verifier.Name, CheckCommand, 0, null, null, "Checked."), verifier));
+        _ = Saved(service.Update(child.Id, new TaskPatch { Status = TaskState.Done }, null, owner));
     }
 
     /// <summary>The Human's Accept on a Request Huddle brought to Needs You with the merge named (#416), checking that it did.</summary>
