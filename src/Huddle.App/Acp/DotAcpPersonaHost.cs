@@ -283,12 +283,20 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.skills,
             this.readSkillToolName,
             this.askHumanToolName);
+        IReadOnlyList<string> readDeny = GoldfishReadDeny.Rules(this.readDenyFolders?.Invoke() ?? []);
+        if (readDeny.Count == 0)
+        {
+            this.loggerFactory.CreateLogger<DotAcpPersonaHost>().LogWarning(
+                "Goldfish session for Persona '{PersonaName}' opens with no Read deny rules: none of the memory or Room history folders exists yet, so the Agent could read them.",
+                this.persona.Name);
+        }
+
         Dictionary<string, object>? cleanMeta = DotAcpAgentHostFactory.BuildIsolationMeta(
             this.Profile,
             connectors: false,
             askRules: true,
             browserServer: null,
-            readDeny: GoldfishReadDeny.Rules(this.readDenyFolders?.Invoke() ?? []));
+            readDeny: readDeny);
         return await this.inner.StartSessionAsync(this.BuildOptions(systemPrompt, cleanMeta), cancellationToken).ConfigureAwait(false);
     }
 

@@ -54,6 +54,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     // closing the slot while the app runs cancels this one.
     private CancellationTokenSource? goldfishCts;
 
+    // The close that is disposing the last emptied slot, so a later close awaits it rather than returning early. Guarded by poolLock.
+    private Task? goldfishClosing;
+
     private readonly RoomSession? sharedSession;
     private readonly ITimer? sweepTimer;
     private RoomSession? startupSession;
@@ -279,6 +282,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
         lock (this.poolLock)
         {
+            ObjectDisposedException.ThrowIf(this.disposed, this);
             if (this.goldfish is not null)
             {
                 throw new InvalidOperationException("The goldfish slot is already taken.");
@@ -296,41 +300,72 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <summary>Queues a Turn to the goldfish session.</summary>
     /// <param name="item">The Turn to run.</param>
     /// <exception cref="InvalidOperationException">The slot is empty.</exception>
+    /// <exception cref="ObjectDisposedException">The pool is disposed.</exception>
     internal void EnqueueGoldfish(QueuedWork item)
     {
-        RoomSession? session;
+        // Queued under poolLock, the lock a close empties the slot under: the item is queued before the close takes the session,
+        // so the close sees its ticket, or the slot is already empty and this throws.
         lock (this.poolLock)
         {
-            session = this.goldfish;
-        }
+            ObjectDisposedException.ThrowIf(this.disposed, this);
+            if (this.goldfish is null)
+            {
+                throw new InvalidOperationException("The goldfish slot is empty.");
+            }
 
-        if (session is null)
-        {
-            throw new InvalidOperationException("The goldfish slot is empty.");
+            this.goldfish.Enqueue(item);
         }
-
-        session.Enqueue(item);
     }
 
-    /// <summary>Disposes the goldfish session and empties the slot. Does nothing when it is empty.</summary>
+    /// <summary>
+    /// Disposes the goldfish session and empties the slot. Does nothing when it is empty, except that a close already disposing the
+    /// last session is awaited, so every caller returns after that session is disposed.
+    /// </summary>
     /// <returns>A task that completes when the session is disposed.</returns>
-    internal async Task CloseGoldfishAsync()
+    internal Task CloseGoldfishAsync()
     {
-        RoomSession? session;
-        CancellationTokenSource? cts;
+        RoomSession session;
+        CancellationTokenSource cts;
+        Task prior;
+        TaskCompletionSource done = new(TaskCreationOptions.RunContinuationsAsynchronously);
         lock (this.poolLock)
         {
+            if (this.goldfish is null || this.goldfishCts is null)
+            {
+                return this.goldfishClosing ?? Task.CompletedTask;
+            }
+
             session = this.goldfish;
             cts = this.goldfishCts;
+            prior = this.goldfishClosing ?? Task.CompletedTask;
             this.goldfish = null;
             this.goldfishCts = null;
             this.goldfishRoomId = null;
+            this.goldfishClosing = done.Task;
         }
 
-        if (session is not null && cts is not null)
+        return RoomSessionPool.CloseSlotAsync(session, cts, prior, done);
+    }
+
+    private static async Task CloseSlotAsync(RoomSession session, CancellationTokenSource cts, Task prior, TaskCompletionSource done)
+    {
+        try
         {
+            await prior.ConfigureAwait(false);
             await cts.CancelAsync().ConfigureAwait(false);
             await session.DisposeAsync().ConfigureAwait(false);
+
+            // The consumer may have ended before it took a ticket an enqueue had offered: withdraw it, so the shared gate never holds it.
+            session.WithdrawQueuedTickets();
+            done.SetResult();
+        }
+        catch (Exception ex)
+        {
+            done.SetException(ex);
+            throw;
+        }
+        finally
+        {
             cts.Dispose();
         }
     }

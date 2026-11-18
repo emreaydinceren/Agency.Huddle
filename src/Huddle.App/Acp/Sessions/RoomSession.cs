@@ -382,6 +382,21 @@ internal sealed class RoomSession : IAsyncDisposable, IElicitationScope, IConnec
     }
 
     /// <summary>
+    /// Withdraws the ticket of every item still queued, the way an admission wait cut short by shutdown does (RS §6.1 step 5). Called after a
+    /// session is disposed, whose consumer may have ended before it took a ticket that <see cref="Enqueue"/> had already offered.
+    /// </summary>
+    internal void WithdrawQueuedTickets()
+    {
+        lock (this.gate)
+        {
+            foreach (QueuedWork queued in this.queue)
+            {
+                this.scheduler.Withdraw(queued.Sequence);
+            }
+        }
+    }
+
+    /// <summary>
     /// Opens a question on the Turn in flight, if there is one: pauses that Turn's idle watchdog until the
     /// returned lease is disposed, and hands back the token that is cancelled when the Turn ends. Taken
     /// under <see cref="gate"/>, the same lock that publishes and clears <see cref="activeTurn"/>, so a

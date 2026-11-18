@@ -7,7 +7,8 @@ namespace Agency.Huddle.App.Goldfish;
 /// </summary>
 /// <remarks>
 /// A <c>**</c> in the middle of a path and a path with spaces were not measured, so only a trailing <c>**</c> is ever written and a folder
-/// whose path holds a space is passed through as it is.
+/// whose path holds a space is passed through as it is. A folder created after the session opens is not denied: the rules are fixed
+/// when the session starts.
 /// </remarks>
 internal static class GoldfishReadDeny
 {
@@ -38,7 +39,7 @@ internal static class GoldfishReadDeny
 
     /// <summary>Writes one rule for a full path: forward slashes, the drive letter lowercased with its colon dropped, and a trailing <c>/**</c>.</summary>
     /// <param name="fullPath">The folder's full path.</param>
-    private static string Rule(string fullPath)
+    internal static string Rule(string fullPath)
     {
         string slashed = fullPath.Replace('\\', '/').TrimEnd('/');
         string absolute = slashed.Length > 1 && slashed[1] == ':'

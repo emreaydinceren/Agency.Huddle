@@ -70,6 +70,22 @@ public sealed class GoldfishReadDenyTests : IDisposable
         Assert.Equal(Expected(rooms), rule);
     }
 
+    /// <summary>A Windows path becomes the measured form: forward slashes, a lowercase drive letter with no colon, a double slash and a trailing <c>/**</c>; the folder need not exist.</summary>
+    [Fact]
+    public void Rule_WindowsPath_GivesTheLiteralRule()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "A drive-letter path is a Windows path.");
+
+        Assert.Equal("Read(//e/Huddle/Data/rooms/**)", GoldfishReadDeny.Rule(@"E:\Huddle\Data\rooms"));
+    }
+
+    /// <summary>A rooted Unix path keeps its folders under a double slash, with no drive and a trailing <c>/**</c>; the folder need not exist.</summary>
+    [Fact]
+    public void Rule_UnixPath_GivesTheLiteralRule()
+    {
+        Assert.Equal("Read(//srv/huddle/rooms/**)", GoldfishReadDeny.Rule("/srv/huddle/rooms"));
+    }
+
     /// <summary>No folders, no rules.</summary>
     [Fact]
     public void Rules_NoFolders_IsEmpty()

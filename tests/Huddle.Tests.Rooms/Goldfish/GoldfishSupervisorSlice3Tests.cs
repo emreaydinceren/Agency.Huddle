@@ -125,7 +125,7 @@ public sealed class GoldfishSupervisorSlice3Tests
 
         ChatMessage line = Assert.Single(await rig.HuddleLinesAsync(ct));
         Assert.Equal(GoldfishLine.StartRow("Nova", Brief), line.Text);
-        Assert.EndsWith(Brief, line.Text, StringComparison.Ordinal);
+        Assert.Equal("Nova went into goldfish mode. They don't remember this Room.\n\n  Check @Kai's math\n  twice  ", line.Text);
         Assert.Empty(TurnQueueRows.Read(rig.DataDir));
     }
 
@@ -316,10 +316,8 @@ public sealed class GoldfishSupervisorSlice3Tests
         string row = GoldfishLine.StartRow("Nova", Brief);
         string comment = GoldfishLine.TaskComment("Nova", Brief);
 
-        Assert.StartsWith("Nova went into goldfish mode.", row, StringComparison.Ordinal);
-        Assert.EndsWith(Brief, row, StringComparison.Ordinal);
-        Assert.StartsWith("Goldfish brief for Nova: ", comment, StringComparison.Ordinal);
-        Assert.EndsWith(Brief, comment, StringComparison.Ordinal);
+        Assert.Equal("Nova went into goldfish mode. They don't remember this Room.\n\n  Check @Kai's math\n  twice  ", row);
+        Assert.Equal("Goldfish brief for Nova:   Check @Kai's math\n  twice  ", comment);
     }
 
     /// <summary>A runner connection that closes while its Agent is possessed ends the possession Failed, through the gateway hook.</summary>
