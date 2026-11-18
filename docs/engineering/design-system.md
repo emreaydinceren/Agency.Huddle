@@ -1057,6 +1057,7 @@ Start from the pattern in the file the table names; the full list is in
 | Text input | `MudTextField Variant="Variant.Outlined" Margin="Margin.Dense"` |
 | Search field | The same, with a `Filled.Search` start adornment, `Clearable`, `Immediate`, one debounce constant, a placeholder ("Search members") and an `aria-label` (UX-055) |
 | Choice | `MudSelect` and `MudAutocomplete` (Outlined, Dense), `MudRadioGroup`, `MudToggleGroup`; for a two- to five-way mode switch, `SegmentedControl` |
+| On or off | A `MudSwitch` for a setting that takes effect the moment it is flipped; a `MudCheckBox` for picking items from a list, or an option that only counts once a form is saved (Save, Create, Apply). Never a switch inside a form that waits for Save, and never a checkbox for an immediate setting. Both take `Color.Primary` (a ticked control is never grey) |
 | Container | `MudPaper Outlined="true" Elevation="0"` for a panel or card; `MudStack` for layout |
 | Status | `StatusChip` for a state in a word, `MudBadge` or `StatusDot` for presence; see [Chips](#chips) |
 | Table | `MudSimpleTable` for short lists, with an empty row; `MudDataGrid` for sortable, groupable data |
