@@ -115,7 +115,7 @@ public sealed class RetroAgentsMdTests
         string result = await tool.InvokeAsync(Arguments("Process.md"), ct);
 
         // Process.md is not in the allow-list any more, so the proposal is not stored.
-        Assert.Equal("targetFile must be AGENTS.md, _team.md or the file of an Agent (Name.md).", result);
+        Assert.Equal("targetFile must be AGENTS.md, _team.md, _member-playbook.md, _manager-playbook.md or the file of an Agent (Name.md).", result);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
 }
