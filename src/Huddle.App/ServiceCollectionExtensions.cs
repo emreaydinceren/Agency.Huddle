@@ -478,12 +478,19 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(static sp =>
         {
             TeamOptions options = sp.GetRequiredService<IOptions<TeamOptions>>().Value;
-            return new Agency.Huddle.App.Teams.PlaybookStore(
+            IPromptSource prompts = sp.GetRequiredService<IPromptSource>();
+            Agency.Huddle.App.Teams.PlaybookStore store = new(
                 Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)),
                 sp.GetRequiredService<Agency.Huddle.App.Teams.PlaybookBaseStore>(),
-                sp.GetRequiredService<IPromptSource>(),
+                prompts,
                 options.Playbooks,
                 sp.GetRequiredService<ILogger<Agency.Huddle.App.Teams.PlaybookStore>>());
+            if (prompts is Agency.Huddle.App.Prompts.PromptStore promptStore)
+            {
+                store.FollowPromptSaves(promptStore);
+            }
+
+            return store;
         });
     }
 

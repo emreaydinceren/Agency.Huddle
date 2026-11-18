@@ -194,8 +194,7 @@
                                 <ProcessTab Team="@summary.Name" />
                                 break;
                             case TeamPageTab.Playbooks:
-                                @* Placeholder until the Playbooks tab itself is built (Team Playbooks spec §7). *@
-                                <div data-testid="playbooks-tab"></div>
+                                <PlaybooksTab Team="@summary.Name" />
                                 break;
                             case TeamPageTab.Details:
                                 <TeamDetails Team="@summary.Name" />

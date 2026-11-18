@@ -25,6 +25,16 @@ internal sealed class PlaybookStore(string teamsRoot, PlaybookBaseStore bases, I
     /// <summary>Raised after a Playbook file is created, changed or removed here.</summary>
     public event Action? Changed;
 
+    private string seenDefaults = string.Empty;
+
+    /// <summary>Raises <see cref="Changed"/> after a save of either Playbook Prompt (spec §7.3), so an open tab shows the new default. Saves of other Prompts raise nothing here.</summary>
+    /// <param name="promptStore">The store whose saves are followed; the subscription lasts as long as the process.</param>
+    public void FollowPromptSaves(PromptStore promptStore)
+    {
+        this.seenDefaults = this.Defaults();
+        promptStore.PromptsChanged += this.OnPromptsChanged;
+    }
+
     /// <summary>Works out the state of one Playbook for one Team.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="kind">Which Playbook.</param>
@@ -233,6 +243,18 @@ internal sealed class PlaybookStore(string teamsRoot, PlaybookBaseStore bases, I
     /// <returns>The path.</returns>
     private string FilePath(string team, PlaybookKind kind) =>
         Path.Combine(teamsRoot, team, PlaybookFile.FileName(kind == PlaybookKind.Manager));
+
+    /// <summary>Both defaults as one string, to tell a save of a Playbook Prompt from a save of any other.</summary>
+    private string Defaults() => prompts.Raw(MemberKey) + "\0" + prompts.Raw(ManagerKey);
+
+    private void OnPromptsChanged()
+    {
+        string now = this.Defaults();
+        if (!string.Equals(Interlocked.Exchange(ref this.seenDefaults, now), now, StringComparison.Ordinal))
+        {
+            this.RaiseChanged();
+        }
+    }
 
     /// <summary>Raises <see cref="Changed"/>, so a throwing subscriber neither skips the others nor fails the write.</summary>
     private void RaiseChanged() =>
