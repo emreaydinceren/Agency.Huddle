@@ -8,6 +8,10 @@ internal static class GoldfishComeback
 {
     private const string Word = " comeback";
 
+    /// <summary>The Message that calls <paramref name="name"/> back: "@{name} comeback".</summary>
+    /// <param name="name">The possessed Agent's display name.</param>
+    internal static string Text(string name) => "@" + name + Word;
+
     /// <summary>
     /// Whether <paramref name="text"/> is, as a whole, a Mention of <paramref name="possessed"/> followed by the word
     /// comeback. Case is ignored and any run of white space counts as one space; nothing else may appear.

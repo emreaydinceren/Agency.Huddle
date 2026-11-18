@@ -1,0 +1,85 @@
+@implements IDisposable
+@using Agency.Huddle.App.Goldfish
+@using Agency.Huddle.App.Tabs
+@inject GoldfishLive Live
+@inject ChatService Chat
+@inject TimeProvider Clock
+@inject ISnackbar Snackbar
+@* <summary>
+     C2c, the Room header's goldfish chip. While an Agent is in goldfish mode in this Room it says so with the minutes
+     spent, and offers "Call {Name} back", which posts the comeback Message as the Human exactly as the Composer would.
+   </summary> *@
+@if (this.Live.InRoom(this.RoomId) is { } possession)
+{
+    <MudTooltip Text="@GoldfishStamp.Tooltip">
+        <Chip T="string" Look="ChipLook.Status" Color="Color.Info" Icon="@MaterialSymbols.Fish" Text="@ChipText(possession.AgentName, possession.Waiting, this.MinutesSince(possession))" />
+    </MudTooltip>
+    <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@this.called" OnClick="@(() => this.CallBackAsync(possession.AgentName))">@CallBackText(possession.AgentName)</MudButton>
+}
+
+@code {
+    private ITimer? timer;
+    private bool called;
+
+    /// <summary>The Room whose header carries the chip.</summary>
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    /// <summary>The chip's words: "{Name} in goldfish mode · {n} min", or "{Name} (goldfish) is waiting · {n} min".</summary>
+    /// <param name="name">The Agent's display name.</param>
+    /// <param name="waiting">Whether the goldfish is waiting for an answer.</param>
+    /// <param name="minutes">Whole minutes since it started.</param>
+    internal static string ChipText(string name, bool waiting, int minutes) =>
+        waiting
+            ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{name} (goldfish) is waiting · {minutes} min")
+            : string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{name} in goldfish mode · {minutes} min");
+
+    /// <summary>The button's words.</summary>
+    /// <param name="name">The Agent's display name.</param>
+    internal static string CallBackText(string name) => $"Call {name} back";
+
+    /// <summary>Subscribes to goldfish changes and starts the once-a-minute re-render.</summary>
+    protected override void OnInitialized()
+    {
+        this.Live.Changed += this.OnChanged;
+        this.timer = this.Clock.CreateTimer(_ => this.OnChanged(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+    }
+
+    /// <summary>Stops the timer and unsubscribes.</summary>
+    public void Dispose()
+    {
+        this.Live.Changed -= this.OnChanged;
+        this.timer?.Dispose();
+    }
+
+    private int MinutesSince(LivePossession possession) =>
+        Math.Max(0, (int)(this.Clock.GetUtcNow() - possession.Row.StartedAt).TotalMinutes);
+
+    private async Task CallBackAsync(string name)
+    {
+        this.called = true;
+        try
+        {
+            _ = await this.Chat.SubmitFromComposerAsync(this.RoomId, KnownIds.Human, GoldfishComeback.Text(name));
+        }
+        catch (ChatException ex)
+        {
+            this.called = false;
+            this.Snackbar.Add(ex.Message, Severity.Error, configure: null, key: "goldfish-callback-" + this.RoomId);
+        }
+    }
+
+    private void OnChanged()
+    {
+        if (this.Live.InRoom(this.RoomId) is null)
+        {
+            this.called = false;
+        }
+
+        _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+}
