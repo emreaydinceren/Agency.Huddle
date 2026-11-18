@@ -31,7 +31,7 @@
 
                 <div class="retro-change">
                     <strong class="retro-change-title">@change.Title</strong>
-                    <span class="retro-change-file">@change.TargetFile</span>
+                    <span class="retro-change-file">@this.Service.FileLine(set, change)</span>
                     <pre class="retro-change-diff">@this.Service.Preview(set, change)</pre>
                     <MudStack Row="true" Spacing="2" Class="agent-card-actions retro-change-actions">
                         <ActionButton Role="ButtonRole.Primary" Class="retro-change-accept" Disabled="@this.Busy" OnClick="() => this.AcceptAsync(set, change)">@(this.IsBusy(acceptKey) ? "Accepting…" : "Accept")</ActionButton>

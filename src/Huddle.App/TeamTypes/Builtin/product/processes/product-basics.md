@@ -1,6 +1,6 @@
 ---
 title: 'Product basics'
-template: 'product-basics@1.0.0'
+template: 'product-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team decides what to build next and writes each problem down well enough fo
 2. **In progress**: the UX Researcher gathers the evidence, and the Designer writes the flow and screens beside the spec in the repository. Done when the spec, design and research are attached to the Task.
 3. **Verify**: the Tech Lead checks the spec for feasibility, and the product manager reads it against the problem and the research and posts an Evidence line. Done when that line exists.
 4. **Done**: the Human marks the Task Done after reading the Evidence line, and decides whether it ships.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

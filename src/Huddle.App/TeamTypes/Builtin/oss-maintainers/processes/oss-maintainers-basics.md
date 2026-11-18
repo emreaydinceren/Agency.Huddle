@@ -1,6 +1,6 @@
 ---
 title: 'Open source maintainers basics'
-template: 'oss-maintainers-basics@1.0.0'
+template: 'oss-maintainers-basics@1.1.0'
 gates: []
 retro: { every: 14, unit: 'days' }
 ---
@@ -21,8 +21,6 @@ This Team runs one open-source repository. It triages issues, builds and reviews
 2. **In progress**: the Maintainer or the Developer builds the change and its tests. Done when the build and tests pass locally.
 3. **Verify**: the Reviewer reads the diff against the issue and the tests, and the Maintainer posts an Evidence line with the check command and its result. Done when both are recorded.
 4. **Done**: the Human merges, or approves the Release Engineer's merge, and marks the Task Done.
-
-A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.
 
 ## Who does what
 

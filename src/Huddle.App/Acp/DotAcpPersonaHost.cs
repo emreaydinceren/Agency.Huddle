@@ -353,7 +353,9 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.teamsOptions.MaxHuddleMemoryEntries,
             this.sources.MaxOutputsEntries,
             this.sources.OverCap,
-            this.sources.Levels);
+            this.sources.Levels,
+            this.sources.Playbooks,
+            this.Profile.ReadsFiles);
 
         return SystemPromptComposer.Compose(
             this.persona,
@@ -376,7 +378,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             needsYou: inputs.NeedsYou,
             browser: this.browser,
             reportedDays: this.reportedDays,
-            memoryTidy: this.memoryTidy?.Invoke() ?? false);
+            memoryTidy: this.memoryTidy?.Invoke() ?? false,
+            playbooks: inputs.Playbooks);
     }
 
     /// <summary>

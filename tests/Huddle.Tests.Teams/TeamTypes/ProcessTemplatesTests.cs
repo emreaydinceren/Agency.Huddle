@@ -310,11 +310,13 @@ public sealed partial class ProcessTemplatesTests
         Assert.DoesNotContain("the evidence shows the checks passing", reviewer, StringComparison.Ordinal);
     }
 
-    /// <summary>#550: every built-in process whose Definition of Done has a document-reviewed item says, in its Stages section, that the draft is a file attached to the Task and who logs the review.</summary>
+    /// <summary>#550, Playbooks S4: a built-in process whose Definition of Done has a document-reviewed item no longer repeats that the draft is a file attached to the Task and who logs the review, because the Member Huddle rules every member reads say it.</summary>
     [Fact]
-    public void Process_DocumentReviewedItem_StagesSayTheDraftIsAFile()
+    public void Process_DocumentReviewedItem_MemberHuddleRulesSayTheDraftIsAFile()
     {
-        const string paragraph = "A draft that the Definition of Done reviews is a file, not text in the Task: its author saves it as a Markdown file in the Team's `outputs/` folder and attaches it to the Task by putting its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with `log_change` and the kind `reviewed`, and only then posts the Evidence line. A draft written only in the Task's description does not meet the review item.";
+        string rules = string.Join(' ', ReadResourceText("Playbooks/HuddleRules/member.md").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        Assert.Contains("A draft for review is a file. Save it as Markdown in the Team's `outputs/` folder and put its full path, in backticks, on a line of its own in the Task's description. The member who verifies checks that file, logs the review on it with {{logChangeTool}} and the kind `reviewed`, and only then posts Evidence. A draft written only in the description does not meet the review item.", rules, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        const string paragraph = "A draft that the Definition of Done reviews is a file";
         Assembly assembly = typeof(TeamTypeCatalog).Assembly;
         string[] resources = assembly.GetManifestResourceNames()
             .Select(static n => n.Replace('\\', '/'))
@@ -334,14 +336,14 @@ public sealed partial class ProcessTemplatesTests
 
             checkedCount++;
             string[] stages = StagesLines(text);
-            if (!stages.Contains(paragraph, StringComparer.Ordinal))
+            if (stages.Any(line => line.StartsWith(paragraph, StringComparison.Ordinal)))
             {
                 failures.Add(resource);
             }
         }
 
         Assert.NotEqual(0, checkedCount);
-        Assert.True(failures.Count == 0, "Stages lack the attached-file paragraph in: " + string.Join(", ", failures));
+        Assert.True(failures.Count == 0, "Stages still repeat the attached-file paragraph in: " + string.Join(", ", failures));
     }
 
     /// <summary>#547, #669: the household process's Gates section says a gated Task stays In Progress until its Proof is complete, and only then waits in Needs You.</summary>

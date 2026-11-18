@@ -25,7 +25,7 @@ public sealed class HuddleMemoryRegistrationTests
 
         IEnumerable<string> names = factory.Services.GetServices<ITurnHook>().Select(static hook => hook.Name).Order(StringComparer.Ordinal);
 
-        Assert.Equal(["AgentsMd", "FileChanges", "HuddleMemory", "TeamRenamed"], names);
+        Assert.Equal(["AgentsMd", "FileChanges", "HuddleMemory", "Playbooks", "TeamRenamed"], names);
     }
 
     /// <summary>The supervisor the real container builds plans a pipeline that runs AGENTS.md, then the Huddle-wide hook, so it is wired and not only registered.</summary>
@@ -37,6 +37,6 @@ public sealed class HuddleMemoryRegistrationTests
 
         PersonaSupervisor.StartPlan plan = supervisor.PlanStart(new Persona("Vera", "---\nname: 'Vera'\n---\nYou help."));
 
-        Assert.Equal(["TeamRenamed", "AgentsMd", "HuddleMemory"], plan.Hooks.HookNames.Take(3));
+        Assert.Equal(["TeamRenamed", "AgentsMd", "Playbooks", "HuddleMemory"], plan.Hooks.HookNames.Take(4));
     }
 }

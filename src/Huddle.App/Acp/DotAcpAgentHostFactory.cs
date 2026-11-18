@@ -305,7 +305,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             new AgentSettingsGuard(workDir, Path.Combine(this.options.DataDir, "hooks")),
             protectedDirectory is null ? null : new ProtectedDirectoryGuard(protectedDirectory, workDir),
             mergeGate is null ? null : new MergeGateGuard(mergeGate),
-            this.serviceProvider.GetService<ITeamRenames>() is { } renames ? new RenamedFolderGuard(teamsRoot, workDir, renames) : null);
+            this.serviceProvider.GetService<ITeamRenames>() is { } renames ? new RenamedFolderGuard(teamsRoot, workDir, renames) : null,
+            humanTeamFiles: new HumanTeamFilesGuard(teamsRoot, workDir, prompts));
     }
 
     /// <summary>Builds the AGENTS.md reader (capped by <c>Team:AgentsMd:MaxCharsPerFile</c>) with the Team Memory access rules and the memory warnings.</summary>
@@ -320,7 +321,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.agentPaths,
             this.options.Outputs.MaxIndexEntries,
             this.serviceProvider.GetService<OverCapNotifier>(),
-            this.serviceProvider.GetService<NeedsYouLevels>());
+            this.serviceProvider.GetService<NeedsYouLevels>(),
+            new PlaybookInputs(prompts, this.options.Playbooks, this.loggerFactory.CreateLogger<PlaybookInputs>()));
     }
 
     /// <summary>Whether the goldfish tools are offered on a profile: the mode is on, and the profile isolates settings and launches Claude.</summary>
@@ -914,7 +916,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.options.Teams.MaxMemoryEntries,
             this.options.Teams.MaxHuddleMemoryEntries,
             sources.MaxOutputsEntries,
-            levels: sources.Levels);
+            levels: sources.Levels,
+            playbooks: sources.Playbooks,
+            filesReadable: profile.ReadsFiles);
 
         IReadOnlyList<PromptPart> parts = SystemPromptComposer.ComposeParts(
             persona,
@@ -937,7 +941,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             needsYou: inputs.NeedsYou,
             browser: browser,
             reportedDays: this.options.Memory.Reported.KeepDays,
-            memoryTidy: this.MemoryTidyOn());
+            memoryTidy: this.MemoryTidyOn(),
+            playbooks: inputs.Playbooks);
         return (parts, profile.Id);
     }
 }

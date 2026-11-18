@@ -186,8 +186,32 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 **Process**
 : How a Team's work is done: its `Process.md`, copied from a Team type's process
   template into the Team folder and never overwritten. It holds the **Gates**, the
-  cadence of **Retros** and digests, and the check command.
+  cadence of **Retros** and digests, and the check command. Generic guidance on how to
+  work is in the **Playbooks**, not here.
 : *Avoid*: workflow, pipeline, methodology.
+
+**Playbook**
+: How to work in a Team in any kind of work, read in full by its Agents every session.
+  One per role kind, Manager and Member, each a Huddle default until the Human
+  customizes it for a Team (ADR-0098).
+: *Avoid*: guide, handbook, Skill (a Skill is read on demand).
+
+**Manager Playbook**
+: The **Playbook** the Team's manager reads as well as the **Member Playbook**; it only
+  adds to it.
+
+**Member Playbook**
+: The **Playbook** every member of a Team reads, the manager too.
+
+**Huddle rules**
+: The read-only part of each **Playbook**, the mechanics Huddle enforces. Shipped with
+  the app, never per Team.
+: *Avoid*: system rules, guardrails.
+
+**Mission**
+: A Project's goal, given as a Task the Human assigns the Team's manager and kept by
+  the manager in the Project's Team Memory as `mission.md`.
+: *Avoid*: objective, epic.
 
 **Gate**
 : A rule in a Team's **Process** that refuses one change until a condition is met,
@@ -621,7 +645,7 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
   discovery, applied to know-how rather than tools. A Skill is text and never
   executes; the App Tools it names do. See
   [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md).
-: *Avoid*: ability, capability, plugin, playbook, recipe. Not Claude's own
+: *Avoid*: ability, capability, plugin, recipe. Not Claude's own
   `.claude/skills/`, which only one Adapter honours.
 
 **Proposal**

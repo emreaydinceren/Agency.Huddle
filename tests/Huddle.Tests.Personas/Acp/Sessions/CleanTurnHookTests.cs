@@ -55,7 +55,7 @@ public sealed class CleanTurnHookTests
     {
         string[] names = [.. HookTypeList().Select(type => type.Name)];
 
-        Assert.Equal(["AgentsMdTurnHook", "FileChangesTurnHook", "HuddleMemoryTurnHook", "TeamRenamedTurnHook"], names);
+        Assert.Equal(["AgentsMdTurnHook", "FileChangesTurnHook", "HuddleMemoryTurnHook", "PlaybooksTurnHook", "TeamRenamedTurnHook"], names);
     }
 
     /// <summary>Every concrete hook in the App assembly is in the production order, and the order names nothing else.</summary>
@@ -76,7 +76,7 @@ public sealed class CleanTurnHookTests
 
         TurnHookPipeline clean = ordinary.ForClean();
 
-        Assert.Equal(["TeamRenamed", "AgentsMd", "HuddleMemory", "FileChanges"], ordinary.HookNames);
+        Assert.Equal(["TeamRenamed", "AgentsMd", "Playbooks", "HuddleMemory", "FileChanges"], ordinary.HookNames);
         Assert.Empty(clean.HookNames);
     }
 

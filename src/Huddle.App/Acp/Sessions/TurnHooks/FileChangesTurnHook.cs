@@ -68,15 +68,10 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
         try
         {
             IReadOnlyList<AgentsMdFile> files = scopes.For(personaName);
-            if (files.Count == 0)
-            {
-                return report;
-            }
-
             StringComparer comparer = PathContainment.Comparison == StringComparison.OrdinalIgnoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
             HashSet<string> inScope = new(files.Select(static file => file.FullPath), comparer);
             HashSet<string> teamDirs = new(files.Where(static file => file.Level == AgentsMdLevel.Team).Select(static file => Path.GetDirectoryName(file.FullPath) ?? string.Empty), comparer);
-            List<FileChange> kept = [.. report.Changes.Where(change => !inScope.Contains(change.FullPath) && !IsLevelPath(change.FullPath, teamDirs))];
+            List<FileChange> kept = [.. report.Changes.Where(change => !inScope.Contains(change.FullPath) && !IsLevelPath(change.FullPath, teamDirs) && !IsPlaybookPath(change.FullPath, teamDirs))];
             return kept.Count == report.Changes.Count ? report : report with { Changes = kept };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -101,6 +96,22 @@ internal sealed class FileChangesTurnHook(FileChangeTracker tracker, IPromptSour
         return folder is not null
             && (teamDirs.Contains(folder)
                 || (teamDirs.Contains(Path.GetDirectoryName(folder) ?? string.Empty) && !TeamNames.IsReservedProjectName(Path.GetFileName(folder))));
+    }
+
+    /// <summary>
+    /// Whether a path is a Team Playbook file directly in a Team folder: the Playbooks hook tells the Agent, so File Changes does not (Team
+    /// Playbooks spec §6.4). An Agent in no Team has no Team folder, so nothing is hidden.
+    /// </summary>
+    private static bool IsPlaybookPath(string fullPath, HashSet<string> teamDirs)
+    {
+        string name = Path.GetFileName(fullPath);
+        if (!string.Equals(name, PlaybookFile.FileName(false), PathContainment.Comparison)
+            && !string.Equals(name, PlaybookFile.FileName(true), PathContainment.Comparison))
+        {
+            return false;
+        }
+
+        return teamDirs.Contains(Path.GetDirectoryName(fullPath) ?? string.Empty);
     }
 
     /// <inheritdoc />

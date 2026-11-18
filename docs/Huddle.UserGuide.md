@@ -33,6 +33,7 @@ configuring models; see [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Set up Teams and Projects | [Organising Teams and Projects](#organising-teams-and-projects) |
 | Hire a Team from a type | [Hiring a Team from a type](#hiring-a-team-from-a-type) |
 | Set a Team's process and gates, schedules and Household | [Running a Team](#running-a-team) |
+| Change how a Team's Agents work, or give a Project a goal | [Playbooks](#playbooks) and [Missions](#missions) |
 | Handle asks between Teams, or Team retrospectives | [Requests between Teams](#requests-between-teams) and [Retrospectives](#retrospectives) |
 | Chat with one or several Agents | [Chatting in Rooms](#chatting-in-rooms) |
 | Have an Agent look at work with fresh eyes | [Asking an Agent for fresh eyes (goldfish mode)](#asking-an-agent-for-fresh-eyes-goldfish-mode) |
@@ -849,11 +850,21 @@ reserved, and so are names starting with `_` or `.`.
 Any folder you create directly inside a Team folder, from the Library or your
 file manager, becomes a Project too. There is no separate Project record.
 
-### Renaming or deleting Teams and Projects
+### Renaming, archiving and deleting Teams and Projects
 
-Huddle does not offer this, and the Library refuses to rename, move or delete
-Team and Project folders. To retire a Team, remove it from every member. The
-folder and its Tasks remain on disk.
+Huddle renames and archives Teams and Projects; it does not delete them.
+
+- **Rename.** Choose **Rename** beside **Archive** on a Team's **Details** tab, or
+  from the More (⋮) menu on its row in the sidebar; a Project has the same item on
+  its row and page. Huddle lists every consequence in the confirmation before it
+  changes anything, rewrites every stored copy of the name, and posts one line in
+  the Team Room. The old name keeps working for reads and links (ADR-0084). A folder
+  you rename by hand in Explorer is not a rename: Huddle reads it as one Team gone
+  and another new.
+- **Archive.** To retire a Team or a Project, see
+  [Archiving a Team or a Project](#archiving-a-team-or-a-project). Nothing is
+  deleted, and **Restore** on the [Archived page](#the-archived-page) brings it back.
+- **Delete.** The Library still refuses to move or delete Team and Project folders.
 
 ### The Team and Project pages
 
@@ -1081,7 +1092,7 @@ questions, file what you tell them and do short jobs.
 ## Running a Team
 
 Once a Team is hired, these decide how it works day to day: its process and gates,
-the schedules that wake its manager, Requests between Teams, retrospectives, and the
+its Playbooks and Missions, the schedules that wake its manager, Requests between Teams, retrospectives, and the
 Household team.
 
 ### Process and gates
@@ -1122,6 +1133,46 @@ be marked Done with no verified Evidence."). Only **Turn off** rewrites the `gat
 line of `_team.md`; **Cancel** leaves the file alone and the switch on. The tab only
 lists gates that are on; to turn one on, edit `_team.md`. A Team with neither an
 `AGENTS.md` nor a gate says "This Team has no process yet."
+
+### Playbooks
+
+A Playbook is how the Team's Agents work, in any kind of work: how they ask you, when
+they write to everyone, how a manager triages and runs a mission. There are two, a
+**Member Playbook** that every member reads (the manager too) and a **Manager
+Playbook** that the manager reads as well. Agents read them in full at the start of
+every session. Your Team's [Process](#the-process-tab) holds only what is special to
+that kind of work.
+
+A Team page has a **Playbooks** tab after **Process**. It shows the Manager Playbook
+first, then the Member Playbook. Each section has a chip, the text and its buttons.
+
+- **Huddle default.** The Team reads the default that ships with Huddle. You can
+  change it for every Team on the default under **Settings > Prompts**, in the
+  **Playbooks** group. Running Agents hear of the edit at their next Turn.
+- **Customize for this Team.** Writes the Team's own copy, starting from the default,
+  and opens it in the Library editor. The chip reads "Customized for this Team", and
+  from the next Turn the Team's Agents read your file instead of the default. It needs
+  the Library on.
+- **Default updated.** If Huddle's default changes after you customized, a notice says
+  so. **Show changes** compares the default you started from with the new one;
+  **Keep my version** keeps your text and silences the notice; **Reset to default…**
+  discards your file.
+- **Reset to default…** asks first. **Reset** deletes the Team's own Playbook, and its
+  members read the Huddle default from their next Turn.
+
+Above each Playbook, a locked panel shows the **Huddle rules**: the mechanics Huddle
+enforces. They are always sent and can't be edited. A Playbook is long text that every
+Agent reads every session, so keep a customized one short: the tab warns when it is
+over the limit, and Agents read only the first part. Agents can't edit a Playbook
+themselves; they propose a change in a retro, or ask you.
+
+### Missions
+
+A mission is a Project's goal. To give one, make a Task for the goal and assign it to
+the Team's manager. The manager keeps `mission.md` in the Project's Team Memory:
+the goal, what done looks like and where the work stands. It reads that file when it
+wakes, so the goal survives a restart. Change the mission by telling the manager, or by
+editing `mission.md` yourself.
 
 ### The Needs You level
 

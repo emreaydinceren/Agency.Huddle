@@ -231,6 +231,7 @@ internal static class SystemPromptComposer
     /// </param>
     /// <param name="reportedDays">How many days the memory tool keeps a line of <c>reported.md</c>; filled into <c>{{reportedDays}}</c> of the Memory block.</param>
     /// <param name="memoryTidy">Whether the Memory Tidy Helper is on as the session starts; it fills <c>{{memoryTidy}}</c> of the Memory block.</param>
+    /// <param name="playbooks">The Team Playbooks, or <see langword="null"/> or an empty one for none; they add the Playbook parts after the AGENTS.md block.</param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -261,16 +262,17 @@ internal static class SystemPromptComposer
         IReadOnlyList<(string Scope, string Level)>? needsYou = null,
         bool browser = false,
         int reportedDays = MemoryReportedOptions.DefaultKeepDays,
-        bool memoryTidy = false)
+        bool memoryTidy = false,
+        PlaybookSnapshot? playbooks = null)
     {
         IReadOnlyList<PromptPart> parts = ComposeParts(
-            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces, needsYou, browser, reportedDays, memoryTidy);
+            persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, scope, teamMemory, askHumanToolName, roleBlock, agentsMd, memoryChangesListed, warnings, huddleMemory, outputs, workspaces, needsYou, browser, reportedDays, memoryTidy, playbooks);
 
         return string.Join("\n\n", parts.Select(static part => part.Text));
     }
 
     /// <summary>
-    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?, IReadOnlyList{ValueTuple{string, string}}?, bool, int, bool)"/>
+    /// Composes the same prompt as <see cref="Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?, SessionScope, TeamMemorySnapshot?, string?, RoleBlockInput?, AgentsMdSnapshot?, bool, MemoryWarnings?, MemorySnapshot?, OutputsSnapshot?, IReadOnlyList{ValueTuple{string, string}}?, IReadOnlyList{ValueTuple{string, string}}?, bool, int, bool, PlaybookSnapshot?)"/>
     /// but as labelled parts (Spec §6.4, §8.1): joined with a blank line, their text is the composed prompt. No part is empty.
     /// </summary>
     /// <param name="persona">The Persona whose text and name are spliced in.</param>
@@ -294,6 +296,7 @@ internal static class SystemPromptComposer
     /// <param name="browser">Whether the session passes the browser server; it adds <c>systemPrompt.browser</c> after the other tool paragraphs.</param>
     /// <param name="reportedDays">How many days the memory tool keeps a line of <c>reported.md</c>; filled into <c>{{reportedDays}}</c> of the Memory block.</param>
     /// <param name="memoryTidy">Whether the Memory Tidy Helper is on as the session starts; it fills <c>{{memoryTidy}}</c> of the Memory block.</param>
+    /// <param name="playbooks">The Team Playbooks, or <see langword="null"/> or an empty one for none; they add the Playbook parts after the AGENTS.md block.</param>
     /// <returns>The labelled parts in prompt order.</returns>
     internal static IReadOnlyList<PromptPart> ComposeParts(
         Persona persona,
@@ -316,7 +319,8 @@ internal static class SystemPromptComposer
         IReadOnlyList<(string Scope, string Level)>? needsYou = null,
         bool browser = false,
         int reportedDays = MemoryReportedOptions.DefaultKeepDays,
-        bool memoryTidy = false)
+        bool memoryTidy = false,
+        PlaybookSnapshot? playbooks = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -334,6 +338,7 @@ internal static class SystemPromptComposer
             new("Persona text", new PromptPartSource.Persona(persona.Name), persona.Text),
         ];
         AddAgentsMdPart(parts, prompts, agentsMd);
+        AddPlaybookParts(parts, prompts, playbooks, toolNames);
         AddIdentityParts(parts, prompts, persona, toolNames);
 
         AddToolParagraphs(parts, prompts, toolNames, askHumanToolName, browser);
@@ -688,6 +693,17 @@ internal static class SystemPromptComposer
             parts.Add(new PromptPart("AGENTS.md block", new PromptPartSource.File(section.Path), $"## {name} ({section.Path})\n{section.Text}"));
         }
     }
+
+    /// <summary>
+    /// Adds the Playbook parts right after the AGENTS.md block (Team Playbooks spec §6.1): the frame, the Huddle rules and the Playbooks.
+    /// A <see langword="null"/> or empty snapshot adds nothing, so the prompt stays byte-identical.
+    /// </summary>
+    /// <param name="parts">The prompt parts so far.</param>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="playbooks">The Playbook snapshot, or <see langword="null"/>.</param>
+    /// <param name="toolNames">The offered tools' names, already prefixed.</param>
+    private static void AddPlaybookParts(List<PromptPart> parts, IPromptSource prompts, PlaybookSnapshot? playbooks, IReadOnlyList<string> toolNames) =>
+        PlaybookParts.Add(parts, prompts, playbooks, toolNames);
 
     /// <summary>The offered <c>log_change</c> tool's prefixed name, or <see langword="null"/> when the session does not offer it.</summary>
     /// <param name="toolNames">The offered tools' names, already prefixed.</param>

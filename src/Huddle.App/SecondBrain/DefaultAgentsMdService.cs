@@ -8,14 +8,17 @@ namespace Agency.Huddle.App.SecondBrain;
 /// One-shot start-up write of the default <c>Teams/AGENTS.md</c>: the embedded conduct file is written only when the
 /// Human has no such file yet, and an existing file is never touched (Spec §6.4, D-40).
 /// </summary>
+/// <remarks>It also prunes the Playbook defaults no Team's Playbook file names (Team Playbooks spec §5.2), the other Teams-folder housekeeping done once at start.</remarks>
 /// <param name="options">The app options, for the data folder.</param>
-internal sealed class DefaultAgentsMdService(IOptions<TeamOptions> options) : IHostedService
+/// <param name="playbooks">The Playbook store, whose unused bases are pruned; <see langword="null"/> prunes nothing.</param>
+internal sealed class DefaultAgentsMdService(IOptions<TeamOptions> options, PlaybookStore? playbooks = null) : IHostedService
 {
     private const string ResourceName = "Overlays/second-brain/AGENTS.md";
 
     /// <inheritdoc />
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        playbooks?.PruneBases();
         string teams = Path.Combine(options.Value.DataDir, "Teams");
         string path = Path.Combine(teams, TeamPaths.AgentsMdFileName);
         if (File.Exists(path))

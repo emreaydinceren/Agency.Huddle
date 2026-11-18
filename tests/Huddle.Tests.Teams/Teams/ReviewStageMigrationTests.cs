@@ -115,8 +115,48 @@ public sealed partial class ReviewStageMigrationTests
         }
 
         Assert.DoesNotMatch(OldWording(), fixture.ProcessNow);
-        Assert.Equal(CurrentText(fileName), fixture.ProcessNow.ReplaceLineEndings("\n"));
+        Assert.Equal(WithoutPlaybookTrim(CurrentText(fileName)), WithoutPlaybookTrim(fixture.ProcessNow.ReplaceLineEndings("\n")));
         Assert.Empty(fixture.Proposals.Pending("Platform"));
+    }
+
+    /// <summary>
+    /// Drops what Playbooks S4 trimmed from the built-in processes (the draft-is-a-file paragraph, the disagreement
+    /// bullet and the template version), which the review-wording migration never touches, so the comparison
+    /// keeps checking only the review wording.
+    /// </summary>
+    /// <param name="text">A process file with <c>\n</c> line endings.</param>
+    /// <returns>The text without those lines.</returns>
+    private static string WithoutPlaybookTrim(string text)
+    {
+        List<string> kept = [];
+        bool skipBlank = false;
+        foreach (string line in text.Split('\n'))
+        {
+            if (skipBlank)
+            {
+                skipBlank = false;
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+            }
+
+            if (line.StartsWith("A draft that the Definition of Done reviews is a file", StringComparison.Ordinal))
+            {
+                skipBlank = true;
+                continue;
+            }
+
+            if (line.StartsWith("template: ", StringComparison.Ordinal)
+                || string.Equals(line, "- A disagreement between agents goes to the Human with both views written on the Task.", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            kept.Add(line);
+        }
+
+        return string.Join('\n', kept);
     }
 
     /// <summary>A file with CRLF line endings is offered the same rewrite and ends with the current wording, still CRLF.</summary>

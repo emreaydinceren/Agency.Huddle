@@ -75,13 +75,13 @@ public sealed class TeamPageTests
     /// <param name="expectedHeaders">The tab headers, comma-joined.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(true, true, null, "Members,Library,Details", nameof(TeamRoster))]
+    [InlineData(true, true, null, "Members,Library,Playbooks,Details", nameof(TeamRoster))]
     [InlineData(true, true, "Marketing Project", "Library,Tasks", nameof(TeamFilesTab))]
-    [InlineData(false, true, null, "Members,Details", nameof(TeamRoster))]
+    [InlineData(false, true, null, "Members,Playbooks,Details", nameof(TeamRoster))]
     [InlineData(false, true, "Marketing Project", "Tasks", nameof(TeamTasksTab))]
-    [InlineData(true, false, null, "Members,Library,Details", nameof(TeamRoster))]
+    [InlineData(true, false, null, "Members,Library,Playbooks,Details", nameof(TeamRoster))]
     [InlineData(true, false, "Marketing Project", "Library", nameof(TeamFilesTab))]
-    [InlineData(false, false, null, "Members,Details", nameof(TeamRoster))]
+    [InlineData(false, false, null, "Members,Playbooks,Details", nameof(TeamRoster))]
     public async Task Tabs_FollowTheFlags_AndOnlyTheDefaultTabRenders(
         bool libraryEnabled,
         bool tasksEnabled,
@@ -213,7 +213,8 @@ public sealed class TeamPageTests
     /// <param name="expectedPath">The path navigated to.</param>
     [Theory]
     [InlineData("Business", null, null, 1, "/teams/Business/files")]
-    [InlineData("Business", null, null, 2, "/teams/Business/details")]
+    [InlineData("Business", null, null, 2, "/teams/Business/playbooks")]
+    [InlineData("Business", null, null, 3, "/teams/Business/details")]
     [InlineData("Business", null, "files", 0, "/teams/Business/members")]
     [InlineData("Business", "Marketing Project", null, 1, "/teams/Business/projects/Marketing%20Project/tasks")]
     [InlineData("Sales & Ops", "Q4 #1", "tasks", 0, "/teams/Sales%20%26%20Ops/projects/Q4%20%231/files")]
@@ -264,7 +265,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<ProcessTab>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("Members,Library,Process,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Members,Library,Process,Playbooks,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(navigation.History);
 
         await ctx.DisposeAsync();
@@ -290,7 +291,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<ProcessTab>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("Members,Library,Process,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Members,Library,Process,Playbooks,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(navigation.History);
 
         foreach (IRenderedComponent<MudTabPanel> panel in cut.FindComponents<MudTabPanel>())
@@ -415,7 +416,7 @@ public sealed class TeamPageTests
 
         Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
         Assert.Equal("Business", FilesParameters(cut).Get(p => p.Team));
-        Assert.Equal("Members,Library,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Members,Library,Playbooks,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
@@ -583,7 +584,7 @@ public sealed class TeamPageTests
         IRenderedComponent<TeamPage> project = RenderPage(ctx, "Business", "Marketing Project");
 
         string?[] icons = [.. cut.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
-        Assert.Equal([TabIcons.For("agents"), TabIcons.For("library"), Icons.Material.Outlined.Info], icons);
+        Assert.Equal([TabIcons.For("agents"), TabIcons.For("library"), Icons.Material.Outlined.MenuBook, Icons.Material.Outlined.Info], icons);
         string?[] projectIcons = [.. project.FindComponents<MudTabPanel>().Select(panel => panel.Instance.Icon)];
         Assert.Equal([TabIcons.For("library"), TabIcons.For("tasks")], projectIcons);
     }

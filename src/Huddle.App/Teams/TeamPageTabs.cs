@@ -45,6 +45,9 @@ internal static class TeamPageTabs
                 tabs.Add(TeamPageTab.Process);
             }
 
+            // Playbooks need neither the Library nor Tasks to be read, so the tab is always on a Team page (Team Playbooks spec §7.1).
+            tabs.Add(TeamPageTab.Playbooks);
+
             // Team pages always end with Details: the type, what it's for and the Library folder
             tabs.Add(TeamPageTab.Details);
             return tabs;
@@ -102,6 +105,7 @@ internal static class TeamPageTabs
         TeamPageTab.Files => "Library",
         TeamPageTab.Tasks => "Tasks",
         TeamPageTab.Process => "Process",
+        TeamPageTab.Playbooks => "Playbooks",
         _ => "Details",
     };
 
@@ -114,6 +118,7 @@ internal static class TeamPageTabs
         TeamPageTab.Files => "files",
         TeamPageTab.Tasks => "tasks",
         TeamPageTab.Process => "process",
+        TeamPageTab.Playbooks => "playbooks",
         TeamPageTab.Details => "details",
         _ => "members",
     };

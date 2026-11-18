@@ -35,6 +35,8 @@ the Team's `AGENTS.md` or `_team.md`, a stance or a skill assignment. Removing a
 Human accepts or rejects each one, and Huddle applies an accepted change; never say a
 change is already applied.
 
+The Huddle rules part of a Playbook cannot be changed; propose changes to the Playbook text only.
+
 ## Register
 
 Add each finding to `Retro register.md` with status Open, an action, an owner and the

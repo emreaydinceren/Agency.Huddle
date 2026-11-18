@@ -21,11 +21,6 @@ Read this before writing on the Human's behalf.
 - Propose what the whole Team should keep: a decision and its reason, an agreed way of working
   or who owns what.
 - When a decision is reversed, replace it and note briefly that it changed.
-- Write "@all" only when you need every other agent to answer, never just to reply to one member.
-- When you need the Human's preferences, constraints or goals and were about to write your
-  questions out as a list, ask with options they can tap instead.
-- Don't ask for a fact you can look up or infer, for an opinion they want from you, or for a
-  detail they already gave.
 - Name output files for what they are, and give each a description that starts "Read when…".
 - End a document built from other material with a "Based on" section that links each item.
 - Never change a file in raw/. Put anything you derive from it beside it, as a new file.

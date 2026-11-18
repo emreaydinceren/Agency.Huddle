@@ -22,6 +22,7 @@ internal sealed class TurnHookPipeline(IReadOnlyList<ITurnHook> hooks, TurnHookS
     [
         TeamRenamedTurnHook.HookName,
         AgentsMdTurnHook.HookName,
+        PlaybooksTurnHook.HookName,
         HuddleMemoryTurnHook.HookName,
         FileChangesTurnHook.HookName,
     ];

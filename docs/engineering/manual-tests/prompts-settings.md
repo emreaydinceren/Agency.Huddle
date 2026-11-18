@@ -2,7 +2,7 @@
 
 Prove that the /settings Prompts editor renders every model-facing prompt in the catalog correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running agent, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
 
-**41 tests** · 38 free, 3 paid 💰 · about 4.7 hours.
+**42 tests** · 39 free, 3 paid 💰 · about 4.8 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -1761,6 +1761,40 @@ If the page shows an error strip instead of the table, report it against the Lib
 
 > [!NOTE]
 > Read-only: do not click `Hide` or `Remove` here. Adding, hiding and removing Library Roots belongs to the Library area's tests.
+
+### PROMPTSSETTINGS-42 — The Playbooks group has two live keys with their helper texts
+
+**Free** · about 4 min
+
+*Proves the two Team Playbook keys sit in their own group with the settled helper texts, and that neither carries a `Next session` badge, because an edit of either reaches a running Agent at its next Turn ([Team Playbooks spec](../../Huddle.TeamPlaybooks-Specifications.md) §7.5 and §6.4).*
+
+**Before you start**
+
+- The app is running, on /settings/prompts (Prompts tab). No prompts.json.
+
+**Steps**
+
+1. Scroll the group headings and find the group `Playbooks`.
+2. Read the two fields' bold labels, helper sentences and any timing pill beside each label.
+3. Hover beside each label for a `Next session` pill.
+4. Type a character into **Member Playbook** and read the field's header.
+
+**Pass if — all of these**
+
+- A group heading `Playbooks` exists, with exactly two fields: `Member Playbook` and `Manager Playbook`.
+- The helper text under `Member Playbook` reads: `How every member of a Team works. A Team with its own Member Playbook ignores this one. Running Agents hear of an edit at their next Turn.`
+- The helper text under `Manager Playbook` reads: `How a Team's manager runs it; it adds to the Member Playbook. A Team with its own ignores this one. Running Agents hear of an edit at their next Turn.`
+- Neither field carries a `Next session` pill, and no hover shows `Applies to agents started after the change`.
+- Both fields show the relied-on warning the other relied prompts show. The Huddle rules are not on this page.
+- Step 4: `Modified` and `Unsaved` appear as on any field. Discard the edit with F5.
+
+**Fail if — any of these**
+
+- A `Next session` pill on either key -> the keys are not Timing `Live`, and a user is wrongly told to restart an Agent.
+- The keys sit under `System prompt` instead of their own group -> the group is missing from the field factory.
+
+> [!NOTE]
+> This case adds a seventh group to the six that PROMPTSSETTINGS-04 lists. Read that case's group count as seven once the Playbooks group has shipped.
 
 ---
 

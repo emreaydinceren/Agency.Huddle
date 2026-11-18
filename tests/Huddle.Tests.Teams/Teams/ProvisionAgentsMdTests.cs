@@ -62,9 +62,9 @@ public sealed class ProvisionAgentsMdTests
 
         _ = provisioner.Provision(Team, ProcessId);
 
-        // Template line 3: template 'tax-season-basics@1.0.0'; line 4: gates ['qa-evidence-before-done']; line 5: retro every 14 days.
+        // Template line 3: template 'tax-season-basics@1.1.0'; line 4: gates ['qa-evidence-before-done']; line 5: retro every 14 days.
         ProcessSettings settings = ReadTeamFile(dir).Process;
-        Assert.Equal("tax-season-basics@1.0.0", settings.Template);
+        Assert.Equal("tax-season-basics@1.1.0", settings.Template);
         Assert.Equal([GateId.QaEvidenceBeforeDone], settings.Gates);
         Assert.Equal(new RetroCadence(14, CadenceUnit.Days), settings.RetroSchedule());
         Assert.Null(settings.Wip);

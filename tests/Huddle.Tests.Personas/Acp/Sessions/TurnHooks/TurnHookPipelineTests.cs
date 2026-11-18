@@ -25,6 +25,24 @@ public sealed class TurnHookPipelineTests
         Assert.Equal(["AgentsMd", "HuddleMemory", "FileChanges"], pipeline.HookNames);
     }
 
+    /// <summary>The production order is TeamRenamed, AgentsMd, Playbooks, HuddleMemory, FileChanges: Playbooks rank below AGENTS.md and above Memory (Team Playbooks spec §6.4).</summary>
+    [Fact]
+    public void ProductionOrder_PlaybooksFollowAgentsMd()
+    {
+        Assert.Equal(["TeamRenamed", "AgentsMd", "Playbooks", "HuddleMemory", "FileChanges"], TurnHookPipeline.ProductionOrder);
+    }
+
+    /// <summary>Every production hook handed over in reverse runs in the production order, Playbooks between AgentsMd and HuddleMemory.</summary>
+    [Fact]
+    public void ForPersona_AllHooksInReverse_RunInProductionOrderWithPlaybooks()
+    {
+        ITurnHook[] reversed = [new NamedHook("FileChanges"), new NamedHook("HuddleMemory"), new NamedHook("Playbooks"), new NamedHook("AgentsMd"), new NamedHook("TeamRenamed")];
+
+        TurnHookPipeline pipeline = TurnHookPipeline.ForPersona(Scope, reversed, NullLogger.Instance);
+
+        Assert.Equal(["TeamRenamed", "AgentsMd", "Playbooks", "HuddleMemory", "FileChanges"], pipeline.HookNames);
+    }
+
     /// <summary>A hook whose name is not in the production order is refused, and the message names it.</summary>
     [Fact]
     public void ForPersona_UnlistedHook_ThrowsNamingIt()
