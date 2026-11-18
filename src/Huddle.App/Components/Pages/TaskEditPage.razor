@@ -64,7 +64,7 @@ else
                             <Actions>
                                 @if (this.editing is { } id)
                                 {
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-edit-page-view" OnClick="this.ViewTask">View task</MudButton>
+                                    <ActionButton Class="task-edit-page-view" OnClick="this.ViewTask">View task</ActionButton>
                                     <MudTooltip Text="Copy id">
                                         <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {id}")"
                                                        Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
@@ -73,9 +73,9 @@ else
 
                                 @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@
                                 <div class="task-edit-page-actions">
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
-                                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
-                                               Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
+                                    <ActionButton Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</ActionButton>
+                                    <ActionButton Role="ButtonRole.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
+                                               Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</ActionButton>
                                 </div>
                             </Actions>
                         </PageHeader>

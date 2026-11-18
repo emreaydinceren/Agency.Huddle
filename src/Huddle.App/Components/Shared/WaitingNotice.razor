@@ -20,7 +20,7 @@
             <span class="waiting-notice-text">@WaitingNotice.Text(waiting)</span>
             @if (!this.AgentIdsWithDraft.Contains(agentId))
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.StopAsync(agentId))">Don't answer</MudButton>
+                <ActionButton OnClick="@(() => this.StopAsync(agentId))">Don't answer</ActionButton>
             }
         </MudStack>
     </MudAlert>

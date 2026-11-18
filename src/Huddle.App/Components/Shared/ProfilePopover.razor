@@ -43,8 +43,8 @@
         {
             <ProfileCard Profile="@shown.Profile" Existing="true" Manager="@shown.Manager" Membership="@shown.Membership">
                 <Actions>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(shown.IsHuman ? this.EditHumanAsync : this.EditAsync)"
-                               aria-label="@($"Edit {shown.Profile.Name}")" Class="roster-edit">Edit</MudButton>
+                    <ActionButton StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(shown.IsHuman ? this.EditHumanAsync : this.EditAsync)"
+                               aria-label="@($"Edit {shown.Profile.Name}")" Class="roster-edit">Edit</ActionButton>
                     @if (this.CanStartAfresh(shown))
                     {
                         @if (this.confirmingAfresh)
@@ -53,14 +53,14 @@
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.RestartAlt" OnClick="this.BeginAfresh"
-                                       aria-label="@($"Start {shown.Profile.Name} afresh in this Room")" Class="roster-start-afresh">Start afresh</MudButton>
+                            <ActionButton StartIcon="@Icons.Material.Outlined.RestartAlt" OnClick="this.BeginAfresh"
+                                       aria-label="@($"Start {shown.Profile.Name} afresh in this Room")" Class="roster-start-afresh">Start afresh</ActionButton>
                         }
                     }
                     @if (shown.Agent is not null)
                     {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="this.MessageAsync"
-                                   aria-label="@($"Message {shown.Profile.Name}")" Class="roster-message">Message</MudButton>
+                        <ActionButton StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="this.MessageAsync"
+                                   aria-label="@($"Message {shown.Profile.Name}")" Class="roster-message">Message</ActionButton>
                     }
                 </Actions>
             </ProfileCard>

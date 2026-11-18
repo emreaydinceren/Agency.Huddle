@@ -64,7 +64,7 @@
 @if (this.libraryOpen)
 {
     <div class="avatar-library-inline">
-        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="this.CloseLibraryAsync" Class="avatar-library-back mb-2">Back</MudButton>
+        <ActionButton StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="this.CloseLibraryAsync" Class="avatar-library-back mb-2">Back</ActionButton>
         <AvatarLibraryPicker OnPicked="this.OnLibraryPickedAsync" OnCancel="this.CloseLibraryAsync" />
     </div>
 }
@@ -141,15 +141,15 @@ else
                 </label>
                 <div class="avatar-choice-body">
                     <span class="avatar-choice-actions" @onclick:stopPropagation="true">
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
                             Choose from library
-                        </MudButton>
+                        </ActionButton>
                     </span>
                     @if (this.LibraryHoldsImage)
                     {
                         <MudText Typo="Typo.body2">@this.HeldImageText</MudText>
                         <span class="avatar-choice-actions" @onclick:stopPropagation="true">
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
+                            <ActionButton OnClick="this.RemoveImageAsync">Remove image</ActionButton>
                         </span>
                     }
                 </div>
@@ -171,9 +171,9 @@ else
                 <span class="avatar-choice-actions" @onclick:stopPropagation="true">
                     <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnFileChangedAsync">
                         <CustomContent Context="fileUpload">
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                            <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
                                 Upload…
-                            </MudButton>
+                            </ActionButton>
                         </CustomContent>
                     </MudFileUpload>
                 </span>
@@ -181,7 +181,7 @@ else
                 {
                     <MudText Typo="Typo.body2">@this.HeldImageText</MudText>
                     <span class="avatar-choice-actions" @onclick:stopPropagation="true">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
+                        <ActionButton OnClick="this.RemoveImageAsync">Remove image</ActionButton>
                     </span>
                 }
             </div>
@@ -213,7 +213,7 @@ else
         </div>
         @if (this.background is not null)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</MudButton>
+            <ActionButton OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</ActionButton>
         }
     </div>
 </div>
