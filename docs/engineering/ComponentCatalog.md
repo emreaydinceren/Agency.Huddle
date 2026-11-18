@@ -442,6 +442,49 @@ shows it, so its owner must pass the question text as `AriaLabel` there. `AgentP
 selects (Adapter, Model, Effort and Work mode) are its own copy of the picker, and Work mode needs
 `ToStringFunc`, which `SelectField` does not offer; they move with A4, which replaces that copy.
 
+### Property list
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `PropertyList` | `Components/Shared/PropertyList.razor` | 7 lists in 6 files: `TaskReadView`, `TaskDetail` (2, editing), `FeedTaskPreview`, `FeedHelperPreview`, `ProfileCard`, `LibraryProperties` | `ChildContent` (the rows), `Compact`, `Divided`, `Editing`, `Class`, any other attribute (`aria-label`) |
+| `PropertyRow` | `Components/Shared/PropertyRow.razor` | 35 rows: 30 read rows (the old `<dt>` rows) and the 5 edit rows of the Task form's Planning and Dates groups | `Label` (required), `ChildContent` (the value: text, a chip, a link or an input), `Class`, `LabelClass`, `ValueClass`, any other attribute (`data-*`) |
+
+A label and a value per row. Every row is its own grid with a fixed 120 px label column
+(`Q-A6-1`), so lists stacked on one page line up and a field sits at the same place in the Task's
+read and edit views. The default row is 32 px with a 13 px label; `Compact` is a 28 px row with
+a 12 px label, for cards and previews (the Feed previews, the roster card and the Library
+Properties block). The value is 13 px in both. `Divided` draws a hairline between rows, for a
+list of more than six rows (`Q-A6-2`): only `TaskReadView` uses it. Built in wave 4 (A6,
+2026-11-18); convention rule CV23 counts a raw `<dt>` anywhere but `PropertyRow.razor`, and is
+zero everywhere.
+
+**Read and edit share the row.** A read list is a `<dl>`, each row a `<div>` holding a `<dt>`
+and a `<dd>`. `Editing` makes the list a plain `<div>`, each label a `<span aria-hidden>`
+and each value a `<div>`, because the input inside names itself; the grid, the label column,
+the label ink and the 32 px row are the same, and an editing list has 8 px between rows because
+its values are boxed fields. The row reads `Editing` from its list through a cascading value,
+so a site writes `PropertyRow` the same way in both.
+
+**What moved.** The sites keep their hook classes (`task-read-view-status`,
+`library-properties-key`, `roster-runtime-model`, `task-detail-prop`), so no test selector
+changed. The per-site grids are gone: `tasks.css`'s `.task-read-view-prop` (96 px, 12 px
+label, 28 px rows, a hairline under each), the two identical Feed preview grids
+(`max-content`, 16 px gap), `library.css`'s `minmax(6rem, max-content)` grid and
+`references.css`'s `.roster-runtime` grid (`auto`, 12 px values, no row gap). The Task
+form keeps only what is its own: the stack below 368 px of drawer width and the value's column of
+field, chips and note. The edit page's 96 px column, its 8 px row padding and its hairline
+between the rows of a group are gone (a group of 3 rows is not a long list). The Task read
+view keeps its two-column layout at 440 px of container width, with a hairline under every row
+there so the two columns' lines meet.
+
+**Not a property row.** The edit page's strip (Assignee, Status, Priority, Team, Project, Sprint
+and their follow-ups) is a row of labelled fields side by side, not a list, and stays
+`.task-detail-strip-item`. CV23 cannot see a hand-built editing row (a span and a div); it
+counts the `<dt>` that every read row needs, so it guards the read rows only.
+
+**Still to migrate.** Nothing: every `<dt>` row moved in the build, and the CV23 baselines are
+empty.
+
 ### Settings intro and stored-at line
 
 ![A Settings panel head: the title, an intro paragraph and a Stored at line with a monospace path](../images/components/settings-intro-stored-at.png)
@@ -808,7 +851,6 @@ ships, move its row to the entry for the new component and delete it here.
 | A3 | **RowActionsMenu**: a `MoreVert` menu with the hover-reveal classes and the "Actions for {name}" label | 11 hand-built (the Teams nav twice, Tasks, the board, the Views nav, `RoomNavRow`, Scheduled, and four in Skills settings); 9 files repeat the `hover-reveal-menu-button` class | The rule is in [UXDesignGuidelines.md](UXDesignGuidelines.md#i-need-use-this) but names no component. A twelfth `MoreVert` menu, on `TaskDecisionCard`, offers other decisions and is a different thing | S | Planned |
 | A4 | **One Adapter, Model and Effort picker**, and a `ProbedSelect` for the select-with-progress-bar block | The cascade is written 2 times (`AdapterModelEffortPicker`, used once, and `AgentProfileCard`); the probe block appears 5 times | `AgentProfileCard` (2,359 lines) re-implements the shared picker, and adds a Work mode select the picker lacks | L | Planned |
 | A5 | **ChipRadioGroup**: single-select `Chip Look=Filter` with `role="radio"` | 2 identical (`NotificationsPanel`, `SearchBar`) | `NotificationsPanel` adds its own arrow-key handler in C#; `SearchBar`'s copy shows none in its markup | S | Planned |
-| A6 | **PropertyList** and **PropertyRow**: a label and a value per row | 30 `<dt>` rows in 5 files (`TaskReadView` 14, `FeedTaskPreview` 7, `FeedHelperPreview` 5, `ProfileCard` 3, `LibraryProperties` 1), plus 25 `.task-detail-prop` rows in `TaskDetail` | The edit and read views of a Task use different markup for the same fields | M | Planned |
 | A7 | **SettingSwitch**: a `MudSwitch` with a helper line and a disabled reason | 14 switches in 13 files; about half carry a caption (estimate) | `AgentBrowserRow`, `AgentConnectorsRow`, `RemoteAccessPanel`, `TaskHumanGate` and `ProcessTab` each write their own | S | Planned |
 | A8 | **BusyLabel**: a small spinner beside text | 9 `MudProgressCircular` sites in 9 files | One line each, so the gain is consistency (`mr-2`, `aria-label`) rather than size | S | Planned |
 
@@ -937,39 +979,6 @@ never colour alone. No rule decides the keys.
 
 - `Q-A5-1` Do plain arrows move the choice in both? Recommended: yes in the Feed; the search keeps
   Ctrl because the arrows belong to the text box.
-
-#### A6 PropertyList and PropertyRow
-
-| Variant | Where | Label column | Gap | Label size | Row |
-| --- | --- | --- | --- | --- | --- |
-| Task read view | `Tasks/TaskReadView.razor:111`, `tasks.css:34` | 96 px | 8 px | 12 px | 28 px min, a hairline under each (*measured*) |
-| Task edit page | `Tasks/TaskDetail.razor`, `task-form.css:270` | 96 px *measured*; `task-form.css:316` asks 120 px in a container query that did not win at 1,500 px (lead) | 8 px *measured* | 13 px | 44 px, `padding-block: 8px` (`task-form.css:582`) |
-| Feed previews | `Feed/FeedTaskPreview.razor:22`, `FeedHelperPreview.razor:26` | `max-content` | 16 px | inherited | no line |
-| Library properties | `Library/LibraryProperties.razor:18`, `library.css:907` | `minmax(6rem, max-content)` | 24 px | inherited | no line |
-| Roster card | `Shared/ProfileCard.razor:71`, `references.css:354` | `auto`, 45 px *measured* | 8 px | 12 px | no gap between rows |
-
-The two Feed previews repeat the same grid in two scoped files.
-
-**Which is right.** design-system.md Task form anatomy: a 120 px label column at 13 px
-TextSecondary; the size ladder makes a Task edit page property a 32 px row. Nothing decides the
-other lists.
-
-**Fix:**
-
-1. `PropertyList` takes `Compact` (12 px, 28 px rows, for cards and previews) and the default
-   (13 px label, 32 px row, 120 px column). `visual`
-2. The Task read and edit views use the default, so the same field lines up in both. `visual`
-3. Delete the duplicate grid in `FeedHelperPreview.razor.css:31`. `markup only`
-
-**How to prove.** Css-Snapshot Report on `/tasks/item/{id}` and `/tasks/item/{id}/edit`; declare
-`grid-template-columns`, `column-gap` and `height` on the rows.
-
-**Open questions for the owner:**
-
-- `Q-A6-1` A fixed label column, or as wide as the longest label? Recommended: fixed, 120 px, so
-  lists stacked on one page align.
-- `Q-A6-2` A hairline between rows everywhere, or only in the Task read view? Recommended: only in
-  long lists (more than 6 rows).
 
 #### A7 SettingSwitch
 

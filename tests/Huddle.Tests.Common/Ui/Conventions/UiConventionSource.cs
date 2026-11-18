@@ -74,7 +74,7 @@ internal static class UiConventionSource
         {
             "CV4" => razor || csharp,
             "CV7" or "CV8" => components && (razor || csharp),
-            "CV13" or "CV14" or "CV15" or "CV16" or "CV17" or "CV18" => components && razor,
+            "CV13" or "CV14" or "CV15" or "CV16" or "CV17" or "CV18" or "CV23" => components && razor,
             "CV11" => IsAppStylesheet(path)
                 || (components && path.EndsWith(".razor.css", StringComparison.Ordinal)),
             _ => components && razor,

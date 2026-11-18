@@ -23,24 +23,19 @@ else
             <span class="feed-preview-tile" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Psychology" Size="Size.Small" /></span>
             <span class="feed-preview-title">@this.helper.DisplayName</span>
         </div>
-        <dl class="feed-preview-grid">
-            <dt>Status</dt>
-            <dd class="feed-helper-state">@(this.settings.Enabled ? HelpersCopy.ChipOn : HelpersCopy.ChipOff)</dd>
-            <dt>Runs on</dt>
-            <dd class="feed-helper-runs-on">@this.RunsOn</dd>
-            <dt>Today</dt>
-            <dd class="feed-helper-usage">@this.UsageText</dd>
+        <PropertyList Compact="true" Class="feed-preview-grid">
+            <PropertyRow Label="Status" ValueClass="feed-helper-state">@(this.settings.Enabled ? HelpersCopy.ChipOn : HelpersCopy.ChipOff)</PropertyRow>
+            <PropertyRow Label="Runs on" ValueClass="feed-helper-runs-on">@this.RunsOn</PropertyRow>
+            <PropertyRow Label="Today" ValueClass="feed-helper-usage">@this.UsageText</PropertyRow>
             @if (this.status.LastRunAt is { } ranAt && this.status.LastResult is { } result)
             {
-                <dt>Last run</dt>
-                <dd class="feed-helper-last-run">@(this.TimeOfDay(ranAt) + " · " + result)</dd>
+                <PropertyRow Label="Last run" ValueClass="feed-helper-last-run">@(this.TimeOfDay(ranAt) + " · " + result)</PropertyRow>
             }
             @if (this.status.LastErrorAt is { } failedAt && this.status.LastError is { } error)
             {
-                <dt>Last error</dt>
-                <dd class="feed-helper-last-error">@(this.TimeOfDay(failedAt) + " · " + error)</dd>
+                <PropertyRow Label="Last error" ValueClass="feed-helper-last-error">@(this.TimeOfDay(failedAt) + " · " + error)</PropertyRow>
             }
-        </dl>
+        </PropertyList>
     </div>
 }
 

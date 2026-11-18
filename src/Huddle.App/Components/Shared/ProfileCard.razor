@@ -68,14 +68,11 @@
     </span>
     @if (profile.Runtime is { } runtime)
     {
-        <dl class="roster-runtime">
-            <dt>Adapter</dt>
-            <dd class="roster-runtime-adapter">@runtime.Adapter</dd>
-            <dt>Model</dt>
-            <dd class="roster-runtime-model">@runtime.Model</dd>
-            <dt>Effort</dt>
-            <dd class="roster-runtime-effort">@runtime.Effort</dd>
-        </dl>
+        <PropertyList Compact="true" Class="roster-runtime">
+            <PropertyRow Label="Adapter" ValueClass="roster-runtime-adapter">@runtime.Adapter</PropertyRow>
+            <PropertyRow Label="Model" ValueClass="roster-runtime-model">@runtime.Model</PropertyRow>
+            <PropertyRow Label="Effort" ValueClass="roster-runtime-effort">@runtime.Effort</PropertyRow>
+        </PropertyList>
     }
     @if (profile.SetupReasons.Count > 0)
     {

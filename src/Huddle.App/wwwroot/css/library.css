@@ -898,29 +898,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-bottom: 8px;
 }
 
-.library-properties-list {
-    display: grid;
-    grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
-    gap: 4px 24px;
-    margin: 0;
-}
-
-.library-properties-row {
-    display: contents;
-}
-
-.library-properties-key {
-    color: var(--mud-palette-text-secondary);
-}
-
-.library-properties-value {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-    margin: 0;
-    overflow-wrap: anywhere;
-}
+/* The rows are a Compact PropertyList (base.css): the 120px key column and 28px rows of every card. */
 
 .library-properties .library-properties-chip {
     margin: 0;

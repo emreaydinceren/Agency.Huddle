@@ -19,23 +19,19 @@
         <span class="feed-preview-id">@this.Item.Id</span>
         <span class="feed-preview-title">@this.Item.Title</span>
     </div>
-    <dl class="feed-preview-grid">
-        <dt>Status</dt>
-        <dd><TaskStatusChip Status="this.Item.Status" /></dd>
+    <PropertyList Compact="true" Class="feed-preview-grid">
+        <PropertyRow Label="Status"><TaskStatusChip Status="this.Item.Status" /></PropertyRow>
         @if (this.Item.Assignee is { Length: > 0 } assignee)
         {
-            <dt>Assignee</dt>
-            <dd class="feed-preview-person"><AgentAvatar Name="@assignee" Avatar="this.Avatars.Get(assignee)" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></dd>
+            <PropertyRow Label="Assignee" ValueClass="feed-preview-person"><AgentAvatar Name="@assignee" Avatar="this.Avatars.Get(assignee)" Size="Size.Small" /><span class="feed-preview-assignee">@assignee</span></PropertyRow>
         }
         @if (this.AssignedBy is { } assignedBy)
         {
-            <dt>Assigned by</dt>
-            <dd class="feed-preview-assigned-by">@assignedBy</dd>
+            <PropertyRow Label="Assigned by" ValueClass="feed-preview-assigned-by">@assignedBy</PropertyRow>
         }
         @if (this.Item.DueDate is { } due)
         {
-            <dt>Due</dt>
-            <dd>
+            <PropertyRow Label="Due">
                 <span class="@(this.Overdue ? "feed-due feed-due-overdue" : "feed-due")" title="@TaskDates.Tooltip(due)">
                     @if (this.Overdue)
                     {
@@ -43,12 +39,11 @@
                     }
                     @TaskDates.Human(due, this.Clock)
                 </span>
-            </dd>
+            </PropertyRow>
         }
         @if (this.proof.Total > 0)
         {
-            <dt>Proof</dt>
-            <dd>
+            <PropertyRow Label="Proof">
                 <span class="feed-proof-chip">Proof @this.proof.MetCount/@this.proof.Total</span>
                 <span class="feed-proof-bar" aria-hidden="true">
                     @for (int segment = 0; segment < 3; segment++)
@@ -56,22 +51,20 @@
                         <span class="@(segment < this.FilledSegments ? "feed-proof-segment feed-proof-segment-on" : "feed-proof-segment")"></span>
                     }
                 </span>
-            </dd>
+            </PropertyRow>
         }
         @if (this.originRoom is { } room)
         {
-            <dt>Room</dt>
-            <dd>
+            <PropertyRow Label="Room">
                 <span @onclick:stopPropagation="true">
                     <NavTabLink Href="@("/rooms/" + room.Id)" TabTitle="@room.Name" Match="NavLinkMatch.All" Class="feed-preview-room">
                         <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /> @room.Name
                     </NavTabLink>
                 </span>
-            </dd>
+            </PropertyRow>
         }
-        <dt>File</dt>
-        <dd class="feed-preview-file">@this.Item.Path</dd>
-    </dl>
+        <PropertyRow Label="File" ValueClass="feed-preview-file">@this.Item.Path</PropertyRow>
+    </PropertyList>
     @if (this.proof.Total > 0)
     {
         <div class="feed-proof-heading">@(this.Item.IsGated ? HumanGateCopy.ProofHeadingGated : HumanGateCopy.ProofHeadingUngated)</div>

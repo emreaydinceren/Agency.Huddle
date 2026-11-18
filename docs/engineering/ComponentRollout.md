@@ -87,7 +87,7 @@ another reason for one migration per area at a time.
 | 1 | **Done 2026-11-18.** **B1** `SegmentedControl` pilot: rename from `HuddleSegmentedControl`, 28 px geometry, colour tokens in the component, rule `CV14` (zero-tolerance from the start: all six sites moved in the build PR). Manager writes the B6 rule into design-system.md meanwhile | 1 | Proves the build, rule, baseline and snapshot steps on six sites before 200 are touched |
 | 2 | **Done 2026-11-18** (build, then four area migrations in parallel worktrees: 136 of 141 raw tags moved; 5 stay raw and baselined, see the catalog's "Still raw"). **B2** `ActionButton` (roles `Primary`, `Secondary`, `Quiet`, `Danger`, `DangerQuiet`), with **A2** `DialogFooter` as its first user: rule `CV15`, control radius on every button, 65 tags moved (18 dialogs, the 15 Medium, the 14 with no variant, every Danger and Warning site). The migration then moved the CV15 backlog (141 tags) area by area, four owners at once | 1, then up to 8 | The most sites (205), the widest visual change, and `base.css` is shared |
 | 3 | **A1 build done 2026-11-18** (`Notice`, `NoticeLevel`, `NoticeKind`, rule `CV16`, the 18 px icon and the notice's own 12 px spacing in `base.css`; 53 of 87 tags moved in the build: every Warning but the two Room banners, every non-dense site, the dialog errors, the Composer pair and the runtime-severity site). **Migration done 2026-11-18**: the other 32 tags moved in three parallel worktrees; only the two Room banners stay raw. **B3 and B4 build done 2026-11-18** (`TextField` with `TextFieldShape`, `SelectField<T>`, rules `CV17` and `CV18`, no stylesheet change): 48 of 62 text fields and 28 of 34 selects moved in the build, every multi-line, adorned, compact and nameless site among them. Backlog per area: Room 4 text fields and 1 select, Settings 6 and 0, Shared 3 and 4 (the 4 are `AgentProfileCard`'s picker, which moves with A4), Tasks 1 and 0, Teams 0 and 1. Migrate by area, one component per area at a time | 1, then up to 8 | Smaller and more regular than buttons; B3 and B4 build in one short PR each |
-| 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList`, **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
+| 4 | Composites: **A4** the picker, **A7** `SettingSwitch`, **A6** `PropertyList` (**build done 2026-11-18**: `PropertyList` and `PropertyRow`, rule `CV23`, all 30 `<dt>` rows and the Task form's 5 edit rows moved, so CV23 is zero and nothing is left to migrate), **A3** `RowActionsMenu` with **B5** | 2 to 3 on disjoint files | They contain the earlier parts, so they come last |
 | 5 | Opportunistic: **A5**, **A8**, the browser scripts (group C); fix D2 and D3 when in those files | as convenient | Small gains; do them when passing |
 
 A wave starts when the one before has merged and `main` is green. The first build of each wave
@@ -314,5 +314,12 @@ B3 and B4 (`TextField` and `SelectField`, 2026-11-18) added:
   wrapped it in a `Func<ValueTask>`; `TextField.FocusAsync` returns `ValueTask` too.
 - **The migration script needs the attribute regex to respect quotes.** A `Class="@(x ? "a" : null)"` is cut at the first
   inner quote by `"[^"]*"`; the script rejoined the pieces with a missing space. Print every converted tag and read them.
+- **Scoped CSS stops at the child component's element.** A site's `.razor.css` rule on a `dd` class
+  (`.feed-preview-file`) no longer matched once `PropertyRow` drew the `dd`: such a rule needs
+  `::deep` under an element the site still renders (`.feed-preview ::deep .feed-preview-file`).
+  Markup passed as child content keeps the site's scope, so only the wrapper's own elements are affected.
+- **A custom property declared in `base.css` fails `ThemeSourceTests`** when read through `var()`
+  in another stylesheet: only MudBlazor and skin tokens may be read. A component's sizes are literals
+  on the ladder, not a `--component-*` variable.
 - **`/tasks/new` in a live lane creates a View**, not a Task: measure a Task's edit page at
   `/tasks/item/<id>/edit` instead.

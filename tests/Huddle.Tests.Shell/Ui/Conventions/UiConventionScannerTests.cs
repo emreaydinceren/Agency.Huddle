@@ -496,4 +496,35 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/SelectField.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv18("src/Huddle.App/Components/Shared/AdapterModelEffortPicker.razor", source).Count);
     }
+
+    /// <summary>CV23: a raw <c>dt</c> is counted, with or without a class, but not a <c>dd</c>, a <c>dl</c>, a <c>PropertyRow</c> or a comment.</summary>
+    [Fact]
+    public void Cv23_RawDefinitionTerm_IsCounted()
+    {
+        const string source = """
+            <dl class="x">
+                <dt>Status</dt>
+                <dd>Open</dd>
+                <dt class="key">Due</dt>
+                <dd>Today</dd>
+            </dl>
+            <PropertyList><PropertyRow Label="Team">Platform</PropertyRow></PropertyList>
+            @* <dt>Old</dt> *@
+            """;
+
+        RuleCount result = UiConventionScanner.Cv23(RazorPath, source);
+
+        Assert.Equal("CV23", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV23: the one <c>PropertyRow</c> component is the only file allowed to draw a <c>dt</c>.</summary>
+    [Fact]
+    public void Cv23_PropertyRowRazor_IsExempt()
+    {
+        const string source = """<dt class="@this.LabelCssClass">@this.Label</dt>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv23("src/Huddle.App/Components/Shared/PropertyRow.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv23("src/Huddle.App/Components/Shared/ProfileCard.razor", source).Count);
+    }
 }

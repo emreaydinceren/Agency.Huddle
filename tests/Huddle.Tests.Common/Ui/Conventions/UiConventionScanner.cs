@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV23"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV18</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c>, <c>CV13</c> to <c>CV18</c> and <c>CV23</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -54,6 +54,7 @@ internal static partial class UiConventionScanner
         "CV16" => Cv16(path, text),
         "CV17" => Cv17(path, text),
         "CV18" => Cv18(path, text),
+        "CV23" => Cv23(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -123,6 +124,17 @@ internal static partial class UiConventionScanner
     /// <param name="text">The file text.</param>
     public static RuleCount Cv18(string path, string text) =>
         new("CV18", path, path.EndsWith("/SelectField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSelect"], static _ => true));
+
+    /// <summary>
+    /// CV23: a raw <c>&lt;dt&gt;</c> in a component other than <c>PropertyRow.razor</c>. Every label-and-value row is the one
+    /// <c>PropertyRow</c> in a <c>PropertyList</c>, with its fixed 120 px label column and its 32 or 28 px row (ComponentCatalog
+    /// PropertyList). A <c>&lt;dt&gt;</c> is what tells a hand-built row from other markup; an editing row built from a span and a
+    /// div is not seen, so the rule counts read rows only. Zero-tolerance: every row had moved when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv23(string path, string text) =>
+        new("CV23", path, path.EndsWith("/PropertyRow.razor", StringComparison.Ordinal) ? 0 : RawTermTag().Count(StripRazorComments(text)));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
@@ -405,6 +417,9 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex("""<(?<name>Mud[A-Za-z]+)(?<attrs>(?:"[^"]*"|'[^']*'|[^>"'])*)>""", RegexOptions.CultureInvariant)]
     private static partial Regex MudTag();
+
+    [GeneratedRegex(@"<dt[\s>/]", RegexOptions.CultureInvariant)]
+    private static partial Regex RawTermTag();
 
     [GeneratedRegex(@"@\*.*?\*@|<!--.*?-->", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex RazorComments();
