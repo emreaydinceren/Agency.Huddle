@@ -3,6 +3,7 @@
 ## Contents
 
 - Two obligations for anyone changing the UI
+- Before you build: check the catalog, and keep it current
 - Start here: the five-minute path
 - I need… use this
 - Reusable parts catalog
@@ -62,11 +63,44 @@ the top-left corner) are in wireframes.md's
 [Sources and upkeep](wireframes.md#sources-and-upkeep). A change that leaves wireframes.md
 describing a screen that no longer exists is incomplete.
 
+## Before you build: check the catalog, and keep it current
+
+[ComponentCatalog.md](ComponentCatalog.md) shows every shared component as a screenshot, with
+its file, how many places use it and its key parameters. It also lists the shapes the app
+repeats with no component yet ([Patterns still built by hand](ComponentCatalog.md#patterns-still-built-by-hand)).
+
+**Check it before you write** a component, a block of markup you are copying from another file,
+a helper or a stylesheet class:
+
+- If the part exists, use it. Do not copy its markup.
+- If the shape is listed as planned, write it the way the existing copies do, do not invent a new
+  variant, and say in the pull request that it will move into its component.
+- If neither, and you are about to copy markup from another file, stop: that is the sign a
+  component is needed. Build it, or add a row to the planned list with the count and where it
+  recurs.
+
+**Keep it current**, in the same commit as the code:
+
+| Change | What to do in ComponentCatalog.md |
+| --- | --- |
+| Adds a shared component, or a new look of one | Add its entry: screenshot, path, sites and key parameters |
+| Removes or renames a shared component | Delete or rename its entry, and fix the links to it |
+| Moves a planned shape into its component | Move its row out of Patterns still built by hand and into the new component's entry |
+| Finds a shape repeated by hand | Add a row to Patterns still built by hand, with its count and where it recurs |
+| Changes how a component looks | Retake its screenshot (the recipe is in the catalog's Keeping this page current) |
+| Changes how many places use a component | Update its count. It need not be exact on every change; recount with the catalog's snippet when you refresh the page |
+
+A change that leaves the catalog listing a component that no longer exists, or missing one that
+does, is incomplete. This page's [catalog tables](#reusable-parts-catalog) describe the same parts
+and keep the container codes and full parameter lists, so update both until they are folded
+together.
+
 ## Start here: the five-minute path
 
 1. **Find the screen** in [wireframes.md](wireframes.md) and note the codes you will touch.
 2. **Look up what to use** in [I need… use this](#i-need-use-this), then the
-   [catalog](#reusable-parts-catalog) for the file and its parameters.
+   [catalog](#reusable-parts-catalog) for the file and its parameters, and
+   [ComponentCatalog.md](ComponentCatalog.md) to see it and to check you are not building a copy.
 3. **Read the rule** in [design-system.md](design-system.md) for anything the lookup
    points to.
 4. **Check the pattern** you are about to copy against that page and the tests: the page
@@ -147,7 +181,9 @@ component here, move it onto the component rather than writing another copy.
 ## Reusable parts catalog
 
 Everything here already exists. Paths are under `src/Huddle.App/`. Check this catalog
-before you create a component, a helper or a CSS class.
+before you create a component, a helper or a CSS class. [ComponentCatalog.md](ComponentCatalog.md)
+shows the same parts as screenshots, with how many places use each, and lists the repeated
+shapes that have no component yet.
 
 ### Shell and navigation
 
