@@ -49,7 +49,7 @@
             </MudPaper>
             @if (updated)
             {
-                <MudAlert Severity="Severity.Info" role="status" Class="playbook-updated">
+                <Notice Severity="NoticeLevel.Info" Class="playbook-updated">
                     <div>@($"Huddle's default {label} Playbook changed after this Team customized it.")</div>
                     @if (state.Diff is null)
                     {
@@ -58,24 +58,24 @@
                     <MudStack Row="true" Spacing="1" Class="mt-2">
                         @if (state.Diff is not null)
                         {
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.ToggleDiff(current))">Show changes</MudButton>
+                            <ActionButton OnClick="@(() => this.ToggleDiff(current))">Show changes</ActionButton>
                         }
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.KeepMyVersion(current))">Keep my version</MudButton>
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.Reset(current))">Reset to default…</MudButton>
+                        <ActionButton OnClick="@(() => this.KeepMyVersion(current))">Keep my version</ActionButton>
+                        <ActionButton OnClick="@(() => this.Reset(current))">Reset to default…</ActionButton>
                     </MudStack>
                     @if (state.Diff is not null && this.diffShown.Contains(current))
                     {
                         <pre class="playbook-diff">@state.Diff</pre>
                     }
-                </MudAlert>
+                </Notice>
             }
             @if (state.Status == PlaybookStatus.Unreadable)
             {
-                <MudAlert Severity="Severity.Error" role="alert">@($"Huddle couldn't read {state.Path}. Agents get the Huddle default until it can be read.")</MudAlert>
+                <Notice Severity="NoticeLevel.Error">@($"Huddle couldn't read {state.Path}. Agents get the Huddle default until it can be read.")</Notice>
             }
             @if (state.OverLimitLength > 0)
             {
-                <MudAlert Severity="Severity.Warning" role="status">@OverLimitText(state.OverLimitLength)</MudAlert>
+                <Notice Severity="NoticeLevel.Warning">@OverLimitText(state.OverLimitLength)</Notice>
             }
             <div class="playbook-text library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(state.Text))</div>
             @if (unknownBase)
@@ -86,19 +86,19 @@
                 @if (!ownFile)
                 {
                     <MudTooltip Text="Turn on the Library to customize a Playbook." Disabled="@this.LibraryEnabled">
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" Disabled="@(!this.LibraryEnabled)"
-                                   OnClick="@(() => this.Customize(current))">Customize for this Team</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Edit" Disabled="@(!this.LibraryEnabled)"
+                                      OnClick="@(() => this.Customize(current))">Customize for this Team</ActionButton>
                     </MudTooltip>
-                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.EditTheDefault(current))">Edit the default</MudButton>
+                    <ActionButton OnClick="@(() => this.EditTheDefault(current))">Edit the default</ActionButton>
                 }
                 else
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.Edit(current))">Edit</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" OnClick="@(() => this.Edit(current))">Edit</ActionButton>
                     @if (unknownBase)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.KeepMyVersion(current))">Keep my version</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" OnClick="@(() => this.KeepMyVersion(current))">Keep my version</ActionButton>
                     }
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.Reset(current))">Reset to default…</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" OnClick="@(() => this.Reset(current))">Reset to default…</ActionButton>
                 }
             </MudStack>
         </section>

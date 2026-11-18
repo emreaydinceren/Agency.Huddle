@@ -293,6 +293,10 @@ merged the four branches into the working branch. What made it cheap, and what t
   list the flex and grid parents of its sites and zero the margin there.
 - **Merge main between waves, not during one.** Merging while owners worked would have invalidated
   their baselines; main was merged only when no owner had uncommitted edits.
+- **The guard catches new code from main.** The last merge of main brought a new `PlaybooksTab.razor` with
+  eight raw `MudButton` and three raw `MudAlert` tags; `UiConventionTests` failed on CV15 and CV16 until
+  it was moved onto `ActionButton` and `Notice`. That is the rule working: new code uses the components
+  or it does not merge. Expect it on any branch that was cut before a rule landed.
 
 A1 (`Notice`, 2026-11-18) added:
 
