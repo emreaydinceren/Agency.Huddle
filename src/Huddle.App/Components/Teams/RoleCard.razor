@@ -23,8 +23,8 @@
                 <span class="chip-meta team-type-roles">@(this.Custom ? "Your role" : "Hiring pool")</span>
             </span>
             <span class="role-card-footer">
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.OnAddClick"
-                           aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</MudButton>
+                <ActionButton Role="ButtonRole.Secondary" OnClick="this.OnAddClick"
+                              aria-label="@($"Add {this.Title}")" Class="role-card-add">Add</ActionButton>
                 @if (this.Suggested)
                 {
                     <span class="role-suggested">Suggested</span>

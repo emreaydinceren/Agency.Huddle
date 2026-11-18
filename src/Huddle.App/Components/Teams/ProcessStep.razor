@@ -25,9 +25,9 @@
         <pre class="process-step-preview">@this.Preview</pre>
     }
     <MudStack Row="true" Spacing="2" Class="mt-2">
-        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Use"
-                   Class="process-step-use">Use this process</MudButton>
-        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.StartBlank" Class="process-step-blank">Start blank</MudButton>
+        <ActionButton Role="ButtonRole.Primary" Disabled="@(this.selected is null)" OnClick="this.Use"
+                      Class="process-step-use">Use this process</ActionButton>
+        <ActionButton Role="ButtonRole.Secondary" OnClick="this.StartBlank" Class="process-step-blank">Start blank</ActionButton>
     </MudStack>
     @if (this.result is not null)
     {

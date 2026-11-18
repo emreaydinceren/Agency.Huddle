@@ -111,15 +111,15 @@
                        shortcut toggle follows it: the shortcut is the avatar's tile in the Activity bar. *@
                     @if (summary.TeamType is not null)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
-                                   Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Edit"
+                                      Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</ActionButton>
                     }
                     <TeamShortcutButton Team="@sourceTeam" />
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
-                               Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                                  Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</ActionButton>
                     @* Asks T16's question first (TeamArchiveActions), as the Details tab's Archive does. *@
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
-                               Class="team-page-actions team-page-archive" OnClick="@(() => this.ArchiveTeamAsync(sourceTeam))">Archive</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Inventory2"
+                                  Class="team-page-actions team-page-archive" OnClick="@(() => this.ArchiveTeamAsync(sourceTeam))">Archive</ActionButton>
                 </Actions>
             </PageHeader>
             @* The Team figure (its members' all-time spend) stays on the Team page; a Project page shows the spend of its
@@ -146,14 +146,14 @@
                     <span class="page-kind-chip team-project-kind">Project</span>
                 </TitleTrailing>
                 <Actions>
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
-                               Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Edit"
+                                  Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</ActionButton>
                     @* A Project has no tab for settings, so its Needs You level (ADR-0088) opens in a dialog. *@
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.NotificationsActive"
-                               Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.NotificationsActive"
+                                  Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</ActionButton>
                     @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
-                               Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Inventory2"
+                                  Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</ActionButton>
                 </Actions>
             </PageHeader>
             <ProjectSpend Team="@projectTeam" Project="@projectName" />

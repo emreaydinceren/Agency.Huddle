@@ -24,13 +24,13 @@
         <EmptyState Icon="@Icons.Material.Outlined.AccountTree" Title="No process yet"
                     Text="A process lists the steps the Team follows to deliver work. Add one in the Team's AGENTS.md.">
             <Action>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.Edit" Class="process-tab-add">Add a process</MudButton>
+                <ActionButton Role="ButtonRole.Secondary" OnClick="this.Edit" Class="process-tab-add">Add a process</ActionButton>
             </Action>
         </EmptyState>
     }
     else
     {
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="this.Edit" Class="process-tab-edit">Edit</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" OnClick="this.Edit" Class="process-tab-edit">Edit</ActionButton>
         @if (this.error is not null)
         {
             <MudAlert Severity="Severity.Error" role="alert" Class="process-tab-error">@this.error</MudAlert>

@@ -125,9 +125,9 @@
     /// <param name="selected">The selected row's key, or <see langword="null"/>.</param>
     /// <param name="restore">Restores the row with that key.</param>
     private RenderFragment RestoreButton(string? selected, Func<string, Task> restore) =>
-        @<MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Unarchive"
-                    Class="archived-restore" Disabled="@(selected is null || this.busy)"
-                    OnClick="@(() => selected is null ? Task.CompletedTask : restore(selected))">Restore</MudButton>;
+        @<ActionButton Role="ButtonRole.Primary" StartIcon="@Icons.Material.Outlined.Unarchive"
+                       Class="archived-restore" Disabled="@(selected is null || this.busy)"
+                       OnClick="@(() => selected is null ? Task.CompletedTask : restore(selected))">Restore</ActionButton>;
 
     private void OnChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, async () =>
     {

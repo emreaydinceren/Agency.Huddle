@@ -23,10 +23,10 @@
 
 @* Archive (Spec 6.9, D-46, T16): asks first, then the service moves the Team out of the Boards and the sidebar. *@
 <div class="team-details-archive-row">
-    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
-               Class="team-details-rename" OnClick="this.RenameAsync">Rename</MudButton>
-    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
-               Class="team-details-archive" OnClick="this.ArchiveAsync">Archive</MudButton>
+    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Edit"
+                  Class="team-details-rename" OnClick="this.RenameAsync">Rename</ActionButton>
+    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Inventory2"
+                  Class="team-details-archive" OnClick="this.ArchiveAsync">Archive</ActionButton>
 </div>
 
 @code {
