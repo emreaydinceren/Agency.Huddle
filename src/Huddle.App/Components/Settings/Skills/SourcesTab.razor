@@ -37,12 +37,12 @@
 <div class="d-flex flex-wrap align-center gap-2 mb-1">
     <code class="sources-folder-path">@this.Settings.Dir</code>
     <MudTooltip Text="@SkillGuide.For("Change")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sources-folder-change" OnClick="this.ChangeFolderAsync">Change…</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="sources-folder-change" OnClick="this.ChangeFolderAsync">Change…</ActionButton>
     </MudTooltip>
     @if (this.Settings.FileDir is not null)
     {
         <MudTooltip Text="@SkillGuide.For("Use default")" ShowOnFocus="true">
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="sources-folder-default" OnClick="this.UseDefault">Use default</MudButton>
+            <ActionButton Class="sources-folder-default" OnClick="this.UseDefault">Use default</ActionButton>
         </MudTooltip>
     }
 </div>

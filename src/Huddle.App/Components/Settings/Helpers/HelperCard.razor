@@ -62,17 +62,17 @@
         {
             <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-paused" role="status">
                 <span>@HelpersCopy.Paused</span>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="ml-3 helper-card-continue" OnClick="this.OnContinue">
+                <ActionButton Role="ButtonRole.Secondary" Class="ml-3 helper-card-continue" OnClick="this.OnContinue">
                     @HelpersCopy.Continue(this.baseline.ContinueGrant)
-                </MudButton>
+                </ActionButton>
             </MudAlert>
         }
 
         <MudStack Row="true" Spacing="2" Class="mt-3">
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="helper-card-save"
-                       Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="helper-card-reset"
-                       Disabled="@(!this.AdaptersOn)" OnClick="this.OnReset">@HelpersCopy.Reset</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Class="helper-card-save"
+                          Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</ActionButton>
+            <ActionButton Class="helper-card-reset"
+                          Disabled="@(!this.AdaptersOn)" OnClick="this.OnReset">@HelpersCopy.Reset</ActionButton>
         </MudStack>
     </MudPaper>
 }

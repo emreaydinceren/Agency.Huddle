@@ -91,11 +91,8 @@ else if (this.isAdmin == true)
                                     ValueChanged="this.OnFieldValueChanged"
                                     ResetRequested="this.OnResetRequested" />
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">
-                            <MudButton Variant="Variant.Filled"
-                                       Size="Size.Small"
-                                       Color="Color.Primary"
-                                       ButtonType="ButtonType.Submit"
-                                       Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
+                            <ActionButton Role="ButtonRole.Primary" Submit="true"
+                                          Disabled="@(!this.HasUnsavedChanges)">Save</ActionButton>
                             <ResetAllControl AnyModified="this.AnyModified"
                                              Confirming="this.confirmingResetAll"
                                              OnBeginReset="this.BeginResetAll"

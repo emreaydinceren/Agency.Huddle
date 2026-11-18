@@ -42,8 +42,8 @@
             </MudSelect>
             <MudSwitch T="bool" id="theme-lab-inspect-toggle" Label="Inspect" Color="Color.Primary"
                        Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
-            <MudButton id="theme-lab-export" Size="Size.Small" Variant="Variant.Outlined" OnClick="this.ExportAsync">Export JSON</MudButton>
-            <MudButton id="theme-lab-reset" Size="Size.Small" Variant="Variant.Text" OnClick="this.ResetAsync">Reset edits</MudButton>
+            <ActionButton id="theme-lab-export" Role="ButtonRole.Secondary" OnClick="this.ExportAsync">Export JSON</ActionButton>
+            <ActionButton id="theme-lab-reset" OnClick="this.ResetAsync">Reset edits</ActionButton>
             <span role="status" class="theme-lab-status">@this.status</span>
         </div>
 

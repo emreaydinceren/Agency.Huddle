@@ -20,7 +20,7 @@
     <StoredAt Label="Your team types stored at" Path="@this.Catalog.UserDirectory" />
 
     <MudStack Row="true" Spacing="2" Class="mb-2">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="teamtypes-reload" OnClick="this.Reload">Reload</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="teamtypes-reload" OnClick="this.Reload">Reload</ActionButton>
     </MudStack>
 
     <MudSimpleTable Hover="true" Dense="true">

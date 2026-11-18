@@ -20,10 +20,10 @@
     }
 
     <MudStack Row="true" Spacing="3" AlignItems="AlignItems.Center" Class="mt-2">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="memory-tidy-now"
-                   Disabled="@this.Runner.IsRunning" OnClick="this.OnTidyNow">
+        <ActionButton Role="ButtonRole.Secondary" Class="memory-tidy-now"
+                      Disabled="@this.Runner.IsRunning" OnClick="this.OnTidyNow">
             @(this.Runner.IsRunning ? MemoryTidyCardCopy.PassRunning : MemoryTidyCardCopy.TidyNow)
-        </MudButton>
+        </ActionButton>
         @if (this.ListHref is { } href)
         {
             <MudLink Href="@href" Class="memory-tidy-list">@MemoryTidyCardCopy.OpenList</MudLink>

@@ -24,7 +24,7 @@
 <StoredAt Path="@this.Roots.FilePath" />
 
 <MudStack Row="true" Spacing="2" Class="mb-2">
-    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-reset-button" OnClick="this.ResetAsync">Reset pinned folders</MudButton>
+    <ActionButton Role="ButtonRole.Secondary" Class="library-panel-reset-button" OnClick="this.ResetAsync">Reset pinned folders</ActionButton>
 </MudStack>
 
 <MudSimpleTable Hover="true" Dense="true" Class="library-panel-roots-table">
@@ -50,7 +50,7 @@
                         }
                         else
                         {
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-remove-button" OnClick="@(() => this.AskRemove(root))">Remove</MudButton>
+                            <ActionButton Role="ButtonRole.Secondary" Class="library-panel-remove-button" OnClick="@(() => this.AskRemove(root))">Remove</ActionButton>
                         }
                     }
                     else if (root.Kind != LibraryRootKind.Workspace)
@@ -80,7 +80,7 @@
 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-2 library-panel-add-row">
     <MudTextField T="string" Placeholder="Name" aria-label="Name" @bind-Value="this.name" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-name-field toolbar-compact" />
     <MudTextField T="string" Placeholder="Path" aria-label="Path" @bind-Value="this.path" Variant="Variant.Outlined" Margin="Margin.Dense" Class="library-panel-path-field toolbar-compact" />
-    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</MudButton>
+    <ActionButton Role="ButtonRole.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</ActionButton>
 </MudStack>
 
 @code {

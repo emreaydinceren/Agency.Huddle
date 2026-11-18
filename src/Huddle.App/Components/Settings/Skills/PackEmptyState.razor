@@ -14,7 +14,7 @@
         </ol>
         <div class="d-flex flex-wrap justify-center gap-2">
             <MudTooltip Text="@SkillGuide.For("Add with your AI tool")" ShowOnFocus="true">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@ActionIcons.Add" Class="pack-empty-add" OnClick="this.OnAddWithAi">Add with your AI tool</MudButton>
+                <ActionButton Role="ButtonRole.Primary" StartIcon="@ActionIcons.Add" Class="pack-empty-add" OnClick="this.OnAddWithAi">Add with your AI tool</ActionButton>
             </MudTooltip>
             @this.ChildContent
         </div>

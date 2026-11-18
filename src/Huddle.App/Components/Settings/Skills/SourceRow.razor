@@ -51,7 +51,7 @@
             <div class="d-flex flex-wrap align-center gap-2 mt-1">
                 <MudText Typo="Typo.body2" Class="source-row-moved">This Source moved to @(source.File?.MovedTo ?? "another place").</MudText>
                 <MudTooltip Text="@SkillGuide.For("Copy prompt")" ShowOnFocus="true">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="source-row-copy-prompt" OnClick="this.CopyMovedPromptAsync">Copy prompt</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Class="source-row-copy-prompt" OnClick="this.CopyMovedPromptAsync">Copy prompt</ActionButton>
                 </MudTooltip>
             </div>
         }

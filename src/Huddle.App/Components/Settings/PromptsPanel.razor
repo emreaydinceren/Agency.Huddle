@@ -86,10 +86,9 @@
                 }
 
                 <div class="prompts-field-actions">
-                    <MudButton Variant="Variant.Outlined"
-                               Size="Size.Small"
-                               Disabled="@(!field.IsModified)"
-                               OnClick="@(() => this.OnResetClicked(field.Key))">Reset</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary"
+                                  Disabled="@(!field.IsModified)"
+                                  OnClick="@(() => this.OnResetClicked(field.Key))">Reset</ActionButton>
                 </div>
             </div>
         }

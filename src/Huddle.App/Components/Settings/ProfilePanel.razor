@@ -66,11 +66,11 @@
         }
 
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-3">
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" ButtonType="ButtonType.Submit"
-                       Class="profile-save" Disabled="@(!this.CanSave)">Save</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Submit="true"
+                          Class="profile-save" Disabled="@(!this.CanSave)">Save</ActionButton>
             @if (this.HasUnsavedChanges)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Revert">Discard changes</MudButton>
+                <ActionButton OnClick="this.Revert">Discard changes</ActionButton>
             }
         </MudStack>
     </form>
