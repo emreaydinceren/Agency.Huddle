@@ -16,12 +16,12 @@ The first part of this page is a quick overview. For rules, limits and fixes, se
 | `team-building` | Assembling a Team |
 | `team-rollup` | Summarising across Teams |
 | `team-management` | Managing a Team |
-| `request-confirmation` | Confirming a Request your Team filed |
+| `request-confirmation` | Confirming a Request your Team filed once the other Team has finished it. Every role that verifies holds it |
 | `retrospective` | Running a retro |
 | `ingest` | Proposing facts, Tasks and documents from new originals |
 | `wrap-up` | Proposing what a session produced |
 | `brain-check` | Finding drift and filing it as Tasks |
-| `browser-check` | Driving a web page in a browser to verify a Task |
+| `browser-check` | Driving a web page in a browser to verify a Task. A Development Team's QA engineer and manager hold it |
 
 Assign a Skill on an Agent's card. You can override a built-in Skill file by file and restore it later.
 
@@ -56,6 +56,20 @@ those catalog files are split again.
 
 Huddle adds the Skill to the Agent's file and restarts it. The Agent's prompt then lists each Skill's name and
 description, and it reads the full text when its work calls for it. This keeps its main instructions short.
+
+### Confirming a Request
+
+A Request is a Task your Team filed into another Team's backlog. The other Team moves it to **Done**, but it closes
+only when your Team confirms it was delivered as asked. `request-confirmation` is how the QA, a checker or a
+reviewer does that, and the Team that did the work can't confirm its own.
+
+### Checking a web page
+
+`browser-check` is for the Agent that verifies a Task whose acceptance names a web page or a UI. It grants no
+tools, and it is separate from the Agent's own browser. The Agent writes a short script in a scratch folder
+outside the repository, so the tree it checks stays clean, and drives an Edge or Chrome that is already
+installed. It opens the app on `localhost` only, acts as a person would and checks what changed after each step.
+A step that does nothing counts as a failure, and the result is recorded as Evidence on the Task.
 
 ### Writing a Skill
 

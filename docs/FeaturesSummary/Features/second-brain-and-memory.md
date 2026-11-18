@@ -55,6 +55,8 @@ watches: its own `work/` folder, its Teams' folders and anything you list under 
 - **Upkeep Jobs.** The Chief of Staff offers them, and creates each only if you say yes.
 - **Overflow notices.** A Memory folder over its limit raises a daily Feed notice, and the manager
   moves old facts into `memory/archive/`.
+- **Memory Tidy.** Once a week a Helper tidies each Agent's own Memory and Huddle-wide Memory, copying every file
+  first, and lists what it changed in one Feed Notification. See [Memory Tidy](#memory-tidy).
 
 ## Archive what's finished
 
@@ -65,10 +67,17 @@ many open Tasks it would hide.
 Old links still open the file, with an **Archived** chip, and **Restore** on the Archived page brings back members, manager
 and Rooms.
 
+## Know what an Agent already told you
+
+Every Agent that reports to you keeps a short file, `reported.md`, in its own Memory: one line for each thing it
+told you, with the date, the Room and a few words. Before it reports, it reads the file, so it says "no change since
+Monday" instead of repeating itself. See [What an Agent already told you](#what-an-agent-already-told-you).
+
 ## Good to know
 
 - Huddle doesn't restrict what Agents write in a Team's workspace, such as a code repository.
-- Deleting a Memory file sends it to the Recycle Bin, and an Agent does this only when you ask.
+- Deleting a Memory file sends it to the Recycle Bin, and an Agent does this only when you ask. The one other thing
+  that removes a Memory file is [Memory Tidy](#memory-tidy), and only after it copies the file to **Memory backups**.
 
 ## In more detail
 
@@ -170,6 +179,53 @@ Each session's prompt lists each file's name and description, cut at 200 charact
 
 The `memory` tool's `list` shows every file. An Agent on an Adapter that can't read files still gets the index
 and the tool.
+
+### What an Agent already told you
+
+An Agent that reports to you keeps `reported.md` in its own Memory, one line for each thing it told you:
+
+```markdown
+- 2026-11-16 - Nova and Sam - launch budget is 12% over plan
+```
+
+| Rule | Detail |
+| --- | --- |
+| What counts | Any finding, status, result, decision or warning, however you asked for it. Small talk and explanations of how something works get no line |
+| Who writes the line | The Agent says what it told you, and Huddle adds the date |
+| How long a line stays | 14 days, counted in your calendar days, set by `Team:Memory:Reported:KeepDays`. Huddle drops older lines weekly, and 0 or less keeps every line |
+| Who has one | An Agent that reports to you. One that only does Task work for a manager has none |
+| Who reads it | The Agent, before it reports. The Chief of Staff reads a team manager's, so its digest leaves out what the manager already told you |
+| Editing it | Open it in the Library like any Memory file. A line Huddle can't read as a date and text is kept |
+
+The Agent keeps the file itself, so a report it forgot to note can come again.
+
+### Memory Tidy
+
+**Memory Tidy** is a Helper that runs about once a week, on Sunday at 03:00 in your computer's time zone, and tidies
+each Agent's own Memory folder. It skips a folder with fewer than 10 topic files, or one that hasn't changed since its
+last pass. Otherwise it may merge two files on one topic, shorten a file, give a file a missing description, or remove
+a file that is out of date. It adds nothing and creates no file. After the Agents' folders it tidies Huddle-wide
+Memory, leaving every description as it is.
+
+- **A copy comes first.** Before a file is changed or removed, Huddle copies it to the **Memory backups** root, in a
+  folder for that pass. If the copy can't be written, that change doesn't happen. The root is read-only, and a pass's
+  folder is deleted after 90 days (`Team:Memory:Tidy:KeepBackupDays`).
+- **Every step is checked.** Huddle refuses a change that adds a number, date, link or e-mail address the files didn't
+  hold, a merge that loses one, a rewrite that makes a file longer, and a description that needn't change. A pass drops
+  at most 3 files from one folder (`Team:Memory:Tidy:MaxDropsPerFolder`). A refused change is left out and listed.
+- **You get one list.** A pass that changes anything raises one Feed Notification, such as "Memory Tidy tidied 4 topic
+  files and dropped 2 in 3 Memory folders". Select it to open the list of changes, the reasons and anything refused.
+- **Undoing is by hand.** Open the copy in **Memory backups** and paste its text back into the file. There is no
+  **Restore** button.
+- **You can protect a file.** Add the line `tidy: keep` beside `description` at the top of the file, and the Helper
+  never sees or changes it. `reported.md` and `MEMORY.md` are never shown to it.
+- **It can't see everything.** It doesn't check a number written as a word, a month name, a person's name or a
+  reversed "not". Read the list, and compare with the copy when a file matters.
+
+On **Settings > Helpers**, the **Memory Tidy** card shows the next and last pass, with **Tidy now** to start one at
+once and **Open the last list**. It starts on Claude, Sonnet, low effort, with a daily cap of 20 calls, and it never
+blocks work: if a call fails, Memory stays as it was. The schedule is `Team:Memory:Tidy:When`, which accepts `weekly`
+or `daily`, and Huddle reads it at start-up. If Huddle was closed at the time, the pass runs once when it's back.
 
 ### Team Memory proposals
 
