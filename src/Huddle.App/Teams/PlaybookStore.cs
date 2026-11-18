@@ -123,6 +123,27 @@ internal sealed class PlaybookStore(string teamsRoot, PlaybookBaseStore bases, I
         this.RaiseChanged();
     }
 
+    /// <summary>The effective default of a kind, the text a Team with no file of its own reads.</summary>
+    /// <param name="kind">Which Playbook.</param>
+    /// <returns>The default text.</returns>
+    public string DefaultText(PlaybookKind kind) => prompts.Raw(KeyOf(kind));
+
+    /// <summary>
+    /// Writes a Playbook file with a new body. A file that exists keeps its <c>basedOn</c> and every other frontmatter line; with no file, the
+    /// result is a customized Playbook stamped with the hash of the current default, whose text is stored as its base (spec §9).
+    /// </summary>
+    /// <param name="path">The Playbook file, in the Team's folder.</param>
+    /// <param name="kind">Which Playbook.</param>
+    /// <param name="body">The new body.</param>
+    public void SaveBody(string path, PlaybookKind kind, string body)
+    {
+        PlaybookFile file = File.Exists(path)
+            ? PlaybookFile.Parse(File.ReadAllText(path))
+            : new PlaybookFile(HashPrefix + bases.Save(kind, prompts.Raw(KeyOf(kind))), string.Empty);
+        AtomicFile.WriteText(path, (file with { Body = body }).Compose());
+        this.RaiseChanged();
+    }
+
     /// <summary>Deletes the Team's own Playbook, so the Team reads the default again.</summary>
     /// <param name="team">The Team's name.</param>
     /// <param name="kind">Which Playbook.</param>

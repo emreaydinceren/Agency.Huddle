@@ -55,6 +55,10 @@ internal sealed class RetroProposalFixture : IDisposable
         this.Folders = folders;
         this.Proposals = new RetroProposalStore(folders);
         this.Retro = new RetroFileStore(folders);
+        this.PlaybookPrompts.SetOverride("systemPrompt.memberPlaybook", MemberDefault);
+        this.PlaybookPrompts.SetOverride("systemPrompt.managerPlaybook", ManagerDefault);
+        this.Bases = new PlaybookBaseStore(Path.Combine(harness.Options.Value.DataDir, "playbook-data"));
+        this.Playbooks = new PlaybookStore(this.TeamFolder, this.Bases, this.PlaybookPrompts, new PlaybookOptions());
         ITeamDirectory serviceDirectory = DirectoryGate.Wrap(harness.Directory, out DirectoryGate gate);
         this.Gate = gate;
         this.Service = new RetroProposalService(
@@ -63,11 +67,30 @@ internal sealed class RetroProposalFixture : IDisposable
             folders,
             harness.Personas,
             this.Retro,
+            this.Playbooks,
             serviceDirectory,
             harness.Chat,
             this.Clock,
             this.ServiceLog);
     }
+
+    /// <summary>The effective Member Playbook the fixture's prompt source holds.</summary>
+    public const string MemberDefault = "# Member Playbook\n\nAsk with options.\nKeep replies short.\n";
+
+    /// <summary>The effective Manager Playbook the fixture's prompt source holds.</summary>
+    public const string ManagerDefault = "# Manager Playbook\n\nTriage first.\n";
+
+    /// <summary>The prompt source that holds the two Playbook defaults.</summary>
+    public FakePromptSource PlaybookPrompts { get; } = new();
+
+    /// <summary>The store of the default texts Playbook files were customized from.</summary>
+    public PlaybookBaseStore Bases { get; }
+
+    /// <summary>The Playbook store the service writes through.</summary>
+    public PlaybookStore Playbooks { get; }
+
+    /// <summary>The path of Platform's Member Playbook file, which may not exist.</summary>
+    public string MemberPlaybookPath => Path.Combine(this.TeamFolder, PlaybookFile.FileName(manager: false));
 
     /// <summary>What the service logged; a refused change to the Needs You level is a warning here.</summary>
     public RecordingLogger<RetroProposalService> ServiceLog { get; } = new();

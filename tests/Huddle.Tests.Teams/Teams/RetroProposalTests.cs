@@ -431,9 +431,120 @@ public sealed class RetroProposalTests
 
         string result = await tool.InvokeAsync(Arguments("Platform", Edit(), Edit(file)), ct);
 
-        Assert.Equal("targetFile must be AGENTS.md, _team.md or the file of an Agent (Name.md).", result);
+        Assert.Equal("targetFile must be AGENTS.md, _team.md, _member-playbook.md, _manager-playbook.md or the file of an Agent (Name.md).", result);
         Assert.Empty(fixture.Proposals.Pending("Platform"));
     }
+
+    /// <summary>Playbooks S5: both Playbook files are accepted as a targetFile and stored.</summary>
+    [Theory]
+    [InlineData("_member-playbook.md")]
+    [InlineData("_manager-playbook.md")]
+    public async Task Tool_PlaybookFile_IsAccepted(string file)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        ProposeRetroChangesTool tool = fixture.Tool("Nova");
+
+        string result = await tool.InvokeAsync(Arguments("Platform", Edit(file)), ct);
+
+        Assert.Equal("Proposal sent to the Human.", result);
+        Assert.Equal(file, Assert.Single(Assert.Single(fixture.Proposals.Pending("Platform")).Changes).TargetFile);
+    }
+
+    /// <summary>Playbooks S5: with no Playbook file, the diff is computed against the effective default.</summary>
+    [Fact]
+    public async Task Preview_UncustomizedPlaybook_RunsAgainstTheDefault()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "_member-playbook.md", "Keep replies short.", "Keep replies to two lines."));
+
+        string diff = fixture.Service.Preview(set, set.Changes[0]);
+
+        Assert.Equal(
+            "--- _member-playbook.md\n+++ _member-playbook.md\n@@\n Ask with options.\n-Keep replies short.\n+Keep replies to two lines.",
+            diff);
+        Assert.False(File.Exists(fixture.MemberPlaybookPath));
+    }
+
+    /// <summary>Playbooks S5: the card's file line says an uncustomized Playbook change customizes the Team's Playbook; a customized one and other files show the bare name.</summary>
+    [Fact]
+    public async Task FileLine_UncustomizedPlaybook_SaysItCustomizes()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        RetroProposalSet set = fixture.Propose(
+            RetroProposalFixture.Change("1", "_member-playbook.md", "Keep replies short.", "x"),
+            RetroProposalFixture.Change("2", "AGENTS.md", "Review before done.", "x"));
+        string before = fixture.Service.FileLine(set, set.Changes[0]);
+        File.WriteAllText(fixture.MemberPlaybookPath, RetroProposalFixture.MemberDefault);
+
+        string after = fixture.Service.FileLine(set, set.Changes[0]);
+
+        Assert.Equal("_member-playbook.md (customizes this Team's Playbook)", before);
+        Assert.Equal("_member-playbook.md", after);
+        Assert.Equal("AGENTS.md", fixture.Service.FileLine(set, set.Changes[1]));
+    }
+
+    /// <summary>Playbooks S5: Accept on an uncustomized Playbook writes the default with the replacement, a fresh basedOn and the stored base, and records the register row.</summary>
+    [Fact]
+    public async Task AcceptAsync_UncustomizedPlaybook_WritesTheFileWithItsBase()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "_member-playbook.md", "Keep replies short.", "Keep replies to two lines."));
+
+        RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
+
+        Assert.Equal(RetroChangeOutcomeKind.Applied, outcome.Kind);
+        string hash = PlaybookBaseStore.Hash(RetroProposalFixture.MemberDefault);
+        Assert.Equal(
+            $"---\nbasedOn: 'sha256:{hash}'\n---\n# Member Playbook\n\nAsk with options.\nKeep replies to two lines.\n",
+            File.ReadAllText(fixture.MemberPlaybookPath));
+        Assert.Equal(RetroProposalFixture.MemberDefault, fixture.Bases.Read(PlaybookKind.Member, hash));
+        RegisterRow row = Assert.Single(fixture.Retro.ReadRegister("Platform"));
+        Assert.Equal("Customized the Member Playbook", row.Action);
+    }
+
+    /// <summary>Playbooks S5: Accept on a customized Playbook edits its body like any file and keeps its basedOn.</summary>
+    [Fact]
+    public async Task AcceptAsync_CustomizedPlaybook_AppliesLikeAnyFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        File.WriteAllText(fixture.MemberPlaybookPath, "---\nbasedOn: 'sha256:0123456789abcdef'\n---\nOur own rule.\nSecond line.\n");
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "_member-playbook.md", "Our own rule.", "Our better rule."));
+
+        RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
+
+        Assert.Equal(RetroChangeOutcomeKind.Applied, outcome.Kind);
+        Assert.Equal(
+            "---\nbasedOn: 'sha256:0123456789abcdef'\n---\nOur better rule.\nSecond line.\n",
+            File.ReadAllText(fixture.MemberPlaybookPath));
+        Assert.Equal("Customized the Member Playbook", Assert.Single(fixture.Retro.ReadRegister("Platform")).Action);
+    }
+
+    /// <summary>Playbooks S5: a find that matches only the Huddle rules is not in the file, so Preview says so and Accept refuses and writes nothing.</summary>
+    [Fact]
+    public async Task HuddleRulesText_IsNeverMatched()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using RetroProposalFixture fixture = await RetroProposalFixture.CreateAsync(ct);
+        string rule = HuddleRulesLine();
+        Assert.DoesNotContain(rule, fixture.Playbooks.DefaultText(PlaybookKind.Member), StringComparison.Ordinal);
+        RetroProposalSet set = fixture.Propose(RetroProposalFixture.Change("1", "_member-playbook.md", rule, "gone"));
+
+        string diff = fixture.Service.Preview(set, set.Changes[0]);
+        RetroChangeOutcome outcome = await fixture.Service.AcceptAsync(fixture.RoomId, set.Id, "1", ct);
+
+        Assert.Equal("The text to replace is not in the file exactly once.", diff);
+        Assert.Equal(RetroChangeOutcomeKind.Refused, outcome.Kind);
+        Assert.False(File.Exists(fixture.MemberPlaybookPath));
+    }
+
+    /// <summary>The first substantial line of the Member Huddle rules.</summary>
+    private static string HuddleRulesLine() =>
+        HuddleRules.RawMember.Split('\n').Select(static line => line.Trim()).First(static line => line.Length > 30 && !line.StartsWith('#'));
 
     /// <summary>A proposal missing its title or find text is refused.</summary>
     [Fact]
@@ -473,7 +584,7 @@ public sealed class RetroProposalTests
 
         Assert.Equal("propose_retro_changes", tool.Name);
         Assert.Equal(
-            "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), " +
+            "Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md, _member-playbook.md, _manager-playbook.md or an Agent's Name.md), " +
             "the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; " +
             "nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.",
             tool.Description);

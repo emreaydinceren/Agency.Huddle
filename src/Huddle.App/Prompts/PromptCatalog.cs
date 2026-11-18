@@ -1681,7 +1681,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
+                Proposes up to 3 changes to the Human after a retro. Each change names a targetFile (AGENTS.md, _team.md, _member-playbook.md, _manager-playbook.md or an Agent's Name.md), the exact text to find (it must occur once in that file) and the text to replace it with. Huddle shows each as a diff; nothing is edited until the Human accepts it, and then Huddle makes the edit, not you.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

@@ -228,6 +228,12 @@ Once Agents exist:
 3. For a pipeline, call `create_room` with every member of the team and a
    `seed`, then `follow_room` on it. The seed is the only context the team will
    have, so write it as below.
+4. Once a Team hired from a type exists, file the goal you collected in step 1
+   as one Task in that Team with `create_task`: the title is the goal, the
+   description says what a finished result looks like, and the assignee is the
+   Team's manager. Then tell the Human: "When you create this Team's first
+   Project, move {Id} into it; {Manager} will treat it as the Project's goal."
+   Put the Task's id and the manager's name where `{Id}` and `{Manager}` are.
 
 A seed that works names five things:
 

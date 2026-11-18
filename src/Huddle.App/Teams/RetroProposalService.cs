@@ -17,6 +17,7 @@ namespace Agency.Huddle.App.Teams;
 /// <param name="folders">Finds the Team folder.</param>
 /// <param name="personas">Reads and updates Agent files.</param>
 /// <param name="retro">Appends the register row.</param>
+/// <param name="playbooks">Gives the default a Team's uncustomized Playbook is read from and writes the Playbook file.</param>
 /// <param name="directory">Reads the room's members and the Human.</param>
 /// <param name="chat">Posts the outcome in the room.</param>
 /// <param name="clock">Dates the register row.</param>
@@ -27,6 +28,7 @@ internal sealed class RetroProposalService(
     ITeamFolders folders,
     PersonaStore personas,
     RetroFileStore retro,
+    PlaybookStore playbooks,
     ITeamDirectory directory,
     ChatService chat,
     TimeProvider clock,
@@ -68,6 +70,25 @@ internal sealed class RetroProposalService(
         }
 
         return pending;
+    }
+
+    /// <summary>The file line a card shows for a change: the file name, and for a Playbook the Team has no file of yet, a note that Accept customizes it.</summary>
+    /// <param name="set">The set the change belongs to.</param>
+    /// <param name="change">The change.</param>
+    /// <returns>The line.</returns>
+    public string FileLine(RetroProposalSet set, RetroChange change)
+    {
+        ArgumentNullException.ThrowIfNull(set);
+        ArgumentNullException.ThrowIfNull(change);
+
+        if (TryPlaybookKind(change.TargetFile) is not null
+            && folders.FindTeam(set.Team).Value is { } folder
+            && !File.Exists(Path.Combine(folder.FullPath, change.TargetFile)))
+        {
+            return $"{change.TargetFile} (customizes this Team's Playbook)";
+        }
+
+        return change.TargetFile;
     }
 
     /// <summary>The unified diff of a change against the file as it is now.</summary>
@@ -274,13 +295,25 @@ internal sealed class RetroProposalService(
         return written ? this.Applied(set, change) : Refused(failed);
     }
 
+    /// <summary>The register row's action: what was done to the file.</summary>
+    private static string ActionText(string file)
+    {
+        if (TryPlaybookKind(file) is not { } kind)
+        {
+            return "Edited " + file;
+        }
+
+        string name = kind == PlaybookKind.Manager ? "Manager" : "Member";
+        return $"Customized the {name} Playbook";
+    }
+
     private void Record(RetroProposalSet set, RetroChange change)
     {
         try
         {
             string id = RetroRegister.NextId(retro.ReadRegister(set.Team));
             string evidence = $"Accepted {clock.GetUtcNow().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture)}; verify at the next retro.";
-            retro.AppendRows(set.Team, [new RegisterRow(id, change.Title, "Edited " + change.TargetFile, set.Proposer, RetroStatus.Done, evidence)]);
+            retro.AppendRows(set.Team, [new RegisterRow(id, change.Title, ActionText(change.TargetFile), set.Proposer, RetroStatus.Done, evidence)]);
         }
         catch (IOException ex)
         {
@@ -297,6 +330,11 @@ internal sealed class RetroProposalService(
     {
         text = string.Empty;
         path = null;
+        if (TryPlaybookKind(file) is { } kind)
+        {
+            return this.TryReadPlaybook(team, file, kind, out text, out path);
+        }
+
         if (string.Equals(file, TeamPaths.AgentsMdFileName, StringComparison.Ordinal) || string.Equals(file, TeamPaths.TeamFileName, StringComparison.Ordinal))
         {
             LibraryResult<LibraryPath> folder = folders.FindTeam(team);
@@ -330,8 +368,68 @@ internal sealed class RetroProposalService(
         return false;
     }
 
+    /// <summary>Reads a Playbook target: the body of the Team's file, or the effective default when the Team has no file. <c>path</c> is where the file is, or will be.</summary>
+    private bool TryReadPlaybook(string team, string file, PlaybookKind kind, out string text, out string? path)
+    {
+        text = string.Empty;
+        path = null;
+        if (folders.FindTeam(team).Value is not { } folder)
+        {
+            return false;
+        }
+
+        path = Path.Combine(folder.FullPath, file);
+        if (!File.Exists(path))
+        {
+            text = playbooks.DefaultText(kind);
+            return true;
+        }
+
+        try
+        {
+            text = PlaybookFile.Parse(File.ReadAllText(path)).Body;
+            return true;
+        }
+        catch (IOException)
+        {
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Which Playbook a target file name is, or <see langword="null"/> when it is not a Playbook file.</summary>
+    private static PlaybookKind? TryPlaybookKind(string file)
+    {
+        if (string.Equals(file, PlaybookFile.FileName(manager: false), StringComparison.Ordinal))
+        {
+            return PlaybookKind.Member;
+        }
+
+        return string.Equals(file, PlaybookFile.FileName(manager: true), StringComparison.Ordinal) ? PlaybookKind.Manager : null;
+    }
+
     private bool TryWrite(string team, string file, string? path, string edited)
     {
+        if (path is not null && TryPlaybookKind(file) is { } kind)
+        {
+            try
+            {
+                playbooks.SaveBody(path, kind, edited);
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+        }
+
         if (path is not null)
         {
             try
