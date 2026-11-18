@@ -27,16 +27,18 @@ Run [`P-BUILD`](common.md#p-build), then [`P-LAUNCH-UAT`](common.md#p-launch-uat
 
 **Build the fixture once, through the UI** (no seeder scenario makes these Teams):
 
-1. Create `Cy` with [`P-NEW-PERSONA`](common.md#p-new-persona), Title `Ops Manager`, **Teams** = `Ops`. Saving it creates `<data>\Teams\Ops\`.
-2. Open **Agents** › **Bo** › **Edit**, set **Teams** to `Sales, Ops` and **Save**. Bo is now the one Agent in both Teams.
-3. Open **Agents** › **Ada** › **Edit**, set **Teams** to `Sales` and **Save**. This creates `<data>\Teams\Sales\`.
-4. Make Ada Sales' manager and Cy Ops' manager: Huddle has no manager control on the Team page, so open `<data>\Teams\Sales\_team.md` in a text editor, add the line `manager: Ada` between its `---` lines, and save. Do the same in `<data>\Teams\Ops\_team.md` with `manager: Cy`. If either file does not exist yet, open the Team's **Details** tab and **Save** once, then edit it.
+The Edit Agent form has **no Teams field**, and a Team made blank has no `_team.md` (so no manager, no **Process** tab, and **Details** › **Save** fails). Make both Teams through **Build a team** from a team type, which writes `_team.md`, the manager and the **Process** tab. Every new Agent needs an **Alias** as well as a name: give each one in the form.
+
+1. Select **Teams** in the Activity bar, then **Build a team** ([Building a team with the Chief of Staff](../../Huddle.UserGuide.md#building-a-team-with-the-chief-of-staff)). Step 1: pick any team type with a manager role (for example **Development Team**). Step 2: name the Team `Ops`, give it a Library folder. Step 3: on the manager role card click **Add** and name the draft `Cy` (Alias `cy`, Title `Ops Manager`). Step 4: **Approve & hire**. Cy is now Ops' manager.
+2. Build `Sales` the same way, with a manager draft named `Sal` (Alias `sal`). Sales gets `_team.md`, a manager and a **Process** tab.
+3. Put Ada and Bo into the Teams. Huddle has no Teams field on the Edit form, so for each Agent open **Agents** › the Agent › **Edit**, change the `teams:` line in the text of the card to `teams: [Sales]` for Ada and `teams: [Sales, Ops]` for Bo, and **Save** ([Adding and removing members](../../Huddle.UserGuide.md#adding-and-removing-members)). Close the Edit card before step 4: a card open during a membership change puts the old `teams:` line back.
+4. Make Ada Sales' manager: open Sales › **Members**, set **Manager** to `Ada`, remove `Sal` (**Remove** › **Delete agent**) and **Save changes**. If **Manager** does not offer Ada (she has no role), note it in the Run log and keep Sal as the manager, reading `Sal` for `Ada` as manager on this page.
 5. Open **Rooms** and create two Rooms with Bo and Ada in them: **Room A** and **Room B**. Send one Message to Bo in each (`@Bo hello`) so each Room has a first Turn and an open session.
-6. Check the result: the sidebar Teams group lists `Sales` and `Ops`; Sales' Members tab shows Ada and Bo; Ops' shows Cy and Bo.
+6. Check the result: the sidebar Teams group lists `Sales` and `Ops`; Sales' Members tab shows Ada and Bo; Ops' shows Cy and Bo. Both Team pages show **Members**, **Files**, **Process**, **Playbooks**, **Details** (no **Tasks** tab: the Team's Tasks are Team Task Views in the sidebar's TASKS section).
 
 Three things this page checks in more than one case, so they are described once.
 
-**The Prompt blocks page.** Open a Room, open the latest Agent Turn's **Turn detail** and its **Prompt blocks** list (the system prompt split into labelled parts, [Prompt blocks](prompt-blocks.md)). The Playbook parts sit after the `AGENTS.md` block and before the identity part, in this order: **Playbooks** (the frame), **Huddle rules (Member)**, **Member Playbook** (one part per section), and for a manager **Huddle rules (Manager)** and **Manager Playbook**. The Huddle rules parts are marked `Built in, not editable`. The sections are headed `## Member Playbook (Huddle default) for Ops` for the default and `## Member Playbook for Sales (this Team's own)` for a customized one. A Turn started before the change keeps its old parts: open the **newest** Turn.
+**The Prompt blocks page.** Open the Agent's card and read its **What this Agent reads** list (the system prompt split into labelled parts; the mock Agents show no Turn detail control; [Prompt blocks](prompt-blocks.md)). Wherever a case below says Prompt blocks, it means this list. The Playbook parts sit after the `AGENTS.md` block and before the identity part, in this order: **Playbooks** (the frame), **Huddle rules (Member)**, **Member Playbook** (one part per section), and for a manager **Huddle rules (Manager)** and **Manager Playbook**. The Huddle rules parts are marked `Built in, not editable`. The sections are headed `## Member Playbook (Huddle default) for Ops` for the default and `## Member Playbook for Sales (this Team's own)` for a customized one. A Turn started before the change keeps its old parts: open the **newest** Turn.
 
 **The Turn notice.** The notice is part of the Message Turn's prompt, so with the mock adapter it is in the reply. It opens once with `Your Playbooks changed since you last read them.`, and each changed section follows as `The {section heading} changed. It applies from now on and replaces what you read before:` and then the whole current text. A section the Agent no longer reads is told as `The {section heading} no longer applies to you.`
 
@@ -123,14 +125,14 @@ Three things this page checks in more than one case, so they are described once.
 3. In Room A send `@Bo what is 2 + 2?`. Read the reply.
 4. In Room B send `@Bo name a colour.` Read the reply.
 5. In Room A send `@Bo name an animal.` Read the reply.
-6. Open the Turn detail of the step 3 Turn and read its Turn prompt.
+6. Read the step 3 reply again (the mock echoes the Turn prompt; there is no Turn detail control).
 
 **Pass if — all of these**
 
 - The step 3 reply, which is the mock adapter's echo of the Turn prompt, contains `Your Playbooks changed since you last read them.` once, and then `The Member Playbook for Sales (this Team's own) changed. It applies from now on and replaces what you read before:` followed by the whole file body, ending `Always end with the word Sales!`.
 - The step 4 reply contains the same notice: Room B hears it too.
 - The step 5 reply contains **no** Playbook notice.
-- Step 6 shows the notice in the Turn prompt, not in the system prompt.
+- Step 6: the notice is in the Turn prompt echo, and not in Bo's **What this Agent reads** list.
 - Nothing arrived between step 1 and step 3: no Message, no Turn for Bo.
 
 **Fail if — any of these**
@@ -220,7 +222,7 @@ The diff is replaced by `Huddle no longer has the earlier default, so it can't s
 
 **Steps**
 
-1. In Room A send `@Bo hello`. Open that Turn's **Turn detail** and its Prompt blocks list.
+1. In Room A send `@Bo hello`. Open Bo's Agent card and its **What this Agent reads** list.
 2. Read the Playbook parts top to bottom, with their labels and headings.
 3. Hover the first Huddle rules part and read its source.
 4. Customize Ops as well, send `@Bo hello` again after **Start afresh**, and read the parts.
@@ -230,7 +232,7 @@ The diff is replaced by `Huddle no longer has the earlier default, so it can't s
 - Step 2, in this order after the `AGENTS.md` part: **Playbooks**, **Huddle rules (Member)** (once), a **Member Playbook** part headed `## Member Playbook (Huddle default) for Ops`, then a **Member Playbook** part headed `## Member Playbook for Sales (this Team's own)`. Bo is a member only, so no Manager parts. Then the identity part follows.
 - Step 3: the source reads `Built in, not editable`.
 - Step 4: the `(Huddle default) for` part is gone, and two customized parts follow in `teams` order: `## Member Playbook for Sales (this Team's own)` and `## Member Playbook for Ops (this Team's own)`. A label never names a Team whose file it did not come from, even when both files hold the same text.
-- Open Ada's Room and its newest Turn: for the manager Ada, **Huddle rules (Manager)** and a **Manager Playbook** part for Sales follow the Member parts, with the label `## Manager Playbook (Huddle default) for Sales`.
+- Open Ada's Agent card and its **What this Agent reads** list: for the manager Ada, **Huddle rules (Manager)** and a **Manager Playbook** part for Sales follow the Member parts, with the label `## Manager Playbook (Huddle default) for Sales`.
 
 **Fail if — any of these**
 
@@ -249,7 +251,7 @@ The diff is replaced by `Huddle no longer has the earlier default, so it can't s
 
 **Steps**
 
-1. Ask the Agent to Write `Teams/Sales/_member-playbook.md` with the text `hacked`. Read the permission result in Turn detail.
+1. Ask the Agent to Write `Teams/Sales/_member-playbook.md` with the text `hacked`. Read the permission result in the Room (the mock Agents show no Turn detail control).
 2. Ask it to Delete the same file, then to Move it to `Teams/Sales/old.md`.
 3. Ask it to Read the file.
 4. Read the file on disk.
@@ -281,7 +283,7 @@ No lane can make the Agent attempt a Write. The automated guard tests cover the 
 
 **Steps**
 
-1. On Sales › **Tasks** create a Task titled `Ship the catalogue` with no Project, assigned to nobody.
+1. In the sidebar's TASKS section open Sales' Team Task View (a Team page has no Tasks tab) and create a Task titled `Ship the catalogue` with no Project, assigned to nobody.
 2. Edit the Task: set **Project** to `Launch` and **Assignee** to `Ada`. Save.
 3. Read Ada's next Turn (the wake) in its Room or Direct Room and its Turn prompt.
 4. As the manager would, create `<data>\Teams\Sales\Launch\memory\mission.md` with `description: Read when you work on a Launch Task: the Project's goal and what finished looks like.`, a blank line and `Ship the catalogue. Task: ` and the Task's id.
@@ -311,7 +313,7 @@ No lane can make the Agent attempt a Write. The automated guard tests cover the 
 **Steps**
 
 1. Start a fresh session for Bo (**Start afresh** in Room A) and send `@Bo hello`.
-2. Open the Turn detail and its Prompt blocks list. Find the **Team Memory** part and read it.
+2. Open Bo's Agent card and its **What this Agent reads** list. Find the **Team Memory** part and read it.
 
 **Pass if — all of these**
 
@@ -397,7 +399,7 @@ A signed-out Adapter or a failing Turn: sign in through the Agents page and reru
 
 1. In the Chief of Staff's Room, say `Build me a Team that launches a spring catalogue.` and answer its questions until a Team is hired.
 2. Read the Chief of Staff's last Message.
-3. Open the new Team's **Tasks** tab.
+3. Open the new Team's Team Task View in the sidebar's TASKS section.
 4. Create a Project in the Team and move the goal Task into it (edit the Task, set **Project**).
 
 **Pass if — all of these**

@@ -448,9 +448,10 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         error = null;
 
         string[] relativeSegments = current[(teamsRoot.Length + 1)..].Split(Path.DirectorySeparatorChar);
-        foreach (string segment in relativeSegments)
+        for (int index = 0; index < relativeSegments.Length; index++)
         {
-            if (TaskLayout.IsReservedFolderName(segment))
+            string segment = relativeSegments[index];
+            if (TaskLayout.IsReservedFolderName(segment) && !(index == 1 && relativeSegments.Length == 2 && IsPlaybookFileName(segment)))
             {
                 error = ReservedFolderError;
                 return false;
@@ -473,6 +474,11 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
 
         return true;
     }
+
+    /// <summary>Whether a name is one of a Team's two Playbook files, which sit directly in the Team folder and are the only <c>_</c>-prefixed files the Library shows.</summary>
+    private static bool IsPlaybookFileName(string name) =>
+        string.Equals(name, PlaybookFile.FileName(manager: false), StringComparison.OrdinalIgnoreCase)
+        || string.Equals(name, PlaybookFile.FileName(manager: true), StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Step 7: the Agent folder, its <c>&lt;Name&gt;.md</c> definition, and its Work Dir.</summary>
     private static LibraryNodeRole ClassifyUnderAgents(string current, string agentsRoot)

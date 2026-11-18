@@ -3083,6 +3083,7 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Playbooks group has exactly Member and Manager Playbook with the spec 7.5 helper texts, no Next session pill; typing showed Modified and Unsaved. |
 
 ## Appearance tab, Themes, Tokens and overrides
 
@@ -7488,6 +7489,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Tab strip Members, Library, Playbooks, Details (no Process: Blank Team has none), URL /teams/Sales/playbooks, Manager then Member, chip Huddle default, caption and buttons as 7.3, rules box not editable, Project page has Library and Tasks only. |
 
 ### PLAYBOOK-02 — Customize opens the Library editor and a save turns the chip to Customized
 
@@ -7495,6 +7497,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Fail | 120ab384 |  | Customize wrote Teams/Sales/_member-playbook.md (basedOn sha256:31b04cf23a26bd8d) and the chip became Customized with Edit and Reset, but the Library opened at ?root=teams&path=Sales%2F_member-playbook.md shows No note open (the file is not in the Library tree), so it cannot be edited there. Library-off tooltip not run. |
 
 ### PLAYBOOK-03 — A member hears a changed Playbook once per Room at its next Turn
 
@@ -7502,6 +7505,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Blocked | 120ab384 |  | Blocked by PLAYBOOK-02: the Library cannot open the file, so the step 1 edit was not made. Observed without the edit: first Turn after Customize carried one notice per Room (A and B), a later Turn in Room A carried none. |
 
 ### PLAYBOOK-04 — Editing the default on Settings Prompts reaches an uncustomized Team and marks a customized one Default updated
 
@@ -7509,6 +7513,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Settings save of Member Playbook: Bo reply notice headed Member Playbook (Huddle default) for Ops with the new line, no Sales section; Ops chip Huddle default; Sales chip Default updated with the info text and three actions; Show changes diff held +Also keep every reply short. and toggled. P-RESET-SETTINGS done. |
 
 ### PLAYBOOK-05 — Keep my version and Reset to default with its confirm
 
@@ -7516,6 +7521,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | Keep my version: chip Customized, basedOn 31b04cf23a26bd8d to cafd0e73a33b0ee0, body unchanged. Reset dialog title, message, Cancel first and Reset red as 7.4; Cancel kept the file; Reset deleted it, chip Huddle default; next reply told Member Playbook (Huddle default) for Sales and Ops. Last line was not Human-edited because of PLAYBOOK-02. |
 
 ### PLAYBOOK-06 — An Agent in two Teams sees the Playbook order and labels on the Prompt blocks page
 
@@ -7523,6 +7529,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Fail | 120ab384 |  | Step 3: the Huddle rules (Member) row on the Agent card What this Agent reads has an empty source; Built in, not editable is not shown anywhere. Steps 2 and 4 held (Playbooks, Huddle rules once, Ops default part then Sales own part; then Sales own then Ops own). Ada manager parts not checked: no manager line in _team.md. |
 
 ### PLAYBOOK-07 — An Agent cannot write a Playbook file
 
@@ -7530,6 +7537,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Inconclusive | 120ab384 |  | The mock adapter only echoes the prompt and cannot attempt a Write, Delete or Move. Automated guard tests cover the refusal. |
 
 ### PLAYBOOK-08 — A Task moved into a Project and assigned to the manager is treated as the goal
 
@@ -7537,6 +7545,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | SALE-0001 moved to Launch and assigned to Ada: Task shows Woken in Room Ada and the wake Message names SALE-0001 and the change. mission.md written by hand is listed with its description; no mission field, picker or tag in the app. Ada has no manager line, the wake needs none. |
 
 ### PLAYBOOK-09 — A member sees the Project mission in Team Memory on its Prompt blocks page
 
@@ -7544,6 +7553,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Pass | 120ab384 |  | After Restart and a new Turn, Bo Team Memory part lists Sales > Launch (folder: Sales/Launch): mission.md with the spec description; no other new part carries it. |
 
 ### PLAYBOOK-10 — A retro proposal to an uncustomized Member Playbook customizes it on Accept
 
@@ -7551,6 +7561,7 @@ File: [`docs/engineering/manual-tests/team-playbooks.md`](team-playbooks.md#play
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-18 | Inconclusive | 120ab384 |  | The mock adapter cannot file a retro proposal; not run. Rerun on the paid lane. |
 
 ### PLAYBOOK-11 — Live Haiku follows the Playbook loop and the mission 💰
 

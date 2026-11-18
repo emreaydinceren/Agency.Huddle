@@ -666,7 +666,7 @@ Settings: the 24 Prompts, editing, per-field reset and Save — [area file](prom
 | [PROMPTSSETTINGS-39](prompts-settings.md#promptssettings-39--costs-money-a-next-session-prompt-edit-is-silently-inert-on-a-running-agent-until-it-restarts) | 💰 | Active |  |  |
 | [PROMPTSSETTINGS-40](prompts-settings.md#promptssettings-40--costs-money-get_help-re-renders-on-every-call-so-its-get-help-prompts-land-on-the-next-call--while-a-tool-description-does-not) | 💰 | Active |  |  |
 | [PROMPTSSETTINGS-41](prompts-settings.md#promptssettings-41--the-library-tab-opens-its-own-pane-and-does-not-fall-back-to-prompts) |  | Active |  |  |
-| [PROMPTSSETTINGS-42](prompts-settings.md#promptssettings-42--the-playbooks-group-has-two-live-keys-with-their-helper-texts) |  | Active |  |  |
+| [PROMPTSSETTINGS-42](prompts-settings.md#promptssettings-42--the-playbooks-group-has-two-live-keys-with-their-helper-texts) |  | Pass |  | Playbooks group has exactly Member and Manager Playbook with the spec 7.5 helper texts, no Next session pill; typing showed Modified and Unsaved. |
 
 ## appearance-theme
 
@@ -1487,15 +1487,15 @@ Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Pro
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [PLAYBOOK-01](team-playbooks.md#playbook-01--the-tab-on-a-fresh-team-shows-both-sections-with-the-huddle-default-and-read-only-rules) |  | Active |  |  |
-| [PLAYBOOK-02](team-playbooks.md#playbook-02--customize-opens-the-library-editor-and-a-save-turns-the-chip-to-customized) |  | Active |  |  |
-| [PLAYBOOK-03](team-playbooks.md#playbook-03--a-member-hears-a-changed-playbook-once-per-room-at-its-next-turn) |  | Active |  |  |
-| [PLAYBOOK-04](team-playbooks.md#playbook-04--editing-the-default-on-settings-prompts-reaches-an-uncustomized-team-and-marks-a-customized-one-default-updated) |  | Active |  |  |
-| [PLAYBOOK-05](team-playbooks.md#playbook-05--keep-my-version-and-reset-to-default-with-its-confirm) |  | Active |  |  |
-| [PLAYBOOK-06](team-playbooks.md#playbook-06--an-agent-in-two-teams-sees-the-playbook-order-and-labels-on-the-prompt-blocks-page) |  | Active |  |  |
-| [PLAYBOOK-07](team-playbooks.md#playbook-07--an-agent-cannot-write-a-playbook-file) |  | Active |  |  |
-| [PLAYBOOK-08](team-playbooks.md#playbook-08--a-task-moved-into-a-project-and-assigned-to-the-manager-is-treated-as-the-goal) |  | Active |  |  |
-| [PLAYBOOK-09](team-playbooks.md#playbook-09--a-member-sees-the-project-mission-in-team-memory-on-its-prompt-blocks-page) |  | Active |  |  |
-| [PLAYBOOK-10](team-playbooks.md#playbook-10--a-retro-proposal-to-an-uncustomized-member-playbook-customizes-it-on-accept) |  | Active |  |  |
+| [PLAYBOOK-01](team-playbooks.md#playbook-01--the-tab-on-a-fresh-team-shows-both-sections-with-the-huddle-default-and-read-only-rules) |  | Pass |  | Tab strip Members, Library, Playbooks, Details (no Process: Blank Team has none), URL /teams/Sales/playbooks, Manager then Member, chip Huddle default, caption and buttons as 7.3, rules box not editable, Project page has Library and Tasks only. |
+| [PLAYBOOK-02](team-playbooks.md#playbook-02--customize-opens-the-library-editor-and-a-save-turns-the-chip-to-customized) |  | Fail |  | Customize wrote Teams/Sales/_member-playbook.md (basedOn sha256:31b04cf23a26bd8d) and the chip became Customized with Edit and Reset, but the Library opened at ?root=teams&path=Sales%2F_member-playbook.md shows No note open (the file is not in the Library tree), so it cannot be edited there. Library-off tooltip not run. |
+| [PLAYBOOK-03](team-playbooks.md#playbook-03--a-member-hears-a-changed-playbook-once-per-room-at-its-next-turn) |  | Active |  | Blocked on 2026-11-18. Blocked by PLAYBOOK-02: the Library cannot open the file, so the step 1 edit was not made. Observed without the edit: first Turn after Customize carried one notice per Room (A and B), a later Turn in Room A carried none. |
+| [PLAYBOOK-04](team-playbooks.md#playbook-04--editing-the-default-on-settings-prompts-reaches-an-uncustomized-team-and-marks-a-customized-one-default-updated) |  | Pass |  | Settings save of Member Playbook: Bo reply notice headed Member Playbook (Huddle default) for Ops with the new line, no Sales section; Ops chip Huddle default; Sales chip Default updated with the info text and three actions; Show changes diff held +Also keep every reply short. and toggled. P-RESET-SETTINGS done. |
+| [PLAYBOOK-05](team-playbooks.md#playbook-05--keep-my-version-and-reset-to-default-with-its-confirm) |  | Pass |  | Keep my version: chip Customized, basedOn 31b04cf23a26bd8d to cafd0e73a33b0ee0, body unchanged. Reset dialog title, message, Cancel first and Reset red as 7.4; Cancel kept the file; Reset deleted it, chip Huddle default; next reply told Member Playbook (Huddle default) for Sales and Ops. Last line was not Human-edited because of PLAYBOOK-02. |
+| [PLAYBOOK-06](team-playbooks.md#playbook-06--an-agent-in-two-teams-sees-the-playbook-order-and-labels-on-the-prompt-blocks-page) |  | Fail |  | Step 3: the Huddle rules (Member) row on the Agent card What this Agent reads has an empty source; Built in, not editable is not shown anywhere. Steps 2 and 4 held (Playbooks, Huddle rules once, Ops default part then Sales own part; then Sales own then Ops own). Ada manager parts not checked: no manager line in _team.md. |
+| [PLAYBOOK-07](team-playbooks.md#playbook-07--an-agent-cannot-write-a-playbook-file) |  | Active |  | Inconclusive on 2026-11-18. The mock adapter only echoes the prompt and cannot attempt a Write, Delete or Move. Automated guard tests cover the refusal. |
+| [PLAYBOOK-08](team-playbooks.md#playbook-08--a-task-moved-into-a-project-and-assigned-to-the-manager-is-treated-as-the-goal) |  | Pass |  | SALE-0001 moved to Launch and assigned to Ada: Task shows Woken in Room Ada and the wake Message names SALE-0001 and the change. mission.md written by hand is listed with its description; no mission field, picker or tag in the app. Ada has no manager line (see notes), the wake needs none. |
+| [PLAYBOOK-09](team-playbooks.md#playbook-09--a-member-sees-the-project-mission-in-team-memory-on-its-prompt-blocks-page) |  | Pass |  | After Restart and a new Turn, Bo Team Memory part lists Sales > Launch (folder: Sales/Launch): mission.md with the spec description; no other new part carries it. |
+| [PLAYBOOK-10](team-playbooks.md#playbook-10--a-retro-proposal-to-an-uncustomized-member-playbook-customizes-it-on-accept) |  | Active |  | Inconclusive on 2026-11-18. The mock adapter cannot file a retro proposal; not run. Rerun on the paid lane. |
 | [PLAYBOOK-11](team-playbooks.md#playbook-11--live-haiku-follows-the-playbook-loop-and-the-mission-) | 💰 | Active |  |  |
 | [PLAYBOOK-12](team-playbooks.md#playbook-12--the-chief-of-staff-files-the-goal-task-for-a-new-team-) | 💰 | Active |  |  |

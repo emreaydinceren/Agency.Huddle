@@ -55,6 +55,19 @@ public sealed class PromptPartsViewTests
         Assert.Equal(["Prompt · default", "Prompt · overridden", file, "12 topics", "3 tools"], sources);
     }
 
+    /// <summary>PLAYBOOK-06: a part the build supplies (the Huddle rules) says "Built in, not editable", not a blank source.</summary>
+    [Fact]
+    public async Task View_EmbeddedPart_ShowsBuiltInNotEditable()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        IReadOnlyList<PromptPart> parts = [new("Huddle rules (Member)", new PromptPartSource.Embedded("huddleRules.member"), "x")];
+
+        var cut = ctx.Render<PromptPartsView>(p => p.Add(v => v.Parts, parts).Add(v => v.Adapter, "claude"));
+
+        Assert.Equal("Built in, not editable", cut.Find(".prompt-part-source").TextContent.Trim());
+    }
+
     /// <summary>Task 95: the outputs index part says how many documents it lists, not "Teams" or "topics".</summary>
     [Fact]
     public async Task View_OutputsIndexPart_ShowsTheDocumentCount()

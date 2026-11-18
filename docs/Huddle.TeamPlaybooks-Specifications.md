@@ -263,8 +263,9 @@ prompt goldens.
 ### 5.1 A customized Playbook file
 
 `Teams/<Team>/_member-playbook.md` and `Teams/<Team>/_manager-playbook.md`. UTF-8, any line endings. The leading
-`_` keeps the catalog from reading them as Projects (`TeamNames.IsReservedProjectName`), and they show in the
-Team's Library, as `_team.md` does.
+`_` keeps the catalog from reading them as Projects (`TeamNames.IsReservedProjectName`). The Library refuses
+`_`-prefixed names under Teams (`_team.md` included); `LibraryPathResolver` lets these two through, directly in a
+Team folder only, so the Library lists and opens them.
 
 ```markdown
 ---
