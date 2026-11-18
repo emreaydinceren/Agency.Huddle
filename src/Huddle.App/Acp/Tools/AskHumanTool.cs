@@ -20,7 +20,8 @@ internal sealed class AskHumanTool(
     ITeamDirectory directory,
     TimeProvider clock,
     string callerAgentId,
-    IPromptSource prompts) : IAppTool
+    IPromptSource prompts,
+    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
 {
     private const int MaxQuestions = 3;
     private const int MinOptions = 2;
@@ -108,19 +109,20 @@ internal sealed class AskHumanTool(
         }
 
         User? caller = await directory.GetUserAsync(callerAgentId, cancellationToken).ConfigureAwait(false);
+        string askerName = caller?.Name ?? callerAgentId;
         PendingQuestions pending = new(
             Guid.NewGuid().ToString("N"),
             roomId,
             callerAgentId,
-            caller?.Name ?? callerAgentId,
+            goldfish?.PossessionOf(callerAgentId) is null ? askerName : Agency.Huddle.App.Goldfish.GoldfishStamp.Apply(askerName),
             parsed,
             clock.GetUtcNow());
 
         PendingPut<PendingQuestions> put = questions.TryPut(pending);
         if (put.Result == PendingPutResult.Refused)
         {
-            string askerName = put.Existing?.AskerName ?? "another Agent";
-            return $"Questions from {askerName} are already waiting in this Room. Wait for the Human to answer them.";
+            string existingAsker = put.Existing?.AskerName ?? "another Agent";
+            return $"Questions from {existingAsker} are already waiting in this Room. Wait for the Human to answer them.";
         }
 
         string noun = parsed.Count == 1 ? "question" : "questions";

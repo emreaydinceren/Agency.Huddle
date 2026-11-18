@@ -27,6 +27,7 @@ using Agency.Huddle.App.Tasks;
 /// <param name="logger">Records every search that reaches beyond the caller's own Rooms.</param>
 /// <param name="prompts">The description's text.</param>
 /// <param name="callerAgentId">The Agent this tool instance is bound to.</param>
+/// <param name="goldfish">Tells whether the caller is a goldfish, which the tool refuses; optional.</param>
 internal sealed class SearchTool(
     IEnumerable<ISearchProvider> providers,
     ITeamDirectory directory,
@@ -34,7 +35,8 @@ internal sealed class SearchTool(
     PersonaStore personas,
     ILogger<SearchTool> logger,
     IPromptSource prompts,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The most characters one call returns.</summary>
     private const int MaxCharacters = 12000;
@@ -91,6 +93,11 @@ internal sealed class SearchTool(
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (goldfish?.Refusal(callerAgentId) is { } goldfishRefusal)
+        {
+            return goldfishRefusal;
+        }
 
         (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)

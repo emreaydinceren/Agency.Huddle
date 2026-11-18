@@ -387,7 +387,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         if (proposesTeamMemory)
         {
-            chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<ProposeTeamMemoryTool>(this.serviceProvider, persona.Name)];
+            chatTools = [.. chatTools, ActivatorUtilities.CreateInstance<ProposeTeamMemoryTool>(this.serviceProvider, persona.Name, agentId)];
         }
 
         chatTools = this.OfferChatTools(chatTools, persona, profile, skillResolution);
@@ -622,7 +622,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
             // Memory is not optional know-how, so it is not gated by a Skill, and it is offered whether or not the
             // Adapter reads files (Instructions spec §5.1).
-            ActivatorUtilities.CreateInstance<MemoryTool>(this.serviceProvider, personaName),
+            ActivatorUtilities.CreateInstance<MemoryTool>(this.serviceProvider, personaName, agentId),
         ];
 
         // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets

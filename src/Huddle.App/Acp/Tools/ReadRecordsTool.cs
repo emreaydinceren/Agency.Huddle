@@ -34,7 +34,8 @@ internal sealed class ReadRecordsTool(
     TimeProvider clock,
     string callerAgentId,
     IPromptSource prompts,
-    ITeamRenames? renames = null) : IAppTool
+    ITeamRenames? renames = null,
+    Agency.Huddle.App.Goldfish.GoldfishGuard? goldfish = null) : IAppTool
 {
     /// <summary>The most characters one call returns.</summary>
     private const int MaxCharacters = 12000;
@@ -78,6 +79,11 @@ internal sealed class ReadRecordsTool(
     public async Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(arguments);
+
+        if (goldfish?.Refusal(callerAgentId) is { } goldfishRefusal)
+        {
+            return goldfishRefusal;
+        }
 
         (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
