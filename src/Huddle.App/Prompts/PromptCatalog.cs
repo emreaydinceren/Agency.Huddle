@@ -2671,6 +2671,17 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.teamFileRefusal",
+            Label: "Team file write refused",
+            HelperText:
+                "The reason logged when an Agent's tool call that edits, writes, deletes or moves a Team's Playbook file " +
+                "is refused (Team Playbooks §7.6).",
+            Default: "This file is the Human's. Propose a change in a retro, or ask the Human.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.rawRefusal",
             Label: "Raw original change refused",
             HelperText:

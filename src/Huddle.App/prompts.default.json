@@ -119,6 +119,7 @@
   "helper.needsHuman.task": "Task {{taskId}} in team {{team}}. Tags: {{tags}}\n\n<title>\n{{title}}\n</title>\n\n<description>\n{{description}}\n</description>{{level}}",
   "systemPrompt.agentsMdCut": "…cut at {{max}} characters; the rest is in {{path}}.",
   "systemPrompt.agentsMdRefusal": "AGENTS.md is the Human's file. Propose a change in a retrospective instead.",
+  "systemPrompt.teamFileRefusal": "This file is the Human's. Propose a change in a retro, or ask the Human.",
   "systemPrompt.rawRefusal": "Files in raw/ are kept as they arrived. Add a new file beside the original instead, for example \"<name> - extract.md\".",
   "systemPrompt.agentsMdLevels": "Each level below adds to the one before it. If two rules conflict, follow the more specific one: a Project's over its Team's, a Team's over the Huddle-wide rules.",
   "systemPrompt.huddleMemoryRefusal": "Huddle-wide Memory is kept by the Chief of Staff. Ask the Chief of Staff to record it.",

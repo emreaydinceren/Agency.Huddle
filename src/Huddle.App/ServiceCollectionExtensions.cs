@@ -467,6 +467,26 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Registers the Team Playbook stores (spec §5.2): the Teams folder holds a Team's own Playbook files, <c>{DataDir}/playbook-defaults/</c> the
+    /// defaults they were made from.
+    /// </summary>
+    /// <param name="services">The service collection to add to.</param>
+    private static void AddPlaybookStores(IServiceCollection services)
+    {
+        services.AddSingleton(static sp => new Agency.Huddle.App.Teams.PlaybookBaseStore(sp.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir));
+        services.AddSingleton(static sp =>
+        {
+            TeamOptions options = sp.GetRequiredService<IOptions<TeamOptions>>().Value;
+            return new Agency.Huddle.App.Teams.PlaybookStore(
+                Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)),
+                sp.GetRequiredService<Agency.Huddle.App.Teams.PlaybookBaseStore>(),
+                sp.GetRequiredService<IPromptSource>(),
+                options.Playbooks,
+                sp.GetRequiredService<ILogger<Agency.Huddle.App.Teams.PlaybookStore>>());
+        });
+    }
+
     /// <summary>Registers the mention alias source, the Human profile, the agent host factory and the per-Persona stores.</summary>
     /// <param name="services">The service collection to add to.</param>
     /// <returns>The same collection, for chaining.</returns>
@@ -512,6 +532,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<RoomSpendStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
         services.AddSingleton<Agency.Huddle.App.Teams.RetroFileStore>();
+        AddPlaybookStores(services);
 
         // Retro proposals (Task 76): held under _proposals/retro/ in the Team folder; Huddle applies an accepted edit.
         services.AddSingleton<Agency.Huddle.App.Teams.RetroProposalStore>();

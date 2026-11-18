@@ -283,6 +283,8 @@ Singleton Agency.Huddle.App.Teams.ITeamRenamer -> factory Agency.Huddle.App.Team
 Singleton Agency.Huddle.App.Teams.ITeamRenames -> factory Agency.Huddle.App.Teams.ITeamRenames
 Singleton Agency.Huddle.App.Teams.NeedsYouCaps -> Agency.Huddle.App.Teams.NeedsYouCaps
 Singleton Agency.Huddle.App.Teams.NeedsYouLevels -> Agency.Huddle.App.Teams.NeedsYouLevels
+Singleton Agency.Huddle.App.Teams.PlaybookBaseStore -> factory Agency.Huddle.App.Teams.PlaybookBaseStore
+Singleton Agency.Huddle.App.Teams.PlaybookStore -> factory Agency.Huddle.App.Teams.PlaybookStore
 Singleton Agency.Huddle.App.Teams.ProcessGateService -> Agency.Huddle.App.Teams.ProcessGateService
 Singleton Agency.Huddle.App.Teams.ProcessProvisioner -> Agency.Huddle.App.Teams.ProcessProvisioner
 Singleton Agency.Huddle.App.Teams.RecordsBundleBuilder -> Agency.Huddle.App.Teams.RecordsBundleBuilder

@@ -35,7 +35,7 @@ public sealed class PromptFieldFactoryTests
         var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.Equal(
-            ["System prompt", "Turn", "Team Room lines", "Get help", "Tool descriptions", "Tasks", "Cadence", "Skill Packs: install file", "Skill Packs: prompts you paste", "Helpers"],
+            ["System prompt", "Playbooks", "Turn", "Team Room lines", "Get help", "Tool descriptions", "Tasks", "Cadence", "Skill Packs: install file", "Skill Packs: prompts you paste", "Helpers"],
             groups.Select(group => group.Label).ToList());
     }
 
@@ -48,12 +48,38 @@ public sealed class PromptFieldFactoryTests
         var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         var expectedSystemPromptKeys = PromptCatalog.All
-            .Where(definition => definition.Key.StartsWith("systemPrompt.", StringComparison.Ordinal))
+            .Where(definition => definition.Key.StartsWith("systemPrompt.", StringComparison.Ordinal)
+                && definition.Key is not ("systemPrompt.memberPlaybook" or "systemPrompt.managerPlaybook"))
             .Select(definition => definition.Key)
             .ToList();
 
         var systemPromptGroup = groups.Single(group => group.Label == "System prompt");
         Assert.Equal(expectedSystemPromptKeys, systemPromptGroup.Fields.Select(field => field.Key).ToList());
+    }
+
+    /// <summary>
+    /// Team Playbooks spec §7.5: the two default Playbooks are the "Playbooks" group, not part of the System prompt group, with the label and
+    /// helper text the spec gives, in the order Member then Manager. The other Playbook Prompts (the frame, the cut lines) stay in System prompt.
+    /// </summary>
+    [Fact]
+    public void Build_PlaybooksGroup_HoldsTheTwoDefaultPlaybooks_WithTheSpecLabelsAndHelperText()
+    {
+        var groups = PromptFieldFactory.Build(new FakePromptSource(), NoPendingEdits);
+
+        var playbooks = groups.Single(group => group.Label == "Playbooks");
+        Assert.Equal(["systemPrompt.memberPlaybook", "systemPrompt.managerPlaybook"], playbooks.Fields.Select(field => field.Key).ToList());
+        Assert.Equal(["Member Playbook", "Manager Playbook"], playbooks.Fields.Select(field => field.Label).ToList());
+        Assert.Equal(
+            [
+                "How every member of a Team works. A Team with its own Member Playbook ignores this one. Running Agents hear of an edit at their next Turn.",
+                "How a Team's manager runs it; it adds to the Member Playbook. A Team with its own ignores this one. Running Agents hear of an edit at their next Turn.",
+            ],
+            playbooks.Fields.Select(field => field.HelperText).ToList());
+        Assert.All(playbooks.Fields, field => Assert.NotNull(field.ReliedWarning));
+        var systemPromptKeys = groups.Single(group => group.Label == "System prompt").Fields.Select(field => field.Key).ToList();
+        Assert.DoesNotContain("systemPrompt.memberPlaybook", systemPromptKeys);
+        Assert.DoesNotContain("systemPrompt.managerPlaybook", systemPromptKeys);
+        Assert.Contains("systemPrompt.playbooks", systemPromptKeys);
     }
 
     /// <summary>A prompt with no configured override and no pending edit is neither modified nor unsaved.</summary>

@@ -193,6 +193,10 @@
                             case TeamPageTab.Process:
                                 <ProcessTab Team="@summary.Name" />
                                 break;
+                            case TeamPageTab.Playbooks:
+                                @* Placeholder until the Playbooks tab itself is built (Team Playbooks spec §7). *@
+                                <div data-testid="playbooks-tab"></div>
+                                break;
                             case TeamPageTab.Details:
                                 <TeamDetails Team="@summary.Name" />
                                 break;
@@ -315,6 +319,7 @@
         TeamPageTab.Members => TabIcons.For("agents"),
         TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
+        TeamPageTab.Playbooks => Icons.Material.Outlined.MenuBook,
         TeamPageTab.Details => Icons.Material.Outlined.Info,
         _ => TabIcons.For("tasks"),
     };

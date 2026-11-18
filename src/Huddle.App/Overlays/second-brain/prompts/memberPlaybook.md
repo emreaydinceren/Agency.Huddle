@@ -1,7 +1,7 @@
 ---
 key: systemPrompt.memberPlaybook
 label: Member Playbook
-helperText: The default Member Playbook, read by every member of a Team that has no Playbook of its own. Names no tool: the Huddle rules carry the tool names.
+helperText: How every member of a Team works. A Team with its own Member Playbook ignores this one. Running Agents hear of an edit at their next Turn.
 placeholders: []
 required: []
 timing: Live

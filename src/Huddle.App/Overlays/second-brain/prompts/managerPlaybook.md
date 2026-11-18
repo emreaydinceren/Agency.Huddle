@@ -1,7 +1,7 @@
 ---
 key: systemPrompt.managerPlaybook
 label: Manager Playbook
-helperText: The default Manager Playbook, read by the manager of a Team that has no Manager Playbook of its own, after the Member Playbook. Names no tool: the Huddle rules carry the tool names.
+helperText: How a Team's manager runs it; it adds to the Member Playbook. A Team with its own ignores this one. Running Agents hear of an edit at their next Turn.
 placeholders: []
 required: []
 timing: Live
