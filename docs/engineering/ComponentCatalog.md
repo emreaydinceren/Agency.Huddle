@@ -374,23 +374,11 @@ Room strip, and in `paper` and `hairline` a warning tint, the panel radius and a
 so they keep `MudAlert` and their two CV16 counts in the Room baseline until a banner component
 exists. They take the 18 px icon, which is global.
 
-**Still to migrate.** 34 raw `MudAlert` tags in 16 files, in the CV16 baseline
-(`tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/`). Every one is a dense Error or Info whose
-current role is already its kind's default, so a migration is a tag swap; the margin classes
-listed must go too, which moves pixels (declare them):
-
-| Area | Tags | Files (tags), margin classes to remove |
-| --- | --- | --- |
-| Room | 11 | `Pages/Chat` (9: 7 plus the 2 banners, which stay), `Shared/InviteAgent` (2) |
-| Shared | 11 | `Shared/AgentProfileCard` (5: `mb-4`, `mb-3` x3, `mt-3`), `Shared/AdapterModelEffortPicker` (2: `mb-3` x2), `Pages/BuildTeam` (1), `Shared/FollowUpsNotice` (1), `Shared/NeedsYouLevelControl` (1), `Shared/WaitingNotice` (1) |
-| Settings | 6 | `Settings/ProfilePanel` (2: `mb-3`, `mt-2`), `Pages/Settings` (1), `Settings/Helpers/HelpersPanel` (1: `mb-3`), `Settings/LibraryPanel` (1), `Settings/RemoteAccess/RemoteAccessPanel` (1: `mb-3`) |
-| Library | 4 | `Library/LibraryDocument` (4) |
-| Shell | 1 | `Shared/RoomList` (1) |
-| Tasks | 1 | `Tasks/TaskDetail` (1, the unsaved-changes Info) |
-
-The Room notices in the 760 px column (`reply-note`, `fresh-start-note`, `continue-note`,
-`WaitingNotice`, `FollowUpsNotice`) sit in a flex column; check their gap in the snapshot when they
-move, since the notice's own 12 px margin then applies.
+**Migration done (2026-11-18).** All 87 `MudAlert` tags are now `Notice` except the two Room banners above, which
+stay raw and baselined (CV16 counts 2 in `Pages/Chat`). The migration removed the per-site `mb-*` and `mt-*`
+margin classes, so a notice's spacing is now the 12 px between siblings; the Room notices in the 760 px
+column (`reply-note`, `fresh-start-note`, `continue-note`, `WaitingNotice`, `FollowUpsNotice`) take that gap
+too.
 
 ### Settings intro and stored-at line
 
