@@ -36,7 +36,7 @@
         </div>
 
         <div class="task-card-title">
-            <MudHighlighter Text="@this.Task.Title" HighlightedText="@this.Search" />
+            <SearchHighlight Text="@this.Task.Title" Term="@this.Search" />
         </div>
 
         @if (this.Task.BlockedBy.Count > 0 && !this.Fields.Contains("blocked_by", StringComparer.Ordinal))
@@ -121,7 +121,7 @@
     [Parameter]
     public bool Busy { get; set; }
 
-    /// <summary>The active search term, highlighted in the title by <c>MudHighlighter</c>.</summary>
+    /// <summary>The active search term, highlighted in the title by <c>SearchHighlight</c>.</summary>
     [Parameter]
     public string? Search { get; set; }
 

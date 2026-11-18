@@ -13,12 +13,12 @@
                  Meta="@(this.Meta.Length > 0 ? this.Plain(this.Meta) : null)"
                  Snippet="@(this.Hit.Snippet is { } snippet ? this.Highlighted(snippet) : null)">
     <Icon><MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" /></Icon>
-    <Title><MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" /></Title>
+    <Title><SearchHighlight Text="@this.Hit.Title" Term="@this.Phrase" /></Title>
 </SearchCardShell>
 
 @code {
     /// <summary>Renders a line of text with the phrase bolded.</summary>
-    private RenderFragment<string> Highlighted => text => @<MudHighlighter Text="@text" HighlightedText="@this.Phrase" />;
+    private RenderFragment<string> Highlighted => text => @<SearchHighlight Text="@text" Term="@this.Phrase" />;
 
     /// <summary>Renders a line of plain text.</summary>
     private RenderFragment<string> Plain => text => @<text>@text</text>;
