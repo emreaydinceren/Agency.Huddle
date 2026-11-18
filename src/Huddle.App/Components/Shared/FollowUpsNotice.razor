@@ -14,13 +14,12 @@
 @foreach (Job job in this.Store.Jobs.Where(found => found.RoomId is not null && string.Equals(found.RoomId, this.RoomId, StringComparison.Ordinal)))
 {
     string id = job.Id;
-    @* MudAlert renders no role by default, so role="status" is added explicitly, per rules.md. *@
-    <MudAlert Severity="Severity.Info" Dense="true" Class="follow-ups-notice room-notice-column" role="status">
+    <Notice Severity="NoticeLevel.Info" Class="follow-ups-notice room-notice-column">
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <span class="follow-ups-notice-text">@this.TextOf(job)</span>
             <ActionButton Class="follow-ups-notice-cancel" OnClick="@(() => this.Cancel(id))">Cancel</ActionButton>
         </MudStack>
-    </MudAlert>
+    </Notice>
 }
 
 @code {

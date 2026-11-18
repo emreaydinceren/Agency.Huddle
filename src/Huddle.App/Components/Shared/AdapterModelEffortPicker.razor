@@ -27,9 +27,9 @@
 
 @if (this.adapterReset)
 {
-    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+    <Notice Severity="NoticeLevel.Info">
         Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
-    </MudAlert>
+    </Notice>
 }
 
 <div class="agent-profile-card-row mb-1">
@@ -68,9 +68,9 @@
 
 @if (this.effortReset)
 {
-    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+    <Notice Severity="NoticeLevel.Info">
         Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
-    </MudAlert>
+    </Notice>
 }
 
 @code {

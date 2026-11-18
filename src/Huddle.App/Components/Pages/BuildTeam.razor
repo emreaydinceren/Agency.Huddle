@@ -307,13 +307,13 @@
             }
             @if (this.approveError is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="build-team-approve-error">
+                <Notice Severity="NoticeLevel.Error" Class="build-team-approve-error">
                     @this.approveError
                     @if (this.skillsBlocked)
                     {
                         <MudLink Href="/settings/skills?view=skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
                     }
-                </MudAlert>
+                </Notice>
             }
             <div class="build-team-approve-row">
                 <ActionButton Role="ButtonRole.Primary" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
