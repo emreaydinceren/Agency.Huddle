@@ -222,5 +222,8 @@
   "turn.goldfishMessage": "{{sender}} writes:\n\n{{text}}",
   "systemPrompt.playbooks": "Your Teams' Playbooks follow. They say how to work in a Team, whatever the work. The Huddle rules are enforced by Huddle. The Playbook text is the Human's; where a Team has its own, it replaces the default for that Team only.",
   "systemPrompt.playbookCut": "The rest of this Playbook is in `{{path}}`; read it before you work on this Team's Tasks.",
-  "systemPrompt.playbookCutNoFiles": "The rest was cut; ask the Human to shorten this Playbook."
+  "systemPrompt.playbookCutNoFiles": "The rest was cut; ask the Human to shorten this Playbook.",
+  "turn.playbookHeader": "Your Playbooks changed since you last read them.",
+  "turn.playbookChanged": "The {{playbook}} changed. It applies from now on and replaces what you read before:\n\n{{text}}",
+  "turn.playbookGone": "The {{playbook}} no longer applies to you."
 }

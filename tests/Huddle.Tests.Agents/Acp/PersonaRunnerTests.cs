@@ -2607,11 +2607,15 @@ public sealed class PersonaRunnerTests
         var (_, roomId) = await Eventually.DirectRoomAsync(fixture.Services, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
 
-        await chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
-        await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
-        await chat.PostAsync(roomId, KnownIds.Human, "three", ct: ct);
-
-        await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= 3, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
+        // Each Message waits for the Turn before it: a one-to-one Room folds Messages queued during a Turn into one (ADR-0092),
+        // so three quick posts can reach the Agent as two Turns, and three failures would never happen under load.
+        string[] texts = ["one", "two", "three"];
+        for (int turn = 0; turn < texts.Length; turn++)
+        {
+            int expected = turn + 1;
+            await chat.PostAsync(roomId, KnownIds.Human, texts[turn], ct: ct);
+            await Eventually.UntilAsync(() => factory.Session.Prompts.Count >= expected, ct, timeout: TestBudgets.Standard, interval: TimeSpan.FromMilliseconds(20));
+        }
 
         await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded &&

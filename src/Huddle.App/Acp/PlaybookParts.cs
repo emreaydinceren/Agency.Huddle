@@ -80,7 +80,10 @@ internal static class PlaybookParts
             ? prompts.Render(CutKey, new Dictionary<string, string> { ["{{path}}"] = file.Path })
             : prompts.Render(CutNoFilesKey, new Dictionary<string, string>());
 
-    private static string JoinNames(IReadOnlyList<string> teams) =>
+    /// <summary>Joins Team names as a heading reads them: <c>A</c>, <c>A and B</c>, <c>A, B and C</c>.</summary>
+    /// <param name="teams">The Team names.</param>
+    /// <returns>The joined names.</returns>
+    internal static string JoinNames(IReadOnlyList<string> teams) =>
         teams.Count <= 1 ? string.Concat(teams) : string.Join(", ", teams.Take(teams.Count - 1)) + " and " + teams[^1];
 
     private sealed record Own(int Index, string Label, PromptPartSource Source, string Dropped);

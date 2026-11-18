@@ -258,12 +258,14 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<IOptions<TeamOptions>>().Value.AgentsMd,
             sp.GetRequiredService<ILogger<AgentsMdNoticeSource>>()));
         services.AddSingleton<AgentsMdTurnHook>();
+        services.AddSingleton<PlaybooksTurnHook>();
         services.AddSingleton<HuddleMemoryTurnHook>();
         services.AddSingleton<TeamRenamedTurnHook>();
 
         // The pipeline sorts these by its own production order, so the order here does not matter.
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<TeamRenamedTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<AgentsMdTurnHook>());
+        services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<PlaybooksTurnHook>());
         services.AddSingleton<ITurnHook>(static sp => sp.GetRequiredService<HuddleMemoryTurnHook>());
     }
 

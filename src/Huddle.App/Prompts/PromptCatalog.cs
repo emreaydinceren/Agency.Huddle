@@ -100,7 +100,33 @@ internal static class PromptCatalog
         ..OverlayPromptFiles.Load(),
         ..BuildPart50(),
         ..BuildPart53(),
-        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(), ..BuildGoldfishToolParts(), ..BuildGoldfishRefusalParts(), ..BuildGoldfishDoneParts(), ..BuildPlaybookParts(),
+        ..BuildAgentsMdNoticeParts(), ..BuildTurnQueueParts(), ..BuildGoldfishParts(), ..BuildGoldfishToolParts(), ..BuildGoldfishRefusalParts(), ..BuildGoldfishDoneParts(), ..BuildPlaybookParts(), ..BuildPlaybookTurnParts(),
+    ];
+
+    /// <summary>Builds the Team Playbooks Turn notices: the header, a changed Playbook and one that no longer applies (Team Playbooks spec §6.4).</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPlaybookTurnParts() =>
+    [
+        new PromptDefinition(
+            Key: "turn.playbookHeader",
+            Label: "Playbooks changed: Turn notice header",
+            HelperText: "Opens a block telling an Agent that its Playbooks changed. Said once per block.",
+            Default: "Your Playbooks changed since you last read them.",
+            Placeholders: [], RequiredPlaceholders: [], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.playbookChanged",
+            Label: "Playbook changed: Turn notice",
+            HelperText: "Tells an Agent a Playbook changed and gives its whole new text. {{playbook}} names the Playbook, {{text}} is its text.",
+            Default: "The {{playbook}} changed. It applies from now on and replaces what you read before:\n\n{{text}}",
+            Placeholders: ["{{playbook}}", "{{text}}"], RequiredPlaceholders: ["{{playbook}}", "{{text}}"], Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.playbookGone",
+            Label: "Playbook gone: Turn notice",
+            HelperText: "Tells an Agent a Playbook no longer applies to it. {{playbook}} names the Playbook.",
+            Default: "The {{playbook}} no longer applies to you.",
+            Placeholders: ["{{playbook}}"], RequiredPlaceholders: ["{{playbook}}"], Timing: PromptTiming.Live),
     ];
 
     /// <summary>Builds the Team Playbooks frame and the two cut lines; the default Playbook texts are overlay files (Team Playbooks spec §4, §6.1, §6.3).</summary>

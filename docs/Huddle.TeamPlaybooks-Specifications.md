@@ -380,7 +380,11 @@ follows the ADR-0076 pattern (D-15, D-16, D-17), and is one class and one entry 
 
 - **State:** the JSON of a map from section key to hash, `started` and `heard`, as `AgentsMdTurnHook` keeps.
   Section keys: `rules:member`, `rules:manager`, `member:default`, `manager:default`, `member:<Team>`,
-  `manager:<Team>`. The hash is of the text as sent, after rendering and cutting.
+  `manager:<Team>`. The hash is of the text as sent, heading included, after rendering and cutting, so a change to
+  the Teams a default section names (a Reset, or joining a further default Team) is told with its text.
+- **Tool names in told rules:** the hook cannot see the session's tool list, so Huddle rules told mid-session (an
+  Agent joins its first Team or becomes a manager) name the tools bare (`add_comment`), not with the Adapter's
+  prefix. The next session's system prompt names them as offered (D-13).
 - **Fresh open:** records the current map as heard. **Compacted:** resets heard to started, as the AGENTS.md hook does.
 - **Before each Message Turn:** builds the current snapshot for the Persona with the same builder §6.1 uses, and
   compares. For each section that is new or whose hash changed, it adds the section's whole current text under
@@ -751,6 +755,7 @@ texts, and no "next session" badge on either key.
 | D-10 | Team-building files the goal Task assigned to the new Team's manager, and the Human moves it into the first Project (open item 4) | Waiting for the first Project: the Chief of Staff has no event for a Project being created |
 | D-11 | Default text is sent once, labelled with every Team that uses it; customized ones by Team, in `teams` order, Member before Manager (open item 2) | A copy per Team: the same text twice costs tokens, and the model must compare the copies to learn they agree |
 | D-12 | The manager keeps the mission in the Project's Team Memory as a summary and the Task id | A copy of the Task's text: two texts drift. A reserved `mission` tag: a mechanism for what the manager already knows from the Human |
+| D-13 | Huddle rules told by the Turn hook name tools bare | Plumbing the session's tool list into the hook scope, which is built before the tool set: new plumbing for a rare case (a first Team, or a new manager, mid-session). "Not available" for every tool would be false |
 
 ---
 

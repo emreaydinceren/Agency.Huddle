@@ -30,6 +30,8 @@ Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.H
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook -> factory Agency.Huddle.App.Acp.Sessions.TurnHooks.ITurnHook
+Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.PlaybooksTurnHook -> Agency.Huddle.App.Acp.Sessions.TurnHooks.PlaybooksTurnHook
 Singleton Agency.Huddle.App.Acp.Sessions.TurnHooks.TeamRenamedTurnHook -> Agency.Huddle.App.Acp.Sessions.TurnHooks.TeamRenamedTurnHook
 Singleton Agency.Huddle.App.Acp.Tools.IRequestNotifier -> Agency.Huddle.App.Acp.Tools.RequestNotifier
 Singleton Agency.Huddle.App.Acp.WorkModePolicy -> Agency.Huddle.App.Acp.WorkModePolicy

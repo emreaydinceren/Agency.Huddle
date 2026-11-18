@@ -48,7 +48,38 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(224,PromptCatalog.All.Count);
+        Assert.Equal(227, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// Team Playbooks (spec §6.4): the three Turn notice Prompts of <c>PlaybooksTurnHook</c> exist with their label, Timing and placeholders
+    /// (count 224 to 227), and none names the tool prefix.
+    /// </summary>
+    [Theory]
+    [InlineData("turn.playbookHeader", "Playbooks changed: Turn notice header", PromptTiming.Live, "")]
+    [InlineData("turn.playbookChanged", "Playbook changed: Turn notice", PromptTiming.Live, "{{playbook}} {{text}}")]
+    [InlineData("turn.playbookGone", "Playbook gone: Turn notice", PromptTiming.Live, "{{playbook}}")]
+    public void PlaybookTurnPrompts_HaveTheirLabelTimingAndPlaceholders_AndCarryNoPrefix(string key, string label, PromptTiming timing, string placeholders)
+    {
+        ArgumentNullException.ThrowIfNull(placeholders);
+        PromptDefinition prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(label, prompt.Label);
+        Assert.Equal(timing, prompt.Timing);
+        Assert.Equal(placeholders.Split(' ', StringSplitOptions.RemoveEmptyEntries), prompt.Placeholders);
+        Assert.Equal(prompt.Placeholders, prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>The three Playbook Turn notices are the spec's text word for word (§6.4).</summary>
+    [Fact]
+    public void PlaybookTurnPrompts_DefaultsAreTheSpecText()
+    {
+        Assert.Equal("Your Playbooks changed since you last read them.", PromptCatalog.Get("turn.playbookHeader").Default);
+        Assert.Equal(
+            "The {{playbook}} changed. It applies from now on and replaces what you read before:\n\n{{text}}",
+            PromptCatalog.Get("turn.playbookChanged").Default.Replace("\r\n", "\n", StringComparison.Ordinal));
+        Assert.Equal("The {{playbook}} no longer applies to you.", PromptCatalog.Get("turn.playbookGone").Default);
     }
 
     /// <summary>

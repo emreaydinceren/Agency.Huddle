@@ -28,6 +28,9 @@ internal static class HuddleRules
         ("{{memoryTool}}", "memory"),
     ];
 
+    /// <summary>The bare names of every tool the rules mention, for a notice sent where the session's own tool names are not known.</summary>
+    internal static IReadOnlyList<string> BareToolNames { get; } = [.. MemberTools.Concat(ManagerTools).Select(static pair => pair.Tool).Distinct(StringComparer.Ordinal)];
+
     /// <summary>The Member rules as shipped, LF line endings, placeholders unfilled.</summary>
     internal static string RawMember { get; } = Read("Playbooks/HuddleRules/member.md");
 
