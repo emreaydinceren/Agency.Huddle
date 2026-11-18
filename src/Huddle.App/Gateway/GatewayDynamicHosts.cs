@@ -18,6 +18,10 @@ internal sealed class GatewayDynamicHosts : IOptionsChangeTokenSource<HostFilter
     private IReadOnlyList<string> tailscale = [];
     private CancellationTokenSource changed = new();
 
+    // Set and SetTailscale cancel the source they swap out after leaving the gate, so Dispose takes the same gate: a
+    // Tailscale poll that lands while the container disposes must not cancel a disposed source (issue 677).
+    private bool disposed;
+
     /// <summary>The dynamic host names now in force (the automatic hosts and the Tailscale hosts).</summary>
     public IReadOnlyList<string> Current
     {
@@ -43,6 +47,11 @@ internal sealed class GatewayDynamicHosts : IOptionsChangeTokenSource<HostFilter
         lock (this.gate)
         {
             this.current = [.. hosts];
+            if (this.disposed)
+            {
+                return;
+            }
+
             previous = this.changed;
             this.changed = new CancellationTokenSource();
         }
@@ -70,6 +79,11 @@ internal sealed class GatewayDynamicHosts : IOptionsChangeTokenSource<HostFilter
             }
 
             this.tailscale = next;
+            if (this.disposed)
+            {
+                return;
+            }
+
             previous = this.changed;
             this.changed = new CancellationTokenSource();
         }
@@ -79,7 +93,19 @@ internal sealed class GatewayDynamicHosts : IOptionsChangeTokenSource<HostFilter
     }
 
     /// <inheritdoc />
-    public void Dispose() => this.changed.Dispose();
+    public void Dispose()
+    {
+        lock (this.gate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+            this.changed.Dispose();
+        }
+    }
 
     /// <inheritdoc />
     public IChangeToken GetChangeToken()
