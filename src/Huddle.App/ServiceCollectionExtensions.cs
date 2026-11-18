@@ -115,7 +115,14 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<Goldfish.GoldfishStore>();
         services.AddSingleton<Goldfish.IGoldfishRunnerLink, Goldfish.AgentGatewayGoldfishLink>();
-        services.AddSingleton<Goldfish.GoldfishSupervisor>();
+        services.AddSingleton<Goldfish.GoldfishSupervisor>(sp =>
+        {
+            Goldfish.GoldfishSupervisor supervisor = ActivatorUtilities.CreateInstance<Goldfish.GoldfishSupervisor>(sp);
+            sp.GetRequiredService<Pipes.AgentGateway>().Goldfish = supervisor;
+            return supervisor;
+        });
+        services.AddSingleton<Goldfish.IPossessionLookup>(static sp => sp.GetRequiredService<Goldfish.GoldfishSupervisor>());
+        services.AddSingleton<Goldfish.GoldfishGuard>();
         return services;
     }
 

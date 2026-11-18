@@ -92,9 +92,11 @@ Singleton Agency.Huddle.App.Feed.IFeedPublisher -> factory Agency.Huddle.App.Fee
 Singleton Agency.Huddle.App.FileChanges.FileChangeTracker -> Agency.Huddle.App.FileChanges.FileChangeTracker
 Singleton Agency.Huddle.App.FileChanges.FileStateStore -> Agency.Huddle.App.FileChanges.FileStateStore
 Singleton Agency.Huddle.App.FileChanges.WatchedFolderResolver -> Agency.Huddle.App.FileChanges.WatchedFolderResolver
+Singleton Agency.Huddle.App.Goldfish.GoldfishGuard -> Agency.Huddle.App.Goldfish.GoldfishGuard
 Singleton Agency.Huddle.App.Goldfish.GoldfishStore -> Agency.Huddle.App.Goldfish.GoldfishStore
-Singleton Agency.Huddle.App.Goldfish.GoldfishSupervisor -> Agency.Huddle.App.Goldfish.GoldfishSupervisor
+Singleton Agency.Huddle.App.Goldfish.GoldfishSupervisor -> factory Agency.Huddle.App.Goldfish.GoldfishSupervisor
 Singleton Agency.Huddle.App.Goldfish.IGoldfishRunnerLink -> Agency.Huddle.App.Goldfish.AgentGatewayGoldfishLink
+Singleton Agency.Huddle.App.Goldfish.IPossessionLookup -> factory Agency.Huddle.App.Goldfish.IPossessionLookup
 Singleton Agency.Huddle.App.Helpers.AgentsMdChange.AgentsMdChangeHelper -> Agency.Huddle.App.Helpers.AgentsMdChange.AgentsMdChangeHelper
 Singleton Agency.Huddle.App.Helpers.HelperBudget -> Agency.Huddle.App.Helpers.HelperBudget
 Singleton Agency.Huddle.App.Helpers.HelperDispatcher -> Agency.Huddle.App.Helpers.HelperDispatcher

@@ -457,17 +457,21 @@ public sealed class ProtocolJsonTests
         Assert.Null(Assert.IsType<PostMessage>(ProtocolJson.Deserialize(without)).InReplyTo);
     }
 
-    /// <summary>GoldfishBegin pins its JSON, type first and version last, and reads back.</summary>
+    /// <summary>GoldfishBegin pins its JSON, type first and version last, and reads back; the additive TaskId is written after the brief and omitted when null.</summary>
     [Fact]
     public void GoldfishBegin_PinsTheJson()
     {
-        string json = ProtocolJson.Serialize(new GoldfishBegin("p1", "r1", "b"));
+        string json = ProtocolJson.Serialize(new GoldfishBegin("p1", "r1", "b", "t1"));
+        string withoutTask = ProtocolJson.Serialize(new GoldfishBegin("p1", "r1", "b"));
 
-        Assert.Equal("{\"type\":\"goldfishBegin\",\"possessionId\":\"p1\",\"roomId\":\"r1\",\"brief\":\"b\",\"version\":3}", json);
+        Assert.Equal("{\"type\":\"goldfishBegin\",\"possessionId\":\"p1\",\"roomId\":\"r1\",\"brief\":\"b\",\"taskId\":\"t1\",\"version\":3}", json);
+        Assert.Equal("{\"type\":\"goldfishBegin\",\"possessionId\":\"p1\",\"roomId\":\"r1\",\"brief\":\"b\",\"version\":3}", withoutTask);
         GoldfishBegin back = Assert.IsType<GoldfishBegin>(ProtocolJson.Deserialize(json));
         Assert.Equal("p1", back.PossessionId);
         Assert.Equal("r1", back.RoomId);
         Assert.Equal("b", back.Brief);
+        Assert.Equal("t1", back.TaskId);
+        Assert.Null(Assert.IsType<GoldfishBegin>(ProtocolJson.Deserialize(withoutTask)).TaskId);
     }
 
     /// <summary>GoldfishEnd pins its JSON with a camelCase exit and reads back.</summary>

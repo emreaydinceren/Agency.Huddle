@@ -53,6 +53,17 @@ internal static class GoldfishLine
         return string.IsNullOrWhiteSpace(findings) ? text : $"{text}\n\n{findings}";
     }
 
+    /// <summary>The start row (spec 6.2): the Agent went into goldfish mode, then the brief word for word.</summary>
+    /// <param name="agentName">The Agent's display name.</param>
+    /// <param name="brief">The brief, quoted as given.</param>
+    internal static string StartRow(string agentName, string brief) =>
+        $"{agentName} went into goldfish mode. They don't remember this Room.\n\n{brief}";
+
+    /// <summary>The comment on the Task in hand: the brief word for word.</summary>
+    /// <param name="agentName">The Agent's display name.</param>
+    /// <param name="brief">The brief, quoted as given.</param>
+    internal static string TaskComment(string agentName, string brief) => $"Goldfish brief for {agentName}: {brief}";
+
     /// <summary>The reply when a comeback names an Agent that is not in goldfish mode.</summary>
     /// <param name="agentName">The Agent's display name.</param>
     internal static string NotInMode(string agentName) => $"{agentName} isn't in goldfish mode.";

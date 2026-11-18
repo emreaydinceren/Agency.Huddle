@@ -17,7 +17,10 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
     private readonly ConcurrentDictionary<string, AgentConnection> connections = new(StringComparer.Ordinal);
     private readonly Action<MessagePostedEvent> onMessagePosted;
 
-    public AgentGateway(RoomEvents events, Drafts drafts, ILogger<AgentGateway> logger)
+    /// <summary>The goldfish supervisor told when an Agent's runner connection is lost or replaced; set by the composition root.</summary>
+    internal Agency.Huddle.App.Goldfish.GoldfishSupervisor? Goldfish { get; set; }
+
+    public AgentGateway(RoomEvents events,Drafts drafts, ILogger<AgentGateway> logger)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(drafts);
@@ -107,6 +110,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         if (stale is not null && !ReferenceEquals(stale, connection))
         {
             stale.Close();
+            this.ReportRunnerLost(agentId);
         }
 
         this.RaisePresenceChanged();
@@ -137,7 +141,29 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
             this.events.PublishDraftChanged(roomId);
         }
 
+        this.ReportRunnerLost(agentId);
         this.RaisePresenceChanged();
+    }
+
+    /// <summary>The Agent's runner connection was lost or replaced: its open possession ends Failed (E-3). A failure is logged and never reaches the caller.</summary>
+    private void ReportRunnerLost(string agentId)
+    {
+        if (this.Goldfish is { } supervisor)
+        {
+            _ = this.EndLostPossessionAsync(supervisor, agentId);
+        }
+    }
+
+    private async Task EndLostPossessionAsync(Agency.Huddle.App.Goldfish.GoldfishSupervisor supervisor, string agentId)
+    {
+        try
+        {
+            await supervisor.OnRunnerLostAsync(agentId, CancellationToken.None).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogWarning(ex, "Ending the possession of {AgentId} after its runner was lost failed.", agentId);
+        }
     }
 
     internal async Task DeliverAsync(MessagePostedEvent e, CancellationToken ct = default)

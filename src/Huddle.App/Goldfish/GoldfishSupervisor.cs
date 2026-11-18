@@ -18,7 +18,7 @@ internal sealed class GoldfishSupervisor(
     IGoldfishRunnerLink link,
     IOptions<TeamOptions> options,
     ILogger<GoldfishSupervisor> logger,
-    TimeProvider? timeProvider = null) : IHostedService, IDisposable
+    TimeProvider? timeProvider = null) : IHostedService, IDisposable, IPossessionLookup
 {
     private readonly TimeProvider clock = timeProvider ?? TimeProvider.System;
 
@@ -62,7 +62,8 @@ internal sealed class GoldfishSupervisor(
     /// <param name="by">Who chose the exit, or <see langword="null"/>.</param>
     /// <param name="ct">Cancels the work.</param>
     /// <returns><see langword="true"/> when this call did the return; <see langword="false"/> when it was already returning, ended or unknown.</returns>
-    public async Task<bool> EndAsync(string possessionId, GoldfishExit exit, string? by, CancellationToken ct)
+    /// <param name="result">What the goldfish reported through <c>goldfish_done</c>, or <see langword="null"/>; a Stuck result is posted as partial.</param>
+    public async Task<bool> EndAsync(string possessionId, GoldfishExit exit, string? by, CancellationToken ct, GoldfishResult? result = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(possessionId);
 
@@ -81,7 +82,7 @@ internal sealed class GoldfishSupervisor(
                 return false;
             }
 
-            return await this.ReturnClaimedAsync(row, exit, by, ct).ConfigureAwait(false);
+            return await this.ReturnClaimedAsync(row, exit, by, result, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -90,13 +91,13 @@ internal sealed class GoldfishSupervisor(
     }
 
     /// <summary>Runs the steps after the claim. The row ends even when a step fails; on cancellation it stays Returning, and the start-up pass ends it Restarted.</summary>
-    private async Task<bool> ReturnClaimedAsync(Possession row, GoldfishExit exit, string? by, CancellationToken ct)
+    private async Task<bool> ReturnClaimedAsync(Possession row, GoldfishExit exit, string? by, GoldfishResult? result, CancellationToken ct)
     {
         try
         {
             await this.TellRunnerAsync(row, exit, ct).ConfigureAwait(false);
-            await this.PostResultAsync(row, ct).ConfigureAwait(false);
-            await this.PostReturnRowAsync(row, exit, by, ct).ConfigureAwait(false);
+            await this.PostResultAsync(row, exit, result, ct).ConfigureAwait(false);
+            await this.PostReturnRowAsync(row, exit, by, result, ct).ConfigureAwait(false);
         }
         finally
         {
@@ -160,6 +161,101 @@ internal sealed class GoldfishSupervisor(
     public Possession? FindOpen(string agentId) =>
         store.Open().FirstOrDefault(row => string.Equals(row.AgentId, agentId, StringComparison.Ordinal));
 
+    /// <inheritdoc />
+    public string? PossessionOf(string agentId, string roomId) =>
+        this.FindOpen(agentId) is { State: PossessionState.Working or PossessionState.Waiting or PossessionState.Returning } open
+        && string.Equals(open.RoomId, roomId, StringComparison.Ordinal)
+            ? open.Id
+            : null;
+
+    /// <summary>The open possession in a Room, whatever its state.</summary>
+    /// <param name="roomId">The Room.</param>
+    /// <returns>The row, or <see langword="null"/> when no Agent is possessed there.</returns>
+    public Possession? OpenInRoom(string roomId) =>
+        store.Open().FirstOrDefault(row => string.Equals(row.RoomId, roomId, StringComparison.Ordinal));
+
+    /// <summary>Starts a possession: inserts the Starting row, posts the start row quietly and tells the runner. A failure ends it Failed and rethrows.</summary>
+    /// <param name="agentId">The Agent to possess.</param>
+    /// <param name="roomId">The Room it works in.</param>
+    /// <param name="taskId">The Task in hand, or <see langword="null"/>.</param>
+    /// <param name="brief">The brief, word for word.</param>
+    /// <param name="ct">Cancels the work.</param>
+    /// <returns>The row, or <see langword="null"/> when the Agent already has an open possession.</returns>
+    public async Task<Possession?> BeginAsync(string agentId, string roomId, string? taskId, string brief, CancellationToken ct)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        ArgumentNullException.ThrowIfNull(brief);
+
+        Possession row = new(
+            Guid.NewGuid().ToString("N"), agentId, roomId, taskId, brief, PossessionState.Starting, null, null, this.clock.GetUtcNow(), null, 0, 0m, null, null);
+        if (!store.TryInsert(row))
+        {
+            return null;
+        }
+
+        try
+        {
+            IReadOnlyList<User> members = await team.GetRoomMembersAsync(roomId, ct).ConfigureAwait(false);
+            string name = members.FirstOrDefault(member => string.Equals(member.Id, agentId, StringComparison.Ordinal))?.Name ?? agentId;
+            _ = await chat.PostAsHuddleQuietAsync(roomId, GoldfishLine.StartRow(name, brief), ct).ConfigureAwait(false);
+            await link.SendBeginAsync(agentId, new GoldfishBegin(row.Id, roomId, brief, taskId), ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _ = await this.EndAsync(row.Id, GoldfishExit.Failed, null, ct).ConfigureAwait(false);
+            throw;
+        }
+
+        return row;
+    }
+
+    /// <summary>Applies a runner's report to the Agent's open possession; a report for any other id is ignored.</summary>
+    /// <param name="agentId">The reporting Agent.</param>
+    /// <param name="report">The report.</param>
+    /// <param name="ct">Cancels the work.</param>
+    /// <returns>A task that completes when the report is applied.</returns>
+    public async Task OnReportAsync(string agentId, GoldfishReport report, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(report);
+
+        if (this.FindOpen(agentId) is not { } open || !string.Equals(open.Id, report.PossessionId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        switch (report.Kind)
+        {
+            case GoldfishReportKind.Opened:
+                if (logger.IsEnabled(LogLevel.Debug))
+                {
+                    logger.LogDebug("The runner of {AgentId} opened possession {PossessionId}.", agentId, open.Id);
+                }
+
+                break;
+            case GoldfishReportKind.TurnStarted:
+                _ = store.SetState(open.Id, PossessionState.Working, PossessionState.Starting, PossessionState.Waiting);
+                break;
+            case GoldfishReportKind.TurnEnded:
+                if (report.RunningSpend is { } running)
+                {
+                    store.AddTurn(open.Id, running - open.Spend, report.Currency);
+                }
+                else
+                {
+                    store.AddTurn(open.Id, null, report.Currency);
+                }
+
+                await this.OnTurnEndedAsync(open.Id, false, ct).ConfigureAwait(false);
+                break;
+            case GoldfishReportKind.Failed:
+                _ = await this.EndAsync(open.Id, GoldfishExit.Failed, null, ct).ConfigureAwait(false);
+                break;
+            default:
+                break;
+        }
+    }
+
     private async Task RestartOneAsync(string possessionId, CancellationToken ct)
     {
         try
@@ -184,7 +280,7 @@ internal sealed class GoldfishSupervisor(
         }
     }
 
-    private async Task PostResultAsync(Possession row, CancellationToken ct)
+    private async Task PostResultAsync(Possession row, GoldfishExit exit, GoldfishResult? result, CancellationToken ct)
     {
         if (row.ResultMessageId is not null)
         {
@@ -193,8 +289,10 @@ internal sealed class GoldfishSupervisor(
 
         try
         {
-            ChatMessage result = await chat.PostAsHuddleQuietAsync(row.RoomId, GoldfishLine.ResultText(row.Brief, null, null, false), ct).ConfigureAwait(false);
-            store.SetResultMessage(row.Id, result.Id);
+            string? findings = result is { Findings.Count: > 0 } ? string.Join('\n', result.Findings.Select(finding => "- " + finding)) : null;
+            string text = GoldfishLine.ResultText(row.Brief, result?.Text, findings, exit == GoldfishExit.Stuck);
+            ChatMessage posted = await chat.PostAsHuddleQuietAsync(row.RoomId, text, ct).ConfigureAwait(false);
+            store.SetResultMessage(row.Id, posted.Id);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -202,14 +300,15 @@ internal sealed class GoldfishSupervisor(
         }
     }
 
-    private async Task PostReturnRowAsync(Possession row, GoldfishExit exit, string? by, CancellationToken ct)
+    private async Task PostReturnRowAsync(Possession row, GoldfishExit exit, string? by, GoldfishResult? result, CancellationToken ct)
     {
         try
         {
             IReadOnlyList<User> members = await team.GetRoomMembersAsync(row.RoomId, ct).ConfigureAwait(false);
             User? agent = members.FirstOrDefault(member => string.Equals(member.Id, row.AgentId, StringComparison.Ordinal));
             TimeSpan elapsed = this.clock.GetUtcNow() - row.StartedAt;
-            string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null);
+            string? firstLine = result?.Text.Split('\n', 2)[0].Trim();
+            string text = GoldfishLine.ReturnLine(agent?.Name ?? row.AgentId, exit, by, elapsed, agent is not null, result?.Findings.Count ?? 0, firstLine);
             _ = await chat.PostAsHuddleAsync(row.RoomId, text, ct).ConfigureAwait(false);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

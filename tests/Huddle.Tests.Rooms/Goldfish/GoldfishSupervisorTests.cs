@@ -365,6 +365,8 @@ public sealed class GoldfishSupervisorTests
 
         public bool Throws { get; set; }
 
+        public Task SendBeginAsync(string agentId, GoldfishBegin begin, CancellationToken ct) => Task.CompletedTask;
+
         public Task SendEndAsync(string agentId, string possessionId, GoldfishExit exit, CancellationToken ct)
         {
             if (this.Throws)

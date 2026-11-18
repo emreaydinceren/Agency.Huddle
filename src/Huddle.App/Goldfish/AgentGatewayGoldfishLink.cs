@@ -9,4 +9,8 @@ internal sealed class AgentGatewayGoldfishLink(AgentGateway gateway) : IGoldfish
     /// <inheritdoc />
     public Task SendEndAsync(string agentId, string possessionId, GoldfishExit exit, CancellationToken ct) =>
         gateway.SendAsync(agentId, new GoldfishEnd(possessionId, exit), ct);
+
+    /// <inheritdoc />
+    public Task SendBeginAsync(string agentId, GoldfishBegin begin, CancellationToken ct) =>
+        gateway.SendAsync(agentId, begin, ct);
 }
