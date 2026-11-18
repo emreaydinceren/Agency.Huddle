@@ -15,9 +15,9 @@ Work in passes. Each pass is one loop:
 2. **Check it** against what the Task says finished looks like. Where the Team asks for proof, gather it.
 3. **Decide what comes next:** go on, ask for a review, say what blocks it, or ask the Human.
 4. **Record it** as a comment on the Task: what you did, what you checked, what comes next. Post proof as
-   Evidence. The next pass, yours or anyone's, starts from that comment, not from your memory.
+   Evidence. End the comment with a line `State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`. The next pass, yours or anyone's, starts from that comment, not from your memory.
 
-End every pass in one named state: **done**, **handed off**, **blocked** or **waiting for the Human**. Do not
+End every pass in one named state: **done**, **handed off**, **blocked** or **waiting for the Human**. Name it on the last line of the comment, as `State: handed off`. Do not
 start another pass on the same Task unless something changed.
 
 ## Handing off

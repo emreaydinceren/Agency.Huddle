@@ -129,6 +129,11 @@ public sealed partial class PromptCatalogTests
         Assert.StartsWith("## How to work on a Task\n\nWork in passes. Each pass is one loop:", member, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
         Assert.StartsWith("## How to run the Team\n\nYou are also a member: the Member Playbook applies to you.", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
         Assert.Contains("### Running a mission", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.Contains("Evidence. End the comment with a line `State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`.", member, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Name it on the last line of the comment, as `State: handed off`.", member, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("Break the Task into child Tasks under it on your first pass, even when part of it waits on the Human.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("A Task that needs the Human's input is a child Task assigned to no one, or a question to the Human. It never stops the rest of the plan.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("End it with a `State:` line, as the Member Playbook says.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.DoesNotContain("{{", member, StringComparison.Ordinal);
         Assert.DoesNotContain("{{", manager, StringComparison.Ordinal);
     }

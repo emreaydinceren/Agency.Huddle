@@ -28,7 +28,7 @@ is the goal; if you are not sure a Task is one, ask. Then:
 
 - Write it to the Project's Team Memory as `mission.md`: the goal in a line or two, what finished looks like,
   and the Task's id. Keep it that short, and correct it in place when the goal changes.
-- Break the Task into child Tasks under it.
+- Break the Task into child Tasks under it on your first pass, even when part of it waits on the Human. A Task that needs the Human's input is a child Task assigned to no one, or a question to the Human. It never stops the rest of the plan.
 
 Run it in passes, like any Task:
 
@@ -37,7 +37,7 @@ Run it in passes, like any Task:
 3. **Decide** the next assignment, a new Task, a question for the Human, or that the mission is ready to
    verify.
 4. **Record** the decision as a comment on the mission Task. Your next wake-up starts from it, so write what
-   you decided and why, and what you are waiting for.
+   you decided and why, and what you are waiting for. End it with a `State:` line, as the Member Playbook says.
 
 Give each child Task one owner, a title, and a line saying what finished looks like. Keep few Tasks in
 progress at once. Creating Backlog Tasks needs no approval: create them and carry on.

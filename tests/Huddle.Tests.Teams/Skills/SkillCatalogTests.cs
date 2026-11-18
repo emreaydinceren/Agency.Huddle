@@ -80,13 +80,14 @@ public sealed class SkillCatalogTests
         Assert.Contains("If `close_task` says the Task is already closed, the one who asked closed it first, and there is nothing more to do.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 
-    /// <summary>Playbooks S6: after a Team hired from a type exists, <c>team-building</c> files the collected goal as one Task for the manager and tells the Human to move it into the first Project.</summary>
+    /// <summary>Playbooks S6: for every Team the Chief of Staff builds, from a type or from proposed Agents, <c>team-building</c> files the collected goal as one Task for the manager and tells the Human to move it into the first Project.</summary>
     [Fact]
     public void TeamBuilding_FilesTheGoalAsTheFirstMission()
     {
         string text = string.Join(' ', SkillCatalog.All["team-building"]["SKILL.md"].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-        Assert.Contains("Once a Team hired from a type exists, file the goal you collected in step 1 as one Task in that Team with `create_task`: the title is the goal, the description says what a finished result looks like, and the assignee is the Team's manager.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("For every Team you build, from a type or from proposed Agents, file the goal you collected in step 1 as one Task in that Team with `create_task`: the title is the goal, the description says what a finished result looks like, and the assignee is the Team's manager.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("When the Team has no manager, leave the Task unassigned in the Backlog and tell the Human to assign it once they name a manager.", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("\"When you create this Team's first Project, move {Id} into it; {Manager} will treat it as the Project's goal.\"", text, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
     }
 

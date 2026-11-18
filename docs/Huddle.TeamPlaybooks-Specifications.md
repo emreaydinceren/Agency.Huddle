@@ -164,9 +164,9 @@ Work in passes. Each pass is one loop:
 2. **Check it** against what the Task says finished looks like. Where the Team asks for proof, gather it.
 3. **Decide what comes next:** go on, ask for a review, say what blocks it, or ask the Human.
 4. **Record it** as a comment on the Task: what you did, what you checked, what comes next. Post proof as
-   Evidence. The next pass, yours or anyone's, starts from that comment, not from your memory.
+   Evidence. End the comment with a line `State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`. The next pass, yours or anyone's, starts from that comment, not from your memory.
 
-End every pass in one named state: **done**, **handed off**, **blocked** or **waiting for the Human**. Do not
+End every pass in one named state: **done**, **handed off**, **blocked** or **waiting for the Human**. Name it on the last line of the comment, as `State: handed off`. Do not
 start another pass on the same Task unless something changed.
 
 ## Handing off
@@ -218,7 +218,7 @@ is the goal; if you are not sure a Task is one, ask. Then:
 
 - Write it to the Project's Team Memory as `mission.md`: the goal in a line or two, what finished looks like,
   and the Task's id. Keep it that short, and correct it in place when the goal changes.
-- Break the Task into child Tasks under it.
+- Break the Task into child Tasks under it on your first pass, even when part of it waits on the Human. A Task that needs the Human's input is a child Task assigned to no one, or a question to the Human. It never stops the rest of the plan.
 
 Run it in passes, like any Task:
 
@@ -227,7 +227,7 @@ Run it in passes, like any Task:
 3. **Decide** the next assignment, a new Task, a question for the Human, or that the mission is ready to
    verify.
 4. **Record** the decision as a comment on the mission Task. Your next wake-up starts from it, so write what
-   you decided and why, and what you are waiting for.
+   you decided and why, and what you are waiting for. End it with a `State:` line, as the Member Playbook says.
 
 Give each child Task one owner, a title, and a line saying what finished looks like. Keep few Tasks in
 progress at once. Creating Backlog Tasks needs no approval: create them and carry on.
@@ -550,11 +550,12 @@ Project stays the Human's.
 
 ### 8.4 Team-building (open item 4)
 
-In step 6 of the `team-building` Skill, once a Team hired from a type exists, the Chief of Staff files the goal it
-collected in step 1 as one Task in that Team with `create_task`: the title is the goal, the description says what a
-finished result looks like, and the assignee is the Team's manager. It then tells the Human: "When you create this
-Team's first Project, move {Id} into it; {Manager} will treat it as the Project's goal." The Skill gains that step and
-its sentence; no tool changes (D-10).
+In step 6 of the `team-building` Skill, for every Team the Chief of Staff builds, from a type or from proposed Agents,
+it files the goal it collected in step 1 as one Task in that Team with `create_task`: the title is the goal, the
+description says what a finished result looks like, and the assignee is the Team's manager. When the Team has no
+manager, it leaves the Task unassigned in the Backlog and tells the Human to assign it once they name a manager. It then
+tells the Human: "When you create this Team's first Project, move {Id} into it; {Manager} will treat it as the Project's
+goal." The Skill gains that step and its sentence; no tool changes (D-10).
 
 ---
 

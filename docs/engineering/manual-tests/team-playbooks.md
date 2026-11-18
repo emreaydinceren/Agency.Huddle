@@ -25,6 +25,22 @@ Read [the manual test script](../manual-tests.md) first, the cost guard, the Mod
 
 Run [`P-BUILD`](common.md#p-build), then [`P-LAUNCH-UAT`](common.md#p-launch-uat): the page gets **Ada** and **Bo**, two mock-adapter Agents (data folder `<data>` = `C:\seeds\huddle\uat\data`). The mock adapter echoes each Turn's prompt back as its reply, so every Turn notice on this page can be read for free. PLAYBOOK-11 and PLAYBOOK-12 need a real model: run [`P-BUILD`](common.md#p-build) and [`P-LAUNCH-PAID`](common.md#p-launch-paid-) for them, with Haiku at `low` as [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) says. Ask the owner before the paid ones. The Library must be on (Settings › Library shows the Roots table; on is the default).
 
+**Notes for the free lane** (learned in earlier runs):
+
+- A Development Team type needs an existing repository folder: give it one before step 2 of the fixture.
+- The manager drafts are auto-named: rename the draft to `Cy` or `Sal` in the draft's name field.
+- The Team page tab is **Library**, not **Files**.
+- The **Manager** picker offers only the role holder, so it never lists an Agent that has no manager role.
+- A Room has no name field: tell **Room A** from **Room B** by creating them in that order.
+- The Library-off tooltip appears only with `Team:Library:Enabled=false` in the configuration and a restart of the server. Hiding a Root does not show it.
+
+**Notes for the paid lane:**
+
+- The worktree needs `tools/acp/node_modules` before the Claude Adapter starts.
+- Haiku appears twice in the Model list: pick the newest.
+- An Agent hired by the Chief of Staff, or through the Team's **Add** button, defaults to Sonnet: set Haiku and `low` on each one.
+- A Backlog Task assigned to a member wakes the manager, not the member: create Tasks in **To Do**.
+
 **Build the fixture once, through the UI** (no seeder scenario makes these Teams):
 
 The Edit Agent form has **no Teams field**, and a Team made blank has no `_team.md` (so no manager, no **Process** tab, and **Details** › **Save** fails). Make both Teams through **Build a team** from a team type, which writes `_team.md`, the manager and the **Process** tab. Every new Agent needs an **Alias** as well as a name: give each one in the form.
@@ -34,7 +50,7 @@ The Edit Agent form has **no Teams field**, and a Team made blank has no `_team.
 3. Put Ada and Bo into the Teams. Huddle has no Teams field on the Edit form, so for each Agent open **Agents** › the Agent › **Edit**, change the `teams:` line in the text of the card to `teams: [Sales]` for Ada and `teams: [Sales, Ops]` for Bo, and **Save** ([Adding and removing members](../../Huddle.UserGuide.md#adding-and-removing-members)). Close the Edit card before step 4: a card open during a membership change puts the old `teams:` line back.
 4. Make Ada Sales' manager: open Sales › **Members**, set **Manager** to `Ada`, remove `Sal` (**Remove** › **Delete agent**) and **Save changes**. If **Manager** does not offer Ada (she has no role), note it in the Run log and keep Sal as the manager, reading `Sal` for `Ada` as manager on this page.
 5. Open **Rooms** and create two Rooms with Bo and Ada in them: **Room A** and **Room B**. Send one Message to Bo in each (`@Bo hello`) so each Room has a first Turn and an open session.
-6. Check the result: the sidebar Teams group lists `Sales` and `Ops`; Sales' Members tab shows Ada and Bo; Ops' shows Cy and Bo. Both Team pages show **Members**, **Files**, **Process**, **Playbooks**, **Details** (no **Tasks** tab: the Team's Tasks are Team Task Views in the sidebar's TASKS section).
+6. Check the result: the sidebar Teams group lists `Sales` and `Ops`; Sales' Members tab shows Ada and Bo; Ops' shows Cy and Bo. Both Team pages show **Members**, **Library**, **Process**, **Playbooks**, **Details** (no **Tasks** tab: the Team's Tasks are Team Task Views in the sidebar's TASKS section).
 
 Three things this page checks in more than one case, so they are described once.
 
@@ -258,7 +274,7 @@ The diff is replaced by `Huddle no longer has the earlier default, so it can't s
 
 **Pass if — all of these**
 
-- Steps 1 and 2: each is refused, and the refusal reads `This file is the Human's. Propose a change in a retro, or ask the Human.`
+- Steps 1 and 2: each is refused, and the Agent reports a refusal. The text `This file is the Human's. Propose a change in a retro, or ask the Human.` reaches the server log, not the Room, and the Agent sees only a generic refusal: look for it in the log.
 - Step 3: the read succeeds.
 - Step 4: the file is unchanged, and `old.md` does not exist.
 
@@ -357,7 +373,7 @@ No lane can make the Agent attempt a Write. The automated guard tests cover the 
 
 **Before you start**
 
-- Run [`P-LAUNCH-PAID`](common.md#p-launch-paid-) and ask the owner first. Set Ada (manager) and Bo (member) of Sales to the stock Claude Adapter, Model Haiku, Effort `low` ([section 0.3](../manual-tests.md#03-the-model-and-effort-convention)). Both Sales Playbooks are the defaults. Sales has Project `Launch`.
+- Run [`P-LAUNCH-PAID`](common.md#p-launch-paid-) and ask the owner first. Set Ada (manager) and Bo (member) of Sales to the stock Claude Adapter, Model Haiku, Effort `low` ([section 0.3](../manual-tests.md#03-the-model-and-effort-convention)). Both Sales Playbooks are the defaults. Sales has Project `Launch`. Create the Tasks in **To Do**: a Backlog Task assigned to a member wakes the manager.
 
 **Steps**
 
@@ -368,10 +384,11 @@ No lane can make the Agent attempt a Write. The automated guard tests cover the 
 
 **Pass if — all of these**
 
-- Steps 1 and 2: each of Bo's passes ends with a Task comment that names a state (Done, Blocked, Handing off or Asking, as the Member Playbook gives them), not with a bare chat reply.
+- Steps 1 and 2: each of Bo's passes ends with a Task comment that ends with a `State:` line (`State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`), not with a bare chat reply.
 - Step 4: `mission.md` exists in `Teams/Sales/Launch/memory/` and starts with a `description:` line; it states the goal and the Task id and is short (a summary, not a copy of the Task).
 - At least one child Task exists with `parent` set to the mission Task, in `Launch`.
-- Ada's decision is a comment on the mission Task.
+- At least one child Task exists on the first pass even if part of the mission waits on the Human: that part is a child Task assigned to no one, or a question.
+- Ada's decision is a comment on the mission Task, and it ends with a `State:` line.
 
 **Fail if — any of these**
 
@@ -405,7 +422,7 @@ A signed-out Adapter or a failing Turn: sign in through the Agents page and reru
 **Pass if — all of these**
 
 - The Chief of Staff's last Message holds `When you create this Team's first Project, move` the Task's id `into it;` and the manager's name `will treat it as the Project's goal.`
-- Step 3: one Task whose title is the goal, with a description of what a finished result looks like, assigned to the Team's manager.
+- Step 3: one Task whose title is the goal, with a description of what a finished result looks like, assigned to the Team's manager. A Team built from proposed Agents with no manager gets the Task unassigned in the Backlog, and the Chief of Staff tells you to assign it once you name a manager.
 - Step 4: the move saves; the manager wakes (see PLAYBOOK-08).
 
 **Fail if — any of these**
