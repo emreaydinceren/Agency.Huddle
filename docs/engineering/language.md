@@ -945,6 +945,16 @@ See
 : *Avoid*: order, position, sort order (a View's sort keys are something else), and priority, which
   is the separate Low to Urgent field.
 
+**TaskOrder**
+: The order in which a set of Tasks is to be tackled, and the first one that can start. It is derived each time it is
+  asked from rank, priority and `blocked_by`, and is never stored or edited. An open blocker is listed just ahead of the
+  Task it blocks, and only To Do Tasks with no open blocker are startable. Agents read it with `next_task`, and the
+  Human sees it in the Task order panel ([Huddle.TaskOrder-Specifications.md](../Huddle.TaskOrder-Specifications.md),
+  ADR-0101).
+: Not the Board's rank order: TaskOrder moves blockers and groups started and Backlog Tasks, while the Board shows rank
+  as stored.
+: *Avoid*: work order, next order, Up Next, queue.
+
 **Project**
 : An optional grouping of Tasks inside one Team: the folder below the Team's
   folder. A Room of that Team may also belong to it (ADR-0082). Its name is unique only within its Team, so write it as
