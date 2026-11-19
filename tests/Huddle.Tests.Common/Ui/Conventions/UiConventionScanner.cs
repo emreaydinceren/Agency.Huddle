@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV25</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV26</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -61,6 +61,7 @@ internal static partial class UiConventionScanner
         "CV22" => Cv22(path, text),
         "CV24" => Cv24(path, text),
         "CV25" => Cv25(path, text),
+        "CV26" => Cv26(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -239,6 +240,17 @@ internal static partial class UiConventionScanner
         new("CV25", path, path.EndsWith("/ChipRadioGroup.razor", StringComparison.Ordinal)
             ? 0
             : CountTags(text, ["MudChipSet"], static attrs => attrs.Contains("SelectionMode.SingleSelection", StringComparison.Ordinal)));
+
+    /// <summary>
+    /// CV26: a raw <c>&lt;MudHighlighter&gt;</c> anywhere. Text marked by a search term is drawn by <c>SearchHighlight</c>, which splits
+    /// with <c>string.IndexOf</c>; <c>MudHighlighter</c> splits with a regular expression under a fixed one-second timeout, so a server
+    /// stalled for a second inside one scan threw from <c>OnParametersSet</c> and ended the Human's circuit (ComponentCatalog Search).
+    /// Zero-tolerance with no exempt file: the tag was already gone when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv26(string path, string text) =>
+        new("CV26", path, CountTags(text, ["MudHighlighter"], static _ => true));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>

@@ -695,4 +695,32 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv25("src/Huddle.App/Components/Shared/ChipRadioGroup.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv25("src/Huddle.App/Components/Feed/NotificationsPanel.razor", source).Count);
     }
+
+    /// <summary>CV26: a raw <c>MudHighlighter</c> is counted in every file, but not <c>SearchHighlight</c>, a comment that names it or another Mud tag.</summary>
+    [Fact]
+    public void Cv26_MudHighlighter_IsCounted()
+    {
+        const string source = """
+            <MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" />
+            <MudHighlighter Text="a"
+                            HighlightedText="b"></MudHighlighter>
+            <SearchHighlight Text="@this.Hit.Title" Term="@this.Phrase" />
+            @* <MudHighlighter Text="c" /> was replaced by SearchHighlight. *@
+            <MudText>d</MudText>
+            """;
+
+        RuleCount result = UiConventionScanner.Cv26(RazorPath, source);
+
+        Assert.Equal("CV26", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV26: no file is exempt, so even the component that replaced the tag is counted if it ever draws one.</summary>
+    [Fact]
+    public void Cv26_SearchHighlightRazor_IsNotExempt()
+    {
+        const string source = """<MudHighlighter Text="x" HighlightedText="y" />""";
+
+        Assert.Equal(1, UiConventionScanner.Cv26("src/Huddle.App/Components/Shared/SearchHighlight.razor", source).Count);
+    }
 }
