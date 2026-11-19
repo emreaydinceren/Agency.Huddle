@@ -14,6 +14,8 @@ namespace Agency.Huddle.App.Tasks;
 /// <param name="Decision">The Human's decision when this change records one, otherwise <see langword="null"/>.</param>
 /// <param name="Note">The note given with the decision, otherwise <see langword="null"/>.</param>
 /// <param name="Reason">The reason the patch gave (a Helper's cut Verdict reason), otherwise <see langword="null"/>.</param>
+/// <param name="Kind">What the change is, for a change whose <paramref name="Changes"/> list is empty; <see cref="TaskChangeKind.Edit"/> for every change that has fields.</param>
+/// <param name="Comment">The trimmed comment text for a <see cref="TaskChangeKind.Comment"/>, otherwise <see langword="null"/>.</param>
 internal sealed record TaskChange(
     TaskItem? Before,
     TaskItem After,
@@ -22,4 +24,6 @@ internal sealed record TaskChange(
     ChangeLogEntry Entry,
     Agency.Huddle.App.Tasks.HumanGate.TaskDecision? Decision = null,
     string? Note = null,
-    string? Reason = null);
+    string? Reason = null,
+    TaskChangeKind Kind = TaskChangeKind.Edit,
+    string? Comment = null);
