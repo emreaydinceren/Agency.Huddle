@@ -39,6 +39,7 @@ Finance Tracker. Every spend or signature waits for you. Only the Household Mana
 | **Files** | The Library, scoped to this Team |
 | **Tasks** | A List or Board with one swimlane per Project |
 | **Process** | The Team's rules, gates and Needs You level, on a Team with a `_team.md` file |
+| **Playbooks** | The Manager and Member Playbooks that tell Agents how to work |
 | **Details** | Type, name, purpose, Library folder and archive |
 
 A Project's page has **Files** and **Tasks**, and its own **Spent** total. Any ordinary sub-folder of a Team folder is a

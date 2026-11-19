@@ -33,7 +33,7 @@ Reach for these as your setup grows.
 
 | Area | What you can do | More |
 | --- | --- | --- |
-| **Running a Team** | Add a process, gates, digests, retrospectives and Requests between Teams | [Running a Team](Features/running-a-team.md) |
+| **Running a Team** | Add a process, Playbooks, gates, digests, retrospectives and Requests between Teams | [Running a Team](Features/running-a-team.md) |
 | **Scheduled Jobs** | Run an instruction on a timetable, for you or an Agent, and let an Agent set a Follow-up to come back to a conversation | [Scheduled Jobs](Features/scheduled-jobs.md) |
 | **Skills and Skill Packs** | Teach Agents new abilities with folders of instructions | [Skills and Skill Packs](Features/skills.md) |
 | **Finding your way around** | Search everything, and work in tabs and split panes | [Finding your way around](Features/finding-your-way.md) |
@@ -75,6 +75,10 @@ Reach for these as your setup grows.
   [User Guide](../Huddle.UserGuide.md#after-huddle-restarts)
 - **Keep Memory tidy for you.** Weekly, Memory Tidy merges, shortens and removes stale files, copies each file first
   and lists every change in the Feed. [User Guide](../Huddle.UserGuide.md#memory-tidy)
+- **Tell a Team how to work.** Every Team has a Manager Playbook and a Member Playbook on its **Playbooks** tab.
+  Agents read them every session. Customize either for one Team, or change the default in **Settings > Prompts**.
+  Give a Project a goal by assigning a Task to the manager, who keeps it as a mission.
+  [Running a Team](Features/running-a-team.md#give-a-team-its-playbooks)
 - **Rename a Team or Project.** Use **Rename team...** or **Rename project...**. Its folder, Rooms, Tasks and links
   move with it, and Agents are told once. [Teams and Projects](Features/teams-and-projects.md)
 
@@ -84,8 +88,6 @@ These are designed but not built:
 
 - **More Adapters:** Codex, Antigravity and Copilot, with Gemini CLI as a secondary option.
 - **Further Work mode options,** beyond the ones on an Agent's card today.
-- **Team Playbooks:** a Playbooks tab on every Team page that tells a manager how to run the Team and a member how to
-  work in it, and a Project mission the manager plans as Tasks.
 
 Huddle also has some deliberate limits:
 
