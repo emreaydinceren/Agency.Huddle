@@ -1196,7 +1196,7 @@ other sites move over area by area. Three rules held for every wrapper:
 The order was: the segmented control (the pilot), `ActionButton` with `DialogFooter`, `Notice`,
 `TextField` and `SelectField`, then the composites (the picker, `SettingSwitch`, `PropertyList`,
 `RowActionsMenu` with `ActionIconButton`), then `ChipRadioGroup`, `BusyLabel` and the browser
-scripts. Each one added a convention rule (CV14 to CV25; CV26 to CV29 came after the rollout) that holds every file to a baseline which
+scripts. Each one added a convention rule (CV14 to CV25; CV26 to CV30 came after the rollout, and CV30 keeps the building blocks free of app services: see [UXDesignGuidelines.md](UXDesignGuidelines.md#before-you-build-check-the-catalog-and-keep-it-current)) that holds every file to a baseline which
 may only shrink. Visual changes were proved with `agents/scripts/Css-Snapshot.ps1`, one comparison
 per wave; see [Proving a visual change](ComponentRollout.md#proving-a-visual-change).
 

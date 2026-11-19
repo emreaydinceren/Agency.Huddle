@@ -815,4 +815,42 @@ public sealed class UiConventionScannerTests
         Assert.Equal(1, UiConventionScanner.Cv29("src/Huddle.App/Components/Shared/MessageList.razor", call).Count);
         Assert.Equal(0, UiConventionScanner.Cv29("src/Huddle.App/Components/Shared/MessageList.razor", source).Count);
     }
+
+    /// <summary>CV30: in a building block, an app service injected either way and a written-out app namespace are counted, but not a framework service, the components namespace or a comment.</summary>
+    [Fact]
+    public void Cv30_AppDependencyInBuildingBlock_IsCounted()
+    {
+        const string source = """
+            @using Agency.Huddle.App.Acp
+            @using Agency.Huddle.Contracts
+            @using Agency.Huddle.App.Components.Shared.Dialogs
+            @inject IJSRuntime Js
+            @inject IDialogService DialogService
+            @inject ChatService Chat
+            @inject Agency.Huddle.App.Pipes.IAgentGateway Gateway
+            @* @inject PersonaStore Personas, from Agency.Huddle.App.Acp *@
+            @code {
+                [Inject]
+                private IOptions<TeamOptions> Options { get; set; }
+
+                [Inject] private NavigationManager Navigation { get; set; }
+            }
+            """;
+
+        RuleCount result = UiConventionScanner.Cv30("src/Huddle.App/Components/Shared/Notice.razor", source);
+
+        Assert.Equal("CV30", result.Rule);
+        Assert.Equal(5, result.Count);
+    }
+
+    /// <summary>CV30: only the listed building blocks are scanned, so an app card in the same folder may inject what it needs.</summary>
+    [Fact]
+    public void Cv30_AppCardOutsideTheList_IsNotScanned()
+    {
+        const string source = "@using Agency.Huddle.App.Acp\n@inject PersonaStore Personas\n";
+
+        Assert.Equal(2, UiConventionScanner.Cv30("src/Huddle.App/Components/Shared/TextField.razor", source).Count);
+        Assert.Equal(0, UiConventionScanner.Cv30("src/Huddle.App/Components/Shared/AgentProfileCard.razor", source).Count);
+        Assert.Equal(0, UiConventionScanner.Cv30("src/Huddle.App/Components/Library/TextField.razor", source).Count);
+    }
 }

@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26", "CV27", "CV28", "CV29"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26", "CV27", "CV28", "CV29", "CV30"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -31,8 +31,27 @@ internal static partial class UiConventionScanner
         "MudTextField", "MudSelect", "MudAutocomplete", "MudNumericField", "MudCheckBox", "MudRadioGroup",
     };
 
+    /// <summary>The folder that holds the shared building blocks CV30 scans.</summary>
+    private const string SharedRoot = "src/Huddle.App/Components/Shared/";
+
+    /// <summary>The shared building blocks CV30 keeps free of the application: file names under <c>Components/Shared/</c>.</summary>
+    private static readonly HashSet<string> BuildingBlocks = new(StringComparer.Ordinal)
+    {
+        "ActionButton.razor", "ActionIconButton.razor", "BusyLabel.razor", "Chip.razor", "ChipCloud.razor", "ChipRadioGroup.razor",
+        "DialogFooter.razor", "EmptyState.razor", "InlineConfirm.razor", "Notice.razor", "PageHeader.razor", "ProbedSelect.razor",
+        "PropertyList.razor", "PropertyRow.razor", "RowActionsMenu.razor", "SearchField.razor", "SearchHighlight.razor",
+        "SegmentedControl.razor", "SelectField.razor", "SettingSwitch.razor", "ShowAllRow.razor", "StatusChip.razor", "SystemRow.razor",
+        "TextField.razor",
+    };
+
+    /// <summary>The framework services a building block may inject (CV30): the browser, dialogs, the snackbar and navigation.</summary>
+    private static readonly HashSet<string> FrameworkServices = new(StringComparer.Ordinal)
+    {
+        "IJSRuntime", "IDialogService", "ISnackbar", "NavigationManager",
+    };
+
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV29</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV30</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -65,6 +84,7 @@ internal static partial class UiConventionScanner
         "CV27" => Cv27(path, text),
         "CV28" => Cv28(path, text),
         "CV29" => Cv29(path, text),
+        "CV30" => Cv30(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -310,6 +330,39 @@ internal static partial class UiConventionScanner
         }
 
         return new("CV28", path, count);
+    }
+
+    /// <summary>
+    /// CV30: a shared building block (the fixed list in <c>BuildingBlocks</c>: buttons, fields, notices, chips, rows and the other
+    /// catalog parts) that reaches into the application. Counted: an <c>@inject</c> or <c>[Inject]</c> of anything but the framework's
+    /// <c>IJSRuntime</c>, <c>IDialogService</c>, <c>ISnackbar</c> or <c>NavigationManager</c>, and every written-out
+    /// <c>Agency.Huddle.*</c> namespace other than <c>Agency.Huddle.App.Components</c> (a <c>@using</c> or a qualified type name).
+    /// The blocks then depend on MudBlazor and each other only, which a separate project would enforce; the app's own types reached
+    /// through <c>_Imports.razor</c> without a written namespace are not seen. Every other file in <c>Shared</c> is an app card and is not
+    /// scanned. Zero-tolerance: every block was clean when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv30(string path, string text)
+    {
+        if (!path.StartsWith(SharedRoot, StringComparison.Ordinal) || !BuildingBlocks.Contains(path[SharedRoot.Length..]))
+        {
+            return new("CV30", path, 0);
+        }
+
+        string source = StripRazorComments(text);
+        int count = 0;
+        foreach (Match injection in Injection().Matches(source))
+        {
+            string type = injection.Groups["type"].Value;
+            if (!FrameworkServices.Contains(type))
+            {
+                count++;
+            }
+        }
+
+        count += AppNamespace().Count(Injection().Replace(source, string.Empty));
+        return new("CV30", path, count);
     }
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
@@ -605,6 +658,12 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex("""(?<!cref\s*=\s*")(?<![\w.])MarkdownRenderer\s*\.\s*To(?:Task)?Html\s*\(""", RegexOptions.CultureInvariant)]
     private static partial Regex RendererCall();
+
+    [GeneratedRegex(@"@inject\s+(?<type>[\w.<>?]+)|\[Inject\]\s*(?:(?:public|private|protected|internal|required)\s+)*(?<type>[\w.<>?]+)", RegexOptions.CultureInvariant)]
+    private static partial Regex Injection();
+
+    [GeneratedRegex(@"(?<![\w.])Agency\.Huddle\.(?!App\.Components\b)(?:App\.)?\w+", RegexOptions.CultureInvariant)]
+    private static partial Regex AppNamespace();
 
     [GeneratedRegex(@"@\*.*?\*@|<!--.*?-->", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex RazorComments();
