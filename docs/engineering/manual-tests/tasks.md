@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**27 tests** · 19 free, 8 paid 💰 · about 4.7 hours.
+**31 tests** · 20 free, 11 paid 💰 · about 5.3 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -1219,6 +1219,120 @@ Team's backlog, and a drop inside one column writes only the dragged Task.*
 
 - Another Task's file changes on a drop -> placement renumbered neighbours (`RankPlacement`).
 - The card jumps back after the drop -> the zone is not following the saved rank (`TaskBoard.Reorder`).
+
+### TASKORDER-01 — The Task order panel lists a Team's Tasks by rank and blockers, and a Room of that Team shows the same list
+
+**Free** · about 8 min · no Turns
+
+*Proves [the TaskOrder spec §5.2](../../Huddle.TaskOrder-Specifications.md#52-task-order-panel): the panel puts Started
+first, then Next with a blocker listed ahead of what it blocks, and collapses the Backlog; it follows the Team of the
+open Task or Room and redraws on a change.*
+
+**Before you start**
+
+- A Team (seed Platform) with five Tasks: A in **In Progress**; B in **To Do**, rank 1, blocked by D; C in **To Do**,
+  rank 2; D in **To Do**, rank 3; E in **Backlog**. Open the Right sidebar.
+
+**Steps**
+
+1. Open C in its edit page (`/tasks/item/{id}`) and find **Task order** below Blocks.
+2. Read the groups, the dots and the second line of each item; click the title of B.
+3. Open the Backlog group. Then move D to **Done** from the Board in another Tab.
+4. Open the Platform Team Room, then a Room outside any Team.
+
+**Pass if — all of these**
+
+- Step 2: **Started** holds A (blue dot); **Next** holds D (Next, blocks B, accent dot), B (blocked by D, amber dot) and C
+  (no reason, grey dot), in that order; C is in bold; the Backlog shows as "Backlog (1)", collapsed; the frame's count is 2.
+- Clicking B's title opens B.
+- Step 3: E appears under the Backlog; D leaves the list without a reload, B becomes the Next entry (accent dot, "Next" reason), and the count follows.
+- Step 4: the Platform Team Room's panel shows the same list with nothing in bold; the root Room's shows nothing.
+
+**Fail if — any of these**
+
+- B is listed above D, or D has no "blocks" line -> `TaskOrder.Compute` is not placing the blocker ahead.
+- The list does not change after step 3 -> `TaskOrderPanel` is not redrawing on `TaskEvents`.
+- The root Room shows a list -> the panel is not resolving the Room's Team.
+
+### TASKORDER-02 — A Developer calls `next_task` and starts what it names
+
+**Paid 💰** · about 10 min · 2-3 Turns
+
+*Proves the `next_task` tool ([spec §5.1](../../Huddle.TaskOrder-Specifications.md#51-next_task-tool)): an Agent that is
+asked what to work on gets its own order, and the Task it names starts.*
+
+**Before you start**
+
+- A development Team with a Developer on a live Adapter (Sonnet or better), and the `blockers-done-before-start` gate on.
+  Two **To Do** Tasks assigned to the Developer: the first ranked 2, the second ranked 1 and blocked by an open Task
+  that is also assigned to the Developer.
+
+**Steps**
+
+1. In the Team Room, ask the Developer "what should you work on next?".
+2. Open the Developer's reply and the Task it names.
+
+**Pass if — all of these**
+
+- The Developer calls `next_task`, and its reply names the open blocker first (the Task to do before the ranked-1 one)
+  with the reason, and the ranked-2 Task after it.
+- The Developer moves the named Task to **In Progress**, and the Task order panel shows it under **Started**.
+
+**Fail if — any of these**
+
+- The reply names the blocked Task as Next -> `TaskOrder` is not treating the open blocker as blocking.
+- The Developer orders by `list_tasks` and never calls `next_task` -> the tool is not offered or the Playbook line is missing.
+
+### TASKORDER-03 — A refused start names the next Task
+
+**Paid 💰** · about 8 min · 2 Turns
+
+*Proves C-4: when the gate refuses an Agent's start, the refusal adds the Agent's next startable Task.*
+
+**Before you start**
+
+- The setup of TASKORDER-02, with a third **To Do** Task assigned to the Developer, unblocked and ranked 3.
+
+**Steps**
+
+1. Ask the Developer in the Team Room to start the blocked Task.
+2. Read the Developer's tool result.
+
+**Pass if — all of these**
+
+- The blocked Task stays in **To Do**, and the tool result carries the `Gate blockers-done-before-start` text followed by
+  `Your next startable Task is <id> "<title>".` naming the open blocker.
+
+**Fail if — any of these**
+
+- The refusal has no second line -> `UpdateTaskTool` is not adding the next-Task line.
+- The line names the blocked Task -> `TaskOrder.Compute` was given the wrong scope.
+
+### TASKORDER-04 — A new household Team refuses a blocked start
+
+**Paid 💰** · about 10 min · 2 Turns
+
+*Proves D-7: every built-in Team's process lists `blockers-done-before-start`, not only the development ones.*
+
+**Before you start**
+
+- A Team created now from the household type, with its Agent on a live Adapter (Sonnet or better). Two **To Do** Tasks
+  assigned to that Agent, the second blocked by the first.
+
+**Steps**
+
+1. Open the Team's **Process** tab and read the gates.
+2. Ask the Agent to start the second Task.
+
+**Pass if — all of these**
+
+- The Process tab lists `blockers-done-before-start`.
+- The second Task stays in **To Do**, and the refusal names the first Task.
+
+**Fail if — any of these**
+
+- The gate is missing from the Process tab -> the type's `processes/*.md` files do not list it.
+- The Task moves -> the Team's process was not the one loaded.
 
 ---
 

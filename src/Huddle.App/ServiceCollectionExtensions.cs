@@ -977,6 +977,11 @@ public static class ServiceCollectionExtensions
             static subject => subject is Sidebar.TaskSubject { HasBlockers: true }, typeof(Components.Sidebar.TaskBlockersPanel), static options => options.Tasks.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("task-blocks", "Blocks", MudBlazor.Icons.Material.Filled.Block, 25,
             static subject => subject is Sidebar.TaskSubject { IsBlocking: true }, typeof(Components.Sidebar.TaskBlocksPanel), static options => options.Tasks.Enabled));
+        // One panel for the three Subjects that name a Team: a Task open for editing, a Task selected on the Tasks page, and a
+        // Room. Order 27 puts it after Blocks (25) and before Linked documents (30) for a Task, and after "room-tasks" (20)
+        // and before "room-documents" (30) for a Room (docs/Huddle.TaskOrder-Specifications.md, §5.2).
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("task-order", "Task order", MudBlazor.Icons.Material.Filled.FormatListNumbered, 27,
+            static subject => subject is Sidebar.TaskSubject or Sidebar.TaskDetailSubject or Sidebar.RoomSubject, typeof(Components.Sidebar.TaskOrderPanel), static options => options.Tasks.Enabled));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("task-documents", "Linked documents", MudBlazor.Icons.Material.Filled.Link, 30,
             static subject => subject is Sidebar.TaskSubject, typeof(Components.Sidebar.TaskDocumentsPanel), static options => options.Tasks.Enabled && options.Library.Enabled));
     }

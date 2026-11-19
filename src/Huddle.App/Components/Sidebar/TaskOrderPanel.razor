@@ -1,0 +1,188 @@
+@*
+    The Right sidebar's Task order panel (docs/Huddle.TaskOrder-Specifications.md, §5.2): the Team's active Tasks in the order
+    TaskOrder gives, one timeline per group (Started, Next, Backlog). Read-only; the Backlog is collapsed until opened.
+    A Task Subject shows its Team with that Task in bold; a Room Subject shows the Room's Team; anything else renders nothing.
+    The count in the frame is the number of Tasks that can start now.
+*@
+@using Agency.Huddle.App.Data
+@using Agency.Huddle.App.Sidebar
+@using Agency.Huddle.App.Tasks
+@using Agency.Huddle.App.Tasks.Ordering
+@inherits SidebarPanelBase
+@implements IDisposable
+@inject TaskStore Store
+@inject TaskEvents TaskEvents
+@inject ITeamDirectory TeamDirectory
+
+@if (this.entries.Count > 0)
+{
+    @foreach (TaskOrderGroup group in new[] { TaskOrderGroup.Started, TaskOrderGroup.Next })
+    {
+        IReadOnlyList<TaskOrderEntry> items = this.InGroup(group);
+        if (items.Count > 0)
+        {
+            <div class="task-order-group-label chip-meta">@group</div>
+            @this.Timeline(items)
+        }
+    }
+
+    IReadOnlyList<TaskOrderEntry> backlog = this.InGroup(TaskOrderGroup.Backlog);
+    if (backlog.Count > 0)
+    {
+        <ActionButton Role="ButtonRole.Quiet" Class="task-order-backlog-toggle" StartIcon="@(this.backlogOpen ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)" OnClick="this.ToggleBacklog">Backlog (@backlog.Count)</ActionButton>
+        @if (this.backlogOpen)
+        {
+            @this.Timeline(backlog)
+        }
+    }
+}
+
+@code {
+    private IReadOnlyList<TaskOrderEntry> entries = [];
+    private TaskId? nextId;
+    private string? team;
+    private bool backlogOpen;
+
+    /// <summary>One timeline: a dot per entry, the title as a link, and the id and reason under it.</summary>
+    private RenderFragment<IReadOnlyList<TaskOrderEntry>> Timeline => items => @<MudTimeline TimelinePosition="TimelinePosition.Start" Modifiers="false" Class="doc-history-timeline task-order-timeline">
+        @foreach (TaskOrderEntry entry in items)
+        {
+            <MudTimelineItem Size="Size.Small" Color="@this.ColorOf(entry)" Class="doc-history-entry">
+                <div class="task-order-body">
+                    <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="@this.TitleClass(entry)" title="@($"{entry.Task.Id} {entry.Task.Title}")"
+                             Href="@($"/tasks/item/{Uri.EscapeDataString(entry.Task.Id.ToString())}")">@entry.Task.Title</MudLink>
+                    <div class="chip-meta task-order-meta">@this.Meta(entry)</div>
+                </div>
+            </MudTimelineItem>
+        }
+    </MudTimeline>;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.TaskEvents.TaskChanged += this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded += this.OnTasksReloaded;
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        this.team = await this.TeamOfAsync(this.Subject);
+        this.Resolve();
+    }
+
+    /// <summary>Stops listening.</summary>
+    public void Dispose()
+    {
+        this.TaskEvents.TaskChanged -= this.OnTaskChanged;
+        this.TaskEvents.TasksReloaded -= this.OnTasksReloaded;
+    }
+
+    /// <summary>The Team the Subject belongs to: the Task's, or the Room's when it has one; null for any other Subject.</summary>
+    /// <param name="subject">What the page shows.</param>
+    private async Task<string?> TeamOfAsync(PageSubject subject)
+    {
+        TaskId? id = this.OpenTaskId();
+        if (id is { } taskId)
+        {
+            return this.Store.Get(taskId)?.Location.Team;
+        }
+
+        if (subject is RoomSubject room)
+        {
+            Room? found = await this.TeamDirectory.GetRoomAsync(room.RoomId);
+            return string.IsNullOrEmpty(found?.Team) ? null : found.Team;
+        }
+
+        return null;
+    }
+
+    /// <summary>The Task the Subject names, to show in bold; null for a Room.</summary>
+    private TaskId? OpenTaskId() => this.Subject switch
+    {
+        TaskSubject task => task.Id,
+        TaskDetailSubject detail => detail.Id,
+        _ => null,
+    };
+
+    /// <summary>Orders the Team's active Tasks and reports how many can start.</summary>
+    private void Resolve()
+    {
+        if (this.team is not { } teamName)
+        {
+            this.entries = [];
+            this.nextId = null;
+            this.Panel?.SetCount(null);
+            return;
+        }
+
+        IReadOnlyList<TaskItem> scope = [.. this.Store.All.Where(task => !task.Location.Closed && string.Equals(task.Location.Team, teamName, StringComparison.Ordinal))];
+        TaskOrderResult result = TaskOrder.Compute(scope, this.Store.Get);
+        this.entries = result.Entries;
+        this.nextId = result.Next?.Task.Id;
+        this.Panel?.SetCount(this.entries.Count(static entry => entry.IsStartable));
+    }
+
+    private IReadOnlyList<TaskOrderEntry> InGroup(TaskOrderGroup group) => [.. this.entries.Where(entry => entry.Group == group)];
+
+    private bool IsNext(TaskOrderEntry entry) => this.nextId is { } id && id == entry.Task.Id;
+
+    private Color ColorOf(TaskOrderEntry entry) => entry switch
+    {
+        { Group: TaskOrderGroup.Started } => Color.Info,
+        _ when this.IsNext(entry) => Color.Primary,
+        { Group: TaskOrderGroup.Backlog } => Color.Default,
+        { IsStartable: false } => Color.Warning,
+        _ => Color.Default,
+    };
+
+    private string TitleClass(TaskOrderEntry entry) =>
+        this.OpenTaskId() is { } id && id == entry.Task.Id ? "task-order-title task-order-current" : "task-order-title";
+
+    /// <summary>The id, then the reason where it is not plain rank, joined with a middle dot.</summary>
+    /// <param name="entry">The entry to describe.</param>
+    private string Meta(TaskOrderEntry entry)
+    {
+        List<string> parts = [entry.Task.Id.ToString()];
+        if (this.IsNext(entry))
+        {
+            parts.Add("Next");
+        }
+
+        if (entry.Group == TaskOrderGroup.Next && entry.Task.Status == TaskState.Backlog)
+        {
+            parts.Add("in Backlog");
+        }
+
+        if (entry.Blocks is { } blocks)
+        {
+            parts.Add($"blocks {blocks}");
+        }
+
+        if (entry.BlockedBy.Count > 0)
+        {
+            parts.Add("blocked by " + string.Join(", ", entry.BlockedBy.Select(static blocker => blocker.Id.ToString())));
+        }
+
+        List<string> others = [.. entry.Cycle.Where(id => id != entry.Task.Id).Select(static id => id.ToString())];
+        if (others.Count > 0)
+        {
+            parts.Add("cycle with " + string.Join(", ", others));
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    private void ToggleBacklog() => this.backlogOpen = !this.backlogOpen;
+
+    private void OnTaskChanged(TaskChange change) => this.Redraw();
+
+    private void OnTasksReloaded() => this.Redraw();
+
+    private void Redraw() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.Resolve();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+}

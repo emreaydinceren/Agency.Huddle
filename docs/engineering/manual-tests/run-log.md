@@ -4268,6 +4268,34 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-27--dragging-a-c
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, free lane, Agents off)* | `feat/task-rank` on `95fbf0c8`, uncommitted |  | Copy of the `software-co` seed, `-NoAcp`, `Team__DataDir` set by environment. Platform board, Backlog / No project cell (PLAT-0016, 0017, 0014, unranked). Step 1: PLAT-0014 to the top → only its file changed, `rank: 10`, Timeline `rank: — → 10`. Step 2: PLAT-0017 → `rank: 20`, only its file. Step 3: PLAT-0016 between them → `rank: 15`, only its file. Step 4: PLAT-0017 set to 1 on the edit page → `rank: 20 → 1`; Board order 0017, 0014, 0016, and the All Tasks list starts with the same three. Read view: Rank 15 after Priority; PLAT-0012 (unranked) shows "—". Step 5: Growth by project (due-date sort), GROW-0006 dragged to the top of To Do → no file changed (steps 1-3 show the same drag does reach the Board). The test was rewritten during the run: its first draft pointed at a Fields › Sort control that does not exist. |
 
+### TASKORDER-01 — The Task order panel lists a Team's Tasks by rank and blockers, and a Room of that Team shows the same list
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-01--the-task-order-panel-lists-a-teams-tasks-by-rank-and-blockers-and-a-room-of-that-team-shows-the-same-list)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TASKORDER-02 — A Developer calls `next_task` and starts what it names
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-02--a-developer-calls-next_task-and-starts-what-it-names)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TASKORDER-03 — A refused start names the next Task
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-03--a-refused-start-names-the-next-task)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### TASKORDER-04 — A new household Team refuses a blocked start
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-04--a-new-household-team-refuses-a-blocked-start)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

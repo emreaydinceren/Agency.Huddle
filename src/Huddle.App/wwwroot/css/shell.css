@@ -1095,6 +1095,19 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
+/* Task order panel: a small group label over each timeline, the open Task's title in bold, the Backlog toggle flush left. */
+.task-order-group-label {
+    margin-top: 8px;
+}
+
+.task-order-current {
+    font-weight: 600;
+}
+
+.task-order-backlog-toggle {
+    margin-top: 8px;
+}
+
 /* Nothing to show: the sentence alone, so the empty text line takes no room. */
 .right-sidebar .empty-state-text:empty {
     display: none;
