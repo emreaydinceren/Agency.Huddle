@@ -40,7 +40,6 @@ blocker gate on.**
   gates.
 - Ranks compare across Teams as plain numbers in an Agent's own list (ADR-0099). An Agent with Tasks in two Teams sees
   them interleaved, and it can filter by `team`.
-- One In Progress Task per person is not decided by this ADR. If it is ever built, it is a gate, and TaskOrder does not
-  change.
+- One In Progress Task per person is decided by ADR-0102, as a gate; TaskOrder does not change.
 
 Amends ADR-0085: the gate is a default of every built-in process, not only the development ones.
