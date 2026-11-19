@@ -8,7 +8,7 @@ date: 2026-11-19
 Rank (ADR-0099) lets the Human or the manager order a Team's backlog. Each Agent still works out its next Task from
 prompt text and a `list_tasks` result. A blocked Task looks like any other there, so an Agent picks it and the
 `blockers-done-before-start` gate refuses the start. A rank 1 Task can also wait behind a blocker ranked 40 that
-nobody treats as urgent. In 18 of the 26 built-in processes `blocked_by` is only a note, because only the development
+nobody treats as urgent. In 25 of the 29 built-in processes `blocked_by` is only a note, because only the development
 processes turn the gate on (ADR-0085).
 
 ## Decision

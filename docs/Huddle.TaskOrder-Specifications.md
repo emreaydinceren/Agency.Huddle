@@ -68,7 +68,7 @@ The following calls were made while writing this spec. The owner can reverse any
 | A Task is blocked while any Task in its stored `blocked_by` is not terminal (Done, Cancelled, Duplicate, Rejected). A blocker that no longer exists blocks nothing. The test is private | `TaskService.OpenBlockersOf`, `TaskService.cs:1420`; `TaskStates.IsTerminal` |
 | The gate refuses a move into In Progress, Needs You or Done while a blocker is open, naming each blocker with its status. The Human can override it | `ProcessGateService.CheckTaskChange` ~52, `IsBlockerGated` ~159, `BlockerRefusal` ~166 |
 | The gates of a Team come from `_team.md`, written from its process's `gates:` line when the Team is made. The Human can switch a gate off in the Process tab (`GateOffConsequence`) | `ProcessGateService.EnabledGates`; `TeamTypes/Builtin/*/processes/*.md` |
-| Only the four development processes list `blockers-done-before-start`. Four other processes list only `qa-evidence-before-done`, and 18 list no gates at all | `TeamTypes/Builtin/` |
+| Only the four development processes list `blockers-done-before-start`. Four other processes list only `qa-evidence-before-done`, and 21 list no gates at all | `TeamTypes/Builtin/` |
 | A changed built-in process bumps the minor number of its `template:` version | e.g. `household-basics@1.1.0` → `1.2.0` in `aafc31dc` |
 | `list_tasks` returns Tasks in the Views' order and tells Agents "Take your open Tasks in rank order" | `Acp/Tools/ListTasksTool.cs`; `PromptCatalog.cs` `tool.listTasks.description` |
 | The default Playbooks carry the rank lines (member: "take your open Tasks in rank order, lowest first"; manager: "order your Team's backlog with a Task's rank") | `Overlays/second-brain/prompts/memberPlaybook.md:25`, `managerPlaybook.md:50` |
@@ -269,7 +269,7 @@ Across Teams, ranks compare as plain numbers and interleave. ADR-0099 already ac
 
 ### 5.4 The gate in every Team (D-7)
 
-- Add `'blockers-done-before-start'` to the `gates:` line of each of the 22 non-development built-in processes, and its
+- Add `'blockers-done-before-start'` to the `gates:` line of each of the 25 non-development built-in processes, and its
   `Gates` bullet, worded as in the development processes. Bump each `template:` minor version.
 - Installed Teams keep their `_team.md` as it is. There is no migration: installed Teams are test data (owner ruling). Only new
   Teams get the gate.
@@ -303,7 +303,7 @@ Prove each new test can fail, as [agents/Testing.md](../agents/Testing.md) requi
 | # | Slice | Depends on |
 | --- | --- | --- |
 | 1 | **Core:** `TaskQuery.DefaultOrder`, `TaskBlockers.Open` (with `TaskService` moved onto it), `OpenBlocker` gains the assignee, `TaskOrder.Compute` and its tests | — |
-| 2 | **Gate in every Team:** the 22 process files, their template bumps, the every-process test, and the user guide sentence about blockers | — (parallel with 1) |
+| 2 | **Gate in every Team:** the 25 process files, their template bumps, the every-process test, and the user guide sentence about blockers | — (parallel with 1) |
 | 3 | **Agent surface:** `next_task`, its `PromptCatalog` texts and regenerated defaults, the refusal line in `update_task`, the Playbook and `list_tasks` text (§5.3), `ToolNamesTests`, the goldens and `ToolActivityText` | 1 |
 | 4 | **Panel:** `TaskOrderPanel`, its registration, bUnit tests, `wireframes.md`, the manual tests and a User Guide line | 1 |
 
