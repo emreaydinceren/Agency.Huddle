@@ -191,6 +191,20 @@ Items are cards, newest first, under day headings. A card shows who did what, a 
 
 **Helpers in the Feed.** When the Needs Human Helper turns **Requires your acceptance** on for a Task, the Feed shows it as a Notification, with the Helper's reason and a Helper mark where an Agent's avatar would be, until you turn the gate off, decide the Task, it waits in Needs You, or it closes. If a Helper pauses at its daily cap, or fails three times in a row, **Huddle** says so in the **Helpers** Category and links to the Helper's card on **Settings › Helpers**, where **Continue** is; the item is done when you continue, the day ends or the Helper works again. The Helper's wake-up Message to the Task's assignee is written by **Huddle**, not by you, so it no longer answers a Mention of you or clears a Room from Needs you.
 
+**Other items you may see.** These ring the bell (they are Notifications):
+
+- **A Spend cap reached.** "*Team* has spent 5 USD running inside the Team, its cap. Let it spend another 5 USD?" Decide it as described under [The Needs You level](#the-needs-you-level).
+- **A Job that did not run.** "*Title* did not run: *reason*", for a one-off Job of yours that was removed without posting, such as one more than a day late. The same item for an Agent's Job or Follow-up is only Activity, not a Notification, and the Agent finds a line about it in its Job Room.
+- **A Team rename that did not finish.** "Renaming *Old* to *New* did not finish: *what*. Huddle will try again at the next start."
+- **Memory Tidy.** One item per pass that changed topic files, as under [Memory Tidy](#memory-tidy).
+
+These are Activity only, in the Feed without ringing the bell:
+
+- **A Follow-up set.** "*Agent* set a Follow-up in *Room* for *time*."
+- **A Team archived.** "Team *Name* archived."
+- **A Task or Sprint that went ahead.** "proceeded under Team level Run inside the Team", naming the Task that merged into main without an Accept, or the Sprint approved without you.
+- **A switch you made.** "You turned on account connectors for *Agent*" and "You turned *Agent*'s browser on", and the same for off.
+
 Feed items are kept for 30 days (a Notification you dismissed, 30 days after you dismissed it). To turn the Feed off, set `Team:Feed:Enabled` to `false`; the bell and the **Feed** icon then disappear. See the [Engineering Guide](Huddle.EngineeringGuide.md) for the keys.
 
 ### Tabs
