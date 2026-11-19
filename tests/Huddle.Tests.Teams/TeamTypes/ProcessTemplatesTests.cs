@@ -370,6 +370,37 @@ public sealed partial class ProcessTemplatesTests
         Assert.True(failures.Count == 0, "These processes say a Task waits in Needs You with no Proof step first: " + string.Join(", ", failures));
     }
 
+    /// <summary>TaskOrder 5.4: every built-in process, whatever its Team type, lists the blockers gate in its <c>gates:</c> line and has a Gates bullet for it.</summary>
+    [Fact]
+    public void Process_EveryBuiltIn_ListsTheBlockersGateAndItsBullet()
+    {
+        string[] resources = typeof(TeamTypeCatalog).Assembly.GetManifestResourceNames()
+            .Select(static n => n.Replace('\\', '/'))
+            .Where(static n => n.Contains("TeamTypes/Builtin/", StringComparison.Ordinal) && n.Contains("/processes/", StringComparison.Ordinal) && n.EndsWith(".md", StringComparison.Ordinal)) // contains-ok: resource path filter
+            .ToArray();
+
+        Assert.True(resources.Length >= 29, "Expected every built-in process, found " + resources.Length);
+        List<string> missingGate = [];
+        List<string> missingBullet = [];
+        foreach (string resource in resources)
+        {
+            string text = ReadResourceText(resource);
+            string gatesLine = text.Split('\n').First(static l => l.StartsWith("gates:", StringComparison.Ordinal));
+            if (!gatesLine.Contains("'blockers-done-before-start'", StringComparison.Ordinal)) // contains-ok: scanning shipped front matter
+            {
+                missingGate.Add(resource);
+            }
+
+            if (!GatesLines(text).Any(static l => l.StartsWith("- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open", StringComparison.Ordinal)))
+            {
+                missingBullet.Add(resource);
+            }
+        }
+
+        Assert.True(missingGate.Count == 0, "No blockers gate in the gates: line of: " + string.Join(", ", missingGate));
+        Assert.True(missingBullet.Count == 0, "No blockers gate bullet in: " + string.Join(", ", missingBullet));
+    }
+
     /// <summary>Returns the trimmed lines of the Gates section of a raw process file.</summary>
     /// <param name="text">The raw file text.</param>
     /// <returns>The lines between <c>## Gates</c> and the next level-two heading.</returns>

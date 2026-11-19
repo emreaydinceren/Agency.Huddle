@@ -295,16 +295,17 @@ It holds one or more panels, depending on the page:
 
 | On | Panels |
 | --- | --- |
-| A Room | **Members**, **Tasks in this Room**, **Documents in this Room** |
+| A Room | **Members**, **Tasks in this Room**, **Task order** (for a Room that belongs to a Team), **Documents in this Room** |
 | A Markdown note in the Library | **Outline**, **Linked documents** |
-| A Task you opened on the Tasks page | **Task**: its details, read-only, with **Edit** (the sidebar opens by itself when you open a Task) |
-| A Task in its edit page | **Activity**, **Blocked by**, **Blocks**, **Linked documents** (the last three only when they have something to show) |
+| A Task you opened on the Tasks page | **Task**: its details, read-only, with **Edit**, and **Task order** (the sidebar opens by itself when you open a Task) |
+| A Task in its edit page | **Activity**, **Blocked by**, **Blocks**, **Task order**, **Linked documents** (Blocked by, Blocks and Linked documents only when they have something to show) |
 | Any other page | None. The sidebar says `Nothing to show here`, with a line on where panels appear. |
 
 | Panel | What it shows | What selecting it does |
 | --- | --- | --- |
 | **Members** | Everyone in the Room, Agents first, each with their avatar and, for an Agent, the [presence badge](#status-at-a-glance) on it. | The avatar opens the member's profile. |
 | **Tasks in this Room** | Each Task the Room's Messages mention, most recent first, with its current title and state. A deleted Task shows `(unavailable)`. A code such as an invoice number (`INV-2043`) is listed only if its letters are the Task prefix of a Team that exists or once existed; otherwise it stays plain text. | The row opens the Task. The arrow beside it scrolls the Room to the Message that last mentioned it. |
+| **Task order** | The Team's open Tasks in the order to work them: **Started** first, then **Next**, where a Task that blocks another is listed ahead of it and the one to start now has the accent dot; the Backlog is collapsed under its count. The Task you have open is in bold, and a second line gives each Task's id and why it sits there (blocks, blocked by, in a blocker cycle). Read-only: change the order by rank on the Board. | The title opens the Task. |
 | **Documents in this Room** | Each Library file the Room's Messages mention, most recent first. A file that is no longer in the Library is shown in grey. | The row opens the file in the Library. The arrow scrolls the Room to the Message. |
 | **Outline** | The note's headings, indented by level. In **Split** mode it follows your typing; in **Read** and **Edit** it shows the note as last loaded or saved. | Scrolls the note to that heading. In **Edit** mode it moves the cursor to the heading's line. |
 | **Linked documents** | The notes this note links to with `[[...]]`, in the order they appear. A link to a note that does not exist shows `(not found)`. | Opens the linked note. |
@@ -1252,7 +1253,7 @@ on the Task, "proceeded under Team level Run inside the Team", and as an item in
 | `checks-before-merge` | A `git merge` or `git push` by an Agent in the Team until an Evidence line shows the Team's `checkCommand` ending with exit code 0. |
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
 | `failing-test-before-fix` | A bug Task moving to **Needs you** or **Done** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
-| `blockers-done-before-start` | A Task moving to **In Progress**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. The development processes have it, and development Teams you already had get it once, when you first start the new version; switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
+| `blockers-done-before-start` | A Task moving to **In Progress**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. Every built-in process has it, so a new Team of any type starts with it on; development Teams you already had got it once, when you first started that version, and other Teams you already had keep the gates they have. Switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
 
 A Task in a Team with gates shows a line such as `Gates: qa-evidence-before-done`
 in its panel.

@@ -853,6 +853,10 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-25](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write) |  | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
 | [TASKS-26](tasks.md#tasks-26--follow-ups-a-manager-files-while-answering-a-projects-question-task-show-on-that-projects-board) | 💰 | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
 | [TASKS-27](tasks.md#tasks-27--dragging-a-card-within-its-board-column-changes-only-its-rank) |  | Pass |  | run by an agent 2026-11-19, free lane, see the Run log |
+| [TASKORDER-01](tasks.md#taskorder-01--the-task-order-panel-lists-a-teams-tasks-by-rank-and-blockers-and-a-room-of-that-team-shows-the-same-list) |  | Pass |  | run by an agent 2026-11-19, paid lane, see the Run log |
+| [TASKORDER-02](tasks.md#taskorder-02--a-developer-calls-next_task-and-starts-what-it-names) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
+| [TASKORDER-03](tasks.md#taskorder-03--a-refused-start-names-the-next-task) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
+| [TASKORDER-04](tasks.md#taskorder-04--a-new-household-team-refuses-a-blocked-start) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
 
 ## adapters
 

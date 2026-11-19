@@ -1,7 +1,7 @@
 ---
 title: 'Legal basics'
-template: 'legal-basics@1.1.0'
-gates: ['qa-evidence-before-done']
+template: 'legal-basics@1.2.0'
+gates: ['qa-evidence-before-done', 'blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Legal basics
@@ -40,6 +40,7 @@ This Team reads the contracts, leases, policies, notices and terms the Human has
 
 - `qa-evidence-before-done`: a Task cannot be Done until the Compliance Lead has posted an Evidence line.
 - No agent says a document is safe to sign or compliant. The Human decides and signs, with a lawyer where it matters.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
 
 ## Definition of Done
 

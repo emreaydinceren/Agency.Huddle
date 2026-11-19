@@ -1,7 +1,7 @@
 ---
 title: 'Community org basics'
-template: 'community-org-basics@1.1.0'
-gates: []
+template: 'community-org-basics@1.2.0'
+gates: ['blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Community org basics
@@ -43,7 +43,8 @@ Follow the voice principles in `Teams/AGENTS.md`. Write plainly for members who 
 
 ## Gates
 
-- This process declares no hard gate. The board secretary's Evidence line is the check, and the Human sends everything.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The board secretary's Evidence line is the check, and the Human sends everything.
 
 ## Definition of Done
 

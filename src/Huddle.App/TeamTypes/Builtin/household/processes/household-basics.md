@@ -1,7 +1,7 @@
 ---
 title: 'Household basics'
-template: 'household-basics@1.2.0'
-gates: []
+template: 'household-basics@1.3.0'
+gates: ['blockers-done-before-start']
 digest: { every: 7, unit: 'days' }
 retro: { every: 28, unit: 'days' }
 ---
@@ -48,7 +48,8 @@ Each job has one owner from noticing that it needs doing to getting it done, nev
 
 ## Gates
 
-- This process declares no hard gate. The household manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The household manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
 - Every Task that spends money or needs a signature carries an `action:` line naming the amount and who is paid, or what is signed. That Task stays In Progress until its Proof is complete, then Huddle moves it to Needs You, where it waits for a parent to accept it, however small the amount.
 
 ## Definition of Done

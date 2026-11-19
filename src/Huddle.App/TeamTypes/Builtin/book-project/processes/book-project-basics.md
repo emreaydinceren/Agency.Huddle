@@ -1,7 +1,7 @@
 ---
 title: 'Book project basics'
-template: 'book-project-basics@1.1.0'
-gates: []
+template: 'book-project-basics@1.2.0'
+gates: ['blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Book project basics
@@ -43,7 +43,8 @@ Follow the voice principles in `Teams/AGENTS.md`. Write in the author's voice ra
 
 ## Gates
 
-- This process declares no hard gate. The developmental editor's Evidence line is the check, and the author decides every change.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The developmental editor's Evidence line is the check, and the author decides every change.
 
 ## Definition of Done
 

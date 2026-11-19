@@ -216,6 +216,7 @@ Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-blockers order 20
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel backlinks order 25 Agency.Huddle.App.Components.Sidebar.BacklinksPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-blocks order 25 Agency.Huddle.App.Components.Sidebar.TaskBlocksPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel tags order 27 Agency.Huddle.App.Components.Sidebar.TagsPanel
+Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-order order 27 Agency.Huddle.App.Components.Sidebar.TaskOrderPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel recent-edits order 30 Agency.Huddle.App.Components.Sidebar.RecentEditsPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel room-documents order 30 Agency.Huddle.App.Components.Sidebar.RoomDocumentsPanel
 Singleton Agency.Huddle.App.Sidebar.SidebarPanel -> panel task-documents order 30 Agency.Huddle.App.Components.Sidebar.TaskDocumentsPanel

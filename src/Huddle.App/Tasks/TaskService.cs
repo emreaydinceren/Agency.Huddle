@@ -580,7 +580,7 @@ internal sealed class TaskService : IDisposable
         TaskItem candidate = gated with { Status = TaskState.NeedsYou };
         if (!proof.IsComplete
             || proof.Total == 0
-            || this.OpenBlockersOf(task).Count > 0
+            || TaskBlockers.Open(task, this.store.Get).Count > 0
             || HumanGateRules.Check(task, candidate, TaskActors.Huddle, proof, this.human.Name) is not null
             || this.store.ReadText(task.Id) is not { } text)
         {
@@ -1394,7 +1394,7 @@ internal sealed class TaskService : IDisposable
             || (this.store.Get(parentId) is { } parent && IsApproved(parent));
 
         // The stored blockers decide, never the candidate's: an update that clears blocked_by while it starts the Task must not pass.
-        IReadOnlyList<OpenBlocker> openBlockers = this.OpenBlockersOf(current);
+        IReadOnlyList<OpenBlocker> openBlockers = TaskBlockers.Open(current, this.store.Get);
         bool hasDoneVerifyChild = this.store.All.Any(child => child.Parent == current.Id
             && child.Status == TaskState.Done
             && child.Tags.Contains(ReviewTags.Verify, StringComparer.OrdinalIgnoreCase));
@@ -1413,22 +1413,6 @@ internal sealed class TaskService : IDisposable
         }
 
         return null;
-    }
-
-    /// <summary>Lists the Tasks in a Task's stored <c>blocked_by</c> that are not finished; a blocker that no longer exists blocks nothing.</summary>
-    /// <param name="task">The Task as stored.</param>
-    private List<OpenBlocker> OpenBlockersOf(TaskItem task)
-    {
-        List<OpenBlocker> open = [];
-        foreach (TaskId id in task.BlockedBy)
-        {
-            if (this.store.Get(id) is { } blocker && !blocker.Status.IsTerminal())
-            {
-                open.Add(new OpenBlocker(id, blocker.Status));
-            }
-        }
-
-        return open;
     }
 
     /// <summary>The refusals that come before the process gates: a Request leaving Backlog without triage, and a blocker removed without authority (#538).</summary>

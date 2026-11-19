@@ -4268,6 +4268,38 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-27--dragging-a-c
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, free lane, Agents off)* | `feat/task-rank` on `95fbf0c8`, uncommitted |  | Copy of the `software-co` seed, `-NoAcp`, `Team__DataDir` set by environment. Platform board, Backlog / No project cell (PLAT-0016, 0017, 0014, unranked). Step 1: PLAT-0014 to the top → only its file changed, `rank: 10`, Timeline `rank: — → 10`. Step 2: PLAT-0017 → `rank: 20`, only its file. Step 3: PLAT-0016 between them → `rank: 15`, only its file. Step 4: PLAT-0017 set to 1 on the edit page → `rank: 20 → 1`; Board order 0017, 0014, 0016, and the All Tasks list starts with the same three. Read view: Rank 15 after Priority; PLAT-0012 (unranked) shows "—". Step 5: Growth by project (due-date sort), GROW-0006 dragged to the top of To Do → no file changed (steps 1-3 show the same drag does reach the Board). The test was rewritten during the run: its first draft pointed at a Fields › Sort control that does not exist. |
 
+### TASKORDER-01 — The Task order panel lists a Team's Tasks by rank and blockers, and a Room of that Team shows the same list
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-01--the-task-order-panel-lists-a-teams-tasks-by-rank-and-blockers-and-a-room-of-that-team-shows-the-same-list)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane)* | `feat/task-order` on `60eb1f86` |  | Copy of the `software-co` seed; a new development Team DevLane built in the UI. To Do Tasks: DEVL-0001 rank 40, DEVL-0002 rank 1 blocked by 0001, DEVL-0003 rank 2, DEVL-0004 rank 3. Panel on DEVL-0003: DEVL-0001 "Next · blocks DEVL-0002" (Primary dot), DEVL-0002 "blocked by DEVL-0001" (Warning), DEVL-0003 in bold, DEVL-0004. The blocker, not DEVL-0003, is Next: it is the first startable entry. Read by DOM text and computed styles. After Ana started DEVL-0001, the Team Room's panel showed it under Started without a reload. |
+
+### TASKORDER-02 — A Developer calls `next_task` and starts what it names
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-02--a-developer-calls-next_task-and-starts-what-it-names)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | Developer Ana (Sonnet, confirmed in `persona_models` and the session jsonl). "Call next_task, then start the Task it names": activity showed "Finding the next Task" and `next_task` named DEVL-0001. Ana first held back because the Task had no acceptance line (her process, not the tool); given one, she moved DEVL-0001 To Do → In Progress herself (Timeline 22:38:56Z, actor Ana). |
+
+### TASKORDER-03 — A refused start names the next Task
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-03--a-refused-start-names-the-next-task)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | Ana asked to start DEVL-0002. The tool result in her session: the unchanged gate text naming DEVL-0001 (In Progress), then "Your next startable Task is DEVL-0003 "C the startable one"." DEVL-0002 stayed To Do. |
+
+### TASKORDER-04 — A new household Team refuses a blocked start
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-04--a-new-household-team-refuses-a-blocked-start)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | New household Team HouseLane: `_team.md` has `gates: ['blockers-done-before-start']` and the Process tab lists it. Manager Nora asked to start HOUS-0002 (blocked by HOUS-0001): refused with the gate text and "Your next startable Task is HOUS-0001 "P first chore"."; HOUS-0002 stayed To Do. Lane spend 0.50 USD, of which 0.23 was the Chief of Staff's Greeting Turn on Opus. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

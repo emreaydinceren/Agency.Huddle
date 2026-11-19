@@ -23,7 +23,7 @@ public sealed class SidebarPanelRegistrationTests
 
         List<string> ids = catalog.For(new RoomSubject("ab12")).Select(static panel => panel.Id).ToList();
 
-        string[] expected = ["members", "room-tasks", "room-documents"];
+        string[] expected = ["members", "room-tasks", "task-order", "room-documents"];
         Assert.Equal(expected, ids);
     }
 
@@ -65,7 +65,7 @@ public sealed class SidebarPanelRegistrationTests
 
         List<string> ids = catalog.For(new RoomSubject("ab12")).Select(static panel => panel.Id).ToList();
 
-        string[] expected = ["members", "room-tasks"];
+        string[] expected = ["members", "room-tasks", "task-order"];
         Assert.Equal(expected, ids);
     }
 
@@ -95,8 +95,8 @@ public sealed class SidebarPanelRegistrationTests
         List<string> bare = catalog.For(new TaskSubject(id)).Select(static panel => panel.Id).ToList();
         List<string> both = catalog.For(new TaskSubject(id, HasBlockers: true, IsBlocking: true)).Select(static panel => panel.Id).ToList();
 
-        Assert.Equal(["task-activity", "task-documents"], bare);
-        Assert.Equal(["task-activity", "task-blockers", "task-blocks", "task-documents"], both);
+        Assert.Equal(["task-activity", "task-order", "task-documents"], bare);
+        Assert.Equal(["task-activity", "task-blockers", "task-blocks", "task-order", "task-documents"], both);
     }
 
     /// <summary>None of the four Task panels applies to a Room or a document.</summary>
@@ -110,7 +110,7 @@ public sealed class SidebarPanelRegistrationTests
         List<string> room = catalog.For(new RoomSubject("ab12")).Select(static panel => panel.Id).ToList();
         List<string> document = catalog.For(MarkdownSubject()).Select(static panel => panel.Id).ToList();
 
-        Assert.DoesNotContain(room.Concat(document), static id => id.StartsWith("task-", StringComparison.Ordinal));
+        Assert.DoesNotContain(room.Concat(document), static id => id.StartsWith("task-", StringComparison.Ordinal) && !string.Equals(id, "task-order", StringComparison.Ordinal));
     }
 
     /// <summary>With the Library off, the Task's Linked documents panel is not registered; the others stay.</summary>
@@ -124,7 +124,7 @@ public sealed class SidebarPanelRegistrationTests
 
         List<string> ids = catalog.For(new TaskSubject(id, HasBlockers: true, IsBlocking: true)).Select(static panel => panel.Id).ToList();
 
-        Assert.Equal(["task-activity", "task-blockers", "task-blocks"], ids);
+        Assert.Equal(["task-activity", "task-blockers", "task-blocks", "task-order"], ids);
     }
 
     /// <summary>The Task Subject's key names the Task alone, so its panels stay mounted while its flags change.</summary>
@@ -149,7 +149,7 @@ public sealed class SidebarPanelRegistrationTests
         List<string> selected = catalog.For(new TaskDetailSubject(id)).Select(static panel => panel.Id).ToList();
         List<string> editing = catalog.For(new TaskSubject(id)).Select(static panel => panel.Id).ToList();
 
-        Assert.Equal(["task-detail"], selected);
+        Assert.Equal(["task-detail", "task-order"], selected);
         Assert.DoesNotContain("task-detail", editing);
     }
 
@@ -163,6 +163,7 @@ public sealed class SidebarPanelRegistrationTests
         _ = TaskId.TryParse("PLAT-0013", out TaskId id);
 
         Assert.Empty(catalog.For(new TaskDetailSubject(id)));
+        Assert.DoesNotContain("task-order", catalog.For(new RoomSubject("ab12")).Select(static panel => panel.Id));
     }
 
     /// <summary>Every registered panel's component takes the Subject and Tab id by the names <c>RightSidebar</c> passes, so a renamed parameter fails here and not at run time.</summary>

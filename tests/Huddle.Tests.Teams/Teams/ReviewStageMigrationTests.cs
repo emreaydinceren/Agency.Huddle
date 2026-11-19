@@ -156,6 +156,23 @@ public sealed partial class ReviewStageMigrationTests
             kept.Add(line);
         }
 
+        return WithoutBlockerGate(string.Join('\n', kept));
+    }
+
+    /// <summary>
+    /// Drops what TaskOrder slice 2 added to every built-in process (the <c>blockers-done-before-start</c> entry in
+    /// <c>gates:</c>, its Gates bullet, and "no other hard gate" back to "no hard gate"). Installed Teams are never
+    /// migrated to that gate, so the review-wording migration correctly leaves it out and the comparison must too.
+    /// </summary>
+    /// <param name="text">A process file with <c>\n</c> line endings.</param>
+    /// <returns>The text as it read before the gate was added.</returns>
+    private static string WithoutBlockerGate(string text)
+    {
+        IEnumerable<string> kept = text.Split('\n')
+            .Where(static line => !line.StartsWith("- `blockers-done-before-start`:", StringComparison.Ordinal))
+            .Select(static line => line
+                .Replace("gates: ['blockers-done-before-start']", "gates: []", StringComparison.Ordinal)
+                .Replace("declares no other hard gate", "declares no hard gate", StringComparison.Ordinal));
         return string.Join('\n', kept);
     }
 

@@ -20,6 +20,7 @@ internal static partial class ToolActivityText
         ["update_task"] = "Updating a Task",
         ["get_task"] = "Reading a Task",
         ["list_tasks"] = "Listing Tasks",
+        ["next_task"] = "Finding the next Task",
         ["close_task"] = "Closing a Task",
         ["reopen_task"] = "Reopening a Task",
         ["post_message"] = "Posting a Message",

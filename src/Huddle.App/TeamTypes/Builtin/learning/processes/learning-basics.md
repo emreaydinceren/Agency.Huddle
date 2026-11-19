@@ -1,7 +1,7 @@
 ---
 title: 'Learning basics'
-template: 'learning-basics@1.1.0'
-gates: []
+template: 'learning-basics@1.2.0'
+gates: ['blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Learning basics
@@ -36,7 +36,8 @@ This Team supports one learner working towards one goal: a subject, a skill, a l
 
 ## Gates
 
-- This process declares no hard gate. The Tutor Lead's Evidence line is the check, and the Human closes each Task.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The Tutor Lead's Evidence line is the check, and the Human closes each Task.
 
 ## Definition of Done
 
