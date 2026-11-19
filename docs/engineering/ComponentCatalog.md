@@ -642,6 +642,33 @@ progressbar; the Library tree's labelled wrapper span is the `BusyLabel` itself
 (`library-tree-loading` kept); the inline confirm's busy spinner is now named "Working"; the chip
 and transcript spinners are hidden from assistive technology, since their containers name them.
 
+### Rendered Markdown
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `MarkdownView` | `Components/Shared/MarkdownView.razor` | 11 (8 files): `MessageList` twice (the Human's bubble and an Agent's body), `TaskDetail` twice, `TaskReadView`, `TaskTimeline` (Task text), `DocumentHistory` (a note's summary), `SkillsHelpDialog`, `PlaybooksTab` twice and `ProcessTab` | `Markdown`, `Tasks`, `Library`, `Mentions`, `From`, `TaskText`, `LibraryStyle`, `Class` |
+
+`MarkdownRenderer` returns an HTML string, and a string only becomes markup through a `(MarkupString)`
+cast, which skips Razor's encoding. `MarkdownView` is the one place that cast is made for rendered
+Markdown, so it is reviewed once: what makes the markup safe is the renderer (its pipeline disables raw
+HTML and it checks the links and images it writes), never the caller, and nothing passes the component
+HTML. It draws one `div`, and the caller's classes go in `Class`; `LibraryStyle` adds `library-rendered`
+(the Library's prose look) after them, which `PlaybooksTab` and `ProcessTab` use. The resolvers are the
+ones `MarkdownRenderer` takes, all optional: `Tasks` links Task ids, `Library` links the paths written in
+chat or a Task, `Mentions` draws Mention pills, and `TaskText` shows a bare path in a Task's `## Evidence`
+section as written. `From` is for text read from a Library note: `Library` is then the note resolver and
+wikilinks and relative links are linked instead of chat paths. It calls `MarkdownRenderer.Render`, which
+is internal for this reason, so it can pass every resolver at once.
+
+**Still raw.** `LibraryDocument` (1 call, baselined): it splits the rendered HTML after the note's first
+heading to put the byline there, inside a `library-rendered` element it builds with a `RenderTreeBuilder`
+with the properties block and tags, so the component's one div cannot serve it. Convention rule CV29
+counts a `MarkdownRenderer.ToHtml` or `ToTaskHtml` call in any component but `MarkdownView.razor` (it
+counts the call, not the cast, so a site that casts a variable is seen too); the only baseline entry is
+`LibraryDocument`. Built in the follow-up to the rollout (2026-11-18); each moved site draws the same
+`div` with the same classes it wrote by hand, and none has a scoped stylesheet, so nothing on screen
+changed.
+
 ### Settings intro and stored-at line
 
 ![A Settings panel head: the title, an intro paragraph and a Stored at line with a monospace path](../images/components/settings-intro-stored-at.png)
@@ -728,7 +755,7 @@ row passes an icon (`TaskAlt`, `RestartAlt` or `MaterialSymbols.Fish`), and `Sum
 `RenderFragment`s, because the wake-up draws a bold Task id and a list of changes. With no `Detail` the
 row draws no detail section at all: a goldfish return row whose possession was pruned is its summary
 only (`Detail` is a variable there, null in that case, since a Razor child element cannot be
-conditional). The rows' look is `.system-row` in `room.css`. Convention rule CV27 counts a hand-built
+conditional). The rows' look is `.system-row` in `room.css`. Convention rule CV28 counts a hand-built
 `<details class="system-row"` anywhere but `SystemRow.razor` and is zero. Built in the follow-up to the
 rollout (2026-11-18); the DOM it draws is the markup `MessageList` wrote by hand, so nothing on screen
 changed.
@@ -1050,7 +1077,7 @@ blank `Term` marks nothing. `HighlightSplitter` cuts the text into matched and u
 `string.IndexOf`, which has no timeout to exceed. It replaced `MudHighlighter`, which splits with a
 regular expression under a fixed one-second timeout: a server stalled for a second inside one scan
 threw `RegexMatchTimeoutException` from `OnParametersSet` and ended the Human's circuit. Convention
-rule CV26 counts a raw `<MudHighlighter` anywhere and is zero-tolerance with no baseline and no
+rule CV27 counts a raw `<MudHighlighter` anywhere and is zero-tolerance with no baseline and no
 exempt file. The mark's look is the States table's "Search match" in
 [design-system.md](design-system.md#colour).
 
@@ -1163,7 +1190,7 @@ other sites move over area by area. Three rules held for every wrapper:
 The order was: the segmented control (the pilot), `ActionButton` with `DialogFooter`, `Notice`,
 `TextField` and `SelectField`, then the composites (the picker, `SettingSwitch`, `PropertyList`,
 `RowActionsMenu` with `ActionIconButton`), then `ChipRadioGroup`, `BusyLabel` and the browser
-scripts. Each one added a convention rule (CV14 to CV25; CV26 and CV27 came after the rollout) that holds every file to a baseline which
+scripts. Each one added a convention rule (CV14 to CV25; CV27 and CV28 came after the rollout) that holds every file to a baseline which
 may only shrink. Visual changes were proved with `agents/scripts/Css-Snapshot.ps1`, one comparison
 per wave; see [Proving a visual change](ComponentRollout.md#proving-a-visual-change).
 

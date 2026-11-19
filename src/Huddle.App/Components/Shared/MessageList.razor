@@ -110,7 +110,7 @@
                             <span class="message-time">@time</span>
                         </div>
                     }
-                    <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
+                    <MarkdownView Class="message-bubble message-body" Markdown="@message.Text" Tasks="@this.TaskResolver" Library="@this.ChatLibraryResolver" Mentions="@this.Mentions" />
                     <MessageReferences Message="@message" />
                 </div>
                 continue;
@@ -154,7 +154,7 @@
                         }
                     </div>
                 }
-                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver, this.ChatLibraryResolver, this.Mentions))</div>
+                <MarkdownView Class="message-body" Markdown="@message.Text" Tasks="@this.TaskResolver" Library="@this.ChatLibraryResolver" Mentions="@this.Mentions" />
                 <MessageReferences Message="@message" />
             </div>
         </div>

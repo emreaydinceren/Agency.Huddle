@@ -45,7 +45,7 @@
                     <MudIcon Icon="@Icons.Material.Outlined.Lock" Size="Size.Small" />
                     <MudText Typo="Typo.caption">Huddle enforces these. They are always sent and can't be edited.</MudText>
                 </div>
-                <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(RulesOf(current)))</div>
+                <MarkdownView LibraryStyle="true" Markdown="@RulesOf(current)" />
             </MudPaper>
             @if (updated)
             {
@@ -77,7 +77,7 @@
             {
                 <Notice Severity="NoticeLevel.Warning">@OverLimitText(state.OverLimitLength)</Notice>
             }
-            <div class="playbook-text library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(state.Text))</div>
+            <MarkdownView Class="playbook-text" LibraryStyle="true" Markdown="@state.Text" />
             @if (unknownBase)
             {
                 <MudText Typo="Typo.caption" Class="playbook-unknown-base">Huddle can't tell which default this started from.</MudText>

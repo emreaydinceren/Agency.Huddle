@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26", "CV27"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV27", "CV28", "CV29"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV27</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV29</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -61,8 +61,9 @@ internal static partial class UiConventionScanner
         "CV22" => Cv22(path, text),
         "CV24" => Cv24(path, text),
         "CV25" => Cv25(path, text),
-        "CV26" => Cv26(path, text),
         "CV27" => Cv27(path, text),
+        "CV28" => Cv28(path, text),
+        "CV29" => Cv29(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -243,18 +244,31 @@ internal static partial class UiConventionScanner
             : CountTags(text, ["MudChipSet"], static attrs => attrs.Contains("SelectionMode.SingleSelection", StringComparison.Ordinal)));
 
     /// <summary>
-    /// CV26: a raw <c>&lt;MudHighlighter&gt;</c> anywhere. Text marked by a search term is drawn by <c>SearchHighlight</c>, which splits
+    /// CV27: a raw <c>&lt;MudHighlighter&gt;</c> anywhere. Text marked by a search term is drawn by <c>SearchHighlight</c>, which splits
     /// with <c>string.IndexOf</c>; <c>MudHighlighter</c> splits with a regular expression under a fixed one-second timeout, so a server
     /// stalled for a second inside one scan threw from <c>OnParametersSet</c> and ended the Human's circuit (ComponentCatalog Search).
     /// Zero-tolerance with no exempt file: the tag was already gone when the rule was added.
     /// </summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
-    public static RuleCount Cv26(string path, string text) =>
-        new("CV26", path, CountTags(text, ["MudHighlighter"], static _ => true));
+    public static RuleCount Cv27(string path, string text) =>
+        new("CV27", path, CountTags(text, ["MudHighlighter"], static _ => true));
 
     /// <summary>
-    /// CV27: a hand-built <c>&lt;details class="system-row"&gt;</c> in a component other than <c>SystemRow.razor</c>. The slim, muted,
+    /// CV29: a call of <c>MarkdownRenderer.ToHtml</c> or <c>ToTaskHtml</c> in a component other than <c>MarkdownView.razor</c>. The
+    /// renderer returns an HTML string that only becomes markup through a <c>(MarkupString)</c> cast, which skips Razor's encoding; the one
+    /// <c>MarkdownView</c> makes that cast, so it is reviewed in one place and owns the <c>library-rendered</c> class (ComponentCatalog
+    /// MarkdownView). The call is counted rather than the cast because a site may cast a variable (<c>LibraryDocument</c> splits the HTML
+    /// around the byline), and a <c>cref</c> that names the method is not counted. Its baseline holds the sites that cannot use the
+    /// component.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv29(string path, string text) =>
+        new("CV29", path, path.EndsWith("/MarkdownView.razor", StringComparison.Ordinal) ? 0 : RendererCall().Count(StripRazorComments(text)));
+
+    /// <summary>
+    /// CV28: a hand-built <c>&lt;details class="system-row"&gt;</c> in a component other than <c>SystemRow.razor</c>. The slim, muted,
     /// expandable row of the transcript is the one <c>SystemRow</c>, which owns the icon, the summary, the time, the chevron and the
     /// optional detail, and keeps <c>data-message-id</c> and <c>tabindex="-1"</c> for a jump to the Message (ComponentCatalog SystemRow).
     /// A <c>&lt;details&gt;</c> with another class, and an element that only has a <c>system-row-</c> class, are not counted.
@@ -262,11 +276,11 @@ internal static partial class UiConventionScanner
     /// </summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
-    public static RuleCount Cv27(string path, string text)
+    public static RuleCount Cv28(string path, string text)
     {
         if (path.EndsWith("/SystemRow.razor", StringComparison.Ordinal))
         {
-            return new("CV27", path, 0);
+            return new("CV28", path, 0);
         }
 
         int count = 0;
@@ -278,7 +292,7 @@ internal static partial class UiConventionScanner
             }
         }
 
-        return new("CV27", path, count);
+        return new("CV28", path, count);
     }
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
@@ -571,6 +585,9 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex("""(?<![\w-])class\s*=\s*["'][^"']*(?<![\w-])system-row(?![\w-])""", RegexOptions.CultureInvariant)]
     private static partial Regex SystemRowClass();
+
+    [GeneratedRegex("""(?<!cref\s*=\s*")(?<![\w.])MarkdownRenderer\s*\.\s*To(?:Task)?Html\s*\(""", RegexOptions.CultureInvariant)]
+    private static partial Regex RendererCall();
 
     [GeneratedRegex(@"@\*.*?\*@|<!--.*?-->", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex RazorComments();
