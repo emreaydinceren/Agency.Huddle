@@ -90,6 +90,17 @@ a helper or a stylesheet class:
 | Changes how a component looks | Retake its screenshot (the recipe is in the catalog's Keeping this page current) |
 | Changes how many places use a component | Update its count. It need not be exact on every change; recount with the catalog's snippet when you refresh the page |
 
+**Building blocks stay free of the app.** The generic parts in `Components/Shared` (buttons,
+fields, notices, chips, rows and the other catalog parts listed in `BuildingBlocks` in
+`tests/Huddle.Tests.Common/Ui/Conventions/UiConventionScanner.cs`) depend on MudBlazor and on each
+other, nothing else. Convention rule CV30 fails one that injects an app service (only `IJSRuntime`,
+`IDialogService`, `ISnackbar` and `NavigationManager` are allowed) or names an `Agency.Huddle.*`
+namespace other than `Agency.Huddle.App.Components`. It is zero-tolerance. A part that needs app
+data is an app card (`AgentProfileCard`, the Adapter, Model and Effort picker): it takes the
+building blocks and the services, and it is not on the list. A new generic part goes on the list in
+the same commit. This keeps the blocks ready to move to their own project, which would be worth
+doing only once a second app needs them.
+
 A change that leaves the catalog listing a component that no longer exists, or missing one that
 does, is incomplete. This page's [catalog tables](#reusable-parts-catalog) describe the same parts
 and keep the container codes and full parameter lists, so update both until they are folded
