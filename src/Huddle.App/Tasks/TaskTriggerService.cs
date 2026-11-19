@@ -159,12 +159,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="events">Raises <see cref="TaskEvents.TaskChanged"/>, subscribed to in <see cref="StartAsync"/>.</param>
     /// <param name="store">Reads a Task's latest state when a coalesced batch fires.</param>
     /// <param name="activity">The per-Task wake budget (Spec §10.6): guard 6, and the count a fired Agent-made wake consumes.</param>
-    /// <param name="turns">Reports whether the assignee has a Turn running, for <see cref="Preview"/>'s presence.</param>
+    /// <param name="turns">Reports whether the assignee has a Turn running, for <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>'s presence.</param>
     /// <param name="chat">Posts the wake-up Message.</param>
     /// <param name="directory">Resolves Users and Rooms: presence, the assignee's user, the sender and the Room.</param>
     /// <param name="personas">Resolves whether the assignee is still a known Persona (guard 5).</param>
-    /// <param name="gateway">Reports whether the assignee's pipe connection is live, for <see cref="Preview"/>'s presence.</param>
-    /// <param name="health">Reports the assignee's latest health, for <see cref="Preview"/>'s presence.</param>
+    /// <param name="gateway">Reports whether the assignee's pipe connection is live, for <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>'s presence.</param>
+    /// <param name="health">Reports the assignee's latest health, for <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>'s presence.</param>
     /// <param name="prompts">Renders the <c>task.wake.message</c> Prompt.</param>
     /// <param name="options">Supplies <see cref="TasksOptions"/> (guards 1 and 6, the coalesce window) and the first-run Human Name when <paramref name="human"/> is <see langword="null"/>.</param>
     /// <param name="clock">Creates the coalescing timers.</param>
@@ -243,7 +243,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// every guard without posting anything or touching the wake budget. Pure over its inputs and
     /// this service's injected collaborators.
     /// </summary>
-    /// <param name="before">The Task before the change, or <see langword="null"/> for a Create. Unused by the guards themselves - Spec §10.2 considers only <paramref name="after"/>'s assignee, so a reassignment never tells the previous assignee.</param>
+    /// <param name="before">The Task before the change, or <see langword="null"/> for a change that wakes (a Create, the unblock path, the trigger round): then nothing is diffed. When given, a diff of it against <paramref name="after"/> that holds nothing the assignee acts on is <see cref="WakeBlock.NothingWakes"/> (smart wakes spec 5.4). The assignee guards themselves consider only <paramref name="after"/>'s assignee, so a reassignment never tells the previous assignee.</param>
     /// <param name="after">The Task as it would be saved.</param>
     /// <param name="actor">Who made the change.</param>
     /// <returns>The resolved <see cref="WakePreview"/>.</returns>
@@ -251,13 +251,44 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     {
         ArgumentNullException.ThrowIfNull(after);
         ArgumentNullException.ThrowIfNull(actor);
-        _ = before;
 
+        bool wakes = before is null
+            || WakeRelevance.Wakes(TaskDiff.Compare(before, after), actor.Kind, WakeRecipient.Assignee);
+        return this.PreviewAssignee(after, actor, wakes);
+    }
+
+    /// <summary>
+    /// What <paramref name="change"/> would do to its assignee, judged by the same rule the receipt uses (<see cref="WakeRelevance.Wakes(TaskChange, WakeRecipient)"/>),
+    /// so a close of an In Progress Task, a Create and a Decision wake and a rank-only edit does not (smart wakes correction 5). The guards that follow are those of
+    /// <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>.
+    /// </summary>
+    /// <param name="change">The change as saved.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <returns>The resolved <see cref="WakePreview"/>.</returns>
+    public WakePreview Preview(TaskChange change, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        return this.PreviewAssignee(change.After, actor, WakeRelevance.Wakes(change, WakeRecipient.Assignee));
+    }
+
+    /// <summary>The guards of Spec §10.2 in order: Disabled, then <see cref="WakeBlock.NothingWakes"/> when <paramref name="wakes"/> is <see langword="false"/>, then the assignee checks.</summary>
+    /// <param name="after">The Task as saved.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="wakes">Whether the change holds something the assignee acts on.</param>
+    private WakePreview PreviewAssignee(TaskItem after, TaskActor actor, bool wakes)
+    {
         string? assignee = after.Assignee;
 
         if (!this.teamOptions.Tasks.Enabled || !this.teamOptions.Tasks.WakeEnabled)
         {
             return new WakePreview(assignee, null, WakeBlock.Disabled);
+        }
+
+        if (!wakes)
+        {
+            return new WakePreview(assignee, null, WakeBlock.NothingWakes);
         }
 
         if (string.IsNullOrEmpty(assignee))
@@ -434,19 +465,29 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
+        if (change.After.Status.IsTerminal() && !FinishedBefore(change))
+        {
+            // Before the silent drop: a blocker reaching a finished status wakes the Tasks it blocked, even when the move
+            // itself wakes no one (Backlog to Cancelled; smart wakes correction 1).
+            this.StartUnblock(change);
+        }
+
+        if (IsSilent(change))
+        {
+            // Smart wakes spec 5.3: a change that wakes neither recipient (and is not a comment or a Request's C-5 move) is saved and
+            // logged, then dropped here. It joins no batch, resets no wake budget, forgets no held wake, holds nothing and counts
+            // toward no outside-edit flood window (corrections 1 and 2).
+            return;
+        }
+
         if (change.Actor.Kind == TaskActorKind.Human)
         {
-            // Corrections-B3 D9 item 15: on receipt, before any guard - a Human change resets the Task's
+            // Corrections-B3 D9 item 15: on receipt, before any guard - a kept Human change resets the Task's
             // wake budget even when it wakes nobody. An OutsideHuddle actor never resets it (item 18).
             this.activity.ResetForHuman(change.After.Id);
 
             // The Human's own change wakes whoever it concerns, so what was waiting is covered, and a pause it ended is over.
             this.ForgetHeld(change.After.Id);
-        }
-
-        if (change.After.Status.IsTerminal() && !(change.Before?.Status.IsTerminal() ?? false))
-        {
-            this.StartUnblock(change);
         }
 
         BatchKey key = new(change.After.Id, change.Actor.Name);
@@ -467,6 +508,35 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         {
             this.StartFire(key);
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="change"/> is dropped on receipt (smart wakes spec 5.3): it wakes neither the assignee nor the manager, is not a
+    /// Request's C-5 status move and is not a comment (slice 1 keeps a comment waking exactly as today, correction 11).
+    /// </summary>
+    /// <param name="change">The change.</param>
+    private static bool IsSilent(TaskChange change) =>
+        change.Kind != TaskChangeKind.Comment
+        && !WakeRelevance.Wakes(change, WakeRecipient.Assignee)
+        && !WakeRelevance.Wakes(change, WakeRecipient.Manager)
+        && !WakeRelevance.RequestStatusWakes(change);
+
+    /// <summary>
+    /// Whether the Task was already finished (Done, Cancelled, Duplicate or Rejected) before <paramref name="change"/>. A status field decides from its
+    /// old value (correction 4), since a change may carry the same Task as <c>Before</c> and <c>After</c>; with no status field it is <c>Before</c>'s status.
+    /// </summary>
+    /// <param name="change">The change.</param>
+    private static bool FinishedBefore(TaskChange change)
+    {
+        foreach (FieldChange field in change.Changes)
+        {
+            if (field.Field == TaskField.Status && TaskStates.TryParse(field.Old, out TaskState old))
+            {
+                return old.IsTerminal();
+            }
+        }
+
+        return change.Before?.Status.IsTerminal() ?? false;
     }
 
     /// <summary>
@@ -510,10 +580,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
                 batch.Note = change.Note;
             }
 
+            batch.WakesAssignee |= WakeRelevance.Wakes(change, WakeRecipient.Assignee);
+            batch.WakesManager |= WakeRelevance.Wakes(change, WakeRecipient.Manager);
+            batch.RequestStatusWakes |= WakeRelevance.RequestStatusWakes(change);
             if (change.Changes.Any(static field => field.Field == TaskField.Status))
             {
-                batch.StatusChanged = true;
-
                 // The last status change decides: a Request moved into Done and straight out again is not waiting to be confirmed.
                 batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;
             }
@@ -806,7 +877,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
-        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, this.Preview(null, latest, batch.Actor));
+        TaskWakeRound round = new(latest, batch.Actor, batch.RequestStatusWakes, this.Preview(null, latest, batch.Actor), batch.WakesAssignee, batch.WakesManager);
         foreach (ITaskWakeRule rule in this.wakeRules)
         {
             try
@@ -1034,7 +1105,10 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             FirstChangeAt = batch.FirstChangeAt,
             Decision = batch.Decision,
             Note = batch.Note,
-            StatusChanged = batch.StatusChanged,
+            WakesAssignee = batch.WakesAssignee,
+            WakesManager = batch.WakesManager,
+            RequestStatusWakes = batch.RequestStatusWakes,
+            MovedToDone = batch.MovedToDone,
         };
         held.Entries.AddRange(batch.Entries);
         bool forAssignee = string.Equals(name, latest.Assignee, StringComparison.OrdinalIgnoreCase);
@@ -1050,6 +1124,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
                 held.Entries.InsertRange(0, earlier.Batch.Entries);
                 held.Decision ??= earlier.Batch.Decision;
                 held.Note ??= earlier.Batch.Note;
+                held.WakesAssignee |= earlier.Batch.WakesAssignee;
+                held.WakesManager |= earlier.Batch.WakesManager;
+                held.RequestStatusWakes |= earlier.Batch.RequestStatusWakes;
             }
 
             this.heldWakes[key] = new HeldWake(latest.Id, name, roomId, forAssignee, held);
@@ -1724,8 +1801,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         /// <summary>The coalescing timer, or <see langword="null"/> when the batch fires directly.</summary>
         public ITimer? Timer { get; set; }
 
-        /// <summary>Whether any batched change moved the Task's status (RQ-4 wakes the requesting manager on those).</summary>
-        public bool StatusChanged { get; set; }
+        /// <summary>Whether any batched change wakes the assignee (<see cref="WakeRelevance"/>). A batch built for a Request lifecycle event sets none: it is delivered, not run through the rules.</summary>
+        public bool WakesAssignee { get; set; }
+
+        /// <summary>Whether any batched change wakes the Team's manager.</summary>
+        public bool WakesManager { get; set; }
+
+        /// <summary>Whether any batched change is a status move that wakes a Request's requesting manager (RQ-4, narrowed by C-5).</summary>
+        public bool RequestStatusWakes { get; set; }
 
         /// <summary>Whether any batched change moved the Task into Done (#350: a Request that gets there waits for its requesting Team to confirm it).</summary>
         public bool MovedToDone { get; set; }

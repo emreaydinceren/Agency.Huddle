@@ -16,7 +16,7 @@ using Agency.Huddle.App.Teams;
 /// Creates a Task (Spec §11.2): validates its arguments in the §11.2 order - required fields, an
 /// <c>originRoomId</c> the caller must be a Member of, a status that isn't a Won't do state, and
 /// dates in <c>yyyy-MM-dd</c> - then hands the rest to <see cref="TaskService.Create"/>, and reports
-/// who will be notified via <see cref="TaskTriggerService.Preview"/>. Every expected failure is
+/// who will be notified via <see cref="TaskTriggerService.Preview(TaskChange, TaskActor)"/>. Every expected failure is
 /// text; this never throws (corrections-B4 D10 items 2, 4 and 5).
 /// </summary>
 /// <remarks>
@@ -491,7 +491,7 @@ internal sealed class CreateTaskTool(
             { } name => string.Create(CultureInfo.InvariantCulture, $"assigned to {name}"),
         };
 
-        WakePreview preview = triggers.Preview(saved.Change.Before, saved.Change.After, actor);
+        WakePreview preview = triggers.Preview(saved.Change, actor);
         string notify = TaskToolText.NotifyClause(preview, actor.Name);
 
         string filedClause = filed is null

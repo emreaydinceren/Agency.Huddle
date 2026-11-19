@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Tasks.Wake;
 
 /// <summary>
 /// Smart wakes spec 3 as a pure rule: from the fields and the kind of a <see cref="TaskChange"/> alone, whether it wakes the assignee and
-/// whether it wakes the manager. No I/O, no clock, no options. Nothing in the trigger service reads it yet.
+/// whether it wakes the manager. No I/O, no clock, no options. <see cref="TaskTriggerService"/> reads it on receipt of a change and in <c>Preview</c>.
 /// </summary>
 internal static class WakeRelevance
 {
@@ -85,7 +85,8 @@ internal static class WakeRelevance
 
         if (change.Before.Location.Closed != change.After.Location.Closed)
         {
-            return IsActive(change.After.Status);
+            return IsActive(change.After.Status)
+                || (change.Kind == TaskChangeKind.Edit && Wakes(change.Changes, change.Actor.Kind, recipient));
         }
 
         return change.Kind switch

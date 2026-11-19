@@ -48,7 +48,7 @@ public sealed class TaskTriggerRuleIsolationTests
         harness.Events.RaiseTaskChanged(new TaskChange(
             request,
             request,
-            [new FieldChange(TaskField.Status, "To Do", "In Progress")],
+            [new FieldChange(TaskField.Status, "In Progress", "Done")],
             HumanActor,
             new ChangeLogEntry(harness.Clock.GetUtcNow(), HumanActor.Name, "Started")));
         harness.Clock.Advance(DefaultWindow);

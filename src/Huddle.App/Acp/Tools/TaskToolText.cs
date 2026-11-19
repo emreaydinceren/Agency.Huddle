@@ -365,6 +365,7 @@ internal static class TaskToolText
             WakeBlock.AssigneeIsHuman => "You aren't notified; the Human sees it on the Tasks page.",
             WakeBlock.BudgetPaused => "No one is notified: wake-ups for this task are paused.",
             WakeBlock.Disabled => "No one is notified: wake-ups are off.",
+            WakeBlock.NothingWakes => "The assignee is not woken: nothing they act on changed.",
             _ => "No one is notified.",
         };
     }

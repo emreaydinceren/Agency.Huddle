@@ -73,6 +73,29 @@ public sealed class UpdateTaskToolTests
             result);
     }
 
+    /// <summary>
+    /// SW-T7: a patch of only a silent field (Priority) is saved, and the notify clause says the assignee is not woken because nothing they act
+    /// on changed. It is about the assignee only: a Request move still wakes its requesting manager, so "No one is woken" would be false.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_PriorityOnly_SaysTheAssigneeIsNotWoken()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.ToDo, priority: TaskPriority.Medium, assignee: "Kai");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["priority"] = "High" };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"Updated {task.Id}: priority: Medium → High. The assignee is not woken: nothing they act on changed.", result);
+        Assert.Equal(TaskPriority.High, harness.Store.Get(task.Id)?.Priority);
+
+        string withTitle = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["priority"] = "Urgent", ["title"] = "Support SSO login" }, ct);
+
+        Assert.EndsWith(" Kai will be notified.", withTitle, StringComparison.Ordinal); // contains-ok: the summary before the clause lists both fields in an order TaskDiff owns.
+    }
+
     /// <summary>A refusal lists every violated rule, joined with "\n" (Spec §11.1).</summary>
     [Fact]
     public async Task InvokeAsync_MultipleProblems_ReturnsEveryProblemJoinedByNewline()

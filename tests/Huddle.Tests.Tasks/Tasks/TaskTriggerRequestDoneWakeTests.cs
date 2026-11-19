@@ -172,9 +172,12 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Assert.Equal("Kai|PLAT-0001|Nova|- status: In Progress → Done", kaiPost);
     }
 
-    /// <summary>A Request's move to a status other than Done wakes the requesting manager with the plain change and no confirm line.</summary>
+    /// <summary>
+    /// Smart wakes C-5: a Request's move to In Progress is not a C-5 move, so the requesting manager is not woken (it was woken on every status
+    /// change before), and nobody else is either: the assignee made the move.
+    /// </summary>
     [Fact]
-    public async Task Request_MovesToInProgress_WakesWithoutConfirmLine()
+    public async Task Request_MovesToInProgress_WakesNobody()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -183,8 +186,7 @@ public sealed class TaskTriggerRequestDoneWakeTests
 
         await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.ToDo, TaskState.InProgress);
 
-        string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: To Do → In Progress", post);
+        Assert.Empty(harness.Posts);
     }
 
     /// <summary>A plain Task reaching Done wakes its assignee as before: the text is the Task wake and carries no confirm line.</summary>
@@ -246,9 +248,12 @@ public sealed class TaskTriggerRequestDoneWakeTests
         Assert.DoesNotContain(harness.Posts.Select(static p => p.Message.Text), static text => text.EndsWith(ConfirmLine("Nova"), StringComparison.Ordinal));
     }
 
-    /// <summary>An Agent's move of a Request to Needs You is a status change like any other: the requesting manager hears of it, without the confirm line. (Huddle's own ready move is pinned by TaskTriggerNeedsYouMoveTests.)</summary>
+    /// <summary>
+    /// Smart wakes C-5: an Agent's move of a Request to Needs You hands it to the Human, so it is silent for the requesting manager as well as for
+    /// the assignee and manager (Active to Active). (Huddle's own ready move is pinned by TaskTriggerNeedsYouMoveTests.)
+    /// </summary>
     [Fact]
-    public async Task Request_MovesToNeedsYou_CarriesNoConfirmLine()
+    public async Task Request_MovesToNeedsYou_WakesNobody()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -257,7 +262,6 @@ public sealed class TaskTriggerRequestDoneWakeTests
 
         await MoveAsync(arrangement, arrangement.Cast.KaiActor, TaskState.InProgress, TaskState.NeedsYou);
 
-        string post = harness.Posts.Select(static p => p.Message.Text).Single(static text => text.StartsWith("Mia|", StringComparison.Ordinal));
-        Assert.Equal("Mia|PLAT-0001|Kai|- status: In Progress → Needs You", post);
+        Assert.Empty(harness.Posts);
     }
 }

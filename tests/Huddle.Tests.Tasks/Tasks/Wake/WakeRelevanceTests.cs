@@ -272,6 +272,51 @@ public sealed class WakeRelevanceTests
         Assert.Equal((wakes, wakes), Verdicts(WakeChanges.CloseOrReopen(status, closing: false, TaskChangeKind.Edit, TaskActorKind.OutsideHuddle)));
     }
 
+    /// <summary>
+    /// Slice 1b ruling: when the closed flag flips under a Kind of Edit and the change also carries waking fields, it wakes whatever the status:
+    /// the result is the Close/Reopen rule (Active only) OR the fields. A Title edit made together with a move into the closed folder of a To Do
+    /// Task wakes, while the same flip with only silent fields does not.
+    /// </summary>
+    [Theory]
+    [InlineData(TaskState.ToDo, "Title", true)]
+    [InlineData(TaskState.Done, "Title", true)]
+    [InlineData(TaskState.Backlog, "Description", true)]
+    [InlineData(TaskState.ToDo, "Rank", false)]
+    [InlineData(TaskState.Done, "Priority", false)]
+    public void Wakes_ClosedFlagFlippedByAnEditThatAlsoCarriesFields_WakesWhenAFieldWakes(TaskState status, string fieldName, bool wakes)
+    {
+        TaskField field = Enum.Parse<TaskField>(fieldName);
+        FieldChange[] changes = [new FieldChange(field, "before", "after")];
+
+        Assert.Equal((wakes, wakes), Verdicts(WakeChanges.Make(WakeChanges.Task(status, closed: false), WakeChanges.Task(status, closed: true), changes, TaskActorKind.Agent)));
+        Assert.Equal((wakes, wakes), Verdicts(WakeChanges.Make(WakeChanges.Task(status, closed: true), WakeChanges.Task(status, closed: false), changes, TaskActorKind.Agent)));
+    }
+
+    /// <summary>A pure Close or Reopen kind stays decided by the Task's status alone, even when it carries a waking field: only a Kind of Edit adds the fields.</summary>
+    [Fact]
+    public void Wakes_ClosedFlagFlippedByCloseKindWithAWakingField_StaysDecidedByTheStatus()
+    {
+        FieldChange[] title = [new FieldChange(TaskField.Title, "Old", "New")];
+        TaskChange close = WakeChanges.Make(WakeChanges.Task(TaskState.ToDo, closed: false), WakeChanges.Task(TaskState.ToDo, closed: true), title, TaskActorKind.Agent, TaskChangeKind.Close);
+        TaskChange reopen = WakeChanges.Make(WakeChanges.Task(TaskState.ToDo, closed: true), WakeChanges.Task(TaskState.ToDo, closed: false), title, TaskActorKind.Agent, TaskChangeKind.Reopen);
+        TaskChange edit = WakeChanges.Make(WakeChanges.Task(TaskState.ToDo, closed: false), WakeChanges.Task(TaskState.ToDo, closed: true), title, TaskActorKind.Agent, TaskChangeKind.Edit);
+
+        AssertVerdicts([(false, false), (false, false), (true, true)], Verdicts(close), Verdicts(reopen), Verdicts(edit));
+    }
+
+    /// <summary>A closed-flag flip by an Edit judges the fields per recipient: a move into the closed folder of a To Do Task with a To Do to In Progress status field wakes the assignee only.</summary>
+    [Fact]
+    public void Wakes_ClosedFlagFlippedByAnEditWithAStatusField_JudgesTheMovePerRecipient()
+    {
+        TaskChange change = WakeChanges.Make(
+            WakeChanges.Task(TaskState.ToDo, closed: false),
+            WakeChanges.Task(TaskState.ToDo, closed: true),
+            [new FieldChange(TaskField.Status, "To Do", "In Progress")],
+            TaskActorKind.Human);
+
+        Assert.Equal((true, false), Verdicts(change));
+    }
+
     /// <summary>A Human decision with no fields (accept, changes requested, decline) wakes both recipients, as it carries the decision sentence.</summary>
     [Theory]
     [InlineData(TaskDecision.Accept)]

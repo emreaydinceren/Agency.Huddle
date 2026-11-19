@@ -86,7 +86,7 @@ else if (this.archivedView && this.loaded is { } archivedTask)
 else if (this.loaded is { } task)
 {
     TaskItem effective = this.Effective ?? task;
-    WakePreview preview = this.Triggers.Preview(task, effective, TaskActors.Human(this.Human));
+    WakePreview preview = this.Triggers.Preview(this.WakeBefore(task), effective, TaskActors.Human(this.Human));
     string? notice = TaskDetail.NoticeText(preview);
     string saveLabel = TaskDetail.SaveLabel(preview);
     bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
@@ -761,8 +761,12 @@ else if (this.loaded is { } task)
 
     /// <summary>The footer's Save label ("Save", or "Save &amp; notify {name}" for an awake or asleep assignee), as the inline row would draw it.</summary>
     public string FooterSaveLabel => this.loaded is { } task
-        ? TaskDetail.SaveLabel(this.Triggers.Preview(task, this.Effective ?? task, TaskActors.Human(this.Human)))
+        ? TaskDetail.SaveLabel(this.Triggers.Preview(this.WakeBefore(task), this.Effective ?? task, TaskActors.Human(this.Human)))
         : "Save";
+
+    /// <summary>The Task a wake preview diffs against: <paramref name="task"/>, or <see langword="null"/> in create mode, where the draft is the Task before and after and a create always wakes (smart wakes spec 3.2).</summary>
+    /// <param name="task">The loaded Task or draft.</param>
+    private TaskItem? WakeBefore(TaskItem task) => this.createMode ? null : task;
 
     /// <summary>Whether the footer's Save is disabled: a Duplicate with no original, a Sprint name that is not valid, or a conflict field still unresolved.</summary>
     public bool FooterSaveDisabled => this.IsSaveDisabled(this.Effective ?? this.loaded);
@@ -1981,18 +1985,20 @@ else if (this.loaded is { } task)
     /// <param name="clock">Supplies <see cref="TimeProvider.LocalTimeZone"/> and today.</param>
     internal static string FormatHistoryDate(DateTimeOffset at, TimeProvider clock) => TaskDates.HumanMoment(at, clock);
 
-    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
+    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise, and so for <see cref="WakeBlock.NothingWakes"/>.</summary>
     /// <param name="preview">The wake preview for the Human's pending edit.</param>
-    private static string SaveLabel(WakePreview preview) =>
-        preview.Block == WakeBlock.None && preview.Presence is PresenceState.Awake or PresenceState.Asleep
-            ? $"Save & notify {preview.AssigneeName}"
-            : "Save";
+    private static string SaveLabel(WakePreview preview) => preview.Block switch
+    {
+        WakeBlock.NothingWakes => "Save",
+        WakeBlock.None when preview.Presence is PresenceState.Awake or PresenceState.Asleep => $"Save & notify {preview.AssigneeName}",
+        _ => "Save",
+    };
 
     /// <summary>
     /// The notice shown above the Save button for <paramref name="preview"/> (Spec §13.6's table, and
     /// corrections-B5 D14 item 5's exact Offline and Disabled wording, which supersedes the Spec's own
     /// Offline row text). <see cref="WakeBlock.BudgetPaused"/> has no case: <c>TaskDetail</c> always
-    /// calls <see cref="TaskTriggerService.Preview"/> with the Human actor, and that guard only ever
+    /// calls <see cref="TaskTriggerService.Preview(TaskItem?, TaskItem, TaskActor)"/> with the Human actor, and that guard only ever
     /// fires for an Agent actor (corrections-B5 D14 item 4) - the Budget banner, not this notice, is
     /// what a Human sees instead.
     /// </summary>
@@ -2003,6 +2009,7 @@ else if (this.loaded is { } task)
         { Block: WakeBlock.None, Presence: PresenceState.Asleep } => $"{preview.AssigneeName} is asleep and will be notified.",
         { Block: WakeBlock.None, Presence: PresenceState.Offline } => $"{preview.AssigneeName} is offline, so this change won't reach them.",
         { Block: WakeBlock.Disabled } => "Wake-ups are off.",
+        { Block: WakeBlock.NothingWakes } => null,
         _ => null,
     };
 

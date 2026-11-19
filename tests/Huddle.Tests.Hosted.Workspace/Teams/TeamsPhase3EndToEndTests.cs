@@ -185,7 +185,7 @@ public sealed class TeamsPhase3EndToEndTests
         Assert.Empty(proposals.Pending(TeamName));
     }
 
-    /// <summary>Flow 5: a Task change wakes the manager, and finishing the last blocker wakes the blocked Task's assignee.</summary>
+    /// <summary>Flow 5: a Task change that its readers act on (a retitle; smart wakes: a To Do to In Progress move wakes only the assignee) wakes the manager, and finishing the last blocker wakes the blocked Task's assignee.</summary>
     [Fact]
     public async Task TaskChange_WakesManager_AndFinishingLastBlockerWakesAssignee()
     {
@@ -204,7 +204,7 @@ public sealed class TeamsPhase3EndToEndTests
         TaskItem blocker = Assert.IsType<TaskResult.Saved>(service.Create(new TaskDraft("Blocker", TeamName, null, TaskState.ToDo, Assignee: reviewer.Name, OriginRoomId: room.Id), human)).Task;
         TaskItem blocked = Assert.IsType<TaskResult.Saved>(service.Create(new TaskDraft("Blocked", TeamName, null, TaskState.ToDo, Assignee: developer.Name, OriginRoomId: room.Id, BlockedBy: [blocker.Id]), human)).Task;
 
-        _ = service.Update(blocker.Id, new TaskPatch { Status = TaskState.InProgress }, null, developer);
+        _ = service.Update(blocker.Id, new TaskPatch { Title = "Blocker, renamed" }, null, developer);
         await Eventually.UntilAsync(() => run.WakesOf(manager.Name, developer.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
         int developerWakesBefore = run.WakesOf(developer.Name, null);
         _ = service.Update(blocker.Id, new TaskPatch { Status = TaskState.Done }, null, human, humanOverridesGates: true);

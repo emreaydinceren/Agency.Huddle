@@ -256,7 +256,7 @@ public sealed class TaskDetailSprintTests
         Assert.Equal(TaskPriority.Urgent, harness.Store.Get(task.Id)?.Priority);
     }
 
-    /// <summary>The Save label still comes from <c>Preview</c>: a pending Sprint on a Task assigned to an Awake or Asleep Agent reads "Save &amp; Notify" (spec §12.1, D-S8).</summary>
+    /// <summary>The Save label still comes from <c>Preview</c>: a pending Sprint on a Task assigned to an Asleep Agent reads plain "Save" and shows no notice, because a Sprint change is silent (smart wakes spec 3.1; it read "Save &amp; notify" under spec §12.1, D-S8).</summary>
     [Fact]
     public async Task WakeLabel_FollowsPreview_WhenASprintIsPending()
     {
@@ -268,8 +268,8 @@ public sealed class TaskDetailSprintTests
 
         await cut.InvokeAsync(() => SprintField(cut).Instance.ValueChanged.InvokeAsync("Sprint 1"));
 
-        Assert.Equal("Save & notify Nova", FindButton(cut, "Save & notify Nova").TextContent.Trim());
-        Assert.Equal("Nova is asleep and will be notified.", TextOf(cut, ".task-detail-wake-notice"));
+        Assert.Equal("Save", FindButton(cut, "Save").TextContent.Trim());
+        Assert.Empty(cut.FindAll(".task-detail-wake-notice"));
     }
 
     /// <summary>The Sprint autocomplete: <c>CoerceValue</c> and <c>Clearable</c>, like the Project field (spec §12.1 Control).</summary>

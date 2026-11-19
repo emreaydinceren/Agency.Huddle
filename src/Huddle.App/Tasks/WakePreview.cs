@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Tasks;
 /// Name's presence if the wake would actually happen, and which guard - if any - stops it. Every UI
 /// label about who will be woken (a Save button, a drag hint, a banner) reads this record rather than
 /// re-deriving the guards in Spec §10.2 itself, so the interface can never disagree with
-/// <see cref="TaskTriggerService.Preview"/>.
+/// <see cref="TaskTriggerService.Preview(TaskItem?, TaskItem, TaskActor)"/>.
 /// </summary>
 /// <param name="AssigneeName">The Task's assignee Name (<c>After.Assignee</c>), or <see langword="null"/> when the Task has none.</param>
 /// <param name="Presence">The assignee's presence badge, resolved only when <paramref name="Block"/> is <see cref="WakeBlock.None"/>; otherwise <see langword="null"/>.</param>

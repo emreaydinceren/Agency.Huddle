@@ -27,7 +27,8 @@ internal sealed class ManagerWakeRule(ITeamCatalog? teams, IHumanIdentity human,
         ArgumentNullException.ThrowIfNull(round);
 
         TaskItem latest = round.Latest;
-        if (teams?.Find(latest.Location.Team)?.Manager is not { Length: > 0 } manager
+        if (!round.WakesManager
+            || teams?.Find(latest.Location.Team)?.Manager is not { Length: > 0 } manager
             || !options.Tasks.Enabled
             || !options.Tasks.WakeEnabled)
         {

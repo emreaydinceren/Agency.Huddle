@@ -182,7 +182,7 @@ public sealed class TaskTriggerPreviewTests
 
     /// <summary>
     /// Corrections-B5 D14 item 4: guard 6 only ever applies to an Agent actor. A Human actor's
-    /// <see cref="TaskTriggerService.Preview"/> never returns <see cref="WakeBlock.BudgetPaused"/>,
+    /// <see cref="TaskTriggerService.Preview(TaskItem?, TaskItem, TaskActor)"/> never returns <see cref="WakeBlock.BudgetPaused"/>,
     /// even when the Task's wake budget happens to be exhausted from earlier Agent-made changes.
     /// </summary>
     [Fact]
@@ -224,7 +224,7 @@ public sealed class TaskTriggerPreviewTests
         Assert.Equal("Kai", preview.AssigneeName);
     }
 
-    /// <summary>Spec §10.2: closing a Task is a change like any other, so it still previews as waking the assignee.</summary>
+    /// <summary>Spec §10.2: closing a Task is a change like any other, so it still previews as waking the assignee. Smart wakes 3.4: the move is In Progress to Done, which wakes (To Do to Done does not).</summary>
     [Fact]
     public async Task Preview_CloseChange_StillPreviewsWaking()
     {
@@ -234,7 +234,7 @@ public sealed class TaskTriggerPreviewTests
         using Harness harness = await CreateHarnessAsync(dir, options, ct);
         _ = harness.Personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
         TaskActor actor = new(TaskActorKind.Human, "You", KnownIds.Human);
-        TaskItem before = TestTasks.Make(status: TaskState.ToDo, assignee: "Nova");
+        TaskItem before = TestTasks.Make(status: TaskState.InProgress, assignee: "Nova");
         TaskItem after = TestTasks.Make(status: TaskState.Done, assignee: "Nova");
 
         WakePreview preview = harness.Trigger.Preview(before, after, actor);

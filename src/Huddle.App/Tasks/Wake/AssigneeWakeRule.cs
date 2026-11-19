@@ -11,6 +11,11 @@ internal sealed class AssigneeWakeRule : ITaskWakeRule
     {
         ArgumentNullException.ThrowIfNull(round);
 
+        if (!round.WakesAssignee)
+        {
+            return new TaskWakeChoice.Skip(null);
+        }
+
         WakePreview preview = round.AssigneePreview;
         if (preview.Block == WakeBlock.BudgetPaused && preview.AssigneeName is { } pausedAssignee)
         {

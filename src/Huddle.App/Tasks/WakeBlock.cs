@@ -23,4 +23,7 @@ public enum WakeBlock
 
     /// <summary>The post would go into a Room whose Budget is spent; the Task's own wake budget is untouched.</summary>
     RoomBudgetSpent,
+
+    /// <summary>Nothing that wakes the assignee changed: only silent fields (rank, priority, tags, dates, sprint, parent, origin, the Human gate) or a silent status move.</summary>
+    NothingWakes,
 }
