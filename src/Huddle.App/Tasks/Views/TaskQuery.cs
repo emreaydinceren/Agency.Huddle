@@ -14,6 +14,9 @@ internal static class TaskQuery
         new("id", SortDirection.Ascending),
     ];
 
+    /// <summary>The Views' one order: rank ascending with unranked last, priority descending, due date ascending with nulls last, id ascending. <see cref="Sort"/> applies it after any explicit keys; the Task order uses it alone.</summary>
+    public static readonly IComparer<TaskItem> DefaultOrder = BuildDefaultOrder();
+
     /// <summary>Room for a formatted <see cref="TaskId"/> on the stack: a prefix of up to eight letters or digits, a dash and a number; a longer id falls back to <c>ToString</c>.</summary>
     private const int IdBufferLength = 32;
 
@@ -236,10 +239,7 @@ internal static class TaskQuery
             comparisons.Add(BuildComparison(key.Field, key.Direction));
         }
 
-        foreach (SortKey key in DefaultSortKeys)
-        {
-            comparisons.Add(BuildComparison(key.Field, key.Direction));
-        }
+        comparisons.Add(DefaultOrder.Compare);
 
         Comparer<TaskItem> comparer = Comparer<TaskItem>.Create((left, right) =>
         {
@@ -256,6 +256,29 @@ internal static class TaskQuery
         });
 
         return items.OrderBy(item => item, comparer).ToList();
+    }
+
+    private static Comparer<TaskItem> BuildDefaultOrder()
+    {
+        List<Comparison<TaskItem>> comparisons = [];
+        foreach (SortKey key in DefaultSortKeys)
+        {
+            comparisons.Add(BuildComparison(key.Field, key.Direction));
+        }
+
+        return Comparer<TaskItem>.Create((left, right) =>
+        {
+            foreach (Comparison<TaskItem> comparison in comparisons)
+            {
+                int result = comparison(left, right);
+                if (result != 0)
+                {
+                    return result;
+                }
+            }
+
+            return 0;
+        });
     }
 
     /// <summary>
