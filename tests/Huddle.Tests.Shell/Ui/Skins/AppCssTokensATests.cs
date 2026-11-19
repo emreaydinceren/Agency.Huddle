@@ -54,7 +54,7 @@ public sealed class AppCssTokensATests
     [InlineData(".sidebar-views", "border-inline-start: 1px solid var(--hu-line-control);")]
     [InlineData(".sidebar-row .mud-link.sidebar-row-text.is-current", "color: var(--hu-accent-ink);")]
     [InlineData(".invite-panel", "background: var(--hu-ground-raised);")]
-    [InlineData(".invite-agent-option:hover","background: var(--hu-hover);")]
+    [InlineData(".mud-button-root.list-option.mud-button-text:hover","background: var(--hu-hover);")]
     [InlineData(".mud-input.mud-input-outlined", "background-color: var(--hu-field-background);")]
     [InlineData(".mud-input.mud-input-outlined:focus-within .mud-shrink > .mud-input-outlined-border", "border-color: var(--hu-field-focus-line);")]
     [InlineData(".mud-input.mud-input-outlined:focus-within .mud-shrink > .mud-input-outlined-border", "box-shadow: var(--hu-field-focus-shadow);")]

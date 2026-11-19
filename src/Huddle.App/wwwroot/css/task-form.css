@@ -762,13 +762,6 @@
     font-weight: 400;
 }
 
-.task-detail-library-add.mud-button-root {
-    padding-inline: 0;
-    text-transform: none;
-    color: var(--hu-accent-ink);
-    font-size: var(--mud-typography-body2-size);
-}
-
 /* ---- surface=flat: Cobalt Soft --------------------------------------------------------------- */
 :root:has([data-hu-surface="flat"]) .task-edit-page .task-detail-group > .group-label {
     font-size: var(--mud-typography-body2-size);

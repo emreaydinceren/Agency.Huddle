@@ -49,7 +49,7 @@ public sealed partial class TranscriptAuditCssTests
     [Fact]
     public void AppCss_QuestionCard_HasOneButtonHeightAndRoomUnderTheQuestion()
     {
-        Assert.Matches(@"min-height:\s*28px", TranscriptAuditCssTests.DeclarationsFor(".question-card-option"));
+        Assert.Matches(@"min-height:\s*28px", TranscriptAuditCssTests.DeclarationsFor(".mud-button-root.list-option"));
         Assert.Matches(@"margin-top:\s*12px", TranscriptAuditCssTests.DeclarationsFor(".question-card-options"));
     }
 

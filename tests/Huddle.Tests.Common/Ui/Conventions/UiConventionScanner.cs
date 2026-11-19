@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV25</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV26</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -61,6 +61,7 @@ internal static partial class UiConventionScanner
         "CV22" => Cv22(path, text),
         "CV24" => Cv24(path, text),
         "CV25" => Cv25(path, text),
+        "CV26" => Cv26(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -239,6 +240,22 @@ internal static partial class UiConventionScanner
         new("CV25", path, path.EndsWith("/ChipRadioGroup.razor", StringComparison.Ordinal)
             ? 0
             : CountTags(text, ["MudChipSet"], static attrs => attrs.Contains("SelectionMode.SingleSelection", StringComparison.Ordinal)));
+
+    /// <summary>
+    /// CV26: a raw <c>&lt;MudButton&gt;</c> (outside <c>ActionButton.razor</c>) whose <c>Class</c> carries neither <c>list-option</c> nor
+    /// <c>link-action</c>. A button that is not a role button (an answer option, a tree row, a link in a form row) stays raw but takes one of
+    /// those two shared styles, so the raw sites look alike (ComponentCatalog, Still raw). Zero-tolerance: every raw button carried one when
+    /// the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv26(string path, string text) =>
+        new("CV26", path, path.EndsWith("/ActionButton.razor", StringComparison.Ordinal)
+            ? 0
+            : CountTags(
+                text,
+                ["MudButton"],
+                static attrs => !attrs.Contains("list-option", StringComparison.Ordinal) && !attrs.Contains("link-action", StringComparison.Ordinal)));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>

@@ -519,6 +519,38 @@ b {
     margin-inline-end: 8px;
 }
 
+/* A raw MudButton that is a row in a list, not a role button: an answer option, an Agent to invite, a tag-tree row. One look for all of
+   them (ComponentCatalog, Still raw): flush left, no capitals, a 28px row (the size of the buttons beside them) at the control radius, and
+   the hover tint on a text row. Width and spacing stay with the site. */
+.mud-button-root.list-option {
+    min-height: 28px;
+    justify-content: flex-start;
+    text-align: left;
+    text-transform: none;
+    border-radius: var(--hu-radius-control);
+}
+
+.mud-button-root.list-option .mud-button-label {
+    justify-content: flex-start;
+}
+
+.mud-button-root.list-option.mud-button-text:hover {
+    background: var(--hu-hover);
+}
+
+/* A raw MudButton that reads as a link inside a form row (Link note, Add File): accent ink, body text, no side padding. */
+.mud-button-root.link-action {
+    padding-inline: 0;
+    text-transform: none;
+    color: var(--hu-accent-ink);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.mud-button-root.link-action:hover {
+    background: transparent;
+    text-decoration: underline;
+}
+
 .mud-button-text-size-large,
 .mud-button-outlined-size-large,
 .mud-button-filled-size-large {

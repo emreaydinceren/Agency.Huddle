@@ -89,7 +89,7 @@
                             <MudButton Variant="@(selected ? Variant.Filled : Variant.Outlined)"
                                        Color="Color.Primary"
                                        Size="Size.Small"
-                                       Class="question-card-option"
+                                       Class="list-option question-card-option"
                                        aria-pressed="@(selected ? "true" : "false")"
                                        Disabled="@this.OptionsDisabled"
                                        OnClick="@(() => this.ChooseAsync(q, o))">@question.Options[o]</MudButton>
