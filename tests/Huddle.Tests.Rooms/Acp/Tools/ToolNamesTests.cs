@@ -38,6 +38,7 @@ public sealed class ToolNamesTests
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new GetTaskTool(taskHarness.Store, taskHarness.Sprints, new FakePromptSource()),
             new ListTasksTool(taskHarness.Store, taskHarness.Directory, taskHarness.Personas, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
+            new NextTaskTool(taskHarness.Store, taskHarness.Directory, new FakePromptSource(), "caller-id"),
             new UpdateTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, taskHarness.Sprints, new FakePromptSource(), "caller-id"),
             new CloseTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
             new ReopenTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
@@ -56,9 +57,10 @@ public sealed class ToolNamesTests
         Assert.Equal("create_task", tools[9].Name);
         Assert.Equal("get_task", tools[10].Name);
         Assert.Equal("list_tasks", tools[11].Name);
-        Assert.Equal("update_task", tools[12].Name);
-        Assert.Equal("close_task", tools[13].Name);
-        Assert.Equal("reopen_task", tools[14].Name);
-        Assert.Equal("ask_human", tools[15].Name);
+        Assert.Equal("next_task", tools[12].Name);
+        Assert.Equal("update_task", tools[13].Name);
+        Assert.Equal("close_task", tools[14].Name);
+        Assert.Equal("reopen_task", tools[15].Name);
+        Assert.Equal("ask_human", tools[16].Name);
     }
 }

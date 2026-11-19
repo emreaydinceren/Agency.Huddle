@@ -24,6 +24,7 @@ public sealed partial class ToolOfferOrderTests
         "mcp__team__create_task",
         "mcp__team__get_task",
         "mcp__team__list_tasks",
+        "mcp__team__next_task",
         "mcp__team__update_task",
         "mcp__team__close_task",
         "mcp__team__reopen_task",

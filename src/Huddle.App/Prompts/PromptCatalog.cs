@@ -81,7 +81,7 @@ internal static class PromptCatalog
         ..BuildPart31(),
         ..BuildPart60(),
         ..BuildPartWakeRestart(),
-        ..BuildPart32(),
+        ..BuildPart32(), ..BuildPartNextTaskA(), ..BuildPartNextTaskB(), ..BuildPartNextTaskC(), ..BuildPart32Update(),
         ..BuildParts33To39(),
         ..BuildPart51(),
         ..BuildPart52(),
@@ -2309,12 +2309,176 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Lists Tasks matching the filters you give: scope ("active" or "closed"), team, project, assignee, status, or priority. Give assignee "me" to find your own work, or "unassigned" for Tasks no one owns yet. text searches both id and title, case-insensitively. sprint filters by one sprint: give its name or id, current for the newest sprint, or none for Tasks in no sprint. Tasks come back in rank order: a Team's backlog with 1 first, then the unranked ones. Ranks compare only within a Team, so filter by team when the order matters. Take your open Tasks in rank order.
+                Lists Tasks matching the filters you give: scope ("active" or "closed"), team, project, assignee, status, or priority. Give assignee "me" to find your own work, or "unassigned" for Tasks no one owns yet. text searches both id and title, case-insensitively. sprint filters by one sprint: give its name or id, current for the newest sprint, or none for Tasks in no sprint. Tasks come back in rank order: a Team's backlog with 1 first, then the unranked ones. Ranks compare only within a Team, so filter by team when the order matters. To pick your next Task, call next_task.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the <c>next_task</c> description and its first three lines.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPartNextTaskA() =>
+    [
+        new PromptDefinition(
+            Key: "tool.nextTask.description",
+            Label: "next_task description",
+            HelperText:
+                "The one-line job description a model reads for the next_task tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Tells you which of your Tasks to start next. It orders your active Tasks by rank, priority and blockers, names the one you can start now, the few after it, and each Task that has to wait, with what it waits on. Optional team narrows it to one Team; without it, your Tasks in every Team are weighed together. It changes nothing.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
 
+        new PromptDefinition(
+            Key: "tool.nextTask.nothing",
+            Label: "next_task, nothing startable",
+            HelperText:
+                "The first line of a next_task answer when none of the caller's Tasks can start. Takes no placeholders.",
+            Default:
+                """
+                Nothing is startable right now.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.started",
+            Label: "next_task, started line",
+            HelperText:
+                "The line naming a Task the caller has already started. {{id}} is its id, {{title}} its title and {{status}} its status.",
+            Default:
+                """
+                Started: {{id}} "{{title}}" ({{status}}). Finish it before you start another.
+                """,
+            Placeholders: ["{{id}}", "{{title}}", "{{status}}"],
+            RequiredPlaceholders: ["{{id}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.next",
+            Label: "next_task, next line",
+            HelperText:
+                "The line naming the Task to start now. {{entry}} is the Task as id, quoted title and a bracket with its status and rank.",
+            Default:
+                """
+                Next: {{entry}}.
+                """,
+            Placeholders: ["{{entry}}"],
+            RequiredPlaceholders: ["{{entry}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the <c>next_task</c> after-it, waiting, blocked and cycle lines.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPartNextTaskB() =>
+    [
+        new PromptDefinition(
+            Key: "tool.nextTask.after",
+            Label: "next_task, after-it line",
+            HelperText:
+                "The line naming up to five startable Tasks after the next one. {{entries}} is those Tasks, each as id, quoted title and a bracket with its status and rank, joined by semicolons.",
+            Default:
+                """
+                After it: {{entries}}.
+                """,
+            Placeholders: ["{{entries}}"],
+            RequiredPlaceholders: ["{{entries}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.waiting",
+            Label: "next_task, waiting line",
+            HelperText:
+                "The line listing every Task that has to wait. {{reasons}} is one sentence per Task, each from a tool.nextTask.wait* prompt.",
+            Default:
+                """
+                Waiting: {{reasons}}
+                """,
+            Placeholders: ["{{reasons}}"],
+            RequiredPlaceholders: ["{{reasons}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.waitBlocked",
+            Label: "next_task, waiting on blockers",
+            HelperText:
+                "The reason for a Task held up by open blockers. {{id}} and {{title}} name the Task; {{blockers}} lists each blocker as id and a bracket with its status and assignee.",
+            Default:
+                """
+                {{id}} "{{title}}" is blocked by {{blockers}}.
+                """,
+            Placeholders: ["{{id}}", "{{title}}", "{{blockers}}"],
+            RequiredPlaceholders: ["{{id}}", "{{blockers}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.waitCycle",
+            Label: "next_task, waiting in a cycle",
+            HelperText:
+                "The reason for Tasks that block each other. {{ids}} lists the Tasks in the cycle.",
+            Default:
+                """
+                {{ids}} block each other; ask your manager.
+                """,
+            Placeholders: ["{{ids}}"],
+            RequiredPlaceholders: ["{{ids}}"],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog: the <c>next_task</c> Backlog reason and the two <c>update_task</c> refusal lines.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPartNextTaskC() =>
+    [
+        new PromptDefinition(
+            Key: "tool.nextTask.waitBacklog",
+            Label: "next_task, waiting in Backlog",
+            HelperText:
+                "The reason for a Backlog Task that holds up a To Do one. {{id}} and {{title}} name it; {{blocks}} is the Task it blocks.",
+            Default:
+                """
+                {{id}} "{{title}}" is in Backlog and blocks {{blocks}}.
+                """,
+            Placeholders: ["{{id}}", "{{title}}", "{{blocks}}"],
+            RequiredPlaceholders: ["{{id}}", "{{blocks}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.refusalNext",
+            Label: "update_task refusal, next startable Task",
+            HelperText:
+                "The line added to a refused start when the caller has a Task it can start. {{id}} and {{title}} name that Task.",
+            Default:
+                """
+                Your next startable Task is {{id}} "{{title}}".
+                """,
+            Placeholders: ["{{id}}", "{{title}}"],
+            RequiredPlaceholders: ["{{id}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.nextTask.refusalNone",
+            Label: "update_task refusal, no startable Task",
+            HelperText:
+                "The line added to a refused start when the caller has no Task it can start. Takes no placeholders.",
+            Default:
+                """
+                You have no startable Task.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+    ];
+
+    /// <summary>Builds one contiguous slice of the catalog, from <c>tool.updateTask.description</c> to <c>tool.closeTask.description</c>.</summary>
+    /// <returns>The prompt definitions of this slice, in catalog order.</returns>
+    private static PromptDefinition[] BuildPart32Update() =>
+    [
         new PromptDefinition(
             Key: "tool.updateTask.description",
             Label: "update_task description",

@@ -47,7 +47,7 @@ record Evidence that links each child Task. Archiving the Project is the Human's
 
 ### Ordering the backlog
 
-Order your Team's backlog with a Task's rank: 1 is first. Leave gaps such as 10, 20, 30, so moving one Task is one change to one Task and no other Task is renumbered. Rank a new Task when you create it.
+Order your Team's backlog with a Task's rank: 1 is first. Leave gaps such as 10, 20, 30, so a move changes one Task. Rank a new Task, and the Tasks that block it, when you create it. Members take their next Task from next_task.
 
 ### Reporting
 

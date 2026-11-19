@@ -105,6 +105,8 @@ internal sealed class UpdateTaskTool(
         {
             TaskResult.Saved saved => this.FormatSaved(saved, actor),
             TaskResult.Unchanged unchanged => $"{unchanged.Task.Id} already has those values; nothing changed.",
+            TaskResult.GateRefused { Gate: GateId.BlockersDoneBeforeStart } refused =>
+                $"{refused.Message}\n{NextTaskTool.RefusalLine(store, prompts, actor.Name)}",
             _ => TaskToolText.Refusal(result, this.Name),
         };
     }

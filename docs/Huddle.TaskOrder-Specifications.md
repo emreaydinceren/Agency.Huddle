@@ -261,8 +261,9 @@ Across Teams, ranks compare as plain numbers and interleave. ADR-0099 already ac
 
 - Default member Playbook (`Overlays/second-brain/prompts/memberPlaybook.md:25`): the line becomes "When you pick your
   next Task, call next_task. It weighs rank, priority and blockers for you."
-- Default manager Playbook (line 50): keep the rank line, and add "next_task shows each member what comes next, so a
-  blocker you leave unranked can still hold up a rank 1 Task. Rank the blocker, or move it to To Do."
+- Default manager Playbook (line 50): the "Ordering the backlog" paragraph becomes "Order your Team's backlog with a
+  Task's rank: 1 is first. Leave gaps such as 10, 20, 30, so a move changes one Task. Rank a new Task, and the Tasks
+  that block it, when you create it. Members take their next Task from next_task." (it fits the 2,500-character cap)
 - `tool.listTasks.description`: replace "Take your open Tasks in rank order." with "To pick your next Task, call
   next_task."
 - Do not edit `Playbooks/HuddleRules/member.md` (the Rank plan forbids it).

@@ -646,6 +646,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 ActivatorUtilities.CreateInstance<CreateTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<GetTaskTool>(this.serviceProvider),
                 ActivatorUtilities.CreateInstance<ListTasksTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<NextTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<UpdateTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<CloseTaskTool>(this.serviceProvider, agentId),
                 ActivatorUtilities.CreateInstance<ReopenTaskTool>(this.serviceProvider, agentId),

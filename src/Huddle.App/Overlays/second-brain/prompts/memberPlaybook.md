@@ -22,7 +22,7 @@ start another pass on the same Task unless something changed.
 
 ## Choosing what to take
 
-When you pick your next Task, take your open Tasks in rank order, lowest first, and list them with list_tasks filtered by your team. A Task with no rank comes after the ranked ones.
+When you pick your next Task, call next_task. It weighs rank, priority and blockers for you.
 
 ## Handing off
 
