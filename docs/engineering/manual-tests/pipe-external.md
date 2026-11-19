@@ -17,7 +17,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Lane is `P-LAUNCH-FREE` (ACP off, data in `<repo>\src\Huddle.App\App_Data`), except PIPEEXTERNAL-03, -18, -19, -20, -21 and -31, which need an in-process Agent and say in **Before you start** that they use [`P-LAUNCH-UAT`](common.md#p-launch-uat) instead (ACP on with the free mock adapter, data in `C:\seeds\huddle\uat\data`). Nothing in this area needs a real model turn, so nothing spends money. A Room or bot created under one lane does not exist under the other: switching lane means a different data folder.
 2. `T-A` runs the app. Extra terminals are opened by individual tests as `T-C`, `T-D` and so on, each at `<repo>`.
-3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Needs you** card when something waits, the **Rooms** group (the Rooms, then **New room** below them; the group starts closed), **Teams**, **Agents**, **Tasks**, **Library** (one link) and, at the foot, the **Archived** and **Settings** icons. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
+3. Arrange the browser at `http://localhost:5100` and `T-A` so both are visible at once. Confirm the sidebar shows, top to bottom: the **Needs you** card when something waits, the **Rooms** group (the Rooms, then **New room** below them; the group starts closed), **Teams**, **Tasks**, **Library** (one link) and, at the foot, the **Archived** and **Settings** icons. If it does not, STOP and report the app as not starting; every test below is INCONCLUSIVE.
 4. No test in this area configures a Persona. Under `P-LAUNCH-FREE` ACP stays off, so nothing here spends money; the six UAT tests use the free mock adapter.
 5. A fresh install has no pipe Agents: the sidebar starts with no Rooms of bots, and a bot's own Room appears only when it connects. The built-in Chief of Staff is seeded at every start and is an in-process Agent whatever `Acp:Enabled` is; ignore it wherever these tests read the New room and Invite agent lists. Tests that need an extra in-process Agent in a Room use Ada or Bo from `P-LAUNCH-UAT`, and say so in **Before you start**. Do not run `P-ECHO-BOT` under the name `Ada` or `Bo` in such a test: an external client under an in-process Agent's name collides with it.
 6. **RAW-CLIENT** (used by PIPEEXTERNAL-28 through -32): a plain PowerShell pipe client, distinct from `P-ECHO-BOT`. In a new terminal, line by line:
@@ -357,10 +357,10 @@ If `mybot` was never registered (no such sidebar entry), this test has no baseli
 
 **Inconclusive if**
 
-If a banner DOES appear and the name it lists is a Persona (an entry that also appears on the **Agents** page), this test is INCONCLUSIVE for this area — that banner belongs to Persona health, not to the pipe. Confirm `mybot` is absent from /agents before judging.
+If a banner DOES appear and the name it lists is a Persona (an Agent with a Persona file, one that is in a Team's **Agents** tab or the **From other teams** picker), this test is INCONCLUSIVE for this area — that banner belongs to Persona health, not to the pipe. Confirm `mybot` is in no Team's **Agents** tab and not in the **From other teams** picker before judging.
 
 > [!NOTE]
-> A pipe-only Agent NEVER appears on the **Agents** page — that page renders Persona files, and `mybot` has none. "My bot is missing from Agents" is not a bug.
+> A pipe-only Agent NEVER appears on a Team's **Agents** tab or in the **From other teams** picker — those list Persona files, and `mybot` has none. "My bot is missing from the Agents tab" is not a bug.
 
 ### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New room and Invite agent
 
@@ -402,7 +402,7 @@ If a banner DOES appear and the name it lists is a Persona (an entry that also a
 
 **Inconclusive if**
 
-In step 9, a dot that does NOT repaint while the panel sits open is EXPECTED and is not a fail — these two panels do not subscribe to presence changes, and the dot is correct every time the panel is opened or the page re-renders. Only judge the dot after closing and reopening the panel. Do not use the **Agents** page as an oracle here: pipe-only agents never appear on it at all.
+In step 9, a dot that does NOT repaint while the panel sits open is EXPECTED and is not a fail — these two panels do not subscribe to presence changes, and the dot is correct every time the panel is opened or the page re-renders. Only judge the dot after closing and reopening the panel. Do not use a Team's **Agents** tab as an oracle here: pipe-only agents never appear on it at all.
 
 ### PIPEEXTERNAL-13 — An offline Agent receives nothing, and nothing is replayed on reconnect
 

@@ -35,14 +35,14 @@ public sealed class TabHostTests
     public async Task StartingLocation_OpensAnActivePreviewTab()
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
 
         var cut = RenderHost(ctx);
 
         var tab = Assert.Single(cut.FindAll(".tab-item"));
         Assert.Contains("active", tab.ClassList);
         Assert.Contains("preview", tab.ClassList);
-        Assert.Equal("Agents", tab.QuerySelector(".tab-title")?.TextContent);
+        Assert.Equal("Scheduled", tab.QuerySelector(".tab-title")?.TextContent);
     }
 
     /// <summary>Navigating to another page replaces the preview Tab instead of adding one.</summary>
@@ -51,7 +51,7 @@ public sealed class TabHostTests
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
 
         nav.NavigateTo("/settings");
@@ -65,7 +65,7 @@ public sealed class TabHostTests
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
 
         cut.Find(".tab-item").DoubleClick();
@@ -85,7 +85,7 @@ public sealed class TabHostTests
     public async Task ClosingTheLastTab_ShowsTheEmptyState()
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
 
         await cut.InvokeAsync(() => cut.Find(".tab-close").ClickAsync());
@@ -102,7 +102,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -110,8 +110,8 @@ public sealed class TabHostTests
 
         await cut.InvokeAsync(() => cut.FindAll(".tab-close")[1].ClickAsync());
 
-        Assert.Equal("/agents", new Uri(nav.Uri).AbsolutePath);
-        Assert.Equal("agents", tabs.Active?.Key);
+        Assert.Equal("/scheduled", new Uri(nav.Uri).AbsolutePath);
+        Assert.Equal("scheduled", tabs.Active?.Key);
     }
 
     /// <summary>A menu link opens its page with the title the menu shows, not the address's fallback.</summary>
@@ -155,7 +155,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -163,8 +163,8 @@ public sealed class TabHostTests
 
         await cut.InvokeAsync(() => cut.Instance.ShortcutAsync("close"));
 
-        Assert.Equal("/agents", new Uri(nav.Uri).AbsolutePath);
-        Assert.Equal("agents", tabs.Active?.Key);
+        Assert.Equal("/scheduled", new Uri(nav.Uri).AbsolutePath);
+        Assert.Equal("scheduled", tabs.Active?.Key);
     }
 
     /// <summary>The shortcut script's next and previous move the active Tab and the router follows.</summary>
@@ -173,14 +173,14 @@ public sealed class TabHostTests
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".tab-item").Count));
 
         await cut.InvokeAsync(() => cut.Instance.ShortcutAsync("next"));
-        Assert.Equal("/agents", new Uri(nav.Uri).AbsolutePath);
+        Assert.Equal("/scheduled", new Uri(nav.Uri).AbsolutePath);
 
         await cut.InvokeAsync(() => cut.Instance.ShortcutAsync("previous"));
         Assert.Equal("/settings", new Uri(nav.Uri).AbsolutePath);
@@ -228,7 +228,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -239,7 +239,7 @@ public sealed class TabHostTests
         cut.WaitForAssertion(() =>
         {
             Assert.Equal(2, cut.FindAll(".tab-group").Count);
-            Assert.Single(cut.FindAll("#page-agents"));
+            Assert.Single(cut.FindAll("#page-scheduled"));
             Assert.Single(cut.FindAll("#page-settings"));
         });
     }
@@ -251,7 +251,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -261,8 +261,8 @@ public sealed class TabHostTests
 
         await cut.FindAll(".tab-group")[0].TriggerEventAsync("onpointerdown", new PointerEventArgs());
 
-        Assert.Equal("/agents", new Uri(nav.Uri).AbsolutePath);
-        Assert.Equal("agents", tabs.Active?.Key);
+        Assert.Equal("/scheduled", new Uri(nav.Uri).AbsolutePath);
+        Assert.Equal("scheduled", tabs.Active?.Key);
         cut.WaitForAssertion(() => Assert.Contains("focused", cut.FindAll(".tab-group")[0].ClassList));
     }
 
@@ -273,7 +273,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -293,7 +293,7 @@ public sealed class TabHostTests
     public async Task RightClickingATab_OffersTheTabMenu()
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
         var cut = RenderHostWithMenus(ctx);
 
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
@@ -306,7 +306,7 @@ public sealed class TabHostTests
     public async Task TheTabMenu_DisablesMovesForALoneTab()
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
         var cut = RenderHostWithMenus(ctx);
 
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
@@ -320,7 +320,7 @@ public sealed class TabHostTests
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
         var cut = RenderHostWithMenus(ctx);
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
 
@@ -341,7 +341,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHostWithMenus(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -361,7 +361,7 @@ public sealed class TabHostTests
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
         var cut = RenderHostWithMenus(ctx);
         await cut.InvokeAsync(() => cut.Find(".tab-item").ContextMenuAsync());
 
@@ -377,10 +377,10 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
 
-        Assert.Equal(["More actions for Agents"], cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label")));
+        Assert.Equal(["More actions for Scheduled"], cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label")));
         string[] drawn = [.. cut.Find(".tab-action").QuerySelectorAll("path").Select(static path => path.GetAttribute("d") ?? string.Empty)];
         Assert.Contains(PathData(MudBlazor.Icons.Material.Filled.MoreVert), drawn);
         Assert.DoesNotContain(PathData(MudBlazor.Icons.Material.Filled.ExpandMore), drawn);
@@ -391,7 +391,7 @@ public sealed class TabHostTests
         await cut.InvokeAsync(() => tabs.MoveRight(ActiveId(tabs)));
 
         cut.WaitForAssertion(() => Assert.Equal(
-            ["More actions for Agents", "Move Agents right", "More actions for Settings", "Move Settings left"],
+            ["More actions for Scheduled", "Move Scheduled right", "More actions for Settings", "Move Settings left"],
             cut.FindAll(".tab-action").Select(static button => button.GetAttribute("aria-label"))));
     }
 
@@ -409,7 +409,7 @@ public sealed class TabHostTests
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var nav = ctx.Services.GetRequiredService<NavigationManager>();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         var cut = RenderHost(ctx);
         cut.Find(".tab-item").DoubleClick();
         nav.NavigateTo("/settings");
@@ -427,10 +427,10 @@ public sealed class TabHostTests
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
         var tabs = ctx.Services.GetRequiredService<TabService>();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
         var cut = RenderHostWithMenus(ctx);
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label='More actions for Agents']").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='More actions for Scheduled']").ClickAsync());
 
         Assert.Equal(["Pin tab", "Move left", "Move right", "Close"], MenuItems(cut).Select(Label));
         await cut.InvokeAsync(() => MenuItems(cut).First(item => Label(item) == "Pin tab").ClickAsync());

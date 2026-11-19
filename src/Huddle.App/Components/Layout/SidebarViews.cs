@@ -13,8 +13,7 @@ internal static class SidebarViews
     private static readonly SidebarViewItem[] All =
     [
         new(SidebarView.Rooms, "Rooms", ActionIcons.Chat),
-        new(SidebarView.Teams, "Teams", Icons.Material.Outlined.Groups),
-        new(SidebarView.Agents, "Agents", Icons.Material.Filled.Group),
+        new(SidebarView.Teams, "Teams", Icons.Material.Filled.Group),
         new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.Checklist),
         new(SidebarView.Library, "Library", MaterialSymbols.Newsstand),
         new(SidebarView.Scheduled, "Scheduled", Icons.Material.Outlined.Schedule),
@@ -67,7 +66,7 @@ internal static class SidebarViews
 
     /// <summary>
     /// The page area a Tab's address belongs to: the first path segment when it names one of the places the
-    /// Activity bar follows (<c>rooms</c>, <c>teams</c>, <c>agents</c>, <c>tasks</c>, <c>library</c>,
+    /// Activity bar follows (<c>rooms</c>, <c>teams</c>, <c>tasks</c>, <c>library</c>,
     /// <c>scheduled</c>, <c>settings</c>), otherwise <see langword="null"/> (the home page, an unknown address).
     /// </summary>
     /// <param name="url">The site-relative address of the focused pane's active Tab, or <see langword="null"/> when it has none.</param>
@@ -85,7 +84,6 @@ internal static class SidebarViews
         {
             "rooms" => "rooms",
             "teams" => "teams",
-            "agents" => "agents",
             "tasks" => "tasks",
             "library" => "library",
             "scheduled" => "scheduled",
@@ -106,7 +104,6 @@ internal static class SidebarViews
     public static SidebarView? ViewForArea(string area, SidebarView? current) => area switch
     {
         "teams" => current == SidebarView.Team ? SidebarView.Team : SidebarView.Teams,
-        "agents" => SidebarView.Agents,
         "tasks" => SidebarView.Tasks,
         "library" => SidebarView.Library,
         "scheduled" => SidebarView.Scheduled,

@@ -5,7 +5,6 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
-using AgentsPage = Agency.Huddle.App.Components.Pages.Agents;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -17,8 +16,8 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The bug's shape survives in a new form, though. <see cref="AgentsPage.BuildViewParameters"/> and
-/// <see cref="AgentsPage.BuildCreateParameters"/> build a <see cref="DialogParameters"/> keyed by plain
+/// The bug's shape survives in a new form, though. <see cref="AgentProfileCardOpener.BuildViewParameters"/> and
+/// <see cref="AgentProfileCardOpener.BuildCreateParameters"/> build a <see cref="DialogParameters"/> keyed by plain
 /// strings; <c>Agents.razor</c> writes every key as <c>nameof(AgentProfileCard.Something)</c> rather
 /// than a literal, which makes a typo a compile error today, but nothing stops a future edit from
 /// reaching for a raw string instead, or from renaming a <c>[Parameter]</c> on
@@ -38,7 +37,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// </remarks>
 public sealed class AgentDialogParametersTests
 {
-    /// <summary>Every <see cref="DialogParameters"/> key <see cref="AgentsPage.BuildViewParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="AgentProfileCard"/>.</summary>
+    /// <summary>Every <see cref="DialogParameters"/> key <see cref="AgentProfileCardOpener.BuildViewParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="AgentProfileCard"/>.</summary>
     [Fact]
     public void ViewParameters_EveryKeyNamesARealAgentProfileCardParameter()
     {
@@ -46,7 +45,7 @@ public sealed class AgentDialogParametersTests
         var persona = new Persona("Jarvis", "You are Jarvis.", "claude-opus-4", "high");
         var status = new PersonaStatus(PersonaState.Online, null, DateTimeOffset.UtcNow);
 
-        var parameters = AgentsPage.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
+        var parameters = AgentProfileCardOpener.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
 
         AssertEveryKeyIsARealParameter(parameters);
     }
@@ -59,37 +58,37 @@ public sealed class AgentDialogParametersTests
         var persona = new Persona("Jarvis", "You are Jarvis.", "claude-opus-4", "high", WorkMode: "plan");
         var status = new PersonaStatus(PersonaState.Online, null, DateTimeOffset.UtcNow);
 
-        var parameters = AgentsPage.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
+        var parameters = AgentProfileCardOpener.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
 
         Assert.Equal("plan", parameters[nameof(AgentProfileCard.WorkMode)]);
         AssertEveryKeyIsARealParameter(parameters);
     }
 
-    /// <summary>The same guard against <see cref="AgentsPage.BuildViewParameters"/>'s null-entry, null-persona path (a Persona somehow not yet in <see cref="PersonaStore.Entries"/>), which still must name only real parameters.</summary>
+    /// <summary>The same guard against <see cref="AgentProfileCardOpener.BuildViewParameters"/>'s null-entry, null-persona path (a Persona somehow not yet in <see cref="PersonaStore.Entries"/>), which still must name only real parameters.</summary>
     [Fact]
     public void ViewParameters_WithNoEntryOrPersona_EveryKeyNamesARealAgentProfileCardParameter()
     {
         var status = new PersonaStatus(PersonaState.Offline, null, DateTimeOffset.MinValue);
 
-        var parameters = AgentsPage.BuildViewParameters("ghost", entry: null, persona: null, status, roomId: null, filePath: null);
+        var parameters = AgentProfileCardOpener.BuildViewParameters("ghost", entry: null, persona: null, status, roomId: null, filePath: null);
 
         AssertEveryKeyIsARealParameter(parameters);
     }
 
-    /// <summary>Every <see cref="DialogParameters"/> key <see cref="AgentsPage.BuildCreateParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="AgentProfileCard"/>.</summary>
+    /// <summary>Every <see cref="DialogParameters"/> key <see cref="AgentProfileCardOpener.BuildCreateParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="AgentProfileCard"/>.</summary>
     [Fact]
     public void CreateParameters_EveryKeyNamesARealAgentProfileCardParameter()
     {
-        var parameters = AgentsPage.BuildCreateParameters();
+        var parameters = AgentProfileCardOpener.BuildCreateParameters();
 
         AssertEveryKeyIsARealParameter(parameters);
     }
 
-    /// <summary><see cref="AgentsPage.BuildCreateParameters"/> sets <see cref="AgentProfileCard.Mode"/> to <see cref="AgentProfileCardMode.Create"/> - the one value a blank Create card cannot be opened without.</summary>
+    /// <summary><see cref="AgentProfileCardOpener.BuildCreateParameters"/> sets <see cref="AgentProfileCard.Mode"/> to <see cref="AgentProfileCardMode.Create"/> - the one value a blank Create card cannot be opened without.</summary>
     [Fact]
     public void CreateParameters_SetsModeToCreate()
     {
-        var parameters = AgentsPage.BuildCreateParameters();
+        var parameters = AgentProfileCardOpener.BuildCreateParameters();
 
         Assert.Equal(AgentProfileCardMode.Create, parameters.Get<AgentProfileCardMode>(nameof(AgentProfileCard.Mode)));
     }

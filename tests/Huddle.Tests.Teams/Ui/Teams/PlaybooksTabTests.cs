@@ -438,7 +438,7 @@ public sealed class PlaybooksTabTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal($"Reset the {kind} Playbook of Sales?", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal(
-            $"This Team's own {kind} Playbook is deleted, and its members read the Huddle default from their next Turn.",
+            $"This Team's own {kind} Playbook is deleted, and its Agents read the Huddle default from their next Turn.",
             cut.Find(".mud-dialog-content").TextContent.Trim());
         List<IElement> buttons = [.. cut.FindAll(".mud-dialog-actions button")];
         Assert.Equal(["Cancel", "Reset"], buttons.Select(static button => button.TextContent.Trim()).ToList());

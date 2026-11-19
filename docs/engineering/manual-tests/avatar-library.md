@@ -25,8 +25,8 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
    The equivalent command-line flag is `--Team:AvatarLibrary:Dir="E:\tmp\avatar-library"`; the [Engineering Guide](../../Huddle.EngineeringGuide.md#configuration) describes the key. The path is absolute because a library of your own is not under `<data>`. Those tests call the copy "the library folder". To go back to the bundled library, clear the variable (`Remove-Item Env:Team__AvatarLibrary__Dir`) and restart.
 4. Restart the app after any change to `Dir` or after the library folder appears or disappears. The thumbnail mount is added at start-up only, and only when the folder exists (`Program.cs:129`); AVATARLIB-02 depends on this.
-5. Open `http://localhost:5100/agents`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
-6. Create one scratch Agent for the card tests with **New agent**, named `Library Test`. Delete it at the end of the area. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
+5. Open `http://localhost:5100`. Keep File Explorer open on `<lib>` and on `<repo>\src\Huddle.App\App_Data\avatars` so you can see copied files appear.
+6. Create one scratch Agent for the card tests with the **New agent** card (`P-NEW-PERSONA`, in the `Test` Team), named `Library Test`. Delete it at the end of the area. "Open **New agent**" below means steps 1 and 2 of `P-NEW-PERSONA`. The picker is reached from the card by clicking the avatar at the top of the card, which opens the **Avatar** window, and selecting **An image** there; the tests below call that "open the **Avatar** window".
 
 ## Tests
 
@@ -42,7 +42,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open `/agents` and choose **New agent**.
+1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2).
 2. Click the avatar at the top of the card to open the **Avatar** window, then select **An image**.
 3. Read the buttons beside the upload control.
 4. Close the **Avatar** window and the card. Open **Settings → Profile** and click the avatar on the profile card (**Change avatar**) to open the **Avatar** window.
@@ -101,7 +101,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 
 **Steps**
 
-1. Open `/agents` and choose **Edit** on `Library Test`, then click the avatar to open the **Avatar** window.
+1. Open `Library Test`'s card (`P-OPEN-AGENT`) and choose **Edit**, then click the avatar to open the **Avatar** window.
 2. Select **Initials of the name**. Read the **Avatar** window.
 3. Select **A short label**. Read the **Avatar** window.
 4. Select **An image**. Read the **Avatar** window.
@@ -791,7 +791,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 5. Press **Edit**, then click the avatar. Read the last button and the line under the preview. Select **A short label**, type `CD`, and press **Apply**. Read the card's avatar and `<data>\avatars.json`.
 6. Press **Cancel** on the card. Reopen `Library Test` and read its avatar.
 7. Press **Edit**, click the avatar, press **Cancel** in the window and read the card's avatar. Click the avatar again and press Esc. Click it again and click the dimmed area outside the window.
-8. Close the card. Choose **New agent** and read the card's avatar before touching anything. Close the card and choose **New agent** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
+8. Close the card. Open **New agent** and read the card's avatar before touching anything. Close the card and open **New agent** twice more, reading the avatar each time. Then click the avatar, select **An image**, press **Choose from library**, click a picture and press **Apply**. Read the card's avatar. Press **Cancel** on the card and look at `<data>\avatars`.
 9. Put `Library Test` back: open it, click the avatar, select **Initials of the name** and press **Save**.
 
 **Pass if — all of these**
@@ -839,7 +839,7 @@ Note for the tester: Escape pressed with focus anywhere other than the search bo
 
 ## Cleanup
 
-1. Delete `Library Test` from `/agents`.
+1. Delete `Library Test`: open its card (`P-OPEN-AGENT`) and choose **Remove**.
 2. Delete any file this area added to `<data>\avatars` that no Agent or the Human uses.
 3. In your copy of the library, restore `master.json` if any test changed it, confirm it matches its backup, and delete `fake.svg`, any `.bak` picture and `master.json.good`. Then delete the copy (`E:\tmp\avatar-library`). Confirm `git status` shows nothing changed under `src\Huddle.App\AvatarLibrary`.
 4. Clear `Team__AvatarLibrary__Dir` in the shell you used, so the next run uses the bundled library.

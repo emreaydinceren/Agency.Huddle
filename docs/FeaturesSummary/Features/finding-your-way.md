@@ -145,7 +145,6 @@ Every page has its own address:
 | Address | Page |
 | --- | --- |
 | `/rooms/{roomId}` | A chat Room |
-| `/agents` | Agents |
 | `/teams/{Team}`, `/teams/{Team}/files` | A Team and its **Library** tab |
 | `/teams/{Team}/no-project/files` | The files of a Team that belong to no Project |
 | `/teams/{Team}/projects/{Project}` | A Project |

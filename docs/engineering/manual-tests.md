@@ -230,8 +230,8 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Jobs](manual-tests/jobs.md): scheduled Jobs, their Rooms, Needs You for the Human, `schedule.md` and restarts.
 - [Feed](manual-tests/feed.md): the Notifications bell and panel, the Feed Tab, cards, filters, the new-items pill and the restart.
 - [Remote access](manual-tests/remote-access.md): the connect page, pairing, Tailscale Serve and Funnel, the LAN bind, revocation and the Open action.
-- [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control, the one-time notice and the paid log checks.
-- [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control, the one-time notice and the paid log checks.
+- [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control and the paid log checks.
+- [Account connectors](manual-tests/agent-connectors.md): the default off, the confirm before turning on, the switch and its Feed item, the text on an Adapter Huddle cannot control and the paid log checks.
 - [Agent browser](manual-tests/agent-browser.md): the browser on by default and off per Agent, a JavaScript page, a sign-in the Human types, every click and type asking, Team duplicate and reset, Work Modes, the tool-call log and two Rooms at once (paid, Sonnet minimum).
 - [Memory Tidy](manual-tests/memory-tidy.md): the reported file an Agent keeps, the one-line "no change since", the age rule and the Chief of Staff reading a manager's file (paid, Sonnet minimum).
 - [Turn Queue](manual-tests/turn-queue.md): a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer and the held Mention (paid, Sonnet minimum).
@@ -252,14 +252,14 @@ the [Tracker](manual-tests/tracker.md), never here.
 - [Turn streaming](manual-tests/streaming-turn.md): Drafts, Stop and failure surfacing.
 - [Tasks](manual-tests/tasks.md): creating, moving, viewing and referencing a Task.
 - [Chat uploads](manual-tests/uploads.md): the paperclip, paste and drop in the composer, the chips, the Message's path lines, the Library's Uploads root and Room delete.
-- [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests in a Team's Room.
+- [Team chats](manual-tests/team-chats.md): the Team Room, Team chats in the sidebar, the Agents-tab Message, archiving and Task wakes and digests in a Team's Room.
 - [Team rename](manual-tests/team-rename.md): renaming a Team or a Project: the name dialog, the confirmation, the folder and Rooms, old links, the Agent notice, case-only, refusals, recovery from a stopped rename, and the paid checks of V-1 and V-2.
 - [Teams](manual-tests/team-pages.md): the sidebar, Members, Files, Tasks and Shared Memory.
 - [Team Playbooks](manual-tests/team-playbooks.md): the Playbooks tab, Customize, Default updated and Reset, delivery and the Turn notice, an Agent in two Teams, the file guard, Project missions, and the live paid checks.
 - [Agent card](manual-tests/agent-profile-card.md): view, edit, create and delete.
 - [Global Search](manual-tests/global-search.md): the search box, the dropdown and the jump to a Message.
 - [References](manual-tests/at-tagging.md): the `@` picker, what a pick writes, the Room and Team links, Copy link and the Referenced items header.
-- [Agents page](manual-tests/agents-library.md): tiles, Teams grouping, the filter and rejected files.
+- [Agent files](manual-tests/agents-library.md): loading, rejected files, the watcher, the status badge and the card.
 - [Turn detail and Spend](manual-tests/turn-detail.md): the live preview, Spend and phone width.
 - [Work Mode](manual-tests/work-mode.md): the picker, hidden modes and the permission behaviour.
 - [Instructions and Memory](manual-tests/instructions-memory.md): the Instructions files, the memory tool, Team Memory and the Memory protocol.

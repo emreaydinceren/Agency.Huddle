@@ -74,7 +74,7 @@ project sets the same `RootNamespace`, so namespaces do not change. To find a cl
 | Project (folder = project = assembly name) | Holds | Rule |
 | --- | --- | --- |
 | `tests/Huddle.Tests.Common` | Every non-test `.cs`: fakes, fixtures, harnesses, `TempDataDir`, `TestPaths`, `TeamWebApplicationFactory`, `MudBunitContext`. Class library | Non-test file |
-| `tests/Huddle.Tests.Hosted.Personas` | Tests that start the app in-process, for Agents: the profile card, the avatar library and endpoint, the Agents page | Uses `TeamWebApplicationFactory` |
+| `tests/Huddle.Tests.Hosted.Personas` | Tests that start the app in-process, for Agents: the profile card, the avatar library and endpoint | Uses `TeamWebApplicationFactory` |
 | `tests/Huddle.Tests.Hosted.Workspace` | Tests that start the app in-process, for the work: the Room page and message list, Teams, Library, Tasks, search, references, the sidebar | Uses `TeamWebApplicationFactory` |
 | `tests/Huddle.Tests.Hosted.Gateway` | Tests that start the app in-process, for remote access: the gateway's gates, endpoints and listeners, host filtering, the desktop bootstrap endpoint (the `Gateway/` folder) | Uses `TeamWebApplicationFactory` |
 | `tests/Huddle.Tests.Hosted` | Tests that start the app in-process, for everything else: settings (the Profile and Spending panels among them), the avatar editor, appearance, desktop wiring, app host and composition, the prompt goldens | Uses `TeamWebApplicationFactory` |

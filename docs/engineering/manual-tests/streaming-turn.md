@@ -17,7 +17,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Take the [§0.4](../manual-tests.md#04-rollback) rollback copy before touching anything. Several tests here edit config, Personas and the database.
 2. Free lane is `P-LAUNCH-FREE`. `<data>` is `<repo>\src\Huddle.App\App_Data` on that lane (see [common.md](common.md)), so a Room's Transcript is `<data>\rooms\<roomid>.jsonl`. Tests STREAMINGTURN-21 onward are all paid (21 and 22 send no prompt but start the real Adapter and the Chief of Staff's Greeting) and additionally need the Adapter: run `pwsh tools/acp/install.ps1`, then confirm `tools\acp\node_modules` exists and `node --version` prints a version. Without both, every ACP test here is INCONCLUSIVE, not failed. On any lane with ACP on, the built-in Chief of Staff also starts and takes a Greeting Turn in its empty Room (paid on the real adapter): `P-LAUNCH-PAID` handles that in its first step, so do not launch the paid lane any other way.
-3. Open a Chromium browser at `http://localhost:5100`. The free lane starts no Agent (the built-in Chief of Staff is seeded but stays Offline, and no Room is created for it), so a fresh data folder has no Room yet: the sidebar shows the title `No rooms yet` with the line `Start an agent to create one.` under it and the main column reads `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>`. The drawer shows the Room list with **New room** at its foot, then Teams, **Agents**, Task views, Library, Archived and the **Settings** icon (`MainLayout.razor:17-30`). Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
+3. Open a Chromium browser at `http://localhost:5100`. The free lane starts no Agent (the built-in Chief of Staff is seeded but stays Offline, and no Room is created for it), so a fresh data folder has no Room yet: the sidebar shows the title `No rooms yet` with the line `Start an agent to create one.` under it and the main column reads `No rooms yet. Start an agent to create one.` Start the slow-draft client (step 5) or `pwsh tools/echo-bot.ps1 -Name pipebot` in `T-C` to create one. Then confirm the page redirects to `/rooms/<some id>`. The drawer shows the Room list with **New room** at its foot, then Teams, Task views, Library, Archived and the **Settings** icon (`MainLayout.razor:17-30`). Write down the room id — tests call it ROOMID. Keep DevTools (F12) on the **Elements** tab; every "search the DOM" step below means Ctrl+F inside Elements, which searches the live DOM and not the page text.
 4. Open `T-C` for pipe clients and `T-D` for file and HTTP checks.
 5. SAVE THE SLOW-DRAFT CLIENT. It is the workhorse of this area: it holds a Draft open for as long as you like, costs nothing and needs no real agent. Create `$env:TEMP\drip.ps1` with exactly this content:
 
@@ -64,7 +64,7 @@ Read-Host 'ENTER = disconnect'
 3. In devtools Elements, press Ctrl+F and search for `member-health-alert`. Record the match count.
 4. Click each room link in the sidebar in turn and repeat the same search in each Room.
 5. In `T-D` run: `(Invoke-WebRequest "http://localhost:5100/rooms/ROOMID" -UseBasicParsing).Content | Select-String 'member-health-alert'` (substituting the real id). Record whether anything is printed.
-6. Click **Agents** in the sidebar and record the state word in the avatar badge's tooltip for each agent.
+6. Open each Agent's card (`P-OPEN-AGENT`, here the Chief of Staff) and record the state word in the avatar badge's tooltip for each agent.
 7. Go back to a Room and, in `T-C`, run `pwsh tools/echo-bot.ps1 -Name pipebot`, wait for it to print `Sent hello`, then press Ctrl+C in that window to disconnect it. Reload the Room in the browser and search for `member-health-alert` again.
 
 **Pass if — all of these**
@@ -75,7 +75,7 @@ Read-Host 'ENTER = disconnect'
   unreachable Agent is not a recipient and the Room has nothing to explain. A note standing
   permanently in every Room would be the same always-on failure by a different door.
 - The `Invoke-WebRequest` command prints nothing at all.
-- /agents shows the Chief of Staff as **Offline** with a hollow grey ring (`.agent-dot.offline`) - that alone is correct and is not a failure of this test. It is not red; red is Degraded's dash.
+- The Chief of Staff's card shows it as **Offline** with a hollow grey ring (`.agent-dot.offline`) - that alone is correct and is not a failure of this test. It is not red; red is Degraded's dash.
 
 **Fail if — any of these**
 
@@ -934,7 +934,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
    > which needs two Agents. Same rule as `ROOMMESSAGING-30` and `STARTUPCONFIG-33`.
 5. Read the area between the transcript and the composer.
 6. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
-7. Click **Agents** and read the avatar badge's tooltip for `Ada`.
+7. Open `Ada`'s card (`P-OPEN-AGENT`) and read the avatar badge's tooltip.
 8. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"` using the `P-LAUNCH-UAT` launch command only (do NOT re-run the seeder, which would wipe the Room), and send one `hello again @Ada and @Bo`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
 9. Return to the Room and click **Continue**. BEFORE typing anything, confirm the `Agents have sent 1 replies…` prompt is gone and that either the refused Agent's reply now lands (the last Message is re-delivered to whoever it Mentions) or the blue note `Budget granted and the last message was delivered again, but it names no agent. Mention one by name to get an answer.` appears (`Chat.razor:181`). Only then send `@Ada hello four` and confirm Ada replies; that last reply proves nothing about Continue, because any Human Message resets the counter (`ChatService.cs:280`).
 10. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget`, then the `P-LAUNCH-UAT` launch command.
@@ -943,19 +943,19 @@ If the app fails to restart (port in use), wait for the old process to exit full
 
 - Once the budget is spent, the Room shows `Agents have sent 2 replies since you last spoke, and are paused.` with a **Continue** button and a **Leave paused** button.
 - Zero `member-health-alert` elements exist in that Room.
-- /agents does not show `Ada` or `Bo` as **Degraded** because of the pause.
+- Neither `Ada`'s nor `Bo`'s card shows **Degraded** because of the pause.
 - `T-A` logs the refusal at Warning with no health report alongside it.
 - Clicking **Continue** clears the prompt and either lets a re-delivered reply through or shows the blue note, before you type anything.
 
 **Fail if — any of these**
 
 - A `member-health-alert` strip appears alongside the Continue prompt -> a budgetExhausted refusal is being reported as a health failure, marking an Agent that is behaving exactly as designed as broken.
-- `Ada` or `Bo` reads **Degraded** on /agents after the pause -> the same defect on the other surface.
+- `Ada` or `Bo` reads **Degraded** on its card after the pause -> the same defect on the other surface.
 - No Continue prompt appears although the console logged the refusal -> the pause is invisible, and the Human sees only a Room that stopped answering.
 
 **Inconclusive if**
 
-This Room has three Members, so per ADR-0004 each Agent answers only a Mention; in a two-Member Room (Ada's own Room) she would answer every Message, and an unmentioned Message would consume Budget exactly like a mentioned one, so stay in this Room and watch the count if you deviate from the steps. If no reply ever arrives, check that Ada and Bo are **Online** on `/agents`; if they are not, `P-LAUNCH-UAT` did not run and this test cannot run.
+This Room has three Members, so per ADR-0004 each Agent answers only a Mention; in a two-Member Room (Ada's own Room) she would answer every Message, and an unmentioned Message would consume Budget exactly like a mentioned one, so stay in this Room and watch the count if you deviate from the steps. If no reply ever arrives, check that Ada and Bo are **Online** on their avatars in their Rooms; if they are not, `P-LAUNCH-UAT` did not run and this test cannot run.
 
 > [!NOTE]
 > `Team__AgentMessageBudget` maps to the `Team:AgentMessageBudget` setting and only takes effect on restart.
@@ -975,19 +975,19 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 **Steps**
 
 1. Press Ctrl+C in `T-A`, then launch with `P-LAUNCH-PAID` (its first step makes the Chief of Staff cheap), with no `Team__Acp__Command` set.
-2. In the browser click **Agents** in the sidebar, then click **New agent**.
-3. In **Name** type `Nova`. In **Title** type `Test persona`. In **Alias** type `nova`. Leave **Teams** blank.
-4. In the **Persona body** textarea type `You are Nova. Answer briefly.`
+2. In the browser start `P-NEW-PERSONA`: open a Team's **Agents** tab, point at **Add an Agent**, select **From scratch**.
+3. In **Name** type `Nova`. In **Title** type `Test persona`. In **Alias** type `nova`. The card has no Teams field; Nova stays in the Team you opened.
+4. In the **Persona text** field type `You are Nova. Answer briefly.`
 5. In the **Model** dropdown choose the option whose name contains `Haiku`.
 6. In the **Effort** dropdown choose `low`.
-7. Click **Add agent**. Wait until Nova's avatar badge shows **Online** (check glyph) (it may pass through **Starting** first).
-8. Open Nova's Room from the sidebar (or click her tile and then **Message**) and confirm the Room shows NO alert strip while she is healthy. Note the Room id as NOVAROOM.
+7. Select **Save draft**, then **Save changes**. Wait until Nova's avatar badge shows **Online** (check glyph) (it may pass through **Starting** first).
+8. Open Nova's Room from the sidebar (or open her card, `P-OPEN-AGENT`, and then **Message**) and confirm the Room shows NO alert strip while she is healthy. Note the Room id as NOVAROOM.
 9. Press Ctrl+C in `T-A`. In the same window set `$env:Team__Acp__Command="definitely-not-node"`, then run the `P-LAUNCH-PAID` launch command (the last block of that procedure; do not repeat its first step).
 10. Wait for startup, then reload the browser and open Nova's Room.
 11. Read the area between the transcript and the composer, word for word.
 12. In devtools Elements, confirm the strip element is a `MudAlert` whose class list includes `member-health-alert` (it also carries `mud-alert` classes) and has `role="alert"` (`Chat.razor:76`), and that it sits BETWEEN the message list and the composer.
 13. Check `T-A` for `Persona 'Nova' failed to start.` at Warning.
-14. Click **Agents**, then Nova's tile; read the badge tooltip on her tile and the status and reason line on the card.
+14. Open Nova's card (`P-OPEN-AGENT`); read the badge tooltip and the status and reason line on the card.
 15. Confirm the card offers a **Restart** button and the hint `Like saving an edit, this restarts the agent, which clears what it remembers.`
 
 **Pass if — all of these**
@@ -995,7 +995,7 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 - The Room shows a bordered strip reading exactly `Nova is Offline: Failed to start 'definitely-not-node'.`
 - The strip's element carries the class `member-health-alert` (among others) and `role="alert"`, positioned between the transcript and the composer.
 - `T-A` logs `Persona 'Nova' failed to start.` at Warning with the exception (`PersonaSupervisor.cs:617`); the reason text `Failed to start 'definitely-not-node'.` comes from `AgentProcessLauncher.cs:48`.
-- /agents shows Nova as **Offline** with a hollow grey ring, the same reason line on the card, a **Restart** button and the quoted hint.
+- Nova's card shows her as **Offline** with a hollow grey ring, the same reason line as the Room, a **Restart** button and the quoted hint.
 
 **Fail if — any of these**
 
@@ -1024,7 +1024,7 @@ If Nova never reaches **Online** in step 7 even with a working `node`, this test
 **Steps**
 
 1. Open a second browser tab on Nova's Room (`/rooms/<NOVAROOM>`), confirm the alert strip is visible there, and leave that tab open and untouched.
-2. In the first tab click **Agents**, then click Nova's tile.
+2. In the first tab open Nova's card (`P-OPEN-AGENT`).
 3. Confirm the card shows **Offline**, the reason line, and a **Restart** button.
 4. Click **Restart** and immediately read the button's label.
 5. Watch the card's status line until it settles, and read the reason line.
@@ -1077,7 +1077,7 @@ If clicking Restart shows an error line at the top of the card, record it verbat
 5. In `T-A` run the `P-LAUNCH-PAID` launch command (not its first step).
 6. Reload the browser and open Nova's Room.
 7. Read the strip between the transcript and the composer, word for word.
-8. Click **Agents**, click Nova's tile, and read the **Model** section and the status line.
+8. Open Nova's card (`P-OPEN-AGENT`) and read the **Model** section and the status line.
 9. Optional (costs one very short Haiku turn): go back to Nova's Room, type `@Nova say ok` and press Enter, then wait up to 30 seconds for a Draft and a reply.
 10. Stop the app and restore the stored model: `sqlite3 <data>\team.db "update persona_models set model='<the id you wrote down>' where persona_name='Nova';"`, then restart the app.
 
@@ -1113,7 +1113,7 @@ If `sqlite3` is not on PATH, do NOT improvise - record the test as inconclusive 
 
 **Steps**
 
-1. Confirm on /agents that Nova reads **Online** (check glyph) and no reason line.
+1. Confirm on Nova's card (`P-OPEN-AGENT`) that she reads **Online** (check glyph) and no reason line.
 2. Open Nova's Room and note its id as NOVAROOM.
 3. In `T-D` run: `Get-Content "<data>\rooms\<NOVAROOM>.jsonl" | Measure-Object -Line` and write down the count as BEFORE.
 4. In the composer type exactly `@Nova count from 1 to 200, one number per line` and press Enter.
@@ -1164,17 +1164,17 @@ If no Draft ever appears, the Turn failed before streaming: read `T-A` for a war
 2. Type `@Nova count from 1 to 200, one number per line` and press Enter; click **Stop** after a second or two.
 3. Immediately look at the area between the transcript and the composer.
 4. In devtools Elements, search for `member-health-alert` and record the count.
-5. Click **Agents** and read the badge tooltip on Nova's tile; open her card and check for a reason line.
+5. Open Nova's card (`P-OPEN-AGENT`), read the badge tooltip, and check for a reason line.
 6. Note that the card offers a **Restart** button; it is offered in every state except Starting, so its presence says nothing about health here (`AgentProfileCard.razor:182`).
 7. Return to the Room and repeat the prompt-and-Stop twice more, so three Turns in a row have been stopped.
-8. After the third Stop, re-check the Room strip, the /agents tile and the card.
+8. After the third Stop, re-check the Room strip and Nova's card.
 9. Read `T-A` and count the `was stopped.` lines and any `failed to process a turn` warnings.
 10. Type `@Nova say ok` and press Enter; confirm a normal reply.
 
 **Pass if — all of these**
 
 - After every Stop the Room shows NO `member-health-alert` strip, no red text and no budget prompt.
-- Nova's tile and card read **Online** (check glyph) and no reason line throughout, including after three consecutive Stops.
+- Nova's avatar and card read **Online** (check glyph) and no reason line throughout, including after three consecutive Stops.
 - `T-A` shows exactly three `Persona 'Nova' turn in room <id> was stopped.` lines at Information and ZERO `failed to process a turn` warnings.
 - The follow-up message is answered normally.
 
@@ -1300,7 +1300,7 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 1. With the app running on `P-LAUNCH-PAID`, create a second Persona through the UI with `P-NEW-PERSONA`: **Name** `Nova2`, **Title** `Second test persona`, **Alias** `nova2`, **Persona body** `You are Nova2. Reply with one very short sentence that ends with @nova.`, **Model** the Haiku option, **Effort** `low`. Never write its file by hand: a `.md` at the `Agents` root is rejected and a hand-written file has no Model row (F1). Then open Nova's card, choose **Edit**, and change her body to `You are Nova. Reply with one very short sentence that ends with @nova2.`, then **Save**. Write down her original body so you can restore it in step 10.
 2. Press Ctrl+C in `T-A`. In the same window run the `P-LAUNCH-PAID` launch block (not its first step) but with its two budget lines replaced by `$env:Team__AgentMessageBudget = '4'` and `$env:Team__Acp__TokenBudget = '1'`. The Room Budget bounds the ping-pong, and therefore the spend.
-3. Wait for BOTH Nova and Nova2 to reach **Online** on /agents and confirm both cards show Model = Haiku and Effort = low.
+3. Wait for BOTH Nova and Nova2 to reach **Online** (their avatars, or their cards via `P-OPEN-AGENT`) and confirm both cards show Model = Haiku and Effort = low.
 4. Click **New room**, tick `Nova` and `Nova2` only, and click **Open room**.
 5. Type exactly `Say hi @nova` and press Enter. Nova answers mentioning `@nova2`, then Nova2 answers mentioning `@nova`. That second reply is an AGENT Message, so it wakes Nova with no reset — and that is the Turn the cap refuses.
 6. Watch the Room for 15 seconds and note whether any third Draft appears.
@@ -1384,7 +1384,7 @@ If pulling the network also kills the browser's connection to the app, do not ju
 
 **💰 Spends money** · about 15 min
 
-*The headline regression for this area, and it was live once: the Agent went permanently deaf in every Room with the pipe still open, the tile still green, the Draft frozen on screen and nothing logged anywhere.*
+*The headline regression for this area, and it was live once: the Agent went permanently deaf in every Room with the pipe still open, the avatar still green, the Draft frozen on screen and nothing logged anywhere.*
 
 **Before you start**
 
@@ -1400,10 +1400,10 @@ If pulling the network also kills the browser's connection to the app, do not ju
 5. Switch back to the browser immediately and watch the Room for 30 seconds WITHOUT reloading.
 6. Record whether the Draft row cleared or froze.
 7. Read the strip between the transcript and the composer, word for word.
-8. Click **Agents** and read the badge tooltip on Nova's tile.
+8. Open Nova's card (`P-OPEN-AGENT`) and read the badge tooltip.
 9. Read `T-A` for warnings mentioning Nova.
 10. Return to the Room, type `@Nova are you there` and press Enter, and watch for 30 seconds.
-11. Open Nova's card on /agents and click **Restart**; wait for **Online**.
+11. Open Nova's card (`P-OPEN-AGENT`) and click **Restart**; wait for **Online**.
 12. Type `@Nova say ok` and confirm she answers.
 13. In `T-D` re-run the line count and compare it with BEFORE plus your own prompt lines (three: steps 3, 10 and 12).
 
@@ -1411,16 +1411,16 @@ If pulling the network also kills the browser's connection to the app, do not ju
 
 - The Draft row DISAPPEARS rather than freezing, within a few seconds of the kill.
 - An alert strip appears in the Room. Any ONE of these reasons is correct (`RoomSession.cs:737,1123`; `PersonaRunner.cs:820-825,302`): `Nova is Offline: The Adapter process disconnected.`, `Nova is Offline: Its event reader ended unexpectedly.` (with `: <message>` appended when an exception ended it), `Nova is Offline: The pipe 'team' broke: <message>`, or `Nova is Degraded: A Turn in Room '<room name>' failed — <message>`. Match the `Nova is Offline:` or `Nova is Degraded:` prefix, not the whole sentence.
-- Nova's tile is no longer green/Online.
+- Nova's avatar is no longer green/Online.
 - `T-A` logs at Warning `Persona 'Nova' agent event stream ended unexpectedly.` and/or `Persona 'Nova' failed to process a turn in room <id>.`
 - The transcript gains no agent line for the killed Turn.
 - Clicking **Restart** brings Nova back to **Online**, and she answers the next message.
 
 **Fail if — any of these**
 
-- Any combination of a frozen Draft, a still-green tile, and no strip -> THE headline regression: the Agent is deaf in every Room with the pipe still open and nothing said anywhere. File immediately.
+- Any combination of a frozen Draft, a still-green avatar, and no strip -> THE headline regression: the Agent is deaf in every Room with the pipe still open and nothing said anywhere. File immediately.
 - The Draft freezes on screen with the caret still blinking -> the stream terminator is not written on this failure path.
-- Nova's tile stays **Online** -> pipe liveness alone is being used to judge health, which cannot tell a deaf Agent from a healthy one.
+- Nova's avatar stays **Online** -> pipe liveness alone is being used to judge health, which cannot tell a deaf Agent from a healthy one.
 - Messages sent afterwards are swallowed forever and **Restart** does not recover her -> the only manual recovery path is broken and the app must be restarted to use that Persona.
 - A partial reply is persisted -> a failed Turn produced a Message.
 

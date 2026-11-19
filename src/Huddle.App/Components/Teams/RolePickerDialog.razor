@@ -1,0 +1,38 @@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+
+@*
+    "Add an Agent" on the Team page's Agents tab: the roles to hire from (RolePicker, with its explainer and team type
+    filter) in a dialog. Pressing Add on a role closes it with DialogResult.Ok(roleId); the Agents tab then puts a new
+    draft Agent for that role on its roster, unhired until Save changes. The close button and Escape cancel. Adding,
+    editing or deleting one of the Human's own roles opens RoleFormDialog over this one and leaves it open.
+*@
+
+<MudDialog Class="role-picker-dialog">
+    <DialogContent>
+        <RolePicker SuggestedTypeId="@this.SuggestedTypeId" TakenRoleIds="@this.TakenRoleIds" TypeFilter="true" Intro="@Explainer" OnAdd="this.Choose" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    /// <summary>What the role cards are for, shown under the "Roles" heading.</summary>
+    internal const string Explainer = "Pick the role the new Agent will fill. Add puts a new Agent for it on the roster as a draft; nothing is hired until you select Save changes.";
+
+    /// <summary>A grid of role cards is too wide for a form's 600px, so it opens at the picker width.</summary>
+    internal static DialogOptions Options => HuddleDialogOptions.Picker;
+
+    /// <summary>The dialog instance, for closing with a result.</summary>
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The Team's own type, whose roles are marked "Suggested"; <see langword="null"/> for none.</summary>
+    [Parameter]
+    public string? SuggestedTypeId { get; set; }
+
+    /// <summary>The ids of the roles the roster already has an Agent for.</summary>
+    [Parameter]
+    public IReadOnlyCollection<string> TakenRoleIds { get; set; } = [];
+
+    /// <summary>Closes with the chosen role's id.</summary>
+    /// <param name="roleId">The role whose Add was pressed.</param>
+    private void Choose(string roleId) => this.Dialog?.Close(DialogResult.Ok(roleId));
+}

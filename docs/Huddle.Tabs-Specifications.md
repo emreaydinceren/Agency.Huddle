@@ -53,7 +53,7 @@ text. The document title is the bare page name ("Platform", "Grace", "My Tasks")
 
 | URL | Trail |
 | --- | --- |
-| `/`, `/tasks`, `/agents`, `/library`, `/settings` | the title alone |
+| `/`, `/tasks`, `/library`, `/settings` | the title alone |
 | `/rooms/{id}` | Rooms (link to `/`); the Room's name is the page's h1 |
 | `/teams/build` | Teams |
 | `/teams/{team}` | Teams; the Team's name is the page's h1 |
@@ -76,7 +76,6 @@ trail holds only the ancestors.
 | `/teams/build` | `team-build` | The query (`?type=`) is the page's own state, not part of the key. |
 | `/tasks/{view}` | `tasks:{view}` | |
 | `/tasks/item/{id}`, `/tasks/new` | `task:{id}`, `task-new` | |
-| `/agents` | `agents` | |
 | `/settings` and its sub-tabs | `settings` | |
 | `/library` with any query | `library` | One page, one Tab. The sidebar's one Library link opens it; there are no root rows. |
 | anything else | the path | |

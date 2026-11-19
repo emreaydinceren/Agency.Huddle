@@ -218,17 +218,16 @@ public sealed class PresenceAnchorGoldfishTests
         Assert.Contains("mask-image: url(", CssText.RuleBodyLoose(css, ".agent-dot.presence-glyph-fish::after", false), StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
     }
 
-    /// <summary>The four callers pass the Agent's name to the anchor, and only the ProfileCard asks for the badge alone.</summary>
+    /// <summary>The three callers pass the Agent's name to the anchor, and only the ProfileCard asks for the badge alone.</summary>
     [Fact]
     public void Callers_PassAgentName_AndOnlyProfileCardIsBadgeOnly()
     {
-        string agents = File.ReadAllText(RepoPaths.App("Components", "Pages", "Agents.razor"));
         string label = File.ReadAllText(RepoPaths.App("Components", "Shared", "AgentLabel.razor"));
         string card = File.ReadAllText(RepoPaths.App("Components", "Shared", "ProfileCard.razor"));
         string members = File.ReadAllText(RepoPaths.App("Components", "Sidebar", "MembersPanel.razor"));
 
-        Assert.All([agents, label, card, members], source => Assert.Contains("AgentName=", source, StringComparison.Ordinal)); // contains-ok: each caller source must spell the parameter
-        Assert.Equal([0, 0, 2, 0], new[] { agents, label, card, members }.Select(source => CssText.CountOccurrences(source, "BadgeOnly=\"true\"")));
+        Assert.All([label, card, members], source => Assert.Contains("AgentName=", source, StringComparison.Ordinal)); // contains-ok: each caller source must spell the parameter
+        Assert.Equal([0, 2, 0], new[] { label, card, members }.Select(source => CssText.CountOccurrences(source, "BadgeOnly=\"true\"")));
     }
 
     /// <summary>design-system.md names the fish symbol, the ring exception and the avatar label.</summary>

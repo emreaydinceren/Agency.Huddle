@@ -23,7 +23,7 @@ public sealed class TeamPageRouteTests
 
     /// <summary>Each of the four routes answers 200 with its own prerendered title and opens its default (or named) tab.</summary>
     [Theory]
-    [InlineData("/teams/Business", "Business", "Members", ".team-roster")]
+    [InlineData("/teams/Business", "Business", "Agents", ".team-roster")]
     [InlineData("/teams/Business/files", "Business", "Library", ".team-files-tab")]
     [InlineData("/teams/Business/projects/Marketing%20Project", "Marketing Project", "Library", ".team-files-tab")]
     [InlineData("/teams/Business/projects/Marketing%20Project/tasks", "Marketing Project", "Tasks", ".team-tasks-tab")]
@@ -95,7 +95,7 @@ public sealed class TeamPageRouteTests
         IHtmlDocument page = await GetPageAsync(client, "/teams/Sales%20%26%20Ops", ct);
 
         Assert.Equal("Sales & Ops", TitleOf(page));
-        Assert.Equal("Members", TextOf(page, ActiveTabSelector));
+        Assert.Equal("Agents", TextOf(page, ActiveTabSelector));
     }
 
     /// <summary>E-11: on a Project page the shell's Team crumb carries the escaped label in its href, <c>/teams/Sales%20%26%20Ops</c>.</summary>

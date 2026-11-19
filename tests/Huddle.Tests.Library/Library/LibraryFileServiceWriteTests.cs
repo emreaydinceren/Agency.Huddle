@@ -399,7 +399,7 @@ public sealed class LibraryFileServiceWriteTests
         LibraryResult<LibraryEntry> result = await service.WriteTextAsync(path, changedText, content.Format, ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Rename agents on the Agents page.", result.Error);
+        Assert.Equal("Rename an agent from its card.", result.Error);
         Assert.Equal(originalText, File.ReadAllText(path.FullPath));
     }
 

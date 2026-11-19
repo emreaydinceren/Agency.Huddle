@@ -134,9 +134,8 @@ internal static class ServicePresets
         typeof(SkillStore),
         typeof(BuiltinAgentReset),
 
-        // The Account connectors row (P6a) injects the policy; the page resolves the one-time notice's flag on demand.
+        // The Account connectors row (P6a) injects the policy.
         typeof(WorkModePolicy),
-        typeof(ConnectorsNoticeStore),
 
         // The Browser row (P6b) injects the launch facts to say whether a browser can be offered here.
         typeof(Agency.Huddle.App.Acp.BrowserLaunchFactsSource),

@@ -195,7 +195,7 @@
         string label = KindLabel(kind);
         bool confirmed = await this.Dialogs.ConfirmAsync(
             $"Reset the {label} Playbook of {this.Team}?",
-            $"This Team's own {label} Playbook is deleted, and its members read the Huddle default from their next Turn.",
+            $"This Team's own {label} Playbook is deleted, and its Agents read the Huddle default from their next Turn.",
             "Reset",
             danger: true);
         if (!confirmed)

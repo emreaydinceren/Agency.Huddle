@@ -75,7 +75,7 @@ else
                                 <MudAvatar Size="Size.Small" Color="Color.Default" Class="room-members-more" aria-label="@($"{Plural.Of(more, "more member", "more members")}")">+@more</MudAvatar>
                             }
                         </MudAvatarGroup>
-                        <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "member", "members") + you</MudText>
+                        <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "Agent", "Agents") + you</MudText>
                         @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
                         <InviteAgent RoomId="@this.room.Id" RoomName="@this.room.Name" />
                     </MudStack>

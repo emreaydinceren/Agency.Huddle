@@ -10,7 +10,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build). The paid tests need the **real** Claude adapter, not the mock cast: run `tools/acp/install.ps1` once, sign in to Claude on this computer, and launch the app with `Team:Acp:Enabled` set to true and the default Adapter. Each paid call is one Haiku call at low effort, a fraction of a cent. This area adds:
 
-1. Hire or have two Agents **Online** on `/agents`: **Leo**, who writes Tasks, and **Miriam**, a second assignee. Both may run on the real adapter; their own Turns are not what this page tests.
+1. Hire or have two Agents **Online** (status badge on their avatars in their Rooms): **Leo**, who writes Tasks, and **Miriam**, a second assignee. Both may run on the real adapter; their own Turns are not what this page tests.
 2. Open **Settings › Helpers** and note the **Needs Human** card: **On**, `0 of 50 calls today`.
 3. Task files are `{DataDir}\Teams\<Team>\_tasks\<ID>.md`; the Helper's choices and counts are in `{DataDir}\team.db` (tables `helper_settings`, `helper_usage`, `helper_status`, `needs_human_overrides`).
 4. The exact interface strings below are those of the Helpers tab, the Task panel and the Change log. A pass means the text matches, not just the meaning.

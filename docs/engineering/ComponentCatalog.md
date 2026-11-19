@@ -198,7 +198,7 @@ beside the name, which `GoldfishStamp.Apply` suffixes with " · goldfish". The R
 | `ProfileCard` | `Components/Shared/ProfileCard.razor` | 3 (3 files: `BuildTeam`, `ProfilePanel`, `ProfilePopover`) | `Profile`, `Manager`, `Existing`, `Membership`, `Actions`, `OnAvatarClick` |
 | `ProfilePopover` | `Components/Shared/ProfilePopover.razor` | opened by `ProfileAvatar` | `Name`, `Team`, `OnClose` |
 
-The Team page's Members tab is `BuildTeam` with `MembersOnly`, so the roster cards above are
+The Team page's Agents tab is `BuildTeam` with `MembersOnly`, so the roster cards above are
 `ProfileCard`. The caller passes the buttons in `Actions`.
 
 ### The Agents page card

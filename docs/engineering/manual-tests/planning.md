@@ -25,8 +25,8 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 3 | [Room view, posting Messages and Transcript rendering](room-messaging.md) | 29 | 1 | 3.3h |
 | 4 | [Turn streaming, Drafts, Stop and failure surfacing](streaming-turn.md) | 30 | 10 | 4.5h |
 | 5 | [Reply Gate, Mentions and Room Budget](reply-gate-budget.md) | 36 | 6 | 5.9h |
-| 6 | [Agents page: tiles, Teams grouping, filter and rejected files](agents-library.md) | 42 | 1 | 4.4h |
-| 7 | [Agent card: view, edit, create, delete](agent-profile-card.md) | 53 | 1 | 6.9h |
+| 6 | [Agent files: loading, rejected files, watcher, status badge and the card](agents-library.md) | 42 | 1 | 3.4h |
+| 7 | [Agent card: view, edit, create, delete](agent-profile-card.md) | 53 | 1 | 6.1h |
 | 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 28 | 1 | 3.8h |
 | 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 38 | 4 | 4.2h |
 | — | [Global Search: the box, the dropdown and the jump](global-search.md) | 10 | — | 2.3h |
@@ -51,7 +51,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 27 | [Turn detail and Spend](turn-detail.md) | 5 | 4 | 1.8h |
 | 28 | [Needs You: the sidebar card of Rooms waiting on the Human](needs-you.md) | 4 | — | 0.4h |
 | 29 | [Right sidebar: the panels by Subject, Outline, collapse and focus](right-sidebar.md) | 8 | — | 0.7h |
-| 29 | [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | 11 | — | 1.1h |
+| 29 | [Team chats: the Team Room, Team chats in the sidebar, the Agents-tab Message, archiving and Task wakes and digests](team-chats.md) | 11 | — | 1.1h |
 | 30 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | 8 | 0 | 1.0h |
 | 31 | [Skill Packs: SKILLS.md, the AI tool, updates, the move and shared folders](skill-packs.md) | 7 | 1 | 2.5h |
 | 32 | [Document history: the byline, the History, the History panel and the Stop hook](doc-history.md) | 8 | 4 | 1.6h |
@@ -116,7 +116,7 @@ continue. For the totals, run `pwsh agents/scripts/Check-ManualTests.ps1 -Summar
 | [PROMPTBLOCKS-01](prompt-blocks.md#promptblocks-01--a-named-image-is-seen-without-a-tool-call) | A named image is seen, without a tool call |
 | [RS-M1](room-sessions.md#rs-m1--the-two-trip-stress-test) | Per-Room session context across the two-trip stress test |
 | [TASKS-01](tasks.md#tasks-01--creating-a-task-in-the-ui-writes-the-file-at-the-right-path-with-the-canonical-frontmatter) | Creating a Task in the UI writes its file at the right path, with canonical frontmatter |
-| [TP-T0](team-pages.md#tp-t0--click-business-team-and-open-members-tab) | Clicking Business team opens its Members tab |
+| [TP-T0](team-pages.md#tp-t0--click-business-team-and-open-members-tab) | Clicking Business team opens its Agents tab |
 | [TURNDETAIL-01](turn-detail.md#turndetail-01--an-edit-shows-a-live-expandable-preview-in-a-room) | An edit shows a live, expandable preview in a Room |
 
 > [!TIP]

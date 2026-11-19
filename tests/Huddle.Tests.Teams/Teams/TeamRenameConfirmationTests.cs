@@ -46,7 +46,7 @@ public sealed class TeamRenameConfirmationTests
         IReadOnlyList<ConfirmPoint> points = TeamRenameConfirmation.Points(TeamRenameKind.Team, Marketing, 3, []);
 
         Assert.Equal(5, points.Count);
-        Assert.Equal(new ConfirmPoint("3 members restart and start new conversations.", Restart), points[0]);
+        Assert.Equal(new ConfirmPoint("3 Agents restart and start new conversations.", Restart), points[0]);
     }
 
     /// <summary>One member reads in the singular.</summary>
@@ -55,7 +55,7 @@ public sealed class TeamRenameConfirmationTests
     {
         IReadOnlyList<ConfirmPoint> points = TeamRenameConfirmation.Points(TeamRenameKind.Team, Marketing, 1, []);
 
-        Assert.Equal(new ConfirmPoint("1 member restarts and starts a new conversation.", Restart), points[0]);
+        Assert.Equal(new ConfirmPoint("1 Agent restarts and starts a new conversation.", Restart), points[0]);
     }
 
     /// <summary>A Team with no members has no restart point, so four remain and the first is the "told on their next Turn" one.</summary>

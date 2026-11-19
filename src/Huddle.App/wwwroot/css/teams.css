@@ -326,6 +326,118 @@
     gap: 8px;
 }
 
+/* The Agents tab's "Add an Agent" tile fills its roster cell, as tall as the member cards beside it. The tile and its three
+   sources share one grid cell; hover, focus inside it or the open class (a tap, or Enter) swaps the one for the other. The
+   tile fades rather than leaving the layout, so a keyboard focus on it survives the swap and Tab moves on to the sources. */
+.roster-add-item {
+    display: grid;
+}
+
+.roster-add-item > .roster-add-card,
+.roster-add-item > .roster-add-choices {
+    grid-area: 1 / 1;
+}
+
+.roster-add-choices {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border: 1px dashed var(--mud-palette-primary);
+    border-radius: var(--hu-radius-card);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 120ms ease, visibility 120ms;
+}
+
+.roster-add-card {
+    transition: opacity 120ms ease;
+}
+
+.roster-add-item:is(:hover, :focus-within, .roster-add-open) > .roster-add-choices {
+    opacity: 1;
+    visibility: visible;
+}
+
+.roster-add-item:is(:hover, :focus-within, .roster-add-open) > .roster-add-card {
+    opacity: 0;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .roster-add-choices,
+    .roster-add-card {
+        transition: none;
+    }
+}
+
+/* "From other teams": the Agents not on this Team, a grid of tiles under a heading per Team. */
+.agent-picker-intro {
+    margin-bottom: 12px;
+}
+
+.agent-picker-filter {
+    max-width: 16rem;
+    margin-bottom: 12px;
+}
+
+.agent-picker-group + .agent-picker-group {
+    margin-top: 16px;
+}
+
+.agent-picker-heading {
+    margin-bottom: 8px;
+}
+
+.agent-picker-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.agent-picker-tile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 12px;
+    font: inherit;
+    text-align: start;
+    color: inherit;
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--ink-line);
+    border-radius: var(--hu-radius-card);
+    cursor: pointer;
+}
+
+.agent-picker-tile:hover,
+.agent-picker-tile:focus-visible {
+    background: var(--mud-palette-action-default-hover);
+    border-color: var(--mud-palette-primary);
+}
+
+.agent-picker-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.agent-picker-name {
+    font-weight: 600;
+}
+
+.agent-picker-role {
+    overflow: hidden;
+    font-size: var(--mud-typography-body2-size);
+    color: var(--mud-palette-text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .build-team-subhead .chip-meta::before {
     content: "\00b7\00a0";
 }

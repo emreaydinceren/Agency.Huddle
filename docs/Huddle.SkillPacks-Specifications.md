@@ -2850,6 +2850,12 @@ cancelled card leaves nothing behind (the existing comment at line 852 says the 
 `SaveDraftAsync` (line 1892, the draft path) copies nothing; the draft returns its names and `BuildTeam`
 checks them at **Approve & hire**.
 
+> **Changed 2026-11-18.** The select and the separate collapse below are now one checkbox list with a search box:
+> items 2 and 3 form its **On this computer** group, and the not-downloaded Skills its folded **Needs setup first**
+> group (disabled checkbox and **Copy prompt** each). The draft caption now reads *"…when the Agent is
+> hired."*, and *Changing Skills restarts this Agent.* shows only when editing an existing Agent. See
+> wireframes.md `P7`.
+
 **The Skills select (lines 340–375).** It lists:
 
 1. For a draft only: nothing "Not installed yet" any more.

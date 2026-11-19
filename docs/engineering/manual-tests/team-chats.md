@@ -1,6 +1,6 @@
 # Team chats
 
-Prove, in a real browser, that every Team has a Team Room holding the Human and every member; that a chat started inside a Team is listed under that Team and not under Rooms; that **Message** on the Members tab opens the Team's own one-to-one rather than the root one; that the Team Room cannot be renamed; that archiving and a vanished Team behave as ADR-0052 says; and that a digest lands in the Team Room while a Task wake lands in the Team's own Room for its assignee. The automated suite proves the directory, the reconciler, the prompt label and the wakes against fakes; this page proves what only a browser and a running app show: the sidebar's place and nesting, the Members tab's action, the Explorer rename, and the Transcripts a real Agent writes into. The design is [the Team chats spec](../../Huddle.TeamChats-Specifications.md) and [ADR-0052](../../adr/0052-a-room-belongs-to-the-root-or-to-one-team.md).
+Prove, in a real browser, that every Team has a Team Room holding the Human and every member; that a chat started inside a Team is listed under that Team and not under Rooms; that **Message** on the Agents tab opens the Team's own one-to-one rather than the root one; that the Team Room cannot be renamed; that archiving and a vanished Team behave as ADR-0052 says; and that a digest lands in the Team Room while a Task wake lands in the Team's own Room for its assignee. The automated suite proves the directory, the reconciler, the prompt label and the wakes against fakes; this page proves what only a browser and a running app show: the sidebar's place and nesting, the Agents tab's action, the Explorer rename, and the Transcripts a real Agent writes into. The design is [the Team chats spec](../../Huddle.TeamChats-Specifications.md) and [ADR-0052](../../adr/0052-a-room-belongs-to-the-root-or-to-one-team.md).
 
 **11 tests** · 11 free · about 1.1 hours. Written 2026-10-12; **not yet run by a person**. The feature was built on 2026-10-12; uploads are a separate spec and are not covered here.
 
@@ -10,10 +10,10 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Both are in no Team yet.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room). Both are in no Team yet.
 2. Open Ada's and Bo's root one-to-ones under **Rooms** once, send `hello` in each, and note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's room id>'`, `$bo = '<Bo's room id>'`.
 3. Create the Team **Marketing** by making the folder `<data>\Teams\Marketing` and reloading the page. It has no members, so it has no Team Room yet, and that is expected.
-4. Add **Ada** to Marketing: open her card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line of the text and save. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
+4. Add **Ada** to Marketing (`P-ADD-TO-TEAM`, on Marketing's **Agents** tab; Ada is under **No team**). Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
 5. The area's tests share this fixture and run in order. TEAMCHATS-02 adds a third Agent, and TEAMCHATS-07 renames the folder, so leave the fixture as it is when a test says so.
 
 This area makes an Agent post a Message into a Transcript by hand, because the mock Agents strip every `@` from what they echo. Define the helper once:
@@ -61,14 +61,14 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Before you start**
 
-- TEAMCHATS-01 has passed. Hire a third Agent with **Add agent** on the Agents page, named `Kim`, and wait for it to be **Online**. Kim is in no Team yet.
+- TEAMCHATS-01 has passed. Hire a third Agent with `P-NEW-PERSONA`, named `Kim`, and wait for it to be **Online**. Use **Remove from team** so Kim is in no Team yet.
 
 **Steps**
 
-1. Open **Kim**'s card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line of the text and save.
+1. Add **Kim** to Marketing (`P-ADD-TO-TEAM`, on Marketing's **Agents** tab; Kim is under **No team**).
 2. Wait until Kim is **Online**, then open the Team Room.
 3. Read the end of the Transcript.
-4. Open the Members tab of Marketing.
+4. Open the Agents tab of Marketing.
 
 **Pass if — all of these**
 
@@ -113,7 +113,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Steps**
 
 1. Note the id in the address bar of Ada's root one-to-one under **Rooms**: open it and read the 32 hexadecimal characters after `/rooms/`.
-2. Open **Marketing** and its **Members** tab. Find Ada's card and press **Message**.
+2. Open **Marketing** and its **Agents** tab. Find Ada's card and press **Message**.
 3. Note the id in the address bar now.
 4. Look at **Rooms** and at **Marketing**'s rows.
 
@@ -175,7 +175,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 **Before you start**
 
 - TEAMCHATS-03 has passed, so Marketing has a Team Room and at least one more scoped Room.
-- Ada and Bo no longer carry the `Marketing` label: on the Members tab of Marketing, choose **Remove** › **Remove from team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that an Agent still names is not gone, so it would not be archived.
+- Ada and Bo no longer carry the `Marketing` label: on the Agents tab of Marketing, choose **Remove** › **Remove from team** on each of them, select **Save changes**, and wait for both to be **Online**. A Team that an Agent still names is not gone, so it would not be archived.
 - Note the Team Room's id and the number of Messages in it.
 
 **Steps**
@@ -232,7 +232,7 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 1. On the Task `Marketing: brief`, change its status to another column on the board or list.
 2. Wait for Ada to answer.
-3. Open Marketing's **Members** tab and press **Message** on Ada. This is the Team's one-to-one with Ada.
+3. Open Marketing's **Agents** tab and press **Message** on Ada. This is the Team's one-to-one with Ada.
 4. Read its last lines, then open Ada's root one-to-one under **Rooms** and read its last lines.
 
 **Pass if — all of these**

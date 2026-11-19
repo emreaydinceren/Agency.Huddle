@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -122,7 +121,7 @@ internal static class AgentProfileCardTestSupport
             () => cut.Find(AvatarLabelInput),
             input => input.Input(value));
 
-    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <c>AgentsPageTests</c> uses.</summary>
+    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern the page tests use.</summary>
     internal static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
         MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Agents));
@@ -131,13 +130,13 @@ internal static class AgentProfileCardTestSupport
         AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         return ctx;
     }
-    /// <summary>Renders the real <see cref="Agency.Huddle.App.Components.Pages.Agents"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card actually renders (see the type-level remarks) and a <c>MudSelect</c> inside it can too.</summary>
+    /// <summary>Renders <see cref="AgentCardTestHost"/>, the page that opens the card, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card actually renders (see the type-level remarks) and a <c>MudSelect</c> inside it can too.</summary>
     internal static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, TeamWebApplicationFactory factory)
     {
         _ = factory;
         return ctx.RenderWithPopovers(builder =>
         {
-            builder.OpenComponent<Agency.Huddle.App.Components.Pages.Agents>(0);
+            builder.OpenComponent<AgentCardTestHost>(0);
             builder.CloseComponent();
         });
     }
@@ -287,7 +286,7 @@ internal static class AgentProfileCardTestSupport
     /// <paramref name="raise"/> on it inside one turn of the renderer's dispatcher.
     /// </summary>
     /// <remarks>
-    /// Neither the page nor the card is synchronous end to end: <c>Agents.OnInitializedAsync</c>
+    /// Neither the page nor the card is synchronous end to end: the opener's lookups
     /// and a View/Edit card's own <c>OnInitializedAsync</c> each finish on a real SQLite lookup, and
     /// their completion renders land on the dispatcher whenever that lookup answers - under full-suite
     /// load, often mid-test. A bare synchronous click from the test thread races them twice
@@ -405,16 +404,12 @@ internal static class AgentProfileCardTestSupport
     internal static Task ClickSelectItemAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
         ClickAsync(cut, () => cut.FindAll("div.mud-list-item").First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)));
 
-    /// <summary>
-    /// Clicks the Skills select's open option naming <paramref name="skillName"/> - matched by
-    /// <c>Contains</c> rather than <see cref="ClickSelectItemAsync"/>'s exact equality, because Spec
-    /// §6.7 has each option show its description alongside the Skill's name, so the option's full
-    /// text content is never just the bare name.
-    /// </summary>
+    /// <summary>Ticks or unticks the Skills list's checkbox for <paramref name="skillName"/>, found by its row's <c>data-skill</c>.</summary>
     /// <param name="cut">The rendered page holding the card.</param>
-    /// <param name="skillName">The Skill's name, as it appears in <see cref="SkillStore.All"/>.</param>
-    internal static Task ClickSkillOptionAsync(IRenderedComponent<ContainerFragment> cut, string skillName) =>
-        ClickAsync(cut, () => cut.FindAll("div.mud-list-item").First(item => item.TextContent.Contains(skillName, StringComparison.Ordinal)));
+    /// <param name="skillName">The Skill's name.</param>
+    /// <param name="ticked">Whether to tick it.</param>
+    internal static Task SetSkillTickedAsync(IRenderedComponent<ContainerFragment> cut, string skillName, bool ticked) =>
+        cut.InvokeAsync(() => cut.Find($".agent-profile-card-skill-row[data-skill='{skillName}'] input[type=checkbox]").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = ticked }));
 
     /// <summary>Raises <c>@onchange</c> with <paramref name="value"/> on the input or textarea labelled <paramref name="label"/>, through <see cref="DispatchWhenPresentAsync"/>.</summary>
     /// <param name="cut">The rendered page holding the card.</param>

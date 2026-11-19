@@ -162,7 +162,7 @@ ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test g
    Chief of Staff
    ```
 
-5. Click **Agents** in the Activity bar and open the **Chief of Staff**. Click **Edit**, check **Model** already shows Opus and **Effort** medium (a new Chief of Staff starts on them), set **Model** to Sonnet and **Effort** to low, and click **Save**.
+5. Open the **Chief of Staff**'s card (`P-OPEN-AGENT`). Click **Edit**, check **Model** already shows Opus and **Effort** medium (a new Chief of Staff starts on them), set **Model** to Sonnet and **Effort** to low, and click **Save**.
 
 **Expect**: the app opens on **Settings › Profile** with a welcome note, not on a chat. No Team exists. The sidebar's
 **Teams** view shows only **Build a team**.
@@ -247,7 +247,7 @@ Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** 
    C:\HuddleZero\data\Agents\Hana\Hana.md:7:skills: ['team-management', 'ingest', 'wrap-up', 'brain-check']
    ```
 
-2. Click **Agents**, open **Hana**, and click **Edit**. Open **Skills**, and also tick `retrospective`, which ZERO-20 needs. Click an empty part of the card to close the list, then click **Save**. Hana restarts.
+2. Open **Hana**'s card (`P-OPEN-AGENT`) and click **Edit**. Open **Skills**, and also tick `retrospective`, which ZERO-20 needs. Click an empty part of the card to close the list, then click **Save**. Hana restarts.
 3. Click **Edit** on the card again, because **Process** is only in the edit form. Under **Process**, click **Use this process**. It must say `This Team already has a process. Edit it on the Process tab.` and change nothing.
 4. Open Hana's page again and find **What this Agent reads**. Check it lists `Teams/AGENTS.md`, `Teams/Family/AGENTS.md` and Hana's own file.
 
@@ -443,7 +443,7 @@ There is no `_tasks` folder yet: it appears with the Team's first Task, which co
 This is the core test of the Second Brain. Cole and Cass were never mentioned during the ingest, and each now starts a new
 session in a new Room.
 
-1. On the Team's **Members** tab, click **Message** on **Cole**, and send:
+1. On the Team's **Agents** tab, click **Message** on **Cole**, and send:
 
    ```text
    As of 3 November 2026, what is our total unpaid, and how much of that is overdue? Exclude anything void. Name the overdue invoices, and say which file you used.
@@ -535,7 +535,7 @@ session in a new Room.
 
 **Route B, with no download.**
 
-1. On the Developer draft, click **Edit**, and open the **Skills** select (focus it and press Enter if a click does not open it). The two Skills it brought are at the end of the select, each marked `Not on this computer yet. Untick it to go without it.` Click each row's **text** to untick it: clicking the checkbox square toggles twice and leaves it ticked. The `Not on this computer yet` list below the select is read-only. Click an empty part of the card, and click **Save draft**.
+1. On the Developer draft, click **Edit** and find the **Skills** list. The two Skills it brought are at the end of its **On this computer** group, each marked `Not on this computer yet. Untick it to go without it.` Untick each one's checkbox. The **Needs setup first** group, if you open it, is read-only. Click **Save draft**.
 2. Do the same on the Reviewer draft.
 3. **Needs setup** clears from both, and **Approve & hire** turns on.
 

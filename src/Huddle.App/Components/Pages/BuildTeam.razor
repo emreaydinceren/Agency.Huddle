@@ -50,7 +50,8 @@
     The Team page embeds this component twice for an existing Team (Team set). Its Details tab (TeamDetails) shows
     the type and details sections and a Save row: the type and name are fixed, and Save changes writes "What it's
     for" and the Library folder. Its Members tab (TeamRoster, MembersOnly) shows only the Hire section and a Save
-    row: the members are on the roster beside any new drafts, a member's Edit opens their card (which saves at
+    row. The roles are not on the tab: the roster's "Add an Agent" tile opens them in RolePickerDialog, and the role
+    chosen there becomes a new draft. The members are on the roster beside any new drafts, a member's Edit opens their card (which saves at
     once), and Remove marks a member to leave the Team or to be deleted. Save changes hires the new drafts,
     replaces the manager, then takes members off or deletes them, in that order, so the manager is replaced before
     the old one goes. Neither embedded form has the page header or the steps, and both redraw in place on save.
@@ -146,58 +147,29 @@
                     <MudText Typo="Typo.h6" id="build-team-hire-heading">Hire</MudText>
                 </div>
             }
-            <div class="build-team-subhead">
-                <MudText Typo="Typo.subtitle2" HtmlTag="h3">Roles</MudText>
-                <span class="chip-meta build-team-roles-subtitle">@Plural.Of(this.Pool.Jobs.Count + this.CustomRoles.Roles.Count, "role", "roles") available</span>
-            </div>
-            @if (this.MembersOnly)
+            @* An Agent file that does not load is in no Team, so it would vanish without a word: every Members tab names it,
+               above the roster, until the file is fixed (PersonasChanged repaints this page). *@
+            @if (this.MembersOnly && this.Personas.RejectedFiles is { Count: > 0 } rejectedFiles)
             {
-                @* Members tab only: narrow the roles below to the ones a team type defines. A cloud of the types; the chosen one
-                   floats to its left as the Tasks toolbar's filter chip without the caret, with a clear button, and pressing
-                   another type in the cloud changes the choice. *@
-                <div class="build-team-role-type-filter">
-                    <ChipCloud Title="Team types" Pool="@this.TypeChipNames" Cap="12" OnToggle="this.OnTypeChipToggled">
-                        <Leading>
-                            @if (this.RoleTypeFilter is { } filterType)
-                            {
-                                <TaskFilterChip Label="Team type" Value="@filterType.DisplayName" IsSet="true" NoMenu="true" OnClear="this.ClearRoleTypeFilter" Class="build-team-role-type-chip" />
-                            }
-                        </Leading>
-                    </ChipCloud>
-                </div>
+                <Notice Severity="NoticeLevel.Warning" Class="build-team-load-notice">
+                    <MudText Typo="Typo.subtitle2">Files that didn't load</MudText>
+                    <ul class="agents-rejected-list">
+                        @foreach (RejectedPersonaFile rejected in rejectedFiles)
+                        {
+                            <li class="agents-rejected-item">
+                                <span class="agents-rejected-path">@rejected.Path</span>
+                                <span class="agents-rejected-reason">@rejected.Reason</span>
+                            </li>
+                        }
+                    </ul>
+                </Notice>
             }
-            @if (this.CustomRoles.LoadError is not null)
+            @* Build a team leads with the roles, since its roster is empty until one is added. The Members tab leads with who is
+               on the Team; its roles open in RolePickerDialog from the roster's "Add an Agent" tile. *@
+            @if (!this.MembersOnly)
             {
-                <Notice Severity="NoticeLevel.Warning" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</Notice>
+                <RolePicker SuggestedTypeId="@this.selected.Id" TakenRoleIds="@this.TakenRoleIds" OnAdd="this.AddDraftAsync" />
             }
-            <div class="role-grid" role="group" aria-label="Roles">
-                <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
-                    <span class="role-add-label">Add a role</span>
-                </button>
-                @foreach (RoleEntry entry in this.VisibleRoleEntries)
-                {
-                    @if (entry.Custom)
-                    {
-                        <RoleCard @key="entry.Id" RoleId="@entry.Id" Title="@entry.Title" Description="@entry.Description" Custom="true" Taken="@this.OnRoster(entry.Id)"
-                                  OnAdd="this.AddDraftAsync" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
-                    }
-                    else
-                    {
-                        <RoleCard @key="entry.Id" RoleId="@entry.Id" Title="@entry.Title" Description="@entry.Description" Suggested="@entry.Suggested" Taken="@this.OnRoster(entry.Id)" OnAdd="this.AddDraftAsync" />
-                    }
-                }
-            </div>
-            @if (this.RoleEntries.Count > CollapsedRoleLimit)
-            {
-                <ActionButton Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
-                           OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</ActionButton>
-            }
-            @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
-            {
-                <MudText Typo="Typo.body2" Class="build-team-intro build-team-role-type-empty" role="status">@emptyType.DisplayName has no roles to hire from here.</MudText>
-            }
-
             <div class="build-team-roster">
                 <div class="build-team-subhead">
                     <MudText Typo="Typo.subtitle2" HtmlTag="h3">@(this.EditMode ? "Roster" : "Draft roster")</MudText>
@@ -206,9 +178,27 @@
                         <span class="chip-meta build-team-roster-summary">@this.RosterSummary</span>
                     }
                 </div>
-                @if (this.drafts.Count > 0)
+                @if (this.drafts.Count > 0 || this.MembersOnly)
                 {
                     <div class="roster-grid" role="list" aria-label="@(this.EditMode ? "Roster" : "Draft roster")">
+                        @if (this.MembersOnly)
+                        {
+                            @* The Members tab's way to add someone: like the roles' "Add a role" tile, first in the grid. Hovering it, focusing it
+                               or tapping it turns it into its three sources (CSS shows them on :hover and :focus-within; the open class carries a
+                               tap or a press of Enter, and a focus leaving the tile drops it). *@
+                            <div role="listitem" class="@(this.addChoicesOpen ? "roster-add-item roster-add-open" : "roster-add-item")" @onfocusout="this.CloseAddChoices">
+                                <button type="button" class="role-add-card roster-add-card" aria-label="Add an Agent"
+                                        aria-expanded="@(this.addChoicesOpen ? "true" : "false")" @onclick="this.OpenAddChoices">
+                                    <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
+                                    <span class="role-add-label">Add an Agent</span>
+                                </button>
+                                <div class="roster-add-choices" role="group" aria-label="Add an Agent from">
+                                    <ActionButton Role="ButtonRole.Secondary" FullWidth="true" OnClick="this.AddMemberAsync" Class="roster-add-catalog">From roles catalog</ActionButton>
+                                    <ActionButton Role="ButtonRole.Secondary" FullWidth="true" OnClick="this.AddFromTeamsAsync" Class="roster-add-teams">From other teams</ActionButton>
+                                    <ActionButton Role="ButtonRole.Secondary" FullWidth="true" OnClick="this.AddFromScratchAsync" Class="roster-add-scratch">From scratch</ActionButton>
+                                </div>
+                            </div>
+                        }
                         @foreach (DraftMember draft in this.drafts)
                         {
                             bool deleting = this.removed.Contains(draft.Key);
@@ -223,6 +213,11 @@
                                     {
                                         <ActionButton StartIcon="@Icons.Material.Outlined.Undo" OnClick="@(() => this.UndoRemove(draft.Key))"
                                                    aria-label="@($"Keep {draft.Name}")" Class="roster-undo">Undo</ActionButton>
+                                    }
+                                    else if (this.joining.Contains(draft.Key))
+                                    {
+                                        <ActionButton OnClick="@(() => this.RemoveDraft(draft.Key))"
+                                                   aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</ActionButton>
                                     }
                                     else if (draft.Existing)
                                     {
@@ -271,21 +266,21 @@
                     @* An empty roster is the EmptyState, not a caption after the heading (#476). *@
                     <div class="roster-empty">
                         <EmptyState Icon="@Icons.Material.Outlined.GroupAdd" Title="No Agents yet"
-                                    Text="@(this.EditMode ? "Add a role above to hire the first Agent." : "Add a role above to draft the first Agent, with a name and an avatar.")" />
+                                    Text="Add a role above to draft the first Agent, with a name and an avatar." />
                     </div>
                 }
-            </div>
 
-            @if (this.EditMode && this.ManagerChoices.Count > 0)
-            {
-                <SelectField T="string" Label="Manager" DenseItems="true"
-                           Value="this.managerKey" ValueChanged="this.OnManagerChanged" Class="build-team-manager">
-                    @foreach (DraftMember choice in this.ManagerChoices)
-                    {
-                        <MudSelectItem T="string" Value="@choice.Key">@choice.Name</MudSelectItem>
-                    }
-                </SelectField>
-            }
+                @if (this.EditMode && this.ManagerChoices.Count > 0)
+                {
+                    <SelectField T="string" Label="Manager" DenseItems="true"
+                               Value="this.managerKey" ValueChanged="this.OnManagerChanged" Class="build-team-manager">
+                        @foreach (DraftMember choice in this.ManagerChoices)
+                        {
+                            <MudSelectItem T="string" Value="@choice.Key">@choice.Name</MudSelectItem>
+                        }
+                    </SelectField>
+                }
+            </div>
         </section>
     }
 
@@ -377,6 +372,12 @@
     /// <summary>The members marked to leave the Team on save: their Team label is removed and they stay Agents.</summary>
     private readonly HashSet<string> leaving = new(StringComparer.Ordinal);
 
+    /// <summary>The Agents from other Teams (or none) marked to join on save: this Team is added to their teams: line, and they stay where they are.</summary>
+    private readonly HashSet<string> joining = new(StringComparer.Ordinal);
+
+    /// <summary>Whether the "Add an Agent" tile shows its three sources after a tap or a press of Enter; hover and focus show them without it.</summary>
+    private bool addChoicesOpen;
+
     /// <summary>Whether the member or draft is marked to be deleted or to leave the Team.</summary>
     /// <param name="key">Its key.</param>
     private bool IsGoing(string key) => this.removed.Contains(key) || this.leaving.Contains(key);
@@ -412,6 +413,7 @@
 
     private bool HasMemberChanges =>
         this.drafts.Exists(static draft => !draft.Existing)
+        || this.joining.Count > 0
         || this.removed.Count > 0
         || this.leaving.Count > 0
         || !string.Equals(this.managerKey, this.originalManagerKey, StringComparison.Ordinal);
@@ -435,9 +437,9 @@
                 return $"{drafted} · dashed ring = not hired yet";
             }
 
-            int members = this.drafts.Count(static draft => draft.Existing);
+            int members = this.drafts.Count(draft => draft.Existing && !this.joining.Contains(draft.Key));
             int added = this.drafts.Count - members;
-            string text = Plural.Of(members, "member", "members");
+            string text = Plural.Of(members, "Agent", "Agents");
             if (added > 0)
             {
                 text += $" · {added} new";
@@ -483,7 +485,7 @@
             return ProfileMembership.None;
         }
 
-        return draft.Existing ? ProfileMembership.Member : ProfileMembership.New;
+        return draft.Existing && !this.joining.Contains(draft.Key) ? ProfileMembership.Member : ProfileMembership.New;
     }
 
     /// <summary>The line a roster card shows while its Agent is going: deleted, leaving the Team, or null when staying.</summary>
@@ -765,6 +767,7 @@
         this.drafts.Clear();
         this.removed.Clear();
         this.leaving.Clear();
+        this.joining.Clear();
         this.approveError = null;
         TeamSummary? summary = this.Catalog.Find(team);
         this.missingTeam = summary is null;
@@ -791,7 +794,9 @@
     /// <param name="summary">The Team as the catalog reports it.</param>
     private void RefreshMembers(TeamSummary summary)
     {
-        List<DraftMember> added = [.. this.drafts.Where(static draft => !draft.Existing)];
+        // New drafts, and the Agents joining from elsewhere while they still exist, stay after the members.
+        List<DraftMember> added = [.. this.drafts.Where(draft => !draft.Existing
+            || (this.joining.Contains(draft.Key) && this.Personas.ResolveByNameOrAlias(draft.Name) is not null))];
         List<DraftMember> members = [];
         foreach (string member in summary.Members.Order(StringComparer.OrdinalIgnoreCase))
         {
@@ -811,6 +816,7 @@
         this.drafts.AddRange(added);
         this.removed.RemoveWhere(key => !this.drafts.Exists(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)));
         this.leaving.RemoveWhere(key => !this.drafts.Exists(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)));
+        this.joining.RemoveWhere(key => !this.drafts.Exists(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)));
     }
 
     /// <summary>An existing member as a roster card: their title, Skills, adapter, model, effort and stored avatar, and the role they were hired into, so the role's card shows as taken and a manager role makes them a manager choice.</summary>
@@ -870,74 +876,6 @@
             this.workspace = folder;
         }
     }
-
-    /// <summary>Whether the chosen type's template defines this pool job as a role; see <see cref="DefinesRole"/>.</summary>
-    /// <param name="jobId">The pool job's id.</param>
-    private bool IsSuggested(string jobId) => DefinesRole(this.selected, jobId);
-
-    /// <summary>Whether <paramref name="type"/>'s template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
-    /// <param name="type">The team type, or <see langword="null"/> for none.</param>
-    /// <param name="jobId">The pool job's id.</param>
-    private static bool DefinesRole(TeamTypeManifest? type, string jobId) => type?.Roles.Any(role =>
-        !role.Pooled && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
-
-    /// <summary>The id of the team type the roles are filtered by in the Members tab, or <see langword="null"/> while they are not.</summary>
-    private string? roleTypeFilterId;
-
-    /// <summary>The team type the roles are filtered by; <see langword="null"/> while they are not, and always outside the Members tab, which alone offers the filter.</summary>
-    private TeamTypeManifest? RoleTypeFilter => this.MembersOnly && this.roleTypeFilterId is { } id ? this.Types.Find(id) : null;
-
-    /// <summary>The names the type cloud offers, in catalog order, without the one chosen, which is drawn first as the filter chip. The Blank Team is left out: it defines no roles, so filtering by it would show none.</summary>
-    private IReadOnlyList<string> TypeChipNames => [.. this.Types.Types
-        .Where(type => !string.Equals(type.Id, this.roleTypeFilterId, StringComparison.Ordinal))
-        .Select(static type => type.DisplayName)];
-
-    /// <summary>Whether a role card shows: always while the roles are not filtered, otherwise only when the filter's team type defines the role.</summary>
-    /// <param name="roleId">The pool job's or the Human's own role's id.</param>
-    private bool ShowsRole(string roleId) => this.RoleTypeFilter is not { } type || DefinesRole(type, roleId);
-
-    /// <summary>How many role cards show before "Show all": a dozen cards with the "Add a role" tile, which fills whole rows at two, three, four or six columns, so the grid never ends on a gap and no card is cut.</summary>
-    private const int CollapsedRoleLimit = 11;
-
-    /// <summary>Whether the Human pressed "Show all roles"; the roles show in full until they press "Show fewer roles".</summary>
-    private bool allRolesShown;
-
-    /// <summary>One role card to draw: a pool job (suggested by the chosen type or not) or one of the Human's own roles.</summary>
-    /// <param name="Id">The pool job's or the custom role's id.</param>
-    /// <param name="Title">The card's title.</param>
-    /// <param name="Description">The card's description.</param>
-    /// <param name="Suggested">Whether the chosen type's template defines this pool job as a role.</param>
-    /// <param name="Custom">Whether this is one of the Human's own roles, which can be edited and deleted.</param>
-    private sealed record RoleEntry(string Id, string Title, string Description, bool Suggested, bool Custom);
-
-    /// <summary>Every role card the current filter allows, in the order they are drawn: the type's suggested roles, the Human's own, then the rest of the pool.</summary>
-    private IReadOnlyList<RoleEntry> RoleEntries => [
-        .. this.Pool.Jobs.Where(job => this.IsSuggested(job.Id) && this.ShowsRole(job.Id)).Select(static job => new RoleEntry(job.Id, job.Title, job.Description, true, false)),
-        .. this.CustomRoles.Roles.Where(role => this.ShowsRole(role.Id)).Select(static role => new RoleEntry(role.Id, role.Title, role.Description, false, true)),
-        .. this.Pool.Jobs.Where(job => !this.IsSuggested(job.Id) && this.ShowsRole(job.Id)).Select(static job => new RoleEntry(job.Id, job.Title, job.Description, false, false)),
-    ];
-
-    /// <summary>The role cards drawn now: all of them once shown in full, otherwise the first <see cref="CollapsedRoleLimit"/>.</summary>
-    private IReadOnlyList<RoleEntry> VisibleRoleEntries => this.allRolesShown ? this.RoleEntries : [.. this.RoleEntries.Take(CollapsedRoleLimit)];
-
-    /// <summary>Flips between the first few roles and all of them.</summary>
-    private void ToggleAllRoles() => this.allRolesShown = !this.allRolesShown;
-
-    /// <summary>Whether any role card shows under the current filter, so a type that defines nothing hireable here can say so.</summary>
-    private bool AnyRoleShown => this.Pool.Jobs.Any(job => this.ShowsRole(job.Id)) || this.CustomRoles.Roles.Any(role => this.ShowsRole(role.Id));
-
-    /// <summary>Filters the roles by the type whose chip was pressed in the cloud, in place of any type chosen before.</summary>
-    /// <param name="displayName">The pressed chip's text, a type's display name.</param>
-    private void OnTypeChipToggled(string displayName)
-    {
-        if (this.Types.Types.FirstOrDefault(type => string.Equals(type.DisplayName, displayName, StringComparison.Ordinal)) is { } type)
-        {
-            this.roleTypeFilterId = type.Id;
-        }
-    }
-
-    /// <summary>Shows every role again: the chosen type goes back among the cloud's chips.</summary>
-    private void ClearRoleTypeFilter() => this.roleTypeFilterId = null;
 
     /// <summary>One Agent on the draft roster: a role with a Name, not hired until the Human approves.</summary>
     /// <param name="Key">Tells this draft from the others; stable while it is edited or re-rolled.</param>
@@ -1007,9 +945,78 @@
         return image is null ? (null, null, null) : (chosen, image.Bytes, image.Extension);
     }
 
-    /// <summary>Whether the draft roster has an Agent added from the role.</summary>
-    /// <param name="roleId">The role's id.</param>
-    private bool OnRoster(string roleId) => this.drafts.Exists(draft => string.Equals(draft.RoleId, roleId, StringComparison.Ordinal));
+    /// <summary>The ids of the roles the draft roster has an Agent added from, so their cards show a check.</summary>
+    private IReadOnlyCollection<string> TakenRoleIds => [.. this.drafts.Select(static draft => draft.RoleId).Distinct(StringComparer.Ordinal)];
+
+    /// <summary>Shows the "Add an Agent" tile's three sources after a tap or a press of Enter.</summary>
+    private void OpenAddChoices() => this.addChoicesOpen = true;
+
+    /// <summary>Drops the tap-opened state once focus leaves a tile control; CSS keeps the sources showing while focus is still inside it.</summary>
+    private void CloseAddChoices() => this.addChoicesOpen = false;
+
+    /// <summary>Opens the Agents of other Teams, and of none, in a dialog; the one picked goes on the roster to join this Team when the changes are saved.</summary>
+    private async Task AddFromTeamsAsync()
+    {
+        this.addChoicesOpen = false;
+        if (this.Team is not { } team)
+        {
+            return;
+        }
+
+        DialogParameters<AgentPickerDialog> parameters = new()
+        {
+            { x => x.Team, team },
+            { x => x.ExcludedNames, (IReadOnlyCollection<string>)[.. this.drafts.Select(static draft => draft.Name)] },
+        };
+        IDialogReference reference = await this.Dialogs.ShowAsync<AgentPickerDialog>("From other teams", parameters, AgentPickerDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: string picked } && this.MemberDraft(picked) is { } draft
+            && !this.drafts.Exists(other => string.Equals(other.Key, draft.Key, StringComparison.Ordinal)))
+        {
+            this.drafts.Add(draft);
+            _ = this.joining.Add(draft.Key);
+        }
+    }
+
+    /// <summary>Opens a blank New agent card; what it saves goes on the roster as a draft with no role, hired with the others when the changes are saved.</summary>
+    private async Task AddFromScratchAsync()
+    {
+        this.addChoicesOpen = false;
+        DialogParameters parameters = new()
+        {
+            [nameof(AgentProfileCard.Mode)] = AgentProfileCardMode.Create,
+            [nameof(AgentProfileCard.TakenNames)] = (IReadOnlyList<string>)[.. this.drafts.Select(static draft => draft.Name)],
+            [nameof(AgentProfileCard.OnDraftSaved)] = EventCallback.Factory.Create<(string Name, string Title, string Text, string? Model, string? Effort, Avatar Avatar, byte[]? Image, string? ImageExtension, string? Adapter, IReadOnlyList<string> Skills)>(this, async saved =>
+            {
+                // An Agent's text may not be blank, so fall back as a custom role does.
+                string text = new[] { saved.Text, saved.Title }.FirstOrDefault(static candidate => !string.IsNullOrWhiteSpace(candidate)) ?? saved.Name;
+                IReadOnlyList<SkillRef> skills = [.. saved.Skills.Select(this.SkillRefFor)];
+                DraftMember draft = new(Guid.NewGuid().ToString("N"), string.Empty, saved.Title, string.Empty, ModelTier.Balanced, false, saved.Name, text, [], saved.Avatar, [], null,
+                    saved.Image, saved.ImageExtension, skills, [], saved.Adapter, saved.Model, saved.Effort, []);
+                this.drafts.Add(this.Rechecked(draft));
+                this.StateHasChanged();
+                await this.CheckSignInAsync(saved.Adapter, false);
+            }),
+        };
+        _ = await this.Dialogs.ShowAsync<AgentProfileCard>("New agent", parameters, AgentProfileCard.Options);
+    }
+
+    /// <summary>Opens the roles in a dialog and, when one is chosen, puts a new draft Agent for it on the roster.</summary>
+    private async Task AddMemberAsync()
+    {
+        this.addChoicesOpen = false;
+        DialogParameters<RolePickerDialog> parameters = new()
+        {
+            { x => x.SuggestedTypeId, this.selected?.Id },
+            { x => x.TakenRoleIds, this.TakenRoleIds },
+        };
+        IDialogReference reference = await this.Dialogs.ShowAsync<RolePickerDialog>("Add an Agent", parameters, RolePickerDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: string roleId })
+        {
+            await this.AddDraftAsync(roleId);
+        }
+    }
 
     /// <summary>Whether the chosen type's template makes the pool job its manager.</summary>
     /// <param name="jobId">The pool job's id.</param>
@@ -1247,10 +1254,21 @@
         }
     }
 
-    /// <summary>Takes a new draft off the roster; a member of the Team being edited is only marked, and the Agent is deleted when the changes are saved.</summary>
+    /// <summary>Takes a new draft, or an Agent marked to join, off the roster; a member of the Team being edited is only marked, and the Agent is deleted when the changes are saved.</summary>
     /// <param name="key">The draft's key.</param>
     private void RemoveDraft(string key)
     {
+        if (this.joining.Remove(key))
+        {
+            _ = this.drafts.RemoveAll(draft => string.Equals(draft.Key, key, StringComparison.Ordinal));
+            if (string.Equals(this.managerKey, key, StringComparison.Ordinal))
+            {
+                this.managerKey = this.originalManagerKey;
+            }
+
+            return;
+        }
+
         if (this.drafts.Find(draft => string.Equals(draft.Key, key, StringComparison.Ordinal)) is { Existing: true })
         {
             _ = this.leaving.Remove(key);
@@ -1534,6 +1552,27 @@
             }
         }
 
+        List<string> notJoined = [];
+        foreach (DraftMember member in this.drafts.Where(draft => this.joining.Contains(draft.Key)).ToList())
+        {
+            // The Agent restarts when its label changes, so the write runs off the circuit thread.
+            MembershipResult joined = await Task.Run(() => this.Membership.Add(team, member.Name));
+            if (joined.Outcome is MembershipOutcome.Added or MembershipOutcome.AlreadyMember)
+            {
+                _ = this.joining.Remove(member.Key);
+            }
+            else
+            {
+                notJoined.Add(member.Name);
+            }
+        }
+
+        if (notJoined.Count > 0)
+        {
+            this.approveError = $"Could not add {JoinNames(notJoined)} to the Team.";
+            return;
+        }
+
         string? manager = this.drafts.Find(draft => string.Equals(draft.Key, this.managerKey, StringComparison.Ordinal))?.Name;
         if (manager is not null && !string.Equals(this.managerKey, this.originalManagerKey, StringComparison.Ordinal))
         {
@@ -1582,64 +1621,6 @@
         }
 
         this.LoadTeam(team);
-    }
-
-    /// <summary>Opens the role form empty and stores the role it returns.</summary>
-    private async Task AddRoleAsync()
-    {
-        CustomRole? role = await this.ShowRoleDialogAsync(new DialogParameters<RoleFormDialog>());
-        if (role is not null)
-        {
-            _ = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier, role.Skills);
-        }
-    }
-
-    /// <summary>Opens the role form with a custom role's fields and stores the changes.</summary>
-    /// <param name="roleId">The custom role's id.</param>
-    private async Task EditRoleAsync(string roleId)
-    {
-        if (this.CustomRoles.Find(roleId) is not { } current)
-        {
-            return;
-        }
-
-        DialogParameters<RoleFormDialog> parameters = new()
-        {
-            { x => x.Id, current.Id },
-            { x => x.Title, current.Title },
-            { x => x.Description, current.Description },
-            { x => x.Instructions, current.Instructions },
-            { x => x.Tier, current.Tier },
-            { x => x.RoleSkills, current.Skills },
-        };
-        CustomRole? edited = await this.ShowRoleDialogAsync(parameters);
-        if (edited is not null)
-        {
-            _ = this.CustomRoles.Update(edited);
-        }
-    }
-
-    /// <summary>Asks, then deletes a custom role (and un-hires it).</summary>
-    /// <param name="roleId">The custom role's id.</param>
-    private async Task DeleteRoleAsync(string roleId)
-    {
-        if (this.CustomRoles.Find(roleId) is not { } current)
-        {
-            return;
-        }
-
-        if (await this.Dialogs.ConfirmAsync($"Delete {current.Title}?", "The role is removed from your roles. Teams already built keep their Agents.", "Delete", danger: true))
-        {
-            _ = this.CustomRoles.Delete(roleId);
-        }
-    }
-
-    private async Task<CustomRole?> ShowRoleDialogAsync(DialogParameters<RoleFormDialog> parameters)
-    {
-        string heading = parameters.Any() ? "Edit role" : "Add a role";
-        IDialogReference reference = await this.Dialogs.ShowAsync<RoleFormDialog>(heading, parameters, RoleFormDialog.Options);
-        DialogResult? result = await reference.Result;
-        return result is { Canceled: false, Data: CustomRole role } ? role : null;
     }
 
     private void OnNameChanged(string? value)

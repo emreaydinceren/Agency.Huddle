@@ -1,0 +1,259 @@
+@using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.HiringPool
+@using Agency.Huddle.App.TeamTypes
+
+@*
+    The roles to hire from: a "Roles" heading with its count, an optional line saying what they are for, an optional
+    cloud of team types that narrows them, then a grid of role cards led by an "Add a role" tile. Pressing Add on a
+    card raises OnAdd with the role's id; the caller decides what that means. The Human's own roles are added, edited
+    and deleted here, through RoleFormDialog and CustomRoleStore, so every place that shows roles behaves alike.
+
+    Build a team draws it inline (step 3, Hire). The Team page's Agents tab draws it inside RolePickerDialog, opened
+    by the roster's "Add an Agent" tile, with the explainer and the team type filter on.
+*@
+
+@inject TeamTypeCatalog Types
+@inject HiringPoolCatalog Pool
+@inject CustomRoleStore CustomRoles
+@inject IDialogService Dialogs
+@implements IDisposable
+
+<div class="role-picker">
+    <div class="build-team-subhead">
+        <MudText Typo="Typo.subtitle2" HtmlTag="h3">Roles</MudText>
+        <span class="chip-meta build-team-roles-subtitle">@Plural.Of(this.Pool.Jobs.Count + this.CustomRoles.Roles.Count, "role", "roles") available</span>
+    </div>
+    @if (this.Intro is not null)
+    {
+        <MudText Typo="Typo.body2" Class="build-team-intro build-team-roles-intro">@this.Intro</MudText>
+    }
+    @if (this.TypeFilter)
+    {
+        @* Narrows the roles below to the ones a team type defines. A cloud of the types; the chosen one floats to its
+           left as the Tasks toolbar's filter chip without the caret, with a clear button, and pressing another type in
+           the cloud changes the choice. *@
+        <div class="build-team-role-type-filter">
+            <ChipCloud Title="Team types" Pool="@this.TypeChipNames" Cap="12" OnToggle="this.OnTypeChipToggled">
+                <Leading>
+                    @if (this.RoleTypeFilter is { } filterType)
+                    {
+                        <TaskFilterChip Label="Team type" Value="@filterType.DisplayName" IsSet="true" NoMenu="true" OnClear="this.ClearRoleTypeFilter" Class="build-team-role-type-chip" />
+                    }
+                </Leading>
+            </ChipCloud>
+        </div>
+    }
+    @if (this.CustomRoles.LoadError is not null)
+    {
+        <Notice Severity="NoticeLevel.Warning" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</Notice>
+    }
+    <div class="role-grid" role="group" aria-label="Roles">
+        <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
+            <span class="role-add-label">Add a role</span>
+        </button>
+        @foreach (RoleEntry entry in this.VisibleRoleEntries)
+        {
+            @if (entry.Custom)
+            {
+                <RoleCard @key="entry.Id" RoleId="@entry.Id" Title="@entry.Title" Description="@entry.Description" Custom="true" Taken="@this.IsTaken(entry.Id)"
+                          OnAdd="this.OnAdd" OnEdit="this.EditRoleAsync" OnDelete="this.DeleteRoleAsync" />
+            }
+            else
+            {
+                <RoleCard @key="entry.Id" RoleId="@entry.Id" Title="@entry.Title" Description="@entry.Description" Suggested="@entry.Suggested" Taken="@this.IsTaken(entry.Id)" OnAdd="this.OnAdd" />
+            }
+        }
+    </div>
+    @if (this.RoleEntries.Count > CollapsedRoleLimit)
+    {
+        <ActionButton Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
+                   OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</ActionButton>
+    }
+    @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
+    {
+        <MudText Typo="Typo.body2" Class="build-team-intro build-team-role-type-empty" role="status">@emptyType.DisplayName has no roles to hire from here.</MudText>
+    }
+</div>
+
+@code {
+    /// <summary>The id of the team type whose roles earn a "Suggested" chip and lead the grid; <see langword="null"/> for none.</summary>
+    [Parameter]
+    public string? SuggestedTypeId { get; set; }
+
+    /// <summary>The ids of the roles the roster already has an Agent for; their cards show a check.</summary>
+    [Parameter]
+    public IReadOnlyCollection<string> TakenRoleIds { get; set; } = [];
+
+    /// <summary>Whether to offer the cloud of team types that narrows the roles.</summary>
+    [Parameter]
+    public bool TypeFilter { get; set; }
+
+    /// <summary>A line under the heading saying what the roles are for; <see langword="null"/> draws none.</summary>
+    [Parameter]
+    public string? Intro { get; set; }
+
+    /// <summary>Raised with a role's id when its Add is pressed.</summary>
+    [Parameter]
+    public EventCallback<string> OnAdd { get; set; }
+
+    /// <summary>How many role cards show before "Show all": a dozen cards with the "Add a role" tile, which fills whole rows at two, three, four or six columns, so the grid never ends on a gap and no card is cut.</summary>
+    private const int CollapsedRoleLimit = 11;
+
+    /// <summary>Whether the Human pressed "Show all roles"; the roles show in full until they press "Show fewer roles".</summary>
+    private bool allRolesShown;
+
+    /// <summary>The id of the team type the roles are filtered by, or <see langword="null"/> while they are not.</summary>
+    private string? roleTypeFilterId;
+
+    /// <summary>One role card to draw: a pool job (suggested by the chosen type or not) or one of the Human's own roles.</summary>
+    /// <param name="Id">The pool job's or the custom role's id.</param>
+    /// <param name="Title">The card's title.</param>
+    /// <param name="Description">The card's description.</param>
+    /// <param name="Suggested">Whether the suggesting type's template defines this pool job as a role.</param>
+    /// <param name="Custom">Whether this is one of the Human's own roles, which can be edited and deleted.</param>
+    private sealed record RoleEntry(string Id, string Title, string Description, bool Suggested, bool Custom);
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Types.Changed += this.OnCatalogChanged;
+        this.Pool.Changed += this.OnCatalogChanged;
+        this.CustomRoles.Changed += this.OnCatalogChanged;
+    }
+
+    /// <summary>The team type whose roles are suggested, or <see langword="null"/>.</summary>
+    private TeamTypeManifest? SuggestedType => this.SuggestedTypeId is { } id ? this.Types.Find(id) : null;
+
+    /// <summary>The team type the roles are filtered by; <see langword="null"/> while they are not, and always when the filter is not offered.</summary>
+    private TeamTypeManifest? RoleTypeFilter => this.TypeFilter && this.roleTypeFilterId is { } id ? this.Types.Find(id) : null;
+
+    /// <summary>The names the type cloud offers, in catalog order, without the one chosen, which is drawn first as the filter chip.</summary>
+    private IReadOnlyList<string> TypeChipNames => [.. this.Types.Types
+        .Where(type => !string.Equals(type.Id, this.roleTypeFilterId, StringComparison.Ordinal))
+        .Select(static type => type.DisplayName)];
+
+    /// <summary>Every role card the current filter allows, in the order they are drawn: the type's suggested roles, the Human's own, then the rest of the pool.</summary>
+    private IReadOnlyList<RoleEntry> RoleEntries
+    {
+        get
+        {
+            TeamTypeManifest? suggesting = this.SuggestedType;
+            return [
+                .. this.Pool.Jobs.Where(job => DefinesRole(suggesting, job.Id) && this.ShowsRole(job.Id)).Select(static job => new RoleEntry(job.Id, job.Title, job.Description, true, false)),
+                .. this.CustomRoles.Roles.Where(role => this.ShowsRole(role.Id)).Select(static role => new RoleEntry(role.Id, role.Title, role.Description, false, true)),
+                .. this.Pool.Jobs.Where(job => !DefinesRole(suggesting, job.Id) && this.ShowsRole(job.Id)).Select(static job => new RoleEntry(job.Id, job.Title, job.Description, false, false)),
+            ];
+        }
+    }
+
+    /// <summary>The role cards drawn now: all of them once shown in full, otherwise the first <see cref="CollapsedRoleLimit"/>.</summary>
+    private IReadOnlyList<RoleEntry> VisibleRoleEntries => this.allRolesShown ? this.RoleEntries : [.. this.RoleEntries.Take(CollapsedRoleLimit)];
+
+    /// <summary>Whether any role card shows under the current filter, so a type that defines nothing hireable here can say so.</summary>
+    private bool AnyRoleShown => this.Pool.Jobs.Any(job => this.ShowsRole(job.Id)) || this.CustomRoles.Roles.Any(role => this.ShowsRole(role.Id));
+
+    /// <summary>Whether <paramref name="type"/>'s template defines this pool job as a role (by its job, or by the role id a job takes); roles the catalog only adds from the pool do not count.</summary>
+    /// <param name="type">The team type, or <see langword="null"/> for none.</param>
+    /// <param name="jobId">The pool job's id.</param>
+    private static bool DefinesRole(TeamTypeManifest? type, string jobId) => type?.Roles.Any(role =>
+        !role.Pooled && string.Equals(role.Job ?? role.Id, jobId, StringComparison.Ordinal)) ?? false;
+
+    /// <summary>Whether a role card shows: always while the roles are not filtered, otherwise only when the filter's team type defines the role.</summary>
+    /// <param name="roleId">The pool job's or the Human's own role's id.</param>
+    private bool ShowsRole(string roleId) => this.RoleTypeFilter is not { } type || DefinesRole(type, roleId);
+
+    /// <summary>Whether the roster already has an Agent for the role.</summary>
+    /// <param name="roleId">The role's id.</param>
+    private bool IsTaken(string roleId) => this.TakenRoleIds.Contains(roleId, StringComparer.Ordinal);
+
+    /// <summary>Flips between the first few roles and all of them.</summary>
+    private void ToggleAllRoles() => this.allRolesShown = !this.allRolesShown;
+
+    /// <summary>Filters the roles by the type whose chip was pressed in the cloud, in place of any type chosen before.</summary>
+    /// <param name="displayName">The pressed chip's text, a type's display name.</param>
+    private void OnTypeChipToggled(string displayName)
+    {
+        if (this.Types.Types.FirstOrDefault(type => string.Equals(type.DisplayName, displayName, StringComparison.Ordinal)) is { } type)
+        {
+            this.roleTypeFilterId = type.Id;
+        }
+    }
+
+    /// <summary>Shows every role again: the chosen type goes back among the cloud's chips.</summary>
+    private void ClearRoleTypeFilter() => this.roleTypeFilterId = null;
+
+    /// <summary>Opens the role form empty and stores the role it returns.</summary>
+    private async Task AddRoleAsync()
+    {
+        CustomRole? role = await this.ShowRoleDialogAsync(new DialogParameters<RoleFormDialog>());
+        if (role is not null)
+        {
+            _ = this.CustomRoles.Add(role.Title, role.Description, role.Instructions, role.Tier, role.Skills);
+        }
+    }
+
+    /// <summary>Opens the role form with a custom role's fields and stores the changes.</summary>
+    /// <param name="roleId">The custom role's id.</param>
+    private async Task EditRoleAsync(string roleId)
+    {
+        if (this.CustomRoles.Find(roleId) is not { } current)
+        {
+            return;
+        }
+
+        DialogParameters<RoleFormDialog> parameters = new()
+        {
+            { x => x.Id, current.Id },
+            { x => x.Title, current.Title },
+            { x => x.Description, current.Description },
+            { x => x.Instructions, current.Instructions },
+            { x => x.Tier, current.Tier },
+            { x => x.RoleSkills, current.Skills },
+        };
+        CustomRole? edited = await this.ShowRoleDialogAsync(parameters);
+        if (edited is not null)
+        {
+            _ = this.CustomRoles.Update(edited);
+        }
+    }
+
+    /// <summary>Asks, then deletes a custom role.</summary>
+    /// <param name="roleId">The custom role's id.</param>
+    private async Task DeleteRoleAsync(string roleId)
+    {
+        if (this.CustomRoles.Find(roleId) is not { } current)
+        {
+            return;
+        }
+
+        if (await this.Dialogs.ConfirmAsync($"Delete {current.Title}?", "The role is removed from your roles. Teams already built keep their Agents.", "Delete", danger: true))
+        {
+            _ = this.CustomRoles.Delete(roleId);
+        }
+    }
+
+    private async Task<CustomRole?> ShowRoleDialogAsync(DialogParameters<RoleFormDialog> parameters)
+    {
+        string heading = parameters.Any() ? "Edit role" : "Add a role";
+        IDialogReference reference = await this.Dialogs.ShowAsync<RoleFormDialog>(heading, parameters, RoleFormDialog.Options);
+        DialogResult? result = await reference.Result;
+        return result is { Canceled: false, Data: CustomRole role } ? role : null;
+    }
+
+    /// <summary>Redraws when the team types, the hiring pool or the Human's own roles change.</summary>
+    private void OnCatalogChanged() => _ = RendererDispatch.RunAsync(this.InvokeAsync, () =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.Types.Changed -= this.OnCatalogChanged;
+        this.Pool.Changed -= this.OnCatalogChanged;
+        this.CustomRoles.Changed -= this.OnCatalogChanged;
+    }
+}

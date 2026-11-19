@@ -117,7 +117,7 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
 - SKILLS-01 passed, or at least: the Chief of Staff is mid-interview in a Room with the Human.
 - `MaxAgentsPerTeam` and `MaxLiveProcesses` at their defaults (Setup step 2) — 8 per Team is
   plenty of headroom for 2–3 Candidates.
-- Note the current Agent count on `/agents` before you start.
+- Note the current Agent count (the number of folders in `<data>\Agents\`, `O-FILE`) before you start.
 
 **Steps**
 
@@ -132,8 +132,8 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
 3. Confirm the Message posted beside the card (not the card itself) names the pattern and who
    coordinates, per SKILL.md step 5.
 4. Click **Approve**.
-5. On `/agents`, confirm the Agent count grew by exactly the number of Candidates the card
-   showed, and that each new tile eventually reads Online — a newly created Agent takes a moment
+5. In `<data>\Agents\`, confirm the Agent count grew by exactly the number of Candidates the card
+   showed, and that each new Agent's roster card on its Team's **Agents** tab eventually reads Online — a newly created Agent takes a moment
    to start, so wait and recheck rather than judging Offline as a failure at the first glance.
 6. Return to the Room. Confirm a Human-authored Message reading `Approved. Created <names>. @Chief
    of Staff go ahead.` is present in `O-TRANSCRIPT`, and that the Chief of Staff answers it without
@@ -145,7 +145,7 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
 
 - The headroom line (step 2) has the form above and its `of 8` or `of 16` matches the defaults.
 - The card's Candidates become real Persona files: `O-FILE` shows `<data>\Agents\<Name>\<Name>.md`
-  for each Candidate, and `/agents`'s count grew by exactly that many (step 5).
+  for each Candidate, and the Agent count grew by exactly that many (step 5).
 - The exact outcome Message text is posted **as the Human** — sender is the Human's configured Name,
   never the Chief of Staff or a system voice — and is present in `O-TRANSCRIPT` (step 6).
 - The Chief of Staff replies to that Message without further Human input — the wake went through the
@@ -207,7 +207,7 @@ Room replaces its own waiting Proposal rather than stacking a second one.*
 - No Candidate from the declined Proposal exists as a file anywhere (step 3).
 - Exactly one Proposal card is visible after the revision (step 5), showing the revised Candidates —
   never both the old and the new at once.
-- `/agents`'s count is unchanged from before SKILLS-03 started — Decline creates nothing, ever.
+- The Agent count is unchanged from before SKILLS-03 started — Decline creates nothing, ever.
 
 **Fail if — any of these**
 
@@ -253,11 +253,11 @@ limit; only Approve does (`ProposalService.cs:67`).*
    Candidate's **Teams** column reads `Launch`. Team `Launch` has no members yet, so `0 + 2 = 2` is
    exactly at the limit of 2 and the card shows `This adds 2 Agents; 0 of 2 per Team.`
 2. **Before clicking Approve**, use **New agent** (`P-NEW-PERSONA`, free) to add one Agent
-   directly — any name, Haiku/low, **Teams** `Launch`. `Launch` now has 1 member, and the card's
+   directly — any name, Haiku/low, in the `Launch` Team (open `Launch`'s **Agents** tab). `Launch` now has 1 member, and the card's
    headroom line, recomputed on render, reads `...; 1 of 2 per Team.`
 3. Click **Approve** on the still-waiting card.
 4. Read the posted Message.
-5. Confirm on `/agents` that neither Candidate from the card exists.
+5. Confirm in `<data>\Agents\` that neither Candidate from the card exists.
 
 **Pass if — all of these**
 
@@ -266,7 +266,7 @@ limit; only Approve does (`ProposalService.cs:67`).*
   (`ProposalService.cs:260-266`, `ComposeOverLimitText`; "1 Agents" is the code's own wording,
   and `Launch` is spelled as the first Candidate spells it) — sent as the Human.
 - Neither Candidate from the card became a file (`O-FILE`: no `<data>\Agents\<Name>\` folder for
-  either), and `/agents`'s count is unchanged at 2 (the Chief of Staff and the Agent you
+  either), and the Agent count is unchanged at 2 (the Chief of Staff and the Agent you
   added in step 2) after Approve.
 - The card disappears once Approve is clicked, even though it creates nothing — the Proposal is
   taken exactly once.
@@ -385,7 +385,7 @@ to advise on a dose change, and file-backed memory across a restart.*
   "Family Health Advisor" section — this body needs no bracket substitution, unlike the Keeper and
   Specialist templates above it in the same file).
 - Do not give it any Skill; the safety rules live in its own Body, not in a Skill it reads.
-- Confirm it is Online on `/agents` before starting.
+- Confirm it is Online (the status badge on its roster card on its Team's **Agents** tab) before starting.
 
 **Steps**
 

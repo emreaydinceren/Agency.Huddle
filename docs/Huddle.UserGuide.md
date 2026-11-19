@@ -121,7 +121,6 @@ per Team, its shortcut. To hide or bring back a Team's tile, open the Team's pag
 | --- | --- |
 | **Rooms** | **Needs you**, a card drawn only while a Room is waiting on you (see [Needs you](#needs-you)), then **Group by: All | Team**. **All** lists your root Rooms in two folders: **Needs you** on top, holding the Rooms waiting on you, and **All** with the rest, plus **New room**. It never folds the list behind "Show all". A Team's Rooms are not listed under **All**; see [Team rooms](#team-rooms). Pick **Team** to list every Room in a folder per Team ("No team" first); click a folder to close or open it. The choice and the closed folders are remembered. A Room that is waiting on you also wears a **Needs you** pill in the list. |
 | **Teams** | One row per Team. Expand it to see its Team Room, its other Rooms and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New room**, **New project** and **Archive team**. A Project row has its own More (⋮) menu with **Archive project**. |
-| **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
 | **Library** | One **Library** link. The Library's roots (see [Library roots](#library-roots)) are on the Library page; pin a folder in **Settings › Library**. Not shown when the Library is turned off. |
 | **Scheduled** | Every Job, for you and for each Agent, and **New job**. See [Scheduling jobs](#scheduling-jobs). |
@@ -133,7 +132,7 @@ opens the [Archived page](#the-archived-page).
 
 1. **Rooms**, highlighted because the sidebar is showing it.
 2. **Teams**.
-3. **Agents**.
+3. **Agents**: retired; the picture predates its removal.
 4. **Tasks**.
 5. **Library**.
 6. **Archived**.
@@ -150,7 +149,6 @@ Every page has its own address, so you can bookmark it:
 | Address | Page |
 | --- | --- |
 | `/rooms/{roomId}` | A Room |
-| `/agents` | Agents |
 | `/teams/{Team}`, `/teams/{Team}/files`, `/teams/{Team}/tasks` | A Team page and its tabs |
 | `/teams/{Team}/projects/{Project}` | A Project page |
 | `/tasks/{viewId}` | A saved Task View |
@@ -370,12 +368,12 @@ The relationships that matter most:
 
 - **An Agent can belong to many Teams.** Membership is written on the
   Agent, not on the Team. An Agent file with
-  `teams: ['Business', 'Household']` is a member of both, and appears under both
-  on the Agents page. An Agent with no `teams:` line appears under **No
-  team**.
+  `teams: ['Business', 'Household']` is a member of both, and is on both Teams'
+  **Agents** tabs. **Add an Agent** → **From other teams** lists the Agents by Team;
+  an Agent with no `teams:` line appears there under **No team**.
 - **A Team is a label plus a folder.** The list of Teams is every label used by
   any Agent, plus every folder directly under `Teams/`. A folder with no
-  members still shows, as **No members**. A label with no folder gets one
+  members still shows, as **No Agents**. A label with no folder gets one
   created automatically. A Team's folder may also hold `_team.md`, which names its
   team type, manager and workspace and holds its process settings, and `AGENTS.md`,
   which says how it works.
@@ -469,13 +467,15 @@ App_Data/
 
 ## Working with Agents
 
-Select **Agents** in the Activity bar, then the **Agents** link in the sidebar. The page lists every Agent, grouped by
-Team, with a **Team** filter at the top. An Agent in two Teams is listed under
-both. Each card shows the Agent's status as a badge on its avatar.
+Agents live in Teams. Open a Team and its **Agents** tab to see who is on it, each
+with their status as a badge on the avatar. An Agent in two Teams is on both
+Teams' rosters. **Add an Agent** → **From other teams** lists every Agent that is
+not on the Team, grouped by Team, with the Agents in no Team under **No team**. To
+find one Agent anywhere, search for its Name with Ctrl K.
 
 ### Status at a glance
 
-The same badge sits on an Agent's avatar everywhere: the Agents page, a Room, the
+The same badge sits on an Agent's avatar everywhere: a Team's Agents tab, a Room, the
 Board and the Right sidebar. Hover it to see the reason.
 
 | Badge | Means |
@@ -492,19 +492,24 @@ priority, an overdue date or a Room that needs you. Working is blue.
 ![The status badges, the four chip looks, the text sizes and a Board card](images/visual-reference.svg)
 
 Each Agent has its own card with **Message**, **Edit**, **Open**,
-**Restart** and **Remove**. With no Agents the page says "No Agents yet.
-Choose New agent."
+**Restart** and **Remove**. Open it with **Edit** on its roster card, from its
+avatar in a Room, or from search.
 
 ### Adding an Agent
 
-1. Select **New agent**.
+An Agent is added to a Team, from the Team's **Agents** tab (see
+[Adding and removing members](#adding-and-removing-members)). To write one from
+nothing:
+
+1. Point at **Add an Agent** and select **From scratch**.
 2. **Name** starts with a random first name that no Agent has yet. Keep it,
    edit it, or select the reset button (the circular arrow at the right of the
-   box) for another one. Then fill in **Title** and **Alias**. Optionally add
-   **Teams** as a comma-separated list, select **Skills**, **Model**,
-   **Effort**, **Work mode** and an avatar.
+   box) for another one. Then fill in **Title**; the Agent's Alias will be its
+   Name in lower case. Optionally select **Skills**, **Model**, **Effort**,
+   **Work mode** and an avatar.
 3. Write the Agent's instructions in the text area.
-4. Select **Add agent**.
+4. Select **Save draft**. The Agent is on the roster as a draft.
+5. Select **Save changes** to hire it into the Team.
 
 **In the background:**
 
@@ -513,8 +518,7 @@ Choose New agent."
 - Model, Effort and Work mode are written to `team.db`.
 - The Agent starts as an Agent and appears in chat. Its `work/` and
   `work/memory/` folders are created.
-- Each Team label you entered that has no folder yet gets
-  `Teams/<Team>/` created.
+- Its `teams:` line names the Team it was hired into.
 
 Names and aliases are at most 64 characters, start with a letter or digit, and
 may contain letters, digits, `_`, `-` and single spaces. No dots. Names and
@@ -542,8 +546,8 @@ or Teams. Changing the avatar does not restart anything.
 
 > [!NOTE]
 > The Edit card has no **Teams** field. To take an Agent off a Team, use
-> **Remove from Team** on the Team page's **Members** tab; to add it to a Team,
-> edit the `teams:` line in the text.
+> **Remove from Team** on the Team page's **Agents** tab; to add it to a Team,
+> use **Add an Agent** → **From other teams** on that Team's **Agents** tab.
 
 ### Changing an avatar
 
@@ -568,8 +572,7 @@ you go back to initials or a label.
 
 A new Agent starts with a colour of its own: when you open **New agent**,
 Huddle picks a random swatch from the same palette, so a new card is not a row of
-identical circles. It is written with the Agent when you select **Add
-agent**, and you can change it in the window like any other. Agents that
+identical circles. It is written with the Agent when it is hired, and you can change it in the window like any other. Agents that
 already exist, and any created some other way, keep the theme's colour until you
 press a swatch.
 
@@ -663,7 +666,7 @@ An Agent cannot use your claude.ai account connectors (mail, calendar, files) un
 
 Turning the switch off applies at once, with no question. Renaming an Agent turns it off again, so switch it back on after a rename. Resetting the Chief of Staff to its default also turns it off. The switch appears only for the Claude Adapter with isolation on. For any other Adapter the card says what Huddle cannot control instead.
 
-If you upgraded with Agents already in place, the Agents page shows a one-time notice that connectors are now off. Dismiss it and it does not come back. The Feed records each time you turn the switch on or off.
+The Feed records each time you turn the switch on or off.
 
 ### Your Agents' browser
 
@@ -758,7 +761,7 @@ You can open an Agent's file with **Open** or through the Library and edit it
 in any editor. Huddle watches the `Agents/` folder and picks up a saved change
 within half a second. It behaves exactly like an in-app edit, including the
 restart. A file that fails validation is listed under **Files that didn't load**
-on the Agents page, with the reason.
+at the top of every Team's **Agents** tab, with the reason.
 
 ### Packs, setup warnings and the Process step
 
@@ -822,11 +825,22 @@ case.
 
 ### Adding and removing members
 
-Open the Team, then the **Members** tab. It is the **Hire** step of **Build a team** for
-this Team: the role cards, then the **Roster** with the members first (each with the
-presence badge on its avatar and the word **Member**) and any new drafts after them.
+Open the Team, then the **Agents** tab. It shows the **Roster**: an **Add an Agent**
+tile first, then the Team's Agents (each with the presence badge on its avatar and the words
+**On the Team**) and any new drafts after them.
 
-- **Add** on a role card puts a new draft Agent on the roster, as in Build a team.
+- **Add an Agent** turns into three choices when you point at it, tab to it or tap it:
+  - **From roles catalog** opens a window of **Roles**, the role cards you hire from, as
+    in Build a team's **Hire** step, with the **Team types** filter. **Add** on a role
+    closes the window and puts a new draft Agent for it on the roster.
+  - **From other teams** opens a window of every Agent not on this Team, under the Teams
+    they are in, with the Agents in no Team last. Pick one and it goes on the roster as
+    **New**; on save it joins this Team and stays in its other Teams too. **Remove**
+    takes it off again before you save.
+  - **From scratch** opens a blank **New agent** card. **Save draft** puts that Agent on
+    the roster as a draft, hired into this Team when you save.
+
+  Close any of these windows to add nobody.
 - **Edit** on a member opens their Agent card, which saves at once.
 - **Message** opens this Team's own one-to-one Room with that member. It shows once the
   member has connected at least once.
@@ -837,15 +851,14 @@ presence badge on its avatar and the word **Member**) and any new drafts after t
 
 Nothing changes until **Save changes**, which is off until something did and while the
 manager is marked to go with nobody chosen instead. It asks first when anyone will be
-deleted, then hires the new drafts, makes the chosen member the manager, takes the
-leaving members off the Team, deletes the marked Agents, and redraws the tab. To put
-an Agent who already exists into a Team, add the Team to the `teams:` line in the text
-of their Agent card.
+deleted, then hires the new drafts, adds the Agents from other Teams, makes the chosen
+member the manager, takes the leaving members off the Team, deletes the marked Agents,
+and redraws the tab.
 
 **In the background:** removing from a Team rewrites only the `teams:` line in that
 Agent's `<Name>.md`, then saves. The Agent restarts and loses its
 conversation memory. Removing the last member does **not** delete the Team folder. The
-Team stays, marked **No members**.
+Team stays, marked **No Agents**.
 
 > [!CAUTION]
 > Close any open Agent Edit card before adding or removing members. A card
@@ -930,7 +943,7 @@ A Team page's last tab, **Details**, holds the first two steps of Build a team f
 Team: **Team type** and **Team details**, then **Save changes**. The type and name can't be
 changed; **What it's for** and the **Library folder** can. **Save changes** is off until a
 detail changed; it writes them to the Team file and the tab stays open. The Team's members
-are edited on its **Members** tab (see
+are edited on its **Agents** tab (see
 [Adding and removing members](#adding-and-removing-members)).
 
 ### Building a team with the Chief of Staff
@@ -1024,10 +1037,13 @@ broken, or withdrawn by its Source) stops the approval with "Skills not ready: �
 A card that names such a Skill already shows **Needs setup** with a **Copy prompt**; paste it into your AI
 tool, and the card turns ready by itself when the tool finishes. A hired Agent runs on the adapter and
 model its role's strength resolved to and carries the role's Skills and packs. **Edit** on a draft can
-change them: its **Skills** list shows the Skills Huddle has or can copy, and Skills that are not on this
-computer yet are listed below it, each with **Copy prompt**. A Skill the draft brought that is not on this
-computer is in the list too, so you can untick it and hire without downloading it. The role form for your own
-roles has the same **Skills** field.
+change them. The card's **Skills** section says what a Skill is, has a **Search Skills** box, and one list in
+two groups: **On this computer**, the Skills you can tick now (including ones Huddle copies in when you save),
+and **Needs setup first**, folded until you open it or search, whose Skills are not on this computer yet and
+each have **Copy prompt**. A Skill the draft brought that is not on this computer is under **On this
+computer** too, so you can untick it and hire without downloading it. Under the list is how many are ticked;
+only an existing Agent's card adds that changing them restarts it. The role form for your own roles has its
+own **Skills** field.
 
 ### Hiring a Team from a type
 
@@ -1738,7 +1754,7 @@ lasting facts in memory files.
 - **Only listed commands work.** `/compact` is the one offered to Agents on the
   standard Claude adapter. Anything else you write after a mention, such as
   `@nova /config`, is sent as ordinary text and runs nothing. An Agent's
-  card lists what it offers: open **Agents**, select the Agent, and look for
+  card lists what it offers: open the Agent's card, and look for
   lines like `/compact — Free up context by summarizing the conversation so far`.
   The line is absent while the Agent is offline.
 - **It costs a little.** A compaction is a model call, and Huddle does not show it
@@ -1786,7 +1802,7 @@ inside; they differ in where they are listed.
   Transcript records the join like any invitation. Leaving a Team does not take
   the Agent out of the Team Room. The Team Room cannot be renamed, so it has
   no pencil icon.
-- **Message** on a member's roster card in the Team's **Members** tab opens that
+- **Message** on a member's roster card in the Team's **Agents** tab opens that
   Team's own one-to-one with the Agent, created if it does not exist. It is
   separate from the one-to-one under Rooms, so the two conversations do not mix.
 - **Digests and retrospectives** for a Team post in its Team Room, with a
@@ -2928,7 +2944,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | Restart an Agent | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
 | Build a team (**Approve & hire**) | `Teams/<Team>/_team.md`, then an Agent file for each draft | The Agents are hired; start them from their cards |
 | Details tab (**Save changes**) | `Teams/<Team>/_team.md` (purpose, Library folder) | Nothing else |
-| Members tab (**Save changes**) | An Agent file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Agents' files | The new Agents are hired; the ones taken off restart; the deleted ones are gone |
+| Agents tab (**Save changes**) | An Agent file for each new draft, `_team.md`'s manager, the `teams:` line of each member taken off the Team, and removes the deleted Agents' files | The new Agents are hired; the ones taken off restart; the deleted ones are gone |
 | Duplicate a Team | A new `Teams/<Team>/` and new Agent files; no memory, notes or Tasks | New Agents start |
 | Use a process | `Teams/<Team>/AGENTS.md`, never over an existing one, and the process's settings in `_team.md` | Members read it at their next session |
 | Import a Skill | `Skills/<name>/` with `.source.json` | Read on next `read_skill` |
@@ -2960,13 +2976,13 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | `@nova /compact` got an ordinary reply instead of compacting | The Agent does not offer that command (check its card), it was not yet online, or another Agent wrote it. Only you can run a command, and only those listed on the card. |
 | `/compact` on its own says *Unknown command* | Write the mention first: `@nova /compact`. |
 | An Agent forgot our conversation | It was restarted: an edit, a membership change, or **Restart**. Put lasting facts in memory files. |
-| An Agent file does not appear | See **Files that didn't load** on the Agents page. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
+| An Agent file does not appear | See **Files that didn't load** at the top of any Team's **Agents** tab. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
 | All Agents show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |
 | Huddle stops at start-up: *Another program is already listening on the pipe 'team'* | Another copy of Huddle is running on this computer. Stop it, or start this copy with its own `Team:PipeName`. |
 | A **Notice** row says **Auto mode unavailable** | The Agent runs on a model without auto mode; see [Running an Agent on Haiku](#running-an-agent-on-haiku). |
 | A Task did not wake its assignee | The assignee is you, the change was made by the assignee, the assignee is offline or no longer exists, or the Task's wake budget is spent (**Allow 10 more**; after a restart, use **Wake** on the Task's Notification). |
 | A Task file is missing from every View | It is under **Tasks that didn't load**, or it is in `_closed/` and the View's scope is Active. |
-| A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No members**. |
+| A Team still appears after I removed everyone | Removing members never deletes the folder. The Team shows **No Agents**. |
 | A membership change was undone | An Agent Edit card that was open during the change saved its old text. Re-add the member. |
 | Delete in the Library says the Recycle Bin isn't available | The file is on a network or removable drive. Delete it in your file manager. |
 | A new Skill doesn't show | Check **Settings › Skills › Problems**. The `name` must match the folder name. |

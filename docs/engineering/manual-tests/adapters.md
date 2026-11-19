@@ -122,7 +122,7 @@ Adapter is `mock`, so the Chief of Staff's Greeting Turn is answered by the free
 
 - Restart lane, three profiles configured (setup step 1).
 - Two Personas exist: **Wren** with **no** `adapter:` line (so it runs on the default, `mock`) and **Rook** with `adapter: mock2`. Neither is on `claude`.
-- Both read **Online** on `/agents`.
+- Both read **Online** on their avatars in the Team's **Agents** tab.
 
 **Steps**
 
@@ -171,7 +171,7 @@ Wren or Rook stays Offline with `No ACP adapter is installed for Persona '<Name>
 1. Post a Message Mentioning **only** Rook, with a distinctive sentence of a dozen words (for example "violet harbour lantern seven quiet rivers ahead of the morning tide").
 2. Once Rook's reply has settled, compare what the Room shows with the Transcript (`O-TRANSCRIPT`).
 3. Post another Message Mentioning **both** Personas.
-4. Check the Agent tiles on `/agents` and the Room's health strip.
+4. Check the two Agents' status badges on the **Agents** tab roster and the Room's health strip.
 
 **Pass if — all of these**
 
@@ -210,7 +210,7 @@ You see a Draft row appear or not appear for a split second. Do not judge stream
 1. Open Lark's Edit card. Note the current Model and Effort.
 2. Change **Adapter** to `Mock`.
 3. Read the card without saving.
-4. Save. Watch `/agents`, then run `O-ADAPTERS` and `O-MOCK-ADAPTERS` again.
+4. Save. Watch Lark's status badge on the **Agents** tab roster, then run `O-ADAPTERS` and `O-MOCK-ADAPTERS` again.
 5. Open `O-FILE` on `<data>\Agents\Lark\Lark.md`, and with `O-DB` select the rows for `Lark` from `persona_models` and `persona_efforts` (`PersonaModelStore.cs:26`, `PersonaEffortStore.cs:28`).
 
 **Pass if — all of these**

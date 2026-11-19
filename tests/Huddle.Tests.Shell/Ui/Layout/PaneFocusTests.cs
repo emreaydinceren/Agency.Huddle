@@ -26,7 +26,7 @@ public sealed class PaneFocusTests
     public async Task SinglePane_IsTheFocusedPane()
     {
         await using MudBunitContext ctx = UiTestHost.Create().WithTabs().WithRoutes();
-        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/agents");
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/scheduled");
 
         var cut = ctx.Render<TabHost>();
 

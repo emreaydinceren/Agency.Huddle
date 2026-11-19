@@ -1,6 +1,6 @@
 # Model and Effort pickers, catalog probe and runner restart
 
-Prove, in a real browser, that the Model and Effort `<select>` pair on the Agent card at `/agents` is filled by a real throwaway adapter probe (not a hardcode), that the chosen values are stored as wire ids in `persona_models` / `persona_efforts`, that changing either one restarts the agent while changing nothing does not, and that every documented silent failure in this area (a display name stored instead of an id, a superseded probe landing on the wrong model, a stored choice wiped just by opening Edit, a removed agent's setting resurrecting, a probe running in the repo root) is caught. Almost everything here is free: the probe never starts a prompt turn, and starting a session is not a turn either. Only MODELEFFORT-27 spends money.
+Prove, in a real browser, that the Model and Effort `<select>` pair on the Agent card is filled by a real throwaway adapter probe (not a hardcode), that the chosen values are stored as wire ids in `persona_models` / `persona_efforts`, that changing either one restarts the agent while changing nothing does not, and that every documented silent failure in this area (a display name stored instead of an id, a superseded probe landing on the wrong model, a stored choice wiped just by opening Edit, a removed agent's setting resurrecting, a probe running in the repo root) is caught. Almost everything here is free: the probe never starts a prompt turn, and starting a session is not a turn either. Only MODELEFFORT-27 spends money.
 
 **28 tests** · 27 free, 1 paid 💰 · about 3.8 hours.
 
@@ -42,8 +42,8 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 1. Check that `T-B` rests at 0 and that no card has been opened since the app started. There is no folder to check afterwards: the probe runs in `<data>\Agents`, which always exists (`ModelCatalogProbe.cs:281-282`), so `T-B` is the only spawn oracle.
 2. In `T-A`, note the last line currently in the app log so you can tell new lines from old.
-3. Open a browser at `http://localhost:5100/agents`. Confirm the page heading reads **Agents** and the sidebar link reads **Agents**.
-4. Click the **New agent** text button, the first control in the toolbar under the intro paragraph (`Agents.razor:30-31`). Immediately read `document.activeElement` in the DevTools Console — confirm focus moved into the dialog, not left on the button you clicked.
+3. Open a browser at `http://localhost:5100` and open a Team's **Agents** tab (`P-NEW-PERSONA` step 1).
+4. Point at the **Add an Agent** tile and select **From scratch** (`P-NEW-PERSONA` step 2). Immediately read `document.activeElement` in the DevTools Console — confirm focus moved into the dialog, not left on the button you clicked.
 5. Immediately look at `T-B` and keep watching for 30 seconds. Write down the highest number it ever shows and how many separate times it rises from 0 and falls back to 0.
 6. In the card titled **New agent**, read the hint directly under the **Model** select. Immediately after the click it should read `Reading the models this agent offers…`; wait until it stops.
 7. Open the **Model** select and write down, in order, every option's visible text. Also note the first option's text exactly.
@@ -51,12 +51,12 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 9. Open the **Effort** select and confirm it is populated too (it contains at least the blank first option, and the hint under it is no longer `Reading the effort levels this model offers…`).
 10. Read `T-B` once more: the probe's Adapter process must be gone, so it is back at 0.
 11. In `T-A`, read every new log line since step 2.
-12. Click **Cancel** at the bottom of the card. Then click **New agent** again and watch `T-B` for 15 seconds.
+12. Click **Cancel** at the bottom of the card. Then open the **New agent** card again (**Add an Agent** → **From scratch**) and watch `T-B` for 15 seconds.
 13. Confirm both selects are populated on this second open, and note how quickly.
 
 **Pass if — all of these**
 
-- Focus moved into the dialog the instant it opened (step 4) — never left sitting on the **New agent** button.
+- Focus moved into the dialog the instant it opened (step 4) — never left sitting on the **From scratch** item.
 - The first option of the **Model** select reads exactly `Agent default`.
 - Below it the select lists at least one real model entry, and the entries read as human labels (for example `Sonnet 4.5`, `Haiku 4.5`) rather than raw ids of the shape `claude-sonnet-4-5`.
 - During the first card open `T-B` rises to exactly 1 and returns to 0 - one spawn, not two, and not two spawns in sequence.
@@ -67,7 +67,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Fail if — any of these**
 
-- Focus stays on the **New agent** button after the card opens -> the dialog's focus trap is not engaging, which for a keyboard or screen-reader user means the dialog might as well not be modal.
+- Focus stays on the **From scratch** item after the card opens -> the dialog's focus trap is not engaging, which for a keyboard or screen-reader user means the dialog might as well not be modal.
 - Both selects populate but `T-B` shows a peak of 2 -> the model probe and the effort probe are no longer sharing the single semaphore, and every card open costs two adapter processes.
 - `T-B` rises to 1, falls to 0, then rises to 1 again during ONE card open -> the model probe stopped seeding the default-model effort list from its own session; functionally invisible, exactly twice the cost.
 - `T-B` rises above 0 on the SECOND card open -> the successful catalog is no longer cached for the app run, so browsing the card now costs a process every time.
@@ -96,7 +96,7 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 
 **Steps**
 
-1. On `http://localhost:5100/agents`, click **New agent**.
+1. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2).
 2. Prepare a table with four columns: model label, model id, effort options offered, effort hint text.
 3. In the **Model** select, choose the first real model (the first entry below `Agent default`). Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
 4. Write down, for that model: every option in the **Effort** select in order, and the exact hint text under the Effort select.
@@ -144,40 +144,39 @@ If every model in the list advertises an effort ladder, NO-LADDER-MODEL does not
 **Steps**
 
 1. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and note what is already there.
-2. On `/agents`, click **New agent**.
+2. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2).
 3. In **Name** type `Probe One` and press Tab. Name, Title and Alias commit when the box loses focus, not on each keystroke (`AgentProfileCard.razor:497`), so leave each one with Tab before moving on.
 4. In **Title** type `Tester` and press Tab.
 5. In **Alias** type `p1` and press Tab.
-6. Leave **Teams** empty.
-7. In the **Persona body** textarea type `You are a tester.`
-8. In the **Model** select choose HAIKU (or LADDER-MODEL if Haiku is not in the list). Wait for the Effort select to settle.
-9. In the **Effort** select choose `Low`. If HAIKU offers no ladder, first switch the Model to LADDER-MODEL, wait, then choose `Low`.
-10. Click **Add agent**.
-11. Read the card that is now showing: its heading, its **Model** section and its **Effort** section.
-12. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
-13. In `T-C` run `Get-ChildItem '<data>\Agents\Probe One' -Name`, then `Get-Content -Raw '<data>\Agents\Probe One\Probe One.md'` and then `[bool]((Get-Content -Raw '<data>\Agents\Probe One\Probe One.md') -match "\r\n")`.
+6. In the **Persona text** textarea type `You are a tester.`
+7. In the **Model** select choose HAIKU (or LADDER-MODEL if Haiku is not in the list). Wait for the Effort select to settle.
+8. In the **Effort** select choose `Low`. If HAIKU offers no ladder, first switch the Model to LADDER-MODEL, wait, then choose `Low`.
+9. Click **Save draft**, then **Save changes** (`P-NEW-PERSONA` steps 3-4).
+10. Open the card with `P-OPEN-AGENT` and read its heading, its **Model** section and its **Effort** section.
+11. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
+12. In `T-C` run `Get-ChildItem '<data>\Agents\Probe One' -Name`, then `Get-Content -Raw '<data>\Agents\Probe One\Probe One.md'` and then `[bool]((Get-Content -Raw '<data>\Agents\Probe One\Probe One.md') -match "\r\n")`.
 
 **Pass if — all of these**
 
-- The card does not close on save: it shows the saved agent, with a **Persona** section, a **Model** section and an **Effort** section.
+- The card opened in step 10 shows the saved agent, with a **Persona** section, a **Model** section and an **Effort** section.
 - `persona_models` has exactly one row with `persona_name` = `Probe One` and `model` a lowercase hyphenated wire id (for example `claude-haiku-4-5`), NOT the label shown in the select.
 - `persona_efforts` has exactly one row with `persona_name` = `Probe One` and `effort` exactly `low` (lowercase), NOT `Low`.
 - Neither stored value is an empty string.
 - The folder `<data>\Agents\Probe One` lists `Probe One.md` (and, once a runner has started, `work`); no `.md` sits at the `Agents` root for this agent (`AgentPaths.cs:15,57`).
 - `<data>\Agents\Probe One\Probe One.md` exists and begins with a `---` line followed by `name: 'Probe One'`, `title: 'Tester'`, `alias: 'p1'`, a closing `---`, then `You are a tester.`
-- The CRLF check in step 13 prints **False** (the file is LF-only).
+- The CRLF check in step 12 prints **False** (the file is LF-only).
 
 **Fail if — any of these**
 
 - `persona_models.model` holds a display label such as `Haiku 4.5`, or `persona_efforts.effort` holds `Low` -> a display name is being stored instead of an id; it will never resolve against the adapter's option value, will log a catalog warning on every single restart forever, and the session will silently run on the default.
 - Either column holds an empty string -> a row that exists but never resolves; the blank-means-default path has been bypassed.
 - No row appears in one or both tables even though a non-blank choice was made -> the choice is being dropped on save and the agent silently runs on the default.
-- The file contains CRLF line endings (step 13 prints True) -> the composed frontmatter is no longer joined with LF, which will make MODELEFFORT-24's no-op save restart the agent spuriously.
-- A `teams:` line appears in the file even though Teams was left empty -> an empty optional field is being written where it should be omitted.
+- The file contains CRLF line endings (step 12 prints True) -> the composed frontmatter is no longer joined with LF, which will make MODELEFFORT-24's no-op save restart the agent spuriously.
+- The `teams:` line names any Team other than the one you created the agent in -> the Team is being written wrongly.
 
 **Inconclusive if**
 
-If **Add agent** shows a red error line above the fields (for example a name collision), the save never happened - the message is `Persona 'Probe One' already exists.` (`PersonaStore.cs:370`) - remove the colliding agent from its card, or run `P-RESET-TEAMS`, and re-run. If the database helper errors with `Cannot find module 'node:sqlite'`, the installed Node is too old: use any SQLite GUI against `App_Data\team.db` instead and record the same queries.
+If **Save draft** shows a red error line above the fields (for example a name collision), the save never happened - the message is `Persona 'Probe One' already exists.` (`PersonaStore.cs:370`) - remove the colliding agent from its card, or run `P-RESET-TEAMS`, and re-run. If the database helper errors with `Cannot find module 'node:sqlite'`, the installed Node is too old: use any SQLite GUI against `App_Data\team.db` instead and record the same queries.
 
 > [!NOTE]
 > `Probe One` is the fixture for MODELEFFORT-11, MODELEFFORT-12, MODELEFFORT-15 and the restart-lane tests. Do not delete it until those are done.
@@ -195,21 +194,21 @@ If **Add agent** shows a red error line above the fields (for example a name col
 
 **Steps**
 
-1. On `/agents`, click **New agent**.
+1. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2).
 2. Open the **Model** select and confirm the blank first option reads exactly `Agent default`.
 3. Look for a SECOND default-ish entry among the real model entries - the adapter's own `default` model. If the list has none, stop and record this test as partially inconclusive (see below), then jump to step 10.
 4. Select that adapter `default` entry.
-5. Type **Name** `Probe Default`, **Title** `Tester`, **Alias** `pd`, pressing Tab after each so it commits (`AgentProfileCard.razor:497`), leave **Teams** empty, and in **Persona body** type `You are a tester.`
+5. Type **Name** `Probe Default`, **Title** `Tester`, **Alias** `pd`, pressing Tab after each so it commits (`AgentProfileCard.razor:497`), and in **Persona text** type `You are a tester.`
 6. Leave the **Effort** select on `Agent default`.
-7. Click **Add agent**.
+7. Click **Save draft**, then **Save changes**.
 8. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models WHERE persona_name='Probe Default'"`.
 9. In `T-C` run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Default'"`.
-10. Close the card (the × button, whose tooltip reads `Close`). Click **New agent** again.
-11. Type **Name** `Probe Blank`, **Title** `Tester`, **Alias** `pb` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Agent default`.
-12. Click **Add agent**.
+10. Open the **New agent** card again (**Add an Agent** → **From scratch**).
+11. Type **Name** `Probe Blank`, **Title** `Tester`, **Alias** `pb` (Tab after each), **Persona text** `You are a tester.` and leave BOTH selects on `Agent default`.
+12. Click **Save draft**, then **Save changes**.
 13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Blank'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Blank'"`.
-14. Read the **Model** and **Effort** sections of the card now showing for `Probe Blank`.
-15. Clean up: open each of `Probe Default` and `Probe Blank` from its tile, click **Remove**, then click **Remove** again in the `Remove {name}?` prompt.
+14. Open `Probe Blank`'s card with `P-OPEN-AGENT` and read its **Model** and **Effort** sections.
+15. Clean up: open each of `Probe Default` and `Probe Blank` with `P-OPEN-AGENT`, click **Remove**, then click **Remove** again in the `Remove {name}?` prompt.
 
 **Pass if — all of these**
 
@@ -237,7 +236,7 @@ If the installed adapter's model catalog contains no entry of its own named `def
 
 **Free** · about 5 min
 
-*Catches a card field that shows the name of the value it should carry (`Name`, `Text`, `Model`) or comes up blank, by reading every value the card was handed against the file and database it came from. The old trap, a Razor string parameter missing its `@`, can no longer occur on this path: `Agents.razor` builds the card's `DialogParameters` in C# with `nameof(AgentProfileCard.X)` (`Agents.razor:241-260`), so the check that is left is the one a person can make: what is on screen is what is stored.*
+*Catches a card field that shows the name of the value it should carry (`Name`, `Text`, `Model`) or comes up blank, by reading every value the card was handed against the file and database it came from. The old trap, a Razor string parameter missing its `@`, can no longer occur on this path: the card's `DialogParameters` are built in C# with `nameof(AgentProfileCard.X)`, so the check that is left is the one a person can make: what is on screen is what is stored.*
 
 **Before you start**
 
@@ -247,7 +246,7 @@ If the installed adapter's model catalog contains no entry of its own named `def
 **Steps**
 
 1. In `T-C` run `Get-Content -Raw '<data>\Agents\Probe One\Probe One.md'`, then `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`. Keep the output beside the browser.
-2. On `/agents`, click the tile for `Probe One` to open its card in View mode.
+2. Open `Probe One`'s card in View mode with `P-OPEN-AGENT`.
 3. Read the dialog title (the small heading at the top, beside the × button), the large name line, the `Alias:` line, the **Persona** section and the **Model** and **Effort** sections.
 4. Click **Edit**. Wait until both hints have settled.
 5. Read the dialog title, the **Persona text** textarea, the **Model** select's selected option and the **Effort** select's selected option.
@@ -278,7 +277,7 @@ If the card will not open at all, this test cannot run - report the card-open fa
 
 **Free** · about 6 min
 
-*Proves browsing to /agents and opening an agent for viewing never costs a real adapter process - only Edit and New agent may spawn one. The oracle is `T-B` alone: the probe runs in `<data>\Agents`, which always exists, so there is no folder whose appearance proves a spawn (`ModelCatalogProbe.cs:281-282`).*
+*Proves browsing to a Team's Agents tab and opening an agent for viewing never costs a real adapter process - only Edit and New agent may spawn one. The oracle is `T-B` alone: the probe runs in `<data>\Agents`, which always exists, so there is no folder whose appearance proves a spawn (`ModelCatalogProbe.cs:281-282`).*
 
 **Before you start**
 
@@ -290,26 +289,26 @@ If the card will not open at all, this test cannot run - report the card-open fa
 
 1. Restart the app (`P-STOP`, then `P-LAUNCH-FREE`).
 2. Confirm `T-B` rests at 0.
-3. In the browser, navigate to `http://localhost:5100/agents` and let the page finish rendering (heading, the agent tiles, and the **Team** filter select if more than one team exists).
+3. In the browser, open the Agents tab of the Team that holds `Probe One` and let the page finish rendering (the roster cards).
 4. Do not click anything. Watch `T-B` for 20 seconds.
 5. Note `T-B`'s highest value so far.
-6. Now click the tile for `Probe One` (the whole tile is the button). The card opens in View mode.
+6. Now open `Probe One`'s card in View mode with `P-OPEN-AGENT`.
 7. Watch `T-B` for another 20 seconds.
 8. Note `T-B`'s highest value again.
-9. If more than one team exists, change the **Team** filter select to a specific team and watch `T-B` for 10 seconds.
-10. Click **Edit** on the open card and watch `T-B`.
+9. Open the **Add an Agent** menu and select **From other teams**, watch `T-B` for 10 seconds, then close the picker without choosing anyone.
+10. Open `Probe One`'s card again, click **Edit** and watch `T-B`.
 
 **Pass if — all of these**
 
 - `T-B` stays at 0 for the whole page load (steps 4-5).
-- `T-B` stays at 0 for the whole tile-click card open (steps 7-8).
-- Changing the **Team** filter spawns nothing (step 9 stays at 0).
+- `T-B` stays at 0 for the whole card open (steps 7-8).
+- Opening the From other teams picker spawns nothing (step 9 stays at 0).
 - Clicking **Edit** DOES spawn: `T-B` rises to 1 and falls back to 0, and the Model select fills.
 
 **Fail if — any of these**
 
-- `T-B` rises on the plain page load -> browsing to /agents now launches a real process every time; silent, the page looks identical, it is just slower and dirtier.
-- `T-B` rises on the tile click -> the tile-open path stopped being synchronous and now probes; same silent cost on every agent you merely look at.
+- `T-B` rises on the plain page load -> browsing to a Agents tab now launches a real process every time; silent, the page looks identical, it is just slower and dirtier.
+- `T-B` rises on the plain card open -> the open path stopped being synchronous and now probes; same silent cost on every agent you merely look at.
 - Changing the **Team** filter spawns a process -> display narrowing is reaching the probe.
 - Clicking **Edit** spawns nothing AND the Model select is empty -> the probe is no longer reachable at all from the Edit path.
 
@@ -318,7 +317,7 @@ If the card will not open at all, this test cannot run - report the card-open fa
 If the app was not restarted first, the catalogs may already be cached and the Edit half will show zero spawns for a legitimate reason - restart and re-run. If the Edit probe is shorter than `T-B`'s 200 ms poll, the rise is missed: judge on the Model select filling and repeat the Edit half once.
 
 > [!NOTE]
-> The two automated counterparts of the page-load half exist in the suite; the tile-click half and the Edit half are browser-only.
+> The two automated counterparts of the page-load half exist in the suite; the card-open half and the Edit half are browser-only.
 
 ### MODELEFFORT-07 — Changing the Model re-probes: the Effort list changes and the chosen level resets
 
@@ -334,7 +333,7 @@ If the app was not restarted first, the catalogs may already be cached and the E
 
 **Steps**
 
-1. On `/agents`, click **New agent**.
+1. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2).
 2. In the **Model** select choose HAIKU. Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
 3. Write down every option in the **Effort** select, in order, and the exact Effort hint text.
 4. If HAIKU offers a ladder, select `Low` in the **Effort** select. Confirm the select now shows `Low`.
@@ -382,13 +381,13 @@ If MODELEFFORT-02 recorded that HAIKU and SONNET advertise the SAME ladder, the 
 
 **Steps**
 
-1. Restart the app (so per-model effort caches are cold), then open `http://localhost:5100/agents`.
-2. Click **New agent**. Wait for the Model list to arrive.
+1. Restart the app (so per-model effort caches are cold), then open a Team's **Agents** tab.
+2. Open the **New agent** card (`P-NEW-PERSONA` step 2). Wait for the Model list to arrive.
 3. Change the **Model** select to HAIKU, then about one second later to SONNET, then about one second later back to HAIKU - each change made before the previous Effort hint has stopped reading `Reading the effort levels this model offers…`.
 4. Stop touching the card. Wait 30 seconds for everything to settle.
 5. Write down every option now in the **Effort** select and the Effort hint text.
 6. Compare that list against HAIKU's ladder as recorded in MODELEFFORT-07 step 3.
-7. Click **Cancel**, restart the app again, click **New agent**, and repeat steps 3-5 but with SONNET as the LAST selection.
+7. Click **Cancel**, restart the app again, open the **New agent** card again, and repeat steps 3-5 but with SONNET as the LAST selection.
 8. Compare that settled list against SONNET's recorded ladder.
 
 **Pass if — all of these**
@@ -423,13 +422,13 @@ If the probes complete faster than you can click (the hint never shows `Reading 
 
 **Steps**
 
-1. Restart the app, then open `http://localhost:5100/agents`.
-2. Click **New agent** and wait for the Model list to arrive.
+1. Restart the app, then open a Team's **Agents** tab.
+2. Open the **New agent** card (`P-NEW-PERSONA` step 2) and wait for the Model list to arrive.
 3. Change the **Model** select to SONNET.
 4. While the Effort hint still reads `Reading the effort levels this model offers…`, click **Cancel**.
 5. Confirm the card has closed and the page behind it is normal.
 6. Wait 30 seconds, watching the page for any flicker or repaint.
-7. Click **New agent** again.
+7. Open the **New agent** card again.
 8. Read: the **Model** select's populated state and selected option, the **Effort** select's selected option, and the Effort hint text.
 9. Repeat steps 2-8 three more times: once closing with the × button (tooltip `Close`), once by clicking the dark backdrop outside the card (the card sets only `CloseOnEscapeKey`, `AgentProfileCard.razor:572-577`, so the backdrop close is MudBlazor's own default - if it does not close, record that as an observation and judge the other three gestures), and once by pressing the Escape key while the Effort hint is still loading.
 
@@ -469,15 +468,15 @@ If the probe completes before you can click Cancel (the hint never lingers), the
 **Steps**
 
 1. In `T-A`, note the last log line so you can separate new lines from old.
-2. On `/agents`, click **New agent**.
+2. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2).
 3. In the **Model** select choose NO-LADDER-MODEL. Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
 4. Open the **Effort** select and write down every option it contains.
 5. Write down the exact Effort hint text.
 6. In `T-A`, read every new log line since step 1.
-7. Type **Name** `Probe NoEffort`, **Title** `Tester`, **Alias** `pne` (Tab after each so it commits, `AgentProfileCard.razor:497`), **Persona body** `You are a tester.`
-8. Click **Add agent**.
+7. Type **Name** `Probe NoEffort`, **Title** `Tester`, **Alias** `pne` (Tab after each so it commits, `AgentProfileCard.razor:497`), **Persona text** `You are a tester.`
+8. Click **Save draft**, then **Save changes**.
 9. In `T-C` run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoEffort'"`.
-10. Read the **Effort** section of the card now showing.
+10. Open the agent's card with `P-OPEN-AGENT` and read its **Effort** section.
 11. Clean up: click **Remove** on that card, then **Remove** in the prompt.
 **Pass if — all of these**
 
@@ -516,7 +515,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 
 1. In `T-C` record the current values: `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`.
 2. Restart the app.
-3. Open `http://localhost:5100/agents` and click the `Probe One` tile.
+3. Open `Probe One`'s card with `P-OPEN-AGENT`.
 4. Click **Edit**, and watch the **Model** select from the instant the card paints.
 5. While the Model hint still reads `Reading the models this agent offers…`, write down what the **Model** select shows as selected.
 6. Do the same for the **Effort** select while its hint reads `Reading the effort levels this model offers…`.
@@ -564,8 +563,8 @@ If the catalogs answer so fast that the loading hints never appear, the 'late ca
 2. In `T-C` run `Set-TeamDb "UPDATE persona_models SET model='claude-nonexistent-9' WHERE persona_name='Probe One';"`.
 3. In `T-C` run `Set-TeamDb "INSERT INTO persona_efforts(persona_name, effort) VALUES('Probe One','vintage') ON CONFLICT(persona_name) DO UPDATE SET effort='vintage';"`.
 4. In `T-C` verify with `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`.
-5. Start the app in the free lane and open `http://localhost:5100/agents`.
-6. Click the `Probe One` tile, then click **Edit**. Wait for both selects to settle.
+5. Start the app in the free lane.
+6. Open `Probe One`'s card with `P-OPEN-AGENT`, then click **Edit**. Wait for both selects to settle.
 7. Open the **Model** select and write down every option, noting which is selected.
 8. Open the **Effort** select and write down every option, noting which is selected.
 9. Click **Save** without changing anything.
@@ -604,18 +603,18 @@ If `Set-TeamDb` errors with 'database is locked', the app was not fully stopped 
 
 **Steps**
 
-1. On `/agents`, click **New agent**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each so it commits, `AgentProfileCard.razor:497`), **Persona body** `You are a tester.`
+1. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2). Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each so it commits, `AgentProfileCard.razor:497`), **Persona text** `You are a tester.`
 2. Set **Model** to LADDER-MODEL and, once the Effort select settles, set **Effort** to `Low`.
-3. Click **Add agent**.
+3. Click **Save draft**, then **Save changes**.
 4. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Two'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Two'"`. Both must return one row. Write the values down.
-5. On the card now showing, click **Remove**. The prompt `Remove Probe Two?` replaces it, with **Remove** and **Cancel**.
-6. Click **Remove** in the prompt. The card closes and the `Probe Two` tile disappears from the list.
+5. Open `Probe Two`'s card with `P-OPEN-AGENT` and click **Remove**. The prompt `Remove Probe Two?` replaces it, with **Remove** and **Cancel**.
+6. Click **Remove** in the prompt. The card closes and the `Probe Two` roster card disappears from the Team's Agents tab.
 7. In `T-C` run both queries from step 4 again.
-8. Click **New agent**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each), **Persona body** `You are a tester.` and leave BOTH selects on `Agent default`.
-9. Click **Add agent**.
-10. Read the **Model** and **Effort** sections of the card now showing.
+8. Open the **New agent** card again. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2` (Tab after each), **Persona text** `You are a tester.` and leave BOTH selects on `Agent default`.
+9. Click **Save draft**, then **Save changes**.
+10. Open the new card with `P-OPEN-AGENT` and read its **Model** and **Effort** sections.
 11. In `T-C` run both queries from step 4 once more.
-12. Now test the case-insensitive key: click **Remove** then **Remove** in the prompt on `Probe Two`. Click **New agent** and create `probe two` (all lowercase, Tab after each of Name, Title and Alias) with **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`, both selects left on `Agent default`.
+12. Now test the case-insensitive key: click **Remove** then **Remove** in the prompt on `Probe Two`. Open the **New agent** card and create `probe two` (all lowercase, Tab after each of Name, Title and Alias) with **Title** `Tester`, **Alias** `p2`, **Persona text** `You are a tester.`, both selects left on `Agent default`, then **Save draft** and **Save changes**.
 13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and look for any row keyed `Probe Two` or `probe two`.
 14. Clean up: remove `probe two` (**Remove**, then **Remove** in the prompt).
 
@@ -652,13 +651,13 @@ If the prompt's **Remove** produces a red error line on the card, the removal ne
 
 **Steps**
 
-1. On `/agents`, click **New agent**. Type **Name** `Probe Three`, **Title** `Tester`, **Alias** `p3` (Tab after each so it commits, `AgentProfileCard.razor:497`), **Persona body** `You are a tester.`
-2. Set **Model** to LADDER-MODEL, wait for the Effort select to settle, set **Effort** to `Low`, then click **Add agent**.
+1. Open the **New agent** card (`P-NEW-PERSONA` steps 1-2). Type **Name** `Probe Three`, **Title** `Tester`, **Alias** `p3` (Tab after each so it commits, `AgentProfileCard.razor:497`), **Persona text** `You are a tester.`
+2. Set **Model** to LADDER-MODEL, wait for the Effort select to settle, set **Effort** to `Low`, then click **Save draft** and **Save changes**.
 3. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"`. Record the exact values of the `Probe Three` rows.
-4. On the card now showing, click **Edit**. The **Persona text** textarea now contains the WHOLE file including front matter - the hint under it reads `Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.`
+4. Open `Probe Three`'s card with `P-OPEN-AGENT` and click **Edit**. The **Persona text** textarea now contains the WHOLE file including front matter - the hint under it reads `Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.`
 5. In the textarea, change the line `name: 'Probe Three'` to `name: 'Probe Four'`. Change nothing else - leave the Model and Effort selects alone.
 6. Click **Save**.
-7. Look at the agent list behind the card: it must now show a tile named `Probe Four`.
+7. Look at the Team's Agents tab behind the card: it must now show a roster card named `Probe Four`.
 8. Read the **Model** and **Effort** sections of the card now showing.
 9. In `T-C` run both queries from step 3 again and look for rows keyed `Probe Three` and `Probe Four`.
 10. In `T-C` run `Get-ChildItem '<data>\Agents' -Name` and then `Get-ChildItem '<data>\Agents\Probe Four' -Name`. Note the folder names and the definition filename.
@@ -666,7 +665,7 @@ If the prompt's **Remove** produces a red error line on the card, the removal ne
 
 **Pass if — all of these**
 
-- The tile list shows `Probe Four` and no longer shows `Probe Three`.
+- The Agents tab shows `Probe Four` and no longer shows `Probe Three`.
 - `persona_models` contains exactly one row keyed `Probe Four` holding the same model id recorded in step 3, and NO row keyed `Probe Three`.
 - `persona_efforts` contains exactly one row keyed `Probe Four` holding `low`, and NO row keyed `Probe Three`.
 - The card's **Model** and **Effort** sections show the LADDER-MODEL choice and `Low` - not `Agent default` / `Model default`.
@@ -690,7 +689,7 @@ If **Save** shows a red error line (a malformed edit, or a Name/Alias collision 
 
 **Free** · about 6 min
 
-*Proves the View card never invents a value, and records the documented (and confusing) difference between what the card shows right after a Save and what it shows when opened from a tile.*
+*Proves the View card never invents a value, and records the documented (and confusing) difference between what the card shows right after a Save and what it shows when opened afresh with `P-OPEN-AGENT`.*
 
 **Before you start**
 
@@ -699,11 +698,11 @@ If **Save** shows a red error line (a malformed edit, or a Name/Alias collision 
 
 **Steps**
 
-1. On `/agents`, click the `Probe One` tile, then click **Edit**.
+1. Open `Probe One`'s card with `P-OPEN-AGENT`, then click **Edit**.
 2. Without changing anything, click **Save**.
 3. IMMEDIATELY read the **Model** section and the **Effort** section of the View card now showing, and write both down.
 4. Close the card with the × button (tooltip `Close`).
-5. Click the `Probe One` tile again.
+5. Open `Probe One`'s card again with `P-OPEN-AGENT`.
 6. Read the **Model** and **Effort** sections again and write both down.
 7. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
 8. Compare each of the four values you wrote down against the stored values.
@@ -715,7 +714,7 @@ If **Save** shows a red error line (a malformed edit, or a Name/Alias collision 
 - The popover's **Model** and **Effort** rows show the exact stored ids (the popover never probes, so it never shows labels), and its **Adapter** row shows the same display name the Agent card's Adapter select shows.
 - An Agent with nothing stored shows `Agent default` for Model and `Model default` for Effort, the same words the Agent card uses, and the default Adapter's display name.
 - Right after **Save**, the **Model** section shows the friendly label (for example `Haiku 4.5`) and the **Effort** section shows the friendly label (for example `Low`).
-- When the same card is opened from the tile, the sections show the raw stored ids instead (for example `claude-haiku-4-5` and `low`).
+- When the same card is opened afresh (`P-OPEN-AGENT`), the sections show the raw stored ids instead (for example `claude-haiku-4-5` and `low`).
 - Every one of the four values is either the exact stored id or that id's catalog label - never a third string, and never `Agent default` / `Model default` for an agent that has stored values.
 
 **Fail if — any of these**
@@ -728,7 +727,7 @@ If **Save** shows a red error line (a malformed edit, or a Name/Alias collision 
 If both views show the same thing (labels in both, or ids in both), that is not automatically a failure - it depends on whether the catalogs happened to be populated. Record what you saw and check it against the stored values; only a value that matches neither the id nor its label is a defect.
 
 > [!NOTE]
-> The label-then-id switch is a documented consequence of the rule that opening from a tile never probes, so the catalogs are empty on that path. Report it as a copy observation if it confuses you, not as a functional defect.
+> The label-then-id switch is a documented consequence of the rule that opening a card in View mode never probes, so the catalogs are empty on that path. Report it as a copy observation if it confuses you, not as a functional defect.
 
 ### MODELEFFORT-16 — The probe runs in App_Data\Agents, never in the repository root
 
@@ -747,7 +746,7 @@ If both views show the same thing (labels in both, or ids in both), that is not 
 2. In `T-C` run `git -C <repo> status --porcelain` and save the output.
 3. In `T-C` run `Get-ChildItem -Force '<repo>' | Select-Object -ExpandProperty Name` and save the list.
 4. In `T-C` run `Get-ChildItem -Force '<data>\Agents' | Select-Object -ExpandProperty Name` and save the list. It holds the Chief of Staff's folder and any other agent folders, because the seeder created the folder at start (`BuiltinAgentSeeder.cs`); it exists before the probe, so its existence proves nothing.
-5. Open `http://localhost:5100/agents` and click **New agent**. Wait for both selects to settle.
+5. Open a Team's **Agents** tab and open the **New agent** card (`P-NEW-PERSONA` step 2). Wait for both selects to settle.
 6. In `T-C` re-run `git -C <repo> status --porcelain` and compare with step 2.
 7. In `T-C` re-run the root listing from step 3 and compare.
 8. In `T-C` re-run the listing from step 4. The probe's working folder is the `Agents` root itself (`ModelCatalogProbe.cs:281-282`), so a folder the probe adds there would show up as a new entry, and no new agent folder should appear.
@@ -788,9 +787,9 @@ If `git status` was already dirty before the test, the comparison is unreliable 
 **Steps**
 
 1. Restart the app.
-2. Open `http://localhost:5100/agents` in TWO separate browser windows, side by side. Do not click anything in either yet.
+2. Open the same Team's **Agents** tab in TWO separate browser windows, side by side. Do not click anything in either yet.
 3. Position `T-B` where you can see it while clicking.
-4. Click **New agent** in the first browser window, then within about half a second click **New agent** in the second.
+4. In the first browser window point at **Add an Agent** and select **From scratch**, then within about half a second do the same in the second.
 5. Watch `T-B` continuously for 45 seconds and write down the highest number it ever reaches.
 6. In both browser windows, check that the **Model** select is populated and that the Model hint has settled.
 7. In both browser windows, check that the **Effort** select is populated and its hint has settled.
@@ -833,16 +832,16 @@ If you cannot click both within roughly a second, the overlap may not have happe
 
 **Steps**
 
-1. Restart the app, open `http://localhost:5100/agents`, click **New agent** and write down every entry in the **Model** select.
+1. Restart the app, open a Team's **Agents** tab, open the **New agent** card (`P-NEW-PERSONA` step 2) and write down every entry in the **Model** select.
 2. Click **Cancel**.
 3. In `T-C` run `Rename-Item '<repo>\tools\acp\node_modules' 'node_modules.off'`.
-4. Without restarting the app, click **New agent** again and write down every entry in the **Model** select.
+4. Without restarting the app, open the **New agent** card again and write down every entry in the **Model** select.
 5. Watch `T-B` during step 4.
 6. In `T-A`, check whether any new log line appeared during step 4.
 7. Click **Cancel**. Restart the app.
-8. Open `/agents` and click **New agent**. Write down the **Model** select's contents and the Model hint text.
+8. Open a Team's **Agents** tab and open the **New agent** card. Write down the **Model** select's contents and the Model hint text.
 9. In `T-C` run `Rename-Item '<repo>\tools\acp\node_modules.off' 'node_modules'` to restore the adapter.
-10. Restart the app and confirm with one more **New agent** that the real list is back.
+10. Restart the app and confirm with one more **New agent** card that the real list is back.
 
 **Pass if — all of these**
 
@@ -881,22 +880,22 @@ If step 3's rename fails with 'file in use', a runner or a probe still holds the
 1. Stop the app (Ctrl+C in `T-A`).
 2. In `T-C` run `Rename-Item '<repo>\tools\acp\node_modules' 'node_modules.off'`.
 3. Start the app in the free lane and note the last log line in `T-A`.
-4. Open `http://localhost:5100/agents`. Confirm the page renders normally - heading, intro paragraph, tiles for existing agents.
-5. Click **New agent** - this must be the FIRST card open of this app run.
+4. Open a Team's **Agents** tab. Confirm the page renders normally - the roster cards for existing agents.
+5. Open the **New agent** card (`P-NEW-PERSONA` step 2) - this must be the FIRST card open of this app run.
 6. Read the hint under the **Model** select and the hint under the **Effort** select, and write both down exactly.
 7. Open both selects and write down every option each contains.
 8. In `T-A`, read the new log lines.
 9. Watch `T-B` for 15 seconds.
-10. Type **Name** `Probe NoAdapter`, **Title** `Tester`, **Alias** `pna`, **Persona body** `You are a tester.` and click **Add agent**.
+10. Type **Name** `Probe NoAdapter`, **Title** `Tester`, **Alias** `pna`, **Persona text** `You are a tester.`, then click **Save draft** and **Save changes**.
 11. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe NoAdapter'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoAdapter'"`.
 12. WITHOUT restarting the app, run in `T-C`: `Rename-Item '<repo>\tools\acp\node_modules.off' 'node_modules'`.
-13. In the browser, close the card (× button) and click **New agent** again. Wait for the hints to settle.
+13. In the browser, open the **New agent** card again (**Add an Agent** → **From scratch**). Wait for the hints to settle.
 14. Read the **Model** select's contents.
-15. Clean up: click **Cancel**, open `Probe NoAdapter`, click the **Remove** icon button (tooltip `Remove`), then **Remove** in the prompt.
+15. Clean up: click **Cancel**, open `Probe NoAdapter` with `P-OPEN-AGENT`, click the **Remove** icon button (tooltip `Remove`), then **Remove** in the prompt.
 
 **Pass if — all of these**
 
-- `/agents` renders normally with no adapter present - no error banner, no blank page.
+- The Agents tab renders normally with no adapter present - no error banner, no blank page.
 - The card opens, and the Model hint reads exactly `This agent advertises no models, so it will use its own default.`
 - The Effort hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Both selects contain ONLY the option `Agent default`.
@@ -934,15 +933,15 @@ FALSE PASS TRAP: if any card was opened earlier in the SAME app run, the cached 
 **Steps**
 
 1. PART A - launch failure. Stop the app. In `T-A` run `$env:Team__Acp__Command='node-does-not-exist'` and then the free-lane `dotnet run` line.
-2. Open `http://localhost:5100/agents` and confirm the page renders normally.
-3. Click **New agent** and start a stopwatch.
+2. Open a Team's **Agents** tab and confirm the page renders normally.
+3. Open the **New agent** card (`P-NEW-PERSONA` step 2) and start a stopwatch.
 4. Note how long it takes for the Model hint to stop reading `Reading the models this agent offers…`.
 5. Write down the Model hint, the Effort hint, and the contents of both selects.
 6. In `T-A`, read the new log lines.
-7. Confirm the card can be closed with **Cancel** and the page is still usable (click a tile, open and close it).
+7. Confirm the card can be closed with **Cancel** and the page is still usable (open and close an agent's card with `P-OPEN-AGENT`).
 8. Stop the app and run `Remove-Item Env:Team__Acp__Command` in `T-A`.
 9. PART B - authentication. If you have a way to put the Claude CLI into an unauthenticated state for this machine, do so now; otherwise skip to step 12 and record Part B as inconclusive.
-10. Start the app in the free lane, open `/agents`, and click **New agent** as the first card open.
+10. Start the app in the free lane, open a Team's **Agents** tab, and open the **New agent** card as the first card open.
 11. Write down both hints, both select contents, and the new log lines. Then restore authentication.
 12. PART C - timeout. Record the expected shape without forcing it: a probe that neither answers nor fails must be abandoned after a hard 20 seconds with the log line `Model catalog probe timed out after 00:00:20.` and the same two 'no choice' sentences in the card. Only report a timeout observation if you actually saw one during any test in this set.
 
@@ -987,17 +986,17 @@ The identical on-screen text across all four causes is DOCUMENTED and must not b
 4. In `T-C` run `Set-TeamDb "DROP TABLE IF EXISTS persona_models; DROP TABLE IF EXISTS persona_efforts;"`.
 5. In `T-C` run `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` and confirm neither table is listed.
 6. Start the app in the free lane. Watch `T-A` for a startup exception.
-7. Open `http://localhost:5100/agents` and confirm the page renders, with the same agent tiles as before.
+7. Open a Team's **Agents** tab and confirm the page renders, with the same roster cards as before.
 8. In `T-C` run `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` again.
 9. In `T-C` re-run the two count queries from step 3.
-10. Click **New agent**, create `Probe Migrate` with **Title** `Tester`, **Alias** `pm`, **Persona body** `You are a tester.`, **Model** = LADDER-MODEL and **Effort** = `Low`, then click **Add agent**.
+10. Open the **New agent** card, create `Probe Migrate` with **Title** `Tester`, **Alias** `pm`, **Persona text** `You are a tester.`, **Model** = LADDER-MODEL and **Effort** = `Low`, then click **Save draft** and **Save changes**.
 11. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Migrate'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Migrate'"`.
 12. Clean up: remove `Probe Migrate` through the card (the **Remove** icon button, then **Remove** in the prompt), and delete the backup file if everything passed.
 
 **Pass if — all of these**
 
 - The app starts with no exception in the log.
-- `/agents` renders with the same agents as before the drop.
+- The Agents tab renders with the same agents as before the drop.
 - After startup, `sqlite_master` lists BOTH `persona_models` and `persona_efforts` again.
 - The `users` and `rooms` counts are unchanged from step 3 - nothing was wiped.
 - The new agent's Model and Effort rows are written into the freshly created tables.
@@ -1031,14 +1030,14 @@ If `Set-TeamDb` errors with 'database is locked', the app is still running - sto
 
 **Steps**
 
-1. Start the app in the restart lane. Open `http://localhost:5100/agents`.
-2. Wait until the `Probe One` tile's avatar badge shows the check glyph and its tooltip reads `Online`. This may take several seconds.
+1. Start the app in the restart lane. Open the Agents tab of the Team that holds `Probe One`.
+2. Wait until `Probe One`'s roster-card avatar badge shows the check glyph and its tooltip reads `Online`. This may take several seconds.
 3. In `T-B` note the resting adapter count now that runners are up (one per Online agent, the Chief of Staff included).
-4. Click the `Probe One` tile, then click **Edit**. Wait for both selects to settle, then wait until `T-B` is back to the step 3 count. A cold-cache probe adds a throwaway adapter for a few seconds, and it must be gone before you take the baseline.
+4. Open `Probe One`'s card with `P-OPEN-AGENT`, then click **Edit**. Wait for both selects to settle, then wait until `T-B` is back to the step 3 count. A cold-cache probe adds a throwaway adapter for a few seconds, and it must be gone before you take the baseline.
 5. In `T-C` run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId` and write down the PIDs as list A. In `T-A`, note the last log line.
 6. Change the **Model** select from HAIKU to SONNET. Leave the Persona text and everything else untouched.
 7. Click **Save**.
-8. Watch the card's status line and the tile's dot continuously for the next 30 seconds. Write down every status word you see, in order (`Online`, `Offline`, `Starting`, `Degraded`).
+8. Watch the card's status line and the avatar badge continuously for the next 30 seconds. Write down every status word you see, in order (`Online`, `Offline`, `Starting`, `Degraded`).
 9. Count how many times the status leaves `Online` and returns to it.
 10. In `T-A`, read every new log line since step 5.
 11. Wait until `T-B` is back to the step 3 count (the model change also probes the Effort list for the new model, which spawns a throwaway adapter), then re-run the PID query from step 5 as list B and compare it with list A.
@@ -1061,7 +1060,7 @@ If `Set-TeamDb` errors with 'database is locked', the app is still running - sto
 
 **Inconclusive if**
 
-If `Probe One` never reaches `Online` at all in this lane, this test cannot run - read the reason line on its card (and the tile's status tooltip), fix the environment, and mark INCONCLUSIVE. If the status transition is too fast to see, judge on the PID evidence instead and say so.
+If `Probe One` never reaches `Online` at all in this lane, this test cannot run - read the reason line on its card (and the avatar badge's status tooltip), fix the environment, and mark INCONCLUSIVE. If the status transition is too fast to see, judge on the PID evidence instead and say so.
 
 > [!NOTE]
 > Do not use the log line `The agent process disconnected.` or an `[agent stderr]` burst as restart evidence. Every catalog probe logs the same line when its throwaway adapter is disposed (`DotAcpAgentHost.cs:586-594`, `AdapterProcessProbeRunner.cs:45-48`), and opening Edit or changing the Model probes, so both appear with or without a restart. A restart forgets the Room Sessions (ADR-0024): the next Turn starts a fresh session whose first Turn carries the last 20 Messages, so the agent can still seem to remember earlier text - expected, not a defect. Starting a session is not a prompt turn, so this test spends nothing.
@@ -1079,12 +1078,12 @@ If `Probe One` never reaches `Online` at all in this lane, this test cannot run 
 
 **Steps**
 
-1. On `/agents`, confirm the agent's tile shows `Online`, and note the resting count in `T-B`.
-2. Click the agent's tile, then click **Edit**. Wait for both selects to settle, confirm **Effort** shows `Low`, then wait until `T-B` is back to the step 1 count (a cold-cache probe adds a throwaway adapter for a few seconds).
+1. On the agent's Agents-tab roster card, confirm its avatar badge shows `Online`, and note the resting count in `T-B`.
+2. Open the agent's card with `P-OPEN-AGENT`, then click **Edit**. Wait for both selects to settle, confirm **Effort** shows `Low`, then wait until `T-B` is back to the step 1 count (a cold-cache probe adds a throwaway adapter for a few seconds).
 3. In `T-C` record the adapter PIDs as list A: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`. In `T-A`, note the last log line.
 4. Change the **Effort** select from `Low` to `Medium`. Do NOT touch the Model select or the Persona text.
 5. Click **Save**.
-6. Watch the card status and the tile dot for 30 seconds and write down every status word in order.
+6. Watch the card status and the avatar badge for 30 seconds and write down every status word in order.
 7. In `T-A`, read every new log line since step 3, and specifically search for the words `advertised effort catalog`.
 8. Wait until `T-B` is back to the step 1 count, then re-run the PID query as list B and compare it with list A.
 9. In `T-C` run `Get-TeamDb "SELECT effort FROM persona_efforts WHERE persona_name='<the agent name>'"`.
@@ -1125,18 +1124,18 @@ If MODELEFFORT-02 found no model advertising both `Low` and `Medium`, this test 
 **Steps**
 
 1. In `T-C` confirm the Persona file is LF-only: `[bool]((Get-Content -Raw '<data>\Agents\Probe One\Probe One.md') -match "\r\n")` must print **False**. If it prints True, see INCONCLUSIVE.
-2. On `/agents`, confirm `Probe One` shows `Online`. Click its tile, then click **Edit**.
+2. On its Agents-tab roster card, confirm `Probe One` shows `Online`. Open its card with `P-OPEN-AGENT`, then click **Edit**.
 3. Wait for both selects to settle, and until `T-B` is back to its resting count (a cold-cache probe adds a throwaway adapter for a few seconds). Touch NOTHING - do not click into the textarea, do not open either select.
 4. In `T-C` record the adapter PIDs as list A: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`. In `T-A`, note the last log line now, after the selects have settled, so the Edit probe's own lines fall before the mark.
 5. Click **Save**.
-6. Watch the card status line and the tile dot continuously for at least 15 seconds - the file write also fires a 500 ms-debounced watcher event, and that second event must also decide 'no change'.
+6. Watch the card status line and the avatar badge continuously for at least 15 seconds - the file write also fires a 500 ms-debounced watcher event, and that second event must also decide 'no change'.
 7. In `T-A`, read every new log line since step 4.
 8. In `T-C` re-run the PID query as list B and compare it with list A.
 9. Repeat steps 2-8 once more (a second consecutive no-op save) and record the same observations.
 
 **Pass if — all of these**
 
-- The status reads `Online` continuously throughout - no flicker, no `Starting`, no `Offline`, on both the card and the tile.
+- The status reads `Online` continuously throughout - no flicker, no `Starting`, no `Offline`, on both the card and the avatar badge.
 - The adapter PIDs are identical before and after both saves (list B equals list A). This is the deciding evidence.
 - The log since step 4 shows no sign of a restart: no `Persona '<Name>' failed to start.` line and no new `[agent stderr] …` burst from a new agent process. (`The agent process disconnected.` alone proves nothing here, because a probe's disposal logs it too.)
 - The second consecutive no-op save behaves identically to the first.
@@ -1172,17 +1171,17 @@ FALSE DEFECT TRAP: if step 1 prints True, the Persona file has CRLF line endings
 2. In `T-C` run `Set-TeamDb "UPDATE persona_models SET model='claude-nonexistent-9' WHERE persona_name='Probe One';"`.
 3. In `T-C` run `Set-TeamDb "INSERT INTO persona_efforts(persona_name, effort) VALUES('Probe One','vintage') ON CONFLICT(persona_name) DO UPDATE SET effort='vintage';"`.
 4. Start the app in the restart lane and watch `T-A` from the first line.
-5. Open `http://localhost:5100/agents` and watch the `Probe One` tile for up to 60 seconds.
-6. Write down the final status word on the tile and, if it is not `Online`, hover it to read the status tooltip.
+5. Open the Agents tab of the Team that holds `Probe One` and watch its roster-card avatar badge for up to 60 seconds.
+6. Write down the final status word on the badge and, if it is not `Online`, hover it to read the status tooltip.
 7. In `T-A`, search the log for `advertised model catalog` and for `advertised effort catalog`.
-8. Click the `Probe One` tile and read the card: the status line, any reason line beneath it, and the **Model** and **Effort** sections.
+8. Open `Probe One`'s card with `P-OPEN-AGENT` and read it: the status line, any reason line beneath it, and the **Model** and **Effort** sections.
 9. Restore the fixture: click **Edit**, set **Model** back to HAIKU, wait for the Effort list, set **Effort** to `Low`, click **Save**.
 
 **Pass if — all of these**
 
 - The log contains `Requested model 'claude-nonexistent-9' is not in the agent's advertised model catalog; continuing on the agent's default.` at Warning.
 - The log contains `Requested effort 'vintage' is not in the agent's advertised effort catalog for the current model; continuing on the model's default.` at Warning.
-- Despite both warnings, the `Probe One` tile reaches `Online`.
+- Despite both warnings, the `Probe One` avatar badge reaches `Online`.
 - The card's **Model** section shows `claude-nonexistent-9` and its **Effort** section shows `vintage` - the stored values, not defaults.
 
 **Fail if — any of these**
@@ -1212,13 +1211,13 @@ If the app cannot start a session at all in this lane for unrelated reasons (ada
 
 **Steps**
 
-1. On `/agents`, click the tile of an agent showing `Online`.
+1. Open the card (`P-OPEN-AGENT`) of an agent whose avatar badge shows `Online`.
 2. Write down every button in the card's action row. The row can hold **Message** (only when the agent has a direct Room), **Edit**, **Open**, **Restart**, and the **Remove** icon button (for the Chief of Staff, **Reset to default** instead).
 3. Read the hint line below the action row.
 4. Close the card.
 5. Now make an agent unhealthy. Easiest: in `T-C` run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId, CommandLine` to find the adapter process, then `Stop-Process -Id <pid> -Force` for one of them.
-6. Watch `/agents` until that agent's tile shows `Offline` or `Degraded`.
-7. Click that tile to open its card. Write down every button in the action row and the hint line below it.
+6. Watch the agent's roster-card avatar badge on its Team's Agents tab until it shows `Offline` or `Degraded`.
+7. Open its card with `P-OPEN-AGENT`. Write down every button in the action row and the hint line below it.
 8. Click **Restart** and immediately read the button's label.
 9. Immediately click the same button a second time.
 10. Watch the status line for up to 60 seconds and write down every status word in order.
@@ -1242,7 +1241,7 @@ If the app cannot start a session at all in this lane for unrelated reasons (ada
 
 **Inconclusive if**
 
-If you cannot produce an `Offline` or `Degraded` agent (the process restarts itself too quickly, or none is running), record the healthy-agent half as PASS and the rest as INCONCLUSIVE. The Starting half (Restart hidden while the tile reads `Starting`) lasts a few seconds after launch; if you cannot catch it, leave it unrecorded rather than failing it. A `Degraded` agent NEVER recovering on its own is documented and correct - do not report the absence of automatic recovery as a defect; the Human clicks this button.
+If you cannot produce an `Offline` or `Degraded` agent (the process restarts itself too quickly, or none is running), record the healthy-agent half as PASS and the rest as INCONCLUSIVE. The Starting half (Restart hidden while the avatar badge reads `Starting`) lasts a few seconds after launch; if you cannot catch it, leave it unrecorded rather than failing it. A `Degraded` agent NEVER recovering on its own is documented and correct - do not report the absence of automatic recovery as a defect; the Human clicks this button.
 
 > [!NOTE]
 > Stopping an adapter process with Stop-Process is the cheapest way to create the fixture and spends nothing. Prefer a `Probe One` process over the Chief of Staff's, so a restart cannot queue a Greeting Turn.
@@ -1262,15 +1261,15 @@ If you cannot produce an `Offline` or `Degraded` agent (the process restarts its
 
 **Steps**
 
-1. Open `/agents` and wait until the agent's tile shows `Online`.
-2. Click its tile and click the **Message** action on the card. This opens its Room.
+1. Open the Agents tab of the agent's Team and wait until its avatar badge shows `Online`.
+2. Open its card with `P-OPEN-AGENT` and click the **Message** action on the card. This opens its Room.
 3. In the message box type exactly `which model are you running as, and what thinking effort?` and press Enter. A direct Room has two Members, so no Mention is needed; a Room of three or more would need one. If you prefer a Mention, use the Alias form `@p1`, not `@Probe One`.
 4. Wait for the reply and write it down verbatim.
 5. In `T-C` record the adapter PIDs as list A (`Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`), and in `T-A` search the log for `advertised model catalog` and `advertised effort catalog` and note the last log line.
-6. Go back to `/agents`, click the agent's tile, click **Edit**, change the **Model** select from HAIKU to SONNET, and click **Save**.
-7. Wait until the tile shows `Online` again and `T-B` is back to its resting count, then re-run the PID query as list B. Exactly one PID from list A must be gone and one new PID present.
+6. Open the agent's card again with `P-OPEN-AGENT`, click **Edit**, change the **Model** select from HAIKU to SONNET, and click **Save**.
+7. Wait until the avatar badge shows `Online` again and `T-B` is back to its resting count, then re-run the PID query as list B. Exactly one PID from list A must be gone and one new PID present.
 8. Return to the same Room and send the identical message again. Write down the reply.
-9. Go back to the card, click **Edit**, change the **Effort** select from `Low` to `Medium` (leaving the Model on SONNET), and click **Save**. Again compare the adapter PIDs before and after, once the tile is `Online` and `T-B` is at rest.
+9. Go back to the card, click **Edit**, change the **Effort** select from `Low` to `Medium` (leaving the Model on SONNET), and click **Save**. Again compare the adapter PIDs before and after, once the badge is `Online` and `T-B` is at rest.
 10. Wait for `Online`, return to the Room, send the identical message a third time, and write down the reply.
 11. In `T-A`, search the whole log from step 5 onward for `advertised model catalog` and `advertised effort catalog`.
 12. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
@@ -1279,7 +1278,7 @@ If you cannot produce an `Offline` or `Degraded` agent (the process restarts its
 **Pass if — all of these**
 
 - The first reply names a Haiku-family model; the second reply names a Sonnet-family model. The two answers DIFFER in the model they name.
-- Between each pair of turns the agent's adapter PID changed (one PID gone, one new) and the tile went through `Offline` or `Starting` back to `Online` - the restart evidence. The log line `The agent process disconnected.` is NOT evidence, because every catalog probe logs it too when opening Edit.
+- Between each pair of turns the agent's adapter PID changed (one PID gone, one new) and the avatar badge went through `Offline` or `Starting` back to `Online` - the restart evidence. The log line `The agent process disconnected.` is NOT evidence, because every catalog probe logs it too when opening Edit.
 - Across all three turns the log contains NO `Requested model '…' is not in the agent's advertised model catalog` and NO `Requested effort '…' is not in the agent's advertised effort catalog for the current model` warning.
 - The database holds the ids matching what was selected: SONNET's wire id and `medium` after step 9.
 
@@ -1287,7 +1286,7 @@ If you cannot produce an `Offline` or `Degraded` agent (the process restarts its
 
 - The model names the SAME model on both turns -> the picker's value is not reaching `session/new`; the session is running on the default and the card is showing a choice that never took effect.
 - Any `not in the agent's advertised … catalog` warning appears -> a display name or a stale value is stored, and the session is silently running on a default.
-- The adapter PIDs are unchanged and the tile never left `Online` between turns -> the save is not restarting the session, so the new Model could not possibly have applied.
+- The adapter PIDs are unchanged and the avatar badge never left `Online` between turns -> the save is not restarting the session, so the new Model could not possibly have applied.
 - The agent replies but never reaches `Online` again after a save -> the restart is breaking the session rather than replacing it.
 
 **Inconclusive if**
@@ -1313,7 +1312,7 @@ The model's self-report about its own EFFORT level is not reliable - treat the M
 **Steps**
 
 1. Restart the app.
-2. Open `http://localhost:5100/agents` and click the `Probe One` tile.
+2. Open `Probe One`'s card with `P-OPEN-AGENT`.
 3. Click **Edit**, and from the instant the card paints try to open the **Model** select, then the **Effort** select. Click each one twice.
 4. Read both hints, and note whether each control looks dimmed.
 5. Keep watching. Note whether the **Model** select becomes usable BEFORE the **Effort** hint stops reading `Reading the effort levels this model offers…`, at the same moment, or after.

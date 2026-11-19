@@ -47,38 +47,24 @@ public sealed class AppCssTokensBTests
         Assert.DoesNotContain("body1-lineheight", body, StringComparison.Ordinal);
     }
 
-    /// <summary>The turn-detail toggle and an Agent tile hover on the <c>hover</c> token; the tile's border is a control line.</summary>
+    /// <summary>The turn-detail toggle hovers on the <c>hover</c> token.</summary>
     [Fact]
-    public void Hover_TurnDetailToggleAndAgentTile_ReadTheHoverToken()
+    public void Hover_TurnDetailToggle_ReadsTheHoverToken()
     {
         string toggle = AppCssTokensBTests.Rule(".turn-detail-toggle:hover");
-        string tile = AppCssTokensBTests.Rule(".agents-item:hover");
 
         Assert.Contains("background: var(--hu-hover);", toggle, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("background: var(--hu-hover);", tile, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("border-color: var(--hu-line-control);", tile, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.DoesNotContain("action-default-hover", toggle + tile, StringComparison.Ordinal);
-        Assert.DoesNotContain("lines-default", tile, StringComparison.Ordinal);
+        Assert.DoesNotContain("action-default-hover", toggle, StringComparison.Ordinal);
     }
 
-    /// <summary>The composer's drop hint and an Agent tile sit on <c>ground.raised</c>.</summary>
+    /// <summary>The composer's drop hint sits on <c>ground.raised</c>.</summary>
     [Fact]
-    public void RaisedGround_DropHintAndAgentTile_ReadTheToken()
+    public void RaisedGround_DropHint_ReadsTheToken()
     {
         string hint = AppCssTokensBTests.Rule(".composer-drop-hint");
-        string tile = AppCssTokensBTests.Rule(".agents-item");
 
         Assert.Contains("background: var(--hu-ground-raised);", hint, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("background: var(--hu-ground-raised);", tile, StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.DoesNotContain("palette-surface", hint + tile, StringComparison.Ordinal);
-    }
-
-    /// <summary>An Agent tile is a card: it reads <c>shadow.card</c> at rest and <c>shadow.card.hover</c> hovered.</summary>
-    [Fact]
-    public void AgentTile_ReadsTheCardShadowTokens()
-    {
-        Assert.Contains("box-shadow: var(--hu-shadow-card);", AppCssTokensBTests.Rule(".agents-item"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
-        Assert.Contains("box-shadow: var(--hu-shadow-card-hover);", AppCssTokensBTests.Rule(".agents-item:hover"), StringComparison.Ordinal); // contains-ok: one rule of the stylesheet source
+        Assert.DoesNotContain("palette-surface", hint, StringComparison.Ordinal);
     }
 
     /// <summary>The disabled-but-probing outlined border is a control line.</summary>

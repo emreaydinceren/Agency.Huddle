@@ -64,7 +64,6 @@ internal static class TabKeys
             ["tasks", "item", var taskId, "edit"] => new($"task-edit:{taskId}", string.Create(CultureInfo.InvariantCulture, $"Edit {taskId}"), "tasks"),
             ["tasks", "item", var taskId, ..] => new($"task:{taskId}", string.Create(CultureInfo.InvariantCulture, $"Task {taskId}"), "tasks"),
             ["tasks", var view, ..] => new($"tasks:{view}", view, "tasks"),
-            ["agents", ..] => new("agents", "Agents", "agents"),
             ["settings", ..] => new("settings", "Settings", "settings"),
             ["library", ..] => new("library", "Library", "library"),
             ["needs-you"] => new("needs-you", "Needs you", "needs-you"),

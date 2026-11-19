@@ -88,7 +88,7 @@ public sealed class R3TeamsCardTests
         Assert.True(commands < firstSection, "the commands must come before the first section, with the action row");
     }
 
-    /// <summary>Edit groups its fields under Identity, Persona and Model (B10 New agent).</summary>
+    /// <summary>Edit groups its fields under Identity, Persona, Skills and Model (B10 New agent, P7).</summary>
     [Fact]
     public async Task EditCard_FieldsAreGroupedUnderGroupLabels()
     {
@@ -100,7 +100,7 @@ public sealed class R3TeamsCardTests
         await ClickButtonAsync(cut, "Edit");
 
         string[] labels = [.. cut.FindAll(".mud-dialog-content .group-label").Select(static label => label.TextContent.Trim())];
-        Assert.Equal(["Identity", "Persona", "Model"], labels);
+        Assert.Equal(["Identity", "Persona", "Skills", "Model"], labels);
     }
 
     /// <summary>The Create form's placeholders are "e.g." examples, never bare values, and the one text label reads "Persona text" (B10 New agent).</summary>

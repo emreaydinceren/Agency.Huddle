@@ -6,7 +6,6 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
-using AgentsPage = Agency.Huddle.App.Components.Pages.Agents;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -59,30 +58,6 @@ public sealed class AgentProfileCardOpenerTests
         Assert.False(opened);
         Assert.Empty(cut.FindComponents<AgentProfileCard>());
         Assert.Empty(cut.FindAll(".mud-dialog"));
-    }
-
-    /// <summary>A tile on the Agents page still opens that Agent's card, now through the opener.</summary>
-    [Fact]
-    public async Task AgentsPage_TileStillOpensTheCard()
-    {
-        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        await using TeamWebApplicationFactory factory = new();
-        await AgentProfileCardOpenerTests.SeedAsync(factory, ct);
-        await using MudBunitContext ctx = AgentProfileCardOpenerTests.NewContext(factory);
-        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<AgentsPage>(0);
-            builder.CloseComponent();
-        });
-
-        _ = cut.InvokeAsync(() => cut.FindAll("button.agent-tile")
-            .Single(candidate => candidate.TextContent.Contains("Nova", StringComparison.Ordinal))
-            .ClickAsync());
-
-        cut.WaitForState(() => cut.FindComponents<AgentProfileCard>().Count == 1);
-        AgentProfileCard card = cut.FindComponent<AgentProfileCard>().Instance;
-        Assert.Equal("Nova", card.Name);
-        Assert.Equal("Researcher", card.Title);
     }
 
     /// <summary>Writes the two Agent definitions the tests open.</summary>

@@ -579,7 +579,7 @@ You remove these `ping` lines in Phase 7.
 | --- | --- |
 | Group Room | Select **New chat**, tick two or more Agents, select **Start chat**. It is named after its members, for example "Nova, Kai" |
 | One-to-one Room | Already exists. Selecting a single Agent in **New chat** reopens it |
-| Add a member | In the Room, select **Add agent** at the top right and choose one |
+| Add an Agent | In the Room, select **Add agent** at the top right and choose one |
 | Custom name | Select the pencil beside the Room name, type the name, press Enter |
 | Archive | Hover the Room in **Chats**, open its `⋯` **Room actions** menu, select **Archive** |
 
@@ -609,7 +609,7 @@ scenario is about models.
 ### Add memberships the files did not set
 
 Normally `teams:` in the Agent files covers membership. To exercise the UI
-path instead, open the Team page, **Members** tab, **Add member**.
+path instead, open the Team page, **Agents** tab, **Add member**.
 
 ## Phase 7: Write the chat history
 

@@ -102,7 +102,7 @@ They are unique regardless of case.
 
 ### Changing members
 
-On the **Members** tab, nothing changes until **Save changes**:
+On the **Agents** tab, nothing changes until **Save changes**:
 
 | Control | What it does |
 | --- | --- |
@@ -229,7 +229,7 @@ itself.
 | **Approve & hire** is off | The details aren't complete or the roster is empty. The hint says which |
 | A hire says the Team is full | A [hire limit](#hire-limits) was reached |
 | The Chief of Staff says a role cannot be hired yet | A Skill or Pack the role needs isn't ready. Set it up, or ask for a role it lists as ready |
-| A Team still appears after you removed everyone | Removing members never deletes the folder. It shows **No members** |
+| A Team still appears after you removed everyone | Removing members never deletes the folder. It shows **No Agents** |
 | A rename was refused | The name breaks the name rules, is taken, or is an old name that stays reserved. Pick another |
 | The Feed says a rename is stuck | A step could not finish, such as a file held open. Close what holds it, and the rename finishes at the next start |
 | Restore was refused | Something now has that name. Rename one of them, then restore |

@@ -10,8 +10,7 @@ For which file holds what, see [Code map](code-map.md). Back to the hub:
 ```text
   Browser (Blazor Server circuit)
       │
-      ├── /            Chat.razor ──────┐
-      └── /agents   Agents.razor  │
+      └── /            Chat.razor ──────┐
                                         ↓
                               ChatService          the only writer of Messages
                                     │

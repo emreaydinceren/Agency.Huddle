@@ -20,13 +20,13 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class ShellSidebarRowsTests
 {
-    /// <summary>The Agents entry is a destination, not a header: it is an ordinary row through the <c>nav-row-link</c> class (audit A7).</summary>
+    /// <summary>The Scheduled entry is a destination, not a header: it is an ordinary row through the <c>nav-row-link</c> class (audit A7).</summary>
     [Fact]
-    public void MainLayout_AgentsLink_TakesTheOrdinaryRowClass()
+    public void ScheduledNav_Link_TakesTheOrdinaryRowClass()
     {
-        string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Layout", "MainLayout.razor"));
+        string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Jobs", "ScheduledNav.razor"));
 
-        Assert.Matches(@"<NavTabLink Href=""/agents""[^>]*Class=""nav-row-link""", markup);
+        Assert.Matches(@"<NavTabLink Href=""/scheduled""[^>]*Class=""nav-row-link""", markup);
     }
 
     /// <summary>The <c>nav-row-link</c> rule gives the 13px, weight-400, body-colour label of every other sidebar row (audit A7).</summary>

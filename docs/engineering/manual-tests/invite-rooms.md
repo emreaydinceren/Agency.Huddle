@@ -103,12 +103,12 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - **Open room** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - An Agent is missing, or `Bo` is listed before `Ada` -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
-- Every dot is a hollow grey ring while Ada and Bo are clearly connected (the Agents page shows them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Online is a green circle with a white check and Offline a hollow grey ring (`agent-dot`, `presence-glyph-ring`); a ring on a connected Agent means the state did not resolve.
+- Every dot is a hollow grey ring while Ada and Bo are clearly connected (their avatars in their Rooms show them Online) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Online is a green circle with a white check and Offline a hollow grey ring (`agent-dot`, `presence-glyph-ring`); a ring on a connected Agent means the state did not resolve.
 - Step 2 prints `true` on a fresh page load, before ever clicking **New room** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
 
 **Inconclusive if**
 
-If the dots are not green and you are NOT sure Ada and Bo are connected, open **Agents** and read their status, and run `O-ADAPTERS` to confirm the `mock-acp` processes are running. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. The panel's content is only rendered while it is open (`NewChat.razor:16`), and `MudCollapse` animates its height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
+If the dots are not green and you are NOT sure Ada and Bo are connected, open their cards (`P-OPEN-AGENT`) and read their status, and run `O-ADAPTERS` to confirm the `mock-acp` processes are running. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. The panel's content is only rendered while it is open (`NewChat.razor:16`), and `MudCollapse` animates its height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
 
 > [!NOTE]
 > The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the ring appear' — that is current behaviour, not a defect; note it in your report if you see it.
@@ -330,7 +330,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 
 **Inconclusive if**
 
-If Ada did not reply to `hi @Ada` within 15 seconds, check on the Agents page that Ada is still Online. Without a reply you can still judge this test on the room id and the sidebar count alone, but say in your report that the history half was not observed; your own message is still in the Transcript, so a missing reply does not by itself empty it.
+If Ada did not reply to `hi @Ada` within 15 seconds, check on Ada's avatar in her Room that she is still Online. Without a reply you can still judge this test on the room id and the sidebar count alone, but say in your report that the history half was not observed; your own message is still in the Transcript, so a missing reply does not by itself empty it.
 
 > [!NOTE]
 > Do not invite anyone into Ada's Room for the rest of the free tests — INVITEROOMS-24 and the restart test read best with it intact.
@@ -427,7 +427,7 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 
 **Free** · about 5 min
 
-*Proves the invite candidate list is the set difference (all Agents minus this Room's Members), that the Human is never offered, and that the panel is collapsed on first render. The panel is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and the Room header's **Invite agent** button no longer carries an `invite-toggle` class — disambiguate it from the `/agents` page's identically-labelled submit button by WHERE it is, not by a CSS class: this one lives inside the Room header's `.invite-agent` wrapper.*
+*Proves the invite candidate list is the set difference (all Agents minus this Room's Members), that the Human is never offered, and that the panel is collapsed on first render. The panel is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and the Room header's **Invite agent** button no longer carries an `invite-toggle` class — disambiguate it from the New agent card's identically-labelled submit button by WHERE it is, not by a CSS class: this one lives inside the Room header's `.invite-agent` wrapper.*
 
 **Before you start**
 
@@ -439,7 +439,7 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 1. Click the sidebar link `mybot`.
 2. Before clicking anything else, look at the top right of the Room header and confirm the panel below **Invite agent** is NOT showing.
 3. In the DevTools Console, type `document.querySelector('.invite-agent .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter. It must print `false`.
-4. Click the **Invite agent** button at the top right of the Room header — the one inside `.invite-agent`, not the `/agents` page's **Add agent** submit button. Repeat the Console command from step 3; it must now print `true`.
+4. Click the **Invite agent** button at the top right of the Room header — the one inside `.invite-agent`, not the New agent card's **Save draft** submit button. Repeat the Console command from step 3; it must now print `true`.
 5. Read every entry in the list that opens.
 6. Read the label above the list.
 
@@ -461,7 +461,7 @@ If you cannot tell the two `Ada, Bo` links apart in the sidebar, hover each and 
 
 **Inconclusive if**
 
-If you clicked a button labelled 'Add agent' and a Name/Title/Alias FORM opened instead of a candidate list, you are on the `/agents` page, not in a Room. Navigate back to `/rooms/<id>` and click the one inside the Room header. Do not record a result from the wrong control.
+If you clicked a button and a Name/Title/Alias FORM opened instead of a candidate list, you are in the New agent card, not in a Room. Navigate back to `/rooms/<id>` and click the one inside the Room header. Do not record a result from the wrong control.
 
 ### INVITEROOMS-12 — Clicking a candidate invites it, renames the Room, and repaints all four surfaces with no reload
 
@@ -1008,7 +1008,7 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 
 **Inconclusive if**
 
-If neither `hi @delta` nor `hi @Bo` draws a reply, the Agents may be disconnected: check the `delta` terminal for `Server closed the connection.` and the Agents page for Bo's status before recording anything. Bo's reply repeats the whole prompt, which can quote earlier Messages such as `hi @delta`; if `delta` answers only because its Name appears inside Bo's reply text, say so and record that part as inconclusive rather than as a Reply Gate defect.
+If neither `hi @delta` nor `hi @Bo` draws a reply, the Agents may be disconnected: check the `delta` terminal for `Server closed the connection.` and Bo's avatar status in his Room before recording anything. Bo's reply repeats the whole prompt, which can quote earlier Messages such as `hi @delta`; if `delta` answers only because its Name appears inside Bo's reply text, say so and record that part as inconclusive rather than as a Reply Gate defect.
 
 > [!NOTE]
 > IMPORTANT: `tools/echo-bot.ps1` and the mock Agents (Ada and Bo) both implement ADR-0004 — the bot mirrors `ReplyGate.Decide` and the mock Agents go through the real Reply Gate — so in a two-Member Room they reply to every Message, Mentioned or not, and only become Mention-gated once a third Member joins. That is exactly the boundary this test exercises: `hi @delta` works in the two-Member Room (step 5) because `delta` is Mentioned, and it would answer a plain `hi` there too, for the same reason `hi` draws nothing once `Bo` makes it a three-Member Room in step 9. This free test can therefore observe the 'answer everything when memberCount <= 2' rule directly, without needing a real Persona.
@@ -1075,7 +1075,7 @@ If Ada or Bo does not return to Online after the restart, its Rooms will still b
 
 1. Click the Room `Ada` (or any Room that still has a candidate), click **Invite agent**, and open the **Team** select. Confirm its only option is `All teams`. This is the no-Persona baseline. Close the popover.
 2. Run `O-MOCK-ADAPTERS` in `T-B` and write the count down.
-3. Create the Agent through `P-NEW-PERSONA`: **Name** = `coo`, **Title** = `Chief of Staff`, **Alias** = `coo`, **Teams** = `Business`, body = `You are the Chief of Staff.`; leave **Model** and **Effort** at whatever the mock adapter offers (it spends nothing). Wait until the `coo` tile reads Online and a sidebar link reading `coo` appears.
+3. Create the Agent through `P-NEW-PERSONA` in the Team `Business` (create the empty folder `<data>\Teams\Business\` first, as that procedure says): **Name** = `coo`, **Title** = `Chief of Staff` (its Alias is the Name, `coo`), Persona text = `You are the Chief of Staff.`; leave **Model** and **Effort** at whatever the mock adapter offers (it spends nothing). Wait until the `coo` card (`P-OPEN-AGENT`) reads Online and a sidebar link reading `coo` appears.
 4. Run `O-MOCK-ADAPTERS` again and write the new count down (one more than step 2). This is the count to hold steady below.
 5. Click the Room `Ada` and click **Invite agent**.
 6. Open the **Team** select and read every option.
@@ -1104,10 +1104,10 @@ If Ada or Bo does not return to Online after the restart, its Rooms will still b
 
 **Inconclusive if**
 
-If `coo` does not reach Online, or `Business` does not appear, check the `coo` card for its reason text and `Files that didn't load` on the Agents page; if the Agent never registered, the test cannot judge the filter — say so. Do not write the file by hand to work around it: that skips the stored Model and Effort rows (`P-NEW-PERSONA`).
+If `coo` does not reach Online, or `Business` does not appear, check the `coo` card for its reason text and `Files that didn't load` at the top of the Team's Agents tab; if the Agent never registered, the test cannot judge the filter — say so. Do not write the file by hand to work around it: that skips the stored Model and Effort rows (`P-NEW-PERSONA`).
 
 > [!NOTE]
-> An Agent with no Persona behind it has no Teams and therefore vanishes under any real Team filter, reachable only under `All teams`. That behaviour is by design, not a defect; it is not recorded in known-limits.md. Afterwards open the `coo` card on **Agents**, click its Remove icon (`aria-label="Remove"`, `AgentProfileCard.razor:220`) and then **Confirm**, so INVITEROOMS-32 onward start without it. Its Direct Room may remain in the sidebar; leave it.
+> An Agent with no Persona behind it has no Teams and therefore vanishes under any real Team filter, reachable only under `All teams`. That behaviour is by design, not a defect; it is not recorded in known-limits.md. Afterwards open the `coo` card (`P-OPEN-AGENT`), click its Remove icon (`aria-label="Remove"`, `AgentProfileCard.razor:220`) and then **Confirm**, so INVITEROOMS-32 onward start without it. Its Direct Room may remain in the sidebar; leave it.
 
 ### INVITEROOMS-26 — /invite accepts a Persona's Alias wherever it accepts its Name
 
@@ -1126,17 +1126,17 @@ If `coo` does not reach Online, or `Business` does not appear, check the `coo` c
 
 1. Press Ctrl+C in `T-A`, and in `T-C`, the `gamma` terminal and every other bot terminal still running.
 2. In `T-A` run `$env:Team__Acp__Enabled = 'true'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100` (no `--Team:DataDir`, so the default data folder is used). Then start `mybot` in `T-C` and `gamma` in the `gamma` terminal as the precondition says.
-3. Reload the browser and click **Agents** in the sidebar.
-4. Click **New agent**.
+3. Reload the browser and open the **Agents** tab of a Team (`P-NEW-PERSONA` step 1; `Test` if you have no other).
+4. Point at **Add an Agent** and select **From scratch**. The **New agent** card opens.
 5. In the card, fill **Name** with exactly `Jarvis`.
 6. Fill **Title** with exactly `Butler`.
 7. Fill **Alias** with exactly `jar`.
-8. Leave **Teams** empty.
-9. In the persona body textarea type exactly: `You are Jarvis. Answer in one short sentence.`
+8. The card has no Teams field; step 12 takes the Agent out of the Team again.
+9. In the persona text field type exactly: `You are Jarvis. Answer in one short sentence.`
 10. Set the **Model** select to `Haiku`.
 11. Set the **Effort** select to `low`.
-12. Click the **Add agent** submit button AT THE BOTTOM OF THIS CARD (this is the New agent dialog's submit action, NOT the Room header's Invite agent control — see INVITEROOMS-11's note on telling the two apart).
-13. Wait until the `Jarvis` tile shows a status of Online or Starting, and until a sidebar link reading `Jarvis` appears. This may take 10-30 seconds.
+12. Select **Save draft** AT THE BOTTOM OF THIS CARD (this is the New agent card's submit action, NOT the Room header's Invite agent control — see INVITEROOMS-11's note on telling the two apart), then **Save changes**. Then on its roster card open **More** (⋮) → **Remove from team** → **Save changes**, so `Jarvis` is in no Team (`P-NEW-PERSONA`).
+13. Wait until the `Jarvis` card (`P-OPEN-AGENT`) shows a status of Online or Starting, and until a sidebar link reading `Jarvis` appears. This may take 10-30 seconds.
 14. Click a Room that does NOT contain `Jarvis` — use the Room named `mybot`.
 15. Note the current last line in `T-A`.
 16. Type exactly `/invite @jar` and press Enter.
@@ -1160,12 +1160,12 @@ If `coo` does not reach Online, or `Business` does not appear, check the `coo` c
 
 - A RED line reads `Unknown agent @jar` -> the alias fallback regressed. It is only reached after the direct Name lookup misses, so this can break with no other visible symptom anywhere in the app.
 - `/invite @jar` works but `/invite @JAR` fails -> the alias comparison lost its case-insensitivity.
-- The Room renames to `jar` rather than `Jarvis` -> the alias is being persisted as an identity; the Room name no longer matches the Agent the user sees on `/agents`, and Mention resolution will disagree with it.
+- The Room renames to `jar` rather than `Jarvis` -> the alias is being persisted as an identity; the Room name no longer matches the Agent the user sees on its card, and Mention resolution will disagree with it.
 - No `Jarvis` sidebar link ever appears -> the Persona never registered as an Agent, and the alias cannot be resolved against the Team Directory at all. That is a start-up failure, not an alias failure.
 
 **Inconclusive if**
 
-If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in the Room's member-health strip, the Persona never registered and this test cannot be judged — report it inconclusive with the reason text from the tile. A HAND-WRITTEN Persona file is NOT enough for this test: an Alias resolves against the Team Directory, which only has a row once the Persona has actually registered.
+If `node --version` fails, or the `Jarvis` status stays Offline with a reason in the Room's member-health strip, the Persona never registered and this test cannot be judged — report it inconclusive with the reason text from its card. A HAND-WRITTEN Persona file is NOT enough for this test: an Alias resolves against the Team Directory, which only has a row once the Persona has actually registered.
 
 > [!NOTE]
 > No model turn is taken for `Jarvis` here — creating and starting a Persona opens a session and never prompts — so the test itself spends no tokens despite needing Acp enabled; only the Chief of Staff's Greeting Turn (see the COST line above) can. Keep `Jarvis` running: INVITEROOMS-27 through 31 all use it.
@@ -1183,15 +1183,15 @@ If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in t
 
 **Steps**
 
-1. Click **Agents** in the sidebar.
-2. Click the `Jarvis` tile to open its card.
+1. Press Ctrl K and type `Jarvis`.
+2. Select the `Jarvis` Agent result to open its card (`P-OPEN-AGENT`).
 3. Read the row of actions near the bottom of the card and write down every action label you see.
 4. Close the card (click the × at its top right).
 5. Click the sidebar link reading exactly `Jarvis` and confirm its members line reads `You, Jarvis`.
 6. Click **Invite agent** in the Room header and click `mybot` (pipe bot `mybot` from `T-C` must be running).
 7. Confirm the `<h1>` is now `Jarvis, mybot`.
-8. Click **Agents** in the sidebar again.
-9. Click the `Jarvis` tile.
+8. Press Ctrl K and type `Jarvis` again.
+9. Select the `Jarvis` Agent result to open its card.
 10. Read the row of actions again and compare.
 
 **Pass if — all of these**
@@ -1209,7 +1209,7 @@ If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in t
 
 **Inconclusive if**
 
-If `Jarvis`'s sidebar entry already contained a comma before you started, its Direct Room was already converted and the 'before' half cannot be observed. Restart `Jarvis` (click **Restart** on its card, which is offered in every state except Starting, `AgentProfileCard.razor:182-185`, or edit and save its file) to mint a fresh Direct Room, then start the test over. If the tile shows no actions at all, the card may not have finished loading — reopen it once before judging.
+If `Jarvis`'s sidebar entry already contained a comma before you started, its Direct Room was already converted and the 'before' half cannot be observed. Restart `Jarvis` (click **Restart** on its card, which is offered in every state except Starting, `AgentProfileCard.razor:182-185`, or edit and save its file) to mint a fresh Direct Room, then start the test over. If the card shows no actions at all, it may not have finished loading — reopen it once before judging.
 
 > [!NOTE]
 > The disappearance is the DESIGNED consequence of membership-defined Direct Rooms and the source comment says the action is 'absent rather than broken'. A tester is quite likely to file this as a bug. Do NOT. Restarting the Persona brings the link back, pointing at a newly minted Direct Room — optionally confirm that as a bonus observation.
@@ -1229,9 +1229,9 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 **Steps**
 
 1. Press Ctrl+C in `T-A`. Run `$env:Team__Acp__Enabled = 'true'` and `$env:Team__AgentMessageBudget = '6'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`. The budget cap is what bounds the spend of this test.
-2. Reload the browser and click **Agents**.
-3. Click **New agent**. Fill **Name** = `Friday`, **Title** = `Analyst`, **Alias** = `fri`, **Teams** empty, body = `You are Friday. Answer in one short sentence.`, **Model** = `Haiku`, **Effort** = `low`. Click the card's **Add agent** submit button.
-4. Wait until both `Jarvis` and `Friday` tiles read Online and both appear in the sidebar.
+2. Reload the browser.
+3. Create an Agent with `P-NEW-PERSONA` (from INVITEROOMS-26's steps 3 to 12): **Name** = `Friday`, **Title** = `Analyst`, **Alias** = `fri`, Persona text = `You are Friday. Answer in one short sentence.`, **Model** = `Haiku`, **Effort** = `low`; **Save draft**, **Save changes**, then **Remove from team**.
+4. Wait until both `Jarvis` and `Friday` cards read Online and both appear in the sidebar.
 5. Click **New room**, tick `Jarvis`, `Friday` and `mybot`, and click **Open room**. You need three or more Members so Mentions actually gate.
 6. Note the current last line in `T-A`.
 7. Count the sidebar links and write the count down.
@@ -1648,7 +1648,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 **Steps**
 
 1. Archive the `Bo` Room. Write its room id down (call it OLD).
-2. Open **Agents**, click the `Bo` tile, and read its actions. Close the card.
+2. Open the `Bo` card (`P-OPEN-AGENT`) and read its actions. Close the card.
 3. Start a new chat with `Bo` (New room, tick `Bo`, Open room).
 4. Read the new Room's id, `<h1>` and Transcript.
 5. Open **Archived**, select OLD on the **Rooms** tab and click **Restore**.
@@ -1656,7 +1656,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 
 **Pass if — all of these**
 
-- Step 2: the card shows **Edit** and **Open** but NO **Message** action, because the Message link resolves through the exact-two-Member lookup, which excludes archived Rooms (`Agents.razor:328`; `SqliteTeamDirectory.cs:393`).
+- Step 2: the card shows **Edit** and **Open** but NO **Message** action, because the Message link resolves through the exact-two-Member lookup, which excludes archived Rooms (`SqliteTeamDirectory.cs:393`).
 - Step 3 creates a NEW Room with a new id. Its Transcript is EMPTY and its `<h1>` reads `Bo`.
 - OLD is not resurrected by step 3 and stays archived until step 5.
 - After step 5 the sidebar shows TWO entries both reading `Bo`, the older one holding the original Messages.

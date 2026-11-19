@@ -12,9 +12,6 @@ public enum SidebarView
     /// <summary>The Teams, each with its Rooms and Projects.</summary>
     Teams,
 
-    /// <summary>The link to the Agents page.</summary>
-    Agents,
-
     /// <summary>The saved Task Views.</summary>
     Tasks,
 

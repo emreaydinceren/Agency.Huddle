@@ -70,7 +70,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If `Bo` does not appear in the **Invite agent** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and the Agents page for `Bo` reading Online, then restart from RESET. If the badge beside `Bo` in the panel is a hollow grey ring rather than a green check circle, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
+If `Bo` does not appear in the **Invite agent** list, it is either already a Member or not Online — check the sidebar for a Room named `Bo` and `Bo`'s avatar in that Room reading Online, then restart from RESET. If the badge beside `Bo` in the panel is a hollow grey ring rather than a green check circle, `Bo` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is a red error alert instead of the blue note, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -157,7 +157,7 @@ If `Ada` is already a Member of the `Bo` Room from an earlier test, step 2 will 
 
 **Inconclusive if**
 
-If `Ada` is offline (a hollow grey ring on Ada's avatar on the Agents page, or the tile reads Offline — the **Invite agent** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
+If `Ada` is offline (a hollow grey ring on Ada's avatar in her Room, or her card reads Offline — the **Invite agent** panel lists only non-Members, so Ada is not in it), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway: add a second Agent first. If `Bo` does reply, read its text: a reply that merely re-quotes an earlier Message naming `Bo` is the mock echoing a Mention (Setup item 8), not a gate failure — re-run from a fresh seeder.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -245,7 +245,7 @@ If the Human's display name is not `You` (it is configurable), step 3 names nobo
 
 **Inconclusive if**
 
-If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on the Agents page that both `Ada` and `Bo` read Online before judging (the **Invite agent** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
+If one of the two Agents is offline at step 3 only one reply arrives and the line will read `1 of 40`, which is correct for what happened — check on their avatars in their Rooms that both `Ada` and `Bo` read Online before judging (the **Invite agent** panel lists only non-Members, so neither is in it). If the app was launched with a different `Team__AgentMessageBudget` from a previous test, substitute that number for 40 throughout rather than failing the test.
 
 > [!NOTE]
 > The line is deliberately suppressed when the Room is uncapped; that case is REPLYGATEBUDGET-16.
@@ -268,7 +268,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 4. Type `@Ada hi` and press Enter.
 5. Wait 8 seconds, then read everything between the transcript and the composer.
 6. Read the sender name of every Message in the transcript.
-7. Click **Agents** in the sidebar and read the state under the `Ada` tile, then use the browser Back button.
+7. Read the status on `Ada`'s avatar in her Room (`P-OPEN-AGENT` shows it on her card).
 8. Read `T-A`.
 
 **Pass if — all of these**
@@ -284,7 +284,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 - No other strip appears above the composer — in particular no alert listing `Ada is Degraded` or `Ada is Offline`.
 - Every Message in the transcript is from `You` or from `Ada`; there is no Message from a `system` or similar sender announcing the pause.
 - `T-A` shows NO `refused a message from` warning yet (nothing has tried to post a second time).
-- The Agents page still shows `Ada` as Online.
+- `Ada`'s avatar still shows her as Online.
 
 **Fail if — any of these**
 
@@ -339,7 +339,7 @@ If no reply arrives at all, you have a dead agent rather than a pause — confir
 
 **Inconclusive if**
 
-If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on the Agents page that both read Online first (the **Invite agent** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Agent and NO `refused a message from` line, the second Agent started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
+If only one of the two Agents is online, only one post is ever attempted and the test proves nothing about the race: check on their avatars in their Rooms that both read Online first (the **Invite agent** panel lists only non-Members). If `T-A` shows a `declined a turn in room` warning for the second Agent and NO `refused a message from` line, the second Agent started its Turn after the first had already posted, so the cheap layer (REPLYGATEBUDGET-33) caught it and the write path was never reached: that is correct behaviour but not what this test is for — re-run from the seeder (a few attempts may be needed to hit the race). If the timing is such that the second Agent's post arrives after you have already typed something else, the Budget will have reset — do not type anything between step 6 and step 9.
 
 > [!NOTE]
 > This layer refuses AFTER the Turn that produced the Message has already happened. With a real Persona the model has thought and the text is thrown away. That is the documented price of putting the authority on the write path, not a defect; the layer that avoids the spend is covered in REPLYGATEBUDGET-33.
@@ -587,7 +587,7 @@ If no reply arrives at step 5, you cannot read the Granted figure at all: confir
 
 **Inconclusive if**
 
-If `Bo` is not Online there is no working `Bo` Room to switch to — check the Agents page and restart from RESET. If both Rooms happen to have the same name after earlier invites, use the Room ids in the URL to tell them apart.
+If `Bo` is not Online there is no working `Bo` Room to switch to — check `Bo`'s avatar status (`P-OPEN-AGENT`) and restart from RESET. If both Rooms happen to have the same name after earlier invites, use the Room ids in the URL to tell them apart.
 
 > [!NOTE]
 > Sidebar switching is deliberately fast here; a stale-state bug shows as a flash of the wrong figures rather than a permanent wrong reading, so watch the moment of the switch.
@@ -1145,10 +1145,10 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false` — no model is needed for this test and none must start).
-3. Open `http://localhost:5100`, click **Agents** in the sidebar, and click **New agent**.
-4. Fill in Name `Jarvis`, Title `Butler`, Alias `jar`, leave Teams blank, and type `You are Jarvis.` into the Persona body.
-5. Leave Model and Effort at `Agent default` and click **Add agent**.
-6. Confirm a tile named `Jarvis` now appears on the Agents page and that the **Files that didn't load** section either is absent or does not list `Jarvis.md`, and that `<data>\Agents\Jarvis\Jarvis.md` now exists.
+3. Open `http://localhost:5100` and start `P-NEW-PERSONA` (the New agent card on a Team's Agents tab).
+4. Fill in Name `Jarvis`, Title `Butler`, Alias `jar`, and type `You are Jarvis.` into the Persona text.
+5. Leave Model and Effort at `Agent default`, select **Save draft**, then **Save changes**. For no Team, finish with `P-NEW-PERSONA`'s **Remove from team** step.
+6. Confirm Ctrl K finds `Jarvis` as an Agent, that the **Files that didn't load** section at the top of the Agents tab either is absent or does not list `Jarvis.md`, and that `<data>\Agents\Jarvis\Jarvis.md` now exists.
 7. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 8. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 9. Click the Room named `Jarvis` in the sidebar, type `/invite @Ada` and press Enter so the Room has three Members.
@@ -1194,12 +1194,12 @@ If `Jarvis.md` appears under **Files that didn't load**, read the reason there a
 
 1. Run `P-RESET-ROOMS`, then delete any leftover `Other` and `Jarvis` folders under `<data>\Agents\`. Do not touch `<data>\Teams\` (Team folders and Tasks) or the `Chief of Staff` folder.
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false`).
-3. CASE A. On **Agents**, click **New agent** and create Name `Other`, Title `Someone else`, Alias `Emily Lee`, body `You are Other.`, then click **Add agent**.
+3. CASE A. Create an Agent with `P-NEW-PERSONA` (no Team, as in REPLYGATEBUDGET-27): Name `Other`, Title `Someone else`, Alias `Emily Lee`, Persona text `You are Other.`, then **Save draft** and **Save changes**.
 4. Confirm `Other.md` is not listed under **Files that didn't load**.
 5. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Emily`; in TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Other`.
 6. Click the Room named `Emily`, type `/invite @Other` and press Enter, and confirm three Members.
 7. Type `@Emily Lee any news?` and press Enter, wait 5 seconds, then read both terminals and the Room.
-8. CASE B. On **Agents**, click **New agent** and create Name `Jarvis`, Title `Butler`, Alias `Jar`, body `You are Jarvis.`, then click **Add agent**.
+8. CASE B. Create an Agent with `P-NEW-PERSONA` (no Team): Name `Jarvis`, Title `Butler`, Alias `Jar`, Persona text `You are Jarvis.`, then **Save draft** and **Save changes**.
 9. In a fourth terminal — TERMINAL D — run `pwsh <repo>\tools\echo-bot.ps1 -Name Jar`; in a fifth — TERMINAL E — run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 10. Click the Room named `Jar`, type `/invite @Jarvis` and press Enter, and confirm three Members.
 11. Type `@Jar are you there?` and press Enter, wait 5 seconds, then read TERMINAL D and TERMINAL E and the Room.
@@ -1337,11 +1337,11 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with `P-LAUNCH-FREE` (`$env:Team__Acp__Enabled = 'false'`), only so you can create the Persona without starting a model.
-3. Open `http://localhost:5100`, click **Agents**, click **New agent**, and create Name `Ada`, Title `Analyst`, Alias `ada1`, body `You are Ada, a concise analyst. Answer in one short sentence.` Click **Invite agent**. Then, still on **Agents**, open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
+3. Open `http://localhost:5100` and create an Agent with `P-NEW-PERSONA`: Name `Ada`, Title `Analyst`, Alias `ada1`, Persona text `You are Ada, a concise analyst. Answer in one short sentence.` Then open the **Chief of Staff** card (`P-OPEN-AGENT`), choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 4. Stop the app with Ctrl+C.
 5. Start the app with PROFILE C: `$env:Team__Acp__Enabled = 'true'`, `$env:Team__AgentMessageBudget = '4'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-6. Open `http://localhost:5100`, click **Agents**, and wait until the `Ada` tile reads **Online**.
-7. Click the `Ada` tile, click **Edit**, set **Model** to the entry whose name contains `Haiku`, set **Effort** to `low`, and click **Save**. Wait until the tile reads **Online** again.
+6. Open `http://localhost:5100`, open the `Ada` card (`P-OPEN-AGENT`), and wait until it reads **Online**.
+7. On the `Ada` card click **Edit**, set **Model** to the entry whose name contains `Haiku`, set **Effort** to `low`, and click **Save**. Wait until the card reads **Online** again.
 8. Close the card, click the Room named `Ada` in the sidebar, and confirm the member line reads exactly `You, Ada`.
 9. Type `what is 2 plus 2` — with no `@` anywhere — and press Enter.
 10. Watch the Room for 60 seconds.
@@ -1356,13 +1356,13 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 
 **Fail if — any of these**
 
-- No reply arrives and the tile still reads Online and no warning appears in `T-A` -> the member-count branch of the Reply Gate is broken: the Message was treated as not-for-me and quietly buffered instead of answered. This is invisible from the UI, which is exactly why it needs a manual test.
+- No reply arrives and `Ada` still reads Online and no warning appears in `T-A` -> the member-count branch of the Reply Gate is broken: the Message was treated as not-for-me and quietly buffered instead of answered. This is invisible from the UI, which is exactly why it needs a manual test.
 - `T-A` shows `Persona 'Ada' declined a turn in room …: the room has spent its budget …` -> a stale in-memory Budget is blocking the very first Message; restart and retry once before filing.
 - A reply arrives but no grey budget line does -> the Room view is not reading the Budget (see REPLYGATEBUDGET-06).
 
 **Inconclusive if**
 
-If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its card and fix that first — an offline Persona is silent for a reason that has nothing to do with the gate. If the tile never leaves **Starting**, the agent process is failing to launch; check `T-A`. If the Model dropdown offers no Haiku entry, stop and ask before selecting anything else: this test must not run on a larger model.
+If the `Ada` card reads **Offline** or **Degraded**, read the reason line on its card and fix that first — an offline Persona is silent for a reason that has nothing to do with the gate. If the status never leaves **Starting**, the agent process is failing to launch; check `T-A`. If the Model dropdown offers no Haiku entry, stop and ask before selecting anything else: this test must not run on a larger model.
 
 > [!NOTE]
 > COST: one short billed Turn at Haiku/low — a few seconds of model time — plus the Chief of Staff's Greeting Turn, which is also Haiku/low once step 3 has been done. Leave the app running if you intend to do REPLYGATEBUDGET-32 next; it reuses this exact setup.
@@ -1432,10 +1432,10 @@ If the app or the Persona restarted, or her session in this Room was stopped, be
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
-2. Start the app with `$env:Team__Acp__Enabled = 'false'` temporarily and create two Personas on **Agents**: Name `Ana`, Title `Planner`, Alias `ana1`, body `You are Ana. Keep the conversation going with @Ben. Always end your message by asking @Ben one short question. One or two sentences only.` and Name `Ben`, Title `Builder`, Alias `ben1`, body `You are Ben. Keep the conversation going with @Ana. Always end your message by asking @Ana one short question. One or two sentences only.` Then open the **Chief of Staff** card, choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
+2. Start the app with `$env:Team__Acp__Enabled = 'false'` temporarily and create two Personas with `P-NEW-PERSONA`: Name `Ana`, Title `Planner`, Alias `ana1`, body `You are Ana. Keep the conversation going with @Ben. Always end your message by asking @Ben one short question. One or two sentences only.` and Name `Ben`, Title `Builder`, Alias `ben1`, body `You are Ben. Keep the conversation going with @Ana. Always end your message by asking @Ana one short question. One or two sentences only.` Then open the **Chief of Staff** card (`P-OPEN-AGENT`), choose **Edit**, set **Model** to the Haiku entry and **Effort** to `low`, and **Save**.
 3. Stop the app with Ctrl+C.
 4. Start the app with PROFILE C and `$env:Team__AgentMessageBudget = '6'` — set this BEFORE `dotnet run`.
-5. On **Agents**, wait until both tiles read **Online**, then set each one's **Model** to the Haiku entry and **Effort** to `low` via **Edit** and **Save**.
+5. Open each card (`P-OPEN-AGENT`), wait until both read **Online**, then set each one's **Model** to the Haiku entry and **Effort** to `low` via **Edit** and **Save**.
 6. In the sidebar click **New room**, tick both `Ana` and `Ben`, and click **Open room**.
 7. Confirm the member line names three people.
 8. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
@@ -1461,7 +1461,7 @@ If the app or the Persona restarted, or her session in this Room was stopped, be
 
 **Inconclusive if**
 
-If the models simply stop talking to each other before six (they may not obey the persona instruction reliably), the halt was not caused by the cap and the test proves nothing: read `T-A` — without a `declined a turn` warning, re-run with a clearer instruction, or accept the run as inconclusive rather than as a pass. If either tile is not Online, do not start: a one-sided conversation cannot reach the cap.
+If the models simply stop talking to each other before six (they may not obey the persona instruction reliably), the halt was not caused by the cap and the test proves nothing: read `T-A` — without a `declined a turn` warning, re-run with a clearer instruction, or accept the run as inconclusive rather than as a pass. If either Agent is not Online, do not start: a one-sided conversation cannot reach the cap.
 
 > [!NOTE]
 > COST: about six short billed Turns at Haiku/low — the most expensive test in this area. Keep the budget at 6 or lower and never raise it for this test. Do not walk away while it runs.
@@ -1480,13 +1480,13 @@ If the models simply stop talking to each other before six (they may not obey th
 **Steps**
 
 1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE` (`Team__Acp__Enabled` `false`).
-2. On **Agents**, set the **Chief of Staff**, `Ana` and `Ben` each to the Haiku entry for **Model**
+2. On each card (`P-OPEN-AGENT`), set the **Chief of Staff**, `Ana` and `Ben` each to the Haiku entry for **Model**
    and `low` for **Effort** via **Edit** and **Save**. `P-RESET-ROOMS` deletes `team.db`, which is where
    the stored Model and Effort live, so all three cards come back reading `Agent default` /
    `Model default` however they were left in REPLYGATEBUDGET-33, and the Chief of Staff's Greeting
    Turn would otherwise bill at the account default. Stop the app with Ctrl+C, then start it with
    PROFILE C and `$env:Team__AgentMessageBudget = '2'` set BEFORE `dotnet run`, and wait for both
-   tiles to read **Online**.
+   cards to read **Online**.
 3. Click **New room**, tick `Ana` and `Ben`, and click **Open room**.
 4. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
 5. Wait until the Room halts and the pause block appears.
@@ -1537,8 +1537,8 @@ Model replies are not deterministic, and 'does the reply account for that Messag
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Agents** set the **Chief of Staff** and the Persona to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models; the Greeting Turn would otherwise bill at the account default). Stop the app with Ctrl+C, then start it with PROFILE C and `$env:Team__AgentMessageBudget = '1'` set BEFORE `dotnet run`.
-2. Wait for the Persona tile to read **Online** and confirm Haiku and low on its card.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On their cards (`P-OPEN-AGENT`) set the **Chief of Staff** and the Persona to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models; the Greeting Turn would otherwise bill at the account default). Stop the app with Ctrl+C, then start it with PROFILE C and `$env:Team__AgentMessageBudget = '1'` set BEFORE `dotnet run`.
+2. Wait for the Persona's card to read **Online** and confirm Haiku and low on its card.
 3. Click the Room named after the Persona and note the Room id.
 4. Type `@<Persona> reply once, then immediately post a second short message into this same room.` and press Enter.
 5. Wait up to 120 seconds and watch the Room.
@@ -1573,7 +1573,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **💰 Spends money** · about 25 min
 
-*Documents a known gap so it is not filed as a bug, and tests the guard that does catch it: a spent per-Persona token Budget must show as Degraded with a reason on the Agent tile, not only in the log.*
+*Documents a known gap so it is not filed as a bug, and tests the guard that does catch it: a spent per-Persona token Budget must show as Degraded with a reason on the Agent's card, not only in the log.*
 
 **Before you start**
 
@@ -1594,13 +1594,13 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **Steps**
 
-1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On **Agents** set the **Chief of Staff**, `Ana` and `Ben` to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models), and stop the app with Ctrl+C.
+1. Run `P-RESET-ROOMS`, then start the app with `P-LAUNCH-FREE`. On their cards (`P-OPEN-AGENT`) set the **Chief of Staff**, `Ana` and `Ben` to Haiku / `low` via **Edit** and **Save** (`P-RESET-ROOMS` cleared the stored Models), and stop the app with Ctrl+C.
 2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '6'` and
    `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`. The Room Budget has to be
    comfortably larger than 2: the token Budget is only ever reached on an Agent-to-Agent Turn (see
    the box above), and a Room that hits its own cap first declines in the read loop, before
    `ProcessWorkItemAsync` ever runs the token check.
-3. Wait for both Persona tiles (`Ana` and `Ben`) to read **Online** and confirm Haiku and low on each card.
+3. Wait for both Persona cards (`Ana` and `Ben`) to read **Online** and confirm Haiku and low on each card.
 4. Click the Room named after the Persona and note the Room id.
 5. Type `@<Persona> create a new room containing yourself and <the other Persona>, then post a short message in it.` and press Enter.
 6. Wait up to 120 seconds, then read the sidebar.
@@ -1608,22 +1608,22 @@ A model may simply choose not to attempt a second post, in which case nothing is
 8. Go to the Room the Persona created, which has both Personas in it.
 9. Type `@<Persona> start a short back-and-forth with <the other Persona>.` and let them bounce.
    Watch `T-A` for the token-budget line; stop as soon as it appears, or when the Room reaches its cap.
-10. Click **Agents** and read the Persona's tile, then open its card and read the line under the status.
+10. Open the Persona's card (`P-OPEN-AGENT`) and read the status and the line under it.
 11. Type one more short Message to the Persona and observe whether it takes a Turn.
-12. Send a final Message and then check whether the tile returns to **Online**.
+12. Send a final Message and then check whether the card returns to **Online**.
 
 **Pass if — all of these**
 
 - A new Room appears in the sidebar, and it has its own untouched Budget: no pause block, no budget line, until an agent Message lands there.
 - `T-A` shows a `rooms` entry being created for it (and `team.db`'s `rooms` table gains a row).
 - Once the token budget is spent, `T-A` prints `Persona '…' has spent its token budget of 2000 and is taking no more turns until a human speaks to it.`
-- At that moment the Persona's tile reads **Degraded**, and its card shows, in red, the reason line `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.` (`PersonaRunner.cs:266-269`, `AgentProfileCard.razor:114-116`).
-- After the Human speaks to it again, the Persona takes Turns again and the tile returns to **Online**.
+- At that moment the Persona's status reads **Degraded**, and its card shows, in red, the reason line `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.` (`PersonaRunner.cs:266-269`, `AgentProfileCard.razor:114-116`).
+- After the Human speaks to it again, the Persona takes Turns again and the status returns to **Online**.
 
 **Fail if — any of these**
 
-- The token budget is spent but the tile still reads **Online** and only the log says anything -> the guard is silent in the UI, so an Agent that has stopped working looks identical to one that is idle.
-- The tile goes Degraded and never recovers after a Human Message -> the token budget is not resetting, so an Agent is permanently disabled by one busy afternoon.
+- The token budget is spent but the status still reads **Online** and only the log says anything -> the guard is silent in the UI, so an Agent that has stopped working looks identical to one that is idle.
+- The status goes Degraded and never recovers after a Human Message -> the token budget is not resetting, so an Agent is permanently disabled by one busy afternoon.
 - No new Room is created at step 5, and the Persona was asked for a room with a SECOND agent in it -> unrelated to this area's cap; note it, but do not judge the budget behaviour from it. (If you asked for a room containing only the Persona itself, you have hit the short-circuit described above, not a defect.)
 
 **Inconclusive if**

@@ -75,13 +75,13 @@ public sealed class TeamPageTests
     /// <param name="expectedHeaders">The tab headers, comma-joined.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(true, true, null, "Members,Library,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(true, true, null, "Agents,Library,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
     [InlineData(true, true, "Marketing Project", "Library,Tasks", nameof(TeamFilesTab))]
-    [InlineData(false, true, null, "Members,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(false, true, null, "Agents,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
     [InlineData(false, true, "Marketing Project", "Tasks", nameof(TeamTasksTab))]
-    [InlineData(true, false, null, "Members,Library,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(true, false, null, "Agents,Library,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
     [InlineData(true, false, "Marketing Project", "Library", nameof(TeamFilesTab))]
-    [InlineData(false, false, null, "Members,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(false, false, null, "Agents,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
     public async Task Tabs_FollowTheFlags_AndOnlyTheDefaultTabRenders(
         bool libraryEnabled,
         bool tasksEnabled,
@@ -266,7 +266,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<ProcessTab>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("Members,Library,Process,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Agents,Library,Process,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(navigation.History);
 
         await ctx.DisposeAsync();
@@ -292,7 +292,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<ProcessTab>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("Members,Library,Process,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Agents,Library,Process,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(navigation.History);
 
         foreach (IRenderedComponent<MudTabPanel> panel in cut.FindComponents<MudTabPanel>())
@@ -350,12 +350,12 @@ public sealed class TeamPageTests
         }
     }
 
-    /// <summary>An unknown Team shows the Warning alert naming it with a link to the Agents page, and renders no tabs.</summary>
+    /// <summary>An unknown Team shows the Warning alert naming it, with no link (there is no page listing Teams), and renders no tabs.</summary>
     /// <param name="project">A Project route value, or <see langword="null"/>: an unknown Team wins either way.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("Marketing Project")]
-    public async Task UnknownTeam_ShowsTheAlertWithTheAgentsLink(string? project)
+    public async Task UnknownTeam_ShowsTheAlertWithTheTeamsLink(string? project)
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
@@ -363,9 +363,7 @@ public sealed class TeamPageTests
 
         Assert.Equal("There is no Team named \"Nope\".", cut.Find($"{AlertSelector} .team-page-notice-text").TextContent.Trim());
         Assert.Equal(Severity.Warning, cut.FindComponent<MudAlert>().Instance.Severity);
-        AngleSharp.Dom.IElement link = cut.Find($"{AlertSelector} a.team-page-notice-link");
-        Assert.Equal("/agents", link.GetAttribute("href"));
-        Assert.Equal("Agents", link.TextContent.Trim());
+        Assert.Empty(cut.FindAll($"{AlertSelector} a"));
         Assert.Empty(TabHeaders(cut));
         Assert.Empty(RenderedTabs(cut));
     }
@@ -417,7 +415,7 @@ public sealed class TeamPageTests
 
         Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
         Assert.Equal("Business", FilesParameters(cut).Get(p => p.Team));
-        Assert.Equal("Members,Library,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Agents,Library,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 

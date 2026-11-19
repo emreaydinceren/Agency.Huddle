@@ -37,7 +37,7 @@ public sealed class ActivityBarTests
 
         IEnumerable<SidebarView> views = SidebarViews.Available(options).Select(static item => item.View);
 
-        Assert.Equal([SidebarView.Rooms, SidebarView.Teams, SidebarView.Agents], views);
+        Assert.Equal([SidebarView.Rooms, SidebarView.Teams], views);
     }
 
     /// <summary>With every feature on, Scheduled is the last view button, after Library.</summary>
@@ -46,7 +46,7 @@ public sealed class ActivityBarTests
     {
         IEnumerable<SidebarView> views = SidebarViews.Available(new TeamOptions()).Select(static item => item.View);
 
-        Assert.Equal([SidebarView.Rooms, SidebarView.Teams, SidebarView.Agents, SidebarView.Tasks, SidebarView.Library, SidebarView.Scheduled], views);
+        Assert.Equal([SidebarView.Rooms, SidebarView.Teams, SidebarView.Tasks, SidebarView.Library, SidebarView.Scheduled], views);
     }
 
     /// <summary>Only the selected view's button is pressed, and every button names the Sidebar it controls.</summary>
@@ -58,7 +58,7 @@ public sealed class ActivityBarTests
         IRenderedComponent<ActivityBar> cut = ctx.Render<ActivityBar>(p => p.Add(c => c.Selected, SidebarView.Teams));
 
         IReadOnlyList<IElement> buttons = cut.FindAll("button.activity-bar-item");
-        Assert.Equal(6, buttons.Count);
+        Assert.Equal(5, buttons.Count);
         IElement pressed = Assert.Single(buttons, static b => b.GetAttribute("aria-pressed") == "true");
         Assert.Equal("Teams", pressed.GetAttribute("aria-label"));
         Assert.Contains("activity-bar-item-selected", pressed.ClassList);

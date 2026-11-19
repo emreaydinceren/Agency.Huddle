@@ -10,7 +10,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room). Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
 2. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`. The Feed lives in `$data\team.db`; never open it while the app runs.
 3. Find the Human's Name in **Settings → Profile**. The steps call it `<Human>`.
 4. The mock Agents cannot call Task tools or Mention you, so the free tests make a Notification in two ways. A Form: send `[elicit:one]` in the `Ada` Room and Ada puts one Form to you. A Task handed to you: create a Task on the Tasks page with no assignee, find its file with `Get-ChildItem $data -Recurse -Filter '<ID>.md'`, change its `assignee:` line to `<Human>` in an editor and save. The file edit counts as an edit made outside Huddle, so its Feed item has the outside-edit mark where an Agent's avatar would be; the Notification itself is the same. A Task you create or assign in the UI makes Activity only, never a Notification, because a Notification is never posted for the Human's own action.

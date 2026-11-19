@@ -10,7 +10,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents`.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room).
 2. Open the Room `Ada` and send `hello`, so it has a Transcript.
 3. Open `Library` and make a Markdown file `Plan.md` with a heading `# Plan`, a heading `## Scope` and a link to a second file, `Notes.md`. Make `Notes.md` with the heading `# Notes`.
 4. Open the browser at `http://localhost:5100/`, and set the zoom to 90%.

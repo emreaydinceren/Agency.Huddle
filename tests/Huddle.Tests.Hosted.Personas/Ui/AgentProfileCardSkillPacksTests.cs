@@ -94,8 +94,8 @@ public sealed class AgentProfileCardSkillPacksTests : IDisposable
             cut.FindAll(".agent-profile-card-warning").Select(static alert => alert.TextContent.Trim()));
     }
 
-    /// <summary>The Skills list offers a copyable registry Skill with its caption; a not-downloaded one is only in the
-    /// collapsed list, with Copy prompt.</summary>
+    /// <summary>The Skills list offers a copyable registry Skill under "On this computer" with its caption; a not-downloaded one is
+    /// only under the folded "Needs setup first" group, with Copy prompt, once that group is opened.</summary>
     [Fact]
     public async Task SkillsSelect_CopyableIsAnOption_NotDownloadedIsListedBelow()
     {
@@ -108,11 +108,33 @@ public sealed class AgentProfileCardSkillPacksTests : IDisposable
         await using MudBunitContext ctx = this.NewCardContext(factory);
         IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(ctx, factory);
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-select .mud-select-input")[0].MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
+        Assert.Equal(["Huddle copies it into Skills/ when you save."], cut.FindAll(".agent-profile-card-copy-caption").Select(static caption => caption.TextContent.Trim()));
+        Assert.Equal("Needs setup first 1", string.Join(' ', cut.Find(".agent-profile-card-not-here-toggle").TextContent.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)));
+        Assert.Empty(cut.FindAll(".agent-profile-card-not-here-row"));
 
-        cut.WaitForAssertion(() => Assert.Equal(["Huddle copies it into Skills/ when you save."], cut.FindAll(".agent-profile-card-copy-caption").Select(static caption => caption.TextContent.Trim())));
-        Assert.Equal("Not on this computer yet (1)", cut.Find(".agent-profile-card-not-here-toggle").TextContent.Trim());
+        await cut.InvokeAsync(() => cut.Find(".agent-profile-card-not-here-toggle").ClickAsync());
+
         Assert.Equal("ghost", cut.Find(".agent-profile-card-not-here-row").GetAttribute("data-skill"));
+        Assert.True(cut.Find(".agent-profile-card-not-here-row input[type=checkbox]").HasAttribute("disabled"));
+    }
+
+    /// <summary>The Skills search narrows both groups by name or description, ignoring case, and opens the setup group's matches without a click.</summary>
+    [Fact]
+    public async Task SkillsSearch_NarrowsBothGroups()
+    {
+        this.host.Source();
+        string catalog = this.host.Catalog("extra", ["copyme", "ghost"], name => name == "copyme" ? this.host.CloneSkill("copyme") : null);
+        this.host.SkillsMd([], [catalog]);
+        await this.host.ReadAsync();
+        await using TeamWebApplicationFactory factory = new();
+        await factory.WriteDefinitionAsync("Dev", Dev(), CancellationToken.None);
+        await using MudBunitContext ctx = this.NewCardContext(factory);
+        IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(ctx, factory);
+
+        await cut.InvokeAsync(() => cut.Find(".agent-profile-card-skill-search input").InputAsync("GHO"));
+
+        Assert.Equal(["ghost"], cut.FindAll(".agent-profile-card-skill-row").Select(static row => row.GetAttribute("data-skill")));
+        Assert.Equal("No Skill on this computer matches.", cut.Find(".agent-profile-card-skill-empty").TextContent.Trim());
     }
 
     /// <summary>A Skill the Agent holds that is not on this computer is an option only so it can be unticked: without this a role that brought one could not be hired without downloading it.</summary>
@@ -128,15 +150,12 @@ public sealed class AgentProfileCardSkillPacksTests : IDisposable
         await using MudBunitContext ctx = this.NewCardContext(factory);
         IRenderedComponent<ContainerFragment> cut = await OpenEditAsync(ctx, factory);
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-select .mud-select-input")[0].MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
-        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".agent-profile-card-unavailable-caption")));
-        AngleSharp.Dom.IElement? option = cut.Find(".agent-profile-card-unavailable-caption").Closest(".mud-list-item");
-        Assert.NotNull(option);
+        Assert.Single(cut.FindAll(".agent-profile-card-unavailable-caption"));
 
-        await cut.InvokeAsync(() => option.ClickAsync());
+        await SetSkillTickedAsync(cut, "ghost", ticked: false);
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".agent-profile-card-unavailable-caption")));
-        Assert.Equal(string.Empty, cut.FindAll(".mud-select .mud-select-input input")[0].GetAttribute("value") ?? string.Empty);
+        Assert.Equal("None ticked. Changing Skills restarts this Agent.", cut.Find(".agent-profile-card-skills-helper").TextContent.Trim());
     }
 
     /// <summary>Save copies a copyable Skill before the Agent file is written; the file names it only afterwards.</summary>

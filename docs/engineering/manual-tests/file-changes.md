@@ -233,7 +233,7 @@ Put a file `plan.txt` in `<data>\Agents\Aide\work\`. Agent A is the Keeper, Agen
 1. In the Keeper's Room send "hello" (baseline).
 2. Ask the Keeper to `watch_folder` `Aide` (an Agent Name resolves to that Agent's Work Dir).
 3. Send any other Message. This Turn baselines Aide's folder.
-4. On Aide's card on the Agents page choose **Edit**, change **Name** to `Aide2`, and **Save**.
+4. Open Aide's card (`P-OPEN-AGENT`), choose **Edit**, change **Name** to `Aide2`, and **Save**.
 5. In the Keeper's Room send the question from Setup step 4.
 
 **Expect**
@@ -265,7 +265,7 @@ that the Human never had auto-memory on to begin with. Use the Keeper.
    belongs in an AGENTS.md, which an Agent does not edit, so the Keeper may propose the line for
    you to add and offer to keep it in its own notes meanwhile: reply "Yes, keep it in your own
    notes for now."
-2. Restart the Keeper from the Agents page (not the whole app).
+2. Restart the Keeper from its card (`P-OPEN-AGENT`; not the whole app).
 3. In a different Room (the Keeper and Aide Room B from FM-0, `@Keeper` in every Message), ask it
    for code and then "What do you remember about my coding preferences, and from which file?"
 4. Check `<data>\Agents\Keeper\work\memory\` for a file recording the preference.
@@ -407,7 +407,7 @@ Create the empty folder `<data>\claude-config` first. Launch with `P-LAUNCH-PAID
 
 **Steps**
 
-1. Open the Keeper's card on the Agents page and read its status.
+1. Open the Keeper's card (`P-OPEN-AGENT`) and read its status.
 2. Send the Keeper "hello" and read the reply.
 
 **Expect and record**

@@ -15,7 +15,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents` before starting. Two empty one-to-one Rooms, `Ada` and `Bo`, and two free mock Agents exist from that point. The built-in Chief of Staff is seeded at every start and, with ACP on, connects on the mock adapter and gets its own `Chief of Staff` Room as well, so the sidebar lists three Rooms (`Ada`, `Bo`, then `Chief of Staff`); leave it alone. A reply from a mock Agent is the whole prompt echoed back in three streamed chunks, so it is long, plain text, and contains the text you sent; judge "a reply from Ada appears and contains `<what you sent>`", never an exact body. To make that check reliable, send a single token with no spaces when you need to find it in a reply (a space can be lost where two streamed chunks join). If Ada never comes Online, every test needing an agent reply is INCONCLUSIVE — say so rather than failing it.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room) before starting. Two empty one-to-one Rooms, `Ada` and `Bo`, and two free mock Agents exist from that point. The built-in Chief of Staff is seeded at every start and, with ACP on, connects on the mock adapter and gets its own `Chief of Staff` Room as well, so the sidebar lists three Rooms (`Ada`, `Bo`, then `Chief of Staff`); leave it alone. A reply from a mock Agent is the whole prompt echoed back in three streamed chunks, so it is long, plain text, and contains the text you sent; judge "a reply from Ada appears and contains `<what you sent>`", never an exact body. To make that check reliable, send a single token with no spaces when you need to find it in a reply (a space can be lost where two streamed chunks join). If Ada never comes Online, every test needing an agent reply is INCONCLUSIVE — say so rather than failing it.
 2. Open a browser at `http://localhost:5100` with DevTools (F12) available. Several tests are settled only by inspecting the DOM in the Elements panel. Run ROOMMESSAGING-01 first, on the seeded `Ada` Room, then make the **quiet Room** for the rest: click **New room**, tick `Ada` and `Bo`, click **Open room**. It has three Members (You, Ada, Bo), so by the Reply Gate nobody answers a Message unless it Mentions them: `@Ada` is answered by Ada and `@Bo` by Bo. Every test below that says "a Room is open" means this quiet Room, so a Human Message adds exactly one line to its Transcript. Every unmentioned Message there also shows a blue info strip above the composer, `No agent was @-mentioned — name one to ask for a reply.` (`Chat.razor:92-103`); it is expected, not an error. A test that needs a reply sends `hi @Ada`; the tests that need Ada's two-Member `Ada` Room (where she answers every Message) say so.
 3. In `T-B` set the data path once: `$data = 'C:\seeds\huddle\uat\data'` (the folder `P-LAUNCH-UAT` builds, not `App_Data`).
 4. Get the open quiet Room's id (step 2) — the 32 hex characters after `/rooms/` in the address bar — and set `$room = '<those characters>'`. Then define the two helpers this area reuses throughout: `function Lines { if (Test-Path "$data\rooms\$room.jsonl") { (Get-Content "$data\rooms\$room.jsonl").Count } else { 0 } }` and `function Tail { Get-Content "$data\rooms\$room.jsonl" -Tail 3 }`. Re-set `$room` every time you switch Rooms.
@@ -650,7 +650,7 @@ If the paste is silently truncated by the browser rather than by the app, the pr
 
 **Inconclusive if**
 
-If Ada never replies, the interleaving half cannot be judged — check that Ada is **Online** on `/agents`, confirm you typed `@Ada` with the at-sign, and record the interleaving and duplicate sub-cases as INCONCLUSIVE while still judging the five-message ordering.
+If Ada never replies, the interleaving half cannot be judged — check that Ada is **Online** (status badge in her Room), confirm you typed `@Ada` with the at-sign, and record the interleaving and duplicate sub-cases as INCONCLUSIVE while still judging the five-message ordering.
 
 > [!NOTE]
 > The duplicate at step 8 is timing-dependent — if it does not reproduce in three attempts, record "not reproduced in 3 attempts" rather than PASS on that sub-case.
@@ -843,7 +843,7 @@ If the transcript does not overflow its area, none of this is observable — sen
 
 **Inconclusive if**
 
-If `Bo` is already a member of the `Ada` Room, the invite will behave differently and the rename will be a no-op — do the RESET named in the preconditions and re-run, rather than judging. If Bo never came Online on `/agents`, record INCONCLUSIVE.
+If `Bo` is already a member of the `Ada` Room, the invite will behave differently and the rename will be a no-op — do the RESET named in the preconditions and re-run, rather than judging. If Bo never came Online (status badge in his Room), record INCONCLUSIVE.
 
 > [!NOTE]
 > Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from rooms where id='<roomId>';"` must now return `Ada, Bo`, and `select count(*) from room_members where room_id='<roomId>';` must return 3.
@@ -1132,7 +1132,7 @@ If `.message-body` and `.message-sender` already read different font families on
 > [!NOTE]
 > Unverified premise, check once: `.message-body` draws `--mud-typography-body1-family` (`app.css:384`), while `ThemeDefaults.cs:43` sets only `Typography.Default.FontFamily`, which `.message-sender` inherits through `body` (`app.css:13`). If MudBlazor keeps its own default for Body1, the two computed families differ on a stock install. That is not an app defect and not a PASS: record both values, mark the identical-font line INCONCLUSIVE, and judge the rest.
 >
-> Only the transcript half of the appearance check belongs here — but since 2026-09-22 that includes avatars, which the Room view now renders beside every Message and every Draft. Check here that each row has one, that it is the sender's, and that the gutter does not shift when a Draft settles into a Message. What still belongs on `/agents` is *choosing* an avatar: the three-way selector, the upload and the colour picker are edited on an Agent's card, and the Human's own on Settings → Appearance.
+> Only the transcript half of the appearance check belongs here — but since 2026-09-22 that includes avatars, which the Room view now renders beside every Message and every Draft. Check here that each row has one, that it is the sender's, and that the gutter does not shift when a Draft settles into a Message. What still belongs on an Agent's card is *choosing* an avatar: the three-way selector, the upload and the colour picker are edited on an Agent's card, and the Human's own on Settings → Appearance.
 
 ### ROOMMESSAGING-28 — A torn or corrupt line in the Transcript is skipped with a warning, not fatal
 
@@ -1287,7 +1287,7 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 
 **Inconclusive if**
 
-If the agents never reply at all, no Budget can be spent and nothing here is testable — confirm Ada and Bo are **Online** on `/agents` and that the env var took effect (`$env:Team__AgentMessageBudget` should print `2`). If the pause never appears after several replies, check the env var was set in the SAME terminal that launched the app before recording a FAIL.
+If the agents never reply at all, no Budget can be spent and nothing here is testable — confirm Ada and Bo are **Online** (status badges in their Rooms) and that the env var took effect (`$env:Team__AgentMessageBudget` should print `2`). If the pause never appears after several replies, check the env var was set in the SAME terminal that launched the app before recording a FAIL.
 
 > [!NOTE]
 > Remember to clear the env var (`Remove-Item Env:Team__AgentMessageBudget`) and relaunch before running any other test, or every later test will pause after two agent replies. A documented NON-bug: a Message declined for Budget is held for re-delivery rather than kept as catch-up, so if you leave a Room paused and then type instead of clicking Continue, the agent's next prompt will not carry the Message it was paused on — though that Message is still in the Transcript and still on screen.
@@ -1362,10 +1362,10 @@ If the overlay never appears because the browser closed the connection instantly
 1. In `T-A` press Ctrl+C to stop the app.
 2. Follow [`P-LAUNCH-PAID`](common.md#p-launch-paid-) from its first step: launch free, set the Chief of Staff to Haiku / low on its card, stop. That procedure's launch block sets `Team__AgentMessageBudget` to `4`, `Team__Acp__TokenBudget` to `200000` and `Team__Acp__Enabled` to `true`, and clears `ANTHROPIC_API_KEY` and `TEAM_E2E`.
 3. Launch with the `P-LAUNCH-PAID` launch block. This launch WILL start real agents and CAN spend money — keep the session short.
-4. In the browser click `Agents` in the sidebar.
-5. Click the `New agent` button.
+4. In the browser open the `Test` Team's **Agents** tab (`P-NEW-PERSONA`, step 1).
+5. Point at **Add an Agent**, select **From scratch**, and the `New agent` card opens.
 6. Fill in a Name, then in the `Model` dropdown select **Haiku**, and in the `Effort` dropdown select **low**. These two settings are the standing convention and keep the charge small — do not pick any other model or effort.
-7. Click `Add agent` to save.
+7. Click `Save draft`, then `Save changes` to hire the Agent.
 8. Wait for the agent to come online, then open its Room from the sidebar. This launch uses the default `App_Data`, not the seeded folder, so in `T-B` set `$data = '<repo>\src\Huddle.App\App_Data'`, set `$room` to that Room's id and run `Lines`.
 9. Type ONE prompt and press Enter: `In under 80 words, reply with a short heading, a three-item bullet list, a fenced code block of one line, and a link to https://example.com`.
 10. Watch the reply arrive: note whether a streaming row appears with the sender's Name, a `Stop` button, a blinking caret, and plain (unrendered) text.

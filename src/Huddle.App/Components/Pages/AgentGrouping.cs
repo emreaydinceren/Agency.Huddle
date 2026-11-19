@@ -3,8 +3,8 @@ namespace Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Acp;
 
 /// <summary>
-/// Groups Personas into the headings <c>Agents.razor</c> renders, and narrows them to one Team
-/// when the page's filter has a choice selected. Pulled out of the page itself, as a pure function
+/// Groups Personas into the headings an Agent list renders (first the retired Agents page, now the Agent picker), and narrows them to one Team
+/// when the filter has a choice selected. Pulled out of the page itself, as a pure function
 /// with no dependency on Blazor at all, so the behaviours that matter here - a Persona's group comes
 /// from its <see cref="PersonaEntry.Teams"/> field and never from which folder its file happens to
 /// sit under, a Persona in two Teams appears under both, a Persona with none falls under

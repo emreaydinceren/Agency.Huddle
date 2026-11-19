@@ -79,7 +79,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Steps**
 
-1. Open `/agents` and open the scratch Agent's card in Edit.
+1. Open the scratch Agent's card (`P-OPEN-AGENT`) and choose **Edit**.
 2. Find the **Work mode** select, directly after Effort. Note its state while the catalog is being read.
 3. Open it and write down every option's visible text, in order.
 4. Pick **Accept edits** and read the helper text under the select. Do not save; close the card.

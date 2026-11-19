@@ -24,13 +24,13 @@ Run [`P-BUILD`](common.md#p-build). Each test names its own starting data. The p
 
 **Steps**
 
-1. Open the Agent from the Agents page.
+1. Open the Agent's card (`P-OPEN-AGENT`).
 2. Find **Account connectors** under Work mode.
 
 **Pass if — all of these**
 
 - The switch is off and the line under it reads "Off. {Name} cannot use your connected accounts."
-- Open **New agent**: the card has no Account connectors row.
+- Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2): it has no Account connectors row.
 
 ### AGCONN-02 — Turning on asks first, and Cancel leaves it off
 
@@ -121,23 +121,8 @@ Run [`P-BUILD`](common.md#p-build). Each test names its own starting data. The p
 
 **Free** · about 10 min
 
-*Proves OQ-3: shown once when an Agent existed at upgrade, stored on dismiss.*
-
-**Before you start**
-
-- A data folder from the previous build with at least one Agent.
-
-**Steps**
-
-1. Start this build and open the Agents page.
-2. Dismiss the notice.
-3. Stop and start the app, then open the Agents page.
-
-**Pass if — all of these**
-
-- The page shows an Info notice that connectors are now off and names the Account connectors switch.
-- After step 3 the notice does not return.
-- A fresh empty data folder never shows it.
+> **Retired (2026-11-18).** The notice was removed with the Agents page that showed it: Huddle has no installs to
+> upgrade yet. Nothing to run; skip this case.
 
 ### AGCONN-07 — A new Agent lists no claude.ai tool by Turn 3
 

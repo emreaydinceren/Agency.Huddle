@@ -86,7 +86,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Steps**
 
-1. Open the Agent's card from `/agents`. Confirm there is **no** `Spent since start` line.
+1. Open the Agent's card (`P-OPEN-AGENT`). Confirm there is **no** `Spent since start` line.
 2. Send the Agent a one-word request (`Reply with the word yes.`) in a direct Room. Wait for the reply.
 3. Reopen the card. Read the Spend line and write the amount down (call it A).
 4. Send the same request again. Wait for the reply, reopen the card, read the line (call it B).

@@ -72,7 +72,7 @@ Run [`P-BUILD`](common.md#p-build). This area adds:
 
 **Pass if — all of these**
 
-- At step 1 the Skills select gains the Pack's Skills, and any not yet in `Skills/` are captioned *"Huddle copies it into Skills/ when you save."*
+- At step 1 the Skills list ticks the Pack's Skills, and any not yet in `Skills/` are captioned *"Huddle copies it into Skills/ when you save."*
 - At step 3 each of the Pack's Skills has a folder in `<data>\Skills\` holding `SKILL.md` and a `.source.json` naming the Source and `copiedFrom`.
 - The Agent's frontmatter lists the Skills under `skills`, the Pack under `_packs` with its version, and the Pack's `consultWhenAdds` text under `consult_when`.
 - The Pack card's holder count on the Packs tab rises by one.

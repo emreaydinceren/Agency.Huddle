@@ -130,7 +130,7 @@ public sealed class ProcessStepTests
 
         IRenderedComponent<TeamPage> cut = ctx.Render<TeamPage>(p => p.Add(x => x.Team, Team).Add(x => x.Tab, "process"));
 
-        Assert.Equal(["Members", "Library", "Process", "Manager Playbook", "Agent Playbook", "Details"], cut.FindAll(".team-page-tabs .mud-tab").Select(static header => header.TextContent.Trim()).ToList());
+        Assert.Equal(["Agents", "Library", "Process", "Manager Playbook", "Agent Playbook", "Details"], cut.FindAll(".team-page-tabs .mud-tab").Select(static header => header.TextContent.Trim()).ToList());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("div.process-tab-gate").Count));
     }
 

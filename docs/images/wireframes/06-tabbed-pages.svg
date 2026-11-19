@@ -52,7 +52,7 @@
 <text x="80" y="344" font-size="9" font-weight="400" fill="#6b7280" text-anchor="start">Team types</text>
 <rect x="132" y="332" width="32" height="17" rx="8.5" fill="#475569"/>
 <text x="148.0" y="344.5" font-size="11" font-weight="700" fill="#fff" text-anchor="middle">B9f</text>
-<text x="172" y="344" font-size="9" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Members tab only; a pick floats left as the chip B9g and filters the roles</text>
+<text x="172" y="344" font-size="9" font-weight="400" fill="#6b7280" text-anchor="start" font-style="italic">Agents tab only; a pick floats left as the chip B9g and filters the roles</text>
 <rect x="80" y="352" width="96" height="16" rx="8" fill="#f1f2f5" stroke="#d6d9e0" stroke-width="1"/>
 <text x="128" y="363" font-size="9" font-weight="400" fill="#1f2430" text-anchor="middle">Development Team</text>
 <rect x="182" y="352" width="52" height="16" rx="8" fill="#f1f2f5" stroke="#d6d9e0" stroke-width="1"/>

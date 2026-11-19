@@ -10,9 +10,9 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are **Online** on `/agents`. Hire two more Agents with **Add agent**, named `Kim` and `Ola`, and wait for them to be **Online**. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`.
+1. Wait until **Ada** and **Bo** are **Online** (the status badge on each avatar in their Room). Hire two more Agents with `P-NEW-PERSONA`, named `Kim` and `Ola`, and wait for them to be **Online**; use **Remove from team** on both so neither is in a Team yet. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`.
 2. Create the Teams **Marketing** and **Research** by making the folders `<data>\Teams\Marketing` and `<data>\Teams\Research`, and reload the page.
-3. Add **Ada**, **Bo** and **Kim** to Marketing: open each card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line and save. Wait until each is **Online** again. Ola stays in no Team. Marketing's Team Room appears within a few seconds and holds you, Ada, Bo and Kim, so it needs a Mention to wake anyone.
+3. Add **Ada**, **Bo** and **Kim** to Marketing: use `P-ADD-TO-TEAM` on Marketing's **Agents** tab for each. Wait until each is **Online** again. Ola stays in no Team. Marketing's Team Room appears within a few seconds and holds you, Ada, Bo and Kim, so it needs a Mention to wake anyone.
 4. Open Ola's one-to-one under **Rooms** and send `hello`, so Ola has an open session. Open the Marketing Team Room and send `@Ada hello`, so Ada has a session there.
 5. Create two Tasks in Marketing with **New task** on the Tasks page. Note their ids (`MARK-1`, `MARK-2`) and the Change log events in each Task's **Timeline**.
 6. In the Marketing Team Room, type `@`, pick the Team **Marketing**, and send. Attach any small text file with the paperclip and send. Note the upload path in the Message: it holds `Teams\Marketing\raw\`.
@@ -63,7 +63,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 1. Select **Rename**, type `Growth` and select **Rename** in the dialog.
 2. Read the confirmation's title, message and every point.
 3. Select **Cancel**.
-4. Look at the sidebar, at `<data>\Teams`, and read each member's `teams:` line on `/agents`.
+4. Look at the sidebar, at `<data>\Teams`, and read each member's `teams:` line in its file under `<data>\Agents\<Name>\` (`O-FILE`).
 
 **Pass if — all of these**
 
@@ -89,7 +89,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 1. On Marketing's **Details** tab select **Rename**, type `Growth`, select **Rename**, then **Rename** in the confirmation.
 2. Watch the page and the sidebar until it settles.
 3. List `<data>\Teams` and `<data>\Archive` in `T-B`.
-4. Open Ada's card on `/agents` and read her `teams:` line, then Bo's and Kim's.
+4. Open Ada's file under `<data>\Agents\Ada\` (`O-FILE`) and read her `teams:` line, then Bo's and Kim's.
 5. Read the Rooms under the Team in the sidebar and the Team Room's name.
 6. Stop the app, relaunch it with the `P-LAUNCH-UAT` launch command **without** the seeder, and look at the sidebar and `<data>\Teams` again.
 

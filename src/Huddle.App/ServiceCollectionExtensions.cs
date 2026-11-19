@@ -534,7 +534,6 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaConnectorsStore>();
         services.AddSingleton<PersonaBrowserStore>();
         services.AddSingleton<BrowserLaunchFactsSource>();
-        services.AddSingleton<ConnectorsNoticeStore>();
         services.AddSingleton<PersonaSpendStore>();
         services.AddSingleton<RoomSpendStore>();
         services.AddSingleton<Agency.Huddle.App.Teams.RecordsBundleBuilder>();
@@ -919,7 +918,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Tabs.RightSidebarService>();
         services.AddSingleton<Sidebar.SidebarPanelCatalog>();
         // The Right sidebar's panels (docs/Huddle.RightSidebar-Specifications.md): one registration each, no page changes.
-        services.AddSidebarPanel(new Sidebar.SidebarPanel("members", "Members", MudBlazor.Icons.Material.Filled.Group, 10,
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("members", "Members", MudBlazor.Icons.Material.Filled.Person, 10,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.MembersPanel)));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("room-tasks", "Tasks in this Room", MudBlazor.Icons.Material.Filled.TaskAlt, 20,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.RoomTasksPanel), static options => options.Tasks.Enabled));
@@ -1046,7 +1045,6 @@ public static class ServiceCollectionExtensions
         // guarantees the supervisor's first reconciliation already sees the Chief of Staff the
         // seeder just wrote, rather than racing a later PersonasChanged (Spec §6.12 Implementation
         // notes).
-        services.AddHostedService<ConnectorsNoticeDecider>();
         services.AddHostedService<BuiltinAgentSeeder>();
 
         // Same instance as the hosted service, not a second registration - mirrors every other pair

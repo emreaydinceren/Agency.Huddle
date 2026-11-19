@@ -49,7 +49,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 
 **Steps**
 
-1. Open `Scratch`'s card from `/agents`. The command line sits under the status and, once the conversation is warm, under the Spend line. Read it, then close the card.
+1. Open `Scratch`'s card (`P-OPEN-AGENT`). The command line sits under the status and, once the conversation is warm, under the Spend line. Read it, then close the card.
 2. In the direct Room, type `@Scratch /compact` and send it.
 3. Watch the Room until the Agent posts. Copy the Message text exactly.
 4. Type `What is my lucky number?` and send it. Read the reply.
@@ -138,7 +138,7 @@ Run [`P-BUILD`](common.md#p-build) then the lane named in each test from
 **Before you start**
 
 - Paid lane. The supervisor starts every Agent at launch and the runner opens the session at once, so the list arrives within a second or two and `Scratch` is already Online with the line. This test therefore watches the line leave and return rather than appear for the first time.
-- Another browser tab on `/agents` is not needed; keep one.
+- Another browser tab is not needed; keep one.
 
 **Steps**
 
