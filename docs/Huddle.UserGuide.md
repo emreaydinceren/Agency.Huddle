@@ -123,9 +123,8 @@ per Team, its shortcut. To hide or bring back a Team's tile, open the Team's pag
 | **Teams** | One row per Team. Expand it to see its Team Room, its other Rooms and its Projects. **Build a team** sits at the bottom. The More (⋮) menu on a Team row has **New room**, **New project** and **Archive team**. A Project row has its own More (⋮) menu with **Archive project**. |
 | **Agents** | A link to the page listing every Agent, grouped by Team. |
 | **Tasks** | Your saved Views of Tasks: **All Tasks**, **My Tasks**, any you saved, and **New view**. Not shown when Tasks are turned off. |
-| **Library** | One **Library** link. The Library's roots (see [Library roots](#library-roots)) and **Add folder** are on the Library page. Not shown when the Library is turned off. |
+| **Library** | One **Library** link. The Library's roots (see [Library roots](#library-roots)) are on the Library page; pin a folder in **Settings › Library**. Not shown when the Library is turned off. |
 | **Scheduled** | Every Job, for you and for each Agent, and **New job**. See [Scheduling jobs](#scheduling-jobs). |
-| **Remote access** | Who may reach Huddle from other devices. **Strict local** (on by default) means only this computer, no sign-in; turn it off to use the rest: Bind, Auth and Tailscale, the gateway token, pairing, the Devices list and the Security check. Admin only; a change to Bind or Tailscale applies after a restart. See [Using Huddle from another device](#using-huddle-from-another-device). | `team.db` |
 
 The two buttons at the bottom of the Activity bar are **Archived** and **Settings**. **Archived**
 opens the [Archived page](#the-archived-page).
@@ -1211,7 +1210,7 @@ falls back to **Ask me** and asks you, in Needs you and in the Feed: **Let it sp
 it spend exactly one more cap, then it asks again. No keeps it on Ask me until you change the level or the cap. The cap counts the USD spend of
 the Team's Agents as it happens (all Agents for the Settings level), so an Agent leaving the Team or a rename moves no count. A project's
 cap counts only the project's own spend: the Turns run in its Rooms, as its page shows. Saving the same level and
-cap again restarts nothing. The cap does not stop a Turn in progress. A step that went ahead shows as a Change log entry
+cap again restarts nothing. The cap does not stop a Turn in progress. A step that went ahead shows as a Timeline entry
 on the Task, "proceeded under Team level Run inside the Team", and as an item in the Feed.
 
 ### The six gates
@@ -1246,7 +1245,7 @@ in its panel.
   `update_task` or `close_task` call, and it cannot override.
 - When an Agent or you **edit a Task file by hand** to jump to a gated status,
   Huddle puts the status back, keeps the rest of your edit, and adds `outside edit
-  refused by gate: <reason>` to the Change log. Evidence-only edits are kept.
+  refused by gate: <reason>` to the Timeline. Evidence-only edits are kept.
 
 **Evidence.** Evidence is a comment tagged `evidence` on the Task's
 [Timeline](#the-timeline-and-comments): the time, the author, the command, and optionally the
@@ -2242,8 +2241,8 @@ right. If the Task is assigned to an Agent, the button reads **Save & notify
 
 | Action | In the background |
 | --- | --- |
-| **Create** | Writes a new `<ID>.md` in the Team's or Project's `_tasks/` folder, with a `created` Change log line. Defaults are Backlog and Medium. |
-| **Edit any field** | Rewrites the frontmatter and appends one Change log line summarising what changed, such as `status: To Do → In Progress`. |
+| **Create** | Writes a new `<ID>.md` in the Team's or Project's `_tasks/` folder, with a `created` Timeline line. Defaults are Backlog and Medium. |
+| **Edit any field** | Rewrites the frontmatter and appends one Timeline line summarising what changed, such as `status: To Do → In Progress`. |
 | **Drag a card on the Board** | Saves immediately, same as an edit. |
 | **Change Team or Project** | Moves the file to the other folder's `_tasks/`, and logs `moved: A → B`. A new Project name typed here creates the Project folder. |
 | **Close task** / **Reopen** | In the **⋮** menu of the read-only panel or the edit page. Moves the file into or out of `_tasks/_closed/` and logs `closed` or `reopened`. |
@@ -2363,7 +2362,7 @@ you. Agents draft as much as they like; the Task shows you the work and the Proo
 and you judge the evidence rather than the tone.
 
 A Task goes through five steps: **Draft, Check, Track, Gate, Decide.** The assignee
-drafts. Other Agents supply the Proof the Team asks for. The Task's Change log
+drafts. Other Agents supply the Proof the Team asks for. The Task's Timeline
 records who did what. When the Proof is complete Huddle moves the Task from In Progress to
 **Needs you**, and you **Accept**, **Request changes** or **Decline**. Two rules hold
 however the Team's process is set up: only you can mark a gated Task Done, and a
@@ -2455,12 +2454,12 @@ to the Task before deciding.
 | --- | --- |
 | **Accept** | Your name and the time are recorded against the exact text you accepted. With no Action the Task becomes Done. With an Action the assignee is woken to carry it out and then moves the Task to Done. |
 | **Request changes** | You write a reason (required). The assignee is woken with your reason. |
-| **Decline** | You write a reason (required). The Task becomes Rejected and closed, the assignee is woken with the reason, and the Change log reads `declined: <reason>`. |
+| **Decline** | You write a reason (required). The Task becomes Rejected and closed, the assignee is woken with the reason, and the Timeline reads `declined: <reason>`. |
 
 Your reason also reaches the next retrospective, so over time the Team learns what
 you accept quickly and what needs a closer look. If anyone changes the Task after you
 accepted it, the card says "Changed since you accepted it." and the Task returns to
-the Needs you list for a new decision. Every decision is a line in the Task's Change log.
+the Needs you list for a new decision. Every decision is a line in the Task's Timeline.
 
 #### Dragging a card into Done
 
@@ -2494,7 +2493,7 @@ There is no **Move anyway** for a gated Task.
 You can edit a Task file in any editor. Huddle watches the `Teams/` folder:
 
 - **While Huddle runs**, it notices the save within half a second, appends
-  `edited outside Huddle: <what changed>` to the Change log, and wakes the
+  `edited outside Huddle: <what changed>` to the Timeline, and wakes the
   assignee.
 - **While Huddle is stopped**, it notices at the next start, logs the same line,
   and wakes no one.
@@ -2561,7 +2560,7 @@ A **root** is a top-level folder shown in the Library:
 | **Prompts** | `Prompts/`: one file per prompt you changed. |
 | **Memory backups** | `MemoryBackups/`: what each Memory Tidy pass changed. Read-only. See [Memory backups](#memory-backups). |
 | **Skill Sources** | The Skill Sources folder. Read-only. |
-| Pinned folders | Any folder on your machine you add with **Add folder** or in **Settings › Library**. |
+| Pinned folders | Any folder on your machine you pin in **Settings › Library**, with a Name, a Path and **Add**. |
 
 Pinned folders are saved in `library-roots.json` in the data root. The file is
 created the first time you add, remove or hide a root. **Reset pinned folders**
@@ -2853,7 +2852,7 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 
 A **Helper** is a small background agent that makes one judgement about something that just happened, and lets Huddle act on its answer. It is not an Agent: it has no Room, keeps no memory, uses no tools and posts no Messages. Huddle shows it what it needs to see, it answers in a few words, and Huddle makes the change itself.
 
-The first Helper is **Needs Human**. When an Agent creates a Task, or rewrites its title or description, Needs Human reads it. If doing the work would leave the team or could not easily be undone (a message to a customer, money, signing, publishing, merging to main, deleting data), it turns on **Requires your acceptance** for that Task. The Change log reads `human gate on (reason: …)` by `Needs Human (Helper)`, and the Task's assignee is woken, as for any other change. The Task panel says "Turned on by the Needs Human Helper: …".
+The first Helper is **Needs Human**. When an Agent creates a Task, or rewrites its title or description, Needs Human reads it. If doing the work would leave the team or could not easily be undone (a message to a customer, money, signing, publishing, merging to main, deleting data), it turns on **Requires your acceptance** for that Task. The Timeline reads `human gate on (reason: …)` by `Needs Human (Helper)`, and the Task's assignee is woken, as for any other change. The Task panel says "Turned on by the Needs Human Helper: …".
 
 What a Helper will and will not do:
 
@@ -2922,7 +2921,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | Turn a gate off | The `gates:` line of `_team.md` | None |
 | Approve or decline a Sprint proposal | Approve creates the Sprint and adds the Tasks | The manager reads the outcome |
 | Accept or reject a retro change | Accept edits the target file and adds a row to `Retro register.md` | The proposer reads the outcome; an edited Agent file restarts that Agent |
-| Override a gate | The Task, with `gate overridden by Human` in its Change log | Assignee woken |
+| Override a gate | The Task, with `gate overridden by Human` in its Timeline | Assignee woken |
 | Add or remove an Agent | The `teams:` line in `<Name>.md` | That Agent restarts |
 | Create a Project | `Teams/<Team>/<Project>/` | Members see it as a file change |
 | Start a Room | `team.db` | None until you post |
@@ -2930,7 +2929,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | Write `@name /compact` | One line in `rooms/<roomId>.jsonl`, then the Agent's outcome line | That Agent compacts its conversation; other Agents only read the outcome |
 | Archive a Room | `team.db` | None; Room still works |
 | Delete a Room | `team.db`; deletes `rooms/<roomId>.jsonl` permanently | Resume entry pruned at next start |
-| Create or edit a Task | `Teams/<Team>/[<Project>/]_tasks/<ID>.md` with a Change log line | Assignee woken |
+| Create or edit a Task | `Teams/<Team>/[<Project>/]_tasks/<ID>.md` with a Timeline line | Assignee woken |
 | Close or reopen a Task | Moves the file to or from `_tasks/_closed/` | Assignee woken |
 | Save a View | `views.json` | None |
 | Save a Library note | The note, atomically | Watchers see a file change next turn |
@@ -2962,7 +2961,7 @@ Helpers run on an Adapter, so they do nothing while `Team:Acp:Enabled` is false;
 | A hire says a Team is full, or that agent processes are running | A hire limit was reached; see [Hire limits](#hire-limits). |
 | A Task would not move, with a message naming a gate | The Team's process has that gate on. Add the Evidence it asks for, or use **Move anyway** in the Task panel. |
 | An Agent's `git push` was denied | The Team's `checks-before-merge` gate wants an Evidence line showing the `checkCommand` passing. The reason is in the log, not shown to the Agent. |
-| A Task I edited by hand went back to its old status | A gate refused the new status; the Change log says `outside edit refused by gate`. |
+| A Task I edited by hand went back to its old status | A gate refused the new status; the Timeline says `outside edit refused by gate`. |
 | An imported Skill says it already exists | The name belongs to a built-in Skill or to one from another source. Nothing was changed. |
 | A card says **Not connected yet** for a connector | Nothing blocks the hire. To clear it, list the connector in `connectors.json` in the data folder. |
 | An Agent shows Offline with *Claude needs you to sign in again* | Your Claude sign-in has expired or was never made. Run `claude` in a terminal, sign in, then send the Message again. |
