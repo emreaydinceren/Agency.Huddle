@@ -182,7 +182,7 @@ public sealed class AgentProfileCardModelEffortTests
         await ClickButtonAsync(cut, "New agent");
 
         Assert.NotEmpty(cut.FindAll(".mud-select"));
-        Assert.Equal("Changing any of these restarts the agent, which clears what it remembers.", cut.Find(".agent-profile-card-row-helper").TextContent.Trim());
+        Assert.Equal("Agent default leaves the choice to the Adapter.", cut.Find(".agent-profile-card-row-helper").TextContent.Trim());
     }
 
     [Fact]
@@ -336,7 +336,7 @@ public sealed class AgentProfileCardModelEffortTests
         var cut = RenderPage(ctx, factory);
         await ClickButtonAsync(cut, "New agent");
 
-        Assert.Equal("Changing any of these restarts the agent, which clears what it remembers.", cut.Find(".agent-profile-card-row-helper").TextContent.Trim());
+        Assert.Equal("Agent default leaves the choice to the Adapter.", cut.Find(".agent-profile-card-row-helper").TextContent.Trim());
     }
 
     [Fact]

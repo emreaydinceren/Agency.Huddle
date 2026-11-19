@@ -1037,10 +1037,13 @@ broken, or withdrawn by its Source) stops the approval with "Skills not ready: â
 A card that names such a Skill already shows **Needs setup** with a **Copy prompt**; paste it into your AI
 tool, and the card turns ready by itself when the tool finishes. A hired Agent runs on the adapter and
 model its role's strength resolved to and carries the role's Skills and packs. **Edit** on a draft can
-change them: its **Skills** list shows the Skills Huddle has or can copy, and Skills that are not on this
-computer yet are listed below it, each with **Copy prompt**. A Skill the draft brought that is not on this
-computer is in the list too, so you can untick it and hire without downloading it. The role form for your own
-roles has the same **Skills** field.
+change them. The card's **Skills** section says what a Skill is, has a **Search Skills** box, and one list in
+two groups: **On this computer**, the Skills you can tick now (including ones Huddle copies in when you save),
+and **Needs setup first**, folded until you open it or search, whose Skills are not on this computer yet and
+each have **Copy prompt**. A Skill the draft brought that is not on this computer is under **On this
+computer** too, so you can untick it and hire without downloading it. Under the list is how many are ticked;
+only an existing Agent's card adds that changing them restarts it. The role form for your own roles has its
+own **Skills** field.
 
 ### Hiring a Team from a type
 

@@ -535,7 +535,7 @@ session in a new Room.
 
 **Route B, with no download.**
 
-1. On the Developer draft, click **Edit**, and open the **Skills** select (focus it and press Enter if a click does not open it). The two Skills it brought are at the end of the select, each marked `Not on this computer yet. Untick it to go without it.` Click each row's **text** to untick it: clicking the checkbox square toggles twice and leaves it ticked. The `Not on this computer yet` list below the select is read-only. Click an empty part of the card, and click **Save draft**.
+1. On the Developer draft, click **Edit** and find the **Skills** list. The two Skills it brought are at the end of its **On this computer** group, each marked `Not on this computer yet. Untick it to go without it.` Untick each one's checkbox. The **Needs setup first** group, if you open it, is read-only. Click **Save draft**.
 2. Do the same on the Reviewer draft.
 3. **Needs setup** clears from both, and **Approve & hire** turns on.
 

@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Factories;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -405,16 +404,12 @@ internal static class AgentProfileCardTestSupport
     internal static Task ClickSelectItemAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
         ClickAsync(cut, () => cut.FindAll("div.mud-list-item").First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)));
 
-    /// <summary>
-    /// Clicks the Skills select's open option naming <paramref name="skillName"/> - matched by
-    /// <c>Contains</c> rather than <see cref="ClickSelectItemAsync"/>'s exact equality, because Spec
-    /// §6.7 has each option show its description alongside the Skill's name, so the option's full
-    /// text content is never just the bare name.
-    /// </summary>
+    /// <summary>Ticks or unticks the Skills list's checkbox for <paramref name="skillName"/>, found by its row's <c>data-skill</c>.</summary>
     /// <param name="cut">The rendered page holding the card.</param>
-    /// <param name="skillName">The Skill's name, as it appears in <see cref="SkillStore.All"/>.</param>
-    internal static Task ClickSkillOptionAsync(IRenderedComponent<ContainerFragment> cut, string skillName) =>
-        ClickAsync(cut, () => cut.FindAll("div.mud-list-item").First(item => item.TextContent.Contains(skillName, StringComparison.Ordinal)));
+    /// <param name="skillName">The Skill's name.</param>
+    /// <param name="ticked">Whether to tick it.</param>
+    internal static Task SetSkillTickedAsync(IRenderedComponent<ContainerFragment> cut, string skillName, bool ticked) =>
+        cut.InvokeAsync(() => cut.Find($".agent-profile-card-skill-row[data-skill='{skillName}'] input[type=checkbox]").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = ticked }));
 
     /// <summary>Raises <c>@onchange</c> with <paramref name="value"/> on the input or textarea labelled <paramref name="label"/>, through <see cref="DispatchWhenPresentAsync"/>.</summary>
     /// <param name="cut">The rendered page holding the card.</param>

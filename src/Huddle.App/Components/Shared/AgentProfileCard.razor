@@ -356,72 +356,103 @@
                           Placeholder="e.g. You are the Chief of Staff. You keep the team honest."
                           HelperText="@this.TextHelperText" Class="mb-3" />
 
-            @* Spec §6.7, §2 U7: next to the Adapter select, and the same WriteListField data flow -
-               this.text is the source of truth, re-derived by ReadSkills whenever this.text changes
-               out from under it (BeginEditAsync, a successful Save), and written back through
-               PersonaFrontmatter.WriteListField on every selection change, mirroring how the Adapter
-               select above reads/writes "adapter" through WriteScalarField. No count-gate unlike the
-               Adapter select's one-choice rule (AdapterModelEffortPicker): a MultiSelection picker with zero or
-               one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
-            <SelectField T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
-                       SelectedValuesChanged="this.OnSkillsChanged"
-                       HelperText="Changing Skills restarts this Agent." Class="mb-3">
-                @foreach (var skill in this.OrderedSkills)
-                {
-                    <MudSelectItem T="string" Value="@skill.Name">
-                        <MudText>@skill.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
-                        <SkillProvenanceLine Skill="@skill" />
-                        @if (SkillOrigin.Of(skill) is { } origin)
-                        {
-                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
-                        }
-                    </MudSelectItem>
+            @* Spec §6.7, §2 U7: one Skills list. this.text stays the source of truth, re-derived by ReadSkills whenever it changes
+               out from under the card (BeginEditAsync, a successful Save) and written back through PersonaFrontmatter.WriteListField
+               on every tick (ToggleSkill). It replaced a multi-select plus a separate "Not on this computer yet" list, whose split
+               nobody could read: the list says what a Skill is, searches both groups, and puts the Skills that can be ticked now
+               above the ones that need setup first (Skill Packs spec §6.10.4). *@
+            <div class="group-label">Skills</div>
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary mb-2 agent-profile-card-skills-intro">@SkillsIntro</MudText>
+            <TextField Label="Search Skills" Placeholder="e.g. review" Value="@this.skillQuery" ValueChanged="this.OnSkillQueryChanged"
+                       Immediate="true" Class="mb-2 agent-profile-card-skill-search" />
+            <div class="agent-profile-card-skill-list mb-1" role="group" aria-label="Skills">
+                @{
+                    IReadOnlyList<Skill> installed = [.. this.OrderedSkills.Where(skill => this.MatchesSkillQuery(skill.Name, skill.Description))];
+                    IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> copyable = [.. this.CopyableSkills.Where(entry => this.MatchesSkillQuery(entry.Name, entry.Description))];
+                    IReadOnlyList<string> held = [.. this.HeldUnavailableSkills.Where(name => this.MatchesSkillQuery(name, null))];
+                    IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.SkillEntry> needsSetup = [.. this.NotDownloadedSkills.Where(entry => this.MatchesSkillQuery(entry.Name, entry.Description))];
+                    int readyCount = installed.Count + copyable.Count + held.Count;
                 }
-                @* Skill Packs spec §6.10.4: registry Skills Huddle can copy (a folder on this computer, not in Skills/ yet). They are
-                   copied on Save, or for a draft when the Team is approved; a not-downloaded one is never an option. *@
-                @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.CopyableSkills)
+                <div class="agent-profile-card-skill-group-head">On this computer <span class="chip-meta">@readyCount</span></div>
+                @if (readyCount == 0)
                 {
-                    <MudSelectItem T="string" Value="@entry.Name">
-                        <MudText>@entry.Name</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@entry.Description</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(entry.Publisher, entry.Origin, entry.License)</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-copy-caption">@(this.OnDraftSaved.HasDelegate ? "Huddle copies it into Skills/ when you approve." : "Huddle copies it into Skills/ when you save.")</MudText>
-                    </MudSelectItem>
+                    <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-skill-empty">@(this.skillQuery.Length > 0 ? "No Skill on this computer matches." : "No Skills on this computer yet.")</MudText>
                 }
-                @* A Skill this card already holds but that is not on this computer: an option only so it can be unticked, or a role
-                   that brought one could never be hired without downloading it. *@
-                @foreach (string kept in this.HeldUnavailableSkills)
+                @foreach (Skill skill in installed)
                 {
-                    <MudSelectItem T="string" Value="@kept">
-                        <MudText>@kept</MudText>
-                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-unavailable-caption">Not on this computer yet. Untick it to go without it.</MudText>
-                    </MudSelectItem>
-                }
-            </SelectField>
-
-            @* Skills a catalog or Pack lists but that have no folder on this computer: not choosable, but visible with their
-               remedy, so a Skill the Human cannot pick yet is still in sight (Skill Packs spec §6.10.4). *@
-            @if (this.NotDownloadedSkills.Count > 0)
-            {
-                <ActionButton Class="agent-profile-card-not-here-toggle mb-1" OnClick="@(() => this.notHereOpen = !this.notHereOpen)"
-                           EndIcon="@(this.notHereOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)">Not on this computer yet (@this.NotDownloadedSkills.Count)</ActionButton>
-                <MudCollapse Expanded="@this.notHereOpen" Class="agent-profile-card-not-here mb-3">
-                    @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in this.NotDownloadedSkills)
-                    {
-                        Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
-                        <div class="agent-profile-card-not-here-row d-flex flex-wrap align-center gap-2 mb-1" data-skill="@shown.Name">
-                            <MudCheckBox T="bool" Value="@this.skills.Contains(shown.Name, StringComparer.Ordinal)" Disabled="true" Color="Color.Primary" Dense="true" aria-label="@($"{shown.Name} is not on this computer yet")" />
-                            <div>
-                                <MudText Typo="Typo.body2">@shown.Name</MudText>
-                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@shown.Description</MudText>
-                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(shown.Publisher, shown.Origin, shown.License)</MudText>
-                            </div>
-                            <ActionButton Role="ButtonRole.Secondary" Class="agent-profile-card-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</ActionButton>
+                    string skillName = skill.Name;
+                    <div class="agent-profile-card-skill-row" data-skill="@skillName">
+                        <MudCheckBox T="bool" Value="@this.HasSkill(skillName)" ValueChanged="@(ticked => this.ToggleSkill(skillName, ticked))" Color="Color.Primary" Dense="true" aria-label="@skillName" />
+                        <div class="agent-profile-card-skill-text">
+                            <MudText Typo="Typo.body2">@skillName</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@skill.Description</MudText>
+                            <SkillProvenanceLine Skill="@skill" />
+                            @if (SkillOrigin.Of(skill) is { } origin)
+                            {
+                                <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@origin</MudText>
+                            }
                         </div>
+                    </div>
+                }
+                @* Registry Skills Huddle can copy (a folder on this computer, not in Skills/ yet): copied on Save, or for a draft when
+                   the Team is saved. *@
+                @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in copyable)
+                {
+                    string skillName = entry.Name;
+                    <div class="agent-profile-card-skill-row" data-skill="@skillName">
+                        <MudCheckBox T="bool" Value="@this.HasSkill(skillName)" ValueChanged="@(ticked => this.ToggleSkill(skillName, ticked))" Color="Color.Primary" Dense="true" aria-label="@skillName" />
+                        <div class="agent-profile-card-skill-text">
+                            <MudText Typo="Typo.body2">@skillName</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@entry.Description</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(entry.Publisher, entry.Origin, entry.License)</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-copy-caption">@(this.OnDraftSaved.HasDelegate ? "Huddle copies it into Skills/ when the Agent is hired." : "Huddle copies it into Skills/ when you save.")</MudText>
+                        </div>
+                    </div>
+                }
+                @* A Skill this card already holds but that is not on this computer: listed only so it can be unticked, or a role that
+                   brought one could never be hired without downloading it. *@
+                @foreach (string kept in held)
+                {
+                    string skillName = kept;
+                    <div class="agent-profile-card-skill-row" data-skill="@skillName">
+                        <MudCheckBox T="bool" Value="@this.HasSkill(skillName)" ValueChanged="@(ticked => this.ToggleSkill(skillName, ticked))" Color="Color.Primary" Dense="true" aria-label="@skillName" />
+                        <div class="agent-profile-card-skill-text">
+                            <MudText Typo="Typo.body2">@skillName</MudText>
+                            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary agent-profile-card-unavailable-caption">Not on this computer yet. Untick it to go without it.</MudText>
+                        </div>
+                    </div>
+                }
+
+                @* Skills a catalog or Pack lists that have no folder here: not tickable, but in sight with their remedy. Folded
+                   while nothing is searched, so a few hundred of them do not bury the Skills that can be ticked. *@
+                @if (this.NotDownloadedSkills.Count > 0)
+                {
+                    bool showSetup = this.notHereOpen || this.skillQuery.Length > 0;
+                    <button type="button" class="agent-profile-card-skill-group-head agent-profile-card-not-here-toggle" aria-expanded="@(showSetup ? "true" : "false")"
+                            @onclick="@(() => this.notHereOpen = !this.notHereOpen)" disabled="@(this.skillQuery.Length > 0)">
+                        Needs setup first <span class="chip-meta">@needsSetup.Count</span>
+                        <MudIcon Icon="@(showSetup ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
+                    </button>
+                    @if (showSetup)
+                    {
+                        <MudText Typo="Typo.caption" Class="d-block mud-text-secondary mb-1">Not on this computer yet. Copy the prompt into your AI tool to fetch one; it can be ticked once it is here.</MudText>
+                        @foreach (Agency.Huddle.SkillPacks.Resolving.SkillEntry entry in needsSetup)
+                        {
+                            Agency.Huddle.SkillPacks.Resolving.SkillEntry shown = entry;
+                            <div class="agent-profile-card-skill-row agent-profile-card-not-here-row" data-skill="@shown.Name">
+                                <MudCheckBox T="bool" Value="@this.HasSkill(shown.Name)" Disabled="true" Color="Color.Primary" Dense="true" aria-label="@($"{shown.Name} is not on this computer yet")" />
+                                <div class="agent-profile-card-skill-text">
+                                    <MudText Typo="Typo.body2">@shown.Name</MudText>
+                                    <MudText Typo="Typo.caption" Class="d-block mud-text-secondary">@shown.Description</MudText>
+                                    <MudText Typo="Typo.caption" Class="d-block mud-text-secondary skill-origin">@Agency.Huddle.App.Skills.Ui.SkillOriginText.Line(shown.Publisher, shown.Origin, shown.License)</MudText>
+                                </div>
+                                <ActionButton Role="ButtonRole.Secondary" Class="agent-profile-card-copy-prompt ml-auto" OnClick="@(() => this.CopyFetchPromptAsync(shown))">Copy prompt</ActionButton>
+                            </div>
+                        }
                     }
-                </MudCollapse>
-            }
+                }
+            </div>
+            <MudText Typo="Typo.caption" Class="d-block mud-text-secondary mb-3 agent-profile-card-skills-helper">@this.SkillsHelperText</MudText>
 
             @* An assigned Skill name the store no longer resolves - a Skill folder removed or renamed
                since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
@@ -514,7 +545,7 @@
             <AdapterModelEffortPicker Adapter="@this.adapter" Model="@this.model" Effort="@this.effort"
                                       OfferWorkMode="true" WorkMode="@this.workMode" DefaultOptionText="@DefaultOptionText"
                                       AdapterHelperText="@this.AdapterHelperText"
-                                      Caption="Changing any of these restarts the agent, which clears what it remembers."
+                                      Caption="@this.ModelCaption"
                                       SelectionChanged="this.OnPickerChanged" OptionsRead="this.OnOptionsRead" />
 
             @* MS-3: a vendor shared with a role this one must differ from. *@
@@ -1104,8 +1135,13 @@
     // "Agent default", like Model: the mode is the Adapter's own when none is chosen.
     private string WorkModeDisplayText => this.workMode is null ? "Agent default" : this.WorkModeLabel(this.workMode);
 
+    /// <summary>The line under Model, Effort and Work mode: a new Agent has nothing to restart, so only an existing one is warned.</summary>
+    private string ModelCaption => this.mode == AgentProfileCardMode.Create
+        ? "Agent default leaves the choice to the Adapter."
+        : "Changing any of these restarts the agent, which clears what it remembers.";
+
     private string TextHelperText => this.mode == AgentProfileCardMode.Create
-        ? "Markdown. Becomes the agent's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here."
+        ? "Markdown. Becomes the agent's system prompt, placed after the details above — no front matter needed here."
         : "Markdown. This is the whole Persona file, front matter included, and becomes the agent's system prompt. Saving restarts it, which clears what it remembers.";
 
     /// <summary>The Name box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="nameLocked"/> is set.</summary>
@@ -1356,8 +1392,50 @@
     /// Agent holds one; empty without a <see cref="roleSpec"/> or a registry.</summary>
     private IReadOnlyList<Agency.Huddle.SkillPacks.Resolving.PackEntry> rolePacks = [];
 
-    /// <summary>Whether the "Not on this computer yet" list is open.</summary>
+    /// <summary>Whether the "Needs setup first" group is open while nothing is searched.</summary>
     private bool notHereOpen;
+
+    /// <summary>What the Skills search box holds; empty lists every Skill.</summary>
+    private string skillQuery = string.Empty;
+
+    /// <summary>The line under the Skills heading that says what a Skill is.</summary>
+    internal const string SkillsIntro = "A Skill is a written how-to the Agent follows for one kind of task, such as reviewing a change. Tick the ones this Agent needs.";
+
+    /// <summary>The line under the Skills list: how many are ticked and, for an existing Agent, that a change restarts it.</summary>
+    private string SkillsHelperText
+    {
+        get
+        {
+            string ticked = this.skills.Count == 0 ? "None ticked." : $"{Plural.Of(this.skills.Count, "Skill", "Skills")} ticked.";
+            return this.mode == AgentProfileCardMode.Edit ? $"{ticked} Changing Skills restarts this Agent." : ticked;
+        }
+    }
+
+    /// <summary>Whether a Skill's name or description holds the search, ignoring case; everything matches an empty search.</summary>
+    /// <param name="name">The Skill's name.</param>
+    /// <param name="description">Its description, or <see langword="null"/>.</param>
+    private bool MatchesSkillQuery(string name, string? description)
+    {
+        string query = this.skillQuery.Trim();
+        return query.Length == 0
+            || name.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || (description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false);
+    }
+
+    private void OnSkillQueryChanged(string? value) => this.skillQuery = value ?? string.Empty;
+
+    /// <summary>Whether the card holds the Skill now.</summary>
+    /// <param name="name">The Skill's name.</param>
+    private bool HasSkill(string name) => this.skills.Contains(name, StringComparer.Ordinal);
+
+    /// <summary>Ticks or unticks one Skill, keeping the others in their order.</summary>
+    /// <param name="name">The Skill's name.</param>
+    /// <param name="ticked">Whether it is now ticked.</param>
+    private void ToggleSkill(string name, bool ticked)
+    {
+        IReadOnlyList<string> others = [.. this.skills.Where(existing => !string.Equals(existing, name, StringComparison.Ordinal))];
+        this.OnSkillsChanged(ticked ? [.. others, name] : others);
+    }
 
     /// <summary>Whether Save is copying Skills into Skills/.</summary>
     private bool copying;

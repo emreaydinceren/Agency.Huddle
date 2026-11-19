@@ -1410,6 +1410,8 @@ public sealed class BuildTeamTests
         string[] labels = [.. cut.FindAll(".mud-dialog label").Select(static label => label.TextContent.Trim())];
         Assert.DoesNotContain("Teams", labels);
         Assert.DoesNotContain("Alias", labels);
+        Assert.Equal("None ticked.", cut.Find(".mud-dialog .agent-profile-card-skills-helper").TextContent.Trim());
+        Assert.DoesNotContain("restarts", cut.Find(".mud-dialog").TextContent, StringComparison.Ordinal); // contains-ok: no line of a new Agent's card may promise a restart
         await cut.InvokeAsync(() => cut.Find(".mud-dialog .agent-profile-card-identity-row input").ChangeAsync("Planner"));
         await AgentProfileCardTestSupport.ClickButtonAsync(cut, "Save draft");
 

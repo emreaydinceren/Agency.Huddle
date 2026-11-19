@@ -163,6 +163,56 @@
     margin-bottom: 0;
 }
 
+/* The Skills list: one bordered, scrolling box with the Skills that can be ticked now above the ones that need setup first. */
+.agent-profile-card-skill-list {
+    max-height: 18rem;
+    overflow-y: auto;
+    padding: 4px 8px;
+    border: 1px solid var(--ink-line);
+    border-radius: var(--hu-radius-card);
+}
+
+.agent-profile-card-skill-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 4px;
+    width: 100%;
+    padding: 4px 0 0;
+    font: inherit;
+    font-size: var(--mud-typography-caption-size);
+    font-weight: 600;
+    text-align: start;
+    color: var(--mud-palette-text-secondary);
+    background: none;
+    border: 0;
+}
+
+button.agent-profile-card-skill-group-head:not(:disabled) {
+    cursor: pointer;
+}
+
+button.agent-profile-card-skill-group-head:disabled {
+    cursor: default;
+}
+
+.agent-profile-card-skill-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.agent-profile-card-skill-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-top: 4px;
+}
+
+/* A long description must not squeeze Copy prompt down to a clipped label. */
+.agent-profile-card-skill-row > .agent-profile-card-copy-prompt {
+    flex-shrink: 0;
+}
+
 /* While the Model, Effort or Work mode list is being read, the field refuses to open but must not look switched off: it keeps
    its normal ink and border (the disabled colours are put back) and a thin progress bar sits under it. */
 .mud-input-control.agent-profile-card-probing .mud-input.mud-disabled {

@@ -714,8 +714,7 @@ public sealed class AgentProfileCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         await ClickButtonAsync(cut, "Edit");
 
-        await OpenSelectAsync(cut, "Skills");
-        await ClickSkillOptionAsync(cut, "team-building");
+        await SetSkillTickedAsync(cut, "team-building", ticked: true);
 
         Assert.Contains("skills: ['team-building']", cut.Find("textarea").TextContent, StringComparison.Ordinal);
     }

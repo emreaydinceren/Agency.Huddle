@@ -108,7 +108,7 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 - The text inputs are, in order, **Name** (with the reset button beside it) and **Title**. There is NO **Alias** field and NO **Teams** field: a draft's Alias is always its Name in lower case, and Team membership changes only on the Members tab. Record each input's placeholder and hint as you read them.
 - The multi-line box is labelled `Persona text`. Record its placeholder and hint.
 - Below the multi-line box the controls are, in this order (`AgentProfileCard.razor`):
-  1. a multi-select labelled `Skills` with the hint `Changing Skills restarts this Agent.` (always rendered, `:340`);
+  1. a **Skills** section: the line `A Skill is a written how-to the Agent follows for one kind of task, such as reviewing a change. Tick the ones this Agent needs.`, a box labelled `Search Skills`, a bordered list headed `On this computer` with a checkbox per Skill (and `Needs setup first`, folded, when the registry lists Skills that are not here), and under it `None ticked.` with no word about a restart;
   2. a select labelled `Model` whose blank option reads `Agent default`, then a select labelled `Effort` with the same blank option;
   3. a select labelled `Work mode`, only while the probe runs or once the adapter advertises modes (`:471`, `ShowWorkModePicker`); it may disappear when the probe finishes with no modes, which is not a failure;
   No avatar controls appear on the card itself: the radios `Initials of the name`, `A short label` and `An image`, the `Background` palette lives in the **Avatar** window that the avatar button opens, and none of those words is on the card.
