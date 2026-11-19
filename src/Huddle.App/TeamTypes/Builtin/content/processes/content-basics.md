@@ -1,7 +1,7 @@
 ---
 title: 'Content basics'
-template: 'content-basics@1.1.0'
-gates: []
+template: 'content-basics@1.2.0'
+gates: ['blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Content basics
@@ -41,7 +41,8 @@ Follow the voice principles in `Teams/AGENTS.md`. Write to the audience and angl
 
 ## Gates
 
-- This process declares no hard gate. The editor-in-chief's Evidence line is the check before a piece is ready, and the Human closes each Task.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The editor-in-chief's Evidence line is the check before a piece is ready, and the Human closes each Task.
 
 ## Definition of Done
 

@@ -1,7 +1,7 @@
 ---
 title: 'Founder''s office basics'
-template: 'founders-office-basics@1.1.0'
-gates: []
+template: 'founders-office-basics@1.2.0'
+gates: ['blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Founder's office basics
@@ -39,7 +39,8 @@ This Team runs the founder's recurring work: investor research, pitches, investo
 
 ## Gates
 
-- This process declares no hard gate. The chief of staff's Evidence line is the check, and the founder sends everything.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The chief of staff's Evidence line is the check, and the founder sends everything.
 
 ## Definition of Done
 

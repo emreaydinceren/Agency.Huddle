@@ -1,7 +1,7 @@
 ---
 title: 'Small business basics'
-template: 'small-business-basics@1.1.0'
-gates: []
+template: 'small-business-basics@1.2.0'
+gates: ['blockers-done-before-start']
 retro: { every: 14, unit: 'days' }
 ---
 # Small business basics
@@ -38,7 +38,8 @@ This Team runs the day-to-day work of a small business: it reconciles the books,
 
 ## Gates
 
-- This process declares no hard gate. The business manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
+- `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- This process declares no other hard gate. The business manager's Evidence line is the check before a Task is ready, and the Human closes each Task.
 
 ## Definition of Done
 
