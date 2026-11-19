@@ -324,14 +324,20 @@ option card, a tree row) and stay raw `MudButton`s in the baseline until their o
 
 **Still raw.** The migration is done (136 of 141 tags moved, 2026-11-18). Five raw `MudButton` tags in
 four files stay in the CV15 baseline (`tests/Huddle.Tests.Shell/Ui/Conventions/Baseline/`),
-because each is not a plain role button:
+because each is not a plain role button. They share one look instead of a component: a raw
+`MudButton` takes `list-option` (a row in a list) or `link-action` (a link inside a form row), both in
+`base.css`, and rule CV26 fails a raw button that carries neither.
 
-| File | Tags | Why it stays raw |
-| --- | --- | --- |
-| `Shared/QuestionCard.razor` | 1 | An answer option tile (`question-card-option`) |
-| `Shared/InviteAgent.razor` | 1 | An option card (`invite-agent-option`) |
-| `Sidebar/TagsPanel.razor` | 1 | A tree row (`tags-tree-row`, `shell.css`) that sets its own width, height, alignment and padding |
-| `Tasks/TaskDetail.razor` | 2 | "Link note" and "Add File" (`task-detail-library-add`, `task-form.css`): a recoloured button with 12 px text. It can become `Quiet` when its rule is deleted |
+| File | Tags | Style class | Why it stays raw |
+| --- | --- | --- | --- |
+| `Shared/QuestionCard.razor` | 1 | `list-option` | An answer option that toggles between Outlined and Filled |
+| `Shared/InviteAgent.razor` | 1 | `list-option` | An Agent row with an avatar and name as its content |
+| `Sidebar/TagsPanel.razor` | 1 | `list-option` | A tree row inside `MudTreeViewItem` |
+| `Tasks/TaskDetail.razor` | 2 | `link-action` | "Link note" and "Add File": accent ink, body text, no side padding |
+
+`list-option` is flush left, no capitals, 28 px tall at the control radius, with the hover tint on a
+text row. `link-action` is accent ink at body size with no side padding and underlines on hover.
+The room banners (`budget-prompt`, `member-health-alert`) already share one rule block in `base.css`.
 
 The map from the old combinations: Filled Primary is `Primary`, Outlined (default or Primary)
 is `Secondary`, Text or no `Variant` is `Quiet`, Filled Error `Danger`, Text or Outlined Error
@@ -1190,7 +1196,7 @@ other sites move over area by area. Three rules held for every wrapper:
 The order was: the segmented control (the pilot), `ActionButton` with `DialogFooter`, `Notice`,
 `TextField` and `SelectField`, then the composites (the picker, `SettingSwitch`, `PropertyList`,
 `RowActionsMenu` with `ActionIconButton`), then `ChipRadioGroup`, `BusyLabel` and the browser
-scripts. Each one added a convention rule (CV14 to CV25; CV27 and CV28 came after the rollout) that holds every file to a baseline which
+scripts. Each one added a convention rule (CV14 to CV25; CV26 to CV29 came after the rollout) that holds every file to a baseline which
 may only shrink. Visual changes were proved with `agents/scripts/Css-Snapshot.ps1`, one comparison
 per wave; see [Proving a visual change](ComponentRollout.md#proving-a-visual-change).
 

@@ -504,7 +504,7 @@ else if (this.loaded is { } task)
                                 <span class="task-detail-library-link task-detail-library-missing" title="Not found"><span aria-hidden="true">[[</span>@row.Name<span aria-hidden="true">]]</span></span>
                             }
                         }
-                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Link" Class="task-detail-library-add task-detail-link-file"
+                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Link" Class="link-action task-detail-link-file"
                                    aria-label="Link a Library file" OnClick="this.LinkLibraryFileAsync">Link note</MudButton>
                     </div>
                 </div>
@@ -517,7 +517,7 @@ else if (this.loaded is { } task)
                             <CustomContent Context="fileUpload">
                                 <MudTooltip Text="@(this.createMode ? "Save the Task first to attach files." : "Attach a file from this computer")">
                                     <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AttachFile" aria-label="Attach a file"
-                                               Class="task-detail-library-add task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
+                                               Class="link-action task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
                                                OnClick="@(() => fileUpload.OpenFilePickerAsync())">Add File</MudButton>
                                 </MudTooltip>
                             </CustomContent>

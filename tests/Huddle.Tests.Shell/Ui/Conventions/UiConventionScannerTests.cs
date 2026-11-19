@@ -696,6 +696,34 @@ public sealed class UiConventionScannerTests
         Assert.Equal(1, UiConventionScanner.Cv25("src/Huddle.App/Components/Feed/NotificationsPanel.razor", source).Count);
     }
 
+    /// <summary>CV26: a raw <c>MudButton</c> is counted unless its class carries <c>list-option</c> or <c>link-action</c>.</summary>
+    [Fact]
+    public void Cv26_RawMudButtonWithoutSharedStyle_IsCounted()
+    {
+        const string source = """
+            <MudButton Variant="Variant.Text" Class="tags-tree-row">a</MudButton>
+            <MudButton Variant="Variant.Text" Class="list-option tags-tree-row">b</MudButton>
+            <MudButton Variant="Variant.Text"
+                       Class="link-action task-detail-link-file">c</MudButton>
+            <ActionButton>d</ActionButton>
+            """;
+
+        RuleCount result = UiConventionScanner.Cv26(RazorPath, source);
+
+        Assert.Equal("CV26", result.Rule);
+        Assert.Equal(1, result.Count);
+    }
+
+    /// <summary>CV26: <c>ActionButton</c> is the one file allowed to draw a <c>MudButton</c> with no shared style class.</summary>
+    [Fact]
+    public void Cv26_ActionButtonRazor_IsExempt()
+    {
+        const string source = """<MudButton Variant="@this.Variant" Class="@this.Class">x</MudButton>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv26("src/Huddle.App/Components/Shared/ActionButton.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv26("src/Huddle.App/Components/Shared/Composer.razor", source).Count);
+    }
+
     /// <summary>CV27: a raw <c>MudHighlighter</c> is counted in every file, but not <c>SearchHighlight</c>, a comment that names it or another Mud tag.</summary>
     [Fact]
     public void Cv27_MudHighlighter_IsCounted()

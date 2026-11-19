@@ -11,7 +11,7 @@ page adds only what is particular to this work.
 `ActionButton`, `DialogFooter`, `Notice`, `TextField`, `SelectField`, `SettingSwitch` with the on-or-off
 rule, `PropertyList`, `RowActionsMenu`, `ActionIconButton`, the Adapter, Model and Effort picker with
 `ProbedSelect`, `ChipRadioGroup`, `BusyLabel`), the shared browser-script helpers were done or decided
-(C1 to C4), and the convention test now holds files to rules CV14 to CV25. What is left raw is listed
+(C1 to C4), and the convention test now holds files to rules CV14 to CV25 (CV26 to CV29 came after the rollout: see the catalog). What is left raw is listed
 in the catalog's entries, as "Still raw".
 
 ## Contents

@@ -1182,13 +1182,6 @@
     margin-top: 8px;
 }
 
-.question-card-option {
-    min-height: 28px;
-    justify-content: flex-start;
-    text-align: left;
-    text-transform: none;
-}
-
 .question-card-rank-row {
     min-height: 44px;
 }

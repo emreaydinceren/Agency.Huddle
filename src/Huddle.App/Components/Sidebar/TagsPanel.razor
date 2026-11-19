@@ -77,7 +77,7 @@ else if (this.loaded)
                 {
                     <MudTreeViewItem T="LibraryTag" Value="@node" @bind-Items="item.Children" @bind-Expanded="item.Expanded" CanExpand="@item.Expandable">
                         <BodyContent>
-                            <MudButton Variant="Variant.Text" Size="Size.Small" Class="tags-tree-row" aria-label="@($"{node.Text}, {node.NoteCount} notes")"
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Class="list-option tags-tree-row" aria-label="@($"{node.Text}, {node.NoteCount} notes")"
                                        OnClick="@(() => this.Open(node.Text))">@LeafName(node.Text) (@node.NoteCount)</MudButton>
                         </BodyContent>
                     </MudTreeViewItem>
