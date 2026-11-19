@@ -9,28 +9,16 @@
     move between buttons and Escape returns to the editor. The marker data-md-toolbar is how the editor finds it.
 *@
 <div class="markdown-toolbar" role="toolbar" aria-label="Markdown formatting" aria-orientation="horizontal" data-md-toolbar>
-    <MudTooltip Text="Bold (Ctrl+B)">
-        <MudIconButton Icon="@Icons.Material.Filled.FormatBold" Size="Size.Small" aria-label="Bold" Class="markdown-toolbar-bold" tabindex="0" data-md-command="@Commands.Bold" />
-    </MudTooltip>
-    <MudTooltip Text="Italic (Ctrl+I)">
-        <MudIconButton Icon="@Icons.Material.Filled.FormatItalic" Size="Size.Small" aria-label="Italic" Class="markdown-toolbar-italic" tabindex="-1" data-md-command="@Commands.Italic" />
-    </MudTooltip>
-    <MudTooltip Text="Heading">
-        <MudIconButton Icon="@Icons.Material.Filled.Title" Size="Size.Small" aria-label="Heading" Class="markdown-toolbar-heading" tabindex="-1" data-md-command="@Commands.Heading" />
-    </MudTooltip>
-    <MudTooltip Text="Code (Ctrl+E)">
-        <MudIconButton Icon="@Icons.Material.Filled.Code" Size="Size.Small" aria-label="Code" Class="markdown-toolbar-code" tabindex="-1" data-md-command="@Commands.Code" />
-    </MudTooltip>
-    <MudTooltip Text="Bulleted list">
-        <MudIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Size="Size.Small" aria-label="Bulleted list" Class="markdown-toolbar-bullet-list" tabindex="-1" data-md-command="@Commands.BulletList" />
-    </MudTooltip>
-    <MudTooltip Text="Task list">
-        <MudIconButton Icon="@Icons.Material.Filled.Checklist" Size="Size.Small" aria-label="Task list" Class="markdown-toolbar-task-list" tabindex="-1" data-md-command="@Commands.TaskList" />
-    </MudTooltip>
+    <ActionIconButton Icon="@Icons.Material.Filled.FormatBold" Label="Bold" Tooltip="Bold (Ctrl+B)" Class="markdown-toolbar-bold" tabindex="0" data-md-command="@Commands.Bold" />
+    <ActionIconButton Icon="@Icons.Material.Filled.FormatItalic" Label="Italic" Tooltip="Italic (Ctrl+I)" Class="markdown-toolbar-italic" tabindex="-1" data-md-command="@Commands.Italic" />
+    <ActionIconButton Icon="@Icons.Material.Filled.Title" Label="Heading" Tooltip="Heading" Class="markdown-toolbar-heading" tabindex="-1" data-md-command="@Commands.Heading" />
+    <ActionIconButton Icon="@Icons.Material.Filled.Code" Label="Code" Tooltip="Code (Ctrl+E)" Class="markdown-toolbar-code" tabindex="-1" data-md-command="@Commands.Code" />
+    <ActionIconButton Icon="@Icons.Material.Filled.FormatListBulleted" Label="Bulleted list" Tooltip="Bulleted list" Class="markdown-toolbar-bullet-list" tabindex="-1" data-md-command="@Commands.BulletList" />
+    <ActionIconButton Icon="@Icons.Material.Filled.Checklist" Label="Task list" Tooltip="Task list" Class="markdown-toolbar-task-list" tabindex="-1" data-md-command="@Commands.TaskList" />
     @if (this.ShowWikilink)
     {
         <MudTooltip Text="Link to a note">
-            <MudButton Size="Size.Small" aria-label="Link to a note" Class="markdown-toolbar-wikilink" tabindex="-1" data-md-command="@Commands.Wikilink">[[ ]]</MudButton>
+            <ActionButton Role="ButtonRole.Quiet" aria-label="Link to a note" Class="markdown-toolbar-wikilink" tabindex="-1" data-md-command="@Commands.Wikilink">[[ ]]</ActionButton>
         </MudTooltip>
     }
 </div>

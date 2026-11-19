@@ -49,31 +49,28 @@
     border-radius: var(--hu-radius-card);
 }
 
-/* Nordic draws a count as a small rounded pill, tinted for the selected segment and for Needs you. */
+/* Nordic draws the Needs you count (the segmented control's one badge here) as a small warning pill, tinted primary on the
+   selected segment. Each selector names the control, so it outranks the component's own badge rule. */
 :root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control {
     border-radius: var(--hu-radius-panel);
     border: 1px solid var(--hu-line-region);
 }
 
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count {
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control .segmented-badge {
     display: inline-block;
     min-width: 18px;
     padding: 0 4px;
     margin-left: 4px;
     border-radius: var(--hu-radius-full);
-    background: var(--hu-ground-rail);
+    background: var(--hu-tone-warning-soft);
+    color: var(--hu-tone-warning-ink);
     font-weight: 600;
     line-height: 18px;
 }
 
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
+:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-category-control .segmented-active-item .segmented-badge {
     background: var(--hu-tone-primary-soft);
     color: var(--hu-tone-primary-ink);
-}
-
-:root:has([data-hu-surface="paper"]) .feed-filter-bar ::deep .feed-count-needsyou {
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
 }
 
 /* Nine segments are wider than a narrow column. MudToggleGroup writes minmax(0, 1fr) columns inline, so a control capped at the
@@ -87,31 +84,6 @@
 
 .feed-filter-bar ::deep .feed-category-control {
     width: max-content;
-    background: var(--hu-control-track);
-}
-
-.feed-filter-bar ::deep .feed-category-control .mud-toggle-item {
-    color: var(--hu-control-ink);
-}
-
-.feed-filter-bar ::deep .feed-category-control .mud-toggle-item.huddle-segmented-active-item {
-    color: var(--hu-control-selected-ink);
-    font-weight: 600;
-}
-
-.feed-filter-bar ::deep .feed-category-control .huddle-segmented-indicator {
-    border-color: var(--hu-control-selected-line);
-}
-
-.feed-filter-bar ::deep .feed-count {
-    margin-left: 4px;
-    font-size: var(--mud-typography-caption-size);
-    font-variant-numeric: tabular-nums;
-    color: var(--hu-text-subtle);
-}
-
-.feed-filter-bar ::deep .huddle-segmented-active-item .feed-count {
-    color: var(--hu-control-selected-ink);
 }
 
 .feed-filter-bar {

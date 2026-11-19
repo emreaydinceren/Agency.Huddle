@@ -19,8 +19,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="@(this.Danger ? Color.Error : Color.Primary)" OnClick="this.Confirm">@this.ConfirmText</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="@this.ConfirmText" Destructive="@this.Danger" OnPrimary="this.Confirm" />
     </DialogActions>
 </MudDialog>
 

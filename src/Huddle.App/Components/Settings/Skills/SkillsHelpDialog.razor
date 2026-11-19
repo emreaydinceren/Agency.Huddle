@@ -1,6 +1,6 @@
 @*
     In-app help for one tab of Settings › Skills (Skill Packs spec §6.9.12, G8): the matching User Guide subsection, rendered
-    from SkillGuide.HelpFor, with Close only. Huddle links to no external guide, so Learn more never leaves the app.
+    from SkillGuide.HelpFor, with no actions row: the title's close button is the way out. Huddle links to no external guide, so Learn more never leaves the app.
 *@
 @using Agency.Huddle.App.Skills.Ui
 
@@ -8,19 +8,10 @@
     <DialogContent>
         <div class="skills-help-text">@((MarkupString)MarkdownRenderer.ToHtml(SkillGuide.HelpFor(this.View)))</div>
     </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" Class="skills-help-close" OnClick="this.Close">Close</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
-    [CascadingParameter]
-    private IMudDialogInstance? Dialog { get; set; }
-
     /// <summary>The tab: <c>skills</c>, <c>packs</c> or <c>sources</c>.</summary>
     [Parameter]
     public string? View { get; set; }
-
-    /// <summary>Closes the dialog.</summary>
-    private void Close() => this.Dialog?.Close();
 }

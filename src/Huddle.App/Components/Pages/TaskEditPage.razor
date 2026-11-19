@@ -30,7 +30,7 @@
 {
     @* K6: the Tasks page's own notice, in the same words. *@
     <MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
-        <MudAlert Severity="Severity.Info" role="status" Class="tasks-disabled-alert">Tasks are turned off.</MudAlert>
+        <Notice Severity="NoticeLevel.Info" Class="tasks-disabled-alert">Tasks are turned off.</Notice>
     </MudContainer>
 }
 else if (this.missing)
@@ -38,7 +38,7 @@ else if (this.missing)
     @* K5: an id that does not parse, or names no Task. *@
     <EmptyState FullPane="true" Icon="@Icons.Material.Outlined.TaskAlt" Title="@($"There is no Task {this.TaskIdText}")" Text="It may have been deleted or moved.">
         <Action>
-            <MudButton Variant="Variant.Text" Size="Size.Medium" Href="/tasks" Class="task-edit-page-open-tasks">Open Tasks</MudButton>
+            <ActionButton Role="ButtonRole.Quiet" Href="/tasks" Class="task-edit-page-open-tasks">Open Tasks</ActionButton>
         </Action>
     </EmptyState>
 }
@@ -64,18 +64,15 @@ else
                             <Actions>
                                 @if (this.editing is { } id)
                                 {
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-edit-page-view" OnClick="this.ViewTask">View task</MudButton>
-                                    <MudTooltip Text="Copy id">
-                                        <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {id}")"
-                                                       Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
-                                    </MudTooltip>
+                                    <ActionButton Class="task-edit-page-view" OnClick="this.ViewTask">View task</ActionButton>
+                                    <ActionIconButton Icon="@Icons.Material.Outlined.ContentCopy" Label="@($"Copy task id {id}")" Tooltip="Copy id" Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
                                 }
 
                                 @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@
                                 <div class="task-edit-page-actions">
-                                    <MudButton Variant="Variant.Text" Size="Size.Small" Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</MudButton>
-                                    <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
-                                               Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</MudButton>
+                                    <ActionButton Class="task-detail-cancel" OnClick="this.CancelAsync">Cancel</ActionButton>
+                                    <ActionButton Role="ButtonRole.Primary" Class="task-detail-save" OnClick="this.SaveAsync"
+                                               Disabled="@this.SaveDisabled">@(this.detail?.FooterSaveLabel ?? "Save")</ActionButton>
                                 </div>
                             </Actions>
                         </PageHeader>

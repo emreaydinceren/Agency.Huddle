@@ -107,8 +107,8 @@ public sealed partial class R3ShellTests
         string source = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "ArchivedPage.razor"));
 
         // The attributes hold lambdas ("=>"), so each pattern spans them lazily rather than stopping at the first '>'.
-        Assert.Matches(@"<MudButton Variant=""Variant\.Filled"" Color=""Color\.Primary""[^<]*?Class=""archived-restore""[^<]*?>Restore</MudButton>", source);
-        Assert.Matches(@"<MudButton Variant=""Variant\.Text""[^<]*?Color=""Color\.Error""[^<]*?Class=""archived-delete""[^<]*?>Delete…</MudButton>", source);
+        Assert.Matches(@"<ActionButton Role=""ButtonRole\.Primary""[^<]*?Class=""archived-restore""[^<]*?>Restore</ActionButton>", source);
+        Assert.Matches(@"<ActionButton Role=""ButtonRole\.DangerQuiet""[^<]*?Class=""archived-delete""[^<]*?>Delete…</ActionButton>", source);
         Assert.Matches(@"<InlineConfirm Class=""archived-delete-confirm""", source);
     }
 
@@ -119,8 +119,8 @@ public sealed partial class R3ShellTests
         string source = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "NewChat.razor"));
 
         Assert.Matches(@"class=""new-chat-panel floating-panel""", source);
-        Assert.Matches(@"new-chat-cancel[^>]*>Cancel</MudButton>", source);
-        Assert.Matches(@"new-chat-start[^>]*>Open room</MudButton>", source);
+        Assert.Matches(@"new-chat-cancel[^>]*>Cancel</ActionButton>", source);
+        Assert.Matches(@"new-chat-start[^>]*>Open room</ActionButton>", source);
         Assert.DoesNotMatch(@"FullWidth=""true""", source);
     }
 
@@ -133,8 +133,8 @@ public sealed partial class R3ShellTests
 
         Assert.DoesNotContain("MudTooltip Text=\"Room actions\"", room, StringComparison.Ordinal);
         Assert.DoesNotContain("MudTooltip Text=\"Team actions\"", teams, StringComparison.Ordinal);
-        Assert.Contains("MenuDialogs.ActivatorLabel(this.Room.Name)", room, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label
-        Assert.Contains("MenuDialogs.ActivatorLabel(team.Name)", teams, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label
+        Assert.Contains("<RowActionsMenu @ref=\"this.menu\" Name=\"@this.Room.Name\"", room, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label ("Actions for {Name}")
+        Assert.Contains("Name=\"@team.Name\" Class=\"hover-reveal-menu\"", teams, StringComparison.Ordinal); // contains-ok: a source pin on the activator's label ("Actions for {Name}")
         Assert.Contains("MenuDialogs.AfterClosingAsync(menu,", teams, StringComparison.Ordinal); // contains-ok: a source pin on the menu-closes-first call
         Assert.Matches(@"<MudDivider />\s*<MudMenuItem[^>]*menu-item-destructive[^>]*>Delete</MudMenuItem>", room);
         Assert.Contains("Narrow=\"true\" Prompt=\"Delete?\"", room, StringComparison.Ordinal); // contains-ok: a source pin on the sidebar's narrow confirm

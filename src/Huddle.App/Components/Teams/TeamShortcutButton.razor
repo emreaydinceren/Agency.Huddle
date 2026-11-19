@@ -12,10 +12,10 @@
 @if (this.Shortcuts.IsLoaded)
 {
     bool shown = this.Shortcuts.Has(this.Team);
-    <MudButton Variant="Variant.Outlined" Size="Size.Small"
-               StartIcon="@(shown ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
-               Class="team-page-actions team-shortcut-toggle"
-               OnClick="@(() => this.ToggleAsync(shown))">@(shown ? "Hide shortcut" : "Show shortcut")</MudButton>
+    <ActionButton Role="ButtonRole.Secondary"
+                  StartIcon="@(shown ? Icons.Material.Outlined.VisibilityOff : Icons.Material.Outlined.Visibility)"
+                  Class="team-page-actions team-shortcut-toggle"
+                  OnClick="@(() => this.ToggleAsync(shown))">@(shown ? "Hide shortcut" : "Show shortcut")</ActionButton>
 }
 
 @code {

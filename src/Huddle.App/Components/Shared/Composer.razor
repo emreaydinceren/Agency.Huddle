@@ -15,11 +15,11 @@
 <div class="composer">
     @if (this.errorText is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="composer-error" role="alert">@this.errorText</MudAlert>
+        <Notice Severity="NoticeLevel.Error" Class="composer-error">@this.errorText</Notice>
     }
     else if (this.infoText is not null)
     {
-        <MudAlert Severity="Severity.Info" Dense="true" Class="composer-info" role="status">@this.infoText</MudAlert>
+        <Notice Severity="NoticeLevel.Info" Class="composer-info">@this.infoText</Notice>
     }
     @if (this.Chips.Count > 0)
     {
@@ -41,9 +41,7 @@
                     {
                         <span class="upload-chip-error">@chip.Error</span>
                     }
-                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="upload-chip-remove"
-                                   aria-label="@($"Remove {chip.DisplayName}")"
-                                   OnClick="@(() => this.RemoveChipAsync(chip.Id))" />
+                    <ActionIconButton Icon="@Icons.Material.Filled.Close" Label="@($"Remove {chip.DisplayName}")" Class="upload-chip-remove" OnClick="@(() => this.RemoveChipAsync(chip.Id))" />
                 </Chip>
             }
         </div>
@@ -61,18 +59,13 @@
                 <MudFileUpload @ref="this.picker" T="IReadOnlyList<IBrowserFile>" MaximumFileCount="this.RemainingFiles()"
                                FilesChanged="this.OnFilesPickedAsync">
                     <CustomContent Context="fileUpload">
-                        <MudTooltip Text="Attach files" Placement="Placement.Top">
-                            <MudIconButton Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small"
-                                           aria-label="Attach files" OnClick="@(() => fileUpload.OpenFilePickerAsync())" />
-                        </MudTooltip>
+                        <ActionIconButton Icon="@Icons.Material.Filled.AttachFile" Label="Attach files" Tooltip="Attach files" TooltipPlacement="Placement.Top" OnClick="@(() => fileUpload.OpenFilePickerAsync())" />
                     </CustomContent>
                 </MudFileUpload>
             </div>
         }
         <MudTooltip Text="@(this.Uploading ? "Waiting for uploads…" : "Send")" Placement="Placement.Start" RootClass="composer-send">
-            <MudIconButton Icon="@Icons.Material.Filled.Send" Size="Size.Small" Class="composer-send-button"
-                           Disabled="this.Uploading"
-                           aria-label="Send message" OnClick="this.SendClickedAsync" />
+            <ActionIconButton Icon="@Icons.Material.Filled.Send" Label="Send message" Class="composer-send-button" Disabled="this.Uploading" OnClick="this.SendClickedAsync" />
             @* A visible "Send" word beside the icon, hidden in app.css; a style pack may show it (Nordic, ADR-0057).
                aria-hidden because the button already carries its name. *@
             <span class="composer-send-label" aria-hidden="true">Send</span>

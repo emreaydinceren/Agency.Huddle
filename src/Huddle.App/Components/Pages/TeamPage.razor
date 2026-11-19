@@ -42,18 +42,18 @@
     @if (summary is null)
     {
         <FocusedPageTitle Title="Huddle" />
-        <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
             <MudLink Href="/agents" Class="team-page-notice-link">Agents</MudLink>
-        </MudAlert>
+        </Notice>
     }
     else if (isProject && project is null)
     {
         <FocusedPageTitle Title="Huddle" />
-        <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="team-page-notice">
             <span class="team-page-notice-text">There is no Project named "@this.Project" in Team "@summary.Name".</span>
             <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>
-        </MudAlert>
+        </Notice>
     }
     else if (this.NoProjectRoute)
     {
@@ -67,9 +67,9 @@
         }
         else
         {
-            <MudAlert Severity="Severity.Info" role="status" Class="team-page-notice">
+            <Notice Severity="NoticeLevel.Info" Class="team-page-notice">
                 <span class="team-page-notice-text">The Library is turned off in this installation.</span>
-            </MudAlert>
+            </Notice>
         }
     }
     else
@@ -111,15 +111,15 @@
                        shortcut toggle follows it: the shortcut is the avatar's tile in the Activity bar. *@
                     @if (summary.TeamType is not null)
                     {
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
-                                   Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Edit"
+                                      Class="team-page-actions" OnClick="@(() => this.EditAvatarAsync(sourceTeam))">Edit avatar…</ActionButton>
                     }
                     <TeamShortcutButton Team="@sourceTeam" />
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ContentCopy"
-                               Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.ContentCopy"
+                                  Class="team-page-actions" OnClick="@(() => this.DuplicateAsync(sourceTeam))">Duplicate</ActionButton>
                     @* Asks T16's question first (TeamArchiveActions), as the Details tab's Archive does. *@
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
-                               Class="team-page-actions team-page-archive" OnClick="@(() => this.ArchiveTeamAsync(sourceTeam))">Archive</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Inventory2"
+                                  Class="team-page-actions team-page-archive" OnClick="@(() => this.ArchiveTeamAsync(sourceTeam))">Archive</ActionButton>
                 </Actions>
             </PageHeader>
             @* The Team figure (its members' all-time spend) stays on the Team page; a Project page shows the spend of its
@@ -146,14 +146,14 @@
                     <span class="page-kind-chip team-project-kind">Project</span>
                 </TitleTrailing>
                 <Actions>
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit"
-                               Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Edit"
+                                  Class="team-project-edit-avatar" OnClick="@(() => this.EditProjectAvatarAsync(projectTeam, projectName))">Edit avatar…</ActionButton>
                     @* A Project has no tab for settings, so its Needs You level (ADR-0088) opens in a dialog. *@
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.NotificationsActive"
-                               Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.NotificationsActive"
+                                  Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</ActionButton>
                     @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Inventory2"
-                               Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Inventory2"
+                                  Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</ActionButton>
                 </Actions>
             </PageHeader>
             <ProjectSpend Team="@projectTeam" Project="@projectName" />
@@ -161,9 +161,9 @@
 
         @if (available.Count == 0)
         {
-            <MudAlert Severity="Severity.Info" role="status" Class="team-page-notice">
+            <Notice Severity="NoticeLevel.Info" Class="team-page-notice">
                 <span class="team-page-notice-text">Files and Tasks are turned off in this installation.</span>
-            </MudAlert>
+            </Notice>
         }
         else
         {

@@ -33,8 +33,9 @@
             <DynamicComponent Type="@section.Component" Parameters="@(new Dictionary<string, object> { [nameof(this.HelperId)] = this.helper.Id.Value })" />
         }
 
-        <MudSwitch T="bool" Value="@this.enabled" ValueChanged="this.OnEnabledChanged" Disabled="@(!this.AdaptersOn)"
-                   Color="Color.Primary" Label="@HelpersCopy.SwitchLabel" />
+        @* A checkbox, not a switch: turning the Helper on or off waits for Save with the card's other fields (the B6 rule). *@
+        <MudCheckBox T="bool" Value="@this.enabled" ValueChanged="this.OnEnabledChanged" Disabled="@(!this.AdaptersOn)"
+                     Color="Color.Primary" Dense="true" Label="@HelpersCopy.EnabledLabel" Class="helper-card-enabled" />
 
         <AdapterModelEffortPicker Adapter="@this.adapter" Model="@this.model" Effort="@this.effort"
                                   Disabled="@(!this.AdaptersOn)" SelectionChanged="this.OnSelectionChanged" />
@@ -53,26 +54,26 @@
 
         @if (this.CurrentError is { } error)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-error" role="status">
+            <Notice Severity="NoticeLevel.Warning" Class="helper-card-error">
                 @HelpersCopy.LastError(this.TimeOfDay(error.At), error.Message)
-            </MudAlert>
+            </Notice>
         }
 
         @if (this.IsPaused)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2 helper-card-paused" role="status">
+            <Notice Severity="NoticeLevel.Warning" Class="helper-card-paused">
                 <span>@HelpersCopy.Paused</span>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="ml-3 helper-card-continue" OnClick="this.OnContinue">
+                <ActionButton Role="ButtonRole.Secondary" Class="ml-3 helper-card-continue" OnClick="this.OnContinue">
                     @HelpersCopy.Continue(this.baseline.ContinueGrant)
-                </MudButton>
-            </MudAlert>
+                </ActionButton>
+            </Notice>
         }
 
         <MudStack Row="true" Spacing="2" Class="mt-3">
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="helper-card-save"
-                       Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</MudButton>
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="helper-card-reset"
-                       Disabled="@(!this.AdaptersOn)" OnClick="this.OnReset">@HelpersCopy.Reset</MudButton>
+            <ActionButton Role="ButtonRole.Primary" Class="helper-card-save"
+                          Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</ActionButton>
+            <ActionButton Class="helper-card-reset"
+                          Disabled="@(!this.AdaptersOn)" OnClick="this.OnReset">@HelpersCopy.Reset</ActionButton>
         </MudStack>
     </MudPaper>
 }
@@ -204,7 +205,7 @@
 
     private void OnCapChanged(int value) => this.dailyCap = Math.Max(1, value);
 
-    private void OnSelectionChanged((string? Adapter, string? Model, string? Effort) selection)
+    private void OnSelectionChanged(AdapterModelEffortChoice selection)
     {
         this.adapter = selection.Adapter;
         this.model = selection.Model;

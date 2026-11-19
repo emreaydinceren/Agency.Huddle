@@ -124,7 +124,7 @@ public sealed class FieldsDialogTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
-        var priority = root.FindComponents<MudSwitch<bool>>().Single(HasSwitchClass("priority"));
+        var priority = root.FindComponents<MudCheckBox<bool>>().Single(HasSwitchClass("priority"));
         await root.InvokeAsync(() => priority.Instance.ValueChanged.InvokeAsync(false));
         await SaveAsync(root);
 
@@ -142,9 +142,9 @@ public sealed class FieldsDialogTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> root = await OpenDialogAsync(ctx);
 
-        var priority = root.FindComponents<MudSwitch<bool>>().Single(HasSwitchClass("priority"));
+        var priority = root.FindComponents<MudCheckBox<bool>>().Single(HasSwitchClass("priority"));
         await root.InvokeAsync(() => priority.Instance.ValueChanged.InvokeAsync(false));
-        priority = root.FindComponents<MudSwitch<bool>>().Single(HasSwitchClass("priority"));
+        priority = root.FindComponents<MudCheckBox<bool>>().Single(HasSwitchClass("priority"));
         await root.InvokeAsync(() => priority.Instance.ValueChanged.InvokeAsync(true));
         await SaveAsync(root);
 
@@ -174,7 +174,7 @@ public sealed class FieldsDialogTests
 
     /// <summary>Returns a predicate matching the row switch for <paramref name="key"/> (<c>.view-editor-field-switch-{key}</c>).</summary>
     /// <param name="key">The field key.</param>
-    private static Func<IRenderedComponent<MudSwitch<bool>>, bool> HasSwitchClass(string key) =>
+    private static Func<IRenderedComponent<MudCheckBox<bool>>, bool> HasSwitchClass(string key) =>
         component => string.Equals(component.Instance.Class, $"view-editor-field-switch-{key}", StringComparison.Ordinal);
 
     /// <summary>Clicks Save inside the dispatch, never holding the element across an await.</summary>

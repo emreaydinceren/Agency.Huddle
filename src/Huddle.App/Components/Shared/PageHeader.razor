@@ -33,9 +33,8 @@
             @this.Aside
             @if (!string.IsNullOrEmpty(this.CreateText))
             {
-                <MudButton Size="Size.Small" Variant="@(this.CreatePrimary ? Variant.Filled : Variant.Outlined)"
-                           Color="@(this.CreatePrimary ? Color.Primary : Color.Default)" StartIcon="@this.CreateIcon"
-                           Disabled="this.CreateDisabled" OnClick="this.OnCreate" Class="page-header-create">@this.CreateText</MudButton>
+                <ActionButton Role="@(this.CreatePrimary ? ButtonRole.Primary : ButtonRole.Secondary)" StartIcon="@this.CreateIcon"
+                           Disabled="this.CreateDisabled" OnClick="this.OnCreate" Class="page-header-create">@this.CreateText</ActionButton>
             }
             @this.Actions
         </div>

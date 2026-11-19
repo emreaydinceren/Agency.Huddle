@@ -1,7 +1,7 @@
 namespace Agency.Huddle.Tests.Ui.Conventions;
 
 /// <summary>
-/// The UI convention test (plan section 3.2): scans <c>src/Huddle.App</c> for the rules CV1 to CV11 and CV13
+/// The UI convention test (plan section 3.2): scans <c>src/Huddle.App</c> for the rules CV1 to CV11 and CV13 to CV25
 /// and holds each file to its baseline, which may only shrink. Also proves, against a copy of one
 /// real file per rule, that the scanner and the baseline check can fail.
 /// </summary>
@@ -28,6 +28,18 @@ public sealed class UiConventionTests
     [InlineData("CV10")]
     [InlineData("CV11")]
     [InlineData("CV13")]
+    [InlineData("CV14")]
+    [InlineData("CV15")]
+    [InlineData("CV16")]
+    [InlineData("CV17")]
+    [InlineData("CV18")]
+    [InlineData("CV19")]
+    [InlineData("CV20")]
+    [InlineData("CV23")]
+    [InlineData("CV21")]
+    [InlineData("CV22")]
+    [InlineData("CV24")]
+    [InlineData("CV25")]
     public void Source_HasNoViolationsBeyondItsBaseline(string rule)
     {
         IReadOnlyList<RuleCount> actual = Scanned.Value.Where(a => string.Equals(a.Rule, rule, StringComparison.Ordinal)).ToList();
@@ -91,6 +103,18 @@ public sealed class UiConventionTests
     [InlineData("CV11", ".zz { border-radius: calc(var(--mud-default-borderradius) * 0.75); }")]
     [InlineData("CV11", "@media (max-width: 1500px) { .zz { display: none; } }")]
     [InlineData("CV13", """<MudChip T="string" Size="Size.Small">x</MudChip>""")]
+    [InlineData("CV14", """<MudToggleGroup T="string" Size="Size.Small"><MudToggleItem Value="@("x")" /></MudToggleGroup>""")]
+    [InlineData("CV15", """<MudButton Size="Size.Small" Variant="Variant.Text">x</MudButton>""")]
+    [InlineData("CV16", """<MudAlert Severity="Severity.Info" Dense="true" role="status">x</MudAlert>""")]
+    [InlineData("CV17", """<MudTextField T="string" Label="x" Variant="Variant.Outlined" Margin="Margin.Dense" />""")]
+    [InlineData("CV18", """<MudSelect T="string" Label="x" Variant="Variant.Outlined" Margin="Margin.Dense"><MudSelectItem Value="@("x")" /></MudSelect>""")]
+    [InlineData("CV19", """<MudSwitch T="bool" Size="Size.Small" Color="Color.Primary" Label="x" />""")]
+    [InlineData("CV20", """<MudCheckBox T="bool" Dense="true" Label="x" />""")]
+    [InlineData("CV23", "<dl><dt>x</dt><dd>y</dd></dl>")]
+    [InlineData("CV21", """<MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="x" />""")]
+    [InlineData("CV22", """<MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="x"><MudMenuItem>x</MudMenuItem></MudMenu>""")]
+    [InlineData("CV24", """<MudProgressCircular Indeterminate="true" Size="Size.Small" />""")]
+    [InlineData("CV25", """<MudChipSet T="string" SelectionMode="SelectionMode.SingleSelection"><Chip T="string" Look="ChipLook.Filter" Text="x" /></MudChipSet>""")]
     public void Mutation_AddedViolation_IsCountedAndOverrunsTheBaseline(string rule, string snippet)
     {
         string path = string.Equals(rule, "CV11", StringComparison.Ordinal)

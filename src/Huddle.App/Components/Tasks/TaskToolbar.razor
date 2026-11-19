@@ -28,39 +28,39 @@
     @* The Filter menu leads the row, as an icon: every saved filter is chosen here and the ones set show as chips after it. *@
     <MudMenu Icon="@Icons.Material.Outlined.FilterAlt" Size="Size.Small" AriaLabel="Filter" Class="task-toolbar-filter" PopoverClass="task-toolbar-filter-popover">
         @* The View editor's Team control (UX-050c, OP-8): a multi-select of the Teams known to the app. *@
-        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Teams"
+        <SelectField T="string" Label="Team" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Teams"
                    SelectedValuesChanged="this.OnTeamFilterChangedAsync" Class="task-toolbar-filter-team">
             @foreach (string team in this.TeamOptions())
             {
                 <MudSelectItem T="string" Value="@team" Class="task-toolbar-filter-team-option">@team</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @* Team/Project pairs, narrowed to the chosen Teams. A value no longer known stays selected as "X (missing)". *@
-        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Project" MultiSelection="true" SelectedValues="this.ProjectKeys()"
+        <SelectField T="string" Label="Project" MultiSelection="true" SelectedValues="this.ProjectKeys()"
                    SelectedValuesChanged="this.OnProjectFilterChangedAsync" Class="task-toolbar-filter-project">
             @foreach ((string value, string label) in this.ProjectOptions())
             {
                 <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-project-option">@label</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @* Me, Unassigned, then every name that holds a Task or is already filtered on. *@
-        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Assignee" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Assignees"
+        <SelectField T="string" Label="Assignee" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Assignees"
                    SelectedValuesChanged="this.OnAssigneeFilterChangedAsync" Class="task-toolbar-filter-assignee">
             @foreach ((string value, string label) in this.AssigneeOptions())
             {
                 <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-assignee-option">@label</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @* Sprints spec §12.3: the "filter dynamically" path. A value no longer in sprints.md stays selected as "S5 (missing)". *@
-        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Sprint" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Sprints"
+        <SelectField T="string" Label="Sprint" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Sprints"
                    SelectedValuesChanged="this.OnSprintFilterChangedAsync" Class="task-toolbar-filter-sprint">
             @foreach ((string value, string label) in SprintLabels.FilterOptions(this.Sprints, this.EffectiveView.Filter.Sprints))
             {
                 <MudSelectItem T="string" Value="@value" Class="task-toolbar-filter-sprint-option">@label</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @* Status: All, Open and Closed are selectable group headers that choose the whole group, followed by the individual statuses. *@
-        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Status" MultiSelection="true" SelectedValues="this.StateKeys()"
+        <SelectField T="string" Label="Status" MultiSelection="true" SelectedValues="this.StateKeys()"
                    SelectedValuesChanged="this.OnStateKeysChangedAsync" Class="task-toolbar-filter-state">
             <MudSelectItem T="string" Value="@AllKey" Class="task-toolbar-filter-state-group task-toolbar-filter-state-all">All</MudSelectItem>
             <MudSelectItem T="string" Value="@OpenKey" Class="task-toolbar-filter-state-group task-toolbar-filter-state-open">Open</MudSelectItem>
@@ -73,21 +73,21 @@
             {
                 <MudSelectItem T="string" Value="@state.ToWire()" Class="task-toolbar-filter-state-option">@state.ToWire()</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
         @* Blocked: All, Blocked or Unblocked. *@
-        <MudSelect T="BlockedFilter" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Blocked" Value="this.EffectiveView.Filter.Blocked"
+        <SelectField T="BlockedFilter" Label="Blocked" Value="this.EffectiveView.Filter.Blocked"
                    ValueChanged="this.OnBlockedChangedAsync" Class="task-toolbar-filter-blocked">
             <MudSelectItem T="BlockedFilter" Value="BlockedFilter.All">All</MudSelectItem>
             <MudSelectItem T="BlockedFilter" Value="BlockedFilter.Blocked">Blocked</MudSelectItem>
             <MudSelectItem T="BlockedFilter" Value="BlockedFilter.Unblocked">Unblocked</MudSelectItem>
-        </MudSelect>
-        <MudSelect T="TaskPriority" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Priority" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Priorities"
+        </SelectField>
+        <SelectField T="TaskPriority" Label="Priority" MultiSelection="true" SelectedValues="this.EffectiveView.Filter.Priorities"
                    SelectedValuesChanged="this.OnPriorityFilterChangedAsync" Class="task-toolbar-filter-priority">
             @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
             {
                 <MudSelectItem T="TaskPriority" Value="@priority" Class="task-toolbar-filter-priority-option">@priority.ToWire()</MudSelectItem>
             }
-        </MudSelect>
+        </SelectField>
     </MudMenu>
     @* Wireframe: the quick filters lead the second row. Each is the same Filter the menu below edits, so a choice here shows there too. *@
     @if (this.EffectiveView.Filter.Teams.Count > 0)
@@ -229,7 +229,7 @@
     public EventCallback<string?> SearchChanged { get; set; }
 
     /// <summary>The page's one primary action, filled and Small like every toolbar control, so the Tasks page and a Team page's Tasks tab draw the same button.</summary>
-    private RenderFragment NewTaskButton => @<MudButton StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="tasks-new-task btn-action-tight">New task</MudButton>;
+    private RenderFragment NewTaskButton => @<ActionButton Role="ButtonRole.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="this.OnNewTaskClickedAsync" Class="tasks-new-task">New task</ActionButton>;
 
     /// <summary>The text a Group by value shows: the field's name, with the State field called Status as everywhere the Human reads it.</summary>
     /// <param name="field">The grouping field, or null for no grouping.</param>
@@ -241,13 +241,15 @@
     };
 
     /// <summary>Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view" offers to persist it - the View editor's own Kind control is the saved counterpart.</summary>
-    private RenderFragment KindControl => @<HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
-                                                                   Class="task-toolbar-kind" ItemCount="2">
-        @* The same icons as the View's sidebar row (TaskViewNav). In the content, not SelectedIcon/UnselectedIcon: MudToggleGroup
-           draws those only with CheckMark on, and the segmented control turns it off. *@
-        <MudToggleItem Value="ViewKind.List"><MudIcon Icon="@Icons.Material.Outlined.ViewList" Size="Size.Small" Class="task-toolbar-kind-icon" />List</MudToggleItem>
-        <MudToggleItem Value="ViewKind.Kanban"><MudIcon Icon="@Icons.Material.Outlined.ViewKanban" Size="Size.Small" Class="task-toolbar-kind-icon" />Kanban</MudToggleItem>
-    </HuddleSegmentedControl>;
+    private RenderFragment KindControl => @<SegmentedControl T="ViewKind" Options="KindOptions" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
+                                                             Class="task-toolbar-kind" />;
+
+    /// <summary>List and Kanban, with the same icons as the View's sidebar row (TaskViewNav).</summary>
+    private static readonly IReadOnlyList<SegmentedOption<ViewKind>> KindOptions =
+    [
+        new(ViewKind.List, "List", Icons.Material.Outlined.ViewList),
+        new(ViewKind.Kanban, "Kanban", Icons.Material.Outlined.ViewKanban),
+    ];
 
     /// <summary>The statuses "Open" stands for: every one that is not terminal.</summary>
     private static readonly IReadOnlyList<TaskState> ActiveStates = [.. TaskStates.All.Where(static state => !state.IsTerminal())];

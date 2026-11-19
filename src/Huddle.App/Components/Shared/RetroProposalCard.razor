@@ -22,7 +22,7 @@
         <AgentCard @key="set.Id" Class="retro-proposal-card" Title="@($"{set.Proposer} is proposing changes")" AriaLabel="@($"Retro changes from {set.Proposer}")">
             <p class="retro-proposal-intro">@set.Proposer proposes changes after the retro. Accept makes the edit; nothing changes until you do.</p>
 
-            <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" @bind-Value="this.reason" Label="Reason if you decline" Class="retro-proposal-reason" Disabled="@this.Busy" />
+            <TextField @bind-Value="this.reason" Label="Reason if you decline" Class="retro-proposal-reason" Disabled="@this.Busy" />
 
             @foreach (var change in set.Changes)
             {
@@ -34,8 +34,8 @@
                     <span class="retro-change-file">@this.Service.FileLine(set, change)</span>
                     <pre class="retro-change-diff">@this.Service.Preview(set, change)</pre>
                     <MudStack Row="true" Spacing="2" Class="agent-card-actions retro-change-actions">
-                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="retro-change-accept" Disabled="@this.Busy" OnClick="() => this.AcceptAsync(set, change)">@(this.IsBusy(acceptKey) ? "Accepting…" : "Accept")</MudButton>
-                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="retro-change-decline" Disabled="@this.Busy" OnClick="() => this.DeclineAsync(set, change)">@(this.IsBusy(declineKey) ? "Declining…" : "Decline")</MudButton>
+                        <ActionButton Role="ButtonRole.Primary" Class="retro-change-accept" Disabled="@this.Busy" OnClick="() => this.AcceptAsync(set, change)">@(this.IsBusy(acceptKey) ? "Accepting…" : "Accept")</ActionButton>
+                        <ActionButton Role="ButtonRole.Secondary" Class="retro-change-decline" Disabled="@this.Busy" OnClick="() => this.DeclineAsync(set, change)">@(this.IsBusy(declineKey) ? "Declining…" : "Decline")</ActionButton>
                     </MudStack>
                 </div>
             }

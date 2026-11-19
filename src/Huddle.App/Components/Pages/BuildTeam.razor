@@ -59,7 +59,7 @@
 @if (this.EditMode && this.missingTeam)
 {
     <MudContainer MaxWidth="MaxWidth.Large" Class="build-team page-reading pa-4">
-        <MudAlert Severity="Severity.Warning" role="alert" Class="build-team-missing">There is no Team named "@this.Team".</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="build-team-missing">There is no Team named "@this.Team".</Notice>
     </MudContainer>
     return;
 }
@@ -112,25 +112,23 @@
             </div>
             <MudPaper Outlined="true" Elevation="0" Class="build-team-details-card pa-3">
                 <MudStack Spacing="3">
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Team name" Immediate="true" Disabled="this.EditMode"
-                                  Value="this.name" ValueChanged="this.OnNameChanged"
+                    <TextField Label="Team name" Immediate="true" Disabled="this.EditMode"
+                                  Value="@this.name" ValueChanged="this.OnNameChanged"
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="What it&#8217;s for" Immediate="true"
-                                  Lines="6" Value="this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose long-text-field" />
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="@LibraryFolderLabel" Immediate="true"
-                                  Value="this.workspace" ValueChanged="this.OnWorkspaceChanged"
-                                  Adornment="@(this.RemoteAccess.IsConfigured ? Adornment.None : Adornment.End)" AdornmentIcon="@Icons.Material.Outlined.Folder"
-                                  AdornmentAriaLabel="Browse for library folder" OnAdornmentClick="this.BrowseAsync"
+                    <TextField Shape="TextFieldShape.LongText" Label="What it&#8217;s for" Immediate="true" Value="@this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                    <TextField Label="@LibraryFolderLabel" Immediate="true"
+                                  Value="@this.workspace" ValueChanged="this.OnWorkspaceChanged" EndIcon="@(this.RemoteAccess.IsConfigured ? null : Icons.Material.Outlined.Folder)"
+                                  EndIconLabel="Browse for library folder" OnEndIconClick="this.BrowseAsync"
                                   Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
                     @if (!this.EditMode && this.selected is { Processes.Count: > 1 } multiple)
                     {
-                        <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Process" Value="this.processId" ValueChanged="this.OnProcessChanged"
+                        <SelectField T="string" Label="Process" Value="this.processId" ValueChanged="this.OnProcessChanged"
                                    HelperText="How this Team works. It becomes the Team's AGENTS.md, which you can edit afterwards." Class="build-team-process">
                             @foreach (ProcessRef process in multiple.Processes)
                             {
                                 <MudSelectItem T="string" Value="@process.Id">@process.Id</MudSelectItem>
                             }
-                        </MudSelect>
+                        </SelectField>
                     }
                 </MudStack>
             </MudPaper>
@@ -170,7 +168,7 @@
             }
             @if (this.CustomRoles.LoadError is not null)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</MudAlert>
+                <Notice Severity="NoticeLevel.Warning" Class="build-team-roles-error">Your custom roles file could not be read, so roles cannot be added or changed: @this.CustomRoles.LoadError</Notice>
             }
             <div class="role-grid" role="group" aria-label="Roles">
                 <button type="button" class="role-add-card" aria-label="Add a custom role" @onclick="this.AddRoleAsync">
@@ -192,8 +190,8 @@
             </div>
             @if (this.RoleEntries.Count > CollapsedRoleLimit)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
-                           OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</MudButton>
+                <ActionButton Class="role-grid-toggle" aria-expanded="@(this.allRolesShown ? "true" : "false")"
+                           OnClick="this.ToggleAllRoles">@(this.allRolesShown ? "Show fewer roles" : $"Show all {this.RoleEntries.Count} roles")</ActionButton>
             }
             @if (this.RoleTypeFilter is { } emptyType && !this.AnyRoleShown)
             {
@@ -223,49 +221,45 @@
                                 <Actions>
                                     @if (removing)
                                     {
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Undo" OnClick="@(() => this.UndoRemove(draft.Key))"
-                                                   aria-label="@($"Keep {draft.Name}")" Class="roster-undo">Undo</MudButton>
+                                        <ActionButton StartIcon="@Icons.Material.Outlined.Undo" OnClick="@(() => this.UndoRemove(draft.Key))"
+                                                   aria-label="@($"Keep {draft.Name}")" Class="roster-undo">Undo</ActionButton>
                                     }
                                     else if (draft.Existing)
                                     {
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditMemberAsync(draft.Name))"
-                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
+                                        <ActionButton StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditMemberAsync(draft.Name))"
+                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</ActionButton>
                                         @if (this.CanMessage?.Invoke(draft.Name) == true)
                                         {
-                                            <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
-                                                       aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</MudButton>
+                                            <ActionButton StartIcon="@Icons.Material.Outlined.ChatBubbleOutline" OnClick="@(() => this.OnMessage.InvokeAsync(draft.Name))"
+                                                       aria-label="@($"Message {draft.Name}")" Class="roster-message">Message</ActionButton>
                                         }
                                         @* A destructive action is never a top-level button with a caret (design-system "Menus"):
                                            Edit and Message lead, and the removals sit under the more-actions button. The activator
                                            names its target and carries no hover tooltip; neither item opens a dialog. *@
-                                        <MudMenu Class="roster-more" Dense="true">
-                                            <ActivatorContent Context="menuContext">
-                                                <MudIconButton Icon="@ActionIcons.MoreActions" Size="Size.Small"
-                                                               aria-label="@MenuDialogs.ActivatorLabel(draft.Name)" OnClick="menuContext.ToggleAsync" />
-                                            </ActivatorContent>
+                                        <RowActionsMenu Name="@draft.Name" Reveal="RowActionsReveal.Always" Class="roster-more">
                                             <ChildContent>
                                                 <MudMenuItem Icon="@ActionIcons.RemoveMember" OnClick="@(() => this.LeaveTeam(draft.Key))" Class="roster-leave">Remove from team</MudMenuItem>
                                                 <MudDivider />
                                                 <MudMenuItem Icon="@ActionIcons.Delete" OnClick="@(() => this.RemoveDraft(draft.Key))" Class="menu-item-destructive">Delete agent</MudMenuItem>
                                             </ChildContent>
-                                        </MudMenu>
+                                        </RowActionsMenu>
                                     }
                                     else
                                     {
                                         @if (draft.SkillSetup.Any(static item => item.Problem != SkillAvailability.Withdrawn))
                                         {
-                                            <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.CopySetupPromptAsync(draft))" Class="roster-copy-prompt">Copy prompt</MudButton>
+                                            <ActionButton Role="ButtonRole.Secondary" OnClick="@(() => this.CopySetupPromptAsync(draft))" Class="roster-copy-prompt">Copy prompt</ActionButton>
                                         }
                                         @if (draft.SkillSetup.Any(static item => item.Problem == SkillAvailability.Withdrawn))
                                         {
                                             <MudText Typo="Typo.caption" Class="roster-withdrawn mud-text-secondary">Edit the draft to drop it.</MudText>
                                         }
-                                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
-                                                   aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</MudButton>
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
-                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</MudButton>
-                                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.RemoveDraft(draft.Key))"
-                                                   aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</MudButton>
+                                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Casino" OnClick="@(() => this.RerollDraftAsync(draft.Key))"
+                                                   aria-label="@($"Re-roll {draft.Name}")" Class="roster-reroll">Re-roll</ActionButton>
+                                        <ActionButton StartIcon="@Icons.Material.Outlined.Edit" OnClick="@(() => this.EditDraftAsync(draft.Key))"
+                                                   aria-label="@($"Edit {draft.Name}")" Class="roster-edit">Edit</ActionButton>
+                                        <ActionButton OnClick="@(() => this.RemoveDraft(draft.Key))"
+                                                   aria-label="@($"Remove {draft.Name}")" Class="roster-remove">Remove</ActionButton>
                                     }
                                 </Actions>
                             </ProfileCard>
@@ -284,13 +278,13 @@
 
             @if (this.EditMode && this.ManagerChoices.Count > 0)
             {
-                <MudSelect T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Manager" Dense="true"
+                <SelectField T="string" Label="Manager" DenseItems="true"
                            Value="this.managerKey" ValueChanged="this.OnManagerChanged" Class="build-team-manager">
                     @foreach (DraftMember choice in this.ManagerChoices)
                     {
                         <MudSelectItem T="string" Value="@choice.Key">@choice.Name</MudSelectItem>
                     }
-                </MudSelect>
+                </SelectField>
             }
         </section>
     }
@@ -307,20 +301,20 @@
             }
             @if (this.approveError is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="build-team-approve-error">
+                <Notice Severity="NoticeLevel.Error" Class="build-team-approve-error">
                     @this.approveError
                     @if (this.skillsBlocked)
                     {
                         <MudLink Href="/settings/skills?view=skills" Class="build-team-skills-link">Open Settings › Skills</MudLink>
                     }
-                </MudAlert>
+                </Notice>
             }
             <div class="build-team-approve-row">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
-                           OnClick="this.ApproveAsync" Class="build-team-approve-button">@this.ApproveLabel</MudButton>
+                <ActionButton Role="ButtonRole.Primary" StartIcon="@Icons.Material.Filled.Check" Disabled="@(!this.CanApprove)"
+                           OnClick="this.ApproveAsync" Class="build-team-approve-button">@this.ApproveLabel</ActionButton>
                 @if (this.continueTeam is not null)
                 {
-                    <MudButton Variant="Variant.Text" Size="Size.Medium" Href="@this.TeamHref(this.continueTeam)" Class="build-team-open-team">Open team</MudButton>
+                    <ActionButton Role="ButtonRole.Quiet" Href="@this.TeamHref(this.continueTeam)" Class="build-team-open-team">Open team</ActionButton>
                 }
                 <MudText Typo="Typo.body2" Class="build-team-intro build-team-approve-hint">@this.ApproveHint</MudText>
             </div>

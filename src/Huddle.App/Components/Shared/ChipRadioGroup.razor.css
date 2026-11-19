@@ -1,0 +1,16 @@
+/* The chip radio group (ComponentCatalog ChipRadioGroup): one wrapping row of Filter chips, 4px apart, 8px in from the group's edge. */
+.chip-radio-group {
+    padding: 8px;
+}
+
+.chip-radio-group ::deep .mud-chipset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.chip-radio-count {
+    margin-inline-start: 4px;
+    color: var(--mud-palette-text-secondary);
+    font-variant-numeric: tabular-nums;
+}

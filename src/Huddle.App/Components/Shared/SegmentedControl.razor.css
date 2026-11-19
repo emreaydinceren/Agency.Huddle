@@ -1,0 +1,87 @@
+/* The segmented control, in one place: the track, the indicator and the toggle group's items (the items are MudBlazor's markup,
+   so their rules reach it through ::deep).
+   One 28px row everywhere (design-system.md Spacing): --segmented-inset from the track's edge to an item, 24px items, 13px text,
+   the selected item at weight 500. A surface trait that draws a 1px border on the track sets --segmented-inset to 1px
+   (sidebar.css), so the border and the inset still make 2px and the row stays 28px.
+   The colours are the four control tokens (--hu-control-track, -ink, -selected-ink, -selected-line), read here only.
+   The indicator is one option wide and sits at the selected index: the component writes --segmented-count and --segmented-index
+   from its options list, so it follows any number of options. */
+.segmented-control {
+    --segmented-inset: 2px;
+    position: relative;
+    display: inline-flex;
+    box-sizing: border-box;
+    height: 28px;
+    padding: var(--segmented-inset);
+    background-color: var(--hu-control-track);
+    border-radius: var(--hu-radius-card);
+}
+
+.segmented-indicator {
+    position: absolute;
+    top: var(--segmented-inset);
+    bottom: var(--segmented-inset);
+    left: var(--segmented-inset);
+    width: calc((100% - 2 * var(--segmented-inset)) / var(--segmented-count, 1));
+    transform: translateX(calc(var(--segmented-index, 0) * 100%));
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--hu-control-selected-line);
+    border-radius: var(--hu-radius-control);
+    box-shadow: var(--mud-elevation-1);
+    transition: transform 120ms ease;
+    z-index: 1;
+}
+
+.segmented-control ::deep .segmented-group {
+    background: transparent;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+.segmented-control ::deep .segmented-group .mud-toggle-item {
+    flex: 1 1 0;
+    box-sizing: border-box;
+    height: 24px;
+    min-height: unset;
+    padding: 0 12px;
+    text-align: center;
+    border-radius: var(--hu-radius-control);
+    border: none;
+    background: transparent;
+    position: relative;
+    z-index: 2;
+    color: var(--hu-control-ink);
+    font-size: var(--mud-typography-body2-size);
+    font-weight: 500;
+    transition: color 120ms ease;
+}
+
+.segmented-control ::deep .segmented-group .mud-toggle-item.segmented-active-item {
+    background-color: transparent;
+    color: var(--hu-control-selected-ink);
+}
+
+.segmented-control ::deep .segmented-group .mud-toggle-item * {
+    color: inherit;
+    font-weight: inherit;
+}
+
+/* An option's icon leads its label, 4px before the word. */
+.segmented-control ::deep .segmented-group .mud-toggle-item .segmented-icon.mud-icon-root {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+}
+
+/* An option's badge (the Feed's Needs you count) follows its label in caption type. */
+.segmented-control ::deep .segmented-group .mud-toggle-item .segmented-badge {
+    margin-left: 4px;
+    font-size: var(--mud-typography-caption-size);
+    font-variant-numeric: tabular-nums;
+    color: var(--hu-text-subtle);
+}
+
+.segmented-control ::deep .segmented-group .mud-toggle-item.segmented-active-item .segmented-badge {
+    color: var(--hu-control-selected-ink);
+}

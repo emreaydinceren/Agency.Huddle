@@ -117,7 +117,7 @@ public sealed class TaskDetailSingleSaveTests
         string[] sides = ["task-detail-conflict-theirs", "task-detail-conflict-yours"];
         foreach (string side in sides)
         {
-            IRenderedComponent<MudTextField<string>> box = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, side, StringComparison.Ordinal));
+            IRenderedComponent<MudTextField<string>> box = cut.FindComponents<MudTextField<string>>().Single(m => m.Instance.Class?.Split(' ').Contains(side, StringComparer.Ordinal) is true);
             Assert.True(box.Instance.Disabled);
             Assert.False(box.Instance.ReadOnly);
         }

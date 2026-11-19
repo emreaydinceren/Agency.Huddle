@@ -40,7 +40,7 @@ public sealed class NeedsYouLevelControlTests
 
     private static async Task ChooseAsync(IRenderedComponent<ContainerFragment> cut, string label)
     {
-        IElement item = cut.FindAll(".needs-you-level-choice .mud-toggle-item").First(item => string.Equals(item.TextContent.Trim(), label, StringComparison.Ordinal));
+        IElement item = cut.FindAll(".needs-you-level .segmented-group .mud-toggle-item").First(item => string.Equals(item.TextContent.Trim(), label, StringComparison.Ordinal));
         await item.ClickAsync(new());
     }
 
@@ -63,7 +63,7 @@ public sealed class NeedsYouLevelControlTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx, NeedsYouLevelUiRig.Team);
 
         Assert.Equal("Inherits Run inside the Team from Settings.", Effective(cut));
-        Assert.Equal("Inherit", cut.Find(".needs-you-level-choice .mud-toggle-item.huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("Inherit", cut.Find(".needs-you-level .segmented-group .mud-toggle-item.segmented-active-item").TextContent.Trim());
     }
 
     /// <summary>Choosing Run inside the Team with a cap and pressing Save saves both in team.db and shows the level in force.</summary>
@@ -81,7 +81,7 @@ public sealed class NeedsYouLevelControlTests
         Assert.Equal((NeedsYouLevel.RunInsideTheTeam, 5m), rig.Levels.Own(NeedsYouLevelUiRig.Team, null));
         Assert.Equal(new SavedNeedsYouLevel(NeedsYouLevel.RunInsideTheTeam, 5m), rig.Store.Get(NeedsYouCaps.TeamKey(rig.Ids.TeamId(NeedsYouLevelUiRig.Team))));
         cut.WaitForAssertion(() => Assert.Equal("In force: Run inside the Team.", Effective(cut)));
-        Assert.Equal("Run inside the Team", cut.Find(".needs-you-level-choice .mud-toggle-item.huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("Run inside the Team", cut.Find(".needs-you-level .segmented-group .mud-toggle-item.segmented-active-item").TextContent.Trim());
         Assert.Equal("5", cut.Find(".needs-you-level-cap input").GetAttribute("value"));
     }
 

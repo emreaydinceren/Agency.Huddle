@@ -104,7 +104,7 @@ public sealed partial class AuditBatchBCssTests
     {
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Pages", "Chat.razor"));
 
-        Assert.Matches(@"<MudAlert [^>]*Class=""" + noticeClass + @" room-notice-column""", markup);
+        Assert.Matches(@"<(?:MudAlert|Notice) [^>]*Class=""" + noticeClass + @" room-notice-column""", markup);
     }
 
     /// <summary>A Human's row stacks the bubble above its reference chips and right-aligns both, so the chips sit under the bubble.</summary>

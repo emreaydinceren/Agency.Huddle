@@ -22,7 +22,7 @@
     <DialogContent>
         @if (this.StatusLine is { } status)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="update-dialog-status mb-2">@status</MudAlert>
+            <Notice Severity="NoticeLevel.Warning" Class="update-dialog-status">@status</Notice>
         }
 
         @if (this.plan.FromVersion.Length > 0 || this.plan.ToVersion.Length > 0)
@@ -40,7 +40,7 @@
                     <MudText Typo="Typo.caption" Class="update-dialog-affected d-block mud-text-secondary">@Affected(change)</MudText>
                     @if (change.ModifiedLocally)
                     {
-                        <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="update-dialog-modified mt-1">You edited @change.Name on this computer. Updating replaces your edits.</MudAlert>
+                        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="update-dialog-modified">You edited @change.Name on this computer. Updating replaces your edits.</Notice>
                     }
                 </div>
             }
@@ -60,7 +60,7 @@
             @foreach (AgentChange change in this.plan.Agents)
             {
                 string name = change.Name;
-                <MudCheckBox T="bool" Value="@this.ticked.Contains(name)" ValueChanged="@((bool on) => this.Tick(name, on))" Dense="true" Class="update-dialog-agent"
+                <MudCheckBox T="bool" Value="@this.ticked.Contains(name)" ValueChanged="@((bool on) => this.Tick(name, on))" Color="Color.Primary" Dense="true" Class="update-dialog-agent"
                              Label="@($"{change.Name}   {change.Role}   {change.Summary}")" />
             }
         }
@@ -73,11 +73,9 @@
         <MudText Typo="Typo.caption" Class="d-block mt-2 mud-text-secondary">@SkillGuide.For("Update")</MudText>
     </DialogContent>
     <DialogActions>
-        <MudTooltip Text="@SkillGuide.For("Not now")" ShowOnFocus="true">
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="update-dialog-not-now" OnClick="this.Close">Not now</MudButton>
-        </MudTooltip>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="@(this.ReplacesEdits ? Color.Warning : Color.Primary)" Disabled="@(this.plan.IsEmpty || this.applying)"
-                   Class="update-dialog-apply" OnClick="this.ApplyAsync">@this.ApplyLabel</MudButton>
+        <DialogFooter CancelText="Not now" CancelTooltip="@SkillGuide.For("Not now")" CancelClass="update-dialog-not-now" OnCancel="this.Close"
+                      PrimaryText="@this.ApplyLabel" Destructive="@this.ReplacesEdits" PrimaryDisabled="@this.plan.IsEmpty" Busy="@this.applying"
+                      PrimaryClass="update-dialog-apply" OnPrimary="this.ApplyAsync" />
     </DialogActions>
 </MudDialog>
 

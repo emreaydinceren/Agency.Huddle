@@ -1,0 +1,92 @@
+@using MudBlazor
+
+@* A dialog's actions row, placed inside <DialogActions>: Cancel, then Back, then any middle option, then the one primary, all Small
+   (design-system.md Dialog anatomy). The primary is Filled Primary, or Filled Error when it destroys; Busy disables it and draws a
+   spinner. A dialog with no primary (a Close-only viewer) passes no PrimaryText. *@
+@if (this.ShowCancel)
+{
+    @if (this.CancelTooltip is { } tooltip)
+    {
+        <MudTooltip Text="@tooltip" ShowOnFocus="true">
+            <ActionButton Role="ButtonRole.Quiet" Class="@HookClass("dialog-footer-cancel", this.CancelClass)" OnClick="@this.OnCancel">@this.CancelText</ActionButton>
+        </MudTooltip>
+    }
+    else
+    {
+        <ActionButton Role="ButtonRole.Quiet" Class="@HookClass("dialog-footer-cancel", this.CancelClass)" OnClick="@this.OnCancel">@this.CancelText</ActionButton>
+    }
+}
+@if (this.OnBack.HasDelegate)
+{
+    <ActionButton Role="ButtonRole.Quiet" Class="dialog-footer-back" OnClick="@this.OnBack">Back</ActionButton>
+}
+@this.ChildContent
+@if (this.PrimaryText is { } primaryText)
+{
+    <ActionButton Role="@(this.Destructive ? ButtonRole.Danger : ButtonRole.Primary)" Class="@HookClass("dialog-footer-primary", this.PrimaryClass)"
+                  StartIcon="@this.PrimaryIcon" Disabled="@this.PrimaryDisabled" Busy="@this.Busy" OnClick="@this.OnPrimary">@(this.Busy && this.BusyText is { } busyText ? busyText : primaryText)</ActionButton>
+}
+
+@code {
+    /// <summary>The cancel button's word: "Cancel" by default, or "Close", "Not now", "Skip" where the dialog says so.</summary>
+    [Parameter]
+    public string CancelText { get; set; } = "Cancel";
+
+    /// <summary>Raised when the cancel button is clicked.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback OnCancel { get; set; }
+
+    /// <summary>Whether the cancel button is shown; a dialog that must be answered (a required reason) hides it.</summary>
+    [Parameter]
+    public bool ShowCancel { get; set; } = true;
+
+    /// <summary>An optional tooltip on the cancel button.</summary>
+    [Parameter]
+    public string? CancelTooltip { get; set; }
+
+    /// <summary>Raised when Back is clicked; Back is shown only when this has a handler.</summary>
+    [Parameter]
+    public EventCallback OnBack { get; set; }
+
+    /// <summary>A middle option between Cancel and the primary, written as <c>ActionButton</c>s (a Secondary "Keep their Skills").</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The primary action's verb ("Save", "Move", "Delete"); with none, the dialog has no primary.</summary>
+    [Parameter]
+    public string? PrimaryText { get; set; }
+
+    /// <summary>Raised when the primary action is clicked.</summary>
+    [Parameter]
+    public EventCallback OnPrimary { get; set; }
+
+    /// <summary>Whether the primary action is disabled, for example while the form is invalid.</summary>
+    [Parameter]
+    public bool PrimaryDisabled { get; set; }
+
+    /// <summary>An optional icon before the primary's verb.</summary>
+    [Parameter]
+    public string? PrimaryIcon { get; set; }
+
+    /// <summary>Whether the primary action is running: it disables and shows a spinner; Cancel stays live.</summary>
+    [Parameter]
+    public bool Busy { get; set; }
+
+    /// <summary>The primary's label while <see cref="Busy"/> ("Saving…"); with none, the verb stays.</summary>
+    [Parameter]
+    public string? BusyText { get; set; }
+
+    /// <summary>Whether the primary destroys something, which draws it Filled Error (Danger).</summary>
+    [Parameter]
+    public bool Destructive { get; set; }
+
+    /// <summary>An extra class on the cancel button, a test or script hook only.</summary>
+    [Parameter]
+    public string? CancelClass { get; set; }
+
+    /// <summary>An extra class on the primary button, a test or script hook only.</summary>
+    [Parameter]
+    public string? PrimaryClass { get; set; }
+
+    private static string HookClass(string fixedClass, string? extra) => extra is null ? fixedClass : $"{fixedClass} {extra}";
+}

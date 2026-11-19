@@ -51,19 +51,15 @@
                     }
                 </div>
 
-                <MudTextField T="string"
+                <TextField Shape="TextFieldShape.Markdown" AriaLabel="@field.Label"
                               Value="@field.Value"
-                              ValueChanged="@(text => this.OnFieldInput(field.Key, text))"
-                              Lines="@PromptFieldFactory.RowsFor(field.Value)"
+                              ValueChanged="@(text => this.OnFieldInput(field.Key, text))" Rows="@PromptFieldFactory.RowsFor(field.Value)"
                               HelperText="@field.HelperText"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Class="long-text-field markdown-field"
                               Immediate="true" />
 
                 @if (field.ReliedWarning is not null)
                 {
-                    <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-1">@field.ReliedWarning</MudAlert>
+                    <Notice Severity="NoticeLevel.Warning">@field.ReliedWarning</Notice>
                 }
 
                 @if (field.Placeholders.Count > 0)
@@ -81,15 +77,14 @@
                 {
                     @foreach (var issue in field.Issues)
                     {
-                        <MudAlert Severity="@(issue.Severity == PromptIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" role="alert" Class="mb-1">@issue.Message</MudAlert>
+                        <Notice Severity="@(issue.Severity == PromptIssueSeverity.Error ? NoticeLevel.Error : NoticeLevel.Warning)">@issue.Message</Notice>
                     }
                 }
 
                 <div class="prompts-field-actions">
-                    <MudButton Variant="Variant.Outlined"
-                               Size="Size.Small"
-                               Disabled="@(!field.IsModified)"
-                               OnClick="@(() => this.OnResetClicked(field.Key))">Reset</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary"
+                                  Disabled="@(!field.IsModified)"
+                                  OnClick="@(() => this.OnResetClicked(field.Key))">Reset</ActionButton>
                 </div>
             </div>
         }

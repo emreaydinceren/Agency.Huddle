@@ -160,18 +160,18 @@
             @if (this.target.Kind is not (FeedTargetKind.None or FeedTargetKind.Device))
             {
                 <div class="feed-card-buttons">
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="feed-btn feed-btn-open" OnClick="this.OpenTarget">@this.OpenLabel</MudButton>
+                    <ActionButton Role="ButtonRole.Primary" Class="feed-btn feed-btn-open" OnClick="this.OpenTarget">@this.OpenLabel</ActionButton>
                     @if (this.CanReview)
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" StartIcon="@Icons.Material.Filled.Warning" Class="feed-btn feed-btn-review" OnClick="this.ReviewInNeedsYou">Review in Needs you</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Warning" Class="feed-btn feed-btn-review" OnClick="this.ReviewInNeedsYou">Review in Needs you</ActionButton>
                     }
                     @if (this.WakeName is { } wakeName)
                     {
-                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.NotificationsActive" Class="feed-btn feed-btn-wake" OnClick="this.WakeAgent">Wake @wakeName</MudButton>
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.NotificationsActive" Class="feed-btn feed-btn-wake" OnClick="this.WakeAgent">Wake @wakeName</ActionButton>
                     }
                     @if (this.OriginRoomId is { } originRoom)
                     {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ChatBubbleOutline" Class="feed-btn feed-btn-room" OnClick="@(() => this.Go("/rooms/" + originRoom))">Open Room</MudButton>
+                        <ActionButton StartIcon="@Icons.Material.Filled.ChatBubbleOutline" Class="feed-btn feed-btn-room" OnClick="@(() => this.Go("/rooms/" + originRoom))">Open Room</ActionButton>
                     }
                 </div>
             }

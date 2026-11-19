@@ -1,0 +1,34 @@
+@*
+    The one standalone spinner (ComponentCatalog BusyLabel): a 24 px indeterminate MudProgressCircular for work that no button owns,
+    such as a folder loading, a profile loading or a search group still running. A button that runs its action shows its own busy
+    state instead (ActionButton Busy and "…ing" text), so a BusyLabel never sits inside a button. With a Label the spinner is a
+    role="status" region named by that text, which a screen reader reads; without one it is decoration, for a spot whose container
+    already names the state (a chip that says "Agent working", a tool call's status mark). A raw MudProgressCircular anywhere else
+    fails the convention scan (CV24).
+*@
+
+@if (string.IsNullOrEmpty(this.Label))
+{
+    <span class="@this.CssClass" aria-hidden="true">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+    </span>
+}
+else
+{
+    <span class="@this.CssClass" role="status">
+        <MudProgressCircular Indeterminate="true" Size="Size.Small" aria-hidden="true" />
+        <span class="visually-hidden">@this.Label</span>
+    </span>
+}
+
+@code {
+    /// <summary>What is running, read out by a screen reader ("Loading", "Searching"); omit when the container already says it.</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>Extra classes, for the caller's layout (a margin) or a test hook only.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string CssClass => string.IsNullOrEmpty(this.Class) ? "busy-label" : $"busy-label {this.Class}";
+}

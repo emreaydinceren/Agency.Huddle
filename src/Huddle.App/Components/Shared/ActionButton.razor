@@ -1,0 +1,94 @@
+@using MudBlazor
+
+@* The one button: a caller names its role and the role fixes the variant, colour and the 28 px Small size, so no site writes
+   Mud's Variant, Color or Size (ComponentCatalog, ActionButton). Busy disables the button and draws a spinner before the label. *@
+<MudButton @ref="this.button" Variant="@this.Variant" Color="@this.Color" Size="Size.Small" StartIcon="@this.StartIconShown" EndIcon="@this.EndIcon"
+           Disabled="@(this.Disabled || this.Busy)" Href="@this.Href" ButtonType="@(this.Submit ? ButtonType.Submit : ButtonType.Button)"
+           FullWidth="@this.FullWidth" Class="@this.Class" OnClick="@this.OnClick" @attributes="this.UserAttributes">
+    @if (this.Busy)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="action-button-spinner" aria-hidden="true" />
+    }
+    @this.ChildContent
+</MudButton>
+
+@code {
+    private MudButton? button;
+
+    /// <summary>What the button is for; it fixes the look. Defaults to <see cref="ButtonRole.Quiet"/>.</summary>
+    [Parameter]
+    public ButtonRole Role { get; set; } = ButtonRole.Quiet;
+
+    /// <summary>The label.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>An icon (an SVG path from <c>Icons</c>) before the label. The component sets the gap between them.</summary>
+    [Parameter]
+    public string? StartIcon { get; set; }
+
+    /// <summary>An icon after the label, for a button that opens a menu or a list.</summary>
+    [Parameter]
+    public string? EndIcon { get; set; }
+
+    /// <summary>Whether the button is disabled.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Whether the action is running: the button disables and shows a spinner in place of its start icon.</summary>
+    [Parameter]
+    public bool Busy { get; set; }
+
+    /// <summary>A link target: the button navigates instead of raising <see cref="OnClick"/>.</summary>
+    [Parameter]
+    public string? Href { get; set; }
+
+    /// <summary>Whether the button submits its form (<c>type="submit"</c>); otherwise it is <c>type="button"</c>.</summary>
+    [Parameter]
+    public bool Submit { get; set; }
+
+    /// <summary>Whether the button fills its container's width.</summary>
+    [Parameter]
+    public bool FullWidth { get; set; }
+
+    /// <summary>
+    /// Extra classes, for the caller's layout (margin, flex, alignment) and a test or script hook only; never a colour, size,
+    /// padding or radius, which the role owns.
+    /// </summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Raised on a click.</summary>
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    /// <summary>Any other attribute (<c>aria-label</c>, <c>id</c>, <c>data-*</c>), passed to the button element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    private Variant Variant => this.Role switch
+    {
+        ButtonRole.Primary or ButtonRole.Danger => Variant.Filled,
+        ButtonRole.Secondary => Variant.Outlined,
+        _ => Variant.Text,
+    };
+
+    private Color Color => this.Role switch
+    {
+        ButtonRole.Primary => Color.Primary,
+        ButtonRole.Danger or ButtonRole.DangerQuiet => Color.Error,
+        _ => Color.Default,
+    };
+
+    private string? StartIconShown => this.Busy ? null : this.StartIcon;
+
+    /// <summary>Moves keyboard focus to the button, as a confirm does when it opens.</summary>
+    /// <returns>A task that completes when focus has moved.</returns>
+    public async Task FocusAsync()
+    {
+        if (this.button is not null)
+        {
+            await this.button.FocusAsync();
+        }
+    }
+}

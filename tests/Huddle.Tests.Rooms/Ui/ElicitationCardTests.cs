@@ -208,7 +208,7 @@ public sealed class ElicitationCardTests
         Assert.Equal("Your full name", FieldControl(cut, 0, "Name").QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
 
         await TypeAsync(cut, 0, "Name", "Ada Lovelace");
-        await ToggleAsync(cut, 0, "label.mud-switch", "I agree");
+        await ToggleAsync(cut, 0, "label.mud-checkbox", "I agree");
         await SendAsync(cut, 0);
 
         Assert.Equal(["agree=Boolean:True", "name=String:Ada Lovelace"], await AcceptedAsync(card, ct));
@@ -308,9 +308,9 @@ public sealed class ElicitationCardTests
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
         Assert.True(SendButton(cut, 0).HasAttribute("disabled"));
 
-        await ToggleAsync(cut, 0, "label.mud-switch", "I agree");
+        await ToggleAsync(cut, 0, "label.mud-checkbox", "I agree");
         Assert.False(SendButton(cut, 0).HasAttribute("disabled"));
-        await ToggleAsync(cut, 0, "label.mud-switch", "I agree");
+        await ToggleAsync(cut, 0, "label.mud-checkbox", "I agree");
         Assert.False(SendButton(cut, 0).HasAttribute("disabled"));
         await SendAsync(cut, 0);
 

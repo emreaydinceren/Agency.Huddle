@@ -33,29 +33,13 @@
     font-weight: 600;
 }
 
-.feed-preview-grid {
-    display: grid;
-    grid-template-columns: max-content minmax(0, 1fr);
-    gap: 4px 16px;
-    margin: 0 0 12px;
+/* The rows are PropertyList's (a Compact list); its element is not this component's, so the space below it and the File value's
+   monospace reach through ::deep. The preview box is block flow, so the margin adds to no gap. */
+.feed-preview ::deep .feed-preview-grid {
+    margin-block-end: 12px;
 }
 
-.feed-preview-grid dt {
-    color: var(--mud-palette-text-secondary);
-}
-
-.feed-preview-grid dd {
-    margin: 0;
-    min-width: 0;
-}
-
-.feed-preview-person {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.feed-preview-file {
+.feed-preview ::deep .feed-preview-file {
     font-family: var(--mud-typography-code-family, ui-monospace, monospace);
     font-size: var(--mud-typography-caption-size);
     overflow-wrap: anywhere;

@@ -65,7 +65,7 @@ restyle it is almost always a Theme change or a parameter you missed.
 | Show that something is loading | [Progress](https://mudblazor.com/components/progress), [Skeleton](https://mudblazor.com/components/skeleton), [Overlay](https://mudblazor.com/components/overlay#childcontent-as-a-loader) |
 | Show a count or a dot on an icon | [Badge](https://mudblazor.com/components/badge) |
 | Show someone's status on their avatar | [Badge](https://mudblazor.com/components/badge) with `Dot="true" Overlap="true"` around `AgentAvatar`, plus a [Tooltip](https://mudblazor.com/components/tooltip) that says the status in words |
-| Show that work is in progress inline, in a chip or button | [Progress](https://mudblazor.com/components/progress#circular-progress) — `MudProgressCircular Indeterminate="true" Size="Size.Small"`, not a CSS animation |
+| Show that work is in progress inline, in a chip or button | [Progress](https://mudblazor.com/components/progress#circular-progress) — a button's own action: `ActionButton` with `Busy`; a spinner beside text: `BusyLabel`. Both draw `MudProgressCircular`; a raw one fails CV24, and it is never a CSS animation |
 | Show a person or agent | [Avatar](https://mudblazor.com/components/avatar) |
 | Show tags, labels or removable filters | [Chips](https://mudblazor.com/components/chips), [Chip Set](https://mudblazor.com/components/chipset) |
 | Pick one of many from a long list, by typing | [Autocomplete](https://mudblazor.com/components/autocomplete) (one value only in 9.12) |

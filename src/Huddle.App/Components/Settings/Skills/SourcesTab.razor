@@ -37,12 +37,12 @@
 <div class="d-flex flex-wrap align-center gap-2 mb-1">
     <code class="sources-folder-path">@this.Settings.Dir</code>
     <MudTooltip Text="@SkillGuide.For("Change")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="sources-folder-change" OnClick="this.ChangeFolderAsync">Change…</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="sources-folder-change" OnClick="this.ChangeFolderAsync">Change…</ActionButton>
     </MudTooltip>
     @if (this.Settings.FileDir is not null)
     {
         <MudTooltip Text="@SkillGuide.For("Use default")" ShowOnFocus="true">
-            <MudButton Variant="Variant.Text" Size="Size.Small" Class="sources-folder-default" OnClick="this.UseDefault">Use default</MudButton>
+            <ActionButton Class="sources-folder-default" OnClick="this.UseDefault">Use default</ActionButton>
         </MudTooltip>
     }
 </div>
@@ -70,12 +70,12 @@
 @foreach (ResolvedCatalog catalog in this.Registry.Current.Resolved.Catalogs)
 {
     ItemState state = this.StateOf(catalog);
-    <MudPaper Outlined="true" Class="catalog-row pa-3 mb-2" data-catalog="@catalog.Id">
+    <MudPaper Outlined="true" Class="row-actions-host catalog-row pa-3 mb-2" data-catalog="@catalog.Id">
         <div class="d-flex flex-wrap align-center gap-2">
             <MudText Typo="Typo.subtitle2" Class="catalog-row-title">@catalog.Title</MudText>
             <MudText Typo="Typo.caption" Class="mud-text-secondary">@catalog.Id · @catalog.Source</MudText>
             <span class="ml-auto"><SkillStateChips State="@state" /></span>
-            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button catalog-row-menu" AriaLabel="@MenuDialogs.ActivatorLabel(catalog.Title)">
+            <RowActionsMenu Name="@catalog.Title" Class="catalog-row-menu">
                 @if (this.LibraryPath(catalog) is { } file)
                 {
                     <MudMenuItem Class="catalog-row-menu-show-in-library" OnClick="@(() => this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, file)))">Show in Library</MudMenuItem>
@@ -89,7 +89,7 @@
                     <MudDivider />
                     <MudMenuItem Class="catalog-row-menu-remove menu-item-destructive" OnClick="@(() => this.RemoveCatalogAsync(catalog))">Remove</MudMenuItem>
                 }
-            </MudMenu>
+            </RowActionsMenu>
         </div>
         <MudText Typo="Typo.body2" Class="catalog-row-counts">@Plural.Of(catalog.SkillNames.Count, "Skill", "Skills"), @catalog.DownloadedCount downloaded</MudText>
         @if (catalog.Row.LastUpdatedText is { } updated)

@@ -735,7 +735,7 @@ public sealed class ChatPageTests
     /// <summary>
     /// A plain Message from the Human in a group Room, addressing no agent by name, renders the
     /// context-only note - and announces it as role="status" rather than role="alert", proving the
-    /// explicit attribute in Chat.razor survived: MudAlert itself emits no role at all.
+    /// Notice's default kind for an Info survived: MudAlert itself emits no role at all.
     /// </summary>
     [Fact]
     public async Task ChatPage_WhenNoAgentIsMentionedInAGroupRoom_SaysTheMessageWasContextOnly()

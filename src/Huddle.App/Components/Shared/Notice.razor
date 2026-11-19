@@ -1,0 +1,55 @@
+@using MudBlazor
+
+@* The one notice: a caller names its severity and, when the default is wrong, its kind; the kind writes the role
+   (alert for an interruption, status for a consequence), so no site writes role, Dense or a margin (ComponentCatalog,
+   Notice). Always dense; the 18 px icon and the gap between a notice and its neighbours are in base.css. *@
+<MudAlert Severity="@this.MudSeverity" Dense="true" ShowCloseIcon="@this.OnDismiss.HasDelegate" CloseIconClicked="@this.DismissAsync"
+          Class="@this.CssClass" @attributes="this.UserAttributes" role="@this.AriaRole">
+    @this.ChildContent
+</MudAlert>
+
+@code {
+    /// <summary>How serious the notice is; it picks the colour of the bar and the icon. Defaults to <see cref="NoticeLevel.Info"/>.</summary>
+    [Parameter]
+    public NoticeLevel Severity { get; set; } = NoticeLevel.Info;
+
+    /// <summary>
+    /// Whether the Human must act now (<see cref="NoticeKind.Interruption"/>, <c>role="alert"</c>) or is told the result of something
+    /// (<see cref="NoticeKind.Consequence"/>, <c>role="status"</c>). Left unset, an Error interrupts and every other severity is a
+    /// consequence.
+    /// </summary>
+    [Parameter]
+    public NoticeKind? Kind { get; set; }
+
+    /// <summary>The message: a sentence, or a sentence with a list or a link.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Raised when the Human closes the notice; when set, the notice draws a close button.</summary>
+    [Parameter]
+    public EventCallback OnDismiss { get; set; }
+
+    /// <summary>Extra classes, for a test or script hook and the caller's layout only; never a colour, size, padding or margin.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Any other attribute (<c>id</c>, <c>data-testid</c>), passed to the notice element.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    private NoticeKind KindShown => this.Kind ?? (this.Severity == NoticeLevel.Error ? NoticeKind.Interruption : NoticeKind.Consequence);
+
+    private string AriaRole => this.KindShown == NoticeKind.Interruption ? "alert" : "status";
+
+    private string CssClass => string.IsNullOrWhiteSpace(this.Class) ? "notice" : "notice " + this.Class;
+
+    private MudBlazor.Severity MudSeverity => this.Severity switch
+    {
+        NoticeLevel.Error => MudBlazor.Severity.Error,
+        NoticeLevel.Warning => MudBlazor.Severity.Warning,
+        NoticeLevel.Success => MudBlazor.Severity.Success,
+        _ => MudBlazor.Severity.Info,
+    };
+
+    private Task DismissAsync(MudAlert _) => this.OnDismiss.InvokeAsync();
+}

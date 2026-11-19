@@ -13,34 +13,26 @@
 <div class="needs-you-level" data-scope="@this.ScopeKind">
     @if (!this.canSet)
     {
-        <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="needs-you-level-unavailable">@this.UnavailableText</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Class="needs-you-level-unavailable">@this.UnavailableText</Notice>
     }
     else
     {
-        <HuddleSegmentedControl T="string" Value="@this.choice" ValueChanged="this.OnChoiceChanged" Class="needs-you-level-choice"
-                                ItemCount="@(this.Inherits ? 3 : 2)">
-            @if (this.Inherits)
-            {
-                <MudToggleItem Value="@InheritChoice">Inherit</MudToggleItem>
-            }
-            <MudToggleItem Value="@AskMeChoice">@NeedsYouLevel.AskMe.ToDisplay()</MudToggleItem>
-            <MudToggleItem Value="@RunChoice">@NeedsYouLevel.RunInsideTheTeam.ToDisplay()</MudToggleItem>
-        </HuddleSegmentedControl>
+        <SegmentedControl T="string" Options="this.ChoiceOptions" Value="@this.choice" ValueChanged="this.OnChoiceChanged" />
 
         @if (this.choice == RunChoice)
         {
             <MudText Typo="Typo.caption" Class="needs-you-level-note">@NeedsYouLevelCopy.RunInsideNote</MudText>
-            <MudTextField T="string" Value="@this.capText" ValueChanged="this.OnCapChanged" Immediate="true" Label="Spend cap (USD)"
-                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="needs-you-level-cap" Error="@(this.capError is not null)"
-                          ErrorText="@this.capError" HelperText="@NeedsYouLevelCopy.CapNote" />
+            <TextField Value="@this.capText" ValueChanged="this.OnCapChanged" Immediate="true" Label="Spend cap (USD)"
+                       Class="needs-you-level-cap" Error="@(this.capError is not null)"
+                       ErrorText="@this.capError" HelperText="@NeedsYouLevelCopy.CapNote" />
         }
         else if (this.choice == AskMeChoice)
         {
             <MudText Typo="Typo.caption" Class="needs-you-level-note">@NeedsYouLevelCopy.AskMeNote</MudText>
         }
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" Class="needs-you-level-save"
-                   Disabled="@(!this.Dirty)" OnClick="this.Save">Save</MudButton>
+        <ActionButton Role="ButtonRole.Primary" Class="needs-you-level-save"
+                   Disabled="@(!this.Dirty)" OnClick="this.Save">Save</ActionButton>
     }
 
     @if (this.effective is not null)
@@ -54,7 +46,7 @@
 
     @if (this.saveError is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="needs-you-level-error">@this.saveError</MudAlert>
+        <Notice Severity="NoticeLevel.Error" Class="needs-you-level-error">@this.saveError</Notice>
     }
 
     @foreach (CapAsk ask in this.asks)
@@ -67,6 +59,15 @@
     private const string InheritChoice = "inherit";
     private const string AskMeChoice = "ask-me";
     private const string RunChoice = "run-inside-team";
+
+    /// <summary>The level choices; Inherit leads them where there is a level to inherit.</summary>
+    private static readonly IReadOnlyList<SegmentedOption<string>> OwnChoices =
+        [new(AskMeChoice, NeedsYouLevel.AskMe.ToDisplay()), new(RunChoice, NeedsYouLevel.RunInsideTheTeam.ToDisplay())];
+
+    private static readonly IReadOnlyList<SegmentedOption<string>> InheritingChoices = [new(InheritChoice, "Inherit"), .. OwnChoices];
+
+    /// <summary>The segments this scope shows.</summary>
+    private IReadOnlyList<SegmentedOption<string>> ChoiceOptions => this.Inherits ? InheritingChoices : OwnChoices;
 
     private string? loadedScope;
     private string choice = AskMeChoice;

@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV25</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -49,6 +49,18 @@ internal static partial class UiConventionScanner
         "CV10" => Cv10(path, text),
         "CV11" => Cv11(path, text),
         "CV13" => Cv13(path, text),
+        "CV14" => Cv14(path, text),
+        "CV15" => Cv15(path, text),
+        "CV16" => Cv16(path, text),
+        "CV17" => Cv17(path, text),
+        "CV18" => Cv18(path, text),
+        "CV19" => Cv19(path, text),
+        "CV20" => Cv20(path, text),
+        "CV23" => Cv23(path, text),
+        "CV21" => Cv21(path, text),
+        "CV22" => Cv22(path, text),
+        "CV24" => Cv24(path, text),
+        "CV25" => Cv25(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -67,6 +79,166 @@ internal static partial class UiConventionScanner
     public static RuleCount Cv13(string path, string text) =>
         new("CV13", path, path.EndsWith("/Chip.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudChip"], static _ => true));
 
+    /// <summary>
+    /// CV14: a raw <c>&lt;MudToggleGroup&gt;</c> in a component other than <c>SegmentedControl.razor</c>. Every mode switch is the one
+    /// <c>SegmentedControl</c>, built from an options list, so its 28 px geometry, colour tokens and sliding indicator live in one place
+    /// (ComponentCatalog B1). A <c>MudToggleItem</c> is not counted: outside the wrapper it can only sit in a counted group.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv14(string path, string text) =>
+        new("CV14", path, path.EndsWith("/SegmentedControl.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudToggleGroup"], static _ => true));
+
+    /// <summary>
+    /// CV15: a raw <c>&lt;MudButton&gt;</c> in a component other than <c>ActionButton.razor</c>. Every button is the one <c>ActionButton</c>,
+    /// which takes a role (Primary, Secondary, Quiet, Danger, DangerQuiet) and fixes the variant, colour and Small size from it, so the
+    /// look lives in one place (ComponentCatalog B2). A <c>MudIconButton</c>, <c>MudButtonGroup</c> or <c>MudFab</c> is a different tag and
+    /// is not counted. Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv15(string path, string text) =>
+        new("CV15", path, path.EndsWith("/ActionButton.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudButton"], static _ => true));
+
+    /// <summary>
+    /// CV16: a raw <c>&lt;MudAlert&gt;</c> in a component other than <c>Notice.razor</c>. Every notice is the one <c>Notice</c>, which
+    /// takes a severity and a kind (interruption or consequence), writes the <c>role</c> itself and is always dense with an 18 px icon,
+    /// so the look and the announcement rule live in one place (ComponentCatalog A1). Its baseline is the migration backlog, one count
+    /// per file; the two Room banners (<c>budget-prompt</c>, <c>member-health-alert</c>) stay raw there by design.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv16(string path, string text) =>
+        new("CV16", path, path.EndsWith("/Notice.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudAlert"], static _ => true));
+
+    /// <summary>
+    /// CV17: a raw <c>&lt;MudTextField&gt;</c> in a component other than <c>TextField.razor</c>. Every text field is the one <c>TextField</c>,
+    /// always Outlined and Dense, which takes a shape (Line, Compact, LongText, Markdown) and requires a label or an accessible name, so the
+    /// look and the naming rule live in one place (ComponentCatalog B3). Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv17(string path, string text) =>
+        new("CV17", path, path.EndsWith("/TextField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudTextField"], static _ => true));
+
+    /// <summary>
+    /// CV18: a raw <c>&lt;MudSelect&gt;</c> in a component other than <c>SelectField.razor</c>. Every select is the one <c>SelectField</c>,
+    /// always Outlined and Dense, with a <c>Compact</c> toolbar box and a required label or accessible name (ComponentCatalog B4). A
+    /// <c>MudSelectItem</c> is a different tag and is not counted. Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv18(string path, string text) =>
+        new("CV18", path, path.EndsWith("/SelectField.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSelect"], static _ => true));
+
+    /// <summary>
+    /// CV19: a raw <c>&lt;MudSwitch&gt;</c> in a component other than <c>SettingSwitch.razor</c>. A switch is for a setting that takes
+    /// effect the moment it is flipped (the B6 rule), and every one is the one <c>SettingSwitch</c>, always Small and Primary with one
+    /// caption line for its helper or disabled reason (ComponentCatalog A7). A setting that waits for Save is a checkbox (CV20).
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv19(string path, string text) =>
+        new("CV19", path, path.EndsWith("/SettingSwitch.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudSwitch"], static _ => true));
+
+    /// <summary>
+    /// CV20: a <c>&lt;MudCheckBox&gt;</c> without <c>Color="Color.Primary"</c>. A checkbox picks items or holds an option saved with a form
+    /// (the B6 rule) and stays the raw MudBlazor tag, because no site needs more than its label; a ticked box is never grey, so the
+    /// colour is the one thing the rule holds (ComponentCatalog B6).
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv20(string path, string text) =>
+        new("CV20", path, CountTags(text, ["MudCheckBox"], static attrs => !PrimaryColor().IsMatch(attrs)));
+
+    /// <summary>
+    /// CV23: a raw <c>&lt;dt&gt;</c> in a component other than <c>PropertyRow.razor</c>. Every label-and-value row is the one
+    /// <c>PropertyRow</c> in a <c>PropertyList</c>, with its fixed 120 px label column and its 32 or 28 px row (ComponentCatalog
+    /// PropertyList). A <c>&lt;dt&gt;</c> is what tells a hand-built row from other markup; an editing row built from a span and a
+    /// div is not seen, so the rule counts read rows only. Zero-tolerance: every row had moved when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv23(string path, string text) =>
+        new("CV23", path, path.EndsWith("/PropertyRow.razor", StringComparison.Ordinal) ? 0 : RawTermTag().Count(StripRazorComments(text)));
+
+    /// <summary>
+    /// CV21: a raw <c>&lt;MudIconButton&gt;</c> in a component other than <c>ActionIconButton.razor</c>. Every icon button is the one
+    /// <c>ActionIconButton</c>, always Small (28 px) and round, with a required accessible label and its tooltip built in
+    /// (ComponentCatalog B5). A <c>MudMenu</c>'s built-in <c>Icon</c> activator is a different tag, counted by CV22 when it is a row
+    /// menu. Its baseline is the migration backlog, one count per file.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv21(string path, string text) =>
+        new("CV21", path, path.EndsWith("/ActionIconButton.razor", StringComparison.Ordinal) ? 0 : CountTags(text, ["MudIconButton"], static _ => true));
+
+    /// <summary>
+    /// CV22: a raw <c>&lt;MudMenu&gt;</c> used as a row menu, in a component other than <c>RowActionsMenu.razor</c>. A row menu is told
+    /// apart by its ⋮ glyph: the tag's own attributes, or its activator (the text up to the first <c>&lt;/ActivatorContent&gt;</c> or
+    /// <c>&lt;/MudMenu&gt;</c>), name <c>MoreVert</c> or <c>ActionIcons.MoreActions</c>. A menu behind a labelled button, a filter icon or
+    /// a right-click is not counted (ComponentCatalog A3). Its baseline holds the ⋮ menus that are not row menus yet, such as the Human
+    /// gate's other decisions.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv22(string path, string text)
+    {
+        if (path.EndsWith("/RowActionsMenu.razor", StringComparison.Ordinal))
+        {
+            return new("CV22", path, 0);
+        }
+
+        string source = StripRazorComments(text);
+        int count = 0;
+        foreach (Match tag in MudTag().Matches(source))
+        {
+            if (!string.Equals(tag.Groups["name"].Value, "MudMenu", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            int start = tag.Index + tag.Length;
+            int activatorEnd = source.IndexOf("</ActivatorContent>", start, StringComparison.Ordinal);
+            int menuEnd = source.IndexOf("</MudMenu>", start, StringComparison.Ordinal);
+            bool ownActivator = activatorEnd >= 0 && (menuEnd < 0 || activatorEnd < menuEnd);
+            string activator = ownActivator ? tag.Groups["attrs"].Value + source[start..activatorEnd] : tag.Groups["attrs"].Value;
+            if (activator.Contains("MoreVert", StringComparison.Ordinal) || activator.Contains("ActionIcons.MoreActions", StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+
+        return new("CV22", path, count);
+    }
+
+    /// <summary>
+    /// CV24: a raw <c>&lt;MudProgressCircular&gt;</c> in a component other than <c>BusyLabel.razor</c> and <c>ActionButton.razor</c>. Work
+    /// no button owns shows the one <c>BusyLabel</c>, a 24 px spinner that is a named <c>role="status"</c> or plain decoration; a button
+    /// shows its own busy state through <c>ActionButton</c>'s <c>Busy</c>, whose spinner is the other allowed tag (ComponentCatalog
+    /// BusyLabel). A <c>MudProgressLinear</c> is a different tag and is not counted. Zero-tolerance: every spinner had moved when the rule
+    /// was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv24(string path, string text) =>
+        new("CV24", path, path.EndsWith("/BusyLabel.razor", StringComparison.Ordinal) || path.EndsWith("/ActionButton.razor", StringComparison.Ordinal)
+            ? 0
+            : CountTags(text, ["MudProgressCircular"], static _ => true));
+
+    /// <summary>
+    /// CV25: a single-select <c>&lt;MudChipSet&gt;</c> (one whose attributes name <c>SelectionMode.SingleSelection</c>) in a component other
+    /// than <c>ChipRadioGroup.razor</c>. One choice out of a few drawn as chips is the one <c>ChipRadioGroup</c>, which writes the
+    /// <c>radiogroup</c> and <c>radio</c> roles and owns the arrow keys (ComponentCatalog ChipRadioGroup). A chip set that closes or
+    /// multi-selects chips, and a hand-built <c>role="radiogroup"</c> of cards or swatches, are not chip radio groups and are not counted.
+    /// Zero-tolerance: both groups had moved when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv25(string path, string text) =>
+        new("CV25", path, path.EndsWith("/ChipRadioGroup.razor", StringComparison.Ordinal)
+            ? 0
+            : CountTags(text, ["MudChipSet"], static attrs => attrs.Contains("SelectionMode.SingleSelection", StringComparison.Ordinal)));
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
@@ -350,6 +522,9 @@ internal static partial class UiConventionScanner
     [GeneratedRegex("""<(?<name>Mud[A-Za-z]+)(?<attrs>(?:"[^"]*"|'[^']*'|[^>"'])*)>""", RegexOptions.CultureInvariant)]
     private static partial Regex MudTag();
 
+    [GeneratedRegex(@"<dt[\s>/]", RegexOptions.CultureInvariant)]
+    private static partial Regex RawTermTag();
+
     [GeneratedRegex(@"@\*.*?\*@|<!--.*?-->", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex RazorComments();
 
@@ -364,6 +539,9 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex(@"(?<![\w-])Margin\s*=\s*""Margin\.Dense""", RegexOptions.CultureInvariant)]
     private static partial Regex DenseMargin();
+
+    [GeneratedRegex(@"(?<![\w-])Color\s*=\s*""Color\.Primary""", RegexOptions.CultureInvariant)]
+    private static partial Regex PrimaryColor();
 
     [GeneratedRegex(@"(?<![\w-])role\s*=", RegexOptions.CultureInvariant)]
     private static partial Regex RoleAttribute();

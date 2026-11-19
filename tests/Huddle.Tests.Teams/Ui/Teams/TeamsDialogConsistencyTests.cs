@@ -27,12 +27,11 @@ public sealed class TeamsDialogConsistencyTests
     {
         string actions = DialogActions(dialog);
 
-        int cancel = actions.IndexOf(">Cancel<", StringComparison.Ordinal);
-        int primary = actions.IndexOf("Variant.Filled", StringComparison.Ordinal);
-
-        Assert.True(cancel >= 0, "no Cancel button");
-        Assert.True(primary > cancel, "the Filled primary must follow Cancel");
-        Assert.Contains("Variant.Text", actions, StringComparison.Ordinal); // contains-ok: haystack is the dialog's razor source
+        // DialogFooter draws Cancel (Quiet) and then the one Filled primary, so the dialog names both and writes no button itself.
+        Assert.Contains("<DialogFooter OnCancel=", actions, StringComparison.Ordinal); // contains-ok: haystack is the dialog's razor source
+        Assert.Contains("PrimaryText=", actions, StringComparison.Ordinal); // contains-ok: haystack is the dialog's razor source
+        Assert.DoesNotContain("Destructive", actions, StringComparison.Ordinal);
+        Assert.DoesNotContain("<MudButton", actions, StringComparison.Ordinal);
     }
 
     /// <summary>The single-field New project name dialog is the shared <c>NameDialog</c>, opened by the nav through <c>NewProjectPrompt</c>; the bespoke dialog is gone.</summary>

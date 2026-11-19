@@ -1,17 +1,4 @@
-/* The Notifications panel in the Right sidebar (Feed spec 6.8): a wrapping Category control, the rows, and the "See all activity" row. */
-.feed-categories ::deep .mud-chipset {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 8px;
-}
-
-.feed-category-count {
-    margin-inline-start: 4px;
-    color: var(--mud-palette-text-secondary);
-    font-variant-numeric: tabular-nums;
-}
-
+/* The Notifications panel in the Right sidebar (Feed spec 6.8): the rows and the "See all activity" row; the Category control is a ChipRadioGroup. */
 ::deep .feed-show-more {
     margin: 4px 8px;
 }

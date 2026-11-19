@@ -47,16 +47,7 @@
 
         <div class="feed-filter-bar">
             <div class="feed-category-scroller">
-                <HuddleSegmentedControl T="FeedCategory" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" ItemCount="FeedCategories.Choices.Count">
-                    @foreach (FeedCategory entry in FeedCategories.Choices)
-                    {
-                        @* Only Needs you carries a count: it is the one number that asks something of the Human. *@
-                        <MudToggleItem Value="@entry">@FeedCategories.Label(entry)@if (entry == FeedCategory.NeedsYou)
-                            {
-                                @(" ")<span class="feed-count feed-count-needsyou">@FeedCategories.CountOf(this.counts, entry)</span>
-                            }</MudToggleItem>
-                    }
-                </HuddleSegmentedControl>
+                <SegmentedControl T="FeedCategory" Options="this.CategoryOptions" Value="@this.category" ValueChanged="this.OnCategoryChosen" Class="feed-category-control" />
             </div>
 
             <div class="feed-filter-end">
@@ -65,8 +56,7 @@
                     <TaskFilterChip Label="Agent" Value="@name" IsSet="true" NoMenu="true" OnClear="this.ClearAgent" Class="feed-agent-chip" />
                 }
 
-                <MudSelect T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" Dense="true" Variant="Variant.Outlined"
-                           Margin="Margin.Dense" Class="@("feed-team-select" + (this.team is null ? string.Empty : " feed-team-select-set"))" aria-label="Team">
+                <SelectField Compact="true" T="string" Value="@(this.team ?? string.Empty)" ValueChanged="this.OnTeamChosen" DenseItems="true" Class="@("feed-team-select" + (this.team is null ? string.Empty : " feed-team-select-set"))" AriaLabel="Team">
                     <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                     @foreach (string teamName in this.TeamNames)
                     {
@@ -74,7 +64,7 @@
                             <TeamAvatar Team="@teamName" Avatar="this.Catalog.Find(teamName)?.Avatar ?? Avatar.None" Size="Size.Small" Class="feed-team-icon" /> <span class="feed-team-option-name">@teamName</span>
                         </MudSelectItem>
                     }
-                </MudSelect>
+                </SelectField>
             </div>
         </div>
 
@@ -87,7 +77,7 @@
 
         @if (this.Pager.HasMore)
         {
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="feed-show-more" OnClick="this.ShowMore">Show more</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" Class="feed-show-more" OnClick="this.ShowMore">Show more</ActionButton>
         }
         else if (this.Pager.Items.Count > 0)
         {
@@ -107,6 +97,13 @@
     private ITimer? seenTimer;
     private bool subscribed;
     private long tabSeenUpTo;
+
+    /// <summary>The Category segments; only Needs you carries a count, the one number that asks something of the Human.</summary>
+    private IReadOnlyList<SegmentedOption<FeedCategory>> CategoryOptions =>
+        [.. FeedCategories.Choices.Select(entry => new SegmentedOption<FeedCategory>(
+            entry,
+            FeedCategories.Label(entry),
+            Badge: entry == FeedCategory.NeedsYou ? FeedCategories.CountOf(this.counts, entry).ToString(System.Globalization.CultureInfo.InvariantCulture) : null))];
 
     /// <summary>The Tab showing this page, which knows its own address; the browser URL names only the focused group's Tab.</summary>
     [CascadingParameter]

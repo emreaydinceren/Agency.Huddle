@@ -30,19 +30,7 @@
                      @oncontextmenu:preventDefault="true">
                     <NavTabLink Href="@($"/tasks/{view.Id}")" TabTitle="@view.Name" Class="hover-reveal-link"
                                 Icon="@(view.Kind == ViewKind.Kanban ? Icons.Material.Outlined.ViewKanban : Icons.Material.Outlined.ViewList)"><span class="sidebar-row-label" title="@view.Name">@view.Name</span></NavTabLink>
-                    <MudMenu @ref="@this.menuRefs[view.Id]" Class="hover-reveal-menu">
-                        @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-                           MudMenu does not wire a click listener around it automatically - the
-                           supplied MenuContext.ToggleAsync is how custom activator content opens
-                           the menu, which is why the button's OnClick calls it explicitly rather
-                           than relying on MudMenu's default ActivationEvent handling
-                           (RoomList.razor's own precedent). *@
-                        <ActivatorContent Context="menuContext">
-                            @* No hover tooltip (it would stay up over the menu's first item); the activator names its View (design-system "Menus"). *@
-                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                           aria-label="@MenuDialogs.ActivatorLabel(view.Name)" Class="hover-reveal-menu-button"
-                                           OnClick="menuContext.ToggleAsync" />
-                        </ActivatorContent>
+                    <RowActionsMenu @ref="@this.menuRefs[view.Id]" Name="@view.Name" Class="hover-reveal-menu">
                         <ChildContent>
                             @* Both items open a dialog: each ends in "…", the menu closes first, and Delete view… is last after a divider, in Error ink. *@
                             <MudMenuItem OnClick="@(() => this.RenameViewAsync(view))">Rename…</MudMenuItem>
@@ -52,7 +40,7 @@
                                 <MudMenuItem Class="menu-item-destructive" OnClick="@(() => this.DeleteViewAsync(view))">Delete view…</MudMenuItem>
                             }
                         </ChildContent>
-                    </MudMenu>
+                    </RowActionsMenu>
                 </div>
             }
             <ShowAllRow Total="this.ViewStore.Views.Count" Expanded="this.showAll" OnToggle="this.ToggleShowAll" />
@@ -81,7 +69,7 @@
 @code {
     private bool showAll;
     private string currentPath = string.Empty;
-    private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RowActionsMenu> menuRefs = new(StringComparer.Ordinal);
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so the nav follows every save, delete or hand edit of <c>views.json</c>.</summary>
     protected override void OnInitialized()
@@ -137,7 +125,7 @@
     /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
     private async Task OnRowContextMenuAsync(string viewId, MouseEventArgs e)
     {
-        if (this.menuRefs.TryGetValue(viewId, out MudMenu? menu))
+        if (this.menuRefs.TryGetValue(viewId, out RowActionsMenu? row) && row.Menu is { } menu)
         {
             await menu.OpenMenuAsync(e);
         }
@@ -147,7 +135,7 @@
     /// <param name="view">The View to rename.</param>
     private Task RenameViewAsync(TaskView view)
     {
-        this.menuRefs.TryGetValue(view.Id, out MudMenu? menu);
+        MudMenu? menu = this.menuRefs.GetValueOrDefault(view.Id)?.Menu;
         return MenuDialogs.AfterClosingAsync(menu, () => ViewActions.RenameAsync(this.DialogService, this.ViewStore, view.Id));
     }
 
@@ -161,7 +149,7 @@
     /// <param name="view">The View to delete.</param>
     private async Task DeleteViewAsync(TaskView view)
     {
-        this.menuRefs.TryGetValue(view.Id, out MudMenu? menu);
+        MudMenu? menu = this.menuRefs.GetValueOrDefault(view.Id)?.Menu;
         if (!await MenuDialogs.AfterClosingAsync(menu, () => ViewActions.ConfirmDeleteAsync(this.DialogService, view)))
         {
             return;

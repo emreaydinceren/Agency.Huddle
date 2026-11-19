@@ -7,7 +7,10 @@
 // narrower than MIN_WIDTH or than its content can fit. A header cell the grid re-renders gets its handle back.
 //
 // An ES module: importing it (JsModule.TaskListResize, which every circuit imports when it opens) starts the handles
-// and the listeners below; TaskListView then registers itself through the exported register.
+// and the listeners below; TaskListView then registers itself through the exported register. The pointer drag and
+// the arrow-key step are the shared ones in pointer-drag.js, which resize.js uses too.
+
+import { arrowStep, startDrag } from "./pointer-drag.js";
 
 const GRID = ".task-list-grid";
 const HANDLE = "task-col-resizer";
@@ -133,24 +136,17 @@ document.addEventListener("pointerdown", (event) => {
     return;
   }
 
-  const startX = event.clientX;
-  handle.setPointerCapture(event.pointerId);
+  // The drag itself is the shared startDrag; the pointer scale measured when the drag began turns pointer pixels
+  // into CSS pixels.
   handle.classList.add("active");
-  event.preventDefault();
-
-  const move = (e) => applyDelta(state, (e.clientX - startX) / state.scale);
-
-  const stop = () => {
-    handle.classList.remove("active");
-    handle.removeEventListener("pointermove", move);
-    handle.removeEventListener("pointerup", stop);
-    handle.removeEventListener("pointercancel", stop);
-    commit(state);
-  };
-
-  handle.addEventListener("pointermove", move);
-  handle.addEventListener("pointerup", stop);
-  handle.addEventListener("pointercancel", stop);
+  startDrag(handle, event, {
+    scale: () => state.scale,
+    onMove: (delta) => applyDelta(state, delta),
+    onEnd: () => {
+      handle.classList.remove("active");
+      commit(state);
+    },
+  });
 });
 
 // Keyboard: Left and Right move the focused border by KEY_STEP pixels (Shift: KEY_STEP_LARGE), like the Task detail's
@@ -160,8 +156,8 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  const direction = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
-  if (direction === 0) {
+  const delta = arrowStep(event, KEY_STEP, KEY_STEP_LARGE);
+  if (delta === 0) {
     return;
   }
 
@@ -171,7 +167,7 @@ document.addEventListener("keydown", (event) => {
     return;
   }
 
-  applyDelta(state, direction * (event.shiftKey ? KEY_STEP_LARGE : KEY_STEP));
+  applyDelta(state, delta);
   commit(state);
 });
 

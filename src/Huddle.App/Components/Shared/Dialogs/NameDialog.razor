@@ -9,19 +9,18 @@
 <MudDialog>
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField T="string" Label="@this.Label" Variant="Variant.Outlined" Margin="Margin.Dense"
-                          AutoFocus="true" Immediate="true" Value="this.text" ValueChanged="this.OnTextChanged"
+            <TextField Label="@this.Label"
+                          AutoFocus="true" Immediate="true" Value="@this.text" ValueChanged="this.OnTextChanged"
                           Error="@(this.problem is not null)" ErrorText="@this.problem" OnKeyDown="this.OnKeyDown" />
             @this.ChildContent
             @if (this.submitError is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.submitError</MudAlert>
+                <Notice Severity="NoticeLevel.Error">@this.submitError</Notice>
             }
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(!this.CanSubmit)" OnClick="this.SubmitAsyncCore">@this.ConfirmText</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="@this.ConfirmText" PrimaryDisabled="@(!this.CanSubmit)" Busy="@this.busy" OnPrimary="this.SubmitAsyncCore" />
     </DialogActions>
 </MudDialog>
 

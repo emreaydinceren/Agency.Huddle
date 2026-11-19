@@ -30,12 +30,11 @@
         </MudList>
         @if (this.error is not null)
         {
-            <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="mt-2">@this.error</MudAlert>
+            <Notice Severity="NoticeLevel.Error">@this.error</Notice>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(this.selectedRelativePath is null)" OnClick="this.ConfirmAsync">Move</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="Move" PrimaryDisabled="@(this.selectedRelativePath is null)" Busy="@this.moving" BusyText="Moving…" OnPrimary="this.ConfirmAsync" />
     </DialogActions>
 </MudDialog>
 
@@ -63,6 +62,7 @@
 
     private string? selectedRelativePath;
     private string? error;
+    private bool moving;
 
     /// <summary>The row's start padding: the base inset plus 16px for each level the folder sits below the first one listed.</summary>
     private string? IndentStyle(LibraryPath folder)
@@ -105,7 +105,17 @@
             return;
         }
 
-        LibraryResult<LibraryMoveResult> result = await this.FileService.MoveAsync(this.Item, destination, CancellationToken.None);
+        LibraryResult<LibraryMoveResult> result;
+        this.moving = true;
+        try
+        {
+            result = await this.FileService.MoveAsync(this.Item, destination, CancellationToken.None);
+        }
+        finally
+        {
+            this.moving = false;
+        }
+
         if (result.Value is null)
         {
             this.error = result.Error;

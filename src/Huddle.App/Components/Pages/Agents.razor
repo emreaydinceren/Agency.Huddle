@@ -27,13 +27,13 @@
                semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
                PersonaStore's write path - selecting a team is pure display narrowing over state already
                loaded, the same "never probes" guarantee a plain page load has. *@
-            <MudSelect Variant="Variant.Outlined" Margin="Margin.Dense" T="string" aria-label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="agents-filter toolbar-compact">
+            <SelectField Compact="true" T="string" AriaLabel="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="agents-filter">
                 <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                 @foreach (var team in this.teams)
                 {
                     <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
         </MudToolBar>
     }
 
@@ -41,16 +41,16 @@
        section 13). Dismissing it is stored, so it never returns. *@
     @if (this.showConnectorsNotice)
     {
-        <MudAlert role="status" Severity="Severity.Info" Dense="true" ShowCloseIcon="true" CloseIconClicked="this.DismissConnectorsNotice" Class="mb-4 agents-connectors-notice">
+        <Notice Severity="NoticeLevel.Info" OnDismiss="this.DismissConnectorsNotice" Class="agents-connectors-notice">
             Account connectors are now off for every Agent. An Agent that used your mail, files or calendar will not find them until you turn them on: open the Agent and use the Account connectors switch.
-        </MudAlert>
+        </Notice>
     }
 
     @* Above the list on purpose: a required-field decision only pays off if the file that fails to
        load is impossible to miss, rather than just silently absent from the directory below. *@
     @if (this.rejectedFiles.Count > 0)
     {
-        <MudAlert role="status" Severity="Severity.Warning" Class="mb-4">
+        <Notice Severity="NoticeLevel.Warning">
             <MudText Typo="Typo.subtitle2">Files that didn't load</MudText>
             <ul class="agents-rejected-list">
                 @foreach (var rejected in this.rejectedFiles)
@@ -61,7 +61,7 @@
                     </li>
                 }
             </ul>
-        </MudAlert>
+        </Notice>
     }
 
     @if (this.entries.Count == 0)

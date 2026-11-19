@@ -1,0 +1,5 @@
+CV15|src/Huddle.App/Components/Sidebar/TagsPanel.razor|1
+CV21|src/Huddle.App/Components/Feed/FeedItemRow.razor|1
+CV21|src/Huddle.App/Components/Shared/AgentProfileCard.razor|1
+CV21|src/Huddle.App/Components/Shared/Chip.razor|1
+CV22|src/Huddle.App/Components/Shared/AgentProfileCard.razor|1

@@ -11,19 +11,17 @@
 @inject AvatarStore Avatars
 
 <div class="invite-agent">
-    <MudTooltip Text="Invite agent" Placement="Placement.Start">
-        <MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.PersonAddAlt" aria-label="Invite agent" OnClick="this.TogglePanel" />
-    </MudTooltip>
+    <ActionIconButton Icon="@Icons.Material.Filled.PersonAddAlt" Label="Invite agent" Tooltip="Invite agent" TooltipPlacement="Placement.Start" OnClick="this.TogglePanel" />
     <MudCollapse Expanded="@this.isOpen">
         <MudStack Class="invite-panel pa-2" Spacing="2">
             <MudText Typo="Typo.subtitle2" Class="invite-title">@this.PanelTitle</MudText>
             @if (this.errorText is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.errorText</MudAlert>
+                <Notice Severity="NoticeLevel.Error">@this.errorText</Notice>
             }
             else if (this.infoText is not null)
             {
-                <MudAlert Severity="Severity.Info" Dense="true" role="status">@this.infoText</MudAlert>
+                <Notice Severity="NoticeLevel.Info">@this.infoText</Notice>
             }
 
             @if (this.candidates.Count == 0)
@@ -35,13 +33,13 @@
                 @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
                    has no Teams at all, so it only ever shows up under "All teams" - narrowing this
                    filter to a real Team simply never matches it, with no special case needed. *@
-                <MudSelect T="string" Variant="Variant.Outlined" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Margin="Margin.Dense" Class="mb-4">
+                <SelectField T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="mb-4">
                     <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
                     @foreach (var team in this.Personas.Teams)
                     {
                         <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
                     }
-                </MudSelect>
+                </SelectField>
 
                 <SearchField Compact="true" Value="@this.search" ValueChanged="this.OnSearchChanged" Placeholder="Search agents" AriaLabel="Search agents" />
 

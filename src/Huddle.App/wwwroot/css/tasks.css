@@ -23,39 +23,7 @@
     flex: 1 1 auto;
 }
 
-/* A label and a value per row, 28px high with an Edge hairline between rows. */
-.task-read-view-props {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    column-gap: 24px;
-    margin: 0;
-}
-
-.task-read-view-prop {
-    display: grid;
-    grid-template-columns: 96px minmax(0, 1fr);
-    align-items: center;
-    column-gap: 8px;
-    min-height: 28px;
-    border-bottom: 1px solid var(--hu-detail-row-line);
-    overflow-wrap: anywhere;
-}
-
-.task-read-view-prop dt {
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-caption-size);
-}
-
-.task-read-view-prop dd {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 8px;
-    min-width: 0;
-    margin: 0;
-    color: var(--mud-palette-text-primary);
-    font-size: var(--mud-typography-body2-size);
-}
+/* The property grid is a Divided PropertyList (base.css): a 120px label column, 32px rows, a hairline between them. */
 
 .task-read-view-empty {
     color: var(--mud-palette-text-secondary);
@@ -73,7 +41,7 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-.task-read-view-prop.task-overdue dd {
+.task-read-view-due-date.task-overdue dd {
     color: var(--mud-palette-error);
 }
 
@@ -91,11 +59,19 @@
 
 @container task-read-view (min-width: 440px) {
     .task-read-view-props {
+        display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 24px;
     }
 
-    .task-read-view-prop.is-wide {
+    .task-read-view-props > .is-wide {
         grid-column: 1 / -1;
+    }
+
+    /* Two columns of rows: a hairline under every row, so the two columns' lines meet, instead of PropertyList's line between rows. */
+    .task-read-view-props.property-list-divided > .property-row {
+        border-top: 0;
+        border-bottom: 1px solid var(--hu-detail-row-line);
     }
 }
 
@@ -861,13 +837,13 @@
     gap: 4px;
 }
 
-.view-editor-field-row > .mud-switch {
+.view-editor-field-row > .mud-checkbox {
     flex: 1 1 auto;
     min-width: 0;
     margin: 0;
 }
 
-.view-editor-field-row > .mud-switch .mud-typography {
+.view-editor-field-row > .mud-checkbox .mud-typography {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1131,7 +1107,7 @@
 }
 
 /* C. The Tasks page: toolbar, chips, List rows, Board columns and cards. */
-/* The toolbar's List | Kanban control is a segmented control; HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
+/* The toolbar's List | Kanban control is a segmented control; SegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink it, so it keeps its width. */
 .task-toolbar-kind {
     flex: none;
 }
@@ -1139,12 +1115,6 @@
 /* The List | Kanban control has two short, equal-width segments, so the same equal-segment floor is smaller. */
 .task-toolbar-kind .mud-toggle-item {
     min-width: 5rem;
-}
-
-/* Each segment leads with its View kind's sidebar icon, at the row icon size, 4px before the word. */
-.task-toolbar-kind .task-toolbar-kind-icon {
-    font-size: var(--icon-size-row);
-    margin-right: 4px;
 }
 
 /* The header row: List | Kanban, then the counts, on the left; the page's actions on the right. */
@@ -1214,22 +1184,6 @@
     padding: 16px;
 }
 
-/* Both toolbar rows are one height: the controls are 28px boxes, so the row reads level. Not the switch's thumb
-   (.mud-switch-base is an icon button too): its track is placed for MudBlazor's 38px base, so a 28px base lifted the thumb
-   5px above the track's centre. */
-.task-toolbar .mud-icon-button:not(.mud-switch-base),
-.task-toolbar-header .mud-icon-button:not(.mud-switch-base) {
-    width: 28px;
-    height: 28px;
-    padding: 4px;
-}
-
-.task-toolbar .btn-action-tight,
-.task-toolbar-header .btn-action-tight {
-    height: 28px;
-    min-height: 0;
-}
-
 .task-toolbar-filter-state-group .mud-list-item-text {
     font-weight: 600;
 }
@@ -1252,10 +1206,6 @@
     row-gap: 8px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--hu-toolbar-line);
-}
-
-.mud-button-root.mud-button-filled {
-    box-shadow: var(--hu-button-filled-shadow);
 }
 
 .task-toolbar-search .mud-input-outlined-border {
@@ -1423,21 +1373,6 @@
 :root:has([data-hu-surface="paper"]) .tasks-count-need-you:not(.is-zero) {
     color: var(--hu-tone-warning-ink);
     font-weight: 600;
-}
-
-/* The Tasks toolbar's List | Kanban control is one of the row's 28px controls, as the design system sets for every toolbar row: the shared
-   control's own 4px padding made it 34px tall. Three classes outrank the component's scoped padding, which loads after this file. */
-.task-toolbar-header .huddle-segmented-control.task-toolbar-kind {
-    box-sizing: border-box;
-    height: 28px;
-    padding: 1px;
-    align-items: center;
-}
-
-.task-toolbar-header .huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
-    top: 1px;
-    bottom: 1px;
-    left: 1px;
 }
 
 /* ---- Task state and priority: a glyph then a small label, with no chip. This is every Theme's look except status=pill (Nordic).

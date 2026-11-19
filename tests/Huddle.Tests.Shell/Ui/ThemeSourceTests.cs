@@ -197,13 +197,25 @@ public sealed partial class ThemeSourceTests
 
         var allowed = AllowedVariables;
         var undeclared = scopedStylesheets
-            .SelectMany(CssSource.ReadReferencedTokens)
+            .SelectMany(static path => CssSource.ReadReferencedTokens(path).Except(DeclaredCustomProperties(path), StringComparer.Ordinal))
             .Distinct(StringComparer.Ordinal)
             .Where(token => !allowed.Contains(token))
             .ToList();
 
         Assert.Empty(undeclared);
     }
+
+    /// <summary>
+    /// The custom properties a stylesheet declares itself (<c>--segmented-inset: 2px;</c>), which its own <c>var()</c> calls may
+    /// read: a component-local property resolves, so only a name declared nowhere is the typo the sweep above exists to catch.
+    /// </summary>
+    /// <param name="cssPath">The stylesheet.</param>
+    /// <returns>The declared property names.</returns>
+    private static IEnumerable<string> DeclaredCustomProperties(string cssPath) =>
+        CustomPropertyDeclaration().Matches(File.ReadAllText(cssPath)).Select(static match => match.Groups["name"].Value);
+
+    [GeneratedRegex(@"(?<![\w-])(?<name>--[A-Za-z0-9-]+)\s*:", RegexOptions.CultureInvariant)]
+    private static partial Regex CustomPropertyDeclaration();
 
     /// <summary>
     /// No <c>MudText</c> in any <c>.razor</c> file under <c>Components</c> carries

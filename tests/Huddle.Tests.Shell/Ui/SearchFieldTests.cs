@@ -32,7 +32,7 @@ public sealed class SearchFieldTests
     {
         await using MudBunitContext ctx = new();
 
-        var cut = ctx.Render<SearchField>(parameters => parameters.Add(p => p.Placeholder, "Search members"));
+        var cut = ctx.Render<SearchField>(parameters => parameters.Add(p => p.Placeholder, "Search members").Add(p => p.AriaLabel, "Search members"));
 
         Assert.NotNull(cut.Find(".mud-input-outlined"));
         Assert.NotNull(cut.Find(".mud-input-adornment-start svg"));
@@ -46,6 +46,7 @@ public sealed class SearchFieldTests
 
         var cut = ctx.Render<SearchField>(parameters => parameters
             .Add(p => p.Placeholder, "Search members")
+            .Add(p => p.AriaLabel, "Search members")
             .Add(p => p.Value, "ada"));
 
         Assert.NotNull(cut.Find(".mud-input-clear-button"));
@@ -60,6 +61,7 @@ public sealed class SearchFieldTests
 
         var cut = ctx.Render<SearchField>(parameters => parameters
             .Add(p => p.Placeholder, "Search members")
+            .Add(p => p.AriaLabel, "Search members")
             .Add(p => p.ValueChanged, EventCallback.Factory.Create<string?>(this, value => received = value)));
 
         cut.Find("input").Input("ada");

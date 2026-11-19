@@ -16,10 +16,9 @@
     <DialogContent>
         <MudStack Spacing="2">
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
-                <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="Up one folder"
-                               Disabled="@(this.listing.Current is null)" OnClick="this.Up" Class="folder-picker-up" />
-                <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Label="Folder" Value="this.typed"
-                              ValueChanged="this.OnTyped" OnKeyDown="this.OnKeyDown" Immediate="true" Class="folder-picker-path flex-grow-1" />
+                <ActionIconButton Icon="@Icons.Material.Filled.ArrowUpward" Label="Up one folder" Disabled="@(this.listing.Current is null)" OnClick="this.Up" Class="folder-picker-up" />
+                <TextField Label="Folder" Value="@this.typed"
+                           ValueChanged="this.OnTyped" OnKeyDown="this.OnKeyDown" Immediate="true" Class="folder-picker-path flex-grow-1" />
             </MudStack>
             @if (this.trail.Count > 0)
             {
@@ -38,7 +37,7 @@
             }
             @if (this.listing.Error is not null)
             {
-                <MudAlert Severity="Severity.Warning" Dense="true" role="alert" Class="folder-picker-error">@this.listing.Error</MudAlert>
+                <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption" Class="folder-picker-error">@this.listing.Error</Notice>
             }
             <MudList T="string" Dense="true" Class="folder-picker-list" aria-label="Folders">
                 @foreach (BrowsedFolder folder in this.listing.Folders)
@@ -57,9 +56,7 @@
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Disabled="@(!this.listing.CanSelect)" OnClick="this.Select"
-                   Class="folder-picker-select">Select</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="Select" PrimaryDisabled="@(!this.listing.CanSelect)" PrimaryClass="folder-picker-select" OnPrimary="this.Select" />
     </DialogActions>
 </MudDialog>
 

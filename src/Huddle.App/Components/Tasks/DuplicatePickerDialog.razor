@@ -11,8 +11,7 @@
         <TaskPicker Label="Duplicate of" Excluding="this.Excluding" Value="this.selected" ValueChanged="this.OnSelected" />
     </DialogContent>
     <DialogActions>
-        <MudButton Size="Size.Medium" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Save">Save</MudButton>
+        <DialogFooter OnCancel="this.Cancel" PrimaryText="Save" PrimaryDisabled="@(this.selected is null)" OnPrimary="this.Save" />
     </DialogActions>
 </MudDialog>
 

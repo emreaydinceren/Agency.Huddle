@@ -2,7 +2,7 @@
 
 @*
     A Project's Needs You level (ADR-0088). A Project has no page of its own and no tab for settings, so the Project page's
-    "Needs You level…" button opens the shared NeedsYouLevelControl in this dialog. Pass the Team and the Project by name: an open
+    "Needs You level…" button opens the shared NeedsYouLevelControl in this dialog, a picker with no actions row: the title's close button is the way out. Pass the Team and the Project by name: an open
     dialog ignores new parameters.
 *@
 
@@ -10,17 +10,11 @@
     <DialogContent>
         <NeedsYouLevelControl Team="@this.Team" Project="@this.Project" />
     </DialogContent>
-    <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Close">Close</MudButton>
-    </DialogActions>
 </MudDialog>
 
 @code {
     /// <summary>How the Project page shows this dialog: small, full-width, with a close button.</summary>
     public static DialogOptions Options => HuddleDialogOptions.SmallForm;
-
-    [CascadingParameter]
-    private IMudDialogInstance? MudDialog { get; set; }
 
     /// <summary>The Team the Project belongs to.</summary>
     [Parameter, EditorRequired]
@@ -29,6 +23,4 @@
     /// <summary>The Project whose level is shown.</summary>
     [Parameter, EditorRequired]
     public string Project { get; set; } = string.Empty;
-
-    private void Close() => this.MudDialog?.Close();
 }

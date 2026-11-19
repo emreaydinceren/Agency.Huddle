@@ -60,7 +60,7 @@
                 <span class="@StateDotClass(column)" aria-hidden="true"></span>
                 @if (this.renamingColumn == i)
                 {
-                    <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
+                    <TextField Class="task-board-column-rename" AriaLabel="Column name" Value="@column.Label" AutoFocus="true"
                                   ValueChanged="@(label => this.RenameAsync(i, label))" />
                 }
                 else
@@ -69,16 +69,12 @@
                     <span class="@(this.IsRail(i) ? "task-board-column-label visually-hidden" : "task-board-column-label")">@column.Label</span>
                 }
                 <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
-                <MudMenu Class="task-board-column-menu">
-                    <ActivatorContent Context="menuContext">
-                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                       aria-label="@($"{column.Label} column menu")" OnClick="menuContext.ToggleAsync" />
-                    </ActivatorContent>
+                <RowActionsMenu Label="@($"{column.Label} column menu")" Reveal="RowActionsReveal.Always" Class="task-board-column-menu">
                     <ChildContent>
                         <MudMenuItem OnClick="@(() => this.StartRename(i))">Rename</MudMenuItem>
                         <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
                     </ChildContent>
-                </MudMenu>
+                </RowActionsMenu>
                 @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
                 {
                     <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>
@@ -620,8 +616,8 @@
             <span>@notice</span>
             @if (canAsk)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" aria-label="@HumanGateCopy.AskAccessibleName(open.Owner, open.Label)"
-                           OnClick="@(() => this.AskAsync(current, open))">@HumanGateCopy.AskButton(open.Owner)</MudButton>
+                <ActionButton aria-label="@HumanGateCopy.AskAccessibleName(open.Owner, open.Label)"
+                              OnClick="@(() => this.AskAsync(current, open))">@HumanGateCopy.AskButton(open.Owner)</ActionButton>
             }
         </div>;
         this.Snackbar.Add(content, Severity.Warning, configure: null, key: $"board-gate-locked:{current.Id}");

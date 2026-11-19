@@ -17,38 +17,37 @@
 <MudDialog ContentClass="duplicate-team-content">
     <DialogContent>
         <MudStack Spacing="2">
-            <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="New team name" @bind-Value="this.title" Class="duplicate-team-title" />
+            <TextField Label="New team name" @bind-Value="this.title" Class="duplicate-team-title" />
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
-                <MudTextField Variant="Variant.Outlined" Margin="Margin.Dense" T="string" Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace flex-grow-1" />
+                <TextField Label="Workspace folder (optional)" @bind-Value="this.workspace" Class="duplicate-team-workspace flex-grow-1" />
                 @if (!this.RemoteAccess.IsConfigured)
                 {
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Outlined.Folder" OnClick="this.BrowseAsync" Class="duplicate-team-browse">Browse</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Folder" OnClick="this.BrowseAsync" Class="duplicate-team-browse">Browse</ActionButton>
                 }
             </MudStack>
             @if (this.error is not null)
             {
-                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="duplicate-team-error">@this.error</MudAlert>
+                <Notice Severity="NoticeLevel.Error" Class="duplicate-team-error">@this.error</Notice>
             }
             @if (this.result is { Skipped.Count: > 0 })
             {
-                <MudAlert role="status" Severity="Severity.Warning" Dense="true" Class="duplicate-team-skipped">
+                <Notice Severity="NoticeLevel.Warning" Class="duplicate-team-skipped">
                     @foreach (SkippedMember skipped in this.result.Skipped)
                     {
                         <div>@skipped.Name: @skipped.Reason</div>
                     }
-                </MudAlert>
+                </Notice>
             }
         </MudStack>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
         @if (this.result is null)
         {
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-submit" Disabled="@(string.IsNullOrWhiteSpace(this.title))" OnClick="this.Submit">Duplicate</MudButton>
+            <DialogFooter OnCancel="this.Cancel" PrimaryText="Duplicate" PrimaryClass="duplicate-team-submit" PrimaryDisabled="@(string.IsNullOrWhiteSpace(this.title))" OnPrimary="this.Submit" />
         }
         else
         {
-            <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="duplicate-team-open" OnClick="this.OpenNewTeam">Open Team</MudButton>
+            <DialogFooter OnCancel="this.Cancel" PrimaryText="Open Team" PrimaryClass="duplicate-team-open" OnPrimary="this.OpenNewTeam" />
         }
     </DialogActions>
 </MudDialog>

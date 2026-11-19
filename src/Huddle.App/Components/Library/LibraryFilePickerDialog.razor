@@ -17,9 +17,8 @@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField T="string" Variant="Variant.Outlined" Margin="Margin.Dense" Immediate="true" DebounceInterval="250"
-                      Value="@this.searchText" ValueChanged="this.OnSearchChangedAsync" Label="Search by file name"
-                      Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Outlined.Search" AutoFocus="true" Clearable="true" />
+        <TextField Immediate="true" DebounceInterval="250"
+                      Value="@this.searchText" ValueChanged="this.OnSearchChangedAsync" Label="Search by file name" StartIcon="@Icons.Material.Outlined.Search" AutoFocus="true" Clearable="true" />
         <MudList T="string" Dense="true" aria-label="Library files">
             @foreach (PickerRow row in this.rows)
             {
@@ -39,7 +38,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.Cancel">Cancel</MudButton>
+        <DialogFooter OnCancel="this.Cancel" />
     </DialogActions>
 </MudDialog>
 

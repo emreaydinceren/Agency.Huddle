@@ -1,0 +1,2 @@
+CV21|src/Huddle.App/Components/Layout/ActivityBar.razor|1
+CV21|src/Huddle.App/Components/NeedsYou/NeedsYouList.razor|1

@@ -707,14 +707,11 @@ emoji-picker {
     gap: 4px;
 }
 
-/* The top bar's icon buttons are 32px boxes with 18px icons, level with the search box and the Activity bar's tiles. */
+/* The top bar's icon buttons are the one 28px icon button (base.css; Q-B5-1) with 18px icons. */
 .top-bar-end .mud-icon-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
 }
 
 .top-bar-end .mud-icon-button .mud-icon-root {
@@ -1360,12 +1357,6 @@ body.sidebar-resizing {
     color: var(--mud-palette-text-secondary);
 }
 
-/* Page toolbars: tighten the gap between the "+" icon and label on action buttons. */
-.btn-action-tight .mud-button-icon-start {
-    margin-right: 2px;
-    margin-inline-end: 2px;
-}
-
 /* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
    .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
    the NavLink can grow and the "..." button sits absolutely on the right; the button stays in the
@@ -1391,17 +1382,6 @@ body.sidebar-resizing {
 .hover-reveal-row .hover-reveal-menu {
     position: absolute;
     right: 0.25rem;
-}
-
-.hover-reveal-row .hover-reveal-menu-button {
-    opacity: 0;
-    border-radius: var(--hu-radius-card);
-    transition: opacity 120ms ease;
-}
-
-.hover-reveal-row:hover .hover-reveal-menu-button,
-.hover-reveal-row:focus-within .hover-reveal-menu-button {
-    opacity: 1;
 }
 
 /* A Team one-to-one's scope after the Agent's name (RoomNavRow's .room-row-scope): a muted dot, the Team's small icon
@@ -1832,10 +1812,8 @@ body.sidebar-resizing {
     color: inherit;
 }
 
-/* -- nav=tile: top-bar buttons are rounded tiles (the same 32px box as every Theme's) ----------------------------------------------------------- */
+/* -- nav=tile: top-bar buttons are rounded tiles (the same 28px box as every Theme's icon button) ----------------------------------------------------------- */
 :root:has([data-hu-nav="tile"]) .top-bar-end .mud-icon-button {
-    width: 32px;
-    height: 32px;
     border-radius: var(--hu-radius-card);
     color: var(--mud-palette-text-secondary);
 }

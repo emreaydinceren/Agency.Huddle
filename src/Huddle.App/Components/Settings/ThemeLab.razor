@@ -17,7 +17,8 @@
     by theme-lab.js, which replaces the layout's hu-skin style block and sets the MudBlazor palette variables inline for
     this browser tab; nothing is saved, and leaving the page puts the page back. The contrast badges re-measure the
     SkinContrastTests pairs on every edit. Inspect shows, for the hovered element, which --hu-* tokens its rules read.
-    Export JSON copies only the keys that differ from the base skin, as the palette and tokens objects of a skin file.
+    Export JSON copies only the keys that differ from the base skin, as the palette and tokens objects of a skin file,
+    through the app's one clipboard.js copy (ClipboardCopier), not theme-lab.js.
 
     The model (ThemeLabModel) owns every rule about what an edit may be; this file only draws it. A refused edit keeps
     the typed text in the field with the reason beneath it, and the preview keeps the last accepted value.
@@ -33,17 +34,16 @@
         <PageHeader Title="Theme lab" Subtitle="Development only. Edits preview on this tab and are never saved. Export JSON copies what differs from the base Theme." />
 
         <div class="theme-lab-controls">
-            <MudSelect T="string" Label="Base Theme" Margin="Margin.Dense" Variant="Variant.Outlined"
+            <SelectField T="string" Label="Base theme"
                        Value="@this.model.Skin.Id" ValueChanged="this.OnSkinChangedAsync">
                 @foreach (Skin skin in this.skins)
                 {
                     <MudSelectItem T="string" Value="@skin.Id">@skin.Label</MudSelectItem>
                 }
-            </MudSelect>
-            <MudSwitch T="bool" id="theme-lab-inspect-toggle" Label="Inspect" Color="Color.Primary"
-                       Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
-            <MudButton id="theme-lab-export" Size="Size.Small" Variant="Variant.Outlined" OnClick="this.ExportAsync">Export JSON</MudButton>
-            <MudButton id="theme-lab-reset" Size="Size.Small" Variant="Variant.Text" OnClick="this.ResetAsync">Reset edits</MudButton>
+            </SelectField>
+            <SettingSwitch id="theme-lab-inspect-toggle" Label="Inspect" Value="@this.inspecting" ValueChanged="this.OnInspectChangedAsync" />
+            <ActionButton id="theme-lab-export" Role="ButtonRole.Secondary" OnClick="this.ExportAsync">Export JSON</ActionButton>
+            <ActionButton id="theme-lab-reset" OnClick="this.ResetAsync">Reset edits</ActionButton>
             <span role="status" class="theme-lab-status">@this.status</span>
         </div>
 
@@ -72,9 +72,9 @@
                     }
                     else
                     {
-                        <MudTextField T="string" Label="@key" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined"
-                                      Value="@this.PaletteText(key)" ValueChanged="@(value => this.OnPaletteChangedAsync(key, value))"
-                                      Error="@this.errors.ContainsKey(key)" ErrorText="@this.ErrorFor(key)" />
+                        <TextField Label="@key" Immediate="true"
+                                   Value="@this.PaletteText(key)" ValueChanged="@(value => this.OnPaletteChangedAsync(key, value))"
+                                   Error="@this.errors.ContainsKey(key)" ErrorText="@this.ErrorFor(key)" />
                     }
                 </div>
             }
@@ -87,10 +87,10 @@
                 @foreach (Token token in group)
                 {
                     <div data-token-key="@token.Key">
-                        <MudTextField T="string" Label="@token.Key" Margin="Margin.Dense" Immediate="true" Variant="Variant.Outlined"
-                                      HelperText="@token.Description"
-                                      Value="@this.TokenText(token.Key)" ValueChanged="@(value => this.OnTokenChangedAsync(token.Key, value))"
-                                      Error="@this.errors.ContainsKey(token.Key)" ErrorText="@this.ErrorFor(token.Key)" />
+                        <TextField Label="@token.Key" Immediate="true"
+                                   HelperText="@token.Description"
+                                   Value="@this.TokenText(token.Key)" ValueChanged="@(value => this.OnTokenChangedAsync(token.Key, value))"
+                                   Error="@this.errors.ContainsKey(token.Key)" ErrorText="@this.ErrorFor(token.Key)" />
                     </div>
                 }
             </div>
@@ -267,15 +267,13 @@
         await BrowserCall.InvokeVoidAsync(loaded, "inspect", enabled, "theme-lab-inspect-output");
     }
 
+    /// <summary>
+    /// Copies the exported JSON through the app's one clipboard helper (<see cref="ClipboardCopier"/>), which falls back
+    /// to a hidden text area where the async clipboard is missing (a non-secure context), and says whether it worked.
+    /// </summary>
     private async Task ExportAsync()
     {
-        IJSObjectReference? loaded = await this.ModuleAsync();
-        if (loaded is null)
-        {
-            return;
-        }
-
-        await BrowserCall.InvokeVoidAsync(loaded, "copy", this.model.ExportJson());
-        this.status = "Copied to the clipboard.";
+        bool copied = await ClipboardCopier.TryCopyAsync(this.JS, this.model.ExportJson(), CancellationToken.None);
+        this.status = copied ? "Copied to the clipboard." : "The browser refused the clipboard; nothing was copied.";
     }
 }

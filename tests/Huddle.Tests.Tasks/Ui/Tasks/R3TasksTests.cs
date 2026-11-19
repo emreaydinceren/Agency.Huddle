@@ -304,7 +304,7 @@ public sealed class R3TasksTests
         IElement create = cut.Find(".tasks-header .task-toolbar-header .tasks-new-task");
         Assert.Equal("New task", create.TextContent.Trim());
         Assert.Contains("mud-button-filled", create.ClassList);
-        Assert.Contains("btn-action-tight", create.ClassList);
+        Assert.Contains("mud-button-filled-primary", create.ClassList);
     }
 
     /// <summary>
@@ -742,9 +742,9 @@ public sealed class R3TasksTests
         await opening;
 
         Assert.Equal("Fields in Sprint board", cut.Find(".mud-dialog-title").TextContent.Trim());
-        Assert.Equal(["Status", "Due date", "Blocked by"], cut.FindAll(".view-editor-field-row .mud-switch").Select(s => s.TextContent.Trim()));
+        Assert.Equal(["Status", "Due date", "Blocked by"], cut.FindAll(".view-editor-field-row .mud-checkbox").Select(s => s.TextContent.Trim()));
         Assert.DoesNotContain("due_date", cut.Find(".mud-dialog-content").TextContent, StringComparison.Ordinal);
-        Assert.All(cut.FindComponents<MudSwitch<bool>>(), s => Assert.Equal(Color.Primary, s.Instance.Color));
+        Assert.All(cut.FindComponents<MudCheckBox<bool>>(), s => Assert.Equal(Color.Primary, s.Instance.Color));
         Assert.True(cut.Find("button[aria-label='Move Status up']").HasAttribute("disabled"));
         Assert.False(cut.Find("button[aria-label='Move Status down']").HasAttribute("disabled"));
         Assert.True(cut.Find("button[aria-label='Move Blocked by down']").HasAttribute("disabled"));
@@ -811,7 +811,7 @@ public sealed class R3TasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("background-color: var(--hu-selected-background);", CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("height: 28px;", CssText.RuleBody(css, ".task-toolbar .mud-icon-button:not(.mud-switch-base),\n.task-toolbar-header .mud-icon-button:not(.mud-switch-base)"), StringComparison.Ordinal);
+        Assert.Contains("height: 28px;", CssText.RuleBody(css, ":where(.mud-icon-button.mud-icon-button-size-small):not(.mud-switch-base)"), StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("color: var(--hu-accent-ink);", CssText.RuleBody(css, ".mud-chip.filter-chip.is-set,\n.mud-chip.filter-chip.mud-chip-selected"), StringComparison.Ordinal);
     }

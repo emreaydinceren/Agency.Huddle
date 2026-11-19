@@ -66,7 +66,7 @@ public sealed partial class Phase4ChromeTraitsTests
         string dialog = Body("surface", "hairline", ".mud-dialog");
         string popover = Body("surface", "hairline", ".mud-popover.mud-paper");
         string filled = Body("surface", "hairline", ".mud-button-root.mud-button-filled");
-        string segmented = Body("surface", "hairline", ".huddle-segmented-control");
+        string segmented = Body("surface", "hairline", ".segmented-control");
         string notice = Body("surface", "hairline", ".budget-prompt");
         string sidebar = Body("surface", "hairline", ".sidebar-panel + .sidebar-panel");
 

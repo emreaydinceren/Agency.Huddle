@@ -1,0 +1,123 @@
+@using MudBlazor
+@typeparam T
+
+@* The one select: always Outlined and Dense, the items are MudSelectItems in ChildContent, and a caller never writes Variant or
+   Margin (ComponentCatalog, SelectField). Compact is the 28 px toolbar box. A select with no Label must carry an AriaLabel, or
+   the first render throws (D5). One value, or many with MultiSelection. *@
+@if (this.MultiSelection)
+{
+    <MudSelect T="T" MultiSelection="true" SelectedValues="@this.SelectedValues" SelectedValuesChanged="this.SelectedValuesChanged"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="@this.DenseItems" Label="@this.Label" HelperText="@this.HelperText"
+               Disabled="@this.Disabled" Error="@this.Error" ErrorText="@this.ErrorText" Class="@this.CssClass"
+               UserAttributes="@FieldAttributes.Merge(this.UserAttributes, this.AriaLabel)">
+        @this.ChildContent
+    </MudSelect>
+}
+else if (this.ToStringFunc is not null)
+{
+    <MudSelect T="T" Value="@this.Value" ValueChanged="this.ValueChanged" ToStringFunc="@this.ToStringFunc"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="@this.DenseItems" Label="@this.Label" HelperText="@this.HelperText"
+               Disabled="@this.Disabled" Error="@this.Error" ErrorText="@this.ErrorText" Class="@this.CssClass"
+               UserAttributes="@FieldAttributes.Merge(this.UserAttributes, this.AriaLabel)">
+        @this.ChildContent
+    </MudSelect>
+}
+else
+{
+    <MudSelect T="T" Value="@this.Value" ValueChanged="this.ValueChanged"
+               Variant="Variant.Outlined" Margin="Margin.Dense" Dense="@this.DenseItems" Label="@this.Label" HelperText="@this.HelperText"
+               Disabled="@this.Disabled" Error="@this.Error" ErrorText="@this.ErrorText" Class="@this.CssClass"
+               UserAttributes="@FieldAttributes.Merge(this.UserAttributes, this.AriaLabel)">
+        @this.ChildContent
+    </MudSelect>
+}
+
+@code {
+    /// <summary>The chosen value. Two-way bound with <c>@bind-Value</c>, or <see cref="Value"/> and <see cref="ValueChanged"/>.</summary>
+    [Parameter]
+    public T? Value { get; set; }
+
+    /// <summary>Raised with the value the Human picked.</summary>
+    [Parameter]
+    public EventCallback<T> ValueChanged { get; set; }
+
+    /// <summary>Whether the Human may pick several values; then <see cref="SelectedValues"/> holds them and <see cref="Value"/> is unused.</summary>
+    [Parameter]
+    public bool MultiSelection { get; set; }
+
+    /// <summary>The chosen values of a <see cref="MultiSelection"/> select.</summary>
+    [Parameter]
+    public IReadOnlyCollection<T>? SelectedValues { get; set; }
+
+    /// <summary>Raised with every chosen value when a <see cref="MultiSelection"/> select changes.</summary>
+    [Parameter]
+    public EventCallback<IReadOnlyCollection<T>> SelectedValuesChanged { get; set; }
+
+    /// <summary>The items: one <c>MudSelectItem</c> per choice, with its value and its text.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The visible label. A select without one must set <see cref="AriaLabel"/>.</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>The accessible name of a select with no visible label, such as a toolbar's Team filter.</summary>
+    [Parameter]
+    public string? AriaLabel { get; set; }
+
+    /// <summary>A line under the select saying what the choice does.</summary>
+    [Parameter]
+    public string? HelperText { get; set; }
+
+    /// <summary>Whether the select is disabled.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Whether the select shows as wrong, such as nothing chosen where a choice is needed.</summary>
+    [Parameter]
+    public bool Error { get; set; }
+
+    /// <summary>What is wrong, shown under the select while <see cref="Error"/> is true.</summary>
+    [Parameter]
+    public string? ErrorText { get; set; }
+
+    /// <summary>True in a toolbar: the 28 px box with 13 px text, level with the buttons and chips beside it.</summary>
+    [Parameter]
+    public bool Compact { get; set; }
+
+    /// <summary>
+    /// The text the closed select shows for a value, when it is not the value itself (a Work mode's name for its id). Left
+    /// out, the select is rendered without one, so MudBlazor's own default text is untouched.
+    /// </summary>
+    [Parameter]
+    public Func<T?, string?>? ToStringFunc { get; set; }
+
+    /// <summary>Whether the open list uses compact rows, for a long list of short names.</summary>
+    [Parameter]
+    public bool DenseItems { get; set; }
+
+    /// <summary>Extra classes, for a test or script hook and the caller's layout only; never a colour, size, font or padding.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Any other attribute (<c>id</c>, <c>title</c>, <c>aria-busy</c>, <c>data-*</c>), passed to the select's input.</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? UserAttributes { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() =>
+        FieldAttributes.RequireName("SelectField", this.Label, this.AriaLabel, this.UserAttributes);
+
+    private string? CssClass
+    {
+        get
+        {
+            if (!this.Compact)
+            {
+                return this.Class;
+            }
+
+            return string.IsNullOrWhiteSpace(this.Class) ? "toolbar-compact" : "toolbar-compact " + this.Class;
+        }
+    }
+}

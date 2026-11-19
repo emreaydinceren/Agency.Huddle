@@ -132,7 +132,7 @@ public sealed class NordicSkinTests
         // 2: the active tab reads TextPrimary.
         Assert.True(CssText.RuleBody(css, paper + ".tab-item.active").Contains("color: var(--mud-palette-text-primary);", StringComparison.Ordinal));
         // 3: the segmented track has the region hairline.
-        Assert.True(CssText.RuleBody(css, paper + ".huddle-segmented-control").Contains("border: 1px solid var(--hu-line-region);", StringComparison.Ordinal));
+        Assert.True(CssText.RuleBody(css, paper + ".segmented-control").Contains("border: 1px solid var(--hu-line-region);", StringComparison.Ordinal));
         // 4: the selected card keeps the paper shadow beside the inset bar.
         Assert.True(CssText.RuleBody(css, paper + ".task-card.task-card-selected").Contains("var(--hu-selected-task-bar), var(--hu-shadow-card);", StringComparison.Ordinal));
         // 5: the need-you count wears the warning ink at 600.

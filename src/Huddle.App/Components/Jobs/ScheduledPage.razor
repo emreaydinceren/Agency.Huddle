@@ -25,7 +25,7 @@
         <PageHeader Title="Scheduled" CreateText="New job" CreateIcon="@Icons.Material.Filled.Add" OnCreate="this.NewAsync" />
         @if (this.Store.Problems.Count > 0)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" role="status" Class="mb-4 scheduled-problems">
+            <Notice Severity="NoticeLevel.Warning" Class="scheduled-problems">
                 @Plural.Of(this.Store.Problems.Count, "section", "sections") of a schedule could not be read, so @(this.Store.Problems.Count == 1 ? "it does" : "they do") not run:
                 <ul>
                     @foreach (JobProblem problem in this.Store.Problems)
@@ -33,7 +33,7 @@
                         <li>@JobText.OwnerName(problem.Owner, this.Human.Name), "@problem.Title": @problem.Reason</li>
                     }
                 </ul>
-            </MudAlert>
+            </Notice>
         }
 
         @if (this.Store.Jobs.Count == 0)
@@ -69,17 +69,17 @@
     {
         <PageHeader Title="@job.Title" Subtitle="@($"For {JobText.OwnerName(job.Owner, this.Human.Name)} · {job.When.Describe()}")">
             <Actions>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-edit" OnClick="@(() => this.EditAsync(job.Id))">Edit…</MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-pause" OnClick="@(() => this.SetPaused(job, !job.Paused))">@(job.Paused ? "Resume" : "Pause")</MudButton>
-                <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="scheduled-run" Disabled="this.running" OnClick="@(() => this.RunNowAsync(job))">Run now</MudButton>
-                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" AriaLabel="@MenuDialogs.ActivatorLabel(job.Title)">
+                <ActionButton Role="ButtonRole.Secondary" Class="scheduled-edit" OnClick="@(() => this.EditAsync(job.Id))">Edit…</ActionButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="scheduled-pause" OnClick="@(() => this.SetPaused(job, !job.Paused))">@(job.Paused ? "Resume" : "Pause")</ActionButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="scheduled-run" Disabled="this.running" OnClick="@(() => this.RunNowAsync(job))">Run now</ActionButton>
+                <RowActionsMenu Name="@job.Title" Reveal="RowActionsReveal.Always">
                     @if (this.JobRooms.RoomOf(job.Id) is { } roomId)
                     {
                         <MudMenuItem Href="@($"/rooms/{roomId}")">Open Room</MudMenuItem>
                         <MudDivider />
                     }
                     <MudMenuItem Class="menu-item-destructive" OnClick="@(() => this.DeleteAsync(job))">Delete job…</MudMenuItem>
-                </MudMenu>
+                </RowActionsMenu>
             </Actions>
         </PageHeader>
 

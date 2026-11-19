@@ -19,7 +19,7 @@
 
 @if (this.error is not null)
 {
-    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" role="alert">@this.error</MudAlert>
+    <Notice Severity="NoticeLevel.Error">@this.error</Notice>
 }
 
 @if (this.ready)
@@ -35,7 +35,8 @@
         </div>
 
         <div data-testid="strict-local">
-            <MudSwitch T="bool" @bind-Value="this.strictLocal" Color="Color.Primary" Label="Strict local" />
+            @* Checkboxes on this card, not switches: every setting here waits for Save (the B6 rule). *@
+            <MudCheckBox T="bool" @bind-Value="this.strictLocal" Color="Color.Primary" Dense="true" Label="Strict local" />
         </div>
         <MudText Typo="Typo.caption" data-testid="strict-local-helper">@RemoteAccessCopy.StrictLocalHelper</MudText>
         @if (this.StrictRunning)
@@ -49,7 +50,7 @@
 
         @if (this.Downgraded)
         {
-            <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2" role="status" data-testid="downgraded-notice">@RemoteAccessCopy.DowngradedNotice</MudAlert>
+            <Notice Severity="NoticeLevel.Warning" data-testid="downgraded-notice">@RemoteAccessCopy.DowngradedNotice</Notice>
         }
 
         @if (this.RuntimeView.ListenerReason is { } reason)
@@ -66,9 +67,9 @@
             <code data-testid="token">@(this.revealedToken ?? RemoteAccessCopy.TokenMask)</code>
             @if (this.IsLoopbackSession)
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.ToggleToken">@(this.revealedToken is null ? "Show" : "Hide")</MudButton>
+                <ActionButton OnClick="this.ToggleToken">@(this.revealedToken is null ? "Show" : "Hide")</ActionButton>
             }
-            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.RotateToken">Rotate</MudButton>
+            <ActionButton OnClick="this.RotateToken">Rotate</ActionButton>
         </div>
 
         @if (this.RuntimeView.PublicUrl is { } url)
@@ -76,7 +77,7 @@
             <div class="d-flex align-center gap-2 mt-1 flex-wrap">
                 <MudText Typo="Typo.body2">Address</MudText>
                 <code data-testid="public-url">@url</code>
-                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.CopyLink(url))">Copy link</MudButton>
+                <ActionButton OnClick="@(() => this.CopyLink(url))">Copy link</ActionButton>
             </div>
         }
 
@@ -87,10 +88,10 @@
 
         <div class="d-flex align-end gap-2 mt-3 flex-wrap">
             <div data-testid="new-password">
-                <MudTextField T="string" @bind-Value="this.newPassword" Label="New password" InputType="InputType.Password" Variant="Variant.Outlined" Margin="Margin.Dense"
+                <TextField @bind-Value="this.newPassword" Label="New password" InputType="InputType.Password"
                               autocomplete="new-password" />
             </div>
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="@string.IsNullOrWhiteSpace(this.newPassword)" OnClick="this.SetPassword">Set password</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" Disabled="@string.IsNullOrWhiteSpace(this.newPassword)" OnClick="this.SetPassword">Set password</ActionButton>
         </div>
 
         <MudDivider Class="my-3" />
@@ -98,38 +99,38 @@
         <div class="d-flex flex-wrap gap-3">
             <div>
                 <div data-testid="stored-bind">
-                    <MudSelect T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <SelectField T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning">
                         @foreach (string choice in BindChoices)
                         {
                             <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
                         }
-                    </MudSelect>
+                    </SelectField>
                 </div>
                 <MudText Typo="Typo.caption" data-testid="running-bind">Running: @this.settingsView.Running.Bind</MudText>
             </div>
-            <MudSelect T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <SelectField T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning">
                 @foreach (string choice in AuthChoices)
                 {
                     <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
             <MudNumericField T="int?" Label="Port" @bind-Value="this.port" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            <MudTextField T="string" Label="Custom bind host" @bind-Value="this.customBindHost" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense" />
-            <MudSelect T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense">
+            <TextField Label="Custom bind host" @bind-Value="this.customBindHost" Disabled="@this.StrictRunning" />
+            <SelectField T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning">
                 @foreach (string choice in TailscaleChoices)
                 {
                     <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
                 }
-            </MudSelect>
+            </SelectField>
             <MudNumericField T="int?" Label="Tailscale HTTPS port" @bind-Value="this.tailscaleHttpsPort" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
         </div>
 
         <div data-testid="allow-tailscale">
-            <MudSwitch T="bool" @bind-Value="this.allowTailscale" Disabled="@this.StrictRunning" Color="Color.Primary" Label="Use Tailscale sign-in" />
+            <MudCheckBox T="bool" @bind-Value="this.allowTailscale" Disabled="@this.StrictRunning" Color="Color.Primary" Dense="true" Label="Use Tailscale sign-in" />
         </div>
-        <MudTextField T="string" Label="Trusted proxies" @bind-Value="this.trustedProxies" Disabled="@this.StrictRunning" HelperText="One address per line." Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Allowed origins" @bind-Value="this.allowedOrigins" Disabled="@this.StrictRunning" HelperText="One address per line." Lines="2" Variant="Variant.Outlined" Margin="Margin.Dense" />
-        <MudTextField T="string" Label="Public origin" @bind-Value="this.publicOrigin" Disabled="@this.StrictRunning" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <TextField Shape="TextFieldShape.LongText" Label="Trusted proxies" @bind-Value="this.trustedProxies" Disabled="@this.StrictRunning" HelperText="One address per line." />
+        <TextField Shape="TextFieldShape.LongText" Label="Allowed origins" @bind-Value="this.allowedOrigins" Disabled="@this.StrictRunning" HelperText="One address per line." />
+        <TextField Label="Public origin" @bind-Value="this.publicOrigin" Disabled="@this.StrictRunning" />
 
         @if (this.settingsView.Pending.Count > 0)
         {
@@ -140,7 +141,7 @@
             <MudText Typo="Typo.body2" Class="mt-1" role="status" data-testid="save-result">@this.saveResult</MudText>
         }
 
-        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="mt-3" OnClick="this.Save">Save</MudButton>
+        <ActionButton Role="ButtonRole.Primary" Class="mt-3" OnClick="this.Save">Save</ActionButton>
     </MudPaper>
 
     @* ---- G10e Waiting for approval ---- *@
@@ -167,7 +168,7 @@
                             <MudMenuItem OnClick="@(() => this.Approve(request.RequestId, choice.Scopes))">@choice.Label</MudMenuItem>
                         }
                     </MudMenu>
-                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Reject(request.RequestId))">Reject</MudButton>
+                    <ActionButton OnClick="@(() => this.Reject(request.RequestId))">Reject</ActionButton>
                 </div>
             }
         </MudPaper>
@@ -190,7 +191,7 @@
             {
                 <MudText Typo="Typo.body2" data-testid="pair-unavailable">@(this.offer?.Reason ?? RemoteAccessCopy.NoAddress)</MudText>
             }
-            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="mt-2" OnClick="this.NewLink">New link</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" Class="mt-2" OnClick="this.NewLink">New link</ActionButton>
         </MudPaper>
     }
 
@@ -203,10 +204,10 @@
                 @if (this.renamingId == device.DeviceId)
                 {
                     <div data-testid="rename-input">
-                        <MudTextField T="string" @bind-Value="this.renameText" Variant="Variant.Outlined" Margin="Margin.Dense" aria-label="Device name" />
+                        <TextField @bind-Value="this.renameText" AriaLabel="Device name" />
                     </div>
-                    <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="this.SaveRename">Save</MudButton>
-                    <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="this.CancelEdit">Cancel</MudButton>
+                    <ActionButton Role="ButtonRole.Primary" OnClick="this.SaveRename">Save</ActionButton>
+                    <ActionButton OnClick="this.CancelEdit">Cancel</ActionButton>
                 }
                 else
                 {
@@ -229,13 +230,13 @@
                     }
                     else
                     {
-                        <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.BeginRename(device))">Rename</MudButton>
+                        <ActionButton OnClick="@(() => this.BeginRename(device))">Rename</ActionButton>
                         @if (device.HasToken)
                         {
-                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Rotate(device.DeviceId))">Rotate</MudButton>
-                            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.Revoke(device.DeviceId))">Revoke</MudButton>
+                            <ActionButton OnClick="@(() => this.Rotate(device.DeviceId))">Rotate</ActionButton>
+                            <ActionButton OnClick="@(() => this.Revoke(device.DeviceId))">Revoke</ActionButton>
                         }
-                        <MudButton Size="Size.Small" Variant="Variant.Text" Color="Color.Error" OnClick="@(() => this.BeginRemove(device.DeviceId))">Remove</MudButton>
+                        <ActionButton Role="ButtonRole.DangerQuiet" OnClick="@(() => this.BeginRemove(device.DeviceId))">Remove</ActionButton>
                     }
                 }
             </div>

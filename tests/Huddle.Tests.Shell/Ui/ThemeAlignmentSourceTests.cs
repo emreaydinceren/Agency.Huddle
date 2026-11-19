@@ -99,8 +99,8 @@ public sealed class ThemeAlignmentSourceTests
         Assert.Contains("padding-block: 0;", CssText.RuleBody(css, ".tags-tree .mud-treeview-item-content", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("content: \"·\";", CssText.RuleBody(css, ".tasks-counts > * + *::before", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("font-weight: 500;", CssText.RuleBody(css, ".tasks-counts strong", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("height: 24px;", CssText.RuleBody(css, ".huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("top: 2px;", CssText.RuleBody(css, ".huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        // List | Kanban takes the segmented control's own 28px geometry: no page stylesheet re-sizes its track, items or indicator.
+        Assert.DoesNotContain(".task-toolbar-kind .segmented-", css, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
     }
 
     /// <summary>One dot rule per entry of <c>TaskFieldView.TagClasses</c>.</summary>

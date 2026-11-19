@@ -36,9 +36,9 @@
 <div class="task-read-view">
 @if (this.deleted)
 {
-    <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
+    <Notice Severity="NoticeLevel.Warning" Class="task-detail-deleted">This Task was deleted</Notice>
     <div class="task-read-view-actions">
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Primary" Class="task-read-view-close" OnClick="this.OnClose">Close</MudButton>
+        <ActionButton Role="ButtonRole.Primary" Class="task-read-view-close" OnClick="this.OnClose">Close</ActionButton>
     </div>
 }
 else if (this.loaded is { } task)
@@ -60,13 +60,10 @@ else if (this.loaded is { } task)
         }
         <span class="task-read-view-actions-spacer"></span>
         <MudTooltip Text="@this.EditLabel(task)">
-            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Edit" Class="task-read-view-edit"
-                       aria-label="@this.EditLabel(task)" OnClick="this.EditAsync">Edit</MudButton>
+            <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Edit" Class="task-read-view-edit"
+                          aria-label="@this.EditLabel(task)" OnClick="this.EditAsync">Edit</ActionButton>
         </MudTooltip>
-        <MudTooltip Text="Copy id">
-            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" Size="Size.Small" aria-label="@($"Copy task id {task.Id}")"
-                           Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(task.Id))" />
-        </MudTooltip>
+        <ActionIconButton Icon="@Icons.Material.Outlined.ContentCopy" Label="@($"Copy task id {task.Id}")" Tooltip="Copy id" Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(task.Id))" />
         <TaskActionsMenu @ref="this.actionsMenu" Id="task.Id" OnCopyId="@(() => this.CopyIdAsync(task.Id))" OnCopyLink="@(() => this.CopyLinkAsync(task.Id))">
             <ExtraItems>
                 <MudMenuItem Icon="@ActionIcons.Duplicate" Class="task-detail-copy" OnClick="this.MakeACopyAsync">Make a copy…</MudMenuItem>
@@ -108,157 +105,115 @@ else if (this.loaded is { } task)
     }
 
     @* T15d: the property grid, one label and value per field. An empty value is a dash, so rows never jump. *@
-    <dl class="task-read-view-props">
-        <div class="task-read-view-prop task-read-view-status">
-            <dt>Status</dt>
-            <dd><TaskStatusChip Status="task.Status" /></dd>
-        </div>
+    <PropertyList Divided="true" Class="task-read-view-props">
+        <PropertyRow Label="Status" Class="task-read-view-status"><TaskStatusChip Status="task.Status" /></PropertyRow>
 
         @if (task.Status == TaskState.Duplicate)
         {
-            <div class="task-read-view-prop is-wide task-read-view-duplicate-of">
-                <dt>Duplicate of</dt>
-                <dd>@this.TaskLink(task.DuplicateOf)</dd>
-            </div>
+            <PropertyRow Label="Duplicate of" Class="is-wide task-read-view-duplicate-of">@this.TaskLink(task.DuplicateOf)</PropertyRow>
         }
         else if (task.Status is TaskState.Cancelled or TaskState.Rejected)
         {
-            <div class="task-read-view-prop is-wide task-read-view-reason">
-                <dt>Reason</dt>
-                <dd>@this.Text(TaskReadView.ReasonOf(task))</dd>
-            </div>
+            <PropertyRow Label="Reason" Class="is-wide task-read-view-reason">@this.Text(TaskReadView.ReasonOf(task))</PropertyRow>
         }
 
-        <div class="task-read-view-prop task-read-view-priority">
-            <dt>Priority</dt>
-            <dd><TaskPriorityChip Priority="task.Priority" /></dd>
-        </div>
+        <PropertyRow Label="Priority" Class="task-read-view-priority"><TaskPriorityChip Priority="task.Priority" /></PropertyRow>
 
-        <div class="task-read-view-prop is-wide task-read-view-assignee">
-            <dt>Assignee</dt>
-            <dd>
-                @if (task.Assignee is { } assignee)
+        <PropertyRow Label="Assignee" Class="is-wide task-read-view-assignee">
+            @if (task.Assignee is { } assignee)
+            {
+                <TaskAssignee Name="@assignee" Presence="@this.PresenceOf(assignee)" />
+            }
+            else
+            {
+                @this.Empty()
+            }
+            @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
+            {
+                <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
+            }
+        </PropertyRow>
+
+        <PropertyRow Label="Team" Class="task-read-view-team">@this.Text(task.Location.Team)</PropertyRow>
+        <PropertyRow Label="Project" Class="task-read-view-project">@this.Text(task.Location.Project)</PropertyRow>
+
+        <PropertyRow Label="Sprint" Class="task-read-view-sprint">
+            @if (task.Sprint is { } sprint)
+            {
+                @SprintLabels.Text(this.Sprints, sprint)
+                @if (this.Sprints.Get(sprint) is null)
                 {
-                    <TaskAssignee Name="@assignee" Presence="@this.PresenceOf(assignee)" />
+                    <MudTooltip Text="@SprintLabels.MissingText">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="@SprintLabels.MissingText" />
+                    </MudTooltip>
+                }
+            }
+            else
+            {
+                @this.Empty()
+            }
+        </PropertyRow>
+        <PropertyRow Label="Parent" Class="task-read-view-parent">@this.TaskLink(task.Parent)</PropertyRow>
+
+        <PropertyRow Label="Blocked by" Class="is-wide task-read-view-blocked-by">
+            @if (task.BlockedBy.Count == 0)
+            {
+                @this.Empty()
+            }
+            else
+            {
+                @foreach (TaskId blockerId in task.BlockedBy)
+                {
+                    <span class="task-read-view-blocker">
+                        @this.TaskLink(blockerId)
+                        <span class="task-read-view-blocker-status">@(this.Store.Get(blockerId)?.Status.ToWire() ?? "?")</span>
+                    </span>
+                }
+            }
+        </PropertyRow>
+
+        <PropertyRow Label="Tags" Class="is-wide task-read-view-tags">
+            @if (task.Tags.Count == 0)
+            {
+                @this.Empty()
+            }
+            else
+            {
+                @TaskFieldView.Tags(task.Tags)
+            }
+        </PropertyRow>
+
+        <PropertyRow Label="Start date" Class="task-read-view-start-date">@this.DateText(task.StartDate)</PropertyRow>
+        <PropertyRow Label="Due date" Class="@(TaskDates.IsOverdue(task, this.Clock) ? "task-read-view-due-date task-overdue" : "task-read-view-due-date")">
+            @if (task.DueDate is { } due && TaskDates.IsOverdue(task, this.Clock))
+            {
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
+                <span title="@TaskDates.Tooltip(due)">@TaskDates.Human(due, this.Clock)</span>
+            }
+            else
+            {
+                @this.DateText(task.DueDate)
+            }
+        </PropertyRow>
+
+        <PropertyRow Label="Origin" Class="is-wide task-read-view-origin">
+            @if (task.OriginRoomId is { } originRoomId)
+            {
+                @if (this.originRoomName is not null)
+                {
+                    <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
                 }
                 else
                 {
-                    @this.Empty()
+                    @:(Room no longer exists)
                 }
-                @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
-                {
-                    <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room {wokenRoomName}")</MudLink>
-                }
-            </dd>
-        </div>
-
-        <div class="task-read-view-prop task-read-view-team">
-            <dt>Team</dt>
-            <dd>@this.Text(task.Location.Team)</dd>
-        </div>
-        <div class="task-read-view-prop task-read-view-project">
-            <dt>Project</dt>
-            <dd>@this.Text(task.Location.Project)</dd>
-        </div>
-
-        <div class="task-read-view-prop task-read-view-sprint">
-            <dt>Sprint</dt>
-            <dd>
-                @if (task.Sprint is { } sprint)
-                {
-                    @SprintLabels.Text(this.Sprints, sprint)
-                    @if (this.Sprints.Get(sprint) is null)
-                    {
-                        <MudTooltip Text="@SprintLabels.MissingText">
-                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-detail-sprint-missing" aria-label="@SprintLabels.MissingText" />
-                        </MudTooltip>
-                    }
-                }
-                else
-                {
-                    @this.Empty()
-                }
-            </dd>
-        </div>
-        <div class="task-read-view-prop task-read-view-parent">
-            <dt>Parent</dt>
-            <dd>@this.TaskLink(task.Parent)</dd>
-        </div>
-
-        <div class="task-read-view-prop is-wide task-read-view-blocked-by">
-            <dt>Blocked by</dt>
-            <dd>
-                @if (task.BlockedBy.Count == 0)
-                {
-                    @this.Empty()
-                }
-                else
-                {
-                    @foreach (TaskId blockerId in task.BlockedBy)
-                    {
-                        <span class="task-read-view-blocker">
-                            @this.TaskLink(blockerId)
-                            <span class="task-read-view-blocker-status">@(this.Store.Get(blockerId)?.Status.ToWire() ?? "?")</span>
-                        </span>
-                    }
-                }
-            </dd>
-        </div>
-
-        <div class="task-read-view-prop is-wide task-read-view-tags">
-            <dt>Tags</dt>
-            <dd>
-                @if (task.Tags.Count == 0)
-                {
-                    @this.Empty()
-                }
-                else
-                {
-                    @TaskFieldView.Tags(task.Tags)
-                }
-            </dd>
-        </div>
-
-        <div class="task-read-view-prop task-read-view-start-date">
-            <dt>Start date</dt>
-            <dd>@this.DateText(task.StartDate)</dd>
-        </div>
-        <div class="@(TaskDates.IsOverdue(task, this.Clock) ? "task-read-view-prop task-read-view-due-date task-overdue" : "task-read-view-prop task-read-view-due-date")">
-            <dt>Due date</dt>
-            <dd>
-                @if (task.DueDate is { } due && TaskDates.IsOverdue(task, this.Clock))
-                {
-                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
-                    <span title="@TaskDates.Tooltip(due)">@TaskDates.Human(due, this.Clock)</span>
-                }
-                else
-                {
-                    @this.DateText(task.DueDate)
-                }
-            </dd>
-        </div>
-
-        <div class="task-read-view-prop is-wide task-read-view-origin">
-            <dt>Origin</dt>
-            <dd>
-                @if (task.OriginRoomId is { } originRoomId)
-                {
-                    @if (this.originRoomName is not null)
-                    {
-                        <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
-                    }
-                    else
-                    {
-                        @:(Room no longer exists)
-                    }
-                }
-                else
-                {
-                    @this.Empty()
-                }
-            </dd>
-        </div>
-    </dl>
+            }
+            else
+            {
+                @this.Empty()
+            }
+        </PropertyRow>
+    </PropertyList>
 
     @* T15e: today's Description preview, always: no Edit | Preview toggle, no Link or Attach. *@
     <section class="task-read-view-description" aria-labelledby="task-read-view-heading-description">

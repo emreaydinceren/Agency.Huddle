@@ -54,7 +54,7 @@ public sealed partial class ThemeFixSourceTests
 
         Match button = SendButtonElement().Match(razor);
 
-        Assert.True(button.Success, "Composer.razor has no MudIconButton with the Send icon.");
+        Assert.True(button.Success, "Composer.razor has no ActionIconButton with the Send icon.");
         Assert.DoesNotContain("Color=", button.Value, StringComparison.Ordinal);
         Assert.Contains("Class=\"composer-send-button\"", button.Value, StringComparison.Ordinal);
     }
@@ -214,7 +214,7 @@ public sealed partial class ThemeFixSourceTests
         return string.Join('\n', bodies);
     }
 
-    [GeneratedRegex(@"<MudIconButton\b[^>]*Icons\.Material\.Filled\.Send[^>]*/>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
+    [GeneratedRegex(@"<ActionIconButton\b[^>]*Icons\.Material\.Filled\.Send[^>]*/>", RegexOptions.CultureInvariant | RegexOptions.Singleline)]
     private static partial Regex SendButtonElement();
 
     [GeneratedRegex(@"(?<selectors>[^{}]+)\{(?<body>[^{}]*)\}", RegexOptions.CultureInvariant)]

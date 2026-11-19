@@ -128,7 +128,7 @@ public sealed partial class ChromeTraitsTests
         Assert.Contains("color: var(--hu-text-subtle);", row, StringComparison.Ordinal);
         Assert.Contains("background-color: var(--hu-hover);", rowHover, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-text-subtle);", settings, StringComparison.Ordinal);
-        Assert.Contains("width: 32px;", topBar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("border-radius: var(--hu-radius-card);", topBar, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("background: var(--hu-tone-primary-soft);", tree, StringComparison.Ordinal);
         Assert.Contains("color: var(--hu-accent-ink);", tree, StringComparison.Ordinal);
     }
@@ -146,7 +146,7 @@ public sealed partial class ChromeTraitsTests
         string notice = Body("surface", "paper", ".budget-prompt");
         string primary = Body("surface", "paper", ".mud-button-filled.mud-button-filled-primary:hover");
         string dialog = Body("surface", "paper", ".mud-dialog");
-        string indicator = Body("surface", "paper", ".huddle-segmented-indicator");
+        string indicator = Body("surface", "paper", ".segmented-indicator");
         string track = Body("surface", "paper", ".mud-switch .mud-checked + .mud-switch-track");
         string tooltip = Body("surface", "paper", ".mud-tooltip.mud-tooltip-default");
 

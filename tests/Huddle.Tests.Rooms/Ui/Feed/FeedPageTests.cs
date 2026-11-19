@@ -224,7 +224,7 @@ public sealed partial class FeedPageTests
         Assert.Equal([third.Id, second.Id], await IdsAsync(team: "Platform"));
         Assert.Equal([third.Id], await IdsAsync(agent: "Nova", team: "Platform"));
         await using MudBunitContext last = NewContext(host);
-        Assert.Equal("All", Text(Render(last, category: "rooms").Find(".huddle-segmented-active-item")));
+        Assert.Equal("All", Text(Render(last, category: "rooms").Find(".segmented-active-item")));
     }
 
     /// <summary>"Show more" loads the next page below the lowest id shown; an item inserted meanwhile repeats nothing and loses nothing.</summary>
@@ -423,7 +423,7 @@ public sealed partial class FeedPageTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx, category: "needs-you", agent: "Nova", team: "Growth", page: page);
 
-        Assert.Equal("All", Text(cut.Find(".huddle-segmented-active-item")));
+        Assert.Equal("All", Text(cut.Find(".segmented-active-item")));
         Assert.Empty(cut.FindAll(".feed-agent-chip"));
     }
 

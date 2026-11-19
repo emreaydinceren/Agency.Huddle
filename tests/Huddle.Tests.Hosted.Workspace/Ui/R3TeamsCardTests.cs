@@ -154,7 +154,7 @@ public sealed class R3TeamsCardTests
 
         Assert.True(FindSelectCombobox(cut, "Model").HasAttribute("aria-busy"));
         Assert.Contains("agent-profile-card-probing", FindInputControl(cut, "Model").ClassList);
-        Assert.NotEmpty(cut.FindAll(".agent-profile-card-probe[aria-label='Reading the models this agent offers']"));
+        Assert.NotEmpty(cut.FindAll(".agent-profile-card-probe[aria-label='Reading the models this adapter offers']"));
     }
 
     /// <summary>The avatar dialog is titled with the item's name, "coo's avatar" (B10j).</summary>

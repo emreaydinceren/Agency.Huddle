@@ -722,7 +722,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     background: var(--hu-tone-primary-tint);
 }
 
-/* The Read | Edit | Split labels are control text, 13px. */
 /* The path gives way in a narrow pane, never the controls: squeezed, the toggle's three labels run together. */
 .library-document-toolbar .library-document-mode-toggle,
 .library-document-toolbar .library-document-save {
@@ -737,11 +736,6 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
 .library-document-toolbar .library-document-path-inline {
     flex: 1 1 12rem;
     min-width: 0;
-}
-
-.library-document-mode-toggle .mud-toggle-item,
-.library-document-mode-toggle .mud-toggle-item .mud-typography {
-    font-size: var(--mud-typography-body2-size);
 }
 
 /* A Theme sets how its headings read (the note.* tokens; the prose ink is on .library-rendered itself): Cobalt Soft's
@@ -904,29 +898,7 @@ html .cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] {
     margin-bottom: 8px;
 }
 
-.library-properties-list {
-    display: grid;
-    grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
-    gap: 4px 24px;
-    margin: 0;
-}
-
-.library-properties-row {
-    display: contents;
-}
-
-.library-properties-key {
-    color: var(--mud-palette-text-secondary);
-}
-
-.library-properties-value {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px;
-    margin: 0;
-    overflow-wrap: anywhere;
-}
+/* The rows are a Compact PropertyList (base.css): the 120px key column and 28px rows of every card. */
 
 .library-properties .library-properties-chip {
     margin: 0;

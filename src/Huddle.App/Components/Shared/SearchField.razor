@@ -1,36 +1,21 @@
 @*
-    The one search field every surface uses (design-system "House defaults"; UX-055): Outlined and Dense,
-    a start search adornment, Clearable, Immediate, one debounce constant and an accessible name. In a toolbar
-    it is Compact: a 28px box with 13px text (audit A7), level with the buttons and chips beside it.
+    The one search field every surface uses (design-system "House defaults"; UX-055): a TextField with a start
+    search icon, Clearable, Immediate, one debounce constant and an accessible name. In a toolbar it is Compact:
+    a 28px box with 13px text (audit A7), level with the buttons and chips beside it.
 *@
 
-<MudTextField T="string" Value="@this.Value" ValueChanged="this.OnValueChangedAsync" Immediate="true"
-              DebounceInterval="@DebounceMs" Variant="Variant.Outlined" Margin="Margin.Dense"
-              Clearable="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
-              Placeholder="@this.Placeholder" aria-label="@this.AriaLabel" Class="@this.FieldClass" />
+<TextField Value="@this.Value" ValueChanged="this.OnValueChangedAsync" Immediate="true" DebounceInterval="@DebounceMs"
+           Shape="@(this.Compact ? TextFieldShape.Compact : TextFieldShape.Line)" Clearable="true" StartIcon="@Icons.Material.Filled.Search"
+           Placeholder="@this.Placeholder" AriaLabel="@this.AriaLabel" Class="@this.Class" />
 
 @code {
     /// <summary>Extra CSS classes for the field, so a surface can restyle its own search box.</summary>
     [Parameter]
     public string? Class { get; set; }
 
-    /// <summary>True in a toolbar: the field wears the global <c>toolbar-compact</c> class, a 28px box with 13px text, so it is the same height as the chips and buttons beside it.</summary>
+    /// <summary>True in a toolbar: the field is <see cref="TextFieldShape.Compact"/>, a 28px box with 13px text, so it is the same height as the chips and buttons beside it.</summary>
     [Parameter]
     public bool Compact { get; set; }
-
-    /// <summary>The field's classes: <c>toolbar-compact</c> when <see cref="Compact"/>, then the caller's <see cref="Class"/>.</summary>
-    private string? FieldClass
-    {
-        get
-        {
-            if (!this.Compact)
-            {
-                return this.Class;
-            }
-
-            return string.IsNullOrEmpty(this.Class) ? "toolbar-compact" : $"toolbar-compact {this.Class}";
-        }
-    }
 
     /// <summary>The debounce, in milliseconds, shared by every search field in the app (UX-055).</summary>
     internal const int DebounceMs = 250;

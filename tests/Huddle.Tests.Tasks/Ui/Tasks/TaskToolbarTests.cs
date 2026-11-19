@@ -118,7 +118,7 @@ public sealed class TaskToolbarTests
         Assert.NotNull(children[^1].QuerySelector(".task-toolbar-group")); // the chip sits in MudBlazor's display: contents container
         Assert.Empty(toolbar.FindAll(".task-toolbar-group-sort, .task-toolbar-grouping"));
         Assert.Equal(["List", "Kanban"],toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
-        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .segmented-active-item").TextContent.Trim());
     }
 
     /// <summary>Picking Board on a List View raises <c>EffectiveViewChanged</c> with a Board that passes <c>ViewValidator</c> (Active scope, every state in a column), and leaves the saved View a List.</summary>
@@ -133,7 +133,7 @@ public sealed class TaskToolbarTests
         await using var ctx = NewContext(store);
         var (_, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
 
-        Assert.Equal("List", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("List", toolbar.Find(".task-toolbar-kind .segmented-active-item").TextContent.Trim());
         await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Kanban));
 
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
@@ -143,7 +143,7 @@ public sealed class TaskToolbarTests
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
-        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.Equal("Kanban", toolbar.Find(".task-toolbar-kind .segmented-active-item").TextContent.Trim());
         Assert.Equal(ViewKind.List, store.Get("v1")?.Kind);
     }
 

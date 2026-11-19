@@ -23,7 +23,7 @@
 
 @if (this.View is { } view)
 {
-    <MudPaper Outlined="true" Class="@($"pack-card pa-3 mb-2{(this.Flash ? " search-hit-flash" : string.Empty)}")" id="@($"pack-card-{view.Pack.Id}")" data-pack="@view.Pack.Id">
+    <MudPaper Outlined="true" Class="@($"row-actions-host pack-card pa-3 mb-2{(this.Flash ? " search-hit-flash" : string.Empty)}")" id="@($"pack-card-{view.Pack.Id}")" data-pack="@view.Pack.Id">
         <div class="d-flex flex-wrap align-center gap-2">
             <MudLink Typo="Typo.subtitle1" Class="card-title pack-card-title" OnClick="this.OpenDetailsAsync">@view.Title</MudLink>
             @if (view.Pack.Version.Length > 0)
@@ -62,17 +62,16 @@
             @if (view.State == ItemState.UpdateAvailable)
             {
                 <MudTooltip Text="@SkillGuide.For("Review update")" ShowOnFocus="true">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-review-update" OnClick="@(() => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id))">Review update</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Class="pack-card-review-update" OnClick="@(() => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id))">Review update</ActionButton>
                 </MudTooltip>
             }
             @if (view.CanCopyFix)
             {
                 <MudTooltip Text="@SkillGuide.For("Copy fix prompt")" ShowOnFocus="true">
-                    <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="pack-card-copy-fix" OnClick="this.CopyFixPromptAsync">Copy fix prompt</MudButton>
+                    <ActionButton Role="ButtonRole.Secondary" Class="pack-card-copy-fix" OnClick="this.CopyFixPromptAsync">Copy fix prompt</ActionButton>
                 </MudTooltip>
             }
-            <MudMenu @ref="this.menu" Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button pack-card-menu ml-auto"
-                     AriaLabel="@MenuDialogs.ActivatorLabel(view.Title)">
+            <RowActionsMenu @ref="this.menu" Name="@view.Title" Class="pack-card-menu ml-auto">
                 @foreach (string item in this.MenuItems(view))
                 {
                     if (item == Divider)
@@ -85,7 +84,7 @@
                         <MudMenuItem Class="@($"pack-card-menu-{chosen.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(chosen))">@chosen</MudMenuItem>
                     }
                 }
-            </MudMenu>
+            </RowActionsMenu>
         </div>
     </MudPaper>
 }
@@ -103,7 +102,7 @@
     private const string RemoveFromAgentsItem = "Remove from Agents";
     private const string RemoveItem = "Remove";
 
-    private MudMenu? menu;
+    private RowActionsMenu? menu;
 
     /// <summary>The Packs row's position in SKILLS.md.</summary>
     [Parameter]
@@ -170,10 +169,10 @@
         switch (item)
         {
             case DetailsItem:
-                await MenuDialogs.AfterClosingAsync(this.menu, this.OpenDetailsAsync);
+                await MenuDialogs.AfterClosingAsync(this.menu?.Menu, this.OpenDetailsAsync);
                 break;
             case ReviewUpdateItem:
-                await MenuDialogs.AfterClosingAsync(this.menu, () => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id));
+                await MenuDialogs.AfterClosingAsync(this.menu?.Menu, () => SkillDialogs.OpenUpdateAsync(this.DialogService, view.Title, view.Pack.Id));
                 break;
             case CopyFixItem:
                 await this.CopyFixPromptAsync();
@@ -186,10 +185,10 @@
                 this.Navigation.NavigateTo(LibraryLinkQuery.BuildPageUri(LibraryRootStore.SkillSourcesRootId, relative));
                 break;
             case RemoveFromAgentsItem:
-                await MenuDialogs.AfterClosingAsync(this.menu, () => this.UnholdAsync(view));
+                await MenuDialogs.AfterClosingAsync(this.menu?.Menu, () => this.UnholdAsync(view));
                 break;
             case RemoveItem:
-                await MenuDialogs.AfterClosingAsync(this.menu, () => PackRemoval.RemoveAsync(this.DialogService, this.Remover, this.Registry, this.Snackbar, view.Pack, view.Title, view.Holders));
+                await MenuDialogs.AfterClosingAsync(this.menu?.Menu, () => PackRemoval.RemoveAsync(this.DialogService, this.Remover, this.Registry, this.Snackbar, view.Pack, view.Title, view.Holders));
                 break;
             default:
                 break;

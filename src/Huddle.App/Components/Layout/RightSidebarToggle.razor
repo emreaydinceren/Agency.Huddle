@@ -15,16 +15,7 @@
 @inject SidebarPanelCatalog Catalog
 
 <span class="@(this.pulsing ? "right-sidebar-toggle-aura is-pulsing" : "right-sidebar-toggle-aura")" @key="this.pulseKey">
-    <MudTooltip Text="@this.Label">
-        <MudIconButton Icon="@MaterialSymbols.DockToLeft"
-                       Size="Size.Small"
-                       Color="@(this.Sidebar.IsOpen ? Color.Primary : Color.Inherit)"
-                       Class="right-sidebar-toggle"
-                       aria-label="@this.Label"
-                       aria-pressed="@(this.Sidebar.IsOpen ? "true" : "false")"
-                       aria-controls="@RightSidebar.ElementId"
-                       OnClick="this.Toggle" />
-    </MudTooltip>
+    <ActionIconButton Icon="@MaterialSymbols.DockToLeft" Label="@this.Label" Tooltip="@this.Label" Pressed="@(this.Sidebar.IsOpen)" Class="right-sidebar-toggle" aria-controls="@RightSidebar.ElementId" OnClick="this.Toggle" />
 </span>
 
 @code {

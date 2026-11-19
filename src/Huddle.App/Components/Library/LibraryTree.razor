@@ -102,16 +102,14 @@
                     {
                         @if (item.Children is null)
                         {
-                            <span class="library-tree-loading" aria-label="Loading">
-                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                            </span>
+                            <BusyLabel Label="Loading" Class="library-tree-loading" />
                         }
                         else if (item.Children.Count == 0)
                         {
                             <div class="library-tree-empty">
                                 <span class="library-tree-empty-text">No notes here yet.</span>
-                                <MudButton Class="library-tree-empty-new-note" Size="Size.Small"
-                                           OnClick="@(() => this.RaiseActionAsync(LibraryTreeActionKind.NewNote, value))">New note</MudButton>
+                                <ActionButton Role="ButtonRole.Quiet" Class="library-tree-empty-new-note"
+                                           OnClick="@(() => this.RaiseActionAsync(LibraryTreeActionKind.NewNote, value))">New note</ActionButton>
                             </div>
                         }
                     }

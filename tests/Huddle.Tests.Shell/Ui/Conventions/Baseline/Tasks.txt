@@ -1,0 +1,5 @@
+CV15|src/Huddle.App/Components/Tasks/TaskDetail.razor|2
+CV21|src/Huddle.App/Components/Tasks/TaskActionsMenu.razor|1
+CV21|src/Huddle.App/Components/Tasks/TaskDecisionCard.razor|1
+CV22|src/Huddle.App/Components/Tasks/TaskActionsMenu.razor|1
+CV22|src/Huddle.App/Components/Tasks/TaskDecisionCard.razor|1

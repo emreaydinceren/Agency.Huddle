@@ -3,6 +3,7 @@
 ## Contents
 
 - Two obligations for anyone changing the UI
+- Before you build: check the catalog, and keep it current
 - Start here: the five-minute path
 - I need… use this
 - Reusable parts catalog
@@ -62,11 +63,44 @@ the top-left corner) are in wireframes.md's
 [Sources and upkeep](wireframes.md#sources-and-upkeep). A change that leaves wireframes.md
 describing a screen that no longer exists is incomplete.
 
+## Before you build: check the catalog, and keep it current
+
+[ComponentCatalog.md](ComponentCatalog.md) shows every shared component as a screenshot, with
+its file, how many places use it and its key parameters. It also lists the shapes the app
+repeats with no component yet ([Patterns still built by hand](ComponentCatalog.md#patterns-still-built-by-hand)).
+
+**Check it before you write** a component, a block of markup you are copying from another file,
+a helper or a stylesheet class:
+
+- If the part exists, use it. Do not copy its markup.
+- If the shape is listed as planned, write it the way the existing copies do, do not invent a new
+  variant, and say in the pull request that it will move into its component.
+- If neither, and you are about to copy markup from another file, stop: that is the sign a
+  component is needed. Build it, or add a row to the planned list with the count and where it
+  recurs.
+
+**Keep it current**, in the same commit as the code:
+
+| Change | What to do in ComponentCatalog.md |
+| --- | --- |
+| Adds a shared component, or a new look of one | Add its entry: screenshot, path, sites and key parameters |
+| Removes or renames a shared component | Delete or rename its entry, and fix the links to it |
+| Moves a planned shape into its component | Move its row out of Patterns still built by hand and into the new component's entry |
+| Finds a shape repeated by hand | Add a row to Patterns still built by hand, with its count and where it recurs |
+| Changes how a component looks | Retake its screenshot (the recipe is in the catalog's Keeping this page current) |
+| Changes how many places use a component | Update its count. It need not be exact on every change; recount with the catalog's snippet when you refresh the page |
+
+A change that leaves the catalog listing a component that no longer exists, or missing one that
+does, is incomplete. This page's [catalog tables](#reusable-parts-catalog) describe the same parts
+and keep the container codes and full parameter lists, so update both until they are folded
+together.
+
 ## Start here: the five-minute path
 
 1. **Find the screen** in [wireframes.md](wireframes.md) and note the codes you will touch.
 2. **Look up what to use** in [I need… use this](#i-need-use-this), then the
-   [catalog](#reusable-parts-catalog) for the file and its parameters.
+   [catalog](#reusable-parts-catalog) for the file and its parameters, and
+   [ComponentCatalog.md](ComponentCatalog.md) to see it and to check you are not building a copy.
 3. **Read the rule** in [design-system.md](design-system.md) for anything the lookup
    points to.
 4. **Check the pattern** you are about to copy against that page and the tests: the page
@@ -93,9 +127,9 @@ component here, move it onto the component rather than writing another copy.
 | A destructive confirmation on a list row | `InlineConfirm` with `ConfirmText` set to the verb | [Confirming](design-system.md#confirming) |
 | Context for a page beside it, in the Right sidebar | `PageSubjectSource` anywhere in the page's markup, with the page's Subject as `Value`. The Right sidebar draws the panels for that Subject. Never a drawer of the page's own | [wireframes.md `S4`](wireframes.md#figure-1-the-shell) |
 | Two resizable panes | `MudSplitPanel`, as `LibraryExplorer` uses it | [MudBlazorImplementation.md](../../agents/MudBlazorImplementation.md) |
-| A notice on the page | `MudAlert` with a role, `Dense` if one line | [Notices and snackbars](design-system.md#notices-and-snackbars) |
-| A notice in a Room | The same `MudAlert`, between the Transcript and the Composer, inside the 760px column | [Notices and snackbars](design-system.md#notices-and-snackbars) |
-| An editable long-text field (a prompt, instructions, a Skill's body) | `MudTextField` with `Lines` and the `long-text-field` class, so it is `body1` at 400 | [Typography](design-system.md#typography) |
+| A notice on the page | `Notice` with a `Severity`, and `Kind="NoticeKind.Interruption"` only for a Warning the Human must act on now | [Notices and snackbars](design-system.md#notices-and-snackbars) |
+| A notice in a Room | The same `Notice`, between the Transcript and the Composer, inside the 760px column | [Notices and snackbars](design-system.md#notices-and-snackbars) |
+| An editable long-text field (a prompt, instructions, a Skill's body) | `TextField` with `Shape="TextFieldShape.LongText"` (4 rows, `body1` at 400), or `Markdown` for text written as Markdown | [Typography](design-system.md#typography) |
 | A date on screen | `HumanDate.Format(date, today)`, with `HumanDate.Full(date)` in the tooltip; never a format string at the call site | [Dates and times](design-system.md#dates-and-times) |
 | A transient result | `ISnackbar.Add(…, key: …)` | [Notices and snackbars](design-system.md#notices-and-snackbars) |
 | An empty list | `EmptyState`, with a `Title` and a sentence that gives the next step | [Patterns worth copying](design-system.md#patterns-worth-copying) |
@@ -109,7 +143,10 @@ component here, move it onto the component rather than writing another copy.
 | An Agent's health beside a name | `StatusDot` | [Avatars and status](design-system.md#avatars-and-status) |
 | A presence badge on an avatar | `PresenceAnchor` around the avatar, with a `PresenceCue` | [Avatars and status](design-system.md#avatars-and-status) |
 | A Task's state, priority or presence colour | `TaskColors.For(…)`; the priority icon is `TaskColors.Icon(priority)` | [Colour](design-system.md#colour) |
-| A two- to five-way mode switch | `HuddleSegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
+| A two- to five-way mode switch | `SegmentedControl<T>` | [House defaults](design-system.md#house-defaults) |
+| An on-or-off setting | `SettingSwitch` when it takes effect the moment it is flipped; a `MudCheckBox` with `Color.Primary` and `Dense` when it waits for Save, Create or Apply, or picks items. Never a raw `MudSwitch` (CV19) | [House defaults](design-system.md#house-defaults) |
+| A button | `ActionButton` with a `Role`: `Primary` (the one filled action), `Secondary`, `Quiet` (Cancel, Close, a row action), `Danger` (the confirm that destroys) or `DangerQuiet` (a trigger that asks first). Never a raw `MudButton` (CV15) | [House defaults](design-system.md#house-defaults) |
+| A dialog's Cancel and primary buttons | `DialogFooter` inside `<DialogActions>`: `CancelText`, `OnCancel`, `PrimaryText`, `OnPrimary`, `PrimaryDisabled`, `Busy`, `Destructive` | [Dialog anatomy](design-system.md#dialog-anatomy) |
 | Filter chips | `ChipCloud` | [Chips](design-system.md#chips) |
 | A toolbar filter shown as "Label: Value ⌄ ×" | `TaskFilterChip` | [Catalog: actions and input](#actions-and-input) |
 | To save a page's own setup | Save each change as it is made, through `ViewStore` | [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) |
@@ -118,7 +155,7 @@ component here, move it onto the component rather than writing another copy.
 | A one-line sidebar list that can grow | `SidebarRows` and `ShowAllRow`, with a `span.sidebar-row-label` | [The sidebar](design-system.md#the-sidebar) |
 | An inline edit of a title | A field with `.title-inline-edit` and an `aria-label`, no floating label | [Component rules](design-system.md#component-rules) |
 | Resizable columns in a List | `task-list-resize.js` on a grid with the `task-list-grid` class; MudDataGrid's own resizing is off because it round-trips per pointer move | [Catalog: browser scripts](#browser-scripts) |
-| Row actions | A `Filled.MoreVert` `MudMenu`, revealed on hover or focus: `hover-reveal-row` on the row, `hover-reveal-menu-button` on the button | [The sidebar](design-system.md#the-sidebar) |
+| Row actions | `RowActionsMenu` with the row's `Name` ("Actions for {Name}") and the items as content; it reveals on hover or focus inside a `hover-reveal-row` or a `row-actions-host` row, or `Reveal="RowActionsReveal.Always"` off a row. Never a raw ⋮ `MudMenu` (CV22) | [The sidebar](design-system.md#the-sidebar) |
 | An icon | The entity or action table | [Icons](design-system.md#icons) |
 | A tinted, selected or hovered surface | The States table | [Colour](design-system.md#colour) |
 | A border | The Lines table | [Colour](design-system.md#colour) |
@@ -127,8 +164,12 @@ component here, move it onto the component rather than writing another copy.
 | A small label over a group of fields, in a drawer, dialog or card | The Label (`.group-label`) | [Typography](design-system.md#typography) |
 | A selected row in any list | The Selected treatment and shape | [Colour](design-system.md#colour) |
 | A filter chip | `Chip` with `Look=Filter`, or its wrappers `TaskFilterChip` and `ChipCloud` | [Chips](design-system.md#chips) |
+| One choice out of a few, as chips | `ChipRadioGroup<T>` (`Items`, `ItemLabel`, `Label`, an optional `ItemCount`); it owns the radio roles and the arrow keys. Never a single-select `MudChipSet` (CV25) | [Chip radio group](ComponentCatalog.md#chip-radio-group) |
+| A spinner for work no button owns | `BusyLabel` with a `Label` ("Loading"), or none when the container already names the state. A button running its action sets `ActionButton`'s `Busy` and says "…ing" instead. Never a raw `MudProgressCircular` (CV24) | [Busy label](ComponentCatalog.md#busy-label) |
 | Any other chip | `Chip` with `Look=Status` or `Look=Tag`; never a raw `MudChip` (CV13). A count or meta is plain `.chip-meta` text | [Chips](design-system.md#chips) |
-| A search box or select in a toolbar | `SearchField` with `toolbar-compact` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
+| A label and its value, read or edited, in a list of properties | `PropertyList` of `PropertyRow`s (`Compact` on a card or preview, `Divided` past six rows, `Editing` when the values are inputs); never a raw `<dt>` (CV23) | [Property list](ComponentCatalog.md#property-list) |
+| A search box or select in a toolbar | `SearchField Compact`, `SelectField Compact`, or `TextField` with `Shape="TextFieldShape.Compact"` | [Spacing, density and size](design-system.md#spacing-density-and-size) |
+| An Adapter, Model and Effort choice, or a select whose list an Adapter probe reads | `AdapterModelEffortPicker` (`OfferWorkMode` for Work mode); `ProbedSelect` for one probed select | [Catalog: the Agent card](ComponentCatalog.md#the-agent-card) |
 | A highlighted search match | Search match in the States table | [Colour](design-system.md#colour) |
 | A file a message mentions | Its name as a `.ref-link`, path in the tooltip | [The Room](design-system.md#the-room) |
 | A menu of actions | The Menus rule | [Menus](design-system.md#menus) |
@@ -147,7 +188,9 @@ component here, move it onto the component rather than writing another copy.
 ## Reusable parts catalog
 
 Everything here already exists. Paths are under `src/Huddle.App/`. Check this catalog
-before you create a component, a helper or a CSS class.
+before you create a component, a helper or a CSS class. [ComponentCatalog.md](ComponentCatalog.md)
+shows the same parts as screenshots, with how many places use each, and lists the repeated
+shapes that have no component yet.
 
 ### Shell and navigation
 
@@ -194,7 +237,7 @@ before you create a component, a helper or a CSS class.
 | `ConflictRow` | `Components/Tasks/ConflictRow.razor` | A conflicting field in the Task detail | `Field`, `Stacked`, `TheirsText`, `YoursText`, `Choice` | One field of an edit conflict, in the panel or the expanded table |
 | `SettingsIntro`, `StoredAt`, `ProblemList` | `Components/Settings/` | The top and foot of a Settings panel | `ChildContent`; `Path`, `Label`; `Count` | The intro paragraph, the "Stored at" line and the "Problems" list of every Settings panel |
 | `SearchCardShell` | `Components/Search/SearchCardShell.razor` | Every row of the `S1b` dropdown | `Icon`, `Title`, `Meta`, `Snippet`, `Trailing`, `AccessibleName`, `Archived` | A new kind of search result: fill the slots, don't copy a card |
-| `HuddleSegmentedControl<T>` | `Components/Shared/HuddleSegmentedControl.razor` | `T3a`, `L3b`, `S2b1` | `Value`, `ValueChanged`, `ItemCount`, `Disabled`, `SelectionMode`; `MudToggleItem`s as children | A two- to five-way mode switch, such as the Feed's All | Needs you (`F3a`). The indicator follows up to nine segments |
+| `SegmentedControl<T>` | `Components/Shared/SegmentedControl.razor` | `T3a`, `L3b`, `S2b1` | `Options` (a list of `SegmentedOption<T>`: value, label, optional icon, optional badge), `Value`, `ValueChanged`, `Class` | A two- to five-way mode switch, such as the Feed's All | Needs you (`F3a`). One 28 px row; the indicator follows any number of options. A raw `MudToggleGroup` elsewhere fails convention rule CV14 |
 | `SkillProvenanceLine` | `Components/Shared/SkillProvenanceLine.razor` | Skills, Agent card | `Skill` | Where a Skill came from and whether it was modified |
 | `EditPreview` | `Components/Shared/EditPreview.razor` | `C7b` | `Edit`, `Path` | A file edit's before and after |
 | `MessageReferences` | `Components/References/MessageReferences.razor` | Under `C5c` | `Message` | The reference chips a Message carries |
@@ -214,9 +257,21 @@ before you create a component, a helper or a CSS class.
 
 | Component | Path | Draws | Key parameters | Use it for |
 | --- | --- | --- | --- | --- |
+| `ActionButton` | `Components/Shared/ActionButton.razor` | Every button | `Role` (`ButtonRole`), `ChildContent`, `StartIcon`, `EndIcon`, `Disabled`, `Busy`, `Href`, `Submit`, `FullWidth`, `Class` (layout and hooks only), `OnClick`, any other attribute; `FocusAsync()` | Any button. The role fixes the variant, colour and the 28 px Small size, at the control radius. A raw `MudButton` elsewhere fails convention rule CV15 against a shrinking per-file baseline |
+| `ActionIconButton` | `Components/Shared/ActionIconButton.razor` | Every icon button | `Icon`, `Label` (required), `Tooltip`, `TooltipPlacement`, `TooltipClass`, `Pressed`, `Disabled`, `Href`, `Class` (layout and hooks only), `OnClick`, any other attribute; `FocusAsync()` | Any icon-only button: always Small, one 28 px round box, the tooltip built in. A raw `MudIconButton` elsewhere fails convention rule CV21 against a shrinking per-file baseline |
+| `RowActionsMenu` | `Components/Shared/RowActionsMenu.razor` | Every row's ⋮ menu | `Name` or `Label`, `ChildContent`, `Reveal` (`RowActionsReveal`: `OnHover` or `Always`), `Disabled`, `Class`, `ActivatorClass`; `Menu` | A row's actions: a Dense menu whose activator is the `ActionIconButton` "Actions for {Name}", revealed on hover or focus. A raw ⋮ `MudMenu` elsewhere fails CV22 |
+| `Notice` | `Components/Shared/Notice.razor` | Every notice (`C9`, `T9`, `L3d`) | `Severity` (`NoticeLevel`: `Error`, `Warning`, `Info`, `Success`), `Kind` (`NoticeKind`: `Interruption` or `Consequence`), `ChildContent`, `OnDismiss`, `Class` (hooks and layout only), any other attribute | Any notice on a page, in a dialog or in a Room. Always dense with an 18 px icon; the kind writes `role="alert"` or `role="status"` (Error interrupts, the rest report, unless `Kind` says otherwise); `OnDismiss` draws a close button; the notice owns its 12 px spacing. A raw `MudAlert` elsewhere fails convention rule CV16 against a shrinking per-file baseline |
 | `InlineConfirm` | `Components/Shared/InlineConfirm.razor` | `O6` | `Prompt`, `ConfirmText`, `Narrow`, `Busy`, `OnConfirm`, `OnCancel`, `Class` | A destructive yes or no that replaces a list row: Cancel, then the verb (`ConfirmText`, default "Delete"). `Narrow="true"` with `Prompt="Delete?"` is the one-line sidebar form. Confirm takes focus, Escape cancels |
+| `BusyLabel` | `Components/Shared/BusyLabel.razor` | The search group heading, the profile popover, a loading Library folder, `InlineConfirm` while busy, the AI reacting chip, a running tool call (CV24 is zero) | `Label` (optional), `Class` | A 24 px spinner for work no button owns: a named `role="status"` with a `Label`, `aria-hidden` decoration without one. Never inside a button |
+| `ChipRadioGroup<T>` | `Components/Shared/ChipRadioGroup.razor` | The Feed panel's Categories, the search scopes (CV25 is zero) | `Items`, `Value`, `ValueChanged`, `Label`, `ItemLabel`, `ItemCount`, `Class` | A single choice drawn as Filter chips: a `radiogroup` of `radio`s, one tab stop, plain arrows move and wrap |
 | `ResetAllControl` | `Components/Settings/ResetAllControl.razor` | `G1a` | `AnyModified`, `Confirming`, `OnBeginReset`, `OnConfirm`, `OnCancel` | Prompts' reset-all only; its confirm reads "Reset all" |
 | `SearchField` | `Components/Shared/SearchField.razor` | The search box of `L2c`, `T3e`, Skill import | `Value`, `ValueChanged`, `Placeholder`, `AriaLabel`, `Class`, `Compact` | Any search box: outlined, dense, clearable, one debounce. `Compact="true"` wears `.toolbar-compact` (a 28px box with 13px text) for a toolbar row. `Class` lets a surface restyle its own box (`.task-toolbar-search` takes the segmented controls' track colour) |
+| `TextField` | `Components/Shared/TextField.razor` | Every text input (CV17 has no baseline) | `Value`, `ValueChanged`, `Label`, `AriaLabel`, `Shape`, `Rows`, `MaxRows`, `HelperText`, `Placeholder`, `Immediate`, `Disabled`, `Error`, `ErrorText`, `StartIcon`, `EndIcon`, `OnEndIconClick`, `OnKeyDown`, `OnBlur`, `Class`; `FocusAsync()` | Any text input: always outlined and dense, named (a field with no `Label` or `AriaLabel` throws), and shaped by `TextFieldShape` (`Line`, `Compact`, `LongText`, `Markdown`) rather than Mud parameters or look classes. See the [catalog entry](ComponentCatalog.md#text-field-and-select) |
+| `SelectField<T>` | `Components/Shared/SelectField.razor` | Every select (CV18 has no baseline) | `Value`, `ValueChanged`, `MultiSelection`, `SelectedValues`, `SelectedValuesChanged`, `ChildContent`, `Label`, `AriaLabel`, `HelperText`, `Disabled`, `Error`, `Compact`, `DenseItems`, `ToStringFunc`, `Class` | Any select: always outlined and dense, `MudSelectItem`s as its content, `Compact` in a toolbar, named like `TextField` |
+| `AdapterModelEffortPicker` | `Components/Shared/AdapterModelEffortPicker.razor` | The Helper card's Adapter, Model and Effort; the Agent card's Create and Edit form | `Adapter`, `Model`, `Effort`, `OfferWorkMode`, `WorkMode`, `Disabled`, `DefaultOptionText`, `AdapterHelperText`, `Caption`, `SelectionChanged` (`AdapterModelEffortChoice`), `OptionsRead` (`AdapterModelEffortOptions`) | Choosing what runs an Agent or Helper: the one cascade (a changed Adapter clears the rest, a changed Model clears Effort, each with a note), the probed lists, and the Adapter select only when there is a choice. See the [catalog entry](ComponentCatalog.md#the-agent-card) |
+| `ProbedSelect` | `Components/Shared/ProbedSelect.razor` | The picker's Model, Effort and Work mode | `Label`, `Value`, `ValueChanged`, `Probing`, `ProbeLabel`, `Disabled`, `ToStringFunc`, `ChildContent` | A select whose choices an Adapter probe reads: Disabled, `aria-busy` and styled busy while `Probing`, with a named progress bar under it |
+| `SettingSwitch` | `Components/Shared/SettingSwitch.razor` | Every switch (CV19 has no baseline): `P6a`, `P6b`, the Process tab's gates, Library Hide, Skills Show hidden (twice), Theme Lab Inspect | `Value`, `ValueChanged`, `Label`, `Helper`, `Disabled`, `DisabledReason`, `Class`, `LineHookClass`, any other attribute | A setting that takes effect the moment it is flipped: Small and Primary, a label naming the setting, one caption line (the reason while disabled, otherwise the helper). A setting that waits for Save is a `MudCheckBox` with `Color.Primary` (CV20). See the [catalog entry](ComponentCatalog.md#switch-and-checkbox) |
+| `PropertyList`, `PropertyRow` | `Components/Shared/PropertyList.razor`, `PropertyRow.razor` | `TaskReadView`, `TaskDetail`'s Planning and Dates groups, the Feed previews, `ProfileCard`, `LibraryProperties` (CV23 is zero) | `Compact`, `Divided`, `Editing`, `Class`; a row: `Label`, `ChildContent`, `Class`, `LabelClass`, `ValueClass` | A label and a value per row: a fixed 120 px label column, a 32 px row (28 px `Compact`), a `<dl>` when read and a plain group with hidden labels when editing, so read and edit views line up. See the [catalog entry](ComponentCatalog.md#property-list) |
 | `TaskFilterChip` | `Components/Tasks/TaskFilterChip.razor` | `T3c`, `T3h`, `T3i` and the other set-filter chips in `T3`; the Members tab's team type filter (`B9g`) | `Label`, `Value`, `IsSet`, `ChildContent` (the `MudMenuItem`s), `NoMenu`, `OnClear`, `Class` | One "Label: Value" filter chip: a menu, a clear button, dashed while unset, filled once set; with `NoMenu` the same pill without the caret and menu, for a choice made elsewhere. It owns no state. The Tasks toolbar's second row (`T3`) is the model: a Filter icon menu, then one chip per set filter |
 | `AvatarEditor` | `Components/Shared/AvatarEditor.razor` | Inside `AvatarEditorDialog` (Agent card, Settings > Profile) | `Name`, `Value`, `ValueChanged`, `SaveMode`, `PendingImage` | Choosing an avatar: a large preview over a `role="radiogroup"` of choice cards (`.avatar-choice-card`, each a small avatar plus its control): Initials of the name; A short label (the Label field, always shown, with an end adornment "Choose an emoji" button that opens a popover with the vendored `<emoji-picker>` and, on a pick, replaces the label and chooses this card; typing chooses it); Image from the library (only when a library is configured; not selectable until it holds a picture, a press on the card does nothing then, and only its button opens the library); Upload an image (the "Upload…" button; selectable empty, Remove image keeps it chosen; a stored image reopens here). The Background, hidden under either image card (`visibility: hidden` and `inert`, so the dialog keeps its height), is a radio group (`role="radiogroup"`) of 32px circles drawn with the avatar recipe, each named by its colour and keyboard-reachable; the chosen one has a ring and a check. Buffered in the dialog; `Immediate` mode has no caller since the Human's avatar moved from Appearance to Profile |
 | `Composer` | `Components/Shared/Composer.razor` | `C10` | `RoomId`, `RoomName` | The message input; one per Room. Its box shares the Transcript's 760px column. The placeholder is "Message {RoomName}… (/invite @Agent)", or "Message… (/invite @Agent)" when `RoomName` is empty. Its focus border is the accent plus a 0.5px inset ring |
@@ -242,6 +297,7 @@ the shell and follow [In-place action rows](design-system.md#in-place-action-row
 | Dialog | Path | Parameters | Pattern worth copying |
 | --- | --- | --- | --- |
 | `NameDialog` | `Components/Shared/Dialogs/` | `Label`, `ConfirmText`, `InitialValue`, `Validate`, `SubmitAsync`, `Location`, `ChildContent` | Any one-field name (`Location` names the place in the title: "New note in Platform"): live validation, Enter submits, focus on open. Used for New project (`NewProjectPrompt`), Rename view (`ViewActions.RenameAsync`) and the Library's New note, New folder and Rename note or folder (`LibraryFileOps`). A multi-field flow such as Duplicate team stays bespoke. `NewTeamDialog`, `RenameDialog`, `NamePromptDialog` and `DeleteDialog` were removed |
+| `DialogFooter` | `Components/Shared/DialogFooter.razor` | `CancelText`, `OnCancel`, `ShowCancel`, `CancelTooltip`, `OnBack`, `ChildContent` (a middle option), `PrimaryText`, `OnPrimary`, `PrimaryDisabled`, `PrimaryIcon`, `Busy`, `BusyText`, `Destructive`, `CancelClass`, `PrimaryClass` | Every dialog's actions row: Cancel, Back, a middle option, then the one primary (Filled Primary, or Filled Error when `Destructive`). Busy disables the primary and shows a spinner. A picker has no actions row |
 | `ConfirmDialog` with `ConfirmAsync` | `Components/Shared/Dialogs/` | `Message`, `ConfirmText`, `Danger` | `await this.DialogService.ConfirmAsync(title, message, confirmText, danger)`; `true` only on confirm |
 | `HuddleDialogOptions` | `Components/Shared/Dialogs/HuddleDialogOptions.cs` | `SmallForm`, `ShortPicker`, `Picker` | The options for every dialog: `SmallForm` (600px) for forms and confirms, `ShortPicker` (600px) for a one-column picker under about 12 items, `Picker` (960px) for two-pane or tabular pickers only |
 | `MenuDialogs`, `ConfirmCopy` | `Components/Shared/Dialogs/` | `MenuDialogs.AfterClosingAsync(menu, open)`, `MenuDialogs.ActivatorLabel(target)`; `ConfirmCopy.Quote(name)`, `ConfirmCopy.DeleteTitle(name)` | The menu-opens-dialog idiom: an item that opens a dialog wraps the call in `AfterClosingAsync` so the menu closes first, and the menu's activator carries `ActivatorLabel` ("Actions for {target}") as its `aria-label` with no hover tooltip. `ConfirmCopy` writes the one quote style ("x") |
@@ -323,19 +379,18 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.ref-link` | A dotted-underline reference to a Task, Library file, Room or Team inside a Message |
 | `.room-strip` | A row stacked above the Composer, with the hairline on top |
 | `.group-heading` | A `subtitle2` heading in `TextPrimary` over a group of fields or tiles |
-| `.long-text-field` | An editable long-text `MudTextField`: `body1` size, weight 400, line height 1.55 |
+| `.long-text-field` | An editable long-text field: `body1` size, weight 400, line height 1.55. Written by `TextField`'s `LongText` and `Markdown` shapes; no caller writes it |
 | `.room-notice-column` | A notice in a Room (`member-health-alert`, `budget-prompt`, `reply-note`): the Transcript's 760px column, centred |
 | `.nav-row-link` | A top-level sidebar destination (Agents, Library): an ordinary 32px, 13px row with the section header's icon geometry, not a header |
 | `.needs-you-heading` | The Needs You card's title, in the sidebar section-header style |
 | `.card-title` | The 14px heading of a card, a panel section or a row, at 600 (the `subtitle1` role itself is 400) |
 | `.group-label` | The Label, the one small-label style: 12px at 600 in Quiet ink, 8px above its fields; `labels=upper` uppercases it |
 | `.selected-shape` | The chosen row of a list, tree or menu: Accent tint at 14% (20% hovered), Accent ink at 500, inset 4px, rounded to the control radius step |
-| `.toolbar-compact` | A field in a toolbar: a 28px box with 13px text. `SearchField Compact` wears it |
+| `.toolbar-compact` | A field in a toolbar: a 28px box with 13px text. Written by `TextField`'s `Compact` shape and `SelectField Compact` (so `SearchField Compact` too); no caller writes it |
 | `.picker-row` | A list row in a picker dialog: 32px, 13px, an 18px icon in a 24px slot |
 | `.menu-item-destructive` | A destructive `MudMenuItem`: Error ink on the text and icon. It goes last, after a divider |
 | `.nav-action-link` | A sidebar action link ("New room"): secondary text colour; its "+" and label sit on the sidebar grid like any row |
 | `.hover-reveal-row` with `.hover-reveal-menu-button` | A row whose menu button shows on hover or focus |
-| `.btn-action-tight` | A button whose start icon sits close to its label |
 | `.agent-dot` with `.online`, `.degraded`, `.starting`, `.awake`, `.on-avatar` and `.presence-glyph-*` | The badge behind `PresenceBadge` (10px, 12px beside a 40px avatar; the pulse animation is `presence-pulse`); use the component |
 | `.presence-anchor` | The frame `PresenceAnchor` draws around an avatar |
 | `.status-chip-*`, `.tag-chip`, `.filter-chip` with `.is-set`, `.chip-meta` | The three chip looks of `Chip`: tinted (24px), quiet (24px, with a Line) and filter (28px, dashed until set), and the plain caption text of a count or meta |
@@ -477,7 +532,7 @@ change.
 
 Check these first. Each links to the rule that owns it.
 
-1. **Density on every control:** `Size.Small` on buttons and icon buttons (a chip is the one
+1. **Density on every control:** a button is an `ActionButton` (always Small), `Size.Small` on icon buttons (a chip is the one
    `Chip`); `Variant.Outlined` and `Margin.Dense` on inputs
    ([Spacing, density and size](design-system.md#spacing-density-and-size)).
 2. **Every page has one `h1`**, a `Typo.h5`, inside `MudContainer pa-4`, and the breadcrumb
@@ -485,7 +540,7 @@ Check these first. Each links to the rule that owns it.
    ([A page](design-system.md#a-page), step 3). Don't copy it to another page.
 3. **Dialog actions run Cancel, then a Filled primary**
    ([Dialog anatomy](design-system.md#dialog-anatomy)).
-4. **Every `MudAlert` has a role, every snackbar a `key`, every icon-only control an
+4. **Every notice is a `Notice` (which writes its role), every snackbar a `key`, every icon-only control an
    `aria-label` that names its target**
    ([Focus and accessibility](design-system.md#focus-and-accessibility)).
 5. **No text under 11px; prose no wider than 75 characters; a heading never smaller than

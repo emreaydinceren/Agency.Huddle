@@ -15,9 +15,10 @@
         <MudText Typo="Typo.caption" Class="d-block mt-2 mud-text-secondary">@SkillGuide.For("Keep or remove Skills")</MudText>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" Size="Size.Small" Class="remove-pack-cancel" OnClick="this.Cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="remove-pack-keep-button" OnClick="@(() => this.Choose(HolderChoice.Keep))">Keep their Skills</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Small" Color="Color.Error" Class="remove-pack-too-button" OnClick="@(() => this.Choose(HolderChoice.RemoveToo))">Remove from Agents too</MudButton>
+        <DialogFooter CancelClass="remove-pack-cancel" OnCancel="this.Cancel" PrimaryText="Remove from Agents too" Destructive="true" PrimaryClass="remove-pack-too-button"
+                      OnPrimary="@(() => this.Choose(HolderChoice.RemoveToo))">
+            <ActionButton Role="ButtonRole.Secondary" Class="remove-pack-keep-button" OnClick="@(() => this.Choose(HolderChoice.Keep))">Keep their Skills</ActionButton>
+        </DialogFooter>
     </DialogActions>
 </MudDialog>
 

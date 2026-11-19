@@ -31,17 +31,15 @@
                     <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
                 </ChildContent>
                 <ItemRenderer>
-                    @* The switch is Accent when on, and its label is the field's display name, so it has an accessible name.
-                       The first row cannot move up and the last cannot move down. *@
+                    @* A checkbox, not a switch, because the choice waits for Save (the B6 rule). It is Accent when ticked, and its
+                       label is the field's display name, so it has an accessible name. The first row cannot move up and the last
+                       cannot move down. The hook class keeps its old name for the tests. *@
                     <div class="view-editor-field-row">
-                        <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary"
-                                   Label="@TaskFieldView.Label(context)" Class="@($"view-editor-field-switch-{context}")" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} up")"
-                                       Disabled="@this.IsFirst(context)" Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"Move {TaskFieldView.Label(context)} down")"
-                                       Disabled="@this.IsLast(context)" Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"Remove {TaskFieldView.Label(context)}")"
-                                       Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.Remove(context))" />
+                        <MudCheckBox T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetShown(context, shown))" Color="Color.Primary" Dense="true"
+                                     Label="@TaskFieldView.Label(context)" Class="@($"view-editor-field-switch-{context}")" />
+                        <ActionIconButton Icon="@Icons.Material.Filled.ArrowUpward" Label="@($"Move {TaskFieldView.Label(context)} up")" Disabled="@this.IsFirst(context)" Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.Move(context, -1))" />
+                        <ActionIconButton Icon="@Icons.Material.Filled.ArrowDownward" Label="@($"Move {TaskFieldView.Label(context)} down")" Disabled="@this.IsLast(context)" Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.Move(context, 1))" />
+                        <ActionIconButton Icon="@Icons.Material.Filled.Close" Label="@($"Remove {TaskFieldView.Label(context)}")" Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.Remove(context))" />
                     </div>
                 </ItemRenderer>
             </MudDropContainer>
@@ -55,13 +53,12 @@
 
         @if (this.problem is not null)
         {
-            <MudAlert Severity="Severity.Error" role="alert" Class="fields-dialog-problem">@this.problem</MudAlert>
+            <Notice Severity="NoticeLevel.Error" Class="fields-dialog-problem">@this.problem</Notice>
         }
     </DialogContent>
     <DialogActions>
-        <MudButton Size="Size.Medium" OnClick="this.Cancel" Class="fields-dialog-cancel">Cancel</MudButton>
-        <MudButton Variant="Variant.Filled" Size="Size.Medium" Color="Color.Primary" OnClick="this.Save"
-                   Disabled="@(this.view is null || this.ViewStore.LoadError is not null)" Class="fields-dialog-save">Save</MudButton>
+        <DialogFooter CancelClass="fields-dialog-cancel" OnCancel="this.Cancel" PrimaryText="Save" PrimaryDisabled="@(this.view is null || this.ViewStore.LoadError is not null)"
+                      PrimaryClass="fields-dialog-save" OnPrimary="this.Save" />
     </DialogActions>
 </MudDialog>
 

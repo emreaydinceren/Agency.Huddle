@@ -14,16 +14,15 @@
 @foreach (WaitingCount waiting in this.counts)
 {
     string agentId = waiting.AgentId;
-    @* MudAlert renders no role by default - verified against the rendered markup, not assumed - so role="status" is added explicitly, per rules.md. *@
-    <MudAlert Severity="Severity.Info" Dense="true" Class="waiting-notice room-notice-column" role="status">
+    <Notice Severity="NoticeLevel.Info" Class="waiting-notice room-notice-column">
         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
             <span class="waiting-notice-text">@WaitingNotice.Text(waiting)</span>
             @if (!this.AgentIdsWithDraft.Contains(agentId))
             {
-                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@(() => this.StopAsync(agentId))">Don't answer</MudButton>
+                <ActionButton OnClick="@(() => this.StopAsync(agentId))">Don't answer</ActionButton>
             }
         </MudStack>
-    </MudAlert>
+    </Notice>
 }
 
 @code {

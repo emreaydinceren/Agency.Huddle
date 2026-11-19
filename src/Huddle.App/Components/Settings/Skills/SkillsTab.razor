@@ -38,17 +38,11 @@
 
 <div class="skills-tab-actions d-flex flex-wrap gap-2 mb-2">
     <MudTooltip Text="@SkillGuide.For("Import skill")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-import-button" OnClick="this.ImportSkillAsync">Import skill</MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="skills-import-button" OnClick="this.ImportSkillAsync">Import skill</ActionButton>
     </MudTooltip>
     <MudTooltip Text="@SkillGuide.For("Reload")" ShowOnFocus="true">
-        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="skills-reload-button" StartIcon="@Icons.Material.Filled.Refresh"
-                   Disabled="@this.reloading" OnClick="this.ReloadAsync">
-            @if (this.reloading)
-            {
-                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-            }
-            Reload
-        </MudButton>
+        <ActionButton Role="ButtonRole.Secondary" Class="skills-reload-button" StartIcon="@Icons.Material.Filled.Refresh"
+                      Busy="@this.reloading" OnClick="this.ReloadAsync">@(this.reloading ? "Reloading…" : "Reload")</ActionButton>
     </MudTooltip>
 </div>
 
@@ -62,8 +56,7 @@
         }
     </TaskFilterChip>
     <MudTooltip Text="@SkillGuide.For("Show hidden")" ShowOnFocus="true">
-        <MudSwitch T="bool" Value="@this.showHidden" ValueChanged="@((bool value) => this.showHidden = value)" Color="Color.Primary" Size="Size.Small"
-                   Label="Show hidden" Class="skills-tab-show-hidden" />
+        <SettingSwitch Value="@this.showHidden" ValueChanged="@((bool value) => this.showHidden = value)" Label="Show hidden" Class="skills-tab-show-hidden" />
     </MudTooltip>
 </div>
 
@@ -72,7 +65,7 @@
     bool virtualize = rows.Count > VirtualizeAbove;
 }
 <MudDataGrid T="SkillRow" Items="@rows" ReadOnly="true" Dense="true" Hover="true" Virtualize="@virtualize" FixedHeader="@virtualize" Height="@(virtualize ? "60vh" : null)"
-             ColumnResizeMode="ResizeMode.None" ShowColumnOptions="false" Class="skills-grid" RowClass="skills-grid-row">
+             ColumnResizeMode="ResizeMode.None" ShowColumnOptions="false" Class="skills-grid" RowClass="row-actions-host skills-grid-row">
     <Columns>
         <TemplateColumn T="SkillRow" Title="Name" Sortable="false">
             <CellTemplate>
@@ -120,14 +113,13 @@
             <CellTemplate>
                 @if (this.MenuItemsFor(context.Item).Count > 0)
                 {
-                    <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Dense="true" Class="hover-reveal-menu-button skills-row-menu"
-                             AriaLabel="@MenuDialogs.ActivatorLabel(SkillNames.Display(context.Item.Name))">
+                    <RowActionsMenu Name="@SkillNames.Display(context.Item.Name)" Class="skills-row-menu">
                         @foreach (string item in this.MenuItemsFor(context.Item))
                         {
                             SkillRow row = context.Item;
                             <MudMenuItem Class="@($"skills-menu-{item.ToLowerInvariant().Replace(' ', '-')}")" OnClick="@(() => this.OnMenuAsync(row, item))">@item</MudMenuItem>
                         }
-                    </MudMenu>
+                    </RowActionsMenu>
                 }
             </CellTemplate>
         </TemplateColumn>

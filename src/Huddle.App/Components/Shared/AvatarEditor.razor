@@ -64,7 +64,7 @@
 @if (this.libraryOpen)
 {
     <div class="avatar-library-inline">
-        <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="this.CloseLibraryAsync" Class="avatar-library-back mb-2">Back</MudButton>
+        <ActionButton StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="this.CloseLibraryAsync" Class="avatar-library-back mb-2">Back</ActionButton>
         <AvatarLibraryPicker OnPicked="this.OnLibraryPickedAsync" OnCancel="this.CloseLibraryAsync" />
     </div>
 }
@@ -100,11 +100,10 @@ else
                    overridden. This is the markup MudInputControl renders for a counter (the helper container, the d-flex helper text, the
                    right-aligned ms-auto line), so it looks the same, and it counts text elements as the limit does. Like the stock counter
                    it does not change colour past the limit. Trimming happens once, in Working's Avatar.TrimLabel call, not here. *@
-                <MudTextField @ref="this.labelField" T="string" aria-label="Avatar label" Class="avatar-label-field" Variant="Variant.Outlined" Margin="Margin.Dense"
+                <TextField @ref="this.labelField" AriaLabel="Avatar label" Class="avatar-label-field"
                               Value="@this.label" ValueChanged="this.OnLabelChangedAsync"
-                              Immediate="true"
-                              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Outlined.EmojiEmotions"
-                              AdornmentAriaLabel="Choose an emoji" OnAdornmentClick="this.OpenEmojiPicker" />
+                              Immediate="true" EndIcon="@Icons.Material.Outlined.EmojiEmotions"
+                              EndIconLabel="Choose an emoji" OnEndIconClick="this.OpenEmojiPicker" />
                 <div class="mud-input-control-helper-container px-2">
                     <div class="d-flex mud-input-helper-text">
                         <div class="ms-auto">@this.LabelCounterText</div>
@@ -141,15 +140,15 @@ else
                 </label>
                 <div class="avatar-choice-body">
                     <span class="avatar-choice-actions" @onclick:stopPropagation="true">
-                        <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
+                        <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.PhotoLibrary" OnClick="this.ChooseFromLibraryAsync">
                             Choose from library
-                        </MudButton>
+                        </ActionButton>
                     </span>
                     @if (this.LibraryHoldsImage)
                     {
                         <MudText Typo="Typo.body2">@this.HeldImageText</MudText>
                         <span class="avatar-choice-actions" @onclick:stopPropagation="true">
-                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
+                            <ActionButton OnClick="this.RemoveImageAsync">Remove image</ActionButton>
                         </span>
                     }
                 </div>
@@ -171,9 +170,9 @@ else
                 <span class="avatar-choice-actions" @onclick:stopPropagation="true">
                     <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnFileChangedAsync">
                         <CustomContent Context="fileUpload">
-                            <MudButton Variant="Variant.Outlined" Size="Size.Small" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                            <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
                                 Upload…
-                            </MudButton>
+                            </ActionButton>
                         </CustomContent>
                     </MudFileUpload>
                 </span>
@@ -181,7 +180,7 @@ else
                 {
                     <MudText Typo="Typo.body2">@this.HeldImageText</MudText>
                     <span class="avatar-choice-actions" @onclick:stopPropagation="true">
-                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveImageAsync">Remove image</MudButton>
+                        <ActionButton OnClick="this.RemoveImageAsync">Remove image</ActionButton>
                     </span>
                 }
             </div>
@@ -191,7 +190,7 @@ else
 
     @if (this.error is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2" role="alert">@this.error</MudAlert>
+        <Notice Severity="NoticeLevel.Error">@this.error</Notice>
     }
 
     @* Under an image card the Background is hidden, not removed: it keeps its space, so the dialog does not change height
@@ -213,7 +212,7 @@ else
         </div>
         @if (this.background is not null)
         {
-            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</MudButton>
+            <ActionButton OnClick="this.UseThemeColourAsync" Class="mt-1">Use the theme colour</ActionButton>
         }
     </div>
 </div>
@@ -233,7 +232,7 @@ else
     /// <summary>The element id <c>emoji-picker.js</c> finds the picker by; one editor is open at a time, and the picker exists only while its popover is.</summary>
     private const string EmojiPickerId = "avatar-emoji-picker";
 
-    private MudTextField<string>? labelField;
+    private TextField? labelField;
     private bool emojiOpen;
     private bool emojiWire;
     private bool disposed;

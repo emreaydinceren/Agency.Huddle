@@ -1,0 +1,73 @@
+@using MudBlazor
+@using Agency.Huddle.App.Components.Shared.Dialogs
+
+@* The one ⋮ menu of a row: a Dense MudMenu whose activator is the round 28 px ActionIconButton named "Actions for {Name}", with no
+   hover tooltip (it would stay up over the first item), revealed on hover or focus unless Reveal says Always (ComponentCatalog,
+   RowActionsMenu; design-system "Menus"). ActivatorContent replaces MudMenu's own activator, so the button calls
+   MenuContext.ToggleAsync itself. *@
+<MudMenu @ref="this.menu" Dense="true" Class="@this.Class">
+    <ActivatorContent Context="menuContext">
+        <ActionIconButton Icon="@ActionIcons.MoreActions" Label="@this.AccessibleName" Class="@this.ActivatorCssClass" Disabled="@this.Disabled"
+                          OnClick="menuContext.ToggleAsync" />
+    </ActivatorContent>
+    <ChildContent>
+        @this.ChildContent
+    </ChildContent>
+</MudMenu>
+
+@code {
+    private MudMenu? menu;
+
+    /// <summary>The name of the row, Team, View or item the menu acts on; the activator reads "Actions for {Name}".</summary>
+    [Parameter]
+    public string? Name { get; set; }
+
+    /// <summary>A whole accessible name in place of "Actions for {Name}", for a menu whose target is not a named row (a board column's
+    /// "{column} column menu").</summary>
+    [Parameter]
+    public string? Label { get; set; }
+
+    /// <summary>The menu's items: <c>MudMenuItem</c>s and <c>MudDivider</c>s.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>When the activator shows. Defaults to <see cref="RowActionsReveal.OnHover"/>.</summary>
+    [Parameter]
+    public RowActionsReveal Reveal { get; set; } = RowActionsReveal.OnHover;
+
+    /// <summary>Whether the activator is disabled.</summary>
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    /// <summary>Classes on the menu's root element, for its place in the row (<c>hover-reveal-menu</c>, <c>ml-auto</c>) and a hook.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>A hook class on the activator button, for a test or a row's own stylesheet; never a size, radius or opacity.</summary>
+    [Parameter]
+    public string? ActivatorClass { get; set; }
+
+    /// <summary>The MudMenu inside, for <see cref="MenuDialogs.AfterClosingAsync(MudMenu?, Func{Task})"/> and a context-menu open;
+    /// <see langword="null"/> before the first render.</summary>
+    public MudMenu? Menu => this.menu;
+
+    private string AccessibleName => this.Label ?? MenuDialogs.ActivatorLabel(this.Name ?? string.Empty);
+
+    private string ActivatorCssClass
+    {
+        get
+        {
+            string reveal = this.Reveal == RowActionsReveal.OnHover ? "row-actions-button hover-reveal-menu-button" : "row-actions-button";
+            return this.ActivatorClass is null ? reveal : $"{reveal} {this.ActivatorClass}";
+        }
+    }
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(this.Label) && string.IsNullOrWhiteSpace(this.Name))
+        {
+            throw new InvalidOperationException("A RowActionsMenu needs a Name (for \"Actions for {Name}\") or a Label.");
+        }
+    }
+}

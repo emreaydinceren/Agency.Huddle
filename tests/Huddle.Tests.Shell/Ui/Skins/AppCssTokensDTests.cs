@@ -4,7 +4,7 @@ namespace Agency.Huddle.Tests.Ui.Skins;
 
 /// <summary>
 /// Phase 2, package D: the Teams, Sidebar, References and Task form stylesheets and the second half of the Tasks stylesheet (from "The Task List at narrower widths") and
-/// <c>HuddleSegmentedControl.razor.css</c> read the skin tokens where a token's registered default is the value the
+/// <c>SegmentedControl.razor.css</c> read the skin tokens where a token's registered default is the value the
 /// site wrote before. A site whose value no token default equals, or that the architecture leaves as a literal recipe,
 /// is not pinned here beyond the count of recipes that must remain.
 /// </summary>
@@ -156,16 +156,16 @@ public sealed class AppCssTokensDTests
         Assert.Contains("color: color-mix(in srgb, var(--mud-palette-secondary) 50%, var(--mud-palette-text-primary));", rule);
     }
 
-    /// <summary>The segmented control's indicator outline reads <c>--hu-line-control</c>.</summary>
+    /// <summary>The segmented control's indicator outline reads the control token <c>--hu-control-selected-line</c>, one rule for every caller.</summary>
     [Fact]
-    public void SegmentedIndicator_ReadsLineControl()
+    public void SegmentedIndicator_ReadsControlSelectedLine()
     {
-        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "HuddleSegmentedControl.razor.css")).Replace("\r\n", "\n", StringComparison.Ordinal);
-        int at = css.IndexOf("\n.huddle-segmented-indicator {\n", StringComparison.Ordinal);
-        Assert.True(at >= 0, "No .huddle-segmented-indicator rule.");
+        string css = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "SegmentedControl.razor.css")).Replace("\r\n", "\n", StringComparison.Ordinal);
+        int at = css.IndexOf("\n.segmented-indicator {\n", StringComparison.Ordinal);
+        Assert.True(at >= 0, "No .segmented-indicator rule.");
         string body = css[at..css.IndexOf('}', at)];
 
-        Assert.Contains("border: 1px solid var(--hu-line-control);", body, StringComparison.Ordinal); // contains-ok: one rule of the scoped stylesheet source
+        Assert.Contains("border: 1px solid var(--hu-control-selected-line);", body, StringComparison.Ordinal); // contains-ok: one rule of the scoped stylesheet source
         Assert.DoesNotContain("lines-default", body, StringComparison.Ordinal);
     }
 

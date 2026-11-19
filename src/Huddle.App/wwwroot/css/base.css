@@ -237,6 +237,86 @@ button:focus-visible {
     border-inline-start: 3px solid transparent;
 }
 
+/* A notice's icon is 18px, the largest icon size, not MudBlazor's 22px (ComponentCatalog Notice, Q-A1-2). 8px of block
+   padding plus a 2px nudge puts its centre on the centre of a dense notice's first 38px line (9px padding, 20px line). */
+.mud-alert .mud-alert-icon {
+    font-size: var(--icon-size-row);
+    padding-block: 8px;
+    margin-block-start: 2px;
+}
+
+/* The glyph itself: MudBlazor sizes it 1.5rem (21px here) through .mud-icon-size-medium, not from its parent. */
+.mud-alert .mud-alert-icon .mud-icon-root {
+    font-size: var(--icon-size-row);
+}
+
+/* A notice owns its spacing, not its call site: 12px from a sibling before or after it, none at its container's edges. Two
+   notices in a row collapse to one 12px in block flow. Only Notice carries the class, so a raw MudAlert is unchanged. */
+.mud-alert.notice:not(:first-child) {
+    margin-block-start: 12px;
+}
+
+.mud-alert.notice:not(:last-child) {
+    margin-block-end: 12px;
+}
+
+/* ---- PropertyList and PropertyRow: a label and a value per row (ComponentCatalog, PropertyList) ----------------------------
+   Every row is its own grid with a fixed 120px label column (Q-A6-1), so lists stacked on one page line up without sharing a track.
+   A row is 32px with a 13px label, or 28px with a 12px label when Compact (cards and previews). The label is as tall as a one-line
+   value and centred on it; a taller value (chips, a note, a field with help text) grows below. A hairline only between the rows of a
+   Divided list (Q-A6-2, the long ones). An editing list's rows hold boxed inputs, so they have 8px of air between them. */
+.property-list {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+}
+
+.property-list-editing {
+    row-gap: 8px;
+}
+
+.property-row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    column-gap: 8px;
+    align-items: start;
+    overflow-wrap: anywhere;
+}
+
+.property-list-divided > .property-row + .property-row {
+    border-top: 1px solid var(--hu-detail-row-line);
+}
+
+.property-row-label,
+.property-row-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+}
+
+.property-list-compact .property-row-label,
+.property-list-compact .property-row-value {
+    min-height: 28px;
+}
+
+.property-row-label {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-body2-size);
+}
+
+.property-list-compact .property-row-label {
+    font-size: var(--mud-typography-caption-size);
+}
+
+.property-row-value {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    min-width: 0;
+    color: var(--mud-palette-text-primary);
+    font-size: var(--mud-typography-body2-size);
+}
+
 .mud-alert[class*="mud-alert-text-"] .mud-alert-message,
 .mud-alert[class*="mud-alert-outlined-"] .mud-alert-message {
     color: var(--mud-palette-text-primary);
@@ -386,8 +466,9 @@ b {
     font-weight: 600;
 }
 
-/* A Small button is a row-sized control: 28px high, in the Button role (13px, 500). MudBlazor sizes Small in rem
-   and not from the role, so the rule points it at the role. A Large one is body1. */
+/* A Small button is a row-sized control: 28px high, in the Button role (13px, 500), at the control radius step like a row or a
+   segment (design-system.md Shape; ComponentCatalog ActionButton). MudBlazor sizes Small in rem and not from the role, so the rule
+   points it at the role. A Large one is body1. */
 .mud-button-text-size-small,
 .mud-button-outlined-size-small,
 .mud-button-filled-size-small {
@@ -395,6 +476,47 @@ b {
     height: 28px;
     padding-block: 0;
     font-size: var(--mud-typography-button-size);
+    border-radius: var(--hu-radius-control);
+}
+
+/* A Small icon button is one 28px round box on the size ladder, everywhere (ComponentCatalog ActionIconButton; Q-B5-1): MudBlazor's
+   own Small is 23.5px. :where() keeps the rule at one class, so a site's own box (the Activity bar's 40px tile, a Send look) still
+   wins; a switch's base is an icon button too and keeps MudBlazor's geometry, which its track is placed for. */
+:where(.mud-icon-button.mud-icon-button-size-small):not(.mud-switch-base) {
+    box-sizing: border-box;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+}
+
+/* RowActionsMenu's activator, revealed on hover or keyboard focus of its row: a sidebar .hover-reveal-row, or a table row or card
+   marked .row-actions-host. Only the opacity is gated, so the button stays in the tab order (ComponentCatalog
+   RowActionsMenu; Q-A3-2). The @media (hover: none) block in agents.css shows it on a touch screen. */
+:is(.hover-reveal-row, .row-actions-host) .hover-reveal-menu-button {
+    opacity: 0;
+    transition: opacity 120ms ease;
+}
+
+:is(.hover-reveal-row, .row-actions-host):is(:hover, :focus-within) .hover-reveal-menu-button {
+    opacity: 1;
+}
+
+/* A menu item is a 32px row in 13px text (design-system.md Menus); MudBlazor's Dense item is 30px at 14px. */
+.mud-menu-item {
+    min-height: 32px;
+    font-size: var(--mud-typography-body2-size);
+}
+
+/* Every filled button carries the Theme's filled-button shadow (it lived in tasks.css, but reaches every page). */
+.mud-button-root.mud-button-filled {
+    box-shadow: var(--hu-button-filled-shadow);
+}
+
+/* ActionButton's Busy spinner sits where the start icon would, one label-height ring. */
+.mud-button-root .action-button-spinner {
+    width: 1em;
+    height: 1em;
+    margin-inline-end: 8px;
 }
 
 .mud-button-text-size-large,
@@ -749,16 +871,6 @@ a.team-ref,
     color: var(--mud-palette-text-primary);
 }
 
-:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-error {
-    color: var(--mud-palette-error);
-    border-color: color-mix(in srgb, var(--mud-palette-error) 40%, var(--hu-line-region));
-    background: var(--hu-ground-raised);
-}
-
-:root:has([data-hu-surface="paper"]) .mud-button-outlined.mud-button-outlined-error:hover {
-    background: var(--hu-tone-error-soft);
-}
-
 /* -- surface=paper: inputs, hover line, label ink, one-line height, helper text (15.2) ----------------------- */
 :root:has([data-hu-surface="paper"]) .mud-input.mud-input-outlined {
     background-color: var(--hu-field-background);
@@ -1017,6 +1129,31 @@ a.team-ref,
 }
 
 :root:has([data-hu-surface="hairline"]) .mud-switch .mud-checked .mud-switch-thumb-medium {
+    box-shadow: none;
+}
+
+/* Every switch is a Small SettingSwitch (Q-A7-1), so the same pill at 30 x 18: the track keeps the medium rule's place, and the 14px
+   thumb is moved 4px right to sit 2px in from the track's ends; on, it travels the 12px between them. */
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-span-small .mud-switch-track {
+    flex: 0 0 30px;
+    width: 30px;
+    min-width: 30px;
+    height: 18px;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-base-small {
+    left: 4px;
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-base-small.mud-checked {
+    transform: translateX(12px);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-switch-thumb-small {
+    box-shadow: 0 0 0 1px var(--hu-line-control);
+}
+
+:root:has([data-hu-surface="hairline"]) .mud-switch .mud-checked .mud-switch-thumb-small {
     box-shadow: none;
 }
 

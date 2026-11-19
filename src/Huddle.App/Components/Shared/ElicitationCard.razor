@@ -96,12 +96,14 @@
                                     break;
 
                                 case ElicitationFieldKind.Boolean:
-                                    <MudSwitch T="bool"
-                                               Color="Color.Primary"
-                                               Required="@shown.Required"
-                                               Disabled="@busy"
-                                               Value="@(this.EntryOf(current, shown) == "true")"
-                                               ValueChanged="@(on => this.SetBoolean(current, shown, on))">
+                                    @* A checkbox, not a switch: the answer is sent with the card's Submit (the B6 rule). *@
+                                    <MudCheckBox T="bool"
+                                                 Color="Color.Primary"
+                                                 Dense="true"
+                                                 Required="@shown.Required"
+                                                 Disabled="@busy"
+                                                 Value="@(this.EntryOf(current, shown) == "true")"
+                                                 ValueChanged="@(on => this.SetBoolean(current, shown, on))">
                                         @if (!labelHidden)
                                         {
                                             <span class="elicitation-card-field-label">@shown.Label</span>
@@ -110,7 +112,7 @@
                                         {
                                             <span class="elicitation-card-required" aria-hidden="true"> *</span>
                                         }
-                                    </MudSwitch>
+                                    </MudCheckBox>
                                     if (shown.Description is not null)
                                     {
                                         <MudText Typo="Typo.caption" Class="elicitation-card-field-description">@shown.Description</MudText>
@@ -164,34 +166,29 @@
 
                                 default:
                                     string? problem = ProblemOf(shown, this.EntriesOf(current));
-                                    <MudTextField T="string"
-                                                  Label="@shownLabel"
-                                                  HelperText="@HelperTextOf(shown)"
-                                                  Error="@(problem is not null)"
-                                                  ErrorText="@problem"
-                                                  Required="@shown.Required"
-                                                  Variant="Variant.Outlined"
-                                                  Margin="Margin.Dense"
-                                                  Immediate="true"
-                                                  InputMode="@InputModeOf(shown.Kind)"
-                                                  Disabled="@busy"
-                                                  Value="@this.EntryOf(current, shown)"
-                                                  ValueChanged="@(text => this.SetText(current, shown, text))" />
+                                    <TextField Label="@shownLabel"
+                                               AriaLabel="@loneName"
+                                               HelperText="@HelperTextOf(shown)"
+                                               Error="@(problem is not null)"
+                                               ErrorText="@problem"
+                                               Required="@shown.Required"
+                                               Immediate="true"
+                                               InputMode="@InputModeOf(shown.Kind)"
+                                               Disabled="@busy"
+                                               Value="@this.EntryOf(current, shown)"
+                                               ValueChanged="@(text => this.SetText(current, shown, text))" />
                                     break;
                             }
 
                             @if (companion is { } other)
                             {
-                                <MudTextField T="string"
-                                              Label="@other.Label"
-                                              HelperText="@other.Description"
-                                              Variant="Variant.Outlined"
-                                              Margin="Margin.Dense"
-                                              Immediate="true"
-                                              Disabled="@busy"
-                                              Class="elicitation-card-other"
-                                              Value="@this.EntryOf(current, other)"
-                                              ValueChanged="@(text => this.SetText(current, other, text))" />
+                                <TextField Label="@other.Label"
+                                           HelperText="@other.Description"
+                                           Immediate="true"
+                                           Disabled="@busy"
+                                           Class="elicitation-card-other"
+                                           Value="@this.EntryOf(current, other)"
+                                           ValueChanged="@(text => this.SetText(current, other, text))" />
                             }
                         </div>
                     }
@@ -199,12 +196,12 @@
             </MudStack>
             </ChildContent>
             <Actions>
-                <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" Class="elicitation-card-send"
-                           Disabled="@(busy || !this.CanSend(current))"
-                           OnClick="@(() => this.SendAsync(current))">@(busy ? "Sending…" : "Send")</MudButton>
-                <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="elicitation-card-dismiss"
-                           Disabled="@busy"
-                           OnClick="@(() => this.DismissAsync(current))">Dismiss</MudButton>
+                <ActionButton Role="ButtonRole.Primary" Class="elicitation-card-send"
+                              Disabled="@(busy || !this.CanSend(current))"
+                              OnClick="@(() => this.SendAsync(current))">@(busy ? "Sending…" : "Send")</ActionButton>
+                <ActionButton Role="ButtonRole.Secondary" Class="elicitation-card-dismiss"
+                              Disabled="@busy"
+                              OnClick="@(() => this.DismissAsync(current))">Dismiss</ActionButton>
             </Actions>
         </AgentCard>
     }

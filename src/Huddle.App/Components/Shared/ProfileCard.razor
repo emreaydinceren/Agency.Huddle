@@ -22,7 +22,7 @@
                         <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="agent-profile-card-avatar-edit" />
                     </button>
                 </PresenceAnchor>
-                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => this.OnAvatarClick.InvokeAsync())">Edit avatar…</MudButton>
+                <ActionButton OnClick="@(() => this.OnAvatarClick.InvokeAsync())">Edit avatar…</ActionButton>
             </div>
         }
         else
@@ -68,14 +68,11 @@
     </span>
     @if (profile.Runtime is { } runtime)
     {
-        <dl class="roster-runtime">
-            <dt>Adapter</dt>
-            <dd class="roster-runtime-adapter">@runtime.Adapter</dd>
-            <dt>Model</dt>
-            <dd class="roster-runtime-model">@runtime.Model</dd>
-            <dt>Effort</dt>
-            <dd class="roster-runtime-effort">@runtime.Effort</dd>
-        </dl>
+        <PropertyList Compact="true" Class="roster-runtime">
+            <PropertyRow Label="Adapter" ValueClass="roster-runtime-adapter">@runtime.Adapter</PropertyRow>
+            <PropertyRow Label="Model" ValueClass="roster-runtime-model">@runtime.Model</PropertyRow>
+            <PropertyRow Label="Effort" ValueClass="roster-runtime-effort">@runtime.Effort</PropertyRow>
+        </PropertyList>
     }
     @if (profile.SetupReasons.Count > 0)
     {
@@ -91,8 +88,8 @@
             <span class="roster-signin-text">@profile.SignInWarning</span>
             @if (this.OnCheckSignIn.HasDelegate)
             {
-                <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@this.CheckingSignIn" OnClick="@(() => this.OnCheckSignIn.InvokeAsync())"
-                           aria-label="Check again whether the Adapter is signed in" Class="roster-signin-check">@(this.CheckingSignIn ? "Checking…" : "Check again")</MudButton>
+                <ActionButton Disabled="@this.CheckingSignIn" OnClick="@(() => this.OnCheckSignIn.InvokeAsync())"
+                           aria-label="Check again whether the Adapter is signed in" Class="roster-signin-check">@(this.CheckingSignIn ? "Checking…" : "Check again")</ActionButton>
             }
         </span>
     }

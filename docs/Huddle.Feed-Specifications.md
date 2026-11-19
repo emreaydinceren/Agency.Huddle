@@ -576,7 +576,7 @@ Tab, like Settings, rather than switching the Sidebar view. Also the panel's "Se
 - **The filter bar**, one row: the **Category** control at the left and the **Team select** at the
   right; the Agent chip, when set, sits just left of the Team select.
 
-**Category** is a `HuddleSegmentedControl<FeedCategory>` with two segments, **All** and **Needs you**
+**Category** is a `SegmentedControl<FeedCategory>` with two segments, **All** and **Needs you**
 (`FeedCategories.Choices`); only Needs you shows its count from `FeedStore.Counts`, because it is the one
 number that asks something of the Human. Selecting one navigates the Tab to `?category=<value>`, keeping
 `agent` and `team`. Until 2026-11-10 the control also offered the kind Categories below as segments;

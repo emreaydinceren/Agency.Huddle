@@ -31,9 +31,9 @@
     @* Spec 6.8, C-13/C-14: Settings changes what every agent is told and what the gateway allows, so it needs operator.admin. *@
     <MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
         <PageHeader Title="Settings" />
-        <MudAlert Severity="Severity.Warning" Dense="true" role="alert">Settings need admin access.</MudAlert>
+        <Notice Severity="NoticeLevel.Warning" Kind="NoticeKind.Interruption">Settings need admin access.</Notice>
         <p class="mt-2">This browser is paired without the admin scope. Ask for it and approve the request from a device that already has it.</p>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Medium" OnClick="this.RequestAdmin">Request admin</MudButton>
+        <ActionButton Role="ButtonRole.Primary" OnClick="this.RequestAdmin">Request admin</ActionButton>
     </MudContainer>
 }
 else if (this.isAdmin == true)
@@ -43,7 +43,7 @@ else if (this.isAdmin == true)
 
     @if (this.error is not null)
     {
-        <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
+        <Notice Severity="NoticeLevel.Error">@this.error</Notice>
     }
 
     <div class="settings-layout">
@@ -91,11 +91,8 @@ else if (this.isAdmin == true)
                                     ValueChanged="this.OnFieldValueChanged"
                                     ResetRequested="this.OnResetRequested" />
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">
-                            <MudButton Variant="Variant.Filled"
-                                       Size="Size.Small"
-                                       Color="Color.Primary"
-                                       ButtonType="ButtonType.Submit"
-                                       Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
+                            <ActionButton Role="ButtonRole.Primary" Submit="true"
+                                          Disabled="@(!this.HasUnsavedChanges)">Save</ActionButton>
                             <ResetAllControl AnyModified="this.AnyModified"
                                              Confirming="this.confirmingResetAll"
                                              OnBeginReset="this.BeginResetAll"

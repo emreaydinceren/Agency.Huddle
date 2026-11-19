@@ -2,8 +2,8 @@
 
 /* ---- The Task detail form as four headed groups of label | value properties ----------------------
    TaskDetail.razor groups its fields under subtitle2 headings (.group-heading). Each .task-detail-prop is a
-   label and a value: stacked, label over value, in a narrow drawer; two columns, label left and value right
-   (the Library Properties block's grid: .library-properties-list), once the container is 368px wide - a 400px
+   label and a value (a PropertyRow): stacked, label over value, in a narrow drawer; two columns, label left and value right
+   (PropertyRow's own 120px label column, the read view's too), once the container is 368px wide - a 400px
    drawer less its 16px padding on each side. A container query on .task-detail-groups, not a viewport media
    query, because the drawer is resizable (resize.js). The visible label is .task-detail-prop-label; the
    control's own MudBlazor label stays in the DOM, visually hidden, as its accessible name. */
@@ -261,28 +261,23 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-.task-detail-props {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-}
-
+/* The groups' rows are an editing PropertyList (base.css), the same row as the read view's. Narrower than 368px a row stacks, label
+   over value; at 368px PropertyRow's own 120px label column comes back (the container query below). A value holds its field and any
+   chips or note stacked at full width; the strip's items reuse the value class without the row. */
 .task-detail-prop {
-    display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 4px;
-    align-items: start;
+    row-gap: 4px;
 }
 
 .task-detail-prop-label {
-    color: var(--mud-palette-text-secondary);
-    font-size: var(--mud-typography-body2-size);
-    line-height: 1.5;
+    min-height: 0;
 }
 
 .task-detail-prop-value {
     display: flex;
     flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
     gap: 8px;
     min-width: 0;
     overflow-wrap: anywhere;
@@ -314,12 +309,10 @@
 @container task-detail (min-width: 368px) {
     .task-detail-prop {
         grid-template-columns: 120px minmax(0, 1fr);
-        column-gap: 24px;
-        align-items: start;
     }
 
     .task-detail-prop-label {
-        padding-top: 8px;
+        min-height: 32px;
     }
 }
 
@@ -554,12 +547,6 @@
     border-radius: var(--hu-radius-card);
 }
 
-.task-edit-page .mud-button-root,
-.task-detail-save,
-.task-detail-cancel {
-    border-radius: var(--hu-radius-card);
-}
-
 .task-edit-page .task-detail-group {
     padding: var(--hu-form-group-padding);
     background: var(--hu-form-group-background);
@@ -573,26 +560,11 @@
     border-bottom: 1px solid var(--hu-form-group-head-line);
 }
 
-/* One rhythm for every field row, in both columns: 12px above and below, a hairline between rows of a group (never between groups), and the label
-   column the Library's width so the labels and the values line up from the top of the page to the bottom. */
+/* One rhythm for every field row, in both columns: PropertyList's 32px row and 8px between rows, no hairline in a group this short
+   (Q-A6-2), and the same 120px label column as the read view, so the labels and the values line up from the top of the page to the
+   bottom. The first row keeps 4px from its group's heading rule. */
 .task-edit-page .task-detail-props {
-    gap: 0;
-}
-
-.task-edit-page .task-detail-prop {
-    padding-block: 8px;
-}
-
-.task-edit-page .task-detail-prop + .task-detail-prop {
-    border-top: 1px solid var(--hu-line-region);
-}
-
-.task-edit-page .task-detail-prop:first-child {
     padding-top: 4px;
-}
-
-.task-edit-page .task-detail-prop:last-child {
-    padding-bottom: 0;
 }
 
 .task-edit-page .task-detail-library + .task-detail-library {
@@ -607,27 +579,11 @@
     border-top: 1px solid var(--hu-line-region);
 }
 
-/* The strip's fields are the form's fields: the .task-detail-prop-value rule below gives every field 34px and body2 text, and the strip's
-   label (.task-detail-strip-label, 96px) is the groups' label column. */
+/* The strip's fields are the form's fields: the .task-detail-prop-value rule below gives every field 34px and body2 text. */
 
 /* The strip carries the page's one rule under the header, so the header has none of its own. */
 .task-edit-page-header .page-header.has-chrome {
     border-bottom: 0;
-}
-
-@container task-detail (min-width: 368px) {
-    .task-edit-page .task-detail-prop {
-        grid-template-columns: 96px minmax(0, 1fr);
-        column-gap: 8px;
-    }
-
-    /* The label is as tall as a one-line field and centred in it, so it sits on the field's centre line; a taller value (chips, a note) grows below. */
-    .task-edit-page .task-detail-prop-label {
-        display: flex;
-        align-items: center;
-        min-height: 32px;
-        padding-top: 0;
-    }
 }
 
 /* A field is 32px tall with body-size text, and the row's 12px is the only space around it (MudBlazor's own margin is dropped). */
@@ -668,51 +624,6 @@
     inset: 0 0 auto 0;
     height: 3px;
     background: linear-gradient(135deg, var(--hu-detail-accent-from), var(--hu-detail-accent-to));
-}
-
-/* Edit | Preview on the edit page and List | Kanban on the Tasks page share the Feed's segmented-control tokens. */
-.huddle-segmented-control.task-detail-description-toggle,
-.huddle-segmented-control.task-toolbar-kind {
-    background: var(--hu-control-track);
-}
-
-.task-detail-description-toggle .mud-toggle-item,
-.task-toolbar-kind .mud-toggle-item {
-    color: var(--hu-control-ink);
-}
-
-.task-detail-description-toggle .mud-toggle-item.huddle-segmented-active-item,
-.task-toolbar-kind .mud-toggle-item.huddle-segmented-active-item {
-    color: var(--hu-control-selected-ink);
-}
-
-.task-detail-description-toggle .huddle-segmented-indicator,
-.task-toolbar-kind .huddle-segmented-indicator {
-    border-color: var(--hu-control-selected-line);
-}
-
-/* List | Kanban is a light toolbar control, as in every Theme's mockup: a 2px track around 24px items at 12px with 14px
-   icons, about 30px in all. The indicator moves to the same 2px inset; the
-   doubled class outranks the component's scoped 3px. */
-.huddle-segmented-control.task-toolbar-kind {
-    padding: 2px;
-}
-
-.huddle-segmented-control.task-toolbar-kind .huddle-segmented-indicator {
-    top: 2px;
-    bottom: 2px;
-    left: 2px;
-}
-
-.huddle-segmented-control.task-toolbar-kind .huddle-segmented-group .mud-toggle-item {
-    height: 24px;
-    padding-block: 0;
-    font-size: var(--mud-typography-caption-size);
-}
-
-.huddle-segmented-control.task-toolbar-kind .task-toolbar-kind-icon.mud-icon-root {
-    width: 14px;
-    height: 14px;
 }
 
 /* The Description editor is one card holding the toolbar and the writing surface (Huddle-DescriptionEditor-Theming.md),
@@ -787,31 +698,6 @@
     inset-inline-start: -4px;
     width: 1px;
     background: var(--hu-editor-toolbar-line);
-}
-
-/* Edit | Preview is a compact 28px control here (the toolbar rule's height). The indicator is placed and sized by the component for a track with 3px of padding (it is 3px in
-   from each edge and (100% - 6px) / items wide), so the track keeps that padding and the items fill what is left: the tile is then exactly as
-   tall and as wide as the item it sits under, and the label is centred in it. The root prefix keeps this ahead of the component's own rule. */
-:root .huddle-segmented-control.task-detail-description-toggle {
-    box-sizing: border-box;
-    height: 28px;
-    padding: calc(4px * 0.75);
-}
-
-:root .task-detail-description-toggle .huddle-segmented-group {
-    align-items: stretch;
-    height: 100%;
-}
-
-:root .task-detail-description-toggle .mud-toggle-item {
-    height: 100%;
-    min-height: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding-block: 0;
-    padding-inline: 8px;
-    line-height: 1;
 }
 
 /* ---- voice=book: Nordic ---------------------------------------------------------------------- */

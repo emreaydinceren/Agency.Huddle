@@ -1,5 +1,6 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Bunit;
@@ -33,7 +34,7 @@ public sealed class AdapterModelEffortPickerTests
         MudBunitContext ctx,
         FakeModelCatalog catalog,
         (string Id, string DisplayName)[] adapters,
-        List<(string? Adapter, string? Model, string? Effort)> raised,
+        List<AdapterModelEffortChoice> raised,
         string? adapter = null,
         string? model = null,
         string? effort = null)
@@ -46,7 +47,7 @@ public sealed class AdapterModelEffortPickerTests
             builder.AddAttribute(1, nameof(AdapterModelEffortPicker.Adapter), adapter);
             builder.AddAttribute(2, nameof(AdapterModelEffortPicker.Model), model);
             builder.AddAttribute(3, nameof(AdapterModelEffortPicker.Effort), effort);
-            builder.AddAttribute(4, nameof(AdapterModelEffortPicker.SelectionChanged), EventCallback.Factory.Create<(string?, string?, string?)>(raised, raised.Add));
+            builder.AddAttribute(4, nameof(AdapterModelEffortPicker.SelectionChanged), EventCallback.Factory.Create<AdapterModelEffortChoice>(raised, raised.Add));
             builder.CloseComponent();
         });
     }
@@ -134,14 +135,14 @@ public sealed class AdapterModelEffortPickerTests
         await using MudBunitContext ctx = new();
         FakeModelCatalog catalog = new() { Models = [Haiku], DefaultEffortLevels = [Low] };
         catalog.ModelsByAdapter["codex"] = [new AgentModelOption("gpt", "GPT", null)];
-        List<(string? Adapter, string? Model, string? Effort)> raised = [];
+        List<AdapterModelEffortChoice> raised = [];
         IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude"), ("codex", "Codex")], raised, adapter: "claude", model: "haiku", effort: "low");
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Model")));
 
         await OpenSelectAsync(cut, "Adapter");
         await ClickSelectItemAsync(cut, "Codex");
 
-        cut.WaitForAssertion(() => Assert.Contains(("codex", (string?)null, (string?)null), raised));
+        cut.WaitForAssertion(() => Assert.Contains(new AdapterModelEffortChoice("codex", null, null, null), raised));
         cut.WaitForAssertion(() => Assert.Equal(
             "Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.",
             cut.Find("[role='status']").TextContent.Trim()));
@@ -154,7 +155,7 @@ public sealed class AdapterModelEffortPickerTests
     {
         await using MudBunitContext ctx = new();
         FakeModelCatalog catalog = new() { Models = [Haiku] };
-        List<(string? Adapter, string? Model, string? Effort)> raised = [];
+        List<AdapterModelEffortChoice> raised = [];
         IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude"), ("codex", "Codex")], raised);
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Model")));
 
@@ -171,7 +172,7 @@ public sealed class AdapterModelEffortPickerTests
     {
         await using MudBunitContext ctx = new();
         FakeModelCatalog catalog = new() { Models = [Haiku, Sonnet], DefaultEffortLevels = [Low, High] };
-        List<(string? Adapter, string? Model, string? Effort)> raised = [];
+        List<AdapterModelEffortChoice> raised = [];
         IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], raised, model: "haiku", effort: "high");
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Model")));
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Effort")));
@@ -179,7 +180,7 @@ public sealed class AdapterModelEffortPickerTests
         await OpenSelectAsync(cut, "Model");
         await ClickSelectItemAsync(cut, "Sonnet");
 
-        cut.WaitForAssertion(() => Assert.Contains((null, "sonnet", (string?)null), raised));
+        cut.WaitForAssertion(() => Assert.Contains(new AdapterModelEffortChoice(null, "sonnet", null, null), raised));
         cut.WaitForAssertion(() => Assert.Equal(
             "Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.",
             cut.Find("[role='status']").TextContent.Trim()));
@@ -192,7 +193,7 @@ public sealed class AdapterModelEffortPickerTests
     {
         await using MudBunitContext ctx = new();
         FakeModelCatalog catalog = new() { Models = [Haiku, Sonnet], DefaultEffortLevels = [Low, High] };
-        List<(string? Adapter, string? Model, string? Effort)> raised = [];
+        List<AdapterModelEffortChoice> raised = [];
         IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], raised, model: "haiku", effort: "high");
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Effort")));
         await OpenSelectAsync(cut, "Model");
@@ -203,7 +204,7 @@ public sealed class AdapterModelEffortPickerTests
         await OpenSelectAsync(cut, "Effort");
         await ClickSelectItemAsync(cut, "Low");
 
-        cut.WaitForAssertion(() => Assert.Contains((null, "sonnet", "low"), raised));
+        cut.WaitForAssertion(() => Assert.Contains(new AdapterModelEffortChoice(null, "sonnet", "low", null), raised));
         Assert.Empty(cut.FindAll("[role='status']"));
     }
 
@@ -225,5 +226,79 @@ public sealed class AdapterModelEffortPickerTests
 
         cut.WaitForAssertion(() => Assert.True(IsSelectInert(cut, "Model")));
         Assert.True(IsSelectInert(cut, "Effort"));
+    }
+
+    /// <summary>Without <c>OfferWorkMode</c> (the Helper card) there is no Work mode select and no Work mode probe, even when the Adapter advertises modes.</summary>
+    [Fact]
+    public async Task WithoutWorkMode_ShowsNoWorkModeSelect_AndReadsNoModes()
+    {
+        await using MudBunitContext ctx = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku], WorkModes = [new AgentModeOption("plan", "Plan", null)] };
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], []);
+
+        cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Effort")));
+        Assert.Equal(0, CountControlsLabelled(cut, "Work mode"));
+        Assert.Equal(0, catalog.WorkModeProbeCount);
+    }
+
+    /// <summary>
+    /// With <c>OfferWorkMode</c> the advertised modes show in a third select, an Adapter change clears a stored mode with its own
+    /// note and raises it cleared, and the Model and Effort selects carry no <c>title</c> tooltip (Q-A4-2).
+    /// </summary>
+    [Fact]
+    public async Task WithWorkMode_AdapterChange_ClearsTheMode_WithItsOwnNote()
+    {
+        await using MudBunitContext ctx = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku], WorkModes = [new AgentModeOption("plan", "Plan", null)] };
+        ctx.Services.AddSingleton<IModelCatalog>(catalog);
+        ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("codex", "Codex")));
+        List<AdapterModelEffortChoice> raised = [];
+
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<AdapterModelEffortPicker>(0);
+            builder.AddAttribute(1, nameof(AdapterModelEffortPicker.Adapter), "claude");
+            builder.AddAttribute(2, nameof(AdapterModelEffortPicker.OfferWorkMode), true);
+            builder.AddAttribute(3, nameof(AdapterModelEffortPicker.WorkMode), "plan");
+            builder.AddAttribute(4, nameof(AdapterModelEffortPicker.SelectionChanged), EventCallback.Factory.Create<AdapterModelEffortChoice>(raised, raised.Add));
+            builder.CloseComponent();
+        });
+        cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Work mode")));
+        Assert.Null(FindInputControl(cut, "Model").QuerySelector("[title]"));
+        Assert.Null(FindInputControl(cut, "Effort").QuerySelector("[title]"));
+        Assert.NotNull(FindInputControl(cut, "Work mode").QuerySelector("[title]"));
+
+        await OpenSelectAsync(cut, "Adapter");
+        await ClickSelectItemAsync(cut, "Codex");
+
+        cut.WaitForAssertion(() => Assert.Contains(new AdapterModelEffortChoice("codex", null, null, null), raised));
+        cut.WaitForAssertion(() => Assert.Contains(
+            "Changing the adapter reset Work mode to its default.",
+            cut.Find("[role='status']").TextContent,
+            StringComparison.Ordinal)); // contains-ok: the note's first sentence names what was reset
+    }
+
+    /// <summary>Each probe that is still current hands its lists to <c>OptionsRead</c>, so a caller can show a stored id by its name.</summary>
+    [Fact]
+    public async Task OptionsRead_CarriesTheProbedLists()
+    {
+        await using MudBunitContext ctx = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku, Sonnet], DefaultEffortLevels = [Low] };
+        ctx.Services.AddSingleton<IModelCatalog>(catalog);
+        ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude")));
+        List<AdapterModelEffortOptions> read = [];
+
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<AdapterModelEffortPicker>(0);
+            builder.AddAttribute(1, nameof(AdapterModelEffortPicker.OptionsRead), EventCallback.Factory.Create<AdapterModelEffortOptions>(read, read.Add));
+            builder.CloseComponent();
+        });
+
+        cut.WaitForAssertion(() => Assert.Contains(read, options => options.Efforts.Count > 0));
+        AdapterModelEffortOptions last = read[^1];
+        Assert.Equal([Haiku, Sonnet], last.Models);
+        Assert.Equal([Low], last.Efforts);
     }
 }

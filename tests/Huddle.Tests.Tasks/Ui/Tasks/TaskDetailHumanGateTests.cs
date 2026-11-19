@@ -71,8 +71,8 @@ public sealed class TaskDetailHumanGateTests
     }
 
     /// <summary>The "Requires your acceptance" switch of the Human gate section.</summary>
-    private static IRenderedComponent<MudSwitch<bool>> GateSwitch(IRenderedComponent<ContainerFragment> cut) =>
-        cut.FindComponents<MudSwitch<bool>>().Single(s => string.Equals(s.Instance.Label, HumanGateCopy.SwitchLabel, StringComparison.Ordinal));
+    private static IRenderedComponent<MudCheckBox<bool>> GateSwitch(IRenderedComponent<ContainerFragment> cut) =>
+        cut.FindComponents<MudCheckBox<bool>>().Single(s => string.Equals(s.Instance.Label, HumanGateCopy.SwitchLabel, StringComparison.Ordinal));
 
     /// <summary>The Accept button of the decision card.</summary>
     private static AngleSharp.Dom.IElement AcceptButton(IRenderedComponent<ContainerFragment> cut) =>
@@ -157,7 +157,7 @@ public sealed class TaskDetailHumanGateTests
         IRenderedComponent<ContainerFragment> cut = RenderOver(ctx,Proof.Empty, task.Id);
         Assert.False(cut.FindComponent<TaskDetail>().Instance.HasPending);
 
-        IRenderedComponent<MudSwitch<bool>> toggle = GateSwitch(cut);
+        IRenderedComponent<MudCheckBox<bool>> toggle = GateSwitch(cut);
         await cut.InvokeAsync(() => toggle.Instance.ValueChanged.InvokeAsync(true));
 
         Assert.True(cut.FindComponent<TaskDetail>().Instance.HasPending);
@@ -227,7 +227,7 @@ public sealed class TaskDetailHumanGateTests
         TaskItem task = CreateTask(harness, assignee: Nova);
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderOver(ctx,Proof.Empty, task.Id);
-        IRenderedComponent<MudSwitch<bool>> toggle = GateSwitch(cut);
+        IRenderedComponent<MudCheckBox<bool>> toggle = GateSwitch(cut);
         await cut.InvokeAsync(() => toggle.Instance.ValueChanged.InvokeAsync(true));
         await cut.InvokeAsync(() => toggle.Instance.ValueChanged.InvokeAsync(false));
         Assert.IsType<TaskResult.Saved>(harness.Service.Update(task.Id, new TaskPatch { HumanGate = Optional<bool>.Set(true) }, null, HumanOf(harness)));
