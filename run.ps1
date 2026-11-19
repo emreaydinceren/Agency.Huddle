@@ -32,6 +32,8 @@
                            Default: off (one node process per Persona).
       -NoBuild             Skip the build; run what is already compiled.
                            Default: off (builds src/Huddle.App first).
+      -NoBrowser           Do not open a browser tab once the app is listening.
+                           Default: off (opens one tab on the app's URL).
       -RunAnalyzers        Run the code analyzers in the build, as CI does.
                            Default: off (analyzers skipped: faster, nothing linted).
       -Configuration <c>   Build configuration: Debug or Release.
@@ -74,6 +76,14 @@
 .PARAMETER NoBuild
     Skip the build and run whatever is already compiled.
     Default: off - src/Huddle.App is built before the app starts.
+
+.PARAMETER NoBrowser
+    Do not open the app in the default browser. Without it, a background job waits until
+    the port accepts connections (Kestrel binds last, after the hosted services have
+    started) and then opens one tab on the app's URL. The job gives up after three
+    minutes and is stopped when the app exits. Callers that bring their own browser,
+    such as the preview configurations in .claude/launch.json, pass it.
+    Default: off - one tab is opened.
 
 .PARAMETER RunAnalyzers
     Run the code analyzers (Sonar, Meziantou, CA, IDE, HUD and the rest) in this script's
@@ -148,6 +158,7 @@
     ./run.ps1 -PipeName my-pipe
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
+    ./run.ps1 -NoBrowser
     ./run.ps1 -RunAnalyzers
     ./run.ps1 -Configuration Debug
     ./run.ps1 -Seed
@@ -163,6 +174,7 @@ param(
     [string]$PipeName,
     [switch]$NoAcp,
     [switch]$NoBuild,
+    [switch]$NoBrowser,
     [switch]$RunAnalyzers,
     [ValidateSet('Debug', 'Release')]
     [string]$Configuration = 'Release',
@@ -258,7 +270,7 @@ if (-not (Test-Path $solution)) {
 # -- Seed: the data set from src/Huddle.Seeder, and nothing else -----------------
 
 # -Seed only swaps the data folder. The app otherwise runs exactly as it does without it.
-$seedArgs = @()
+$dataDirArgs = @()
 $seederProject = Join-Path $scriptDir 'src/Huddle.Seeder'
 $seedCommand = $null
 if ($Seed) {
@@ -277,8 +289,13 @@ if ($Seed) {
 
         $seedCommand = "dotnet run --project `"$seederProject`" -- --root `"$SeedRoot`""
     }
+}
 
-    $seedArgs = @("--Team:DataDir=$dataDir")
+# PowerShell variables are case-insensitive, so $dataDir above has overwritten $DataDir: test the
+# switches instead. With neither -DataDir nor -Seed, pass nothing so the app keeps honouring
+# $env:Team__DataDir / App_Data.
+if ($PSBoundParameters.ContainsKey('DataDir') -or $Seed) {
+    $dataDirArgs = @("--Team:DataDir=$dataDir")
 }
 
 # -- Clean-only: skip every other check, delete, exit -------------------------
@@ -362,7 +379,7 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
 }
 
 # Everything after `--` goes to Huddle.App rather than to `dotnet run`.
-$appArgs = @($seedArgs) + @("--Team:PipeName=$PipeName")
+$appArgs = @($dataDirArgs) + @("--Team:PipeName=$PipeName")
 if ($LogLevel) {
     $appArgs += @('--log-level', $LogLevel)
 }
@@ -416,6 +433,11 @@ if ($DryRun) {
     }
     Write-Host "   Run   : $runCommand" -ForegroundColor Gray
     Write-Host "   URL   : $url" -ForegroundColor Gray
+    if ($NoBrowser) {
+        Write-Host '   Open  : skipped (-NoBrowser)' -ForegroundColor Gray
+    } else {
+        Write-Host "   Open  : $url in the default browser once the port is listening" -ForegroundColor Gray
+    }
     Write-Host "   Pipe  : $PipeName" -ForegroundColor Gray
     Write-Host ''
     Write-Host 'Dry run complete. Nothing was built or started.' -ForegroundColor Green
@@ -603,9 +625,43 @@ try {
         Write-Host "Console log level: $LogLevel" -ForegroundColor Gray
     }
 
+    # `dotnet run` blocks until Ctrl+C, so the tab is opened from a background job. It waits for
+    # the port rather than a fixed delay: Kestrel binds only after every hosted service has
+    # started, which with one node process per Persona takes anywhere from one second to many.
+    $browserJob = $null
+    if (-not $NoBrowser) {
+        $browserJob = Start-Job -ScriptBlock {
+            param([string]$Url, [int]$Port, [int]$TimeoutSeconds)
+
+            $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+            while ([DateTime]::UtcNow -lt $deadline) {
+                $client = [System.Net.Sockets.TcpClient]::new()
+                try {
+                    # 127.0.0.1, not 'localhost': that tries ::1 first, and Windows takes about two
+                    # seconds to refuse a closed port, longer than this one-second wait.
+                    if ($client.ConnectAsync('127.0.0.1', $Port).Wait(1000)) {
+                        Start-Process $Url
+                        return
+                    }
+                } catch {
+                    # Connection refused: the app is still starting. Try again below.
+                    $null = $_
+                } finally {
+                    $client.Dispose()
+                }
+                Start-Sleep -Milliseconds 500
+            }
+        } -ArgumentList $url, $Port, 180
+    }
+
     & dotnet @runArgs
     $runExitCode = $LASTEXITCODE
 } finally {
+    if ($browserJob) {
+        Stop-Job -Job $browserJob -ErrorAction SilentlyContinue
+        Remove-Job -Job $browserJob -Force -ErrorAction SilentlyContinue
+    }
+
     # Only -NoAcp changes the variable, so only -NoAcp has anything to put back.
     if ($NoAcp) {
         if ($null -eq $savedAcp) {
