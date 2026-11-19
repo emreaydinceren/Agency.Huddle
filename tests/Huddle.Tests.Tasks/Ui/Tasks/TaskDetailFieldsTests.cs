@@ -51,6 +51,91 @@ public sealed class TaskDetailFieldsTests
     }
 
     // ---------------------------------------------------------------------------------------------
+    // Rank: an optional whole number right after Priority; clearing it removes the rank.
+    // ---------------------------------------------------------------------------------------------
+
+    /// <summary>The Rank number field of the rendered Task detail.</summary>
+    /// <param name="cut">The rendered Task detail.</param>
+    private static IRenderedComponent<MudNumericField<int?>> RankField(IRenderedComponent<ContainerFragment> cut) =>
+        cut.FindComponents<MudNumericField<int?>>().Single(field => string.Equals(field.Instance.Class, "task-detail-rank", StringComparison.Ordinal));
+
+    /// <summary>The Rank field is a clearable number field, minimum 1, placeholder "None", labelled "Rank", sitting right after the Priority item in the strip.</summary>
+    [Fact]
+    public async Task RankRow_IsAClearableNumberFieldAfterPriority()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        var cut = RenderDetail(ctx, task.Id);
+
+        MudNumericField<int?> field = RankField(cut).Instance;
+
+        Assert.Equal(1, field.Min);
+        Assert.True(field.Clearable);
+        Assert.Equal("None", field.Placeholder);
+        Assert.Equal("Rank", field.Label);
+        string[] labels = [.. cut.FindAll(".task-detail-strip-label").Select(label => label.TextContent.Trim())];
+        Assert.Equal(Array.IndexOf(labels, "Priority") + 1, Array.IndexOf(labels, "Rank"));
+    }
+
+    /// <summary>Entering a rank makes the edit pending, and Save writes it to the Task file.</summary>
+    [Fact]
+    public async Task RankRow_Edit_IsPendingThenSaveWritesIt()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        var cut = RenderDetail(ctx, task.Id);
+
+        await cut.InvokeAsync(() => RankField(cut).Instance.ValueChanged.InvokeAsync(7));
+
+        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
+        Assert.Null(harness.Store.Get(task.Id)?.Rank);
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(7, harness.Store.Get(task.Id)?.Rank));
+    }
+
+    /// <summary>Clearing a ranked Task's rank and saving removes it.</summary>
+    [Fact]
+    public async Task RankRow_Clear_ThenSaveRemovesTheRank()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(
+            new TaskDraft("Ranked", "Platform", null) { Rank = 4 }, TaskActors.Human(harness.Options.Value))).Task;
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        var cut = RenderDetail(ctx, task.Id);
+        Assert.Equal(4, RankField(cut).Instance.GetState(x => x.Value));
+
+        await cut.InvokeAsync(() => RankField(cut).Instance.ValueChanged.InvokeAsync(null));
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Null(harness.Store.Get(task.Id)?.Rank));
+        Assert.NotNull(harness.Store.Get(task.Id));
+    }
+
+    /// <summary>A new Task opened from a draft shows the draft's rank, and its first Save creates the Task with that rank.</summary>
+    [Fact]
+    public async Task RankRow_NewTask_CarriesTheRankOntoTheCreatedTask()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        TaskDraft draft = new("Brand new", "Platform", null) { Rank = 3 };
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TaskDetail>(0);
+            builder.AddAttribute(1, nameof(TaskDetail.Draft), draft);
+            builder.CloseComponent();
+        });
+        Assert.Equal(3, RankField(cut).Instance.GetState(x => x.Value));
+
+        await cut.InvokeAsync(() => RankField(cut).Instance.ValueChanged.InvokeAsync(9));
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Single(harness.Store.All));
+        Assert.Equal(9, Assert.Single(harness.Store.All).Rank);
+    }
+
+    // ---------------------------------------------------------------------------------------------
     // Status: one MudSelect over all eight states, duplicate_of, Reason (Spec §13.6, corrections D14 item 8).
     // ---------------------------------------------------------------------------------------------
 

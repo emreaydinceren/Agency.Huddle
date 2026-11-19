@@ -57,6 +57,12 @@ internal sealed class UpdateTaskTool(
             ["due_date"] = new JsonObject { ["type"] = "string" },
             ["reason"] = new JsonObject { ["type"] = "string" },
             ["sprint"] = new JsonObject { ["type"] = "string" },
+            ["rank"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["minimum"] = 0,
+                ["description"] = "Where the Task sits in its Team's backlog: 1 is first. 0 clears it, leaving the Task unranked. Leave gaps such as 10, 20, 30 so one change moves one Task.",
+            },
             ["human_gate"] = new JsonObject { ["type"] = "boolean" },
             ["action"] = new JsonObject
             {
@@ -143,7 +149,8 @@ internal sealed class UpdateTaskTool(
             || !TaskToolText.TryGetString(arguments, "reason", out string? reason, out refusal)
             || !TryReadSprint(arguments, sprints, out Optional<SprintId?> sprint, out refusal)
             || !TryReadHumanGate(arguments, out Optional<bool> humanGate, out refusal)
-            || !TryReadAction(arguments, out Optional<string?> action, out refusal))
+            || !TryReadAction(arguments, out Optional<string?> action, out refusal)
+            || !TryReadRank(arguments, out Optional<int?> rank, out refusal))
         {
             return false;
         }
@@ -167,6 +174,7 @@ internal sealed class UpdateTaskTool(
             Sprint = sprint,
             HumanGate = humanGate,
             Action = action,
+            Rank = rank,
         };
         refusal = string.Empty;
         return true;
@@ -189,6 +197,34 @@ internal sealed class UpdateTaskTool(
             humanGate = Optional<bool>.Set(value);
         }
 
+        return true;
+    }
+
+    /// <summary>Reads the optional <c>rank</c> argument: 0 clears the rank, 1 or more sets it, and a negative or non-integer value is refused.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="rank">The rank change, unset when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadRank(JsonObject arguments, out Optional<int?> rank, out string refusal)
+    {
+        rank = default;
+        if (arguments["rank"] is null)
+        {
+            refusal = string.Empty;
+            return true;
+        }
+
+        if (!TaskToolText.TryGetInt(arguments, "rank", null, out int value, out refusal))
+        {
+            return false;
+        }
+
+        if (value < 0)
+        {
+            refusal = "'rank' must be a whole number of 0 or more; 0 clears it.";
+            return false;
+        }
+
+        rank = Optional<int?>.Set(value == 0 ? null : value);
         return true;
     }
 

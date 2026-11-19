@@ -45,6 +45,10 @@ progress at once. Creating Backlog Tasks needs no approval: create them and carr
 When every child Task is Done or no longer needed, verify the mission Task against what finished looks like and
 record Evidence that links each child Task. Archiving the Project is the Human's call.
 
+### Ordering the backlog
+
+Order your Team's backlog with a Task's rank: 1 is first. Leave gaps such as 10, 20, 30, so moving one Task is one change to one Task and no other Task is renumbered. Rank a new Task when you create it.
+
 ### Reporting
 
 In a digest or a report, say what is done, what is due next, what slipped and what needs the Human, each with

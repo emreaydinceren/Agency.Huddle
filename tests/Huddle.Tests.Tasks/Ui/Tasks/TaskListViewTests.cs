@@ -174,6 +174,46 @@ public sealed class TaskListViewTests : IDisposable
         Assert.Equal(["ID", "Title", "Due date", "Status", "Assignee"], headers);
     }
 
+    /// <summary>A Rank column shows each Task's rank, empty when unranked, and its header sorts the grid with unranked rows last.</summary>
+    [Fact]
+    public async Task RankColumn_ShowsRankAndSortsUnrankedLast()
+    {
+        TaskItem unranked = TestTasks.Make(id: "PLAT-0001", title: "Unranked one");
+        TaskItem second = TestTasks.Make(id: "PLAT-0002", title: "Second one") with { Rank = 2 };
+        TaskItem first = TestTasks.Make(id: "PLAT-0003", title: "First one") with { Rank = 1 };
+        TaskView view = MakeView(fields: ["rank"]);
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [unranked, second, first]);
+
+        Assert.Equal(["ID", "Title", "Rank"], cut.FindAll("span.sortable-column-header").Select(header => header.TextContent.Trim()));
+        IElement rankHeader = cut.FindAll("span.sortable-column-header").Single(header => string.Equals(header.TextContent.Trim(), "Rank", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => rankHeader.ClickAsync());
+
+        string markup = cut.Markup;
+        int firstAt = markup.IndexOf("First one", StringComparison.Ordinal);
+        int secondAt = markup.IndexOf("Second one", StringComparison.Ordinal);
+        int unrankedAt = markup.IndexOf("Unranked one", StringComparison.Ordinal);
+        Assert.True(firstAt < secondAt && secondAt < unrankedAt, "Rank ascending lists 1, 2, then the unranked Task.");
+    }
+
+    /// <summary>A header click on the Rank column is saved to the View as a <c>rank</c> sort key, not dropped as an unknown column.</summary>
+    [Fact]
+    public async Task RankColumn_HeaderClick_SavesRankSortKey()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "T") with { Rank = 1 };
+        TaskView view = MakeView(fields: ["rank"]);
+        TaskView? saved = null;
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [task], onViewChanged: v => saved = v);
+
+        IElement rankHeader = cut.FindAll("span.sortable-column-header").Single(header => string.Equals(header.TextContent.Trim(), "Rank", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => rankHeader.ClickAsync());
+
+        Assert.Equal([new SortKey("rank", Agency.Huddle.App.Tasks.Views.SortDirection.Ascending)], saved?.Sort);
+    }
+
     /// <summary>A field the View groups on still groups the grid even when it isn't in <see cref="TaskView.Fields"/> - its column exists, just hidden.</summary>
     [Fact]
     public async Task Grouping_OnAFieldNotInFields_StillGroups()
@@ -255,7 +295,8 @@ public sealed class TaskListViewTests : IDisposable
         TaskView view,
         IReadOnlyList<TaskItem> tasks,
         string? search = null,
-        Action<TaskId>? onOpenTask = null)
+        Action<TaskId>? onOpenTask = null,
+        Action<TaskView>? onViewChanged = null)
     {
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero) };
         ctx.Services.AddSingleton<TimeProvider>(clock);
@@ -273,6 +314,11 @@ public sealed class TaskListViewTests : IDisposable
             if (onOpenTask is not null)
             {
                 builder.AddAttribute(4, nameof(TaskListView.OnOpenTask), EventCallback.Factory.Create<TaskId>(onOpenTask, onOpenTask));
+            }
+
+            if (onViewChanged is not null)
+            {
+                builder.AddAttribute(5, nameof(TaskListView.ViewChanged), EventCallback.Factory.Create<TaskView>(onViewChanged, onViewChanged));
             }
 
             builder.CloseComponent();

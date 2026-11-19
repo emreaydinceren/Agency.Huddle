@@ -5,9 +5,10 @@ namespace Agency.Huddle.App.Tasks.Views;
 /// <summary>Pure querying over Tasks: filtering, sorting and grouping, for Spec §12.5.</summary>
 internal static class TaskQuery
 {
-    /// <summary>The final tiebreaker, always applied after any explicit sort keys: priority descending, then due date ascending with nulls last, then id ascending.</summary>
+    /// <summary>The final tiebreaker, always applied after any explicit sort keys: rank ascending with unranked last, then priority descending, then due date ascending with nulls last, then id ascending.</summary>
     private static readonly SortKey[] DefaultSortKeys =
     [
+        new("rank", SortDirection.Ascending),
         new("priority", SortDirection.Descending),
         new("due_date", SortDirection.Ascending),
         new("id", SortDirection.Ascending),
@@ -223,7 +224,7 @@ internal static class TaskQuery
 
     /// <summary>
     /// Sorts <paramref name="items"/> by <paramref name="keys"/> in order, then always by the default tiebreaker
-    /// (priority descending, due date ascending with nulls last, id ascending).
+    /// (rank ascending with unranked last, priority descending, due date ascending with nulls last, id ascending).
     /// </summary>
     /// <param name="items">The Tasks to sort.</param>
     /// <param name="keys">The explicit sort keys to apply first, in order.</param>
@@ -403,6 +404,7 @@ internal static class TaskQuery
             "title" => (left, right) => sign * string.Compare(left.Title, right.Title, StringComparison.OrdinalIgnoreCase),
             "status" => (left, right) => sign * CompareStates(left.Status, right.Status),
             "priority" => (left, right) => sign * ((int)left.Priority).CompareTo((int)right.Priority),
+            "rank" => (left, right) => CompareNullsLast(left.Rank, right.Rank, sign, static (a, b) => a.CompareTo(b)),
             "assignee" => (left, right) => CompareNullsLast(left.Assignee, right.Assignee, sign),
             "creator" => (left, right) => sign * string.Compare(left.Creator, right.Creator, StringComparison.OrdinalIgnoreCase),
             "team" => (left, right) => sign * string.Compare(left.Location.Team, right.Location.Team, StringComparison.OrdinalIgnoreCase),

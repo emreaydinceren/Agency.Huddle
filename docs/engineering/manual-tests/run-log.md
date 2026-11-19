@@ -4260,6 +4260,14 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-26--follow-ups-a
 | --- | --- | --- | --- | --- |
 | 2026-11-15 | Pass *(run by an agent, paid lane)* | `fix/issue-546-project-default`, uncommitted | #546 | Lane from the `software-co` seed, every Persona on Sonnet in `persona_models`, schedules paused. In the Chief of Staff's root Room the Human asked for a question Task in Platform/API v2 for Grace: PLAT-0019 (origin the root Room, which Grace is not in). The wake opened the Room "Chief of Staff, Grace", stored in `room_projects` as API v2 and listed under the Project's Rooms. Grace filed PLAT-0020..0022 with no `parent`; she passed `project: "API v2"` herself, so those results carry no Filed line. Asked in that Room to file one more with `project` left out (input: team, title, description), she got `Created PLAT-0023 … in Platform/API v2, unassigned. Filed in project "API v2" (from Room "Chief of Staff, Grace", where this Task was asked for). …`. All five show on the API v2 board; the follow-ups' own wakes opened Rooms listed under API v2. Spend 0.66 USD (Grace 0.26, Marcus 0.17, Chief of Staff 0.09, Alan 0.08, Lena 0.07). The Task-in-hand fallback was not reached live; unit tests cover it. |
 
+### TASKS-27 — Dragging a card within its Board column changes only its rank
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#tasks-27--dragging-a-card-within-its-board-column-changes-only-its-rank)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, free lane, Agents off)* | `feat/task-rank` on `95fbf0c8`, uncommitted |  | Copy of the `software-co` seed, `-NoAcp`, `Team__DataDir` set by environment. Platform board, Backlog / No project cell (PLAT-0016, 0017, 0014, unranked). Step 1: PLAT-0014 to the top → only its file changed, `rank: 10`, Timeline `rank: — → 10`. Step 2: PLAT-0017 → `rank: 20`, only its file. Step 3: PLAT-0016 between them → `rank: 15`, only its file. Step 4: PLAT-0017 set to 1 on the edit page → `rank: 20 → 1`; Board order 0017, 0014, 0016, and the All Tasks list starts with the same three. Read view: Rank 15 after Priority; PLAT-0012 (unranked) shows "—". Step 5: Growth by project (due-date sort), GROW-0006 dragged to the top of To Do → no file changed (steps 1-3 show the same drag does reach the Board). The test was rewritten during the run: its first draft pointed at a Fields › Sort control that does not exist. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

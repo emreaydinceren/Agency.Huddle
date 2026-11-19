@@ -146,6 +146,33 @@ public sealed class TaskDetailConflictTests
         Assert.Single(cut.FindComponents<MudRadioGroup<ConflictChoice?>>());
     }
 
+    /// <summary>A rank edited on both sides is a conflict with its own "rank" row showing both values, and "Take theirs" drops the pending rank so the field shows the server's.</summary>
+    [Fact]
+    public async Task Conflict_RankEditedOnBothSides_ShowsRankRow_AndTakeTheirsDropsThePendingRank()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        var cut = RenderPanel(ctx, task.Id);
+        IRenderedComponent<MudNumericField<int?>> rank = cut.FindComponents<MudNumericField<int?>>().Single(m => string.Equals(m.Instance.Class, "task-detail-rank", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => rank.Instance.ValueChanged.InvokeAsync(5));
+        TaskResult outsideEdit = harness.Service.Update(task.Id, new TaskPatch { Rank = Optional<int?>.Set(8) }, baseVersion: null, new TaskActor(TaskActorKind.Agent, "Nova", null));
+        Assert.IsType<TaskResult.Saved>(outsideEdit);
+
+        await ClickSaveAsync(cut);
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".task-detail-conflict-alert")));
+
+        Assert.Equal("Nova changed this task while you were editing: rank.", cut.TextOf(".task-detail-conflict-alert"));
+        IElement row = Assert.Single(cut.FindAll(".task-detail-conflict-row"));
+        Assert.Equal("rank", row.QuerySelector(".task-detail-conflict-field")?.TextContent.Trim());
+        Assert.Equal("8", row.QuerySelector(".task-detail-conflict-theirs")?.TextContent.Trim());
+        Assert.Equal("5", row.QuerySelector(".task-detail-conflict-yours")?.TextContent.Trim());
+
+        await ChooseConflictAsync(cut, "rank", ConflictChoice.Theirs);
+
+        Assert.Equal(8, cut.FindComponents<MudNumericField<int?>>().Single(m => string.Equals(m.Instance.Class, "task-detail-rank", StringComparison.Ordinal)).Instance.GetState(x => x.Value));
+    }
+
     /// <summary>Spec §13.7: two conflicting fields (Title and Priority) each get their own row, and the banner lists both wire-key labels, in <see cref="TaskDiff.Compare(TaskItem, TaskItem)"/>'s own field order.</summary>
     [Fact]
     public async Task Conflict_TwoFieldsConflict_ShowsRowPerFieldAndListsBothInBanner()

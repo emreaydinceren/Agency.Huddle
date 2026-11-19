@@ -36,6 +36,17 @@ public sealed class ViewValidatorTests
     public void Validate_ValidList_NoProblems() =>
         Assert.Empty(ViewValidator.Validate(ValidList(), []));
 
+    /// <summary><c>rank</c> is a known field, can be shown and sorted on, and a View naming it is valid.</summary>
+    [Fact]
+    public void Validate_RankFieldAndSort_Valid()
+    {
+        TaskView view = ValidList() with { Fields = ["rank"], Sort = [new SortKey("rank", SortDirection.Descending)] };
+
+        Assert.Empty(ViewValidator.Validate(view, []));
+        Assert.Contains("rank", (IEnumerable<string>)ViewFieldKeys.All);
+        Assert.Contains("rank", (IEnumerable<string>)ViewFieldKeys.Sortable);
+    }
+
     /// <summary>A valid Board has no problems.</summary>
     [Fact]
     public void Validate_ValidBoard_NoProblems() =>

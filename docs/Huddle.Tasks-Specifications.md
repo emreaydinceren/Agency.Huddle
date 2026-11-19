@@ -105,7 +105,6 @@ Agent takes a single action.
 | Editing cells directly in a List | Owner decision. Every cell edit would be a wake-up, and the panel names who will be woken |
 | Several assignees, or watchers | Owner decision. One assignee keeps both grouping and trigger routing simple |
 | Custom states | States are fixed so that Tool schemas, validation and the definition of "terminal" never change at runtime |
-| Reordering cards by hand | A rank field would make every reorder a file write, and therefore a wake-up |
 | Closed Tasks on a Board | A Board is for work in progress |
 | A formatting toolbar in the description editor | V2 will use `BitMarkdownEditor` (Appendix B) |
 | Attachments | Links in the description work. Designed for V2 in [TaskAttachments](Huddle.TaskAttachments-Specifications.md) |
@@ -387,6 +386,7 @@ entry. §7.7 has the grammar and how files written before it are read.
 | `duplicate_of` | when status is `Duplicate` | `TaskId` | parses, isn't the Task itself. Required when status is Duplicate, and an error on any other status |
 | `tags` | no | list | each 1–40 characters, no `,` or `;` or line break (D-18) |
 | `start_date`, `due_date` | no | `yyyy-MM-dd` | `DateOnly.TryParseExact(…, CultureInfo.InvariantCulture)` |
+| `rank` | no | whole number, 1 or more | the order of the Team's backlog, 1 first ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)). Empty or missing means unranked. `0`, a negative number or anything not a whole number rejects the file. Written right after `priority`, only when set |
 | anything else | — | scalar | kept, and written back after the known keys in the order they were read |
 
 Keys are **case-insensitive**. A duplicate key rejects the file, which is the Persona precedent
@@ -461,7 +461,7 @@ public static class TaskFileFormat
 | Change | Summary text |
 | --- | --- |
 | created | `created` |
-| scalar field | `{field}: {old} → {new}`, where an empty value is shown as `—`. Field names are the wire keys: `status`, `priority`, `title`, `assignee`, `parent`, `duplicate_of`, `start_date`, `due_date`, `origin` |
+| scalar field | `{field}: {old} → {new}`, where an empty value is shown as `—`. Field names are the wire keys: `status`, `priority`, `rank`, `title`, `assignee`, `parent`, `duplicate_of`, `start_date`, `due_date`, `origin` |
 | list field | `tags: +security, −legacy`, `blocked_by: +PLAT-0011` |
 | description | `description edited` (the text is never included) |
 | moved | `moved: Platform/Auth v2 → Marketing` |
@@ -1160,7 +1160,9 @@ The actor is `TaskActor(Agent, name, callerAgentId)`.
 PLAT-0042 | In Progress | Urgent | Nova | Platform/Auth v2 | Support SAML login
 ```
 
-The fields are: id, status, priority, assignee (or `unassigned`), `Team[/Project]` (with
+A ranked Task adds ` | rank N` right after the priority: `PLAT-0042 | In Progress | Urgent | rank 10 | Nova | …`.
+
+The fields are: id, status, priority, rank when set, assignee (or `unassigned`), `Team[/Project]` (with
 `(closed)` appended when Closed), and title. The separator is ` | `. A `|` inside the title is
 kept as it is, because the line is for a model, not for parsing.
 
@@ -1176,9 +1178,13 @@ kept as it is, because the line is for a model, not for parsing.
     "assignee": { "type": "string" }, "originRoomId": { "type": "string" },
     "parent": { "type": "string" }, "blocked_by": { "type": "array", "items": { "type": "string" } },
     "tags": { "type": "array", "items": { "type": "string" } },
-    "start_date": { "type": "string" }, "due_date": { "type": "string" } },
+    "start_date": { "type": "string" }, "due_date": { "type": "string" },
+    "rank": { "type": "integer", "minimum": 1 } },
   "required": ["title", "team"] }
 ```
+
+`rank` is optional; a value that is not a whole number is refused naming the argument, and `0` is
+refused by `TaskService` (§9.2).
 
 **Checks, in order.**
 
@@ -1253,8 +1259,9 @@ Created PLAT-0042 "Support SAML login" in Platform/Auth v2, assigned to Kai. Kai
 | `text` | string; case-insensitive search of id and title | — |
 | `limit` | integer, 1–200 | 50 |
 
-- The results run through the **same** `TaskQuery.Filter` as Views (§12.5), sorted by priority
-  descending, then due date ascending, then id.
+- The results run through the **same** `TaskQuery.Filter` as Views (§12.5), in the default
+  order: rank ascending with unranked last, then priority descending, due date ascending, id.
+  Each line carries ` | rank N` after the priority when the Task is ranked.
 - **Output:** one §11.1 line per Task. If results were cut off, end with
   `"Showing 50 of 132; narrow the filters or raise limit."`. If there were none, return
   `"No tasks match."`.
@@ -1267,7 +1274,8 @@ Created PLAT-0042 "Support SAML login" in Platform/Auth v2, assigned to Kai. Kai
 - Optional: `title`, `description`, `status` (all eight states), `priority`, `assignee`
   (`""` unassigns, `"me"` is the caller), `team`, `project` (`""` means no project), `parent`
   (`""` clears it), `blocked_by` (the whole list, which replaces the old one), `duplicate_of`,
-  `tags` (the whole list), `start_date`, `due_date` (`""` clears it), and `reason`.
+  `tags` (the whole list), `start_date`, `due_date` (`""` clears it), `rank` (a whole number;
+  `0` clears it, a negative number is refused), and `reason`.
 - At least one field besides `taskId`, otherwise: *"Nothing to change: pass at least one field
   besides taskId."*
 
@@ -1371,7 +1379,7 @@ public sealed record BoardColumn(string Label, IReadOnlyList<TaskState> States, 
 ### 12.2 Field keys
 
 `id`, `title`, `status`, `priority`, `assignee`, `creator`, `team`, `project`, `parent`,
-`blocked_by`, `tags`, `start_date`, `due_date`, `created`, `updated`, `closed`, `origin`.
+`blocked_by`, `tags`, `start_date`, `due_date`, `created`, `updated`, `closed`, `origin`, `rank`.
 
 - `id` and `title` are **always shown**. They're implicit, and are removed from `Fields` if they
   appear there.
@@ -1465,8 +1473,9 @@ public sealed record TaskGroupNode(string? Label, int Count, IReadOnlyList<TaskG
   - All name comparisons use `OrdinalIgnoreCase`.
 - **Search:** a case-insensitive `Contains` on the id string and the title.
 - **Sorting:**
-  - Apply the keys in order. The **default**, and the final tie-breaker, is priority descending,
-    then due date ascending with nulls last, then id ascending.
+  - Apply the keys in order. The **default**, and the final tie-breaker, is rank ascending with
+    unranked last, then priority descending, then due date ascending with nulls last, then id
+    ascending. Rank, like the dates, puts nulls last in both directions.
   - Status sorts in declaration order and Priority by severity. Dates put nulls last in both
     directions. Strings use `StringComparer.OrdinalIgnoreCase`.
 - **Grouping:** `Group` is used by **Board swimlanes only** (§12.6). The List uses
@@ -1643,7 +1652,12 @@ does what the View asks for. Each of these was checked in the package's XML docs
 - **Rows** are `TaskQuery.Filter` then `TaskQuery.Sort` output (§12.5). The grid shows the order
   it is given until the Human clicks a header. Header sorting is the grid's own state, so it is
   **temporary by construction** and never touches the View. Every column sets `SortBy` so that
-  status and priority sort by severity, not alphabetically.
+  status and priority sort by severity, not alphabetically. Rank and Sprint sort an empty value as
+  the largest, so on the List a descending sort on either (a header click, or a saved View's
+  sort) lists unranked Tasks (or Tasks in no Sprint) first. The Board and `list_tasks` go through
+  `TaskQuery` (§12.5), which keeps them last in both directions. Accepted: MudBlazor 9.12's
+  descending sort only inverts a column's `Comparer`, and its initial sort ignores it, so keeping
+  them last would need a direction-aware comparer and a re-sort after the first render.
 - **Fields.** Every §12.2 field has a column, and `Hidden` is bound to "not in `view.Fields`".
   Column order follows `view.Fields`: render the columns in that order.
 - **Grouping.** `Grouping` and `GroupByOrder` are bound from `view.Grouping`, and `GroupBy`
@@ -1739,6 +1753,16 @@ Writing `TransactionStarted="…"` in markup doesn't compile, because it isn't a
 **While dragging**, a caption under the target column shows the `Preview` text for the dragged
 card, for example *"Nova will be notified"*. It uses `TaskTriggerService.Preview`. Changes made by
 dragging are saved immediately; that is by design (D-20).
+
+**Reordering within a column** ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)).
+A drop into the card's own column sets the dragged card's `rank` only, and writes only that Task
+(`RankPlacement`, pure): halfway between the ranked neighbours above and below; with no whole
+number between them, the first of the two neighbours' ranks (above, then below) under which the
+default order puts the card between them, else the rank above; at the top, half the rank below
+(a drop above a rank-1 card ties at 1, and the fallback order decides which shows first); after the last
+ranked card, that rank plus 10 (10 when nothing is ranked); among unranked cards, the rank is
+cleared. Neighbours from another Team are skipped. Reordering is off when the View has sort keys,
+because the drop position would mean nothing. A drop into another column changes status only.
 
 **Keyboard.** Every card has a `MudMenu` (an icon button with `aria-label="Move PLAT-0042"`) that
 lists all eight states. Choosing one takes the same path as a drop, so Duplicate still asks for its
@@ -1843,6 +1867,7 @@ just under the header, not in it. The Expanded dialog is titled "{id} · {title}
 | Assignee | `MudAutocomplete<AssigneeOption>` with `Strict="true"` and an `ItemTemplate` showing `AgentAvatar` inside a presence `MudBadge` (as on cards), the Name, the Persona `title` as a small `MudChip`, and the presence in words. When the Task has a `LastWake`, a line underneath reads *"Woken in Room: {name}"* and links to the Room with a `MudLink` |
 | Status | a `MudToggleGroup<TaskState> SelectionMode="SelectionMode.SingleSelection"` with five `MudToggleItem`s (Backlog, To Do, In Progress, Review, Done), plus a sixth **Won't do ▾** `MudMenu` offering Cancelled, Duplicate and Rejected. The menu's activator shows the chosen Won't do state, and is highlighted while one is selected. Choosing Duplicate reveals a required `duplicate_of` picker. Choosing Cancelled or Rejected reveals an optional Reason field |
 | Priority | `MudSelect` with a priority icon |
+| Rank | `MudNumericField<int?>`, minimum 1, clearable, placeholder *None*; the read view always shows the row, with "—" when unranked, so rows never jump |
 | Team, Project | `MudSelect` for Team. For Project, a `MudAutocomplete<string>` with `CoerceValue="true"`, so a new name can be typed and creates the folder on save. Team and Project are two rows in both modes, each with its own label |
 | Parent | `MudAutocomplete<TaskItem>` with `Strict="true"` and `ToStringFunc` giving `"PLAT-0030 · title"` |
 | Blocked by | **`MudAutocomplete` selects one value only in 9.10** (there's no `MultiSelection`), so use the [Adding and removing chips](https://mudblazor.com/components/chipset#adding-and-removing-chips) pattern. A `MudChipSet<TaskId>` shows one closable chip per blocker, with its status (*PLAT-0047 ✓ Done*) and `OnClose` removing it. Next to it, a `MudAutocomplete<TaskItem>` adds a blocker and then clears itself. The read-only summary reads *"Blocked by 2 open tasks"* |
@@ -2250,7 +2275,7 @@ exists; see ADR-0030.
 | E-13 | An agent-made wake-up hits a paused Room | Outcome `BudgetSpent`. There's no retry: the change is saved, and the Human continues the Room |
 | E-14 | `views.json` is deleted while the app runs | The built-ins remain in memory, and the file isn't recreated until something is saved |
 | E-15 | A View filters on a Team with no folder and no label | Shown as *(missing)*, and it still filters, matching nothing |
-| E-16 | A card is dropped on its own column | Nothing happens (`Unchanged`, no event) |
+| E-16 | A card is dropped on its own column | With no sort keys on the View, only its `rank` is saved (§13.4 Reordering). Dropped where it already sits, or on a View with sort keys: nothing happens (`Unchanged`, no event) |
 | E-17 | A Task file is over 1 MB | It's read normally. There's no limit in V1 |
 | E-18 | A Task in `_closed/` has status In Progress | Allowed (owner decision: closing doesn't need a terminal state) |
 
@@ -2342,6 +2367,7 @@ TASKS-10 to TASKS-12 are paid 💰.
 | D-33 | **`#` opens the picker and is then removed**; the inserted text is the plain id | Keeping `#PLAT-0042` as a marker | One format whether the id was pasted or picked, and no marker for a model to drop or copy. *Owner* |
 | D-34 | **Task links are plain `href`s to `/tasks/item/{id}`** | Opening a dialog over the chat | Messages render as a `MarkupString`, so Blazor can't handle clicks inside them without new JavaScript. Back returns to the Room |
 | D-35 | **`IsSafe` allows `/tasks/item/<valid id>` exactly, and no other relative URL** | Allowing relative URLs in general | A general allowance would reopen what the link rewriter closes |
+| D-36 | **An optional, sparse `rank` orders a Team's backlog, 1 first, never renumbered** ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)) | No rank (the V1 non-goal); dense ranks renumbered on every move | Priority orders only coarsely. Sparse ranks keep a move to one file write and one wake. A rank change still wakes as any field does, until field-aware wakes. *Owner* |
 
 ---
 

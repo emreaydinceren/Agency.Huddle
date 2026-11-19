@@ -39,6 +39,9 @@ public enum TaskField
     /// <summary>The Sprint the Task belongs to.</summary>
     Sprint,
 
+    /// <summary>The Task's place in its Team's backlog order (<c>rank</c>); 1 is first, none sorts last.</summary>
+    Rank,
+
     /// <summary>Whether the Task waits for the Human (<c>human_gate</c>).</summary>
     HumanGate,
 

@@ -435,4 +435,31 @@ public sealed class GetTaskToolTests
         return store.Create(toWrite, TaskFileFormat.Compose(toWrite))
             ?? throw new InvalidOperationException("Fixture collided with an existing file.");
     }
-}
+
+    /// <summary>A ranked Task's first line carries the <c>| rank N</c> segment after its priority.</summary>
+    [Fact]
+    public async Task GetTask_RankedTask_FirstLineShowsRank()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", title: "Ranked", priority: TaskPriority.High) with { Rank = 12 });
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001" }, ct);
+
+        Assert.Equal("PLAT-0001 | To Do | High | rank 12 | unassigned | Platform | Ranked", result.Split('\n')[0]);
+    }
+
+    /// <summary>An unranked Task's first line has no rank segment.</summary>
+    [Fact]
+    public async Task GetTask_UnrankedTask_FirstLineHasNoRank()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", title: "Plain", priority: TaskPriority.High));
+        GetTaskTool tool = new(harness.Store, harness.Sprints, new FakePromptSource());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = "PLAT-0001" }, ct);
+
+        Assert.Equal("PLAT-0001 | To Do | High | unassigned | Platform | Plain", result.Split('\n')[0]);
+    }}

@@ -613,7 +613,7 @@ public sealed class R3TasksTests
 
         Assert.Empty(cut.FindAll(".task-detail-strip .task-state-dot"));
         Assert.Equal(
-            ["Assignee", "Status", "Priority", "Team", "Project", "Sprint"],
+            ["Assignee", "Status", "Priority", "Rank", "Team", "Project", "Sprint"],
             cut.FindAll(".task-detail-strip-item > .task-detail-strip-label").Select(label => label.TextContent.Trim()));
         Assert.Empty(cut.FindAll(".task-detail-strip-label .mud-icon-root"));
         IRenderedComponent<MudSelect<TaskPriority>> priority = cut.FindComponents<MudSelect<TaskPriority>>().Single();

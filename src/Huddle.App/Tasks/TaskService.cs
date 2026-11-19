@@ -1155,6 +1155,7 @@ internal sealed class TaskService : IDisposable
             StartDate = draft.StartDate,
             DueDate = draft.DueDate,
             Sprint = draft.Sprint,
+            Rank = draft.Rank,
             HumanGate = draft.HumanGate,
             Action = draft.Action,
             Description = draft.Description,
@@ -1770,9 +1771,22 @@ internal sealed class TaskService : IDisposable
             this.AddSprintProblems(candidate.Sprint, problems);
         }
 
+        AddRankProblems(candidate.Rank, Touches(TaskField.Rank), problems);
         AddReasonProblems(reason, candidate.Status, turnsGateOn, problems);
 
         return problems;
+    }
+
+    /// <summary>A rank, when the change touches it, is a whole number of 1 or more.</summary>
+    /// <param name="rank">The candidate's rank, or <see langword="null"/> when it has none.</param>
+    /// <param name="touched">Whether the change touches the rank at all.</param>
+    /// <param name="problems">The list a problem message is appended to.</param>
+    private static void AddRankProblems(int? rank, bool touched, List<string> problems)
+    {
+        if (touched && rank is < 1)
+        {
+            problems.Add("Rank must be a whole number of 1 or more.");
+        }
     }
 
     /// <summary>Spec §9.2: the title is 1-200 characters and one line.</summary>

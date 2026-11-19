@@ -32,6 +32,7 @@ public sealed class FieldsDialogTests
 
         string[] offered = [.. root.FindAll(".view-editor-fields-add-option").Select(option => option.TextContent.Trim())];
         Assert.Contains("Sprint", offered);
+        Assert.Contains("Rank", offered);
         Assert.Contains("Assignee", offered);
         Assert.DoesNotContain("Status", offered);
         Assert.DoesNotContain("Priority", offered);
