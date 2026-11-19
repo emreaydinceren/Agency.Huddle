@@ -24,7 +24,7 @@ public sealed class CommandTurnTests
         "@nova /compact",
         [],
         WorkItemKind.Command,
-        TriggerMessageId: "trig-1",
+        TriggerMessageId: "trig-2",
         Command: new AdapterCommandCall("compact", string.Empty));
 
     /// <summary>The tool-call events <c>claude-agent-acp</c> was observed to send for a bare <c>/compact</c>.</summary>
