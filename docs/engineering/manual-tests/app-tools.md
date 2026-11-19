@@ -155,7 +155,7 @@ If `App_Data/prompts.json` cannot be written (a permissions error paragraph appe
 2. Relaunch with `P-LAUNCH-FREE`; confirm `O-ADAPTERS` prints `0`.
 3. Wait for `Now listening on: http://localhost:5100`.
 4. Run `O-ADAPTERS` and note the count (`0`). Do not count `node.exe` in Task Manager: on a development machine unrelated `node.exe` processes are normal.
-5. In the browser open the Members tab of a Team that holds Chief of Staff, Nova and Jarvis (put any of them that is in no Team there with `P-ADD-TO-TEAM`).
+5. In the browser open the Agents tab of a Team that holds Chief of Staff, Nova and Jarvis (put any of them that is in no Team there with `P-ADD-TO-TEAM`).
 6. Confirm each of the three has a roster card, and that each card's avatar badge reads **Offline** (a hollow ring in the neutral grey of the secondary text colour, not red; red is Degraded's dash).
 7. Hover each **Offline** badge. Confirm no tooltip reason appears (an Agent that merely never started has no reason).
 8. Click the **Nova** tile to open its card. Confirm the card shows **Offline** and shows NO reason line beneath the status.
@@ -210,7 +210,7 @@ If `O-ADAPTERS` printed a non-zero count before the app took any action (a lefto
 2. Open a NEW `T-A` PowerShell window (so the `Team__Acp__Enabled=false` from the previous test is gone).
 3. Launch with `P-LAUNCH-PAID`, including its Chief of Staff Haiku / low step. (Development already sets `Agency.Huddle` to `Debug`, so no log-level variable is needed.)
 4. Wait for `Now listening on: http://localhost:5100`.
-5. Open the Members tab of a Team that holds `Nova` (put it there with `P-ADD-TO-TEAM` if it is in no Team) and leave it open. Do NOT open any room and do NOT type any message.
+5. Open the Agents tab of a Team that holds `Nova` (put it there with `P-ADD-TO-TEAM` if it is in no Team) and leave it open. Do NOT open any room and do NOT type any message.
 6. Watch the badge on `Nova`'s roster-card avatar (hover it to read its tooltip). Confirm it reads **Starting** (pulse glyph), then changes to **Online** (check glyph), within about 30 seconds (Degraded is a dash glyph, Offline a hollow ring).
 7. Look at the left sidebar. Confirm a room named `Nova` has appeared in the room list.
 8. Read the app's console window. Find a line of the form `App tool server listening at http://127.0.0.1:<port>/mcp.` and note the port number.
@@ -470,7 +470,7 @@ If the transcript is empty after the restart, check you reopened the right room:
 
 **Steps**
 
-1. Open the Members tab of the Team that holds the Agents (and, for any Agent in no Team, the **From other teams** picker under **No team**). On paper or in a text file, write down every Agent's Name, its title, its alias, and the state word in its avatar badge's tooltip (Online / Starting / Degraded / Offline).
+1. Open the Agents tab of the Team that holds the Agents (and, for any Agent in no Team, the **From other teams** picker under **No team**). On paper or in a text file, write down every Agent's Name, its title, its alias, and the state word in its avatar badge's tooltip (Online / Starting / Degraded / Offline).
 2. Click **New room** in the left sidebar and write down every checkbox name in the panel and each one's status mark (glyph and tooltip). Click **New room** again to close the panel without starting one.
 3. Open the room named `Nova` from the sidebar.
 4. Click into the composer and type exactly: `Who else is here? List every agent and every persona you can see, name for name, and say which are online.`
@@ -482,7 +482,7 @@ If the transcript is empty after the restart, check you reopened the right room:
 
 **Pass if — all of these**
 
-- Every name in the reply appears on a Members tab, in the From other teams picker or in the New room panel, and every name on those surfaces appears in the reply.
+- Every name in the reply appears on a Agents tab, in the From other teams picker or in the New room panel, and every name on those surfaces appears in the reply.
 - Agents are separated from Personas, each Agent carries an online/offline state, and every Persona appears by name.
 - The online/offline states match the status marks on screen.
 - At Trace: the decoded tool text has the documented `Agents:` / `Personas:` shape.
@@ -490,7 +490,7 @@ If the transcript is empty after the restart, check you reopened the right room:
 **Fail if — any of these**
 
 - The reply names `Alice`, `Bob`, a room called `bananas`, or any other name that is NOT on your two lists -> the agent read the repository's docs and test fixtures instead of calling the tool. This is the plausible-looking wrong answer this test exists to catch. Note which names it invented; they are traceable to `docs/` and `tests/`.
-- A Persona that is visible on a Members tab or in the From other teams picker is missing from the reply -> the directory and the tool disagree.
+- A Persona that is visible on a Agents tab or in the From other teams picker is missing from the reply -> the directory and the tool disagree.
 - Online and offline are inverted relative to the status marks -> the gateway liveness check in `ListAgentsTool` is reading the wrong thing.
 - No job descriptions appear at all for Personas that have a Title and Alias -> `ComposeJobDescription` is returning empty, which will also break APPTOOLS-11.
 
@@ -596,7 +596,7 @@ If Nova asks you which room to invite into rather than reading the id from its o
 
 **Inconclusive if**
 
-If `Jarvis`'s avatar badge reads **Offline** or **Degraded** on its Members-tab roster card when you start, this test is INCONCLUSIVE — the invite may succeed while the reply step fails for an unrelated reason. Bring Jarvis Online (APPTOOLS-04) and rerun. If the model's reply reports success but you cannot find `Invited agent` in the console, do not conclude either way from the reply alone: the console line is the authority, and its absence means the invite did not happen regardless of what the model said.
+If `Jarvis`'s avatar badge reads **Offline** or **Degraded** on its Agents-tab roster card when you start, this test is INCONCLUSIVE — the invite may succeed while the reply step fails for an unrelated reason. Bring Jarvis Online (APPTOOLS-04) and rerun. If the model's reply reports success but you cannot find `Invited agent` in the console, do not conclude either way from the reply alone: the console line is the authority, and its absence means the invite did not happen regardless of what the model said.
 
 > [!NOTE]
 > Always write the URL id down BEFORE sending. Reading it afterwards, after the room has renamed, is how a mis-resolved id gets recorded as a pass.
@@ -661,7 +661,7 @@ If Nova paraphrases rather than quoting the tool result verbatim, that alone is 
 2. Click into the composer and type exactly: `Use mcp__team__invite_agent to add someone called Zephyr to this room, then tell me word for word what the tool replied.`
 3. Press Enter and wait for the reply.
 4. Confirm the reply quotes text of the form `Unknown agent 'Zephyr'. Agents that do exist: <names>.`
-5. Confirm the `<names>` list contains the real agent names you can see on a Members tab, in the From other teams picker and in **New room** — not an empty list and not `none`.
+5. Confirm the `<names>` list contains the real agent names you can see on a Agents tab, in the From other teams picker and in **New room** — not an empty list and not `none`.
 6. Confirm the sidebar entry and the header `<h1>` are unchanged.
 7. Confirm the console shows NO `Invited agent` line.
 8. Confirm the model either corrects itself using one of the listed real names, or reports the failure plainly. It must not claim the invite succeeded.
@@ -839,7 +839,7 @@ If the model creates the room but stops before posting, the test is INCONCLUSIVE
 
 **Steps**
 
-1. Open the Members tab of the Team that holds the Agents and write down every Agent name and status (add any Agent in no Team with `P-ADD-TO-TEAM`), and open **New room** and write down every checkbox name. Close the panel.
+1. Open the Agents tab of the Team that holds the Agents and write down every Agent name and status (add any Agent in no Team with `P-ADD-TO-TEAM`), and open **New room** and write down every checkbox name. Close the panel.
 2. Open the room named `Nova`.
 3. Click into the composer and type exactly: `Do not read any files. Using only your tools, tell me who is in this room and what other agents exist.`
 4. Press Enter and wait for the reply. Write the answer down.
@@ -886,7 +886,7 @@ If your Persona names genuinely ARE `Nova` and `Jarvis` (as the setup suggests),
 
 1. `P-STOP` the app.
 2. Repeat the `P-LAUNCH-PAID` launch block, adding `$env:Team__AgentMessageBudget = '2'` before the `dotnet run` line.
-3. Wait for `Nova`'s avatar badge on its Members-tab roster card to read **Online**.
+3. Wait for `Nova`'s avatar badge on its Agents-tab roster card to read **Online**.
 4. Open the room named `Nova` and write down the sidebar room list.
 5. Click into the composer and type exactly: `Using mcp__team__post_message, post four separate short messages into this room, one at a time, with the texts "one", "two", "three" and "four". Stop and tell me if anything refuses you.`
 6. Press Enter and watch the transcript.
@@ -898,7 +898,7 @@ If your Persona names genuinely ARE `Nova` and `Jarvis` (as the setup suggests),
 12. Confirm you see ONE or TWO such lines, not a long run of them.
 13. In the console, also look for `Persona 'Nova' had a message refused: budgetExhausted - …` (Warning, `PersonaRunner.cs:690`) — this is Nova's own explanatory reply being dropped, and it is correct.
 14. Open `<data>\rooms\<roomId>.jsonl` and confirm it holds exactly two agent-authored lines for this turn (plus the Human's question line).
-15. Return to the Members tab and confirm `Nova`'s badge still reads **Online** and has NOT gone **Degraded**.
+15. Return to the Agents tab and confirm `Nova`'s badge still reads **Online** and has NOT gone **Degraded**.
 
 **Pass if — all of these**
 
@@ -1037,7 +1037,7 @@ The room is not paused, or its last stored Message is not Nova's own (a Human me
 5. Confirm both fields show an **Unsaved** badge, then click **Save**.
 6. Confirm both fields now show **Modified** and neither shows **Unsaved**.
 7. Open `<data>\prompts.json` and confirm it contains exactly two keys: `getHelp.budget` and `tool.listAgents.description`, and no others.
-8. Read the app's console window. Confirm NO restart of the `Nova` runner is logged, and that `Nova`'s badge on its Members-tab roster card still reads **Online**.
+8. Read the app's console window. Confirm NO restart of the `Nova` runner is logged, and that `Nova`'s badge on its Agents-tab roster card still reads **Online**.
 9. Return to the `Nova` room and type exactly `What word did I ask you to remember?` then press Enter.
 10. Confirm Nova answers `pumpkin` — its conversation memory survived the prompt save.
 11. Now type exactly: `Call mcp__team__get_help and tell me the last line of its BUDGET section, word for word.` and press Enter.
@@ -1183,7 +1183,7 @@ If you cannot locate the quiet note, judge the reply-gate result (silence from e
 5. Wait for the first agent reply to land; the Budget is then spent at 1 of 1. If it is Jarvis's `go`, Nova's half of the test is live. If Nova's reply landed first, Jarvis is the one declined and Nova's half is INCONCLUSIVE: repeat step 4 (each Human Message resets the Budget), up to three times.
 6. Watch the Room for sixty seconds. Type nothing once the Budget is spent — a Human Message would reset the counter and destroy the condition.
 7. In `T-A`, search for `declined a turn`.
-8. Open the Members tab of the Team that holds both Agents and read both roster cards' badges, then come back.
+8. Open the Agents tab of the Team that holds both Agents and read both roster cards' badges, then come back.
 
 **Pass if — all of these**
 

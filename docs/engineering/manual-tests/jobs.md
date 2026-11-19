@@ -50,7 +50,7 @@ schedule icon; a Feed Notification from Huddle. Posting `done` in the Room remov
 3. Add a second section whose `when:` is `soonish` and save.
 
 **Expect**: within a second the Job's page shows *Daily at 07:00*; All jobs shows *(1 to fix)* and the Scheduled page lists
-the bad section with its reason. No Team's **Members** tab lists it under **Files that didn't load**. Edit the good Job in the view: the bad section is still
+the bad section with its reason. No Team's **Agents** tab lists it under **Files that didn't load**. Edit the good Job in the view: the bad section is still
 in the file afterwards.
 
 ### JOBS-04 — A restart neither repeats nor sends late

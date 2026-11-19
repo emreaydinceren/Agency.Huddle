@@ -47,10 +47,10 @@ The Edit Agent form has **no Teams field**, and a Team made blank has no `_team.
 
 1. Select **Teams** in the Activity bar, then **Build a team** ([Building a team with the Chief of Staff](../../Huddle.UserGuide.md#building-a-team-with-the-chief-of-staff)). Step 1: pick any team type with a manager role (for example **Development Team**). Step 2: name the Team `Ops`, give it a Library folder. Step 3: on the manager role card click **Add** and name the draft `Cy` (Alias `cy`, Title `Ops Manager`). Step 4: **Approve & hire**. Cy is now Ops' manager.
 2. Build `Sales` the same way, with a manager draft named `Sal` (Alias `sal`). Sales gets `_team.md`, a manager and a **Process** tab.
-3. Put Ada and Bo into the Teams. With `P-ADD-TO-TEAM`, add Ada to Sales, and Bo to Sales and then to Ops, each on that Team's **Members** tab ([Adding and removing members](../../Huddle.UserGuide.md#adding-and-removing-members)). Ada ends with `teams: [Sales]` and Bo with `teams: [Sales, Ops]`.
+3. Put Ada and Bo into the Teams. With `P-ADD-TO-TEAM`, add Ada to Sales, and Bo to Sales and then to Ops, each on that Team's **Agents** tab ([Adding and removing members](../../Huddle.UserGuide.md#adding-and-removing-members)). Ada ends with `teams: [Sales]` and Bo with `teams: [Sales, Ops]`.
 4. Make Ada Sales' manager: open Sales › **Members**, set **Manager** to `Ada`, remove `Sal` (**Remove** › **Delete agent**) and **Save changes**. If **Manager** does not offer Ada (she has no role), note it in the Run log and keep Sal as the manager, reading `Sal` for `Ada` as manager on this page.
 5. Open **Rooms** and create two Rooms with Bo and Ada in them: **Room A** and **Room B**. Send one Message to Bo in each (`@Bo hello`) so each Room has a first Turn and an open session.
-6. Check the result: the sidebar Teams group lists `Sales` and `Ops`; Sales' Members tab shows Ada and Bo; Ops' shows Cy and Bo. Both Team pages show **Members**, **Library**, **Process**, **Playbooks**, **Details** (no **Tasks** tab: the Team's Tasks are Team Task Views in the sidebar's TASKS section).
+6. Check the result: the sidebar Teams group lists `Sales` and `Ops`; Sales' Agents tab shows Ada and Bo; Ops' shows Cy and Bo. Both Team pages show **Members**, **Library**, **Process**, **Playbooks**, **Details** (no **Tasks** tab: the Team's Tasks are Team Task Views in the sidebar's TASKS section).
 
 Three things this page checks in more than one case, so they are described once.
 

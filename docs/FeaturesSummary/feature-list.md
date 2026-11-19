@@ -132,7 +132,7 @@ and picks up a hand edit within half a second. A file that fails validation is l
 Name or Alias may not change to the Human's own, and names Huddle draws skip it. PRs: #3
 (identity), #70 (Settings > Personas tab), #368.
 
-**3.2 The Agent card.** There is no Agents page; an Agent is opened from its Team's Members tab or from search. The card shows a
+**3.2 The Agent card.** There is no Agents page; an Agent is opened from its Team's Agents tab or from search. The card shows a
 presence badge (online, starting, working, error, offline) and has **Message**, **Edit**,
 **Open**, **Restart** and **Remove**. **New agent** starts with a random unused first name
 and a random avatar colour. PRs: #70, #135, #153.
@@ -401,7 +401,7 @@ from the type's role, and one not yet downloaded is marked and can be unticked. 
 shows a warning with **Check again**; it never blocks the hire. Custom roles
 can be written and are saved in `custom-roles.json`. Approving copies the Skills the roster
 needs, creates the Team, writes its process (with a **Process** choice when a type offers
-several), hires the drafts and makes the manager. The Team page's **Members** tab reuses the
+several), hires the drafts and makes the manager. The Team page's **Agents** tab reuses the
 Hire step, with **Remove from team**, **Delete agent** and **Save changes**.
 
 Hiring a typed Team starts a paid Turn: Huddle posts the onboarding steps in the Human's

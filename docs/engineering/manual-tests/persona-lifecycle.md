@@ -24,7 +24,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five re
 7. Use the browser you will test in, with two tabs available. Never test through a private window for the multi-tab test.
 8. MONEY. Starting a Persona's session is free — no prompt turn, no tokens. Only a Message that produces a reply costs. PERSONALIFECYCLE-01 to -25 are free; -26 to -32 are marked and each says how many Turns it costs. One exception: the built-in **Chief of Staff** is seeded at every start, has no stored Model (the account default), and with ACP on and an empty direct Room it takes one Greeting Turn when it first comes Online (`PersonaRunner.cs:481-495`). Before the first WITH-Adapters launch of this area, do steps 1-3 of [`P-LAUNCH-PAID`](common.md#p-launch-paid-) (launch free, set the Chief of Staff to Haiku / `low` on its card, stop), so that Greeting is one small Haiku Turn, once. It is not a failure of a free test.
 9. The Chief of Staff is Online in every WITH-Adapters run, so `Adapters` always lists its row, and so does every Persona an earlier test left behind. Compare each listing with the one the test says to write down; never expect an absolute row count.
-10. There is no Agents page. Where a step says *roster card*, *badge* or *tile*, read the status on the Agent's avatar on its Team's **Members** tab (an Agent is always in a Team; `P-NEW-PERSONA` puts new ones in `Test`). Agents in different Teams are on different tabs, so for a test that watches several at once, put them in one Team with `P-ADD-TO-TEAM`. Open a card with `P-OPEN-AGENT`.
+10. There is no Agents page. Where a step says *roster card*, *badge* or *tile*, read the status on the Agent's avatar on its Team's **Agents** tab (an Agent is always in a Team; `P-NEW-PERSONA` puts new ones in `Test`). Agents in different Teams are on different tabs, so for a test that watches several at once, put them in one Team with `P-ADD-TO-TEAM`. Open a card with `P-OPEN-AGENT`.
 
 ## Tests
 
@@ -46,7 +46,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five re
 2. In `T-B` run `Adapters`. Note the row count (expected: none).
 3. Create `Nova` (`P-NEW-PERSONA`): **Name** `Nova`, **Title** `Test agent`, **Persona text** `You are Nova. Answer in one short sentence.`, **Model** the entry whose label contains `Haiku`, **Effort** `low`. Then **Save draft** and **Save changes**.
 4. Open `Nova`'s card (`P-OPEN-AGENT`), read it, then click the close icon button in its header (`aria-label="Close"`, `AgentProfileCard.razor:74`) to close it.
-5. In the Team's **Members** tab, hover the mouse over the status badge on `Nova`'s avatar and hold it for three seconds.
+5. In the Team's **Agents** tab, hover the mouse over the status badge on `Nova`'s avatar and hold it for three seconds.
 6. Look at the sidebar Room list.
 7. In `T-B` run `Adapters` again.
 8. In `T-B` run `Get-ChildItem '<data>\Agents\Nova'`.
@@ -54,7 +54,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five re
 **Pass if — all of these**
 
 - After **Save changes**, `Nova`'s card (step 4) shows header `Agent` and `Nova` with the status word **Offline**.
-- `Nova`'s roster card on the **Members** tab shows status **Offline**.
+- `Nova`'s roster card on the **Agents** tab shows status **Offline**.
 - Hovering that status badge shows NO tooltip text at all (an empty tooltip, not a tooltip saying "Offline").
 - The card for `Nova` shows no reason line under the status, and its action row has **Edit**, **Open**, **Restart** and the **Remove** icon button but NO **Message** link (Restart is offered in every state except Starting, `AgentProfileCard.razor:182`).
 - The sidebar Room list does NOT contain a Room named `Nova`.
@@ -95,7 +95,7 @@ If the Model select shows only `Agent default` with the hint "This agent adverti
 3. In **Name** type ` Nova Two` (one leading space before the N).
 4. In **Title** type `Test agent`. In the **Persona text** box type `You are Nova Two.` (The card has no Alias field; the Alias is the Name in lower case.)
 5. Click **Save draft**. The draft card does not check the Name's characters, so the draft is accepted.
-6. On the Team's **Members** tab select **Save changes** and read the error notice in the save bar. Nothing is hired.
+6. On the Team's **Agents** tab select **Save changes** and read the error notice in the save bar. Nothing is hired.
 7. Open the draft's card with **Edit** on its roster card, clear the **Name** field and retype it as `Nova Two ` (one trailing space after the o).
 8. Click **Save draft**, then **Save changes**, and read the error notice again.
 9. Edit the draft again, clear the **Name** and retype it as `Nova  Two` (two spaces between the words).
@@ -108,7 +108,7 @@ If the Model select shows only `Agent default` with the hint "This agent adverti
 
 - For each of the three bad Names **Save changes** hires nothing and the save bar's error notice reads `Not every Agent was hired. …` (the store refuses the Name at the write).
 - The typed Title and Persona text are still on the draft after each refusal — nothing the tester typed is thrown away.
-- The single-interior-space Name `Nova Two` is ACCEPTED: **Save changes** hires it and `Nova Two` appears on the Team's **Members** tab roster as an Agent, not a draft.
+- The single-interior-space Name `Nova Two` is ACCEPTED: **Save changes** hires it and `Nova Two` appears on the Team's **Agents** tab roster as an Agent, not a draft.
 - After step 13 `<data>\Agents` has gained exactly ONE new definition, `Nova Two\Nova Two.md`, and no file or folder whose name contains a leading, trailing or doubled space.
 
 **Fail if — any of these**
@@ -140,9 +140,9 @@ If the browser or an input method silently trims the spaces you type (check by s
 **Steps**
 
 1. Run [`P-STOP`](common.md#p-stop), then [`P-LAUNCH-FREE`](common.md#p-launch-free). In `T-B` run `Adapters` and write down the exact rows.
-2. In the browser open a Team from the sidebar, on its **Members** tab.
+2. In the browser open a Team from the sidebar, on its **Agents** tab.
 3. In `T-B` run `Adapters` immediately.
-4. In the browser press F5 to reload the Members tab, twice.
+4. In the browser press F5 to reload the Agents tab, twice.
 5. In `T-B` run `Adapters` immediately.
 6. In the browser switch to another tab of the Team and back to **Members**.
 7. In `T-B` run `Adapters` immediately.
@@ -189,8 +189,8 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 **Steps**
 
 1. Run [`P-STOP`](common.md#p-stop). In `T-B` run `Rename-Item '<repo>\tools\acp\node_modules' 'node_modules.off'`; if it fails with a file-in-use error, close any editor indexing that folder and retry. Then run [`P-LAUNCH-FREE`](common.md#p-launch-free).
-2. In the browser open a Team from the sidebar, on its **Members** tab.
-3. Read the whole page: the heading, the roster cards, the **Add a member** tile and the `Files that didn't load` block if present.
+2. In the browser open a Team from the sidebar, on its **Agents** tab.
+3. Read the whole page: the heading, the roster cards, the **Add an Agent** tile and the `Files that didn't load` block if present.
 4. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2).
 5. Read the grey hint under the **Model** select and the grey hint under the **Effort** select, word for word.
 6. Open the **Model** select and count its options.
@@ -205,7 +205,7 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 
 **Pass if — all of these**
 
-- With the adapter aside, the Team's **Members** tab renders completely: the **Add a member** tile and every existing roster card — no error page and no blank region.
+- With the adapter aside, the Team's **Agents** tab renders completely: the **Add an Agent** tile and every existing roster card — no error page and no blank region.
 - The Model select contains exactly one option, `Agent default`, and its hint reads exactly `This agent advertises no models, so it will use its own default.`
 - The Effort select contains exactly one option, `Agent default`, and its hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Saving still works: `Orphan`'s card (step 8) shows `Agent` and `Orphan`, its **Model** section reads `Agent default` and its **Effort** section reads `Model default`.
@@ -249,7 +249,7 @@ If the rename in step 1 fails because a file is locked, the test cannot start �
 6. Watch the card's status line for 30 seconds and write down every status word it shows, in order.
 7. In `T-B` run `Adapters` every two seconds for 30 seconds and write down the highest row count and whether any new row persists.
 8. Read `T-A`'s console for new lines mentioning `Nova`.
-9. Read the line under the status on the card, word for word, and hover the status badge on `Nova`'s avatar (Members tab roster card) for three seconds to read its tooltip.
+9. Read the line under the status on the card, word for word, and hover the status badge on `Nova`'s avatar (Agents tab roster card) for three seconds to read its tooltip.
 10. Check that the card still has no **Message** link and that no Room named `Nova` has appeared in the sidebar.
 11. Stop the app in `T-A` with Ctrl+C.
 12. In `T-B` run `Adapters` one final time.
@@ -295,7 +295,7 @@ If the tile was already Online or the reason line is absent because the app was 
 
 1. Run [`P-RESET-TEAMS`](common.md#the-five-resets) in `<data>`. Nothing between PERSONALIFECYCLE-01 and here removes `Nova` (-01), `Nova Two` (-02) or `Orphan` (-04), and step 5 would be refused with `The name 'Nova' is already in use.`; their leftover folders would also start adapters and break the counts below. The Chief of Staff is re-seeded at the next start; if its card no longer reads Haiku / `low`, repeat Setup 8 first so the Greeting stays cheap. Then, in `T-A`, run `dotnet run --project src/Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
 2. In `T-B` run `Adapters` and write down the rows (the Chief of Staff's, once Online).
-3. In the browser open a Team from the sidebar, on its **Members** tab.
+3. In the browser open a Team from the sidebar, on its **Agents** tab.
 4. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2).
 5. In **Name** type `Nova`. In **Title** type `Test agent`.
 6. In the **Persona text** box type `You are Nova. Answer in one short sentence.`
@@ -351,8 +351,8 @@ If the Model select is empty, you cannot honour the Haiku convention — record 
 2. In `T-B` run `Get-ChildItem '<data>\Agents\Nova\work'`. A `memory` folder is always created there when the session starts (`DotAcpAgentHostFactory.cs:135-136`), so the Work Dir is not empty.
 3. In `T-B` run `Adapters` and write down the rows.
 4. In `T-B` run `Rename-Item '<data>\Agents\Nova\Nova.md' 'nova-renamed.md'`.
-5. Wait 10 seconds and watch `T-A`'s console and the browser's **Members** tab without reloading it.
-6. Read the roster and the `Files that didn't load` block at the top of the **Members** tab.
+5. Wait 10 seconds and watch `T-A`'s console and the browser's **Agents** tab without reloading it.
+6. Read the roster and the `Files that didn't load` block at the top of the **Agents** tab.
 7. Close any card and look at the sidebar Room list.
 8. In `T-B` run `Adapters` and compare with step 3.
 9. In `T-B` run `Rename-Item '<data>\Agents\Nova\nova-renamed.md' 'Nova.md'` to restore. Wait 15 seconds and confirm `Nova`'s roster card returns and reads **Online**.
@@ -544,7 +544,7 @@ If step 3's rename fails, stop and fix it — everything after depends on the ad
 
 **Steps**
 
-1. In the browser open the Team's **Members** tab (Setup 10).
+1. In the browser open the Team's **Agents** tab (Setup 10).
 2. Open `Nova`'s card (`P-OPEN-AGENT`), which should read **Online**.
 3. Read every button in the card's action row, left to right, and write them down.
 4. Look immediately under the action row for any hint line.
@@ -591,10 +591,10 @@ If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any
 
 **Steps**
 
-1. Arrange the browser so the **Members** tab is visible in one tab and the `Nova` Room in another.
+1. Arrange the browser so the **Agents** tab is visible in one tab and the `Nova` Room in another.
 2. In `T-B` run `Adapters` and identify `Nova`'s `node.exe` row by CreationDate (it was created when `Nova` came Online).
 3. In `T-B` run `Stop-Process -Id <pid>` for that row.
-4. Do NOT touch the browser. Watch the Members tab for 15 seconds and write down every status word `Nova`'s roster card shows and roughly when it changes.
+4. Do NOT touch the browser. Watch the Agents tab for 15 seconds and write down every status word `Nova`'s roster card shows and roughly when it changes.
 5. Hover the status badge on `Nova`'s roster card and read the tooltip.
 6. Open `Nova`'s card (`P-OPEN-AGENT`) and read the reason line on the card, word for word.
 7. Switch to the `Nova` Room tab and read the area above the composer.
@@ -643,7 +643,7 @@ If you cannot attribute a `node.exe` row to `Nova`, do not kill anything — re-
 
 **Steps**
 
-1. In the browser on the **Members** tab ensure these agents exist and all read **Online**: `Nova`, the built-in `Chief of Staff`, and `Ada`, created through `P-NEW-PERSONA` with Name `Ada`, Title `Third agent`, body `You are Ada. Answer in one short sentence.`, Model containing `Haiku`, Effort `low`. (`Head of Ops` from PERSONALIFECYCLE-08 is Online too.)
+1. In the browser on the **Agents** tab ensure these agents exist and all read **Online**: `Nova`, the built-in `Chief of Staff`, and `Ada`, created through `P-NEW-PERSONA` with Name `Ada`, Title `Third agent`, body `You are Ada. Answer in one short sentence.`, Model containing `Haiku`, Effort `low`. (`Head of Ops` from PERSONALIFECYCLE-08 is Online too.)
 2. In `T-B` run `Adapters` and write down the rows: one `claude-agent-acp` row per Online agent.
 3. In `T-B` identify `Ada`'s row (newest CreationDate) and run `Stop-Process -Id <pid>` on it.
 4. Wait 10 seconds without touching the browser.
@@ -694,7 +694,7 @@ If you cannot attribute adapter rows to Personas, skip step 3 and use only the a
 1. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate).
 2. Open `<data>\Agents\Nova\Nova.md` in a text editor.
 3. Append a new line at the end of the body: `Always mention that you are Nova.` and save the file ONCE.
-4. Watch the **Members** tab (no reload) for 30 seconds and write down every status word `Nova`'s roster card shows.
+4. Watch the **Agents** tab (no reload) for 30 seconds and write down every status word `Nova`'s roster card shows.
 5. In `T-B` run `Adapters` and compare `Nova`'s row with step 1.
 6. In the browser open `Nova`'s card (`P-OPEN-AGENT`) and read the **Persona** section of the card.
 7. Now test the debounce (500 ms, `PersonaStore.cs:67`): in `T-B` run `Add-Content '<data>\Agents\Nova\Nova.md' 'First marker.'; Add-Content '<data>\Agents\Nova\Nova.md' 'Second marker.'`, which writes twice well inside the debounce window.
@@ -736,10 +736,10 @@ Some editors write a temp file and rename, some write twice; if you cannot tell 
 
 **Steps**
 
-1. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate). In the browser on the **Members** tab, confirm `Nova` reads **Online**.
+1. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate). In the browser on the **Agents** tab, confirm `Nova` reads **Online**.
 2. In `T-B` run `Set-Content '<data>\Agents\Nova\work\scratch.md' 'agent output'`.
 3. In `T-B` run `Set-Content '<data>\Agents\Nova\work\memory\note.md' 'agent memory'`.
-4. Watch every roster card on the **Members** tab (no reload) for 20 seconds.
+4. Watch every roster card on the **Agents** tab (no reload) for 20 seconds.
 5. In `T-B` run `Adapters` and compare `Nova`'s row with step 1.
 6. Open `Nova`'s card (`P-OPEN-AGENT`) and read its **Persona** section and status.
 7. In `T-B` run `Remove-Item '<data>\Agents\Nova\work\scratch.md', '<data>\Agents\Nova\work\memory\note.md'` and watch the tiles for another 10 seconds.
@@ -776,10 +776,10 @@ If `Nova` was not Online at step 1, bring it Online first. If another Agent flic
 
 **Steps**
 
-1. In the browser open the Team's **Members** tab (Setup 10) and note the roster and whether a `Files that didn't load` block is present at its top.
+1. In the browser open the Team's **Agents** tab (Setup 10) and note the roster and whether a `Files that didn't load` block is present at its top.
 2. Open `<data>\Agents\Nova\Nova.md` in a text editor.
 3. Delete the whole `title: 'Test agent'` line and save the file.
-4. Wait 10 seconds. WITHOUT reloading, read the top of the **Members** tab and the roster.
+4. Wait 10 seconds. WITHOUT reloading, read the top of the **Agents** tab and the roster.
 5. Read the entry in the `Files that didn't load` block: its path and its reason.
 6. Check the sidebar for the Room named `Nova`, open it and look above the composer.
 7. In `T-B` run `Adapters` and check whether `Nova`'s adapter row is gone.
@@ -833,7 +833,7 @@ If your editor rewrites line endings or reorders the file on save, the reason te
 3. In `T-B` run `sqlite3 '<data>\team.db' "update persona_models set model='claude-does-not-exist' where persona_name='Nova';"`.
 4. Re-run the select from step 2 and confirm the value changed.
 5. In `T-A`, from `<repo>`, run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
-6. In the browser open the Team's **Members** tab (Setup 10) and watch `Nova`'s roster card until it settles (up to 60 seconds). Write down every status word.
+6. In the browser open the Team's **Agents** tab (Setup 10) and watch `Nova`'s roster card until it settles (up to 60 seconds). Write down every status word.
 7. Hover the tile's status line and read the tooltip.
 8. Click the tile and read the reason line on the card, word for word.
 9. Open the Room named `Nova` and read the area above the composer.
@@ -876,7 +876,7 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 
 **Steps**
 
-1. In the browser open a Team's **Members** tab and confirm at least one Agent reads **Online**.
+1. In the browser open a Team's **Agents** tab and confirm at least one Agent reads **Online**.
 2. In `T-B` run `Adapters` and write down every row's ProcessId and CreationDate.
 3. In the sidebar click the **Settings** gear (`MainLayout.razor:28`, link target `/settings`).
 4. Click the **Prompts** tab. `/settings` with no tab opens on **Profile**, the first tab, so the prompts are one click away; confirm the address bar reads `/settings/prompts`.
@@ -884,7 +884,7 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 6. Click into that field's textarea and append the text ` (edited)` at the end.
 7. Confirm a `Unsaved` badge appears next to that field's label.
 8. Click **Save** (enabled only while something is unsaved, `Settings.razor:58`).
-9. Switch back to the Members tab and watch every roster card for 30 seconds.
+9. Switch back to the Agents tab and watch every roster card for 30 seconds.
 10. In `T-B` run `Adapters` and compare every ProcessId and CreationDate with step 2.
 11. In `T-B` run `Test-Path '<data>\prompts.json'`.
 12. Return to **Settings**, click the **Reset** button on the field you edited, and click **Save** to restore the shipped wording.
@@ -944,7 +944,7 @@ If no agent is Online (adapters disabled, or all failed), this test cannot disti
 
 - Clicking **Remove** swaps the button row in place for a `Remove {name}?` prompt with **Remove** and **Cancel** — no browser dialog appears.
 - **Cancel** returns the row to the normal actions with nothing removed.
-- The prompt's **Remove** closes the card and removes `Ada`'s roster card from the **Members** tab.
+- The prompt's **Remove** closes the card and removes `Ada`'s roster card from the **Agents** tab.
 - The Room named `Ada` STAYS in the sidebar with its full history and its member list intact.
 - That Room shows NO red alert strip.
 - `<data>\Agents\Ada\Ada.md` is gone: step 12 lists no `Ada.md`. Remove deletes only the definition file (`PersonaStore.cs:477`).
@@ -1077,8 +1077,8 @@ If the save is refused with a message on the card, read it: a collision with an 
 
 **Steps**
 
-1. Open tab 1 on the agent's Team's **Members** tab.
-2. Open tab 2 on the same **Members** tab.
+1. Open tab 1 on the agent's Team's **Agents** tab.
+2. Open tab 2 on the same **Agents** tab.
 3. Open tab 3 at the Room for that agent (`/rooms/<its room>` — click it in the sidebar).
 4. Arrange the windows so you can see at least tab 1 and tab 3 at once, and keep tab 2 reachable with one click.
 5. In `T-B` run `Adapters` and identify the agent's adapter process.
@@ -1130,7 +1130,7 @@ If the browser throttles background tabs (some do aggressively), bring each tab 
 4. In `T-A` press Ctrl+C and wait for the prompt to return.
 5. In `T-B` run `Adapters` immediately, then again 10 seconds later.
 6. In `T-A`, from `<repo>`, run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
-7. In the browser open the Team's **Members** tab (Setup 10) and watch every tile until they settle (up to 90 seconds). Write down the status sequence for each.
+7. In the browser open the Team's **Agents** tab (Setup 10) and watch every tile until they settle (up to 90 seconds). Write down the status sequence for each.
 8. Check the sidebar Room list against what it held before the restart.
 9. Open the Room from step 3 and compare the last three Messages.
 10. In `T-B` re-run the commands from steps 1 and 2 and compare.
@@ -1176,10 +1176,10 @@ If Ctrl+C does not stop the app within 30 seconds, note it and use Ctrl+C again 
 
 1. In `T-B` run `Get-ChildItem '<data>\Agents' -Directory | Select-Object Name`. It must list exactly `Chief of Staff`, `Nova`, `Ada`, `Bram` and `Cleo`. Create the missing Personas through `P-NEW-PERSONA` (Title `Test agent`; body `You are <Name>. Answer in one short sentence.`; Model containing `Haiku`; Effort `low`). Remove any other Persona an earlier test left (for example `Head of Ops`) from its card, then stop the app with Ctrl+C.
 2. In `T-A`, from `<repo>`, run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and note the time.
-3. In the browser open the Team's **Members** tab (Setup 10) and watch all five tiles until they settle, up to 120 seconds. Write down how long the last one takes. The Chief of Staff may take its one Greeting Turn only while its direct Room is still empty (Setup 8); that is not a failure.
+3. In the browser open the Team's **Agents** tab (Setup 10) and watch all five tiles until they settle, up to 120 seconds. Write down how long the last one takes. The Chief of Staff may take its one Greeting Turn only while its direct Room is still empty (Setup 8); that is not a failure.
 4. In `T-B` run `Adapters` and count rows containing `claude-agent-acp`.
 5. In `T-B` run `Get-Item '<data>\Agents\*\work' | Select-Object FullName`.
-6. Click between two Rooms and back to the **Members** tab and note whether the UI stays responsive (any click taking more than about two seconds to paint is worth recording).
+6. Click between two Rooms and back to the **Agents** tab and note whether the UI stays responsive (any click taking more than about two seconds to paint is worth recording).
 7. In `T-A` press Ctrl+C and wait for the prompt.
 8. In `T-B` run `Adapters` immediately and again 10 seconds later.
 
@@ -1220,7 +1220,7 @@ If authentication fails for all five, this measures nothing — fix the login an
 
 1. Reach the unauthenticated state without damaging the tester's own credentials: preferably run the app as a different OS user, or on a machine that has never logged in to Claude. Do not delete or move another user's credential files.
 2. In `T-A` start the app with adapters enabled: `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
-3. In the browser open the Team's **Members** tab (Setup 10) and wait for the tiles to settle.
+3. In the browser open the Team's **Agents** tab (Setup 10) and wait for the tiles to settle.
 4. Read the tile status and hover for the tooltip.
 5. Click the tile and read the reason line, word for word.
 6. Open that agent's Room and read the strip above the composer.
@@ -1525,11 +1525,11 @@ If `Nova` answers `quince` and a Memory file explains it, record the Memory file
 
 1. Open a FRESH `T-A` (so no stale `Team__` variables remain).
 2. In `T-A` run `$env:Team__Acp__TokenBudget='1'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
-3. In the browser open the Team's **Members** tab (Setup 10) and wait until both `Nova` and `Ada` read **Online**.
+3. In the browser open the Team's **Agents** tab (Setup 10) and wait until both `Nova` and `Ada` read **Online**.
 4. In the sidebar click **New room**, tick `Nova` and `Ada`, and click **Open room**.
 5. Open the new Room.
 6. In the composer type `@Nova please ask @Ada a question, then keep the conversation going.` and press Enter.
-7. Watch the Room. As soon as the first agent-to-agent exchange happens, switch to the **Members** tab and watch both roster cards.
+7. Watch the Room. As soon as the first agent-to-agent exchange happens, switch to the **Agents** tab and watch both roster cards.
 8. When a tile flips to **Degraded**, hover its status line and read the tooltip.
 9. Click that tile and read the reason line on the card, word for word.
 10. Go back to the group Room and read the area above the composer.
@@ -1579,12 +1579,12 @@ IMPORTANT: this Degraded state is UNREACHABLE in a plain two-member Human-to-Per
 
 1. Open a FRESH `T-A`.
 2. In `T-A` run `$env:Team__Acp__TokenBudget='0'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
-3. In the browser wait until `Nova` and `Ada` both read **Online** on the **Members** tab.
+3. In the browser wait until `Nova` and `Ada` both read **Online** on the **Agents** tab.
 4. Open (or create with **New room**) a Room containing both `Nova` and `Ada`.
 5. In the composer type `@Nova please ask @Ada a question, then keep the conversation going.` and press Enter.
 6. Watch the Room until the exchange stops. Count the agent replies.
 7. Read the area above the composer.
-8. Switch to the **Members** tab and read both roster cards' statuses and tooltips.
+8. Switch to the **Agents** tab and read both roster cards' statuses and tooltips.
 9. In `T-A` search the whole console for the text `has spent its token budget`.
 10. Back in the Room, click **Continue** and confirm the exchange resumes without you typing a Message.
 11. Let it pause again, then click **Leave paused** and confirm the prompt is replaced by the quieter paused note.

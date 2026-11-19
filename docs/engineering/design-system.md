@@ -489,9 +489,9 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 | Entity | Icon |
 | --- | --- |
 | Room (chat) | `Filled.Chat` |
-| Team | `Outlined.Groups` |
+| Team | `Filled.Group` (the old Agents page's icon, since 2026-11-18) |
 | Project | `Filled.LibraryBooks`, for nothing else |
-| Agents, a Team's members | `Filled.Group` |
+| A Team's members (the Agents tab, the Members panel) | `Filled.Person` |
 | Tasks | `Outlined.TaskAlt` |
 | Library | `Filled.MenuBook` |
 | A folder, including a Library root | `Outlined.Folder` |
@@ -698,7 +698,7 @@ The sidebar's content is about 677px tall in an 890px window, so it fits one scr
   the page's own left menu; a Room keeps whichever view is showing, and opens Chats from a
   collapsed Sidebar.
 - **Meta is trailing, never wrapped.** A Team row ends in a `span.sidebar-row-meta` member
-  count whose tooltip reads "3 members" or "No members".
+  count whose tooltip reads "3 members" or "No Agents".
 - **Groups start closed; the group holding the current page opens.** It also opens on
   navigation, and never closes by itself. Teams persist their open set under
   `teamsNav:expanded`.
@@ -846,7 +846,7 @@ The Room is the Transcript over the Composer in one column.
   Accent. The intro is 14px `TextSecondary` at 75ch; "Overrides stored at" is 12px with the path in 12px `--font-mono`;
   `{{tokens}}` are tag chips in 12px mono.
 - **The Team page.** "Roles" and "Roster" are `subtitle2` `h3`s with a 12px `TextSecondary`
-  count ("Roster · 4 members", "Roles · N roles available"). Roles fill two rows of `.role-grid`
+  count ("Roster · 4 Agents", "Roles · N roles available"). Roles fill two rows of `.role-grid`
   220px cards that scroll sideways, and the roster does the same with 20rem cards in `.roster-grid`
   (the one place a card grid scrolls; the team types still wrap): the description is up to three lines at 13px, "Hiring pool" is meta text, Add is
   a Small outlined button at the bottom left and "Suggested" sits to its right. A roster card

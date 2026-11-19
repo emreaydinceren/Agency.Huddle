@@ -1104,7 +1104,7 @@ If Ada or Bo does not return to Online after the restart, its Rooms will still b
 
 **Inconclusive if**
 
-If `coo` does not reach Online, or `Business` does not appear, check the `coo` card for its reason text and `Files that didn't load` at the top of the Team's Members tab; if the Agent never registered, the test cannot judge the filter — say so. Do not write the file by hand to work around it: that skips the stored Model and Effort rows (`P-NEW-PERSONA`).
+If `coo` does not reach Online, or `Business` does not appear, check the `coo` card for its reason text and `Files that didn't load` at the top of the Team's Agents tab; if the Agent never registered, the test cannot judge the filter — say so. Do not write the file by hand to work around it: that skips the stored Model and Effort rows (`P-NEW-PERSONA`).
 
 > [!NOTE]
 > An Agent with no Persona behind it has no Teams and therefore vanishes under any real Team filter, reachable only under `All teams`. That behaviour is by design, not a defect; it is not recorded in known-limits.md. Afterwards open the `coo` card (`P-OPEN-AGENT`), click its Remove icon (`aria-label="Remove"`, `AgentProfileCard.razor:220`) and then **Confirm**, so INVITEROOMS-32 onward start without it. Its Direct Room may remain in the sidebar; leave it.
@@ -1126,8 +1126,8 @@ If `coo` does not reach Online, or `Business` does not appear, check the `coo` c
 
 1. Press Ctrl+C in `T-A`, and in `T-C`, the `gamma` terminal and every other bot terminal still running.
 2. In `T-A` run `$env:Team__Acp__Enabled = 'true'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100` (no `--Team:DataDir`, so the default data folder is used). Then start `mybot` in `T-C` and `gamma` in the `gamma` terminal as the precondition says.
-3. Reload the browser and open the **Members** tab of a Team (`P-NEW-PERSONA` step 1; `Test` if you have no other).
-4. Point at **Add a member** and select **From scratch**. The **New agent** card opens.
+3. Reload the browser and open the **Agents** tab of a Team (`P-NEW-PERSONA` step 1; `Test` if you have no other).
+4. Point at **Add an Agent** and select **From scratch**. The **New agent** card opens.
 5. In the card, fill **Name** with exactly `Jarvis`.
 6. Fill **Title** with exactly `Butler`.
 7. Fill **Alias** with exactly `jar`.

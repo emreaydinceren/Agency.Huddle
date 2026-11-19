@@ -30,7 +30,7 @@ standing conventions. This area adds:
 3. Every `curl.exe` oracle in this area runs in `T-B`, so it never disturbs the app.
 4. Confirm the baseline state: the `Rooms` group in the sidebar lists the one-to-one Rooms `Ada` and `Bo` once opened (groups start closed; the group holding the current page opens by itself, so open `Rooms` by clicking it if it is closed) (the built-in Chief of Staff's Room may be listed too), and both Agents show **Online** on their avatars in their Rooms. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
 5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
-6. Do NOT create or edit an Agent during this area (no **Add a member**, no **Edit**). Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
+6. Do NOT create or edit an Agent during this area (no **Add an Agent**, no **Edit**). Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
 Top Bar search (the box in the middle of the Top Bar) is not tested here. Its placement is
 GLOBALSEARCH-09 in [global-search.md](global-search.md).

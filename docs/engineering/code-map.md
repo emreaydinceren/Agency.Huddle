@@ -37,7 +37,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Data/WaitingQuestionStore.cs` | Keeps a waiting `ask_human` card across a restart; `QuestionStore` writes through to it and loads it. |
 | `Pipes/AgentGateway.cs` | Bridges `RoomEvents` to connected Agents. Fills `Members` on every `messagePosted`. |
 | `Components/Pages/Chat.razor` | The Room view. |
-| `Components/Pages/AgentGrouping.cs` | The grouping and filtering behind the Members tab's "From other teams" picker (`Components/Teams/AgentPickerDialog.razor`), as a pure function: one group per Team, *No team* last. |
+| `Components/Pages/AgentGrouping.cs` | The grouping and filtering behind the Agents tab's "From other teams" picker (`Components/Teams/AgentPickerDialog.razor`), as a pure function: one group per Team, *No team* last. |
 | `Components/Pages/Settings.razor` | The settings shell at `/settings`. A section menu (`MudNavMenu`) on the left and the active section on the right. Each row is a link to `/settings/{section}`, and the highlight is derived from the parsed `{Tab}` route parameter rather than NavLink's URL match, so `/settings/prompts` stays bookmarkable and `/settings` or an unknown segment still falls back to Profile. Owns every editable Prompt value; `PromptsPanel` holds none. |
 | `Components/Pages/Tasks.razor` | The Tasks page (Spec §13.2): holds the effective View — the saved View with the toolbar's session overrides applied — and requeries on `TasksReloaded`, `TaskChanged` and `ViewsChanged`. Its `/teams/{Team}/tasks/{ViewId}` route narrows the View to one Team for the page only (never saved to the View, like the search). |
 | `Components/Pages/TeamPage.razor` | The Team page and the Project page, one component (Spec §6.6): Members, Files and Tasks tabs driven by route parameters. Routes are `/teams/<Team>[/{Tab}]` and `/teams/<Team>/projects/<Project>[/{Tab}]`. |
@@ -56,7 +56,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), the editor hosted by the edit page: every field, the Save/Revert cycle, the conflict UI, Close/Reopen/Make a copy, and the Timeline (`TaskTimeline`). |
 | `Components/Tasks/TaskTabs.cs` | How a Task is opened for editing: always in the edit page's own Tab (`OpenNew`, `OpenCopy`), and the draft a copy starts from. |
 | `Components/Tasks/FieldsDialog.razor` | The **Fields…** dialog (Spec §13.5): reorder, switch off, remove and add the View's fields. |
-| `Components/Tasks/TaskFilterChip.razor` | One "Label: Value" filter or Group by chip of the toolbar, with a menu and a clear button; also the Members tab's team type filter in `BuildTeam`, in its `NoMenu` form (no caret, no menu). |
+| `Components/Tasks/TaskFilterChip.razor` | One "Label: Value" filter or Group by chip of the toolbar, with a menu and a clear button; also the Agents tab's team type filter in `BuildTeam`, in its `NoMenu` form (no caret, no menu). |
 | `Components/Tasks/ViewActions.cs` | Rename (through `NameDialog`), delete confirm and the default name of a new View. |
 | `Components/Tasks/DuplicatePickerDialog.razor` | Asks which Task a moved Task duplicates (Spec §13.4 Dropping step 2), a strict `MudAutocomplete` over the Task index. |
 | `Components/Tasks/ReasonDialog.razor` | Asks for an optional reason when a Task moves to Cancelled or Rejected (Spec §13.4 Dropping step 3). |
@@ -74,7 +74,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Components/Teams/NewTeamDialog.razor` | The name dialog for creating a new Team or Project (Spec §6.5), behind the TeamsNav's "New team" and "New project" buttons. Copies `Library/AddFolderDialog.razor`'s shape. |
 | `Components/Teams/NewTeamDialogMode.cs` | Enum: whether `NewTeamDialog` is naming a Team or a Project. |
 | `Components/Teams/TeamDetails.razor` | The Details tab of a Team page, always last: `BuildTeam` with only `Team` set, i.e. Build a team's type and details sections for the Team (type and name fixed) with its own Save changes, which writes "What it's for" and the Library folder to `_team.md`. |
-| `Components/Teams/TeamRoster.razor` | The Members tab of a Team page: `BuildTeam` with `MembersOnly` (Build a team's Hire section for the Team, with its own Save changes), plus each member's status dot (pipe liveness, then health, through `PersonaStatusResolver`) and a **Message** that calls `ChatService.EnsureTeamOneToOneAsync` and navigates, so it opens the Team's own one-to-one, not the root one (ADR-0052). |
+| `Components/Teams/TeamRoster.razor` | The Agents tab of a Team page: `BuildTeam` with `MembersOnly` (Build a team's Hire section for the Team, with its own Save changes), plus each member's status dot (pipe liveness, then health, through `PersonaStatusResolver`) and a **Message** that calls `ChatService.EnsureTeamOneToOneAsync` and navigates, so it opens the Team's own one-to-one, not the root one (ADR-0052). |
 | `Components/Teams/TeamFilesTab.razor` | The Files tab of a Team or Project page (Spec §6.8): a `LibraryExplorer` scoped to the Team's or Project's folder, with a shared toolbar for "New note" and "Search files". |
 | `Components/Teams/TeamTasksTab.razor` | The Tasks tab of a Team or Project page (Spec §6.9): shows an in-memory Task View grouped into swimlanes by Project for Teams, or ungrouped for Projects. |
 | *(`Components/Teams/TeamsNav.razor.css` — scoped stylesheet)* | Styling for the sidebar Teams list. |
@@ -578,7 +578,7 @@ Global Search — the search box in the Top Bar, its dropdown and the providers 
 | `Components/Search/LibrarySearchCard.razor` | The card for a Library hit, with its snippet. |
 | `Components/Search/TaskSearchCard.razor` | The card for a Task hit. |
 | `Components/Search/RoomSearchCard.razor` | The card for a Room hit, one per Room. |
-| `Components/Shared/AgentProfileCardOpener.cs` | Opens the Agent card the same way from every surface that opens it (search, a Team's Members tab), and owns the card's `DialogParameters` builders. |
+| `Components/Shared/AgentProfileCardOpener.cs` | Opens the Agent card the same way from every surface that opens it (search, a Team's Agents tab), and owns the card's `DialogParameters` builders. |
 
 Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.NeedsYou-Specifications.md`. Paths are relative to `src/Huddle.App`:
 

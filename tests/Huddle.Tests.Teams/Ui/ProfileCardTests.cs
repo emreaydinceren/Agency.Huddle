@@ -245,7 +245,7 @@ public sealed class ProfileCardTests
         Assert.Empty(cut.FindAll(".roster-state"));
     }
 
-    /// <summary>Membership Member draws the "Member" chip.</summary>
+    /// <summary>Membership Member draws the "On the Team" chip.</summary>
     [Fact]
     public async Task Membership_Member_DrawsMemberChip()
     {
@@ -255,7 +255,7 @@ public sealed class ProfileCardTests
 
         var chip = cut.Find(".roster-state");
         Assert.True(chip.ClassList.Contains("roster-state-member"));
-        Assert.Equal("Member", chip.TextContent);
+        Assert.Equal("On the Team", chip.TextContent);
     }
 
     /// <summary>Membership New draws the "New" chip.</summary>
@@ -283,7 +283,7 @@ public sealed class ProfileCardTests
         Assert.Equal(["roster-state", "roster-tier", "roster-skills"], classes);
     }
 
-    /// <summary>The facts on the chips line are separated by " ·", so "Member" and "1 skill" no longer read as one phrase (#479).</summary>
+    /// <summary>The facts on the chips line are separated by " ·", so "On the Team" and "1 skill" no longer read as one phrase (#479).</summary>
     [Fact]
     public async Task Chips_FactsAreSeparatedByMiddleDots()
     {
@@ -291,7 +291,7 @@ public sealed class ProfileCardTests
 
         var cut = RenderIt(ctx, Plain with { SkillNames = ["lint"] }, p => p.Add(c => c.Membership, ProfileMembership.Member));
 
-        Assert.Equal(["Member", "·", "1 skill"], cut.Find(".roster-chips").Children.Select(static child => child.TextContent.Trim()).ToArray());
+        Assert.Equal(["On the Team", "·", "1 skill"], cut.Find(".roster-chips").Children.Select(static child => child.TextContent.Trim()).ToArray());
     }
 
     /// <summary>A lone fact has no separator (#479).</summary>

@@ -1145,10 +1145,10 @@ If the grey line does not update to `1 of 2` but the log line is present, the vi
 
 1. Run `P-RESET-ROOMS`.
 2. Start the app with PROFILE B (`Team__Acp__Enabled` MUST be `false` — no model is needed for this test and none must start).
-3. Open `http://localhost:5100` and start `P-NEW-PERSONA` (the New agent card on a Team's Members tab).
+3. Open `http://localhost:5100` and start `P-NEW-PERSONA` (the New agent card on a Team's Agents tab).
 4. Fill in Name `Jarvis`, Title `Butler`, Alias `jar`, and type `You are Jarvis.` into the Persona text.
 5. Leave Model and Effort at `Agent default`, select **Save draft**, then **Save changes**. For no Team, finish with `P-NEW-PERSONA`'s **Remove from team** step.
-6. Confirm Ctrl K finds `Jarvis` as an Agent, that the **Files that didn't load** section at the top of the Members tab either is absent or does not list `Jarvis.md`, and that `<data>\Agents\Jarvis\Jarvis.md` now exists.
+6. Confirm Ctrl K finds `Jarvis` as an Agent, that the **Files that didn't load** section at the top of the Agents tab either is absent or does not list `Jarvis.md`, and that `<data>\Agents\Jarvis\Jarvis.md` now exists.
 7. In `T-B` run `pwsh <repo>\tools\echo-bot.ps1 -Name Jarvis`.
 8. In TERMINAL C run `pwsh <repo>\tools\echo-bot.ps1 -Name Ada`.
 9. Click the Room named `Jarvis` in the sidebar, type `/invite @Ada` and press Enter so the Room has three Members.

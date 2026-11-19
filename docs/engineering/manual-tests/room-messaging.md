@@ -1362,8 +1362,8 @@ If the overlay never appears because the browser closed the connection instantly
 1. In `T-A` press Ctrl+C to stop the app.
 2. Follow [`P-LAUNCH-PAID`](common.md#p-launch-paid-) from its first step: launch free, set the Chief of Staff to Haiku / low on its card, stop. That procedure's launch block sets `Team__AgentMessageBudget` to `4`, `Team__Acp__TokenBudget` to `200000` and `Team__Acp__Enabled` to `true`, and clears `ANTHROPIC_API_KEY` and `TEAM_E2E`.
 3. Launch with the `P-LAUNCH-PAID` launch block. This launch WILL start real agents and CAN spend money — keep the session short.
-4. In the browser open the `Test` Team's **Members** tab (`P-NEW-PERSONA`, step 1).
-5. Point at **Add a member**, select **From scratch**, and the `New agent` card opens.
+4. In the browser open the `Test` Team's **Agents** tab (`P-NEW-PERSONA`, step 1).
+5. Point at **Add an Agent**, select **From scratch**, and the `New agent` card opens.
 6. Fill in a Name, then in the `Model` dropdown select **Haiku**, and in the `Effort` dropdown select **low**. These two settings are the standing convention and keep the charge small — do not pick any other model or effort.
 7. Click `Save draft`, then `Save changes` to hire the Agent.
 8. Wait for the agent to come online, then open its Room from the sidebar. This launch uses the default `App_Data`, not the seeded folder, so in `T-B` set `$data = '<repo>\src\Huddle.App\App_Data'`, set `$room` to that Room's id and run `Lines`.

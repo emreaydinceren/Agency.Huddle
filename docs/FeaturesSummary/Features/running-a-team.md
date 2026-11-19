@@ -258,7 +258,7 @@ use the Task's normal wake budget.
 
 ### Retrospectives in depth
 
-The Retro agent is in the hiring pool, and isn't hired for you, so add it from the Team's **Members** tab.
+The Retro agent is in the hiring pool, and isn't hired for you, so add it from the Team's **Agents** tab.
 
 **What it may read.** Only its own Team: a bundle of records, one Task's Timeline, or the last 200
 Messages of a Room. A Room with an outsider in it is refused.

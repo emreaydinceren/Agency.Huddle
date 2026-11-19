@@ -326,7 +326,7 @@
     gap: 8px;
 }
 
-/* The Members tab's "Add a member" tile fills its roster cell, as tall as the member cards beside it. The tile and its three
+/* The Agents tab's "Add an Agent" tile fills its roster cell, as tall as the member cards beside it. The tile and its three
    sources share one grid cell; hover, focus inside it or the open class (a tap, or Enter) swaps the one for the other. The
    tile fades rather than leaving the layout, so a keyboard focus on it survives the swap and Tab moves on to the sources. */
 .roster-add-item {

@@ -1,6 +1,6 @@
 # Agent files: loading, rejected files, watcher, status badge and the card
 
-Prove that the app is an honest, live mirror of the Persona files on disk (the Agents page that once showed them was removed on 2026-11-18, so the cases below read them through a Team's Members tab, Ctrl K, the From other teams picker and the Agent card): that an agent's identity and Team come from its frontmatter (its file sits at `Agents\<Name>\<Name>.md`, and its Team never comes from the folder), that every file which fails to load is named out loud instead of silently vanishing, that opening a card probes nothing, that the status badge tells the truth (health outranking a live pipe), and that the file watcher keeps up with edits, creations, deletions, moves and folder renames. Almost every failure in this area is silent — a moved file that quietly changes identity, an Agent folder that stops reloading, a colliding file that disappears without a word — so these tests are written for a human driving a browser and a file explorer side by side.
+Prove that the app is an honest, live mirror of the Persona files on disk (the Agents page that once showed them was removed on 2026-11-18, so the cases below read them through a Team's Agents tab, Ctrl K, the From other teams picker and the Agent card): that an agent's identity and Team come from its frontmatter (its file sits at `Agents\<Name>\<Name>.md`, and its Team never comes from the folder), that every file which fails to load is named out loud instead of silently vanishing, that opening a card probes nothing, that the status badge tells the truth (health outranking a live pipe), and that the file watcher keeps up with edits, creations, deletions, moves and folder renames. Almost every failure in this area is silent — a moved file that quietly changes identity, an Agent folder that stops reloading, a colliding file that disappears without a word — so these tests are written for a human driving a browser and a file explorer side by side.
 
 **42 tests** · 41 free, 1 paid 💰 · about 3.4 hours.
 
@@ -18,7 +18,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the five re
 1. Lane is `P-LAUNCH-FREE`. A handful of tests need ACP on: stop the app and launch them under [`P-LAUNCH-UAT`](common.md#p-launch-uat) (the mock adapter, free) instead, where `<data>` is `C:\seeds\huddle\uat\data`; relaunch under `P-LAUNCH-FREE` for the next test. Do not switch ACP on with `--Team:Acp:Enabled=true` against the real adapter: the Chief of Staff takes a paid Greeting Turn in its empty direct Room. Never edit `appsettings.json` — leave the shipped defaults alone.
 2. Start from a library that holds only the built-in Chief of Staff. Persona files live at `<data>\Agents\<Name>\<Name>.md` ([`P-NEW-PERSONA`](common.md#p-new-persona) explains why a hand-written file skips the Model and Effort rows). Run [`P-RESET-TEAMS`](common.md#the-five-resets) before launching: it deletes every folder under `<data>\Agents`, and the app re-seeds the Chief of Staff (alias `cos`, no Teams, no stored Model) at every start, whatever `Acp:Enabled` is. `<data>\Teams\` holds Team folders, notes and Tasks, never Personas; do not put Persona files there.
 3. Open a browser at `http://localhost:5100` and a File Explorer window (or a text editor) on `<data>\Agents\`, side by side. Many tests change a file on disk and then watch the browser WITHOUT touching it — do not press F5 unless a step says to.
-3a. Where to look. There is no Agents page. The tests read Agents from: the **Members** tab of the Team `Business` or `Household` (its roster cards and avatar badges, and the `Files that didn't load` block at the top of every Team's Members tab); Ctrl K (type a Name); the **From other teams** picker (**Add a member** → **From other teams**, which lists the Agents NOT already in that Team, Agents in no Team under **No team**); and the Agent card ([`P-OPEN-AGENT`](common.md#p-open-agent)). If `Business` or `Household` is not in the sidebar's Teams list, create the empty folder `<data>\Teams\Business\` (or `Household`) and reload, as in [`P-NEW-PERSONA`](common.md#p-new-persona) step 1. There is no Team filter and no list of every Agent. Below, a "tile" means the Agent's roster card on the Members tab of a Team it belongs to, and "the tile reads Online" means its avatar badge does; "open the card" means `P-OPEN-AGENT`.
+3a. Where to look. There is no Agents page. The tests read Agents from: the **Agents** tab of the Team `Business` or `Household` (its roster cards and avatar badges, and the `Files that didn't load` block at the top of every Team's Agents tab); Ctrl K (type a Name); the **From other teams** picker (**Add an Agent** → **From other teams**, which lists the Agents NOT already in that Team, Agents in no Team under **No team**); and the Agent card ([`P-OPEN-AGENT`](common.md#p-open-agent)). If `Business` or `Household` is not in the sidebar's Teams list, create the empty folder `<data>\Teams\Business\` (or `Household`) and reload, as in [`P-NEW-PERSONA`](common.md#p-new-persona) step 1. There is no Team filter and no list of every Agent. Below, a "tile" means the Agent's roster card on the Agents tab of a Team it belongs to, and "the tile reads Online" means its avatar badge does; "open the card" means `P-OPEN-AGENT`.
 4. Learn the CORE FIXTURE SET but do NOT create it yet — AGENTSLIBRARY-03 creates it. Five Agents, each a folder named after the Agent holding a file of the same name, under `<data>\Agents\`: (1) `Nova\Nova.md` = frontmatter name 'Nova', title 'Research Lead', alias 'nov', teams ['Business']; (2) `Vale\Vale.md` = name 'Vale', title 'Ops Lead', alias 'val', teams ['Business', 'Household']; (3) `Rune\Rune.md` = name 'Rune', title 'Home Steward', alias 'run', teams ['Household']; (4) `Quill\Quill.md` = name 'Quill', title 'Scribe', alias 'qui', and NO teams line at all; (5) `Emily Lee\Emily Lee.md` = name 'Emily Lee', title 'Analyst', alias 'emi', teams ['Business']. With the built-in Chief of Staff that is six Agents. Exact text is given in AGENTSLIBRARY-03.
 5. Never put a `.md` directly in `<data>\Agents\` and never put a second `.md` in an Agent's folder: the first is rejected with `A definition must be inside its agent's folder.`, the second with `An agent folder holds only its definition; use work/.`. Any such stray file would land in the rejected block and drown every other observation.
 6. All sorting on this page is ORDINAL, not case-insensitive: an upper-case letter sorts before a lower-case one, so a Team named `Zulu` legitimately appears above one named `admin`, and a Persona named `Zoe` above one named `ada`. This is deliberate and pinned by tests. Do not file it.
@@ -109,7 +109,7 @@ You are Emily Lee. Answer in one short sentence.
 
 **Inconclusive if**
 
-An Agent you expected is missing from Ctrl K AND a `Files that didn't load` block (top of a Team's Members tab) names its path -> you mistyped that file's frontmatter; fix the file (watch for smart quotes inserted by your editor — the parser wants plain `'`) and rerun. If nothing is found at all after F5, restart the app and rerun before recording anything.
+An Agent you expected is missing from Ctrl K AND a `Files that didn't load` block (top of a Team's Agents tab) names its path -> you mistyped that file's frontmatter; fix the file (watch for smart quotes inserted by your editor — the parser wants plain `'`) and rerun. If nothing is found at all after F5, restart the app and rerun before recording anything.
 
 > [!NOTE]
 > Keep all five fixture folders in place — later tests depend on them and say so. Use a plain-text editor; a word processor that converts `'` into a curly quote will make files fail to parse.
@@ -158,7 +158,7 @@ An Agent you expected is missing from Ctrl K AND a `Files that didn't load` bloc
 
 **Steps**
 
-1. Open the Members tab of the Team `Business` and press F5. Confirm Nova's roster card is present and there is no `Files that didn't load` section at the top.
+1. Open the Agents tab of the Team `Business` and press F5. Confirm Nova's roster card is present and there is no `Files that didn't load` section at the top.
 2. Without touching the browser, open `<data>\Agents\Nova\Nova.md` and delete the whole line `title: 'Research Lead'`. Save.
 3. Wait about two seconds and watch the browser WITHOUT refreshing.
 4. Read the new section that appears, including its heading, the path line and the line under it.
@@ -170,7 +170,7 @@ An Agent you expected is missing from Ctrl K AND a `Files that didn't load` bloc
 **Pass if — all of these**
 
 - Within about a second of the save, and with no refresh, the Nova tile disappears and a new section appears.
-- That section is headed exactly `Files that didn't load` and sits at the TOP of the Members tab, ABOVE the roster cards.
+- That section is headed exactly `Files that didn't load` and sits at the TOP of the Agents tab, ABOVE the roster cards.
 - It lists the absolute path of `Nova.md` (ending `...\Agents\Nova\Nova.md`) on one line, and under it the reason `Persona frontmatter is missing required field 'Title'.`
 - The section is visually distinct (its own bordered block), not a plain sentence lost in the page.
 - No exception or stack trace appears in the `dotnet run` console.
@@ -206,7 +206,7 @@ title: 'Nameless'
 alias: 'nl1'
 ---
 You are nameless.
-2. Open the Members tab of the Team `Business` and read its `Files that didn't load` block (top of the tab); record the reason shown under `bad1.md`. Then delete the `bad1` folder.
+2. Open the Agents tab of the Team `Business` and read its `Files that didn't load` block (top of the tab); record the reason shown under `bad1.md`. Then delete the `bad1` folder.
 3. Create the folder `<data>\Agents\bad2\` and in it `bad2.md` containing exactly (no frontmatter at all — plain prose):
 You are an agent with no front matter whatsoever.
 4. Record the reason shown under `bad2.md`. Then delete the `bad2` folder.
@@ -254,7 +254,7 @@ You are Hyphen.
 - bad5.md -> `Persona frontmatter field 'Name' has an invalid value: 'Emily  Lee'.`
 - bad6.md -> `Persona frontmatter field 'Alias' has an invalid value: '-nope'.`
 - Every reason is shown under that file's own absolute path.
-- The valid core fixtures keep their roster cards on the Business and Household Members tabs, and the Chief of Staff is still found by Ctrl K, throughout — one bad file never takes the page down.
+- The valid core fixtures keep their roster cards on the Business and Household Agents tabs, and the Chief of Staff is still found by Ctrl K, throughout — one bad file never takes the page down.
 - No exception or stack trace appears in the console at any point.
 
 **Fail if — any of these**
@@ -290,7 +290,7 @@ title: 'Duplicate Alias'
 alias: 'nov'
 ---
 You are Twin.
-2. Wait about two seconds and watch the Business Members tab without refreshing.
+2. Wait about two seconds and watch the Business Agents tab without refreshing.
 3. Note whether Nova's roster card is still present.
 4. Read every entry in the `Files that didn't load` block.
 5. Change `Twin.md`'s alias line to `alias: 'twi'` and save.
@@ -345,7 +345,7 @@ title: 'Deputy'
 alias: 'jvb'
 ---
 You are jarvis.
-3. Wait about two seconds and read the Business Members tab without refreshing.
+3. Wait about two seconds and read the Business Agents tab without refreshing.
 4. Read both entries in the `Files that didn't load` block.
 5. In `T-B` run `sqlite3 <data>\team.db "select * from persona_models;"` ([`O-DB`](common.md#o-db); skip if you have no sqlite3).
 6. Delete both folders, `Jarvis-a` and `Jarvis-b`.
@@ -387,7 +387,7 @@ title: 'Shadow Lead'
 alias: 'Nova'
 ---
 You are Shadow.
-2. Wait about two seconds and read the Business Members tab without refreshing.
+2. Wait about two seconds and read the Business Agents tab without refreshing.
 3. Read both entries in the `Files that didn't load` block, word for word.
 4. Delete the folder `<data>\Agents\Shadow\` and confirm the Nova tile returns.
 5. Create the folder `<data>\Agents\Echoic\` and in it `Echoic.md` containing exactly (alias equals its OWN name):
@@ -397,7 +397,7 @@ title: 'Self Named'
 alias: 'Echoic'
 ---
 You are Echoic.
-6. Wait about two seconds and read the Business Members tab, then find `Echoic` with Ctrl K and open its card (`P-OPEN-AGENT`).
+6. Wait about two seconds and read the Business Agents tab, then find `Echoic` with Ctrl K and open its card (`P-OPEN-AGENT`).
 7. Delete the folder `<data>\Agents\Echoic\`.
 
 **Pass if — all of these**
@@ -435,7 +435,7 @@ Nova's reason is missing but Shadow.md's is present -> re-read the block careful
 
 **Steps**
 
-1. Open the Members tab of the Team `Household` and note its exact contents: roster cards present, and no `Files that didn't load` block.
+1. Open the Agents tab of the Team `Household` and note its exact contents: roster cards present, and no `Files that didn't load` block.
 2. Create `<data>\Agents\notes.txt` with the text `scratch notes, not a persona` (directly in the `Agents` root).
 3. Create an empty file `<data>\Agents\.gitkeep`.
 4. Create `<data>\Agents\Rune\readme.rst` with the text `this is not markdown` (inside Rune's folder, beside `Rune.md`).
@@ -469,28 +469,28 @@ You cannot tell whether a repaint happened -> repeat with the browser devtools o
 **Before you start**
 
 - Core fixture set in place, including `Agents\Rune\Rune.md`.
-- The browser is on the Members tab of the Team `Household` and you will not press F5 during the test.
+- The browser is on the Agents tab of the Team `Household` and you will not press F5 during the test.
 
 **Steps**
 
-1. On the `Household` Members tab, press F5 once, and confirm Rune's roster card is there with an `Offline` badge; open its card (`P-OPEN-AGENT`) and confirm it reads `Rune`, `Home Steward` and `Alias: run`, then close it.
+1. On the `Household` Agents tab, press F5 once, and confirm Rune's roster card is there with an `Offline` badge; open its card (`P-OPEN-AGENT`) and confirm it reads `Rune`, `Home Steward` and `Alias: run`, then close it.
 2. In your editor, open `<data>\Agents\Rune\Rune.md` and change `title: 'Home Steward'` to `title: 'House Captain'`. Save. Do not touch the browser.
 3. Wait up to about two seconds, open Rune's card (`P-OPEN-AGENT`), read its Title, then close it.
 4. In the same file, change `alias: 'run'` to `alias: 'rn'`. Save, wait, then open the card again and read its `Alias:` line.
-5. In the same file, change `teams: ['Household']` to `teams: ['Business']`. Save, wait, and read which Team's Members tab Rune's roster card is now on.
+5. In the same file, change `teams: ['Household']` to `teams: ['Business']`. Save, wait, and read which Team's Agents tab Rune's roster card is now on.
 6. Open Rune's card and compare the text in the card's `Persona` block with your editor's buffer, then close the card.
 7. Now repeat the first edit on another Agent: open `<data>\Agents\Nova\Nova.md`, change `title: 'Research Lead'` to `title: 'Research Chief'`, save, wait, open Nova's card and read its Title.
-8. Create the folder `<data>\Agents\Rune\work\` and in it a file `notes.md` containing `scratch notes`. Wait about five seconds WITHOUT refreshing and read the Members tab, including the `Files that didn't load` area.
+8. Create the folder `<data>\Agents\Rune\work\` and in it a file `notes.md` containing `scratch notes`. Wait about five seconds WITHOUT refreshing and read the Agents tab, including the `Files that didn't load` area.
 9. Restore all four edited values (`House Captain` -> `Home Steward`, `rn` -> `run`, `Business` -> `Household`, `Research Chief` -> `Research Lead`) and delete the folder `<data>\Agents\Rune\work\`.
 
 **Pass if — all of these**
 
 - Within about a second of each save, and with NO page refresh and NO app restart, the card shows the new value.
 - Rune's Title becomes `House Captain`, then its `Alias:` line reads `rn`.
-- After the `teams:` edit, Rune's roster card leaves the `Household` Members tab and appears on the `Business` one on its own.
+- After the `teams:` edit, Rune's roster card leaves the `Household` Agents tab and appears on the `Business` one on its own.
 - The card's `Persona` block shows the whole raw file text, matching the editor buffer exactly (frontmatter included).
 - Nova's card reloads on edit in exactly the same way.
-- After `work\notes.md` is created, the Members tab does not change: no new roster card, no `Files that didn't load` entry (a `.md` under `work\` is neither a second definition nor scanned), and Rune keeps its tile.
+- After `work\notes.md` is created, the Agents tab does not change: no new roster card, no `Files that didn't load` entry (a `.md` under `work\` is neither a second definition nor scanned), and Rune keeps its tile.
 
 **Fail if — any of these**
 
@@ -511,11 +511,11 @@ Your editor saves via a temp-file-and-rename dance and you see two repaints -> t
 
 **Free** · about 5 min
 
-*Proves an Agent folder added or removed from outside the app appears or disappears — on its Team's Members tab and in Ctrl K — with no refresh.*
+*Proves an Agent folder added or removed from outside the app appears or disappears — on its Team's Agents tab and in Ctrl K — with no refresh.*
 
 **Before you start**
 
-- Core fixture set in place; browser on the Members tab of the Team `Business`, freshly refreshed once.
+- Core fixture set in place; browser on the Agents tab of the Team `Business`, freshly refreshed once.
 
 **Steps**
 
@@ -528,14 +528,14 @@ alias: 'pik'
 teams: ['Business']
 ---
 You are Pike. Answer in one short sentence.
-3. Wait about two seconds and watch the Members tab WITHOUT refreshing.
+3. Wait about two seconds and watch the Agents tab WITHOUT refreshing.
 4. Press Ctrl K, type `Pike` and read the results.
 5. Delete the folder `<data>\Agents\Pike\`.
-6. Wait about two seconds and watch the Members tab again, and search Ctrl K for `Pike` again.
+6. Wait about two seconds and watch the Agents tab again, and search Ctrl K for `Pike` again.
 
 **Pass if — all of these**
 
-- A `Pike` roster card appears on its own on the Members tab, within about a second.
+- A `Pike` roster card appears on its own on the Agents tab, within about a second.
 - Ctrl K finds `Pike` without a refresh.
 - After the delete, the Pike roster card disappears on its own and Ctrl K no longer finds `Pike`.
 
@@ -570,25 +570,25 @@ alias: 'bra'
 teams: ['Household']
 ---
 You are Bram. Answer in one short sentence.
-2. Open the Members tab of the Team `Household`, press F5, and confirm both `Rune` and `Bram` have roster cards. Open each card (`P-OPEN-AGENT`) and write down the absolute path shown in its `Persona file` section. Close the card.
+2. Open the Agents tab of the Team `Household`, press F5, and confirm both `Rune` and `Bram` have roster cards. Open each card (`P-OPEN-AGENT`) and write down the absolute path shown in its `Persona file` section. Close the card.
 3. PART A — RENAME THE FOLDER ONLY. In File Explorer, rename the folder `<data>\Agents\Rune` to `<data>\Agents\Rune2`. Do not touch the browser.
-4. Wait about two seconds and read the Members tab: Rune's roster card and the `Files that didn't load` block.
-5. PART B — RENAME THE FILE TO MATCH. Rename `<data>\Agents\Rune2\Rune.md` to `Rune2.md`. Wait about two seconds and read the Members tab again.
+4. Wait about two seconds and read the Agents tab: Rune's roster card and the `Files that didn't load` block.
+5. PART B — RENAME THE FILE TO MATCH. Rename `<data>\Agents\Rune2\Rune.md` to `Rune2.md`. Wait about two seconds and read the Agents tab again.
 6. Open Rune's card and read the `Persona file` path.
 7. With that card open, click **Open** and note whether the correct file opens in your Markdown editor. Close the editor window.
 8. Click **Edit**, add a space to the end of the body line, click **Save**, and note whether it succeeds or shows an error line on the card. Close the card.
 9. PART C — DELETE. Move the two folders `<data>\Agents\Rune2` and `<data>\Agents\Bram` OUT of `<data>\Agents` (to your Desktop, say). Do not touch the browser.
-10. Wait about two seconds and read the `Household` Members tab (it must have lost both roster cards).
+10. Wait about two seconds and read the `Household` Agents tab (it must have lost both roster cards).
 11. Move `Bram` back in only to finish: delete it. Move `Rune2` back in, rename `Rune2\Rune2.md` to `Rune.md` FIRST, then rename the folder to `Rune`, and confirm the core fixture set is restored.
 
 **Pass if — all of these**
 
 - PART A: within about a second the Rune tile is gone and Bram is untouched. The `Files that didn't load` block lists `...\Agents\Rune2\Rune.md` with the reason `An agent folder holds only its definition; use work/.` (the file is no longer named after its folder, so it is not Rune2's definition).
-- PART B: after the file is renamed, Rune's roster card is back on the `Household` Members tab, its card still reading `Home Steward` with `Alias: run`, and the rejected entry is gone.
+- PART B: after the file is renamed, Rune's roster card is back on the `Household` Agents tab, its card still reading `Home Steward` with `Alias: run`, and the rejected entry is gone.
 - PART B: the card's `Persona file` path shows the NEW location (`...\Agents\Rune2\Rune2.md`), not the old one.
 - PART B: **Open** launches the correct, existing file.
 - PART B: **Edit** -> **Save** succeeds with no error line on the card, and the change is on disk at the new path.
-- PART C: within about a second of moving the folders away, BOTH roster cards disappear from the `Household` Members tab on their own.
+- PART C: within about a second of moving the folders away, BOTH roster cards disappear from the `Household` Agents tab on their own.
   Vale's roster card REMAINS there: the core fixture set gives `Vale.md`
   `teams: ['Business', 'Household']`, so Household still has a member.
 - PART C: no exception appears in the `dotnet run` console.
@@ -629,8 +629,8 @@ alias: 'bu1'
 teams: ['Business']
 ---
 You are Burst1. Answer in one short sentence.
-2. Open the Members tab of the Team `Business` and press F5.
-3. Select all five folders in the scratch folder and copy them into `<data>\Agents\` in ONE paste operation. Watch the Members tab closely while it happens.
+2. Open the Agents tab of the Team `Business` and press F5.
+3. Select all five folders in the scratch folder and copy them into `<data>\Agents\` in ONE paste operation. Watch the Agents tab closely while it happens.
 4. Count how many distinct repaints you see (a repaint is the roster visibly changing).
 5. Check the `dotnet run` console and count the lines it logged for this burst.
 6. Confirm that the Burst1 to Burst5 roster cards are all on the tab and that no `Files that didn't load` block appeared: this test is about a reload, so five rejected files would be a failed setup, not a pass.
@@ -638,7 +638,7 @@ You are Burst1. Answer in one short sentence.
 
 **Pass if — all of these**
 
-- All five roster cards appear together on the `Business` Members tab, roughly half a second after the copy settles.
+- All five roster cards appear together on the `Business` Agents tab, roughly half a second after the copy settles.
 - You see ONE update, not five separate flickering repaints.
 - The console shows no repeated per-file churn for the same Persona.
 
@@ -668,14 +668,14 @@ Your copy is slow enough that the five files land more than half a second apart 
 
 **Steps**
 
-1. Open the Members tab of the Team `Business` and press F5. (The Storm Agents are in the Team `Storm`, not `Business`, so the From other teams picker is where you count them.)
+1. Open the Agents tab of the Team `Business` and press F5. (The Storm Agents are in the Team `Storm`, not `Business`, so the From other teams picker is where you count them.)
 2. In the second PowerShell window, run this to write 50 valid Personas at once, each in its own folder (replace `<data>` with the real path):
 1..50 | ForEach-Object { $dir = "<data>\Agents\Storm$_"; New-Item -ItemType Directory -Force $dir | Out-Null; "---`nname: 'Storm$_'`ntitle: 'Storm Tester'`nalias: 'st$_'`nteams: ['Storm']`n---`nYou are Storm$_." | Set-Content -Encoding utf8 "$dir\Storm$_.md" }
-3. Wait about five seconds, then WITHOUT refreshing open **Add a member** → **From other teams** and count the Agents listed under `Storm`, and check that no `Files that didn't load` block appeared at the top of the tab.
+3. Wait about five seconds, then WITHOUT refreshing open **Add an Agent** → **From other teams** and count the Agents listed under `Storm`, and check that no `Files that didn't load` block appeared at the top of the tab.
 4. Check the `dotnet run` console for a warning mentioning a FileSystemWatcher error.
 5. Now delete them all at once: `Remove-Item -Recurse <data>\Agents\Storm*`
 6. Wait about five seconds and, without refreshing, reopen **From other teams** and confirm `Storm` is gone.
-7. Run `Get-ChildItem <data>\Agents -Directory | ForEach-Object { Get-ChildItem $_.FullName -Filter *.md }` and compare it against the Agents in the pickers and Members tabs plus rejected entries on screen.
+7. Run `Get-ChildItem <data>\Agents -Directory | ForEach-Object { Get-ChildItem $_.FullName -Filter *.md }` and compare it against the Agents in the pickers and Agents tabs plus rejected entries on screen.
 
 **Pass if — all of these**
 
@@ -708,7 +708,7 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 
 **Steps**
 
-1. Open the Members tab of the Team `Business` and press F5.
+1. Open the Agents tab of the Team `Business` and press F5.
 2. Click **Edit** on Nova's roster card. Immediately read `document.activeElement` in the DevTools Console. Note whether the card opens and whether focus moved into it.
 3. Press Tab a few times and confirm focus never lands on something BEHIND the dialog (the sidebar, another roster card).
 4. Close it by clicking the × at the top right. Read `document.activeElement` again — is it back on Nova's **Edit** button?
@@ -764,7 +764,7 @@ The card does not open at all and other clicks on the page are also dead -> the 
 
 **Steps**
 
-1. Open the Members tab of the Team `Business` and press F5.
+1. Open the Agents tab of the Team `Business` and press F5.
 2. Read the avatar badge (glyph and tooltip) on every roster card, then on the `Household` tab too.
 3. Hover the mouse over the badge on a roster card's avatar for three seconds and note what the tooltip says.
 4. Open Nova's card (`P-OPEN-AGENT`) and read the lines under the Name.
@@ -821,13 +821,13 @@ teams: ['Business']
 ---
 You are Scout. Answer in one short sentence.
 2. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints that it connected.
-3. Open the Members tab of the Team `Business` and press F5 ONCE (this is the only refresh in this test; it lets the page learn the new agent's id).
+3. Open the Agents tab of the Team `Business` and press F5 ONCE (this is the only refresh in this test; it lets the page learn the new agent's id).
 4. Confirm the `Scout` roster card reads `Online` (check glyph on the avatar badge) (an external bot connected under the Name of an Agent that has a Persona file).
 5. Open Scout's card with `P-OPEN-AGENT` so it is open, and leave it open.
 6. In the third PowerShell window, press Ctrl+C to stop the echo bot.
 7. Watch the page for up to five seconds WITHOUT refreshing: read the tile's avatar badge, and the open card's status line.
 8. Run `pwsh tools/echo-bot.ps1 -Name Scout` again and watch the same two places, again without refreshing.
-9. Close the card, click another page in the sidebar (e.g. **Settings**), then come back to the `Business` Members tab. Check the `dotnet run` console for exceptions.
+9. Close the card, click another page in the sidebar (e.g. **Settings**), then come back to the `Business` Agents tab. Check the `dotnet run` console for exceptions.
 10. Stop the echo bot and delete the folder `<data>\Agents\Scout\`.
 
 **Pass if — all of these**
@@ -835,7 +835,7 @@ You are Scout. Answer in one short sentence.
 - After the bot is stopped, both the tile AND the open card change from `Online` to `Offline` on their own, within a few seconds, with no refresh.
 - The tile and the card never disagree — they change at the same moment and to the same value.
 - After the bot reconnects, both go back to `Online` by themselves.
-- Navigating away from the Members tab and back produces no exception in the console and no yellow `An unhandled error has occurred.` banner.
+- Navigating away from the Agents tab and back produces no exception in the console and no yellow `An unhandled error has occurred.` banner.
 
 **Fail if — any of these**
 
@@ -869,7 +869,7 @@ title: 'Misplaced'
 alias: 'str'
 ---
 You are Stray.
-2. Open the Members tab of the Team `Business`, wait about two seconds and read it without refreshing; search Ctrl K for `Stray`.
+2. Open the Agents tab of the Team `Business`, wait about two seconds and read it without refreshing; search Ctrl K for `Stray`.
 3. Create the folder `<data>\Agents\Stray\` and move `Stray.md` into it.
 4. Wait about two seconds and read the tab again; search Ctrl K for `Stray` again.
 5. Delete the folder `<data>\Agents\Stray\`.
@@ -903,7 +903,7 @@ The block lists other files too -> a leftover from an earlier test; delete it an
 **Steps**
 
 1. Create `<data>\Agents\Nova\Nova-notes.md` containing `Some notes.`
-2. Open the Members tab of the Team `Business`, wait about two seconds and read it without refreshing.
+2. Open the Agents tab of the Team `Business`, wait about two seconds and read it without refreshing.
 3. Create the folder `<data>\Agents\Nova\work\` and move `Nova-notes.md` into it.
 4. Wait about two seconds and read the tab again.
 5. Delete the `work` folder you created.
@@ -911,7 +911,7 @@ The block lists other files too -> a leftover from an earlier test; delete it an
 **Pass if — all of these**
 
 - After step 2 the `Files that didn't load` block lists `<data>\Agents\Nova\Nova-notes.md` with the reason `An agent folder holds only its definition; use work/.` (PersonaStore.cs:771-774).
-- Nova's roster card is still on the Members tab, unchanged: the extra file does not take the real definition down.
+- Nova's roster card is still on the Agents tab, unchanged: the extra file does not take the real definition down.
 - After step 4 the rejected block is gone and Nova is unchanged.
 
 **Fail if — any of these**
@@ -939,7 +939,7 @@ Windows refuses the move because the file is open in an editor -> close the edit
 1. Create `<data>\Agents\_unsorted\old-persona.md` containing `---` on the first line and any text after it.
 2. Create `<data>\Agents\_unsorted\deeper\readme.txt` containing `leftover`.
 3. Create `<data>\Agents\_scratch\ignored.md` containing `not scanned`.
-4. Open the Members tab of the Team `Business`, wait about two seconds and read it without refreshing.
+4. Open the Agents tab of the Team `Business`, wait about two seconds and read it without refreshing.
 5. Delete the folders `_unsorted` and `_scratch`.
 
 **Pass if — all of these**
@@ -979,19 +979,19 @@ alias: 'mir'
 teams: ['Business']
 ---
 You are Mira. Answer in one short sentence.
-2. Open the Members tab of the Team `Business`, press F5, click **Edit** on Mira's roster card, choose the **Haiku** entry in the **Model** dropdown and **low** in the **Effort** dropdown, then click **Save**.
-3. Reopen the Mira card in View mode and write down: Name, Title, alias, which Team Members tab holds it, the `Model` line, the `Effort` line and the `Persona file` path. Close the card.
+2. Open the Agents tab of the Team `Business`, press F5, click **Edit** on Mira's roster card, choose the **Haiku** entry in the **Model** dropdown and **low** in the **Effort** dropdown, then click **Save**.
+3. Reopen the Mira card in View mode and write down: Name, Title, alias, which Team Agents tab holds it, the `Model` line, the `Effort` line and the `Persona file` path. Close the card.
 4. If you have sqlite3, run `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts;"` and note the rows for Mira.
-5. With the browser open on the `Business` Members tab and untouched, open `<data>\Agents\Mira\Mira.md` in a text editor, change `title: 'Field Analyst'` to `title: 'Senior Analyst'` and `teams: ['Business']` to `teams: ['Household']`, and save. Change nothing else.
-6. Wait about two seconds and read the Members tab WITHOUT refreshing.
+5. With the browser open on the `Business` Agents tab and untouched, open `<data>\Agents\Mira\Mira.md` in a text editor, change `title: 'Field Analyst'` to `title: 'Senior Analyst'` and `teams: ['Business']` to `teams: ['Household']`, and save. Change nothing else.
+6. Wait about two seconds and read the Agents tab WITHOUT refreshing.
 7. Open Mira's card (`P-OPEN-AGENT`) and compare the seven facts with what you wrote down.
 8. If you have sqlite3, re-run the query and compare the rows.
 9. Delete the folder `<data>\Agents\Mira\`.
 
 **Pass if — all of these**
 
-- The Members tab repaints on its own within about a second of the save, and Mira's roster card leaves it.
-- Mira's card now reads Title `Senior Analyst`, and her roster card is on the `Household` Members tab, not `Business`.
+- The Agents tab repaints on its own within about a second of the save, and Mira's roster card leaves it.
+- Mira's card now reads Title `Senior Analyst`, and her roster card is on the `Household` Agents tab, not `Business`.
 - Name, alias, `Model`, `Effort` and the `Persona file` path are IDENTICAL before and after.
 - The `persona_models` and `persona_efforts` rows are still keyed by the frontmatter Name `Mira` and hold the same values.
 
@@ -1021,22 +1021,22 @@ The Model dropdown offers only `Agent default`, so no Model can be stored throug
 
 **Steps**
 
-1. Open the Members tab of the Team `Business`, press F5, point at **Add a member** and select **From scratch** (`P-NEW-PERSONA` steps 1-2).
+1. Open the Agents tab of the Team `Business`, press F5, point at **Add an Agent** and select **From scratch** (`P-NEW-PERSONA` steps 1-2).
 2. Read the identity field labels. The card has no **Teams** field.
 3. Type `Wren` into **Name**, `Ops Lead` into **Title** and `wre` into **Alias**.
 4. Type `You are Wren. Answer in one short sentence.` into the **Persona text** textarea.
 5. If the **Model** dropdown offers real models, choose the **Haiku** entry and choose **low** in **Effort**. If it only offers `Agent default`, leave both alone and note it.
 6. Click **Save draft**, then **Save changes** (`P-NEW-PERSONA` steps 3-4).
 7. Open Wren's card (`P-OPEN-AGENT`) and read its header, Name, and `Teams:` line. Close it.
-8. Put Wren into the `Household` Team too with `P-ADD-TO-TEAM` (on the `Household` Members tab, **From other teams**, pick Wren, **Save changes**), then read where Wren's roster card appears.
+8. Put Wren into the `Household` Team too with `P-ADD-TO-TEAM` (on the `Household` Agents tab, **From other teams**, pick Wren, **Save changes**), then read where Wren's roster card appears.
 9. In `T-B` run `Get-ChildItem -Recurse <data>\Agents -Filter Wren.md` and then `Get-Content <data>\Agents\Wren\Wren.md`.
-10. Confirm there is no `Files that didn't load` block at the top of either Members tab.
+10. Confirm there is no `Files that didn't load` block at the top of either Agents tab.
 
 **Pass if — all of these**
 
 - The New agent card has no **Teams** field.
 - After **Save changes** Wren's card (step 7) shows header `Agent`, Name `Wren`, and a line reading `Teams: Business`.
-- After step 8 Wren has a roster card on BOTH the `Business` and the `Household` Members tabs.
+- After step 8 Wren has a roster card on BOTH the `Business` and the `Household` Agents tabs.
 - The file is at `<data>\Agents\Wren\Wren.md` (the app created the `Wren` folder; PersonaStore.cs:338-390), and it is the only Wren.md anywhere in the tree.
 - Its contents are lowercase, single-quoted frontmatter: `name: 'Wren'`, `title: 'Ops Lead'`, `alias: 'wre'`, `teams: ['Business', 'Household']` (the Team it was created in, then the one added), then `---`, then the body.
 - No `Files that didn't load` entry appears for the file just created.
@@ -1068,7 +1068,7 @@ The Model dropdown is empty of real models -> that means no adapter is installed
 **Steps**
 
 1. In `T-B` run `(Get-ChildItem <data>\Agents -Directory | Get-ChildItem -Filter *.md | Measure-Object).Count` and write down the Count (one folder level deep, so notes under `work\` do not count). Also write down the number of folders: `(Get-ChildItem <data>\Agents -Directory).Count`.
-2. On the `Business` Members tab open the **New agent** card (**Add a member** → **From scratch**). Type Name `Nova`, Title `Clash`, Alias `cl1`, body `You are a clash test.` Click **Save draft**, then **Save changes** if the draft is accepted. Record the message shown and whether your typed text is still in the fields.
+2. On the `Business` Agents tab open the **New agent** card (**Add an Agent** → **From scratch**). Type Name `Nova`, Title `Clash`, Alias `cl1`, body `You are a clash test.` Click **Save draft**, then **Save changes** if the draft is accepted. Record the message shown and whether your typed text is still in the fields.
 3. Change only the Name to `Rune` and click **Save draft** (then **Save changes**) again. Record the message.
 4. Change only the Name to `rune` (lower case) and click **Save draft** (then **Save changes**). Record the message.
 5. Change the Name to `Clash1` and the Alias to `nov` (Nova's alias) and click **Save draft** (then **Save changes**). Record the message.
@@ -1117,7 +1117,7 @@ A message appears but its wording differs slightly from the text above -> record
 2. Open Mira's card again and click **Edit**.
 3. Read the hint under the textarea, and any note about renaming.
 4. In the textarea (which holds the WHOLE file, frontmatter included), change `name: 'Mira'` to `name: 'Mira Prime'`. Change nothing else. Click **Save**.
-5. Wait about five seconds (the folder move runs after the save). Close whatever card is on screen, then look at the Members tab of the Team that holds her (and Ctrl K): find the renamed Agent and read its Name and monogram.
+5. Wait about five seconds (the folder move runs after the save). Close whatever card is on screen, then look at the Agents tab of the Team that holds her (and Ctrl K): find the renamed Agent and read its Name and monogram.
 6. Open the renamed Agent's card (`P-OPEN-AGENT`) and read its `Model`, `Effort` and `Persona file` lines.
 7. In `T-B` run `Get-ChildItem -Recurse <data>\Agents | Where-Object Name -like 'Mira*'`.
 8. If you have sqlite3, run `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"` ([`O-DB`](common.md#o-db)).
@@ -1160,11 +1160,11 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 
 **Steps**
 
-1. Press F5, open the agent's card (`P-OPEN-AGENT`) and note which Team's Members tab holds it and whether that Team has any other member.
+1. Press F5, open the agent's card (`P-OPEN-AGENT`) and note which Team's Agents tab holds it and whether that Team has any other member.
 2. In the card, click the red Remove icon button (tooltip `Remove`). Read the button row that appears.
 3. Click **Cancel**. Confirm the row returns to its previous buttons and nothing was deleted.
 4. Click Remove again, then click **Remove** in the `Remove {name}?` prompt.
-5. Read the Members tab: is the card closed, is the roster card gone, and does Ctrl K still find the Name?
+5. Read the Agents tab: is the card closed, is the roster card gone, and does Ctrl K still find the Name?
 6. In `T-B` run `Get-ChildItem -Recurse <data>\Agents\<that name>` and note what is left.
 7. If you have sqlite3: `sqlite3 <data>\team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"` and also check the `rooms` table.
 8. Look at the left sidebar: is the removed agent's Room (if it had one) still listed, with its messages intact?
@@ -1175,7 +1175,7 @@ After Save, the card on screen looks empty (no Title, no Persona text, no `Perso
 
 - Remove does not delete on the first click: the row swaps to a `Remove {name}?` prompt with `Remove` and `Cancel`.
 - `Cancel` restores the previous button row and deletes nothing.
-- The prompt's `Remove` closes the card and removes the roster card from the Members tab.
+- The prompt's `Remove` closes the card and removes the roster card from the Agents tab.
 - `<that name>.md` is gone from disk. The Agent's folder and its `work\` notes remain: Remove deletes the definition file only (PersonaStore.cs:472-480).
 - `persona_models` and `persona_efforts` hold NO row for that name.
 - Any Room and transcript the agent had are STILL in the sidebar and still readable — removal is deliberately non-cascading for chats. (Its Avatar entry and image are deleted with it: PersonaRenameCascade removal handler.)
@@ -1234,7 +1234,7 @@ Nothing opens AND the card shows an error line beginning `Could not open '...'` 
 
 ### AGENTSLIBRARY-34 — Neither a page load, a filter change, nor a View card ever spawns an adapter
 
-(Since 2026-11-18 "page load" is a Members tab load and "filter change" is switching between Teams.)
+(Since 2026-11-18 "page load" is a Agents tab load and "filter change" is switching between Teams.)
 
 **Free** · about 6 min
 
@@ -1249,9 +1249,9 @@ Nothing opens AND the card shows an error line beginning `Could not open '...'` 
 **Steps**
 
 1. In `T-B` run `O-ADAPTERS-LIST` and note every PID (probably none).
-2. In the browser, open the Members tab of the Team `Business`.
+2. In the browser, open the Agents tab of the Team `Business`.
 3. Run `O-ADAPTERS-LIST` again.
-4. Open the Members tab of each other Team in the sidebar in turn.
+4. Open the Agents tab of each other Team in the sidebar in turn.
 5. Run `O-ADAPTERS-LIST` again.
 6. Open an Agent's card in View mode (`P-OPEN-AGENT`). Read it, then run `O-ADAPTERS-LIST` again.
 7. Now click **Edit** on that card. Wait for the Model dropdown's hint to settle, then run `O-ADAPTERS-LIST` again.
@@ -1291,7 +1291,7 @@ No adapter is installed, so no probe could ever spawn -> this test cannot distin
 1. In `T-B` run `O-ADAPTERS` and note the count.
 2. Press F5, open Nova's card (`P-OPEN-AGENT`) and read the hint under the action row.
 3. Click **Restart**.
-4. Read the card's status line and any red paragraph under it. Then close the card and hover the badge on Nova's avatar on the `Business` Members tab.
+4. Read the card's status line and any red paragraph under it. Then close the card and hover the badge on Nova's avatar on the `Business` Agents tab.
 5. Run `O-ADAPTERS` again and `Get-ChildItem <data>\Agents\Nova`.
 6. Do NOT send the agent a message.
 
@@ -1362,7 +1362,7 @@ The restart completes too fast to see the `Restarting…` label -> judge on the 
 1. Stop the app with Ctrl+C in the `dotnet run` terminal.
 2. Rename the folder: `Rename-Item tools\acp\node_modules node_modules.off`
 3. Restart the app with ACP ON: `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`
-4. Open the Members tab of the Team `Business` and press F5.
+4. Open the Agents tab of the Team `Business` and press F5.
 5. Read the avatar badge's tooltip on every roster card, then on the `Household` tab too.
 6. HOVER the mouse over the badge on the Nova tile's avatar for three seconds and read the tooltip.
 7. Click the Nova tile and read the red line directly under its status line.
@@ -1418,7 +1418,7 @@ You are Scout. Answer in one short sentence.
 4. Start the app with ACP ON: `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`
 5. In the console, confirm the warning `Persona 'Scout' failed to start.` appears.
 6. In a third PowerShell window at the repo root, run `pwsh tools/echo-bot.ps1 -Name Scout` and confirm it prints `Sent hello. Listening for messages (Ctrl+C to exit)...`.
-7. Open the Members tab of a Team that holds `Scout` (add it with `P-ADD-TO-TEAM`, since this fixture has no `teams:` line) and press F5.
+7. Open the Agents tab of a Team that holds `Scout` (add it with `P-ADD-TO-TEAM`, since this fixture has no `teams:` line) and press F5.
 8. Read the `Scout` roster card's avatar badge (glyph and tooltip).
 9. Hover the badge on its avatar and read the tooltip.
 10. If you have sqlite3, run `sqlite3 <data>\team.db "select id,name,kind from users;"` and confirm the `Scout` agent row is there.
@@ -1462,7 +1462,7 @@ Only one of the two facts holds -> the setup is not in the state this test needs
 
 **Steps**
 
-1. Start the app and confirm the agent under test reads `Online` (avatar badge on its Members-tab roster card).
+1. Start the app and confirm the agent under test reads `Online` (avatar badge on its Agents-tab roster card).
 2. Open its Room from the card's **Message** link (or via **New room** in the sidebar) and send `Say hello in five words.`
 3. While that Turn is running, cut the network (disable the adapter) so the Turn fails. Restore the network. Read the roster card's badge and open the card (`P-OPEN-AGENT`) now (one failed Turn).
 4. Repeat the previous two steps twice more, so THREE Turns in a row have failed. Read the tile's avatar badge (glyph and tooltip), and open its card and read the line under the status and the action row.

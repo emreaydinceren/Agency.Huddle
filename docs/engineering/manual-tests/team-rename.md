@@ -12,7 +12,7 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat)
 
 1. Wait until **Ada** and **Bo** are **Online** (the status badge on each avatar in their Room). Hire two more Agents with `P-NEW-PERSONA`, named `Kim` and `Ola`, and wait for them to be **Online**; use **Remove from team** on both so neither is in a Team yet. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`.
 2. Create the Teams **Marketing** and **Research** by making the folders `<data>\Teams\Marketing` and `<data>\Teams\Research`, and reload the page.
-3. Add **Ada**, **Bo** and **Kim** to Marketing: use `P-ADD-TO-TEAM` on Marketing's **Members** tab for each. Wait until each is **Online** again. Ola stays in no Team. Marketing's Team Room appears within a few seconds and holds you, Ada, Bo and Kim, so it needs a Mention to wake anyone.
+3. Add **Ada**, **Bo** and **Kim** to Marketing: use `P-ADD-TO-TEAM` on Marketing's **Agents** tab for each. Wait until each is **Online** again. Ola stays in no Team. Marketing's Team Room appears within a few seconds and holds you, Ada, Bo and Kim, so it needs a Mention to wake anyone.
 4. Open Ola's one-to-one under **Rooms** and send `hello`, so Ola has an open session. Open the Marketing Team Room and send `@Ada hello`, so Ada has a session there.
 5. Create two Tasks in Marketing with **New task** on the Tasks page. Note their ids (`MARK-1`, `MARK-2`) and the Change log events in each Task's **Timeline**.
 6. In the Marketing Team Room, type `@`, pick the Team **Marketing**, and send. Attach any small text file with the paperclip and send. Note the upload path in the Message: it holds `Teams\Marketing\raw\`.

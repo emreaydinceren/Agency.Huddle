@@ -139,7 +139,7 @@ the per-area tables below.
 | [Avatar library: choosing a face from the library](avatar-library.md) | [below](#avatar-library) |
 | [File Changes, Watched Folders and Memory](file-changes.md) | [below](#file-changes) |
 | [Room Sessions: per-Room context, resume and Stop](room-sessions.md) | [below](#room-sessions) |
-| [Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests](team-chats.md) | [below](#team-chats) |
+| [Team chats: the Team Room, Team chats in the sidebar, the Agents-tab Message, archiving and Task wakes and digests](team-chats.md) | [below](#team-chats) |
 | [Team rename: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals, recovery and the paid checks](team-rename.md) | [below](#team-rename) |
 | [Chat uploads: the paperclip, paste and drop, the chips, the Message's path lines, the Uploads root and Room delete](uploads.md) | [below](#uploads) |
 | [Teams: Sidebar, Members, Files, Tasks and Shared Memory](team-pages.md) | [below](#team-pages) |
@@ -1024,7 +1024,7 @@ Room Sessions: per-Room context, resume and Stop — [area file](room-sessions.m
 
 ## team-chats
 
-Team chats: the Team Room, Team chats in the sidebar, the Members-tab Message, archiving and Task wakes and digests — [area file](team-chats.md)
+Team chats: the Team Room, Team chats in the sidebar, the Agents-tab Message, archiving and Task wakes and digests — [area file](team-chats.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |

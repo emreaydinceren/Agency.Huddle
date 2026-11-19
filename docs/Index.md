@@ -322,9 +322,9 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [startup-config.md](engineering/manual-tests/startup-config.md) | Startup configuration, first-run state, environment variables |
 | [streaming-turn.md](engineering/manual-tests/streaming-turn.md) | Turn streaming, Drafts, Stop, failure alerts, reload |
 | [tasks.md](engineering/manual-tests/tasks.md) | Tasks, Board drag, keyboard navigation, frontmatter, agent edits |
-| [team-chats.md](engineering/manual-tests/team-chats.md) | Team chats: the Team Room, scoped New room, Members-tab Message, archiving, Task wakes and digests |
+| [team-chats.md](engineering/manual-tests/team-chats.md) | Team chats: the Team Room, scoped New room, Agents-tab Message, archiving, Task wakes and digests |
 | [team-rename.md](engineering/manual-tests/team-rename.md) | Renaming a Team or a Project: the dialogs, the confirmation, the folder and Rooms, Tasks and Requests, old links, the Agent notice, case-only, refusals and a live paid check |
-| [team-pages.md](engineering/manual-tests/team-pages.md) | Teams sidebar, Members tab, Files tab, shared Memory |
+| [team-pages.md](engineering/manual-tests/team-pages.md) | Teams sidebar, Agents tab, Files tab, shared Memory |
 | [team-playbooks.md](engineering/manual-tests/team-playbooks.md) | Team Playbooks: the Playbooks tab, Customize, Default updated, Reset, delivery and the Turn notice, an Agent in two Teams, the file guard, Project missions, and a live paid check with Haiku |
 | [agent-profile-card.md](engineering/manual-tests/agent-profile-card.md) | Agent card: create, edit, delete |
 | [agents-library.md](engineering/manual-tests/agents-library.md) | Agent files: loading, rejected files, watcher, status badge and the card (the Agents page cases are retired) |

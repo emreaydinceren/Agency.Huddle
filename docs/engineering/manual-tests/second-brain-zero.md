@@ -443,7 +443,7 @@ There is no `_tasks` folder yet: it appears with the Team's first Task, which co
 This is the core test of the Second Brain. Cole and Cass were never mentioned during the ingest, and each now starts a new
 session in a new Room.
 
-1. On the Team's **Members** tab, click **Message** on **Cole**, and send:
+1. On the Team's **Agents** tab, click **Message** on **Cole**, and send:
 
    ```text
    As of 3 November 2026, what is our total unpaid, and how much of that is overdue? Exclude anything void. Name the overdue invoices, and say which file you used.

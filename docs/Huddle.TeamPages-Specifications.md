@@ -120,7 +120,7 @@ reached in one Room with one Agent part of every member's starting context.
 | T3 | The Human types `no` in the Members search box | Only rows whose Name, Alias or Title contains `no` (ignoring case) stay: Nova |
 | T4 | **The Human opens the Files tab and presses *+ New note*** | **The Library's New note dialog opens, targeting the folder selected in the tree, or the Team folder when nothing inside it is selected. The note is created and opened** |
 | T5 | The Human types `brief` in the Files search box | The tree is replaced by a flat list of files and folders whose names contain `brief`, each with its folder path. A click opens the file. Clearing the box brings the tree back as it was |
-| T6 | **The Human clicks *Marketing Project*** | **`/teams/Business/projects/Marketing%20Project` opens on Files, scoped to `Teams/Business/Marketing Project/`. There is no Members tab** |
+| T6 | **The Human clicks *Marketing Project*** | **`/teams/Business/projects/Marketing%20Project` opens on Files, scoped to `Teams/Business/Marketing Project/`. There is no Agents tab** |
 | T7 | The Human opens the Tasks tab on Business | The Board shows every Task in Business, including those in Projects, in swimlanes by Project. *+ New task* defaults the Team to Business |
 | T8 | The Human opens the Tasks tab on Marketing Project and presses *+ New task* | The Board shows only that Project's Tasks. The new Task defaults to Team Business, Project Marketing Project |
 | T9 | The Human presses *+* on the Teams group and enters `Research` | `Teams/Research/` is created. The Team is listed, and its page opens on Members with *No members yet* and *+ Add member* |
@@ -141,7 +141,7 @@ reached in one Room with one Agent part of every member's starting context.
 | Renaming, moving or deleting a Team or Project | A Team rename relabels every member (each restarts) and refiles every Task (each wakes its assignee, ADR-0026). It needs its own design. The Library already refuses these operations on Team and Project folders |
 | Members of a Project | A Project is worked by its Team. Per-Project membership would be a second membership source beside `teams` |
 | Full-text search | The Library spec defers it (§12 there). The search boxes filter by name |
-| Creating an Agent from *+ Add member* | The Agents page owned creation. *+ Add member* picks an existing Agent. (Superseded 2026-11-18: the Agents page is gone and the Members tab's *Add a member* creates Agents, see §6.7.) |
+| Creating an Agent from *+ Add member* | The Agents page owned creation. *+ Add member* picks an existing Agent. (Superseded 2026-11-18: the Agents page is gone and the Agents tab's *Add an Agent* creates Agents, see §6.7.) |
 | Team settings (colour, icon, description) | No place to store them that isn't a second source of truth. V2 could use a `Teams/<Team>/_team.md` |
 | Permissions | A Team is still never a permission ([language.md](engineering/language.md), *Team*). Every Agent can still read every Team folder with its own tools |
 | A Team-level Budget or token Budget | Budgets stay per Room and per Persona |
@@ -185,7 +185,7 @@ reached in one Room with one Agent part of every member's starting context.
                 │                              ▼                                                          │
                 │   TeamPage.razor  /teams/{Team}/{Tab?}  ·  /teams/{Team}/projects/{Project}/{Tab?}     │
                 │   ┌──────────────┬───────────────────────────┬──────────────────────────────┐           │
-                │   │ Members tab  │ Files tab                 │ Tasks tab                    │           │
+                │   │ Agents tab  │ Files tab                 │ Tasks tab                    │           │
                 │   │ TeamMembers  │ LibraryExplorer           │ TaskBoard                    │           │
                 │   │ (new)        │  + Filter, NewNoteAsync   │  (unchanged, ad-hoc          │           │
                 │   │ AddMember    │  (additive changes)       │   TaskView)                  │           │
@@ -252,7 +252,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Components/Teams/TeamsNav.razor` | The sidebar group | §6.5 |
 | `Components/Pages/TeamPage.razor` | Both routes, the tab strip, and each tab's search text (the shell draws the breadcrumbs: Tabs spec) | §6.6 |
 | `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
-| `Components/Teams/TeamRoster.razor` | Members tab (replaced `TeamMembers`, `AddMemberDialog` and `AgentChoice` on 2026-10-14) | §6.7 |
+| `Components/Teams/TeamRoster.razor` | Agents tab (replaced `TeamMembers`, `AddMemberDialog` and `AgentChoice` on 2026-10-14) | §6.7 |
 | `Components/Teams/TeamDetails.razor` | Details tab, last on a Team page (added 2026-10-14) | §2 |
 | `Components/Teams/TeamFilesTab.razor` | Files tab: the toolbar and a scoped `LibraryExplorer` | §6.8 |
 | `Components/Teams/TeamTasksTab.razor` | Tasks tab: the toolbar and a `TaskBoard` over an in-memory `TaskView` | §6.9 |
@@ -390,7 +390,7 @@ nothing in Huddle deletes a Team folder.
 - The built-in Chief of Staff can be a member like any other Persona (TP-0 answer). The built-in
   marker is the frontmatter key `_builtin`, and `PersonaStore.Update` never reads it, so an edit is
   accepted. The picker lists the Chief of Staff like any other Agent: there is no disabled row.
-- `ITeamMembership` (`Add`, `Remove`) is the `internal` interface the Members tab and the dialog
+- `ITeamMembership` (`Add`, `Remove`) is the `internal` interface the Agents tab and the dialog
   depend on; `TeamMembership` implements it over `PersonaStore` and `ITeamCatalog`.
 - `Add` returns `Rejected` without writing when the Team's display spelling cannot survive a
   round trip through the `teams` line (a `,` or `;`, a control character, or leading or trailing
@@ -613,7 +613,7 @@ depends on the Room scope that §3 defers.
 | Row | Markup | Behaviour |
 | --- | --- | --- |
 | Team | `div.hover-reveal-row` holding a chevron `MudIconButton` (expand/collapse, `aria-expanded`), a `MudNavLink Href="/teams/{team}" Match="NavLinkMatch.Prefix" Class="hover-reveal-link"`, and a `MudMenu Class="hover-reveal-menu"` with **New project** | Clicking the name navigates. The chevron toggles the Team's scope list and sections. Right-click opens the same menu (`RoomList.razor` pattern). A Team row trails its member count (`span.sidebar-row-meta`, tooltip *3 members* or *No members*) in place of the old muted *No members* text |
-| Scope list | Under an open Team, a `div.nav-scope-list` of selectable rows: first the Team as a bordered header card (its 40px avatar, its name in bold over "{Team type} · N members"), then one row per Project (a link to `/teams/{team}/projects/{project}` led by the Project's 24px sharp square `ProjectAvatar`, its label or initials, in place of the Project icon since ADR-0083) in catalog order, ending in *Show all (N)* when long. Each Project row trails the number of its open Tasks (`span.sidebar-row-meta`, *—* when none); the Team card has no count | Under a Team shortcut the card ends in an *Unfold More* button that unfolds every Team, in catalog order with the one shown marked in its own place, inside the same card, in place (not a popover), each drawn as the Team row is; picking one folds the list, shows that Team's view and opens its Team page in the preview Tab. The list ends in *Build a team*. The Activity bar's Teams view is this single-Team view too, for the Team of the open page (a Team's Room or `/teams/{team}/...` page; a page with no Team keeps the Team shown; not remembered across reloads), else the last Team used (else the first), with the list unfolded by default and kept unfolded after a pick (archived Teams are listed on the Archived page since 2026-11-12, not here). One row is selected at a time (`aria-current`), the Team row by default. A click selects the row and opens its page, `/teams/{team}` or `/teams/{team}/projects/{project}`. A Project row has no chevron and no menu. The selection is kept per circuit |
+| Scope list | Under an open Team, a `div.nav-scope-list` of selectable rows: first the Team as a bordered header card (its 40px avatar, its name in bold over "{Team type} · N Agents"), then one row per Project (a link to `/teams/{team}/projects/{project}` led by the Project's 24px sharp square `ProjectAvatar`, its label or initials, in place of the Project icon since ADR-0083) in catalog order, ending in *Show all (N)* when long. Each Project row trails the number of its open Tasks (`span.sidebar-row-meta`, *—* when none); the Team card has no count | Under a Team shortcut the card ends in an *Unfold More* button that unfolds every Team, in catalog order with the one shown marked in its own place, inside the same card, in place (not a popover), each drawn as the Team row is; picking one folds the list, shows that Team's view and opens its Team page in the preview Tab. The list ends in *Build a team*. The Activity bar's Teams view is this single-Team view too, for the Team of the open page (a Team's Room or `/teams/{team}/...` page; a page with no Team keeps the Team shown; not remembered across reloads), else the last Team used (else the first), with the list unfolded by default and kept unfolded after a pick (archived Teams are listed on the Archived page since 2026-11-12, not here). One row is selected at a time (`aria-current`), the Team row by default. A click selects the row and opens its page, `/teams/{team}` or `/teams/{team}/projects/{project}`. A Project row has no chevron and no menu. The selection is kept per circuit |
 | Selection | Follows the address, set on every navigation | A Team page, Team Task View or Team Files address selects the Team row. Any `/teams/{team}/projects/{project}/...` address selects that Project. A Room's address selects the Room's Project, or the Team row when it has none or its Project is gone. Any other address keeps the last selection. In the Teams view the Team shown also follows the address (see Scope list), including a pressed shortcut's view and tile |
 | Sections | Under a hairline below the scope list, three sections of the selected scope, each under an uppercase header: **ROOMS**, **TASKS**, **LIBRARY** | **ROOMS** has a "+" button that opens `NewChat` for the Team, or the Team and the Project (ADR-0082), and lists the scope's Rooms: for the Team, the Team Room, then Rooms with no Project or whose Project is archived or gone. **TASKS** lists each Task View, linking to `/teams/{team}/tasks/{View}` (the Team's Tasks with no Project) or `/teams/{team}/projects/{project}/tasks/{View}`; its Tab is titled *{View} · {Team}* or *{View} · {Team} / {Project}*. **LIBRARY** is one link to `/teams/{team}/files` or `/teams/{team}/projects/{project}/files`, drawn when the Library is enabled. TASKS is not drawn when Tasks is off |
 | Action | `NavTabLink Href="/teams/build" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link"` **Build a team** | Opens the Build a team page (the sidebar's *New team* and *New team from a type* links were removed) |
@@ -747,9 +747,9 @@ stray URL.
 
 ### 6.7 Members tab
 
-> **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
+> **Superseded (2026-10-14).** The Agents tab is now `TeamRoster`: Build a team's Hire section
 > for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). Since 2026-11-18 the tab holds
-> no roles: its roster opens with an *Add a member* tile that, on hover, focus or a tap, turns into three choices.
+> no roles: its roster opens with an *Add an Agent* tile that, on hover, focus or a tap, turns into three choices.
 > *From roles catalog* shows the role cards (`RolePicker`, with an explaining line and the team type filter) in
 > `RolePickerDialog`, and Add there drafts the role. *From other teams* (`AgentPickerDialog`) lists the Agents not on
 > the Team by Team, *No team* last; the one picked joins on save (the Team is added to its `teams:` line) and keeps
@@ -760,7 +760,7 @@ stray URL.
 > avatar carrying the presence badge, no status dot beside the name; the name at 14px/600, the role at 13px, *Member*,
 > *New* or *1 skill* as meta text; Edit, Message and a Remove menu with *Remove from Team* and *Delete Agent* on
 > one row) beside new drafts, a Manager select, and one *Save changes*. The "Roles" and "Roster" headings are
-> 14px/600 with a 12px count (*Roster · 4 members*, *Roles · N roles available*). The save bar
+> 14px/600 with a 12px count (*Roster · 4 Agents*, *Roles · N roles available*). The save bar
 > (`.build-team-savebar`) renders only while there are unsaved changes and is sticky to the bottom of the pane.
 > There is no search box, no *+ Add member* and no `AddMemberDialog`: an Agent joins a Team by
 > being hired into it, or through its `teams:` line. `ITeamMembership.Remove` still does *Remove
@@ -1184,7 +1184,7 @@ rule (§6.4).
 | --- | --- | --- |
 | Catalog rebuild | < 1 ms for 20 Teams and 8 Personas | O(labels + folders + Σ persona teams) |
 | Sidebar render | One row per Team plus its expanded Projects | No IO |
-| Members tab | In-memory, at most `Acp:MaxAgents` (8) rows | — |
+| Agents tab | In-memory, at most `Acp:MaxAgents` (8) rows | — |
 | Files search | Walks at most `Library:MaxIndexedFiles` (5,000) entries, typically < 100 ms on SSD | Capped at 200 hits, cancellable |
 | Tasks tab | `TaskQuery.Filter` over all Tasks, the same cost as the Tasks page | — |
 | Team Memory at session start | One directory enumeration and one first-line read per memory file, at most 50 listed | Capped by `Team:Teams:MaxMemoryEntries`. Unlisted files are counted, not read |
@@ -1279,7 +1279,7 @@ a decision in Team Memory.
 | D-11 | **Team and Project creation from the sidebar; no rename or delete** | Full CRUD; creation only from the Library or Tasks | Creation is cheap and safe. Rename and delete refile Tasks, wake assignees and relabel Personas, and deserve their own design (§3) |
 | D-12 | **A new `TeamCatalog`, leaving Tasks' private union for now** | Refactor `TaskService.KnownTeamNames` onto the catalog in this delivery | Tasks is delivered and green. Moving it is a pure refactor with its own risk, better done when a second consumer is proven (V2) |
 | D-13 | **`LibraryExplorer` gains `Filter` and `NewNoteAsync`, not a toolbar** | Put the search and New note inside the explorer's header | The design places the action and the search on the page row, shared with the other tabs. The explorer stays reusable, and its header stays as the Library pane has it |
-| D-14 | **A Project has no Members tab** | Show the Team's members read-only on the Project | Chosen by the Human. A Project is worked by its Team. A read-only duplicate adds a place to look and nothing to do |
+| D-14 | **A Project has no Agents tab** | Show the Team's members read-only on the Project | Chosen by the Human. A Project is worked by its Team. A read-only duplicate adds a place to look and nothing to do |
 
 **Why this matters overall.** Every decision above keeps a single source for each fact, and lets
 the pages be views over sources that already have writers, watchers and tests. The only new

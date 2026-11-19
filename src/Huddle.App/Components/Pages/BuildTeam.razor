@@ -50,7 +50,7 @@
     The Team page embeds this component twice for an existing Team (Team set). Its Details tab (TeamDetails) shows
     the type and details sections and a Save row: the type and name are fixed, and Save changes writes "What it's
     for" and the Library folder. Its Members tab (TeamRoster, MembersOnly) shows only the Hire section and a Save
-    row. The roles are not on the tab: the roster's "Add a member" tile opens them in RolePickerDialog, and the role
+    row. The roles are not on the tab: the roster's "Add an Agent" tile opens them in RolePickerDialog, and the role
     chosen there becomes a new draft. The members are on the roster beside any new drafts, a member's Edit opens their card (which saves at
     once), and Remove marks a member to leave the Team or to be deleted. Save changes hires the new drafts,
     replaces the manager, then takes members off or deletes them, in that order, so the manager is replaced before
@@ -165,7 +165,7 @@
                 </Notice>
             }
             @* Build a team leads with the roles, since its roster is empty until one is added. The Members tab leads with who is
-               on the Team; its roles open in RolePickerDialog from the roster's "Add a member" tile. *@
+               on the Team; its roles open in RolePickerDialog from the roster's "Add an Agent" tile. *@
             @if (!this.MembersOnly)
             {
                 <RolePicker SuggestedTypeId="@this.selected.Id" TakenRoleIds="@this.TakenRoleIds" OnAdd="this.AddDraftAsync" />
@@ -187,12 +187,12 @@
                                or tapping it turns it into its three sources (CSS shows them on :hover and :focus-within; the open class carries a
                                tap or a press of Enter, and a focus leaving the tile drops it). *@
                             <div role="listitem" class="@(this.addChoicesOpen ? "roster-add-item roster-add-open" : "roster-add-item")" @onfocusout="this.CloseAddChoices">
-                                <button type="button" class="role-add-card roster-add-card" aria-label="Add a member"
+                                <button type="button" class="role-add-card roster-add-card" aria-label="Add an Agent"
                                         aria-expanded="@(this.addChoicesOpen ? "true" : "false")" @onclick="this.OpenAddChoices">
                                     <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Large" />
-                                    <span class="role-add-label">Add a member</span>
+                                    <span class="role-add-label">Add an Agent</span>
                                 </button>
-                                <div class="roster-add-choices" role="group" aria-label="Add a member from">
+                                <div class="roster-add-choices" role="group" aria-label="Add an Agent from">
                                     <ActionButton Role="ButtonRole.Secondary" FullWidth="true" OnClick="this.AddMemberAsync" Class="roster-add-catalog">From roles catalog</ActionButton>
                                     <ActionButton Role="ButtonRole.Secondary" FullWidth="true" OnClick="this.AddFromTeamsAsync" Class="roster-add-teams">From other teams</ActionButton>
                                     <ActionButton Role="ButtonRole.Secondary" FullWidth="true" OnClick="this.AddFromScratchAsync" Class="roster-add-scratch">From scratch</ActionButton>
@@ -375,7 +375,7 @@
     /// <summary>The Agents from other Teams (or none) marked to join on save: this Team is added to their teams: line, and they stay where they are.</summary>
     private readonly HashSet<string> joining = new(StringComparer.Ordinal);
 
-    /// <summary>Whether the "Add a member" tile shows its three sources after a tap or a press of Enter; hover and focus show them without it.</summary>
+    /// <summary>Whether the "Add an Agent" tile shows its three sources after a tap or a press of Enter; hover and focus show them without it.</summary>
     private bool addChoicesOpen;
 
     /// <summary>Whether the member or draft is marked to be deleted or to leave the Team.</summary>
@@ -439,7 +439,7 @@
 
             int members = this.drafts.Count(draft => draft.Existing && !this.joining.Contains(draft.Key));
             int added = this.drafts.Count - members;
-            string text = Plural.Of(members, "member", "members");
+            string text = Plural.Of(members, "Agent", "Agents");
             if (added > 0)
             {
                 text += $" · {added} new";
@@ -948,7 +948,7 @@
     /// <summary>The ids of the roles the draft roster has an Agent added from, so their cards show a check.</summary>
     private IReadOnlyCollection<string> TakenRoleIds => [.. this.drafts.Select(static draft => draft.RoleId).Distinct(StringComparer.Ordinal)];
 
-    /// <summary>Shows the "Add a member" tile's three sources after a tap or a press of Enter.</summary>
+    /// <summary>Shows the "Add an Agent" tile's three sources after a tap or a press of Enter.</summary>
     private void OpenAddChoices() => this.addChoicesOpen = true;
 
     /// <summary>Drops the tap-opened state once focus leaves a tile control; CSS keeps the sources showing while focus is still inside it.</summary>
@@ -1010,7 +1010,7 @@
             { x => x.SuggestedTypeId, this.selected?.Id },
             { x => x.TakenRoleIds, this.TakenRoleIds },
         };
-        IDialogReference reference = await this.Dialogs.ShowAsync<RolePickerDialog>("Add a member", parameters, RolePickerDialog.Options);
+        IDialogReference reference = await this.Dialogs.ShowAsync<RolePickerDialog>("Add an Agent", parameters, RolePickerDialog.Options);
         DialogResult? result = await reference.Result;
         if (result is { Canceled: false, Data: string roleId })
         {

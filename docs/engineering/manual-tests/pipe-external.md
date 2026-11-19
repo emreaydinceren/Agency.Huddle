@@ -357,10 +357,10 @@ If `mybot` was never registered (no such sidebar entry), this test has no baseli
 
 **Inconclusive if**
 
-If a banner DOES appear and the name it lists is a Persona (an Agent with a Persona file, one that is in a Team's **Members** tab or the **From other teams** picker), this test is INCONCLUSIVE for this area — that banner belongs to Persona health, not to the pipe. Confirm `mybot` is in no Team's **Members** tab and not in the **From other teams** picker before judging.
+If a banner DOES appear and the name it lists is a Persona (an Agent with a Persona file, one that is in a Team's **Agents** tab or the **From other teams** picker), this test is INCONCLUSIVE for this area — that banner belongs to Persona health, not to the pipe. Confirm `mybot` is in no Team's **Agents** tab and not in the **From other teams** picker before judging.
 
 > [!NOTE]
-> A pipe-only Agent NEVER appears on a Team's **Members** tab or in the **From other teams** picker — those list Persona files, and `mybot` has none. "My bot is missing from the Members tab" is not a bug.
+> A pipe-only Agent NEVER appears on a Team's **Agents** tab or in the **From other teams** picker — those list Persona files, and `mybot` has none. "My bot is missing from the Agents tab" is not a bug.
 
 ### PIPEEXTERNAL-12 — Where a disconnect IS visible: the agent-dot in New room and Invite agent
 
@@ -402,7 +402,7 @@ If a banner DOES appear and the name it lists is a Persona (an Agent with a Pers
 
 **Inconclusive if**
 
-In step 9, a dot that does NOT repaint while the panel sits open is EXPECTED and is not a fail — these two panels do not subscribe to presence changes, and the dot is correct every time the panel is opened or the page re-renders. Only judge the dot after closing and reopening the panel. Do not use a Team's **Members** tab as an oracle here: pipe-only agents never appear on it at all.
+In step 9, a dot that does NOT repaint while the panel sits open is EXPECTED and is not a fail — these two panels do not subscribe to presence changes, and the dot is correct every time the panel is opened or the page re-renders. Only judge the dot after closing and reopening the panel. Do not use a Team's **Agents** tab as an oracle here: pipe-only agents never appear on it at all.
 
 ### PIPEEXTERNAL-13 — An offline Agent receives nothing, and nothing is replayed on reconnect
 

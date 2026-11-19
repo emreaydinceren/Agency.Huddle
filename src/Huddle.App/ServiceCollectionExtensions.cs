@@ -918,7 +918,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<Tabs.RightSidebarService>();
         services.AddSingleton<Sidebar.SidebarPanelCatalog>();
         // The Right sidebar's panels (docs/Huddle.RightSidebar-Specifications.md): one registration each, no page changes.
-        services.AddSidebarPanel(new Sidebar.SidebarPanel("members", "Members", MudBlazor.Icons.Material.Filled.Group, 10,
+        services.AddSidebarPanel(new Sidebar.SidebarPanel("members", "Members", MudBlazor.Icons.Material.Filled.Person, 10,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.MembersPanel)));
         services.AddSidebarPanel(new Sidebar.SidebarPanel("room-tasks", "Tasks in this Room", MudBlazor.Icons.Material.Filled.TaskAlt, 20,
             static subject => subject is Sidebar.RoomSubject, typeof(Components.Sidebar.RoomTasksPanel), static options => options.Tasks.Enabled));

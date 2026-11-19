@@ -96,9 +96,9 @@ public sealed class TeamRenameUiTests
         IReadOnlyList<IElement> items = cut.FindAll(".mud-dialog-content li");
         Assert.Equal(5, items.Count);
         Assert.Equal(
-            "1 member restarts and starts a new conversation. Each one keeps a summary of recent Messages but loses its working context. Nova is in the middle of a Turn and loses that Turn's work.",
+            "1 Agent restarts and starts a new conversation. Each one keeps a summary of recent Messages but loses its working context. Nova is in the middle of a Turn and loses that Turn's work.",
             items[0].TextContent.Trim());
-        Assert.Equal("1 member restarts and starts a new conversation.", items[0].QuerySelector("strong, b")?.TextContent);
+        Assert.Equal("1 Agent restarts and starts a new conversation.", items[0].QuerySelector("strong, b")?.TextContent);
         Assert.Equal(["Cancel", "Rename"], [.. cut.FindAll(".mud-dialog-actions button").Select(static b => b.TextContent.Trim())]);
         Assert.Contains("mud-button-filled-error", ArchiveTeamUiTests.DialogButton(cut, "Rename").ClassList);
         Assert.Empty(renamer.TeamsRenamed);

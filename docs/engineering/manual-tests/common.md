@@ -208,11 +208,11 @@ Budget counters need no reset: they live in memory and a restart clears them.
 Always through the UI, never by writing the file. An Agent is created inside a Team:
 
 1. Open the Team the test names (its sidebar row, or its tile in the Activity bar) and its
-   **Members** tab. If the test names no Team, use `Test`; if `Test` does not exist yet,
+   **Agents** tab. If the test names no Team, use `Test`; if `Test` does not exist yet,
    create the empty folder `<data>\Teams\Test\` ([`O-FILE`](#o-file)) and reload the page;
    `Test` is in the sidebar's Teams list as a Team with no members. (**Build a team** cannot
    make an empty Team: it hires at least one Agent.)
-2. Point at the **Add a member** tile and select **From scratch**. The **New agent** card opens.
+2. Point at the **Add an Agent** tile and select **From scratch**. The **New agent** card opens.
 3. Fill **Name**, **Title**, one sentence in **Persona text**, choose **Model** and
    **Effort**, then **Save draft**. The Agent is on the roster as *New*. The card has no
    **Alias** field: the Agent is hired with its Name in lower case as its Alias.
@@ -229,7 +229,7 @@ default — which may be far more expensive than Sonnet. Leaving **Model** on `A
 same thing and is not equivalent to choosing Sonnet.
 
 A file that fails to load appears under **Files that didn't load**, with its reason beside
-it, at the top of every Team's **Members** tab. There is no Agents page (removed
+it, at the top of every Team's **Agents** tab. There is no Agents page (removed
 2026-11-18); `/agents` shows "not found".
 
 ### P-OPEN-AGENT
@@ -239,14 +239,14 @@ removed Agents page opened from a tile. Any of these works; use the first unless
 says otherwise:
 
 - Press **Ctrl K**, type the Agent's Name, and select the Agent in the results.
-- In a Team's **Members** tab, select **Edit** on its roster card.
+- In a Team's **Agents** tab, select **Edit** on its roster card.
 - In a Room, select its avatar on one of its Messages or in **Members**, then **Edit** in the
   profile popover.
 
 ### P-ADD-TO-TEAM
 
 Puts an Agent that already exists into a Team; it keeps its other Teams. Open the Team's
-**Members** tab, point at **Add a member**, select **From other teams**, select the Agent (an
+**Agents** tab, point at **Add an Agent**, select **From other teams**, select the Agent (an
 Agent in no Team is under **No team**), then **Save changes**.
 
 ### P-ECHO-BOT
@@ -432,7 +432,7 @@ finds where `Team:DataDir` actually resolved.
 - **"Invite agent" and "Add agent" are two different controls.** The invite
   toggle in a Room header (an icon button; its tooltip and `aria-label` read
   "Invite agent") and the submit button of a **New agent** card that is not a draft
-  (**Add agent**; a card opened from **Add a member** → **From scratch** reads **Save draft**). Find the Room-header one by container (`.invite-agent`
+  (**Add agent**; a card opened from **Add an Agent** → **From scratch** reads **Save draft**). Find the Room-header one by container (`.invite-agent`
   wraps it) or `aria-label`, never by text alone.
 - **Four controls are icon buttons with no visible text.** **Remove** on the
   Agent card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
@@ -441,7 +441,7 @@ finds where `Team:DataDir` actually resolved.
   an `aria-label` spelling the name this script uses, so **find them by
   `aria-label`, never by button text** — in DevTools,
   `document.querySelector('[aria-label="Stop"]')`. Steps written before this change
-  still name them in words; that is the same control. The **Add a member** tile and its
+  still name them in words; that is the same control. The **Add an Agent** tile and its
   three choices, and the **Save draft** and **Add agent** submit buttons, show their text.
 - **A Room can be renamed, and a renamed Room stops auto-renaming.** The Edit icon
   beside a Room's title puts it into edit mode; Enter or blur commits, Escape

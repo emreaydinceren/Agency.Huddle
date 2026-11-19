@@ -19,7 +19,7 @@ standing conventions. This area adds:
 2. Know the launch profile this area keeps probing. `dotnet run --project src/Huddle.App` picks up the only profile (`http`), which sets `ASPNETCORE_ENVIRONMENT=Development`, `applicationUrl http://localhost:5100` and `launchBrowser true`. The `--urls` argument is therefore redundant but harmless.
 3. Know the environment-variable form, because this area is mostly about it: the separator is a DOUBLE underscore, and the variable must be set in the same window that then runs `dotnet run`. Precedence is environment variable, then `appsettings.Development.json`, then `appsettings.json`.
 4. AFTER EVERY ENVIRONMENT-VARIABLE TEST, clear what you set before moving on, or the next test inherits it and reports a false result.
-5. A fresh install has no Rooms with ACP off, which is what `P-LAUNCH-FREE` gives. The built-in **Chief of Staff** (alias `cos`) is seeded at every start whatever `Acp:Enabled` says, so its roster card is always on its Team's **Members** tab (and Ctrl K finds it); with ACP on it also connects and gets a direct Room (a paid Greeting Turn on the real adapter), which is why a launch with ACP on that is not `P-LAUNCH-UAT` is never "empty". Tests that need an Agent to answer name [`P-LAUNCH-UAT`](common.md#p-launch-uat) in **Before you start** and use Ada and Bo. That procedure keeps its data in `C:\seeds\huddle\uat\data`, not `src\Huddle.App\App_Data`, so a disk, database or reset step in such a test points there, and re-running the seeder line of `P-LAUNCH-UAT` is its reset.
+5. A fresh install has no Rooms with ACP off, which is what `P-LAUNCH-FREE` gives. The built-in **Chief of Staff** (alias `cos`) is seeded at every start whatever `Acp:Enabled` says, so its roster card is always on its Team's **Agents** tab (and Ctrl K finds it); with ACP on it also connects and gets a direct Room (a paid Greeting Turn on the real adapter), which is why a launch with ACP on that is not `P-LAUNCH-UAT` is never "empty". Tests that need an Agent to answer name [`P-LAUNCH-UAT`](common.md#p-launch-uat) in **Before you start** and use Ada and Bo. That procedure keeps its data in `C:\seeds\huddle\uat\data`, not `src\Huddle.App\App_Data`, so a disk, database or reset step in such a test points there, and re-running the seeder line of `P-LAUNCH-UAT` is its reset.
 6. For the ACP tests at the end only: `node --version` must print a version, `Test-Path tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js` must be True (if not, run `pwsh tools\acp\install.ps1`), and the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) must be met. Tests that need this say so in their preconditions.
 
 ## Tests
@@ -668,7 +668,7 @@ The `.jsonl` lines from step 1 still reading `"senderName":"You"` is CORRECT: th
 
 **Fail if — any of these**
 
-- The app starts normally with any of the three variables set -> the loud guard has regressed into exactly the silent degradation it exists to prevent; the Persona or Task directory would quietly scan nothing and no Agents would be found (Ctrl K, the Members tab) with no explanation anywhere.
+- The app starts normally with any of the three variables set -> the loud guard has regressed into exactly the silent degradation it exists to prevent; the Persona or Task directory would quietly scan nothing and no Agents would be found (Ctrl K, the Agents tab) with no explanation anywhere.
 - The message names the OLD key as the replacement, or omits the new key (`Team:Acp:AgentsDir`, or `Team:Teams:Dir` for the Tasks key) -> the guard fires but does not tell the user how to fix it.
 
 **Inconclusive if**
@@ -916,13 +916,13 @@ alias: 'ops'
 You are the Operations Lead. You keep the team honest.
 ```
 3. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-4. Open the browser and open the Members tab of any Team (`Test` if none exists, `P-NEW-PERSONA` step 1). Point at **Add a member**, select **From other teams**, and read the picker. Close it without saving.
+4. Open the browser and open the Agents tab of any Team (`Test` if none exists, `P-NEW-PERSONA` step 1). Point at **Add an Agent**, select **From other teams**, and read the picker. Close it without saving.
 5. Leave the app RUNNING. In a text editor, change the file's `title:` line to `title: 'Chief of Operations'` and save it.
 6. WITHOUT reloading the browser, wait 5 seconds, then press Ctrl K, type `Ops Lead`, open the Agent result (`P-OPEN-AGENT`) and read its title.
 7. Still with the app running, create a stray file: `Set-Content "src\Huddle.App\App_Data\Agents\Ops Lead\notes.md" 'scratch'`.
-8. Watch the top of the Team's Members tab for up to 5 seconds and read anything that appears there.
+8. Watch the top of the Team's Agents tab for up to 5 seconds and read anything that appears there.
 9. Still with the app running, create a BROKEN definition: `New-Item -ItemType Directory -Force "src\Huddle.App\App_Data\Agents\Broken One"`, then write a file `src\Huddle.App\App_Data\Agents\Broken One\Broken One.md` containing only the two lines `---` and `---` (empty frontmatter).
-10. Watch the top of the Members tab again for up to 5 seconds and read the list.
+10. Watch the top of the Agents tab again for up to 5 seconds and read the list.
 11. In `T-B` run `O-ADAPTERS`.
 12. Stop the app, delete both folders (`Remove-Item -Recurse "src\Huddle.App\App_Data\Agents\Ops Lead", "src\Huddle.App\App_Data\Agents\Broken One"`), and run `Remove-Item Env:Team__Acp__Enabled`.
 
@@ -930,7 +930,7 @@ You are the Operations Lead. You keep the team honest.
 
 - After step 3, the From other teams picker lists `Ops Lead` under **No team**, and its card (Ctrl K) shows the title `Operations Lead` and the alias `@ops` — a Persona in its own folder is found by the startup scan.
 - After the edit in step 5, the card's title reads `Chief of Operations` within 5 seconds and with no browser reload.
-- After step 7, a section headed exactly `Files that didn't load` appears at the top of the Members tab, listing the path of `notes.md` with the reason `An agent folder holds only its definition; use work/.` (`PersonaStore.cs:773`). `Ops Lead` stays findable.
+- After step 7, a section headed exactly `Files that didn't load` appears at the top of the Agents tab, listing the path of `notes.md` with the reason `An agent folder holds only its definition; use work/.` (`PersonaStore.cs:773`). `Ops Lead` stays findable.
 - After step 9, the same section also lists the path of `Broken One.md` with a reason beginning `Persona frontmatter is missing required field` (`PersonaFrontmatter.cs:595`).
 - `O-ADAPTERS` prints `0` (ACP is off, so no process was spawned at any point).
 

@@ -78,11 +78,11 @@ public sealed class SidebarDensityTests
 
         IElement lab = cut.FindAll("div.hover-reveal-row").Single(row => row.QuerySelector(".hover-reveal-link .sidebar-row-label")?.TextContent.Trim() == "Lab");
         Assert.Equal("0", lab.QuerySelector(".sidebar-row-meta")?.TextContent.Trim());
-        Assert.Equal("No members", lab.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
+        Assert.Equal("No Agents", lab.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
         Assert.Null(lab.QuerySelector(".hover-reveal-link .sidebar-row-meta"));
         IElement business = cut.FindAll("div.hover-reveal-row").Single(row => row.QuerySelector(".hover-reveal-link .sidebar-row-label")?.TextContent.Trim() == "Business");
         Assert.Equal("3", business.QuerySelector(".sidebar-row-meta")?.TextContent.Trim());
-        Assert.Equal("3 members", business.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
+        Assert.Equal("3 Agents", business.QuerySelector(".sidebar-row-meta")?.GetAttribute("title"));
     }
 
     /// <summary>The Chats view draws no "Rooms" section header: its first folder is "All".</summary>

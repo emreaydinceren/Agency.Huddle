@@ -534,7 +534,7 @@
 
     private static string IconFor(LibraryNodeRole role, bool isFolder) => role switch
     {
-        LibraryNodeRole.TeamFolder => Icons.Material.Outlined.Groups,
+        LibraryNodeRole.TeamFolder => Icons.Material.Filled.Group,
         LibraryNodeRole.ProjectFolder => Icons.Material.Outlined.FolderSpecial,
         LibraryNodeRole.AgentFolder => Icons.Material.Outlined.Person,
         _ => isFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.InsertDriveFile,

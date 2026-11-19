@@ -49,7 +49,7 @@ it beat.
 | T3 | Kim joins *Marketing* | Kim is added to the *Marketing* Team Room, which says so in the Transcript like any Invitation |
 | T4 | Kim leaves *Marketing* | Kim stays a Member of the Team Room (§3). Nothing is posted |
 | T5 | The Human chooses **New room** on *Marketing*, ticks Nova and Bo (Bo is not in *Marketing*) | A new Room *Nova, Bo* scoped to *Marketing*, listed under it. Bo is allowed (D-4) |
-| T6 | The Human presses **Message** on Nova in *Marketing*'s Members tab | Marketing's one-to-one with Nova opens, created if it did not exist. It is not the sidebar's root *Nova* Room |
+| T6 | The Human presses **Message** on Nova in *Marketing*'s Agents tab | Marketing's one-to-one with Nova opens, created if it did not exist. It is not the sidebar's root *Nova* Room |
 | T7 | The Human chooses **New room** in the Chats group and ticks Nova | The root *Nova* Room opens, as today |
 | T8 | Nova's Persona comes online | Its root one-to-one is ensured, as today. No Team Room is touched by the hello |
 | T9 | An Agent's Turn in Marketing's *Nova* Room | The Turn label reads `[Room: Nova (id: …, Team: Marketing)]` |
@@ -90,7 +90,7 @@ it beat.
 2. **A scoped Room is a Room.** Reply rule, Budget, Archive, Delete, Invitation and Room
    Sessions do not look at Scope. Only listing, the Turn label, `read_records` and uploads do.
 3. **One reconciler, many doors.** A Team appears from a type, from a Persona label, or from a
-   folder. An Agent joins from hiring, from the Members tab, or from a hand-edited file. The
+   folder. An Agent joins from hiring, from the Agents tab, or from a hand-edited file. The
    Team Room is not created by any of those doors; it is reconciled from the catalog after
    any of them.
 4. **Keyed by Team name, ignoring case.** The same rule `TeamCatalog.Find` and `cadence_state`
@@ -188,7 +188,7 @@ everything). It serialises its runs on a `Lock`-guarded flag or a `SemaphoreSlim
 
 For each Team in the catalog:
 
-1. **No members** → nothing. The Team Room is created when the first member arrives.
+1. **No Agents** → nothing. The Team Room is created when the first member arrives.
 2. **No Team Room** → `CreateRoomAsync(team.Name, [Human, ..members], team.Name, teamRoom: true)`.
    The unique index makes a second concurrent create fail rather than make two.
 3. **A Team Room exists** → for each member whose User is not a Room Member,
@@ -270,7 +270,7 @@ Room first, whatever its Scope. Its fallback — the Room with exactly the Human
 and the assignee — is now found and created **scoped to the Task's Team**:
 `FindRoomWithExactMemberSetAsync(memberSet, task.Team)`, then
 `CreateRoomForAsync(agentIds, task.Team)`. A single assignee lands in Marketing's one-to-one
-with them, the same Room the Members tab opens. Requests (ADR-0040) reach this through
+with them, the same Room the Agents tab opens. Requests (ADR-0040) reach this through
 `WakeForRequestAsync`, so a Request wakes in the receiving Team's scope.
 
 **Cadence** (§11 Q-4). `CadenceService` gains a Team-aware poster call,
@@ -334,7 +334,7 @@ whether it posted. Onboarding calls `PostToTeamOneToOneAsync`, which posts in th
 | D-3 | Scope never changes | Moving Rooms. Files already filed would be in the wrong folder |
 | D-4 | Any Agent can join a scoped Room | Agents only. Chosen by the Human |
 | D-5 | Team Rooms are listed under their Team in `TeamsNav` | A badge in the Chats list; a Chats tab on the Team page. Chosen by the Human |
-| D-6 | Members tab **Message** opens the Team's one-to-one | The root one-to-one. Chosen by the Human |
+| D-6 | Agents tab **Message** opens the Team's one-to-one | The root one-to-one. Chosen by the Human |
 | D-7 | A Team gone from the catalog archives its Rooms | Delete them, or make them root. Chosen by the Human |
 | D-8 | One Team Room per Team, created when the Team has a member, joined by every later member | Created only by the type wizard. Label-born Teams would have none |
 | D-9 | The reconciler, not each door, creates and fills Team Rooms | Hooks in hiring, the wizard, `TeamMembership` and the provisioner. Four places to keep in step, and hand edits would be missed |

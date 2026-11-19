@@ -33,7 +33,7 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 /// are the Teams, under no "Teams" header; each Team is a <c>div.hover-reveal-row</c> whose link goes to
 /// the escaped <c>/teams/{team}</c> route. An open Team is a scope list (the Team, then its Projects, each with a count of
 /// open Tasks and one of them selected) followed by the sections of the selected scope: ROOMS (with a "+"), TASKS and
-/// LIBRARY. A memberless Team shows a "No members" hint, the "Team actions" menu (button or right-click) offers
+/// LIBRARY. A memberless Team shows a "No Agents" hint, the "Team actions" menu (button or right-click) offers
 /// "New project", and "Build a team" trails the list. It follows <see cref="ITeamCatalog.Changed"/> and unsubscribes on dispose.
 /// </summary>
 public sealed class TeamsNavTests
@@ -139,7 +139,7 @@ public sealed class TeamsNavTests
         {
             IElement card = cut.Find(".teams-nav-scope-row[data-scope='team']");
             Assert.Equal("Business", card.QuerySelector(".teams-nav-scope-label")?.TextContent.Trim());
-            Assert.Equal("Web · 8 members", card.QuerySelector(".teams-nav-scope-subtitle")?.TextContent.Trim());
+            Assert.Equal("Web · 8 Agents", card.QuerySelector(".teams-nav-scope-subtitle")?.TextContent.Trim());
         });
     }
 
@@ -158,7 +158,7 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() =>
         {
             string[] subtitles = [.. cut.FindAll(".teams-nav-scope-row[data-scope='team'] .teams-nav-scope-subtitle").Select(subtitle => subtitle.TextContent.Trim())];
-            string[] expected = ["1 member", "2 members"];
+            string[] expected = ["1 Agent", "2 Agents"];
             Assert.Equal(expected, subtitles);
         });
     }
@@ -374,7 +374,7 @@ public sealed class TeamsNavTests
             Assert.Equal(expected, names);
             Assert.Equal("Build a team", list.Children[^1].TextContent.Trim());
             string[] subtitles = [.. list.QuerySelectorAll(".teams-nav-switcher-item .teams-nav-scope-subtitle").Select(subtitle => subtitle.TextContent.Trim())];
-            string[] expectedSubtitles = ["1 member", "1 member", "1 member"];
+            string[] expectedSubtitles = ["1 Agent", "1 Agent", "1 Agent"];
             Assert.Equal(expectedSubtitles, subtitles);
             Assert.Equal(3, list.QuerySelectorAll(".teams-nav-switcher-item .mud-avatar.teams-nav-scope-avatar").Length);
             IElement current = Assert.Single(list.QuerySelectorAll(".teams-nav-switcher-item[aria-current='true']"));
@@ -507,7 +507,7 @@ public sealed class TeamsNavTests
             builder.CloseComponent();
         });
 
-    /// <summary>A Team no Persona is labelled with shows a trailing member count of 0 whose tooltip says "No members", inside its own row and never as row text.</summary>
+    /// <summary>A Team no Persona is labelled with shows a trailing member count of 0 whose tooltip says "No Agents", inside its own row and never as row text.</summary>
     [Fact]
     public async Task TeamWithNoMembers_ShowsATrailingZeroWithTheNoMembersTooltip()
     {
@@ -518,8 +518,8 @@ public sealed class TeamsNavTests
 
         IElement meta = RowFor(cut, "Lab").QuerySelectorAll(".sidebar-row-meta").Single();
         Assert.Equal("0", meta.TextContent.Trim());
-        Assert.Equal("No members", meta.GetAttribute("title"));
-        Assert.DoesNotContain("No members", RowFor(cut, "Lab").QuerySelector(".hover-reveal-link")?.TextContent, StringComparison.Ordinal);
+        Assert.Equal("No Agents", meta.GetAttribute("title"));
+        Assert.DoesNotContain("No Agents", RowFor(cut, "Lab").QuerySelector(".hover-reveal-link")?.TextContent, StringComparison.Ordinal);
     }
 
     /// <summary>A Team with members shows its member count as the trailing meta, with a pluralised tooltip.</summary>
@@ -533,7 +533,7 @@ public sealed class TeamsNavTests
 
         IElement meta = RowFor(cut, "Business").QuerySelectorAll(".sidebar-row-meta").Single();
         Assert.Equal("1", meta.TextContent.Trim());
-        Assert.Equal("1 member", meta.GetAttribute("title"));
+        Assert.Equal("1 Agent", meta.GetAttribute("title"));
     }
 
     /// <summary>At <c>/teams/Business/files</c> the Business link carries the active class and the other Team's link does not.</summary>

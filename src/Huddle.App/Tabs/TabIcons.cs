@@ -17,10 +17,10 @@ internal static class TabIcons
     public static string For(string name) => name switch
     {
         "chat" => ActionIcons.Chat,
-        "team" => Icons.Material.Outlined.Groups,
+        "team" => Icons.Material.Filled.Group,
         "project" => Icons.Material.Filled.LibraryBooks,
         "tasks" => Icons.Material.Outlined.Checklist,
-        "agents" => Icons.Material.Filled.Group,
+        "agents" => Icons.Material.Filled.Person,
         "settings" => Icons.Material.Outlined.Settings,
         "library" => MaterialSymbols.Newsstand,
         "needs-you" => Icons.Material.Filled.NotificationsActive,

@@ -56,8 +56,8 @@ internal static class TeamRenameConfirmation
     private static ConfirmPoint RestartPoint(int memberCount, IReadOnlyList<string> midTurnNames)
     {
         string lead = memberCount == 1
-            ? "1 member restarts and starts a new conversation."
-            : string.Create(CultureInfo.InvariantCulture, $"{memberCount} members restart and start new conversations.");
+            ? "1 Agent restarts and starts a new conversation."
+            : string.Create(CultureInfo.InvariantCulture, $"{memberCount} Agents restart and start new conversations.");
         string text = " Each one keeps a summary of recent Messages but loses its working context.";
         if (midTurnNames.Count > 0)
         {

@@ -13,7 +13,7 @@ internal static class SidebarViews
     private static readonly SidebarViewItem[] All =
     [
         new(SidebarView.Rooms, "Rooms", ActionIcons.Chat),
-        new(SidebarView.Teams, "Teams", Icons.Material.Outlined.Groups),
+        new(SidebarView.Teams, "Teams", Icons.Material.Filled.Group),
         new(SidebarView.Tasks, "Tasks", Icons.Material.Outlined.Checklist),
         new(SidebarView.Library, "Library", MaterialSymbols.Newsstand),
         new(SidebarView.Scheduled, "Scheduled", Icons.Material.Outlined.Schedule),

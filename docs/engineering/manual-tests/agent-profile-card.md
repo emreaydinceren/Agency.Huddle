@@ -1,6 +1,6 @@
 # Agent card: view, edit, create, delete
 
-Prove that the one Agent card (`AgentProfileCard.razor`, opened over a Team's **Members** tab in View, Edit and Create modes) is the only safe way to create, edit and delete a Persona file on disk — and that it fails loudly, not silently. Almost nothing here is provable by the compiler or the test suite: the create-card open path is untested and calls a helper that throws on a blank name; validation messages arrive from three layers in a fixed precedence; a save rewrites YAML frontmatter in the Persona's own file, and a changed Name moves the whole folder (ADR-0011); and delete-then-recreate is only provable by reading `<data>\Agents\<Name>\<Name>.md` and `<data>\team.db` alongside the screen. Every test below is free unless it says otherwise; exactly one test spends money.
+Prove that the one Agent card (`AgentProfileCard.razor`, opened over a Team's **Agents** tab in View, Edit and Create modes) is the only safe way to create, edit and delete a Persona file on disk — and that it fails loudly, not silently. Almost nothing here is provable by the compiler or the test suite: the create-card open path is untested and calls a helper that throws on a blank name; validation messages arrive from three layers in a fixed precedence; a save rewrites YAML frontmatter in the Persona's own file, and a changed Name moves the whole folder (ADR-0011); and delete-then-recreate is only provable by reading `<data>\Agents\<Name>\<Name>.md` and `<data>\team.db` alongside the screen. Every test below is free unless it says otherwise; exactly one test spends money.
 
 > [!NOTE]
 > Stage 4 of the MudBlazor migration (2026-09-14) replaced the card's hand-rolled overlay `<div>`
@@ -29,7 +29,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 2. Run `P-RESET-TEAMS`, which deletes every folder under `<data>\Agents`. Do NOT delete `team.db`. The area still never starts from an empty library: the built-in **Chief of Staff** (alias `cos`, no Team) is re-seeded at every start, whatever `Acp:Enabled` is, so "empty" below means "holds only the Chief of Staff".3. Lane is `P-LAUNCH-FREE`, or equivalently `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=false`. Every Agent then reads Offline and nothing is spawned for it. Part of this page (AGENTPROFILECARD-43 onward) leaves that lane and names `P-LAUNCH-UAT` in its own steps.
 4. `O-DB` is REQUIRED from AGENTPROFILECARD-35 onward, not optional: install `sqlite3` and confirm `sqlite3 -version` in a fresh `T-B`. (DB Browser for SQLite is an acceptable substitute.)
 5. Confirm `node --version` prints a version. AGENTPROFILECARD-37 onward need a node process spawn to be observable.
-6. There is no Agents page. Open a Team's **Members** tab (`Test`: see `P-NEW-PERSONA`); a new Agent is created from it, and an existing one is opened with `P-OPEN-AGENT`. Where a step below says *tile* or *list*, it means the Agent's roster card on that tab. Keep a File Explorer window on `<data>\Agents` and a text editor able to show line endings (VS Code, Notepad++). A Persona lives at `<data>\Agents\<Name>\<Name>.md`; a `.md` directly under `Agents` is rejected.
+6. There is no Agents page. Open a Team's **Agents** tab (`Test`: see `P-NEW-PERSONA`); a new Agent is created from it, and an existing one is opened with `P-OPEN-AGENT`. Where a step below says *tile* or *list*, it means the Agent's roster card on that tab. Keep a File Explorer window on `<data>\Agents` and a text editor able to show line endings (VS Code, Notepad++). A Persona lives at `<data>\Agents\<Name>\<Name>.md`; a `.md` directly under `Agents` is rejected.
 7. **Clean-up.** After each test, remove every Persona it created, unless the next test says to keep it: open its card and use **Remove** (the person-with-a-minus icon, then **Remove** in the prompt), then delete the leftover `<data>\Agents\<Name>` folder in File Explorer. Never remove the Chief of Staff (its card offers **Reset to default**, not Remove). This keeps tests from leaking state into one another.
 
 ## Tests
@@ -51,7 +51,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Steps**
 
-1. Open a Team's **Members** tab (`P-NEW-PERSONA`, step 1).
+1. Open a Team's **Agents** tab (`P-NEW-PERSONA`, step 1).
 2. Open the **New agent** card (`P-NEW-PERSONA`, step 2).
 3. Observe immediately whether a dialog headed `New agent` appears, or whether a pale-yellow bar appears at the bottom of the page reading `An unhandled error has occurred.` with a `Reload` link.
 4. Read the app console and copy any exception text printed in the last few seconds.
@@ -105,7 +105,7 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 
 - The header reads `New agent`; the button on its right is a close icon (an ×-shaped Material icon, not a text glyph) and has the tooltip/aria-label `Close`.
 - A circular avatar showing a monogram on a randomly coloured background is present at the top left of the card body. It is a button named `Change avatar` (pressing it opens the **Avatar** window), and a small pencil appears on it when you point at it. A quiet text button `Edit avatar…` sits under it and opens the same window.
-- The text inputs are, in order, **Name** (with the reset button beside it) and **Title**. There is NO **Alias** field and NO **Teams** field: a draft's Alias is always its Name in lower case, and Team membership changes only on the Members tab. Record each input's placeholder and hint as you read them.
+- The text inputs are, in order, **Name** (with the reset button beside it) and **Title**. There is NO **Alias** field and NO **Teams** field: a draft's Alias is always its Name in lower case, and Team membership changes only on the Agents tab. Record each input's placeholder and hint as you read them.
 - The multi-line box is labelled `Persona text`. Record its placeholder and hint.
 - Below the multi-line box the controls are, in this order (`AgentProfileCard.razor`):
   1. a **Skills** section: the line `A Skill is a written how-to the Agent follows for one kind of task, such as reviewing a change. Tick the ones this Agent needs.`, a box labelled `Search Skills`, a bordered list headed `On this computer` with a checkbox per Skill (and `Needs setup first`, folded, when the registry lists Skills that are not here), and under it `None ticked.` with no word about a restart;
@@ -178,7 +178,7 @@ If clearing the Name kills the card (see AGENTPROFILECARD-02), do the three posi
 
 1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2). Fill **Title** with `T` and the **Persona text** with `x`. Leave **Model** and **Effort** on their blank option.
 2. Leave **Name** empty and click `Save draft`. Read the red error line: it must be `An Agent needs a Name.` and the card stays open.
-3. REJECT SET. Set **Name** to each of the following in turn, click `Save draft`, then `Save changes` on the Members tab, and read the error notice in the save bar. To try the next value, open the draft's card with **Edit** on its roster card and correct the Name. In order: (1) ` Nova` (one leading space), (2) `Nova ` (one trailing space), (3) `Emily  Lee` (two spaces between the words), (4) `Nova.1`, (5) `-nova`, (6) `_nova`, (7) `Nova!`, (8) `Ünal`, (9) `AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGGG` (65 characters).
+3. REJECT SET. Set **Name** to each of the following in turn, click `Save draft`, then `Save changes` on the Agents tab, and read the error notice in the save bar. To try the next value, open the draft's card with **Edit** on its roster card and correct the Name. In order: (1) ` Nova` (one leading space), (2) `Nova ` (one trailing space), (3) `Emily  Lee` (two spaces between the words), (4) `Nova.1`, (5) `-nova`, (6) `_nova`, (7) `Nova!`, (8) `Ünal`, (9) `AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGGG` (65 characters).
 4. After the rejects, check File Explorer: `<data>\Agents` must still hold only the `Chief of Staff` folder.
 5. Now the ACCEPT set. For each of these, set **Name** to the value, click `Save draft`, then `Save changes`, confirm the Agent is hired, run the Clean-up from Setup step 7 for it, and open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2) again for the next one: `Nova`, `Emily Lee`, `1Nova`, `nova-2`, `nova_2`, `AAAAAAAAAABBBBBBBBBBCCCCCCCCCCDDDDDDDDDDEEEEEEEEEEFFFFFFFFFFGGGG` (64 characters). (The Alias is the Name in lower case, so each is unique.)
 6. Confirm `<data>\Agents` holds only the `Chief of Staff` folder again when you finish.
@@ -265,7 +265,7 @@ If the save is refused with a Name error, fix the Name first (`The name 'Nova' i
 4. If the **Model** select offers options, choose Haiku; if it offers only the blank option, leave it. Do the same for **Effort** with low.
 5. Click `Save draft`.
 6. Without touching anything else, read every field on the card and note the selected option in both selects.
-7. Change **Name** to `Atlas`, click `Save draft`, then `Save changes` on the Members tab.
+7. Change **Name** to `Atlas`, click `Save draft`, then `Save changes` on the Agents tab.
 8. Open `Atlas`'s card (`P-OPEN-AGENT`) and read its `Persona` block.
 9. Close the card and run the Clean-up for `Atlas` (Setup step 7).
 
@@ -336,9 +336,9 @@ If the browser reload indicator is too fast to see, open DevTools > Network, che
 **Steps**
 
 1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2). Set **Name** `Nova`, **Title** `Ops Lead`, **Persona text** `You are Nova.` (Create it in the `Business` Team: `P-NEW-PERSONA` names the Team, and `Business` must exist first. Create the empty folder `<data>\Teams\Business\` with `O-FILE` and reload, as `P-NEW-PERSONA` does for `Test`.)
-2. Click `Save draft`, then `Save changes` on the Members tab, then open `Nova`'s card (`P-OPEN-AGENT`).
+2. Click `Save draft`, then `Save changes` on the Agents tab, then open `Nova`'s card (`P-OPEN-AGENT`).
 3. Read the card header, the identity block and every section heading in the card body.
-4. Look behind the dialog at the Members tab.
+4. Look behind the dialog at the Agents tab.
 5. Confirm `<data>\Agents\Nova\Nova.md` exists in File Explorer.
 6. Leave the card and the file in place — AGENTPROFILECARD-12 continues from here.
 
@@ -346,7 +346,7 @@ If the browser reload indicator is too fast to see, open DevTools > Network, che
 
 - The card's header reads `Agent`.
 - The card body shows `Nova` as a heading, `Ops Lead` beneath it, a status dot with a status word, `Alias: nova`, and the sections `Persona`, `Model`, `Effort`, `Work mode`, `Persona file`, in that order (`AgentProfileCard.razor:239-264`).
-- Behind the dialog a roster card for `Nova` has appeared on the Team's **Members** tab.
+- Behind the dialog a roster card for `Nova` has appeared on the Team's **Agents** tab.
 - `<data>\Agents\Nova\Nova.md` exists.
 
 **Fail if — any of these**
@@ -451,7 +451,7 @@ If `Nova` was created with a Model chosen, delete it and re-create it leaving bo
 
 **Steps**
 
-1. Open `Nova`'s View dialog with **Edit** on its Members-tab roster card (`P-OPEN-AGENT`), so a control opens it. Immediately read `document.activeElement` in DevTools -> Console (or just note which element visibly shows a focus ring).
+1. Open `Nova`'s View dialog with **Edit** on its Agents-tab roster card (`P-OPEN-AGENT`), so a control opens it. Immediately read `document.activeElement` in DevTools -> Console (or just note which element visibly shows a focus ring).
 2. Press Tab repeatedly and watch where the focus ring goes: does it ever land on something BEHIND the dialog (a sidebar link, another roster card)?
 3. Press Shift+Tab from the first focusable element in the dialog and confirm focus wraps to the LAST focusable element in the dialog, not out of it.
 4. With the dialog open, try to scroll the page behind it with the mouse wheel over the dimmed area. Observe whether the page behind moves.
@@ -549,7 +549,7 @@ If step 7's Save succeeds instead of erroring, you did not fully clear the text 
 - Clicking the `Remove` icon replaces it with the prompt `Remove Nova?` and two text buttons, `Remove` (styled as the danger action) and `Cancel`.
 - Clicking `Cancel` collapses them back to the single `Remove` icon and the card stays open.
 - `Nova.md` is untouched after the Cancel.
-- Clicking the prompt's `Remove` closes the card and `Nova`'s roster card disappears from the Members tab.
+- Clicking the prompt's `Remove` closes the card and `Nova`'s roster card disappears from the Agents tab.
 - `Nova.md` no longer exists.
 
 **Fail if — any of these**
@@ -586,7 +586,7 @@ If the prompt's `Remove` produces a red line `Persona 'Nova' does not exist.`, t
 2. Set **Name** `Nova` and **Title** `Ops Lead`. Create it in the `Business` Team (`P-NEW-PERSONA`; `Business` must exist first, so create the empty folder `<data>\Teams\Business\` with `O-FILE` and reload, as `P-NEW-PERSONA` does for `Test`).
 3. Type into **Persona text** exactly: `You are Nova.` then a newline then `You keep the team honest.`
 4. If the **Model** select offers options, choose Haiku and set **Effort** to low. If it offers only the blank option, leave both blank and note it.
-5. Click `Save draft`, then `Save changes` on the Members tab.
+5. Click `Save draft`, then `Save changes` on the Agents tab.
 6. In File Explorer, confirm the new file is at `<data>\Agents\Nova\Nova.md` — inside a folder named `Nova`, NOT directly under `Agents`.
 7. Open `Nova.md` in a text editor configured to show line endings (in VS Code, the indicator at the bottom right).
 8. Read all eight lines and the line-ending indicator.
@@ -630,7 +630,7 @@ If the Model select offers no options (no node, or the adapter needs authenticat
 1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2).
 2. Set **Name** `Nova` and **Persona text** `x`.
 3. Set **Title** to exactly `Chief of Staff's deputy` (one apostrophe).
-4. Click `Save draft`, then `Save changes` on the Members tab.
+4. Click `Save draft`, then `Save changes` on the Agents tab.
 5. Open `Nova`'s card (`P-OPEN-AGENT`) and read the line directly under the name heading.
 6. Open `<data>\Agents\Nova\Nova.md` and read line 3 exactly.
 7. Reload the browser page, open `Nova`'s card (`P-OPEN-AGENT`) and re-read the title line.
@@ -679,7 +679,7 @@ If your text editor auto-converts the apostrophe to a typographic quote (’), t
 
 **Pass if — all of these**
 
-- Both attempts show `An Agent with that Name exists.` and the card stays open. (If the lowercase one is not refused by `Save draft`, `Save changes` on the Members tab must refuse it with `The name 'nova' is already in use.` and hire nothing.)
+- Both attempts show `An Agent with that Name exists.` and the card stays open. (If the lowercase one is not refused by `Save draft`, `Save changes` on the Agents tab must refuse it with `The name 'nova' is already in use.` and hire nothing.)
 - The card stays open with all fields intact.
 - `Nova.md`'s modified timestamp and contents are unchanged.
 - No second folder or file appeared.
@@ -758,7 +758,7 @@ If the text box is empty, check the agent still exists on disk — a file delete
 
 1. Stop nothing — the app stays running. In File Explorer create the folder `<data>\Agents\Ops` and, inside it, a file `Ops.md`.
 2. Put exactly this in `Ops.md`, saved with CRLF line endings: `---`, `name: 'Nova'`, `title: 'Ops Lead'`, `alias: 'nov'`, `teams: ['Business']`, `---`, `You are Nova. ORIGINALWORD.`
-3. Wait about one second, then confirm Ctrl K finds `Nova`, that a `Nova` roster card appears on the `Business` Team's **Members** tab, and that `Files that didn't load` does not list `Ops.md`.
+3. Wait about one second, then confirm Ctrl K finds `Nova`, that a `Nova` roster card appears on the `Business` Team's **Agents** tab, and that `Files that didn't load` does not list `Ops.md`.
 4. Open `Nova`'s card (`P-OPEN-AGENT`) and confirm `Persona file` shows `...\Agents\Ops\Ops.md`.
 5. Click `Edit`, change `ORIGINALWORD` to `CHANGEDWORD`, and click `Save`.
 6. Confirm the card lands in View mode showing `CHANGEDWORD` in the `Persona` block.
@@ -969,12 +969,12 @@ If no `Nova` tile appears in step 2, the file did not load — read `Files that 
 **Before you start**
 
 - `<data>\Agents` holds only the Chief of Staff's folder.
-- A Team's **Members** tab is open.
+- A Team's **Agents** tab is open.
 
 **Steps**
 
 1. Create `<data>\Agents\Broken\Broken.md` containing exactly: `---`, `name: 'X'`, `---`, `Some body text.` (no title, no alias).
-2. Wait about one second and read the top of the **Members** tab.
+2. Wait about one second and read the top of the **Agents** tab.
 3. Note whether the failing section appears ABOVE or BELOW the agent list, and whether any tile was rendered for `Broken.md`.
 4. Now create TWO files, `<data>\Agents\TwinA\TwinA.md` and `<data>\Agents\TwinB\TwinB.md`, each containing: `---`, `name: 'Twin'`, `title: 'T'`, plus a DIFFERENT alias line (`alias: 'ta'` in one, `alias: 'tb'` in the other), `---`, `body`.
 5. Wait about one second and read the page again.
@@ -1008,7 +1008,7 @@ If nothing appears after about two seconds, press F5 once. If the section only a
 
 **Before you start**
 
-- A Team's **Members** tab is open with NO card open.
+- A Team's **Agents** tab is open with NO card open.
 - `Nova` (`<data>\Agents\Nova\Nova.md`) and `Atlas` (`<data>\Agents\Atlas\Atlas.md`) exist, besides the Chief of Staff.
 
 **Steps**
@@ -1136,7 +1136,7 @@ If the file opens but in an unexpected application, that is the OS file associat
 
 1. Note the current contents of `<data>\Agents`.
 2. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2). Set **Name** `CON`, **Title** `T`, **Persona text** `x`.
-3. Click `Save draft`, then `Save changes` on the Members tab.
+3. Click `Save draft`, then `Save changes` on the Agents tab.
 4. Record precisely what happens: does a red validation line or an error notice in the save bar (`Not every Agent was hired. …`) appear, is the Agent hired as if saved, or does the yellow `An unhandled error has occurred.` bar appear?
 5. Read the app console and copy any exception verbatim.
 6. List `<data>\Agents` again and note whether any new folder (`CON`) or file (`CON\CON.md`) exists.
@@ -1173,7 +1173,7 @@ If the Name is refused with a clear error (for example `Not every Agent was hire
 
 **Steps**
 
-1. Open the same Team's **Members** tab in tab A and again in tab B. Arrange them so both are visible.
+1. Open the same Team's **Agents** tab in tab A and again in tab B. Arrange them so both are visible.
 2. In tab A, create an agent (`P-NEW-PERSONA`): Name `Sync`, Title `T`, body `x`. Do not touch tab B.
 3. Look at tab B's list without reloading it.
 4. In tab A, close the card, open `Sync`'s card (`P-OPEN-AGENT`), click the `Remove` icon button, then `Remove` in the prompt.
@@ -1329,13 +1329,13 @@ If the app was started before the rows were inserted, reload the browser page an
 
 - Lane is `P-LAUNCH-FREE`, freshly launched: the model list is cached for the life of the app after the first probe (`ModelCatalogProbe.cs:109-112`), so the `Edit` half below only shows a spawn on the first Edit or Create after a launch.
 - `node` is on PATH so a spawn would be visible.
-- At least two agents exist, in at least two different Teams. Create them with `P-NEW-PERSONA` in each Team's Members tab (for example `Nova` in `Business` and `Iris` in `Household`; both Teams must exist first, created as `P-NEW-PERSONA` does for `Test`).
+- At least two agents exist, in at least two different Teams. Create them with `P-NEW-PERSONA` in each Team's Agents tab (for example `Nova` in `Business` and `Iris` in `Household`; both Teams must exist first, created as `P-NEW-PERSONA` does for `Test`).
 - A PowerShell window is available.
 
 **Steps**
 
 1. In `T-B` run `O-ADAPTERS` and record the count (it prints `0` when nothing is running).
-2. In the browser, open a Team's **Members** tab and reload it three more times.
+2. In the browser, open a Team's **Agents** tab and reload it three more times.
 3. Run `O-ADAPTERS` again and read the app console for any line containing `Model catalog probe`.
 4. Switch to another tab of the Team, then back to **Members**.
 5. Run `O-ADAPTERS` again.
@@ -1467,7 +1467,7 @@ If the catalog offers only one model, this test cannot run — record it as bloc
 
 1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2). Set **Name** `Modelcheck`, **Title** `T`, **Persona text** `x`.
 2. Set **Model** to Haiku. Leave **Effort** blank.
-3. Click `Save draft`, then `Save changes` on the Members tab.
+3. Click `Save draft`, then `Save changes` on the Agents tab.
 4. Open `Modelcheck`'s card (`P-OPEN-AGENT`), read its `Model` section and write down exactly what it says.
 5. Run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Modelcheck';"` and write down the stored value.
 6. Open `<data>\Agents\Modelcheck\Modelcheck.md` and search it for the stored value, for the display name, and for the word `model`.
@@ -1547,7 +1547,7 @@ If the Effort select offers only the blank option for Haiku, this model advertis
 
 **Steps**
 
-1. Confirm every roster card on a Team's **Members** tab reads `Offline`.
+1. Confirm every roster card on a Team's **Agents** tab reads `Offline`.
 2. Run `O-ADAPTERS` and record the count (it must be `0`).
 3. Open an agent's card (`P-OPEN-AGENT`) and confirm the card offers a `Restart` button, with the caption `Like saving an edit, this restarts the agent, which clears what it remembers.` beneath the row.
 4. Click `Restart` once and immediately read the button's label.
@@ -1631,7 +1631,7 @@ If the badge sticks on `Offline` WITH a reason line, record the reason text and 
 
 **Steps**
 
-1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2). Set **Name** `Freshone`, **Title** `T`, **Persona text** `x`, then click `Save draft` and `Save changes` on the Members tab.
+1. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2). Set **Name** `Freshone`, **Title** `T`, **Persona text** `x`, then click `Save draft` and `Save changes` on the Agents tab.
 2. Open `Freshone`'s card (`P-OPEN-AGENT`) and read the action row.
 3. Leave the card OPEN and wait until its status reads `Online`.
 4. Without closing or reopening the card, read the action row again.
@@ -1795,7 +1795,7 @@ If Ada does not reach `Online` after a `Restart` with a seeded ghost value, reco
 2. Seed her settings: `sqlite3 "<data>\team.db" "INSERT OR REPLACE INTO persona_models(persona_name,model) VALUES('Ada','ghost-model-1'); INSERT OR REPLACE INTO persona_efforts(persona_name,effort) VALUES('Ada','ghost-effort-1');"`
 3. Run `sqlite3 "<data>\team.db" "SELECT id,name FROM users WHERE name='Ada'; SELECT id,name FROM rooms;"` and record the rows.
 4. Open Ada's card (`P-OPEN-AGENT`), click the `Remove` icon button, then `Remove` in the prompt.
-5. Confirm Ada's roster card is gone from the Team's **Members** tab, Ctrl K no longer finds her, and `<data>\Agents\Ada\Ada.md` is gone from disk (the `Ada` folder stays).
+5. Confirm Ada's roster card is gone from the Team's **Agents** tab, Ctrl K no longer finds her, and `<data>\Agents\Ada\Ada.md` is gone from disk (the `Ada` folder stays).
 6. Look at the Rooms list in the left sidebar.
 7. Navigate to the `/rooms/<id>` URL you noted and read the page.
 8. Re-run the sqlite query from step 3.
@@ -1838,7 +1838,7 @@ If the Room never opened or Ada never answered, there is no content for the Room
 
 1. Run `sqlite3 "<data>\team.db" "SELECT * FROM persona_models WHERE persona_name='Ada'; SELECT * FROM persona_efforts WHERE persona_name='Ada'; SELECT id,name FROM users WHERE name='Ada';"` and record all three results.
 2. Open the **New agent** card (`P-NEW-PERSONA`, steps 1 and 2) and recreate the SAME Name `Ada`, with the same Title (its Alias is the Name in lower case), Persona text `x`, leaving the Model and Effort selects on their blank option.
-3. Click `Save draft`, then `Save changes` on the Members tab, open `Ada`'s card (`P-OPEN-AGENT`) and read its `Model` and `Effort` sections.
+3. Click `Save draft`, then `Save changes` on the Agents tab, open `Ada`'s card (`P-OPEN-AGENT`) and read its `Model` and `Effort` sections.
 4. Re-run the two settings queries.
 5. Wait for the agent to come `Online`, close the card, reopen it and click `Message`.
 6. Compare the `/rooms/<id>` URL with the one recorded in AGENTPROFILECARD-48, and read what is already in the Room.

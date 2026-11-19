@@ -1192,7 +1192,7 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-stepper"));
         Assert.Empty(cut.FindAll(Card));
         Assert.Empty(cut.FindAll(".build-team-details"));
-        Assert.NotNull(cut.Find("[aria-label='Add a member']"));
+        Assert.NotNull(cut.Find("[aria-label='Add an Agent']"));
         Assert.Empty(cut.FindAll(".role-picker"));
         Assert.Equal(["Ada", "Bo"], cut.FindAll(".roster-name").Select(static name => name.TextContent.Trim()));
         Assert.Equal("Manager", Assert.Single(cut.FindAll(".roster-card")[0].QuerySelectorAll(".roster-manager-badge")).TextContent.Trim());
@@ -1219,7 +1219,7 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
-    /// <summary>The roster heading, and the role heading in the "Add a member" dialog, carry their count as secondary meta text, and the roles wrap in their own grid.</summary>
+    /// <summary>The roster heading, and the role heading in the "Add an Agent" dialog, carry their count as secondary meta text, and the roles wrap in their own grid.</summary>
     [Fact]
     public async Task Members_Headings_CarryTheirCountAsMeta()
     {
@@ -1236,7 +1236,7 @@ public sealed class BuildTeamTests
         Assert.Single(cut.FindAll(".role-grid"));
     }
 
-    /// <summary>The Members tab shows only the roster, led by an "Add a member" tile; the tile opens the roles, explained, in a dialog.</summary>
+    /// <summary>The Members tab shows only the roster, led by an "Add an Agent" tile; the tile opens the roles, explained, in a dialog.</summary>
     [Fact]
     public async Task Members_AddAMember_OpensTheRolesInADialog()
     {
@@ -1250,7 +1250,7 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".role-picker"));
         IElement first = cut.Find(".roster-grid").Children[0];
         Assert.Equal("listitem", first.GetAttribute("role"));
-        Assert.Equal("Add a member", first.QuerySelector("button")?.GetAttribute("aria-label"));
+        Assert.Equal("Add an Agent", first.QuerySelector("button")?.GetAttribute("aria-label"));
 
         OpenAddMember(cut);
 
@@ -1277,7 +1277,7 @@ public sealed class BuildTeamTests
         Assert.Equal(2, fixture.Personas.Entries.Count);
     }
 
-    /// <summary>Closing the "Add a member" dialog without choosing a role adds nothing.</summary>
+    /// <summary>Closing the "Add an Agent" dialog without choosing a role adds nothing.</summary>
     [Fact]
     public async Task Members_ClosingTheDialog_AddsNobody()
     {
@@ -1311,7 +1311,7 @@ public sealed class BuildTeamTests
         Assert.Equal(Assert.Single(fixture.Personas.RejectedFiles).Reason, cut.Find(".build-team-load-notice .agents-rejected-reason").TextContent.Trim());
     }
 
-    /// <summary>The "Add a member" tile carries its three sources in order, and a press (a tap, or Enter) opens it, which hover and focus do in CSS.</summary>
+    /// <summary>The "Add an Agent" tile carries its three sources in order, and a press (a tap, or Enter) opens it, which hover and focus do in CSS.</summary>
     [Fact]
     public async Task Members_AddAMemberTile_OffersThreeSources_AndOpensOnPress()
     {
@@ -1361,7 +1361,7 @@ public sealed class BuildTeamTests
 
         Assert.Empty(cut.FindAll(".mud-dialog"));
         Assert.Equal(["Orchard"], TeamsOf(fixture, "Cy"));
-        Assert.Equal("2 members · 1 new", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("2 Agents · 1 new", cut.Find(".build-team-roster-summary").TextContent.Trim());
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(["Garden", "Orchard"], TeamsOf(fixture, "Cy").Order(StringComparer.Ordinal)));
         Assert.Equal(4, fixture.Personas.Entries.Count);
@@ -1437,7 +1437,7 @@ public sealed class BuildTeamTests
         string[] headings = [.. cut.FindAll(".build-team-hire h3").Select(static heading => heading.TextContent.Trim())];
         Assert.Equal(["Roles", "Draft roster"], headings);
         Assert.Empty(cut.FindAll(".build-team-roles-intro"));
-        Assert.Empty(cut.FindAll("[aria-label='Add a member']"));
+        Assert.Empty(cut.FindAll("[aria-label='Add an Agent']"));
     }
 
     /// <summary>A team type's icon tile is the one quiet tile for every type: no per-type hue class.</summary>
@@ -1539,7 +1539,7 @@ public sealed class BuildTeamTests
 
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
         Assert.Equal("Keep at least one Agent on the roster.", cut.Find(".build-team-approve-hint").TextContent.Trim());
-        Assert.Equal("2 members · 1 leaving · 1 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        Assert.Equal("2 Agents · 1 leaving · 1 to delete", cut.Find(".build-team-roster-summary").TextContent.Trim());
     }
 
     /// <summary>Remove from team takes the member's Team label away on save without asking, and the Agent stays.</summary>
@@ -1767,7 +1767,7 @@ public sealed class BuildTeamTests
     private static void OpenAddMember(IRenderedComponent<ContainerFragment> cut)
     {
         _ = cut.InvokeAsync(() => { _ = cut.Find("button.roster-add-catalog").ClickAsync(); });
-        cut.WaitForAssertion(() => Assert.Equal("Add a member", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Add an Agent", cut.Find(".mud-dialog-title").TextContent.Trim()));
     }
 
     /// <summary>Presses the Members tab's "From other teams" choice and waits for the Agent picker. The click is not awaited: it completes only when the dialog closes.</summary>
@@ -1797,7 +1797,7 @@ public sealed class BuildTeamTests
     private static IReadOnlyList<string> TeamsOf(Fixture fixture, string name) =>
         fixture.Personas.Entries.Single(entry => string.Equals(entry.Name, name, StringComparison.Ordinal)).Teams;
 
-    /// <summary>Adds a draft member for the role through the "Add a member" dialog and waits for it on the roster.</summary>
+    /// <summary>Adds a draft member for the role through the "Add an Agent" dialog and waits for it on the roster.</summary>
     private static async Task AddMemberAsync(IRenderedComponent<ContainerFragment> cut, string role)
     {
         int before = cut.FindAll(".roster-card").Count;

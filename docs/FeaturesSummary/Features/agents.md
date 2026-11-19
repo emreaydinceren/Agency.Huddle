@@ -115,7 +115,7 @@ can't match yours.
 | **Remove**, after a confirmation | The definition file, Model, Effort, Work mode, avatar and browser profile, with every site it was signed in to, are deleted, and the Agent goes offline | Rooms, transcripts and its `work/` folder. Tasks keep its name but no longer wake anyone |
 
 An Edit card has no **Teams** field. To add an Agent to a Team, edit the `teams:` line in the card's text.
-To take it off, use **Remove from team** on the Team's **Members** tab.
+To take it off, use **Remove from team** on the Team's **Agents** tab.
 
 ### Status badges
 

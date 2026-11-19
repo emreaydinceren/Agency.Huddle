@@ -975,7 +975,7 @@ This Room has three Members, so per ADR-0004 each Agent answers only a Mention; 
 **Steps**
 
 1. Press Ctrl+C in `T-A`, then launch with `P-LAUNCH-PAID` (its first step makes the Chief of Staff cheap), with no `Team__Acp__Command` set.
-2. In the browser start `P-NEW-PERSONA`: open a Team's **Members** tab, point at **Add a member**, select **From scratch**.
+2. In the browser start `P-NEW-PERSONA`: open a Team's **Agents** tab, point at **Add an Agent**, select **From scratch**.
 3. In **Name** type `Nova`. In **Title** type `Test persona`. In **Alias** type `nova`. The card has no Teams field; Nova stays in the Team you opened.
 4. In the **Persona text** field type `You are Nova. Answer briefly.`
 5. In the **Model** dropdown choose the option whose name contains `Haiku`.

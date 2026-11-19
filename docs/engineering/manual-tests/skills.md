@@ -133,7 +133,7 @@ open a seeded Room exactly as SKILL.md step 6 describes.*
    coordinates, per SKILL.md step 5.
 4. Click **Approve**.
 5. In `<data>\Agents\`, confirm the Agent count grew by exactly the number of Candidates the card
-   showed, and that each new Agent's roster card on its Team's **Members** tab eventually reads Online — a newly created Agent takes a moment
+   showed, and that each new Agent's roster card on its Team's **Agents** tab eventually reads Online — a newly created Agent takes a moment
    to start, so wait and recheck rather than judging Offline as a failure at the first glance.
 6. Return to the Room. Confirm a Human-authored Message reading `Approved. Created <names>. @Chief
    of Staff go ahead.` is present in `O-TRANSCRIPT`, and that the Chief of Staff answers it without
@@ -253,7 +253,7 @@ limit; only Approve does (`ProposalService.cs:67`).*
    Candidate's **Teams** column reads `Launch`. Team `Launch` has no members yet, so `0 + 2 = 2` is
    exactly at the limit of 2 and the card shows `This adds 2 Agents; 0 of 2 per Team.`
 2. **Before clicking Approve**, use **New agent** (`P-NEW-PERSONA`, free) to add one Agent
-   directly — any name, Haiku/low, in the `Launch` Team (open `Launch`'s **Members** tab). `Launch` now has 1 member, and the card's
+   directly — any name, Haiku/low, in the `Launch` Team (open `Launch`'s **Agents** tab). `Launch` now has 1 member, and the card's
    headroom line, recomputed on render, reads `...; 1 of 2 per Team.`
 3. Click **Approve** on the still-waiting card.
 4. Read the posted Message.
@@ -385,7 +385,7 @@ to advise on a dose change, and file-backed memory across a restart.*
   "Family Health Advisor" section — this body needs no bracket substitution, unlike the Keeper and
   Specialist templates above it in the same file).
 - Do not give it any Skill; the safety rules live in its own Body, not in a Skill it reads.
-- Confirm it is Online (the status badge on its roster card on its Team's **Members** tab) before starting.
+- Confirm it is Online (the status badge on its roster card on its Team's **Agents** tab) before starting.
 
 **Steps**
 

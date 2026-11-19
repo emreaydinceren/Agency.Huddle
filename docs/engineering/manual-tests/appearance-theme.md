@@ -667,15 +667,15 @@ If the click produced neither of the two outcomes above — no file change AND n
 5. (c) Close the panel and click the `Ada` Room in the sidebar. In the Room, inspect: the chat header, the member line, each message row (sender name, timestamp, body), the composer textarea including its placeholder `Message {Room name}… (/invite @Agent)`, and the budget note line.
 6. (d) Type `hello` and press Enter. WATCH THE DRAFT STREAM IN: inspect the streaming row, its caret, the stop control (a small outlined button), and any tool-activity line while they are on screen.
 7. (e) Type a fenced code block: type three backticks, then `code`, then three backticks, and press Enter. Inspect the rendered code block - it exercises the monospace token, still declared in `wwwroot/app-vars.css` since MudBlazor's theme has no monospace equivalent.
-8. (f) Open a Team from the sidebar and its **Members** tab. Inspect the roster cards, the avatar monograms and the **Add a member** tile.
+8. (f) Open a Team from the sidebar and its **Agents** tab. Inspect the roster cards, the avatar monograms and the **Add an Agent** tile.
 9. (g) Open an Agent's card (`P-OPEN-AGENT`). It is now a real dialog with a dimmed, scrollable-page-behind backdrop: inspect the dialog surface, the scrim behind it, the `Persona`, `Model` and `Effort` sections, and the Edit / Open / Remove buttons (and the Close icon). Close the dialog with Escape.
 10. (h) Create a rejected persona file so the rejected block renders: in `C:\seeds\huddle\uat\data\Agents\`, create `broken.md` containing exactly:
 ---
 name: broken
 ---
 A persona with no title.
-Save it, then press F5 on the Team's **Members** tab.
-11. (i) At the top of the **Members** tab, find the section headed `Files that didn't load` and inspect its heading, the path and the reason text.
+Save it, then press F5 on the Team's **Agents** tab.
+11. (i) At the top of the **Agents** tab, find the section headed `Files that didn't load` and inspect its heading, the path and the reason text.
 12. (j) Go to http://localhost:5100/settings/prompts and inspect the whole panel, then click `Appearance` and inspect that panel.
 13. Now check native controls specifically: open every MudSelect popup you can find (the card's Model and Effort selects) and check the popup itself is dark, not a white system menu. Check the Theme picker's own lists too — it is a `MudList`, not a popup, so it is always on screen.
 14. Click into the composer textarea and check it is dark.
@@ -703,7 +703,7 @@ Save it, then press F5 on the Team's **Members** tab.
 
 **Inconclusive if**
 
-If the sidebar has no `Ada` Room or `New room` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If the Team's **Members** tab has no Agent, parts (f) and (g) are INCONCLUSIVE until you add one (`P-NEW-PERSONA`).
+If the sidebar has no `Ada` Room or `New room` lists no agents, parts (c), (d) and (e) are INCONCLUSIVE - the app was not launched with `P-LAUNCH-UAT`; relaunch it (the seeder run is the reset) and repeat. If the Team's **Agents** tab has no Agent, parts (f) and (g) are INCONCLUSIVE until you add one (`P-NEW-PERSONA`).
 
 > [!NOTE]
 > TWO THINGS MUST NOT SWITCH AND ARE NOT BUGS. (1) The `An unhandled error has occurred.` banner stays LIGHT YELLOW in dark mode on purpose - it is shown when the application has already failed, the one moment a Theme cannot be trusted. (2) The Persona's Markdown source shown on the agent dialog deliberately keeps the inherited font rather than the monospace token. Free: Ada runs on the mock adapter and needs no Claude turn.
@@ -724,7 +724,7 @@ If the sidebar has no `Ada` Room or `New room` lists no agents, parts (c), (d) a
 1. Go to http://localhost:5100/ and hover a room row in the sidebar. Note the highlight colour.
 2. In DevTools -> Elements, select that room row, click the `:hov` button in the Styles pane, tick `:hover`, and read Computed `background-color`. Write the value down.
 3. Click `New room` and hover a row in the agent list. Force `:hover` on it the same way and read Computed `background-color`. Write it down.
-4. Click a Team in the sidebar, open its **Members** tab and hover an Agent's roster card. Force `:hover` and read Computed `background-color`. Write it down.
+4. Click a Team in the sidebar, open its **Agents** tab and hover an Agent's roster card. Force `:hover` and read Computed `background-color`. Write it down.
 5. Compare the three values.
 6. Go back to a Room and click it so it shows as the ACTIVE/selected room in the sidebar. Read that row's Computed `background-color` and confirm it is a dark selected-surface colour, visibly different from the hover colour but still dark.
 7. Press Tab repeatedly to move keyboard focus through the composer textarea, then through the Appearance tab's Theme picker rows, then through an agent dialog's fields. At each stop, look at whether the focus outline is clearly visible against the dark ground.
