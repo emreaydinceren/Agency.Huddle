@@ -116,8 +116,9 @@ public sealed class JobEditorDialogTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = await OpenAsync(ctx, job.Id);
         await AgentProfileCardTestSupport.OpenSelectAsync(cut, "Repeats");
         await AgentProfileCardTestSupport.ClickSelectItemAsync(cut, "Every day");
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".job-editor-date")));
 
-        cut.Find(".job-editor-save").Click();
+        await cut.InvokeAsync(() => cut.Find(".job-editor-save").Click());
 
         Assert.Equal("A Follow-up runs once; delete it and create a Job instead", cut.Find(".job-editor-error").TextContent.Trim());
         Assert.Equal(job, this.store.Find(job.Id));
