@@ -1,3 +1,4 @@
+using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -7,6 +8,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
+using Agency.Huddle.Tests.Tasks;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -181,6 +183,75 @@ public sealed class TaskOrderPanelTests
         _ = Create(harness, "Late one", rank: 2);
 
         cut.WaitForAssertion(() => Assert.Equal(["First", "Late one"], Titles(cut)));
+    }
+
+    /// <summary>Raising TasksReloaded after a Task is written straight to disk redraws the panel with that Task.</summary>
+    [Fact]
+    public async Task TasksReloaded_Redraws()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem first = Create(harness, "First", rank: 1);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, new SidebarPanelContext(), new TaskSubject(first.Id));
+        Assert.Equal(["First"], Titles(cut));
+
+        Seed(harness, TestTasks.Make(id: "PLAT-0099", title: "Written on disk") with { Rank = 2 });
+        harness.Events.RaiseTasksReloaded();
+
+        cut.WaitForAssertion(() => Assert.Equal(["First", "Written on disk"], Titles(cut)));
+    }
+
+    /// <summary>Two Tasks that block each other each say which one they are in a cycle with, and both dots are Warning.</summary>
+    [Fact]
+    public async Task Cycle_BothEntriesNameTheOtherAndAreWarning()
+    {
+        using TaskToolHarness harness = new();
+        Seed(
+            harness,
+            TestTasks.Make(id: "PLAT-0001", title: "Cycle A", blockedBy: [new TaskId("PLAT", 2)]) with { Rank = 1 },
+            TestTasks.Make(id: "PLAT-0002", title: "Cycle B", blockedBy: [new TaskId("PLAT", 1)]) with { Rank = 2 });
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, new SidebarPanelContext(), new TaskSubject(new TaskId("PLAT", 1)));
+
+        Assert.Equal(
+            ["PLAT-0002 · blocks PLAT-0001 · blocked by PLAT-0001 · cycle with PLAT-0001", "PLAT-0001 · blocked by PLAT-0002 · cycle with PLAT-0002"],
+            cut.FindAll(Item + " .task-order-meta").Select(static e => e.TextContent.Trim()));
+        Assert.Equal(
+            ["mud-timeline-dot-warning", "mud-timeline-dot-warning"],
+            cut.FindAll(Item).Select(static item => DotClass(item)));
+    }
+
+    /// <summary>A Backlog-group entry's dot is Default.</summary>
+    [Fact]
+    public async Task BacklogGroupEntry_DotIsDefault()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem next = Create(harness, "Next one", rank: 1);
+        _ = Create(harness, "Parked", TaskState.Backlog);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, new SidebarPanelContext(), new TaskSubject(next.Id));
+
+        cut.Find(".task-order-backlog-toggle").Click();
+
+        IElement parked = cut.FindAll(Item).Single(static item => item.QuerySelector(".task-order-title")?.TextContent.Trim() == "Parked");
+        Assert.Equal("mud-timeline-dot-default", DotClass(parked));
+    }
+
+    /// <summary>The dot colour class of one timeline item.</summary>
+    private static string DotClass(IElement item) =>
+        string.Join(' ', item.QuerySelectorAll(".mud-timeline-item-dot-inner").SelectMany(static dot => dot.ClassList).Where(static c => c.StartsWith("mud-timeline-dot-", StringComparison.Ordinal)));
+
+    /// <summary>Writes Tasks straight to disk and reloads the store, as a file watcher would.</summary>
+    private static void Seed(TaskToolHarness harness, params TaskItem[] tasks)
+    {
+        foreach (TaskItem task in tasks)
+        {
+            string fullPath = TaskLayout.PathFor(harness.TasksDirPath, task.Location, task.Id);
+            TestTaskStore.WriteTask(harness.TasksDirPath, Path.GetRelativePath(harness.TasksDirPath, fullPath), task);
+        }
+
+        harness.Store.RebuildFromWatcher();
     }
 
     /// <summary>A Document Subject draws nothing and reports no count.</summary>

@@ -71,7 +71,7 @@ internal static class TaskOrder
         /// <param name="blocks">The Task it was listed ahead of, or null.</param>
         public TaskOrderEntry Entry(TaskItem task, TaskOrderGroup group, TaskId? blocks)
         {
-            IReadOnlyList<OpenBlocker> blockedBy = this.open[task.Id];
+            IReadOnlyList<OpenBlocker> blockedBy = [.. this.open[task.Id].OrderBy(static blocker => blocker.Id.ToString(), StringComparer.Ordinal)];
             IReadOnlyList<TaskId> cycle = this.cycles.GetValueOrDefault(task.Id) ?? [];
             bool startable = task.Status == TaskState.ToDo && blockedBy.Count == 0 && cycle.Count == 0;
             return new TaskOrderEntry(task, group, startable, blocks, blockedBy, cycle);

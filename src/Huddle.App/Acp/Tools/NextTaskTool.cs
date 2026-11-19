@@ -171,18 +171,9 @@ internal sealed class NextTaskTool(
         return $"{blocker.Id} ({blocker.Status.ToWire()}{assignee})";
     }
 
-    /// <summary>Joins ids as <c>A and B</c> or <c>A, B and C</c>.</summary>
-    private static string JoinIds(IReadOnlyList<TaskId> ids)
-    {
-        List<string> texts = ids.Select(static id => id.ToString()).ToList();
-        if (texts.Count == 1)
-        {
-            return texts[0];
-        }
-
-        string head = string.Join(", ", texts.Take(texts.Count - 1));
-        return string.Concat(head, " and ", texts[^1]);
-    }
+    /// <summary>Joins ids as <c>A, B, C</c>.</summary>
+    private static string JoinIds(IReadOnlyList<TaskId> ids) =>
+        string.Join(", ", ids.Select(static id => id.ToString()));
 
     /// <summary>Builds the placeholder values of one prompt.</summary>
     private static Dictionary<string, string> Values(params (string Key, string Value)[] pairs) =>

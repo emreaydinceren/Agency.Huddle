@@ -179,7 +179,7 @@ public sealed class NextTaskToolTests
 
         string result = await CreateTool(harness).InvokeAsync(new JsonObject(), ct);
 
-        Assert.Equal("Nothing is startable right now.\nWaiting: PLAT-0001 and PLAT-0002 block each other; ask your manager.", result);
+        Assert.Equal("Nothing is startable right now.\nWaiting: PLAT-0001, PLAT-0002 block each other; ask your manager.", result);
     }
 
     /// <summary>A Backlog Task that holds up a To Do one is listed as waiting, with the Task it blocks.</summary>
@@ -265,7 +265,7 @@ public sealed class NextTaskToolTests
 
         string result = await CreateTool(harness).InvokeAsync(new JsonObject(), ct);
 
-        Assert.Equal("Nothing is startable right now.\nWaiting: PLAT-0001, PLAT-0002 and PLAT-0003 block each other; ask your manager.", result);
+        Assert.Equal("Nothing is startable right now.\nWaiting: PLAT-0001, PLAT-0002, PLAT-0003 block each other; ask your manager.", result);
     }
 
     /// <summary>Creates a Platform Task as the Human.</summary>

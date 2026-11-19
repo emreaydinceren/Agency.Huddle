@@ -160,10 +160,22 @@ public sealed class TaskOrderTests
         TaskOrderResult expected = TaskOrder.Compute(tasks, Lookup(tasks));
         TaskOrderResult actual = TaskOrder.Compute(reversed, Lookup(reversed));
 
-        Assert.Equal(
-            expected.Entries.Select(entry => (entry.Task.Id, entry.Group, entry.Blocks, entry.IsStartable)),
-            actual.Entries.Select(entry => (entry.Task.Id, entry.Group, entry.Blocks, entry.IsStartable)));
+        Assert.Equal(Describe(expected), Describe(actual));
+        Assert.Contains(expected.Entries, entry => entry.BlockedBy.Count > 1);
     }
+
+    /// <summary>Each entry as its id, group, blocks, startability, blocker ids and cycle ids, for comparing two results.</summary>
+    private static string[] Describe(TaskOrderResult result) =>
+    [
+        .. result.Entries.Select(entry => string.Join(
+            '|',
+            entry.Task.Id,
+            entry.Group,
+            entry.Blocks,
+            entry.IsStartable,
+            string.Join(',', entry.BlockedBy.Select(blocker => blocker.Id)),
+            string.Join(',', entry.Cycle))),
+    ];
 
     /// <summary>Seeds are walked in rank order whatever the order of the scope: a scope listed worst-first still lists the best Task first.</summary>
     [Fact]
