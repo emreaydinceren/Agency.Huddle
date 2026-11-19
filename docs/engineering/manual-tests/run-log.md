@@ -4300,6 +4300,14 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-04--a-new-ho
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | New household Team HouseLane: `_team.md` has `gates: ['blockers-done-before-start']` and the Process tab lists it. Manager Nora asked to start HOUS-0002 (blocked by HOUS-0001): refused with the gate text and "Your next startable Task is HOUS-0001 "P first chore"."; HOUS-0002 stayed To Do. Lane spend 0.50 USD, of which 0.23 was the Chief of Staff's Greeting Turn on Opus. |
 
+### TASKORDER-05 — A second Task In Progress is refused, naming the first, until the first is Done
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-05--a-second-task-in-progress-is-refused-naming-the-first-until-the-first-is-done)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/one-in-progress` on `5c4c8bed` |  | The TASKORDER-01 to 04 lane. DevLane predates the gate, so the tester added `one-in-progress-per-assignee` to its `_team.md` by hand (the Process tab only switches gates off). Ana held DEVL-0001 In Progress; asked to start DEVL-0003, her `update_task` got exactly "Gate one-in-progress-per-assignee: Ana already has DEVL-0001 "B the prerequisite" In Progress. Finish it or move it out of In Progress before starting another." and DEVL-0003 stayed To Do. The Human moved DEVL-0001 back to To Do (allowed), and Ana then moved DEVL-0003 to In Progress herself (Timeline 23:21:30Z); the Task order panel listed it under Started. About 0.10 USD. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

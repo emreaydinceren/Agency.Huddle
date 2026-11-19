@@ -857,6 +857,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKORDER-02](tasks.md#taskorder-02--a-developer-calls-next_task-and-starts-what-it-names) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
 | [TASKORDER-03](tasks.md#taskorder-03--a-refused-start-names-the-next-task) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
 | [TASKORDER-04](tasks.md#taskorder-04--a-new-household-team-refuses-a-blocked-start) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
+| [TASKORDER-05](tasks.md#taskorder-05--a-second-task-in-progress-is-refused-naming-the-first-until-the-first-is-done) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
 
 ## adapters
 

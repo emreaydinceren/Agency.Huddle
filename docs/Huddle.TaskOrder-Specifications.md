@@ -280,8 +280,7 @@ Across Teams, ranks compare as plain numbers and interleave. ADR-0099 already ac
 
 ## 6. Out of scope
 
-- **One In Progress Task per person** (question D in the brief): not decided. If it is ever built, it is a gate, and
-  TaskOrder does not need to change.
+- **One In Progress Task per person:** decided later, in §9.
 - **Wakes.** TaskOrder writes nothing, so it wakes no one. What a change to rank, priority or `blocked_by` wakes is
   decided in the smart-wakes spec.
 - **Reordering anything.** No rank is written by TaskOrder or by the panel.
@@ -309,3 +308,40 @@ Prove each new test can fail, as [agents/Testing.md](../agents/Testing.md) requi
 | 4 | **Panel:** `TaskOrderPanel`, its registration, bUnit tests, `wireframes.md`, the manual tests and a User Guide line | 1 |
 
 Slices 3 and 4 touch different files and can run in parallel.
+
+## 9. One Task In Progress per person (added 2026-11-19)
+
+The owner decided question D after the slices above shipped (PR 694): **each person has at most one Task In
+Progress.** Decision record: [ADR-0102](adr/0102-a-person-has-at-most-one-task-in-progress.md). TaskOrder itself does
+not change: `next_task` already tells an Agent to finish its started Task first. This makes it a rule.
+
+### 9.1 The rule
+
+| | Decision |
+| --- | --- |
+| Gate | A new gate, `one-in-progress-per-assignee` (`GateId.OneInProgressPerAssignee`, display name "One In Progress per assignee"), enforced in `ProcessGateService.CheckTaskChange` like the others |
+| What counts | Only Tasks whose status is **In Progress**, not in `_closed/`, in **any** Team. Needs You does not count: that Task waits on the Human, not on its assignee |
+| Who | Every assignee: each Agent and the Human. An unassigned Task is never limited |
+| When it refuses | A change that would leave an assignee with two In Progress Tasks: a move into In Progress; giving an In Progress Task to someone who already has one; creating a Task as In Progress. A move out of In Progress, or any change that leaves the count at one, always passes. |
+| Refusal text | `Gate one-in-progress-per-assignee: <assignee> already has <id> "<title>" In Progress. Finish it or move it out of In Progress before starting another.` The words live where the other gates' refusal texts live, so the gate test style applies |
+| Override | As every gate: the Human can override one move, and can switch the gate off for a Team in the Process tab |
+| Default | Listed in the `gates:` of every one of the 29 built-in processes, with a Gates bullet worded like the refusal, and each process's template minor version bumped |
+| Which Team's gates | The Team of the Task being changed (the same loop over the current and candidate Team that the other gates use) |
+
+What Huddle itself does is not limited: its own status moves (`MoveReadyToNeedsYou`) only leave In Progress.
+
+### 9.2 Where Agents learn it
+
+- `Playbooks/HuddleRules/member.md` (the read-only list of what the code enforces) gains one bullet: "You have at most
+  one Task In Progress. Finish it, or move it to Needs You or back to To Do, before you start another." Regenerate
+  the prompt defaults and goldens it reaches.
+- The `next_task` Started line ("Finish it before you start another") already says the same; leave it.
+
+### 9.3 Tests that must exist
+
+| Area | Pins |
+| --- | --- |
+| Gate | Refuses a second move into In Progress for the same assignee, naming the first Task exactly; passes when the other Task is Needs You, Done or closed; counts across Teams; passes for an unassigned Task; refuses reassigning an In Progress Task to someone who has one; refuses creating a Task as In Progress for such an assignee; never refuses a move out of In Progress; the Human's override passes; off when the Team's `_team.md` does not list it |
+| Process files | Every built-in process lists the gate and its bullet (extend the slice 2 test) |
+| Prompts | The Huddle rules bullet reaches the member prompt (goldens) |
+| Manual | `TASKORDER-05` in [tasks.md](engineering/manual-tests/tasks.md): an Agent with one Task In Progress is asked to start a second, is refused naming the first, and starts it once the first is Done |

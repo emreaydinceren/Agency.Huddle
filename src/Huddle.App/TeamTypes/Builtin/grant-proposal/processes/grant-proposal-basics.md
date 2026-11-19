@@ -1,7 +1,7 @@
 ---
 title: 'Grant proposal basics'
-template: 'grant-proposal-basics@1.2.0'
-gates: ['qa-evidence-before-done', 'blockers-done-before-start']
+template: 'grant-proposal-basics@1.3.0'
+gates: ['qa-evidence-before-done', 'blockers-done-before-start', 'one-in-progress-per-assignee']
 retro: { every: 14, unit: 'days' }
 ---
 # Grant proposal basics
@@ -45,6 +45,7 @@ Follow the voice principles in `Teams/AGENTS.md`. Write each section to the fund
 
 - `qa-evidence-before-done`: Huddle refuses to move a Task to Done until a member whose role covers verify posts an Evidence line.
 - `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- `one-in-progress-per-assignee`: Huddle refuses to move a Task to In Progress, or to give an In Progress Task to someone, while its assignee already has another Task In Progress, and names that Task.
 
 ## Definition of Done
 

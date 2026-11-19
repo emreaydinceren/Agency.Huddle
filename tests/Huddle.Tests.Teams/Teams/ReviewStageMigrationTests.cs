@@ -160,17 +160,20 @@ public sealed partial class ReviewStageMigrationTests
     }
 
     /// <summary>
-    /// Drops what TaskOrder slice 2 added to every built-in process (the <c>blockers-done-before-start</c> entry in
-    /// <c>gates:</c>, its Gates bullet, and "no other hard gate" back to "no hard gate"). Installed Teams are never
-    /// migrated to that gate, so the review-wording migration correctly leaves it out and the comparison must too.
+    /// Drops what TaskOrder slice 2 and the one-in-progress gate added to every built-in process (the
+    /// <c>blockers-done-before-start</c> and <c>one-in-progress-per-assignee</c> entries in <c>gates:</c>, their Gates
+    /// bullets, and "no other hard gate" back to "no hard gate"). Installed Teams are never migrated to those gates,
+    /// so the review-wording migration correctly leaves them out and the comparison must too.
     /// </summary>
     /// <param name="text">A process file with <c>\n</c> line endings.</param>
-    /// <returns>The text as it read before the gate was added.</returns>
+    /// <returns>The text as it read before the gates were added.</returns>
     private static string WithoutBlockerGate(string text)
     {
         IEnumerable<string> kept = text.Split('\n')
-            .Where(static line => !line.StartsWith("- `blockers-done-before-start`:", StringComparison.Ordinal))
+            .Where(static line => !line.StartsWith("- `blockers-done-before-start`:", StringComparison.Ordinal)
+                && !line.StartsWith("- `one-in-progress-per-assignee`:", StringComparison.Ordinal))
             .Select(static line => line
+                .Replace(", 'one-in-progress-per-assignee']", "]", StringComparison.Ordinal)
                 .Replace("gates: ['blockers-done-before-start']", "gates: []", StringComparison.Ordinal)
                 .Replace("declares no other hard gate", "declares no hard gate", StringComparison.Ordinal));
         return string.Join('\n', kept);
@@ -194,7 +197,8 @@ public sealed partial class ReviewStageMigrationTests
             }
         }
 
-        Assert.Equal(CurrentText(FileName).ReplaceLineEndings("\r\n"), fixture.ProcessNow);
+        Assert.DoesNotContain('\n', fixture.ProcessNow.Replace("\r\n", string.Empty, StringComparison.Ordinal));
+        Assert.Equal(WithoutPlaybookTrim(CurrentText(FileName)), WithoutPlaybookTrim(fixture.ProcessNow.ReplaceLineEndings("\n")));
     }
 
     /// <summary>A Team whose file has no outdated text, or already has the new text, gets nothing.</summary>

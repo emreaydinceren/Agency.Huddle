@@ -1,7 +1,7 @@
 ---
 title: 'Lightweight flow'
-template: 'lightweight-flow@1.0.0'
-gates: ['qa-evidence-before-done', 'checks-before-merge', 'accept-before-merge', 'blockers-done-before-start']
+template: 'lightweight-flow@1.1.0'
+gates: ['qa-evidence-before-done', 'checks-before-merge', 'accept-before-merge', 'blockers-done-before-start', 'one-in-progress-per-assignee']
 retro: { every: 10, unit: 'done-tasks' }
 checkCommand: 'dotnet test'
 ---
@@ -45,6 +45,7 @@ This Team builds and ships software in a repository, and this process takes a sm
 - `checks-before-merge`: a merge or push needs an Evidence line that shows exit code 0 for the Team's check command, `dotnet test`, first, whatever runs it.
 - `accept-before-merge`: a merge into main needs the Human's Accept, as the Team's or project's Needs You level says. Under Ask me (the default) put the merge in the Task's Action, for example `Merge feat/x into main`; Huddle moves the Task to Needs You when its Proof is complete, and the merge follows the Accept. Under Run inside the Team do not set a merge Action: when the Proof is complete, Huddle releases the Task and wakes its assignee, who merges its branch into the local main and then moves the Task to Done. The branch must be named after the Task id, for example `feat/DEV-0012-login`; a merge of any other branch needs the Human's Accept. Every push needs the Human's Accept at every level, whatever runs it (a script or a git alias too): put the push in the Task's Action, for example `Push feat/DEV-0012-login to origin`.
 - `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- `one-in-progress-per-assignee`: Huddle refuses to move a Task to In Progress, or to give an In Progress Task to someone, while its assignee already has another Task In Progress, and names that Task.
 
 ## Definition of Done
 

@@ -39,6 +39,7 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         GateId.FailingTestBeforeFix => "A bug can then move on without a test that failed first.",
         GateId.AcceptBeforeMerge => "Code can then be merged into main without the Human's Accept.",
         GateId.BlockersDoneBeforeStart => "A Task can then start, or reach Done, while a Task it is blocked by is still open.",
+        GateId.OneInProgressPerAssignee => "A person can then have several Tasks In Progress at once.",
         GateId.HumanGate => "A Task can then reach Done without the Human's acceptance.",
         GateId.ProofIncomplete => "A Task can then reach Needs You with its Proof incomplete.",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
@@ -57,6 +58,12 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
         bool toDone = string.Equals(context.ToStatus, TaskState.Done.ToWire(), StringComparison.Ordinal);
         bool toInProgress = string.Equals(context.ToStatus, TaskState.InProgress.ToWire(), StringComparison.Ordinal);
         bool toNeedsYou = string.Equals(context.ToStatus, TaskState.NeedsYou.ToWire(), StringComparison.Ordinal);
+
+        // A change that keeps the status (a reassignment) is judged by the one gate about who holds the Task.
+        if (string.Equals(context.FromStatus, context.ToStatus, StringComparison.Ordinal))
+        {
+            return OneInProgressRefusal(context, enabled);
+        }
 
         if (context.OpenBlockers.Count > 0 && enabled.Contains(GateId.BlockersDoneBeforeStart) && IsBlockerGated(context.ToStatus))
         {
@@ -78,7 +85,25 @@ internal sealed class ProcessGateService(ITeamCatalog teams, ITeamFolders folder
             return new GateRefusal(GateId.FailingTestBeforeFix, "Gate failing-test-before-fix: an Evidence line showing a failing test before the fix is needed before this bug can move on.");
         }
 
-        return null;
+        return OneInProgressRefusal(context, enabled);
+    }
+
+    /// <summary>The refusal of <c>one-in-progress-per-assignee</c> (ADR-0102): it names the Task the assignee already has In Progress.</summary>
+    /// <param name="context">The proposed change.</param>
+    /// <param name="enabled">The gates the Team enables.</param>
+    /// <returns>The refusal, or <see langword="null"/> when the gate is off, the change does not end In Progress, or the assignee holds no other Task there.</returns>
+    private static GateRefusal? OneInProgressRefusal(GateContext context, IReadOnlyList<GateId> enabled)
+    {
+        if (context.OtherInProgress is not { } other
+            || !string.Equals(context.ToStatus, TaskState.InProgress.ToWire(), StringComparison.Ordinal)
+            || !enabled.Contains(GateId.OneInProgressPerAssignee))
+        {
+            return null;
+        }
+
+        return new GateRefusal(
+            GateId.OneInProgressPerAssignee,
+            $"Gate one-in-progress-per-assignee: {other.Assignee} already has {other.Id} \"{other.Title}\" In Progress. Finish it or move it out of In Progress before starting another.");
     }
 
     /// <summary>Checks a merge or push against the Team's <c>checks-before-merge</c> gate.</summary>

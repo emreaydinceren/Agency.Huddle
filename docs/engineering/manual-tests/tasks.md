@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**31 tests** · 20 free, 11 paid 💰 · about 5.3 hours.
+**32 tests** · 20 free, 12 paid 💰 · about 5.5 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -1333,6 +1333,37 @@ asked what to work on gets its own order, and the Task it names starts.*
 
 - The gate is missing from the Process tab -> the type's `processes/*.md` files do not list it.
 - The Task moves -> the Team's process was not the one loaded.
+
+### TASKORDER-05 — A second Task In Progress is refused, naming the first, until the first is Done
+
+**Paid 💰** · about 10 min · 3 Turns
+
+*Proves ADR-0102: an assignee has at most one Task In Progress, and the refusal names it.*
+
+**Before you start**
+
+- A Team whose process lists `one-in-progress-per-assignee` (any built-in type), with its Agent on a live Adapter
+  (Sonnet or better). Two **To Do** Tasks assigned to that Agent, neither blocked.
+
+**Steps**
+
+1. Open the Team's **Process** tab and read the gates.
+2. Ask the Agent to start the first Task, then to start the second while the first is still In Progress.
+3. Move the first Task to **Done**, then ask the Agent to start the second again.
+
+**Pass if — all of these**
+
+- The Process tab lists `one-in-progress-per-assignee`.
+- The first Task moves to **In Progress**. The second stays in **To Do**, and the refusal reads
+  `Gate one-in-progress-per-assignee: <Agent> already has <id> "<title>" In Progress.` followed by `Finish it or move it
+  out of In Progress before starting another.`, naming the first Task.
+- After the first Task is Done, the second moves to **In Progress**.
+
+**Fail if — any of these**
+
+- The gate is missing from the Process tab -> the type's `processes/*.md` files do not list it.
+- Both Tasks reach In Progress -> `TaskService` is not computing the assignee's other In Progress Task.
+- The second Task still refuses after the first is Done -> a Task that is not In Progress is being counted.
 
 ---
 
