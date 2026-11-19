@@ -13,7 +13,8 @@ on:
     branches: [main]
     # No `paths-ignore`: a docs-only PR must still run, so the required checks report and the
     # `docs` job in ci-shared.yaml gets to check it. The `validate` job skips its restore, build,
-    # test and smoke-test steps itself when only docs/ changed ("Detect docs-only change").
+    # test and smoke-test steps itself when only docs/ or PowerShell scripts outside src/ and tests/
+    # changed ("Detect docs- or script-only change").
 
 # One runner serves every workflow, so a superseded run is wasted queue time.
 concurrency:

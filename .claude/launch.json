@@ -4,13 +4,13 @@
     {
       "name": "huddle-seed",
       "runtimeExecutable": "pwsh",
-      "runtimeArgs": ["-NoProfile", "-File", "run.ps1", "-Seed", "-Port", "1111"],
+      "runtimeArgs": ["-NoProfile", "-File", "run.ps1", "-Seed", "-NoBrowser", "-Port", "1111"],
       "port": 1111
     },
     {
       "name": "huddle-seed-noacp",
       "runtimeExecutable": "pwsh",
-      "runtimeArgs": ["-NoProfile", "-File", "run.ps1", "-Seed", "-NoAcp", "-Port", "1115"],
+      "runtimeArgs": ["-NoProfile", "-File", "run.ps1", "-Seed", "-NoAcp", "-NoBrowser", "-Port", "1115"],
       "port": 1115,
       "autoPort": false
     },
