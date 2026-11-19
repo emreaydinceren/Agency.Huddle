@@ -1050,8 +1050,6 @@ body.sidebar-resizing {
 
 .tags-tree .tags-tree-row.mud-button-root {
     min-width: 0;
-    height: 28px;
-    justify-content: flex-start;
     padding-inline: 4px;
 }
 
@@ -1641,28 +1639,9 @@ body.sidebar-resizing {
 /* One Agent in the invite list. Not named .invite-agent: that is the header wrapper, and this width: 100% on it
    took the whole members stack and squeezed "N members + you" to one word per line. */
 .invite-agent-option {
-    display: flex;
-    align-items: center;
     gap: 8px;
     width: 100%;
-    min-height: 32px;
     padding: 4px 8px;
-    font: inherit;
-    font-size: var(--mud-typography-body2-size);
-    text-align: left;
-    background: none;
-    border: none;
-    border-radius: var(--hu-radius-card);
-    cursor: pointer;
-}
-
-/* MudButton centres its label; the list reads better flush left. */
-.invite-agent-option .mud-button-label {
-    justify-content: flex-start;
-}
-
-.invite-agent-option:hover {
-    background: var(--hu-hover);
 }
 
 .message-list {

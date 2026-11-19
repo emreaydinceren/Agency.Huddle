@@ -95,7 +95,7 @@ public sealed class ThemeAlignmentSourceTests
         string tagRow = CssText.RuleBody(css, ".tags-tree .tags-tree-row.mud-button-root", RuleMatch.Last);
 
         Assert.Contains("min-width: 0;", tagRow, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
-        Assert.Contains("justify-content: flex-start;", tagRow, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
+        Assert.Contains("justify-content: flex-start;", CssText.RuleBody(css, ".mud-button-root.list-option", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("padding-block: 0;", CssText.RuleBody(css, ".tags-tree .mud-treeview-item-content", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("content: \"·\";", CssText.RuleBody(css, ".tasks-counts > * + *::before", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("font-weight: 500;", CssText.RuleBody(css, ".tasks-counts strong", RuleMatch.Last), StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup

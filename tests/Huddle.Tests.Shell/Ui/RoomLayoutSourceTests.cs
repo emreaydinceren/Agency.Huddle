@@ -89,7 +89,7 @@ public sealed class RoomLayoutSourceTests
     [Fact]
     public void AppCss_QuestionCardOption_IsTouchSizedAndKeepsItsCase()
     {
-        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".question-card-option");
+        string body = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".mud-button-root.list-option");
 
         Assert.Contains("min-height: 28px;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
         Assert.Contains("text-transform: none;", body, StringComparison.Ordinal); // contains-ok: stylesheet source text, not markup
