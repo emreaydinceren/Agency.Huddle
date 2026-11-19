@@ -1,0 +1,97 @@
+@*
+    The Members tab's "From other teams" choice: every Agent not on this Team, grouped by the Teams it is in, with the
+    Agents in no Team last. Picking one closes the dialog with its Name; the Team's roster then shows it as joining,
+    and it joins (this Team is added to its teams: line) when the Human saves. It also stays in its other Teams.
+*@
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Components.Pages
+@using Agency.Huddle.App.Components.Shared.Dialogs
+@inject PersonaStore Personas
+@inject AvatarStore Avatars
+
+<MudDialog Class="agent-picker-dialog">
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="agent-picker-intro mud-text-secondary">@Explainer</MudText>
+        @if (this.Groups.Count == 0)
+        {
+            <EmptyState Icon="@Icons.Material.Outlined.GroupOff" Title="No other Agents" Text="Every Agent is already on this Team. Add one from the roles catalog or from scratch." />
+        }
+        else
+        {
+            @if (this.OtherTeams.Count > 1)
+            {
+                <SelectField Compact="true" T="string" AriaLabel="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamChanged" Class="agent-picker-filter">
+                    <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
+                    @foreach (string team in this.OtherTeams)
+                    {
+                        <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
+                    }
+                </SelectField>
+            }
+            @foreach (AgentGroup group in this.Groups)
+            {
+                <section class="agent-picker-group">
+                    <MudText Typo="Typo.subtitle2" HtmlTag="h3" Class="agent-picker-heading">@group.Heading <span class="chip-meta">@group.Members.Count</span></MudText>
+                    <ul class="agent-picker-list">
+                        @foreach (PersonaEntry entry in group.Members)
+                        {
+                            <li class="agent-picker-item">
+                                <button type="button" class="agent-picker-tile" aria-label="@($"Add {entry.Name}")" @onclick="() => this.Choose(entry.Name)">
+                                    <AgentAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Size="Size.Medium" />
+                                    <span class="agent-picker-text">
+                                        <span class="agent-picker-name">@entry.Name</span>
+                                        <span class="agent-picker-role">@entry.Title</span>
+                                        <span class="chip-meta">@($"@{entry.Alias}")</span>
+                                    </span>
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                </section>
+            }
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    /// <summary>The line under the dialog's title that says what picking an Agent does.</summary>
+    internal const string Explainer = "Pick an Agent to add to this Team. It stays in its other Teams too, and it joins this one when you select Save changes.";
+
+    /// <summary>The dialog's options: as wide as the roles picker, since the Agents sit in a grid.</summary>
+    internal static DialogOptions Options => HuddleDialogOptions.Picker;
+
+    private string selectedTeam = string.Empty;
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The Team being added to; its own members are not offered.</summary>
+    [Parameter]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Names already on the roster, drafts and joining Agents included, which are not offered either.</summary>
+    [Parameter]
+    public IReadOnlyCollection<string> ExcludedNames { get; set; } = [];
+
+    /// <summary>The Agents that may join: not in this Team and not already on its roster.</summary>
+    private IReadOnlyList<PersonaEntry> Candidates =>
+    [
+        .. this.Personas.Entries.Where(entry =>
+            !entry.Teams.Contains(this.Team, StringComparer.OrdinalIgnoreCase)
+            && !this.ExcludedNames.Contains(entry.Name, StringComparer.OrdinalIgnoreCase)),
+    ];
+
+    /// <summary>The Teams the candidates are in, this one left out, in the store's order.</summary>
+    private IReadOnlyList<string> OtherTeams =>
+    [
+        .. this.Personas.Teams.Where(team => !string.Equals(team, this.Team, StringComparison.OrdinalIgnoreCase)
+            && this.Candidates.Any(entry => entry.Teams.Contains(team, StringComparer.OrdinalIgnoreCase))),
+    ];
+
+    private IReadOnlyList<AgentGroup> Groups => AgentGrouping.Group(this.Candidates, this.OtherTeams, this.selectedTeam);
+
+    private void OnTeamChanged(string value) => this.selectedTeam = value;
+
+    private void Choose(string name) => this.Dialog?.Close(DialogResult.Ok(name));
+}

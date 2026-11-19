@@ -113,7 +113,7 @@ retries are the cases that raced.
 
 Never count a bare word in server-rendered HTML (`client.GetStringAsync(…)`): the Blazor prerender
 markers carry random base64, which contains a short name like `Amy` by chance about once in a
-hundred runs. Count the element — `class="agents-item-name">Amy<` — instead.
+hundred runs. Count the element that holds the name (its own `span`) instead.
 
 - A `MudSelect` opens on **`mousedown`**, not `click` (a click throws `MissingEventHandlerException`).
 - A `MudMenu` opens by clicking its activator **button**; read items as `div.mud-menu-item`

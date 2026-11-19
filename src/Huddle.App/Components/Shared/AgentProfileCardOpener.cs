@@ -3,13 +3,12 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using MudBlazor;
-using AgentsPage = Agency.Huddle.App.Components.Pages.Agents;
 
 namespace Agency.Huddle.App.Components.Shared;
 
 /// <summary>
-/// Opens the Agent card dialog for an Agent by name, gathering the inputs exactly as the Agents
-/// page does. The page and Global Search both open the card through this one door, so the two cannot drift
+/// Opens the Agent card dialog for an Agent by name, gathering the inputs the one way. Every
+/// surface that opens the card (Global Search, the Team's Members tab) goes through this one door, so they cannot drift
 /// (Global Search spec §9, OP-9). The inputs are gathered when the card opens and passed as a snapshot,
 /// because an open dialog's parameters are frozen.
 /// </summary>
@@ -51,10 +50,50 @@ internal sealed class AgentProfileCardOpener(
 
         await dialogs.ShowAsync<AgentProfileCard>(
             entry.Name,
-            AgentsPage.BuildViewParameters(entry.Name, entry, persona, status, roomId, AgentProfileCardOpener.TryPathFor(personas, entry.Name)),
+            AgentProfileCardOpener.BuildViewParameters(entry.Name, entry, persona, status, roomId, AgentProfileCardOpener.TryPathFor(personas, entry.Name)),
             AgentProfileCard.Options);
         return true;
     }
+
+    /// <summary>
+    /// Builds the <see cref="DialogParameters"/> <see cref="OpenAsync"/> shows <see cref="AgentProfileCard"/>
+    /// with in <see cref="AgentProfileCardMode.View"/>. A pure function of its inputs, so a plain unit test
+    /// proves it: <c>AgentDialogParametersTests</c> checks that every key names a real public <c>[Parameter]</c>
+    /// on <see cref="AgentProfileCard"/>, because a key that does not is silently dropped.
+    /// </summary>
+    /// <param name="personaName">The Persona to show.</param>
+    /// <param name="entry">Its directory entry, for Title/Alias/Teams - <see langword="null"/> if it somehow is not (yet) in <see cref="PersonaStore.Entries"/>.</param>
+    /// <param name="persona">Its file-plus-database record, for Text/Model/Effort - <see langword="null"/> the same way.</param>
+    /// <param name="status">The resolved status to show for it.</param>
+    /// <param name="roomId">The Room it shares with the Human, if one exists yet.</param>
+    /// <param name="filePath">Its file's absolute path, if it resolves to one.</param>
+    internal static DialogParameters BuildViewParameters(
+        string personaName,
+        PersonaEntry? entry,
+        Persona? persona,
+        PersonaStatus status,
+        string? roomId,
+        string? filePath) => new()
+    {
+        [nameof(AgentProfileCard.Mode)] = AgentProfileCardMode.View,
+        [nameof(AgentProfileCard.Name)] = personaName,
+        [nameof(AgentProfileCard.Title)] = entry?.Title ?? string.Empty,
+        [nameof(AgentProfileCard.Alias)] = entry?.Alias ?? string.Empty,
+        [nameof(AgentProfileCard.Teams)] = entry is null ? string.Empty : string.Join(", ", entry.Teams),
+        [nameof(AgentProfileCard.Text)] = persona?.Text ?? string.Empty,
+        [nameof(AgentProfileCard.Model)] = persona?.Model,
+        [nameof(AgentProfileCard.Effort)] = persona?.Effort,
+        [nameof(AgentProfileCard.WorkMode)] = persona?.WorkMode,
+        [nameof(AgentProfileCard.Status)] = status,
+        [nameof(AgentProfileCard.RoomId)] = roomId,
+        [nameof(AgentProfileCard.FilePath)] = filePath,
+    };
+
+    /// <summary>The <see cref="DialogParameters"/> that show a blank <see cref="AgentProfileCard"/> in <see cref="AgentProfileCardMode.Create"/>; see <see cref="BuildViewParameters"/> for why every key matters.</summary>
+    internal static DialogParameters BuildCreateParameters() => new()
+    {
+        [nameof(AgentProfileCard.Mode)] = AgentProfileCardMode.Create,
+    };
 
     /// <summary>The Agent's definition file path, or <see langword="null"/> when it does not resolve to one.</summary>
     /// <param name="personas">The Agent definitions.</param>

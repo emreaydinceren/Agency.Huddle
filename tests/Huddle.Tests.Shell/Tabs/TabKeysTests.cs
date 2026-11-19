@@ -25,7 +25,6 @@ public sealed class TabKeysTests
     [InlineData("/tasks/item/new/edit", "task-new-edit")]
     [InlineData("/tasks/item/new/edit?team=Platform&project=Alpha", "task-new-edit")]
     [InlineData("/tasks/item/PLAT-0013/copy", "task-copy:PLAT-0013")]
-    [InlineData("/agents", "agents")]
     [InlineData("/settings", "settings")]
     [InlineData("/settings/appearance", "settings")]
     [InlineData("/library", "library")]

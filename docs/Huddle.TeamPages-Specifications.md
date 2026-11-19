@@ -79,7 +79,7 @@ Give each Team a home in the interface that matches the home it already has on d
 Since the Library shipped, `{DataDir}/Teams/<Team>/[<Project>/]` holds a Team's notes, its
 Projects and its Tasks (ADR-0030). The interface has no Team-shaped view of that tree:
 
-- Membership is visible only as a filter on the Agents page.
+- Membership is visible only as a filter on the Agents page. (That page was retired on 2026-11-18.)
 - Notes are one root among several in the Library pane.
 - Tasks are reachable only through a saved View.
 
@@ -141,7 +141,7 @@ reached in one Room with one Agent part of every member's starting context.
 | Renaming, moving or deleting a Team or Project | A Team rename relabels every member (each restarts) and refiles every Task (each wakes its assignee, ADR-0026). It needs its own design. The Library already refuses these operations on Team and Project folders |
 | Members of a Project | A Project is worked by its Team. Per-Project membership would be a second membership source beside `teams` |
 | Full-text search | The Library spec defers it (§12 there). The search boxes filter by name |
-| Creating an Agent from *+ Add member* | The Agents page owns creation. *+ Add member* picks an existing Agent |
+| Creating an Agent from *+ Add member* | The Agents page owned creation. *+ Add member* picks an existing Agent. (Superseded 2026-11-18: the Agents page is gone and the Members tab's *Add a member* creates Agents, see §6.7.) |
 | Team settings (colour, icon, description) | No place to store them that isn't a second source of truth. V2 could use a `Teams/<Team>/_team.md` |
 | Permissions | A Team is still never a permission ([language.md](engineering/language.md), *Team*). Every Agent can still read every Team folder with its own tools |
 | A Team-level Budget or token Budget | Budgets stay per Room and per Persona |
@@ -737,7 +737,7 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
   doesn't build its tree while the Human reads Members.
 
 **Unknown Team.** When `TeamCatalog.Find(Team)` is null, the page shows
-`MudAlert Severity.Warning` *There is no Team named "X".*, with a link to the Agents page.
+`MudAlert Severity.Warning` *There is no Team named "X".*, with no link (it linked to the Agents page, which was removed on 2026-11-18).
 An unknown Project shows the same pattern, *There is no Project named "X" in Team "Business".*,
 with a link to its Team. Both alerts carry `role="alert"`. Neither page creates anything on a
 stray URL.
@@ -748,7 +748,13 @@ stray URL.
 ### 6.7 Members tab
 
 > **Superseded (2026-10-14).** The Members tab is now `TeamRoster`: Build a team's Hire section
-> for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). It shows the role
+> for the Team (`BuildTeam` with `MembersOnly`; `wireframes.md` `M6`, `B12`). Since 2026-11-18 the tab holds
+> no roles: its roster opens with an *Add a member* tile that, on hover, focus or a tap, turns into three choices.
+> *From roles catalog* shows the role cards (`RolePicker`, with an explaining line and the team type filter) in
+> `RolePickerDialog`, and Add there drafts the role. *From other teams* (`AgentPickerDialog`) lists the Agents not on
+> the Team by Team, *No team* last; the one picked joins on save (the Team is added to its `teams:` line) and keeps
+> its other Teams. *From scratch* opens a blank New agent card (`AgentProfileCard` as a draft, no Teams field) whose
+> draft is hired into the Team on save. The Agents page is gone, so these are how an existing Agent joins a Team. It shows the role
 > cards (220px wide, two scrolling rows in `.role-grid`; the description clamps to three lines; Add is a small
 > outlined button at the bottom left with *Suggested* to its right) and a roster of the members (a 40px
 > avatar carrying the presence badge, no status dot beside the name; the name at 14px/600, the role at 13px, *Member*,

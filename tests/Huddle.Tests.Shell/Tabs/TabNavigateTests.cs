@@ -10,7 +10,7 @@ public sealed class TabNavigateTests
     public void Navigate_ToAnotherKey_RewritesTheTabInPlace()
     {
         TabService service = new();
-        Tab agents = service.Open("/agents");
+        Tab agents = service.Open("/scheduled");
         service.Keep(agents.Id);
         Tab project = service.Open("/teams/Core/projects/Alpha");
         service.Keep(project.Id);
@@ -23,7 +23,7 @@ public sealed class TabNavigateTests
         Assert.Equal("/teams/Core", result.Url);
         Assert.Equal("Core", result.Title);
         Assert.Equal("team", result.Icon);
-        Assert.Equal(["agents", "team:core"], Keys(service));
+        Assert.Equal(["scheduled", "team:core"], Keys(service));
     }
 
     /// <summary>A preview Tab that is navigated becomes permanent: the person chose where it goes.</summary>
@@ -43,7 +43,7 @@ public sealed class TabNavigateTests
     public void Navigate_PinnedTab_StaysPinned()
     {
         TabService service = new();
-        Tab agents = service.Open("/agents");
+        Tab agents = service.Open("/scheduled");
         service.Keep(agents.Id);
         Tab project = service.Open("/teams/Core/projects/Alpha");
         service.Pin(project.Id);
@@ -51,7 +51,7 @@ public sealed class TabNavigateTests
         Tab? result = service.Navigate(project.Id, "/teams/Core");
 
         Assert.True(result?.IsPinned);
-        Assert.Equal(["team:core", "agents"], Keys(service));
+        Assert.Equal(["team:core", "scheduled"], Keys(service));
     }
 
     /// <summary>A URL with the Tab's own key only updates the URL; the title, such as a renamed Room's, is kept.</summary>
@@ -91,7 +91,7 @@ public sealed class TabNavigateTests
     public void Navigate_UnknownId_ReturnsNullAndRaisesNothing()
     {
         TabService service = new();
-        service.Open("/agents");
+        service.Open("/scheduled");
         int raised = 0;
         service.Changed += () => raised++;
 

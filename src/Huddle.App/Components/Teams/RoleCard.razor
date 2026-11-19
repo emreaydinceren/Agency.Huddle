@@ -6,13 +6,6 @@
 
 <div class="@(this.Custom ? "role-card role-card-custom" : "role-card")">
     <div class="team-type-card role-card-body">
-        @if (this.Taken)
-        {
-            <span class="role-card-taken" title="On the draft roster">
-                <MudIcon Icon="@Icons.Material.Outlined.CheckBox" Size="Size.Small" />
-                <span class="visually-hidden">On the draft roster</span>
-            </span>
-        }
         <span class="team-type-icon" aria-hidden="true">
             <MudIcon Icon="@(this.Custom ? Icons.Material.Outlined.PersonAdd : Icons.Material.Outlined.Badge)" Size="Size.Small" />
         </span>
@@ -28,6 +21,13 @@
                 @if (this.Suggested)
                 {
                     <span class="role-suggested">Suggested</span>
+                }
+                @if (this.Taken)
+                {
+                    <span class="role-card-taken" title="On the draft roster">
+                        <MudIcon Icon="@Icons.Material.Outlined.CheckBox" Size="Size.Small" />
+                        <span class="visually-hidden">On the draft roster</span>
+                    </span>
                 }
             </span>
         </span>

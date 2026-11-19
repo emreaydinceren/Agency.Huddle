@@ -14,7 +14,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). The mock Agents stand in for the Agents, so no test here spends money. This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Treat Ada as the assignee ("Miriam" and "Leo" in the spec) and Bo as the Agent who owns an open Proof item.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room). Treat Ada as the assignee ("Miriam" and "Leo" in the spec) and Bo as the Agent who owns an open Proof item.
 2. Use a Team whose `Process.md` has a `## Definition of Done` section of four items, the last of them a checked document or a checklist that Bo owns, so that the Proof can be 3/4 and then 4/4. Where a test needs a Task with a Proof, create it under that Team.
 3. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`. Task files are `$data\Teams\<Team>\_tasks\<ID>.md`.
 4. The exact interface strings below are those of the Task panel, the decision card, the board and the Needs You page. A pass means the text matches, not just the meaning.

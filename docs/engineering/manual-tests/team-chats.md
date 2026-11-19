@@ -10,10 +10,10 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Both are in no Team yet.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room). Both are in no Team yet.
 2. Open Ada's and Bo's root one-to-ones under **Rooms** once, send `hello` in each, and note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's room id>'`, `$bo = '<Bo's room id>'`.
 3. Create the Team **Marketing** by making the folder `<data>\Teams\Marketing` and reloading the page. It has no members, so it has no Team Room yet, and that is expected.
-4. Add **Ada** to Marketing: open her card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line of the text and save. Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
+4. Add **Ada** to Marketing (`P-ADD-TO-TEAM`, on Marketing's **Members** tab; Ada is under **No team**). Wait until Ada is **Online** again. Then add **Bo** the same way. The Team Room appears within a few seconds of each add; if it does not, reload the page once.
 5. The area's tests share this fixture and run in order. TEAMCHATS-02 adds a third Agent, and TEAMCHATS-07 renames the folder, so leave the fixture as it is when a test says so.
 
 This area makes an Agent post a Message into a Transcript by hand, because the mock Agents strip every `@` from what they echo. Define the helper once:
@@ -61,11 +61,11 @@ After each `Post`, stop the app and relaunch it with the `P-LAUNCH-UAT` launch c
 
 **Before you start**
 
-- TEAMCHATS-01 has passed. Hire a third Agent with **Add agent** on the Agents page, named `Kim`, and wait for it to be **Online**. Kim is in no Team yet.
+- TEAMCHATS-01 has passed. Hire a third Agent with `P-NEW-PERSONA`, named `Kim`, and wait for it to be **Online**. Use **Remove from team** so Kim is in no Team yet.
 
 **Steps**
 
-1. Open **Kim**'s card on `/agents`, select **Edit**, add `Marketing` to the `teams:` line of the text and save.
+1. Add **Kim** to Marketing (`P-ADD-TO-TEAM`, on Marketing's **Members** tab; Kim is under **No team**).
 2. Wait until Kim is **Online**, then open the Team Room.
 3. Read the end of the Transcript.
 4. Open the Members tab of Marketing.

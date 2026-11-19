@@ -229,7 +229,7 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 4. Add a space at the end of the Persona body (below the second `---`).
 5. Press Ctrl+S.
 6. A dialog titled **Save this definition?** opens with `Saving restarts Ada and clears its conversation memory.`. First click **Cancel** and check that the file is unchanged on disk (`O-FILE`). Press Ctrl+S again and click **Save**.
-7. Open **Agents** in the sidebar and watch Ada's card. It leaves Online and comes back.
+7. Open Ada's Room and watch the status badge on her avatar. It leaves Online and comes back.
 
 **Pass if — all of these**
 
@@ -616,14 +616,14 @@ Each pinned root appears in the table with a **Remove** button. The built-in **T
 4. Run `P-LAUNCH-FREE` again.
 5. In `T-A` look for a line starting `Agent layout migration` (`O-LOG`).
 6. In `T-B`, list the layout: `Get-ChildItem -Recurse <data>\Agents | Select-Object FullName`.
-7. Open **Agents** in the sidebar, then open the Library and expand the **Agents** root in the tree.
+7. Open the Library and expand the **Agents** root in the tree.
 
 **Pass if — all of these**
 
 - The log reports the migration at startup.
 - `Agents\Nova\Nova.md`, `Agents\Nova\work\notes.md`, `Agents\Ada\Ada.md` and `Agents\Ada\work\memory.md` exist, and `Agents\.layout-migrated` exists.
 - `Teams\Nova.md` and `Teams\Ada.md` are gone. `Teams\` itself stays: it is the live Team-folder root. `work\` is empty or removed.
-- Both Agents have cards on the Agents page (they read **Offline** under the free lane; Offline is correct there) and the Library's Agents root lists both with their work files.
+- Ctrl K finds both Agents (their status badges read **Offline** under the free lane; Offline is correct there) and the Library's Agents root lists both with their work files.
 
 **Fail if — any of these**
 

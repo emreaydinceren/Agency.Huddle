@@ -25,8 +25,8 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 3 | [Room view, posting Messages and Transcript rendering](room-messaging.md) | 29 | 1 | 3.3h |
 | 4 | [Turn streaming, Drafts, Stop and failure surfacing](streaming-turn.md) | 30 | 10 | 4.5h |
 | 5 | [Reply Gate, Mentions and Room Budget](reply-gate-budget.md) | 36 | 6 | 5.9h |
-| 6 | [Agents page: tiles, Teams grouping, filter and rejected files](agents-library.md) | 42 | 1 | 4.4h |
-| 7 | [Agent card: view, edit, create, delete](agent-profile-card.md) | 53 | 1 | 6.9h |
+| 6 | [Agent files: loading, rejected files, watcher, status badge and the card](agents-library.md) | 42 | 1 | 3.4h |
+| 7 | [Agent card: view, edit, create, delete](agent-profile-card.md) | 53 | 1 | 6.1h |
 | 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 28 | 1 | 3.8h |
 | 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 38 | 4 | 4.2h |
 | — | [Global Search: the box, the dropdown and the jump](global-search.md) | 10 | — | 2.3h |

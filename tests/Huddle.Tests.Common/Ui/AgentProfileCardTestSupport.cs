@@ -122,7 +122,7 @@ internal static class AgentProfileCardTestSupport
             () => cut.Find(AvatarLabelInput),
             input => input.Input(value));
 
-    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <c>AgentsPageTests</c> uses.</summary>
+    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern the page tests use.</summary>
     internal static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
         MudBunitContext ctx = UiTestHost.Create(services => services.CopyFrom(factory.Services, ServicePresets.Agents));
@@ -131,13 +131,13 @@ internal static class AgentProfileCardTestSupport
         AvatarLibraryPickSupport.RegisterUnconfigured(ctx.Services);
         return ctx;
     }
-    /// <summary>Renders the real <see cref="Agency.Huddle.App.Components.Pages.Agents"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card actually renders (see the type-level remarks) and a <c>MudSelect</c> inside it can too.</summary>
+    /// <summary>Renders <see cref="AgentCardTestHost"/>, the page that opens the card, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card actually renders (see the type-level remarks) and a <c>MudSelect</c> inside it can too.</summary>
     internal static IRenderedComponent<ContainerFragment> RenderPage(MudBunitContext ctx, TeamWebApplicationFactory factory)
     {
         _ = factory;
         return ctx.RenderWithPopovers(builder =>
         {
-            builder.OpenComponent<Agency.Huddle.App.Components.Pages.Agents>(0);
+            builder.OpenComponent<AgentCardTestHost>(0);
             builder.CloseComponent();
         });
     }
@@ -287,7 +287,7 @@ internal static class AgentProfileCardTestSupport
     /// <paramref name="raise"/> on it inside one turn of the renderer's dispatcher.
     /// </summary>
     /// <remarks>
-    /// Neither the page nor the card is synchronous end to end: <c>Agents.OnInitializedAsync</c>
+    /// Neither the page nor the card is synchronous end to end: the opener's lookups
     /// and a View/Edit card's own <c>OnInitializedAsync</c> each finish on a real SQLite lookup, and
     /// their completion renders land on the dispatcher whenever that lookup answers - under full-suite
     /// load, often mid-test. A bare synchronous click from the test thread races them twice

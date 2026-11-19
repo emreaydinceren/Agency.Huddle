@@ -7,21 +7,12 @@ using MudBlazor;
 namespace Agency.Huddle.Tests.Ui.Teams;
 
 /// <summary>
-/// Round 3 of the visual audit for the Agents tiles, the Team page, its dialogs and the avatar pickers: the rules that
+/// Round 3 of the visual audit for the Team page, its dialogs and the avatar pickers: the rules that
 /// live in the stylesheet and in razor source (a render cannot tell a 12px padding or a monospace block from a default).
 /// </summary>
 public sealed class R3TeamsSourceTests
 {
     private static string Source(params string[] path) => File.ReadAllText(CssSource.RepoPath(["src", "Huddle.App", .. path]));
-
-    /// <summary>An Agents tile has 12px padding, as the Board card does, not 16px (B7a, design-system "Agents").</summary>
-    [Fact]
-    public void Tile_HasTwelvePixelPadding()
-    {
-        string tile = CssText.RuleBodyLoose(CssText.AppCss(CssNewlines.AsIs), ".agent-tile");
-
-        Assert.Contains("padding: 12px;", tile, StringComparison.Ordinal); // contains-ok: haystack is one rule of the stylesheet source
-    }
 
     /// <summary>The Persona block is code, so it is monospace at 13px on the wash with an Edge line (B8g).</summary>
     [Fact]

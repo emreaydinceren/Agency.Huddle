@@ -32,8 +32,8 @@ removes Ada, and later tests rely on both.
 1. Create `Nova` with [`P-NEW-PERSONA`](common.md#p-new-persona): Title `VP Product`, Alias `nova`,
    **Teams** = `Business`. Saving it creates the folder `<data>\Teams\Business\` (the Teams
    provisioner, `TeamFolderProvisioner.cs:10-12`).
-2. Open **Agents** → **Ada** → **Edit**, type `Business` in **Teams** and click **Save**. Ada's
-   Title stays `Test Agent`. Leave Bo with no Team.
+2. Open Business → **Members**, point at **Add a member**, click **From other teams**, click **Ada**
+   and click **Save changes**. Ada's Title stays `Test Agent`. Leave Bo with no Team.
 3. In the sidebar Teams group hover `Business`, click its `Team actions` button (⋯), then `New project`, type `Marketing Project` and click `Create`.
 4. On the Marketing Project page open **Tasks** → `New task`, set Title `Seed task` (Team
    `Business` and Project `Marketing Project` are pre-filled) and save it. Then go to
@@ -49,7 +49,7 @@ together with **New team from a type**; a Team is now made with **Build a team**
 tests. The Team a fixture needs can be made by creating its folder under `<data>\Teams`.
 
 **Why TP-T3 and TP-REAL-01 are gone.** The Members tab is now Build a team's Hire section for
-the Team (role cards and a roster). It has no search box and no member row menu, so there is
+the Team (a roster, with the role cards behind **Add a member**). It has no search box and no member row menu, so there is
 nothing to search (TP-T3) and no row click to keep the menu from (TP-REAL-01).
 
 **Why TP-T13 is gone.** It asked whether a Persona on an Adapter with `ReadsFiles=false` gets no
@@ -91,25 +91,33 @@ with the Team row highlighted and a list of members with avatars, names, titles 
 
 **Free** · about 2 min
 
-*Proves the Members tab is Build a team's Hire section for the Team: the role cards, then the
-roster with each member's presence badge on the avatar, the *Member* meta text, Edit, Message (for a member that has
-connected) and a Remove menu on one row of actions; and that an Agent joins through its `teams:` line.*
+*Proves the Members tab is Build a team's Hire section for the Team: a roster led by an **Add a member**
+tile that turns into three choices (roles catalog, other teams, scratch); the roster with each member's presence badge on the avatar, the *Member* meta text, Edit, Message (for a member that has
+connected) and a Remove menu on one row of actions; and that an Agent from another Team joins on save.*
 
 **Steps**
 
-1. Open **Agents** → **Bo** → **Edit**, add `Business` to the `teams:` line of the text and
-   click **Save**. Wait until Bo is **Online** again.
-2. Open Business, then the **Members** tab.
+1. Open Business, then the **Members** tab. Point at the **Add a member** tile, then click
+   **From roles catalog**, look, and press Escape.
+2. Point at the tile again, click **From other teams**, click **Bo**, then **Save changes**.
+   Wait until Bo is **Online** again.
 3. Click **Remove** on Bo's card and look at the menu, then press Escape.
 
 **Pass if**
 
-- The tab shows the role cards (**Roles**, *Available roles*) and, under them, **Roster** with
-  Ada, Bo and Nova, each with a presence badge on the 40px avatar (no status dot beside the Name) and *Member* as meta text.
+- The tab shows **Roster** and no role cards; the roster's first cell is the **Add a member** tile.
+  Pointing at it turns it into **From roles catalog**, **From other teams** and **From scratch**;
+  tabbing to it or tapping it does the same.
+- **From roles catalog** opens **Add a member** with **Roles** (*N roles available*), a line starting
+  "Pick the role the new member will fill." and the **Team types** filter; Escape closes it.
+- **From other teams** lists Bo under his own Team and not Ada or Nova. After the pick Bo is on the
+  roster as *New* with only **Remove**; after the save he is a member, and his Agent card's Teams still
+  name his other Team too.
+- The roster has Ada, Bo and Nova, each with a presence badge on the 40px avatar (no status dot beside the Name) and *Member* as meta text.
 - Each member has **Edit** and **Message**; the Remove menu has **Remove from team** and
   **Delete agent**.
 - There is no **Save changes** bar yet: the save bar (sticky at the bottom of the pane) appears only once something is changed.
-- There is no Add member button and no search box.
+- There is no search box.
 
 **Fail if**
 
@@ -133,8 +141,8 @@ the Agent stays.*
 - Ada's card reads "Will leave the Team when you save", her Name is struck through, and it has
   **Undo**; the roster summary reads "3 members · 1 leaving".
 - Saving asks nothing (nobody is deleted), and Ada then leaves the roster.
-- Ada is still on the **Agents** page, and her `<data>\Agents\Ada\Ada.md` `teams` field no
-  longer includes `Business`.
+- Ada is still an Agent: **From other teams** on the Business Members tab lists her again, and her
+  `<data>\Agents\Ada\Ada.md` `teams` field no longer includes `Business`.
 
 **Fail if**
 
@@ -342,7 +350,7 @@ Changes list is Turn prompt text, not UI — ADR-0023.)*
 
 **Steps**
 
-1. Open Bo's Room (**Agents** → **Bo** → `Message`) and send `first`. Wait for the reply; this fixes Bo's baseline.
+1. Open Bo's Room (search `Bo` with Ctrl K, open his card, then `Message`) and send `first`. Wait for the reply; this fixes Bo's baseline.
 2. Create the folder `<data>\Teams\Business\memory\` if it is missing, and in it a file `launch-date.md` whose content is `Date: Q4 2026` (a text editor, [`O-FILE`](common.md#o-file)). The Human writes it; nothing here spawns a real Agent.
 3. Send `second` in Bo's Room and wait for the reply.
 4. Read the reply, which is the echoed prompt.
@@ -374,13 +382,13 @@ there makes it active.*
 1. Create the folder `<data>\Teams\Legal\` in a file explorer. Add no Agent to it.
 2. In the sidebar, verify `Legal` appears in the Teams list with a trailing count of `0`; hover it and the tooltip reads "No members" (wait a few seconds; reload the page if it has not appeared).
 3. Click `Legal` in the sidebar.
-4. On the Members page, click **Add** on any role card, then **Save changes**.
+4. On the Members page, point at **Add a member**, click **From roles catalog**, click **Add** on any role card, then **Save changes**.
 
 **Pass if**
 
 - The Team is listed and clickable even with no members.
 - The count beside `Legal` is `0` in plain caption text, its tooltip reads "No members", and it is not an error.
-- The Members page opens with the role cards and an empty roster ("No Agents yet. Add a role above.") before the add.
+- The Members page opens with a roster holding only the **Add a member** tile before the add.
 - After saving, the count rises to `1` and the tooltip no longer reads "No members", and the new Agent is on the roster as a member.
 
 **Fail if**
@@ -435,7 +443,7 @@ draft and deletes a removed member (the Agent, not only the label).*
 3. Confirm the tab has no steps and no role cards, shows only the Blank Team card, and the Team name
    field cannot be typed in.
 4. Change **What it's for** to `Grows vegetables.` and click **Save changes**.
-5. On the Garden **Members** tab, add any role from the role cards, then click **Remove** on the
+5. On the Garden **Members** tab, add any role through **Add a member** → **From roles catalog**, then click **Remove** on the
    first of the two members and choose **Delete agent**.
 6. Click **Save changes**, then **Delete** in the confirmation.
 
@@ -446,12 +454,12 @@ draft and deletes a removed member (the Agent, not only the label).*
   and the removed member's card said "Will be deleted when you save" with an **Undo** button.
 - The confirmation named the removed member.
 - After saving, the roster lists the second member and the new Agent as members, and the
-  removed member is gone from the **Agents** page.
+  removed member is gone: Ctrl K finds no Agent by that Name.
 
 **Fail if**
 
 - The type cards or the Team name can be changed, or the Details tab shows role cards.
-- The removed member is still on the Agents page, or only lost the `Garden` label.
+- The removed member still exists as an Agent (Ctrl K finds it), or only lost the `Garden` label.
 - The new draft was not hired, or a member was hired a second time.
 
 ### TP-T17 — A signed-out Adapter warns on the draft and still hires
@@ -510,7 +518,7 @@ persistent at 240 px (`MainLayout.razor:17`), so a narrow window shrinks the pag
 1. In the Settings Appearance section, switch to a Dark theme (e.g. "Huddle Dark").
 2. Observe the sidebar Teams group and the Team page in the browser.
 3. Resize the browser window to narrow (< 600px width, or DevTools mobile view).
-4. Observe the Members tab: the role cards and the roster cards.
+4. Observe the Members tab: the roster cards, then open **Add a member** → **From roles catalog** and observe the role cards.
 
 **Pass if**
 

@@ -39,8 +39,8 @@ Remove `ANTHROPIC_*`, `CLAUDE_CODE_*` and `CLAUDECODE` from the environment befo
 
 **Steps**
 
-1. Hire **New agent** on Sonnet and name it Scout. Do nothing else to it.
-2. Open Scout from the Agents page and find the **Browser** row, directly under Account connectors.
+1. Create an Agent on Sonnet and name it Scout (`P-NEW-PERSONA`). Do nothing else to it.
+2. Open Scout's card (`P-OPEN-AGENT`) and find the **Browser** row, directly under Account connectors.
 3. List the Playwright processes (Setup).
 4. Send Scout one Turn: "How many tools whose names start with mcp__playwright__ do you have? Is browser_run_code_unsafe one of them?"
 5. Open the Agent card's prompt preview and search it for `You have your own browser`.

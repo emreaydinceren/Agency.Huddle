@@ -20,7 +20,7 @@ public sealed class TabCloseGuardTests
     {
         tabs = ctx.Services.GetRequiredService<TabService>();
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
-        nav.NavigateTo("/agents");
+        nav.NavigateTo("/scheduled");
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TabHost>(0);

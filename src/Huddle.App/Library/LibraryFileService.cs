@@ -52,7 +52,7 @@ internal sealed class LibraryFileService(
 
     /// <summary>Settled text (Spec §6.12; corrections-B4 item 18): an Agent definition's frontmatter Name
     /// changed, and the Agents page is the only rename path.</summary>
-    private const string RenameOnAgentsPageReason = "Rename agents on the Agents page.";
+    private const string RenameOnAgentsPageReason = "Rename an agent from its card.";
 
     /// <summary>The buffer size, in bytes, an upload is copied with.</summary>
     private const int UploadBufferSize = 80 * 1024;

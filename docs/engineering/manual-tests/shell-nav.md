@@ -1,6 +1,6 @@
 # Application shell, navigation and layout
 
-Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/agents`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New room** inside it), the `Teams` group, **Agents**, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived and **Settings**. The Tasks, Library and Teams pages (`/tasks…`, `/library`, `/teams/…`) have no shell-level test here. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
+Prove the Agency.Huddle shell holds together: that the five routes this page exercises (`/`, `/rooms/{RoomId}`, `/library`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` is identical on every one of them, and above all that the shell's own assets actually load. The drawer holds the `Rooms` group (the room list, with **New room** inside it), the `Teams` group, the `Tasks` and `Library` groups, and a bottom row of two icon-only links, Archived and **Settings**. There is no Agents page: `/agents` shows "not found". The Tasks and Teams pages (`/tasks…`, `/teams/…`) have no shell-level test here, and the Library page (`/library`) is used only as a page that is not a Room. The asset check is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
 **43 tests** · 43 free, none paid · about 3.5 hours.
 
@@ -28,9 +28,9 @@ standing conventions. This area adds:
 1. Browse to `http://localhost:5100` in Chrome or Edge. Open DevTools (F12) and keep the Console, Network and Elements tabs available.
 2. In DevTools Network, tick **Disable cache** and leave the tab recording for the whole session. Several tests read its Status column.
 3. Every `curl.exe` oracle in this area runs in `T-B`, so it never disturbs the app.
-4. Confirm the baseline state: the `Rooms` group in the sidebar lists the one-to-one Rooms `Ada` and `Bo` once opened (groups start closed; the group holding the current page opens by itself, so open `Rooms` by clicking it if it is closed) (the built-in Chief of Staff's Room may be listed too), and both Agents are **Online** on `/agents`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
+4. Confirm the baseline state: the `Rooms` group in the sidebar lists the one-to-one Rooms `Ada` and `Bo` once opened (groups start closed; the group holding the current page opens by itself, so open `Rooms` by clicking it if it is closed) (the built-in Chief of Staff's Room may be listed too), and both Agents show **Online** on their avatars in their Rooms. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `Ada` and `Bo` assume this pair. Re-run `P-LAUNCH-UAT` to return to it.
 5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
-6. Do NOT click **New agent** on `/agents` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
+6. Do NOT create or edit an Agent during this area (no **Add a member**, no **Edit**). Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
 Top Bar search (the box in the middle of the Top Bar) is not tested here. Its placement is
 GLOBALSEARCH-09 in [global-search.md](global-search.md).
@@ -286,7 +286,7 @@ If the sidebar is empty because no rooms exist, the contradiction cannot be obse
 - Step 1 printed `404`.
 - Step 2 printed `0`.
 - Step 3 printed `404`.
-- The browser shows its OWN error page - in Chrome, `This page isn't working` / `HTTP ERROR 404` - with no sidebar, no **Agents** or **Settings** links, and no styling.
+- The browser shows its OWN error page - in Chrome, `This page isn't working` / `HTTP ERROR 404` - with no sidebar, no **Library** or **Settings** links, and no styling.
 - `T-A` logged no exception.
 
 **Fail if — any of these**
@@ -316,17 +316,17 @@ If a browser extension or a corporate proxy substitutes its own 404 page, the br
 **Steps**
 
 1. In `T-B` run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/Settings`
-2. Run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/AGENTS`
+2. Run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/LIBRARY`
 3. In the browser, navigate to `http://localhost:5100/Settings`.
 4. Read the `<h1>`.
-5. Navigate to `http://localhost:5100/AGENTS`.
-6. Read the `<h1>`.
+5. Navigate to `http://localhost:5100/LIBRARY`.
+6. Read the page.
 
 **Pass if — all of these**
 
 - Both `curl.exe` calls printed `200`.
 - `/Settings` shows an `<h1>` reading `Settings` with the seven-tab bar (SHELLNAV-11).
-- `/AGENTS` shows an `<h1>` reading `Agents`.
+- `/LIBRARY` shows the Library page, not the bare 404.
 
 **Fail if — any of these**
 
@@ -354,9 +354,9 @@ None expected. If the app is not listening, fix the launch first.
 1. In the browser, navigate to `http://localhost:5100/` and let it redirect to a room.
 2. In the DevTools Console, type `getComputedStyle(document.querySelector('.mud-drawer')).width` and press Enter. Record the value.
 3. Type `[...document.querySelectorAll('.mud-drawer-content > *')].map(e => e.className)` and press Enter. Record the list in order (the drawer's own content sections; `.mud-drawer > *` would list MudBlazor's wrapper elements instead).
-4. Type `[...document.querySelectorAll('.mud-drawer .mud-nav-link')].filter(a => ['/agents', '/settings'].includes(a.getAttribute('href'))).map(a => (a.textContent.trim() || a.getAttribute('aria-label')) + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
+4. Type `[...document.querySelectorAll('.mud-drawer .mud-nav-link')].filter(a => ['/settings'].includes(a.getAttribute('href'))).map(a => (a.textContent.trim() || a.getAttribute('aria-label')) + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
 5. Type `getComputedStyle(document.querySelector('.main-column')).overflow` and press Enter.
-6. Click the Agents button in the Activity bar, then **Agents** in the sidebar, and repeat steps 2 to 5.
+6. Click the **Library** button in the Activity bar to open the Library page, and repeat steps 2 to 5.
 7. Click the gear icon (**Settings**) at the bottom of the Activity bar and repeat steps 2 to 5.
 8. Navigate to `http://localhost:5100/settings/appearance` and repeat steps 2 to 5.
 9. On the Settings route, scroll the drawer with the mouse wheel while hovering over it, then scroll while hovering over the main column.
@@ -364,15 +364,15 @@ None expected. If the app is not listening, fix the launch first.
 **Pass if — all of these**
 
 - Step 2 printed `289px` on all four routes (the Activity bar, its edge and the open Sidebar).
-- Step 3 lists exactly two entries, in this order, on all four routes: `activity-bar` and `sidebar-views` (`MainLayout.razor`: the Activity bar, whose bottom toolbar holds the Archived and Settings menu, then the Sidebar's five views: Chats, Teams, Agents, Tasks and Library).
-- Step 4 printed exactly `Settings -> /settings` and `Agents -> /agents`, in that order, on all four routes (every Sidebar view stays mounted while hidden, so the Agents link is found whichever view is selected) — MudBlazor renders the link text as typed (title case), and the Settings link has no text, so its label comes from `aria-label`.
+- Step 3 lists exactly two entries, in this order, on all four routes: `activity-bar` and `sidebar-views` (`MainLayout.razor`: the Activity bar, whose bottom toolbar holds the Archived and Settings menu, then the Sidebar's views: Rooms, Teams, Tasks, Library and Scheduled, plus one Team's view).
+- Step 4 printed exactly `Settings -> /settings` on all four routes — MudBlazor renders the link text as typed (title case), and the Settings link has no text, so its label comes from `aria-label`.
 - Step 5 printed `"hidden"` on all four routes — `.main-column` is still the literal `Class` MudMainContent carries and its CSS rule is unchanged.
 - The drawer scrolls independently; the browser window itself never grows a page-level horizontal or vertical scrollbar.
 
 **Fail if — any of these**
 
 - The drawer is missing on one route -> that page declared its own layout instead of inheriting MainLayout. Defect, and the route is unreachable from anywhere else.
-- A link label reads anything other than `Agents` or `Settings` -> the shell's navigation wording drifted.
+- The Settings link label reads anything other than `Settings` -> the shell's navigation wording drifted.
 - Fewer or more than six sections -> a drawer entry was added or removed in `MainLayout.razor`; confirm that is intended and update this test.
 - `.mud-drawer`'s computed width is not `240px` -> the `Width="240px"` parameter on `MudDrawer` was changed or removed.
 - The whole page scrolls instead of only the drawer and the transcript -> `.main-column`'s `height: 100vh; overflow: hidden` was lost.
@@ -427,48 +427,7 @@ If only one room exists, the 'other room is plain' half cannot be judged - note 
 
 ### SHELLNAV-10 — /agents renders, and a bare page load spawns no node process
 
-**Free** · about 5 min
-
-*Proves the Agents page loads inside the shell and, critically, that simply visiting it costs nothing.*
-
-**Before you start**
-
-- App running on `P-LAUNCH-UAT` (the area lane: ACP on, free mock adapter). Nothing here may start a real adapter.
-- `O-ADAPTERS` reads `0` (no `node` process; the mock adapter is `mock-acp.exe`, which it does not count).
-
-**Steps**
-
-1. In `T-B` run `O-ADAPTERS` and `O-MOCK-ADAPTERS`. Record both numbers.
-2. In the browser, click **Agents** in the sidebar.
-3. Read the `<h1>`.
-4. Read the text of the `New agent` button, the first control in the toolbar under the intro paragraph.
-5. Read the first sentence of the intro paragraph below the heading.
-6. Confirm the sidebar is still present with the room list intact.
-7. In `T-B`, re-run both commands from step 1 and compare the numbers.
-8. Scroll `T-A` and look for any new line mentioning probing an adapter or starting a model catalog.
-9. Press F5 to reload `/agents`, then re-run both commands one more time.
-
-**Pass if — all of these**
-
-- The `<h1>` reads exactly `Agents`.
-- The button reads exactly `New agent`.
-- The intro paragraph begins `A Persona is a Markdown file describing how one agent should behave, plus the model it thinks with.`
-- The sidebar is unchanged and still lists the rooms.
-- Both counts in steps 7 and 9 are identical to step 1 (`O-ADAPTERS` `0`, `O-MOCK-ADAPTERS` unchanged).
-- `T-A` logged nothing about probing an adapter.
-
-**Fail if — any of these**
-
-- Either count rises on a bare page load -> the model catalog is being probed on render rather than when a card opens. This is a real regression AND it spends money whenever a real adapter is configured. Report it as high severity.
-- The `<h1>` or the button label differs from the exact text above -> wording drift.
-- The page renders without the sidebar -> it escaped MainLayout; see SHELLNAV-08.
-
-**Inconclusive if**
-
-If a `node` process was already running before the app started (another tool on the machine), the count comparison is noisy - close that tool, relaunch with `P-LAUNCH-UAT`, and re-run. If an Agent's session was still starting during step 1, the `mock-acp` count may rise for that reason alone; wait until Ada and Bo are **Online** and re-run. Ada, Bo and the Chief of Staff always list, so an empty Agents list is a different defect, not a result for this test.
-
-> [!NOTE]
-> Do NOT click **New agent** here. That card opens the model picker, which is the one control on this page that probes an adapter, and it belongs to the Agents area's tests, not this one. No model or effort selection is needed anywhere in this area.
+> **Retired (2026-11-18).** The Agents page was removed; nothing to run.
 
 ### SHELLNAV-11 — /settings renders the seven-tab bar and defaults to Profile
 
@@ -621,9 +580,9 @@ If the regex oracle prints nothing at all, the markup shape changed - fall back 
 
 **Steps**
 
-1. In the browser, visit each of these in turn and after each one read the browser TAB label and run `document.querySelector('title')` in the DevTools Console: `http://localhost:5100/` (which lands on a room), then a different room via the sidebar, then `http://localhost:5100/agents`, then `http://localhost:5100/settings`, then `http://localhost:5100/settings/appearance`.
+1. In the browser, visit each of these in turn and after each one read the browser TAB label and run `document.querySelector('title')` in the DevTools Console: `http://localhost:5100/` (which lands on a room), then a different room via the sidebar, then `http://localhost:5100/library`, then `http://localhost:5100/settings`, then `http://localhost:5100/settings/appearance`.
 2. Record the tab label and the console result for all five.
-3. In `T-B` run: `foreach ($p in '/agents','/settings','/settings/appearance') { $h = curl.exe -s "http://localhost:5100$p" | Out-String; "$p -> " + ([regex]::Matches($h,'<title')).Count }`
+3. In `T-B` run: `foreach ($p in '/library','/settings','/settings/appearance') { $h = curl.exe -s "http://localhost:5100$p" | Out-String; "$p -> " + ([regex]::Matches($h,'<title')).Count }`
 
 **Pass if — all of these**
 
@@ -657,7 +616,7 @@ If the browser tab is too narrow to read the label, hover it for the tooltip or 
 
 1. In the browser, open `http://localhost:5100/` and let it redirect to a room.
 2. In the DevTools Console, type `window.__probe = 1` and press Enter (this also sets up SHELLNAV-16).
-3. Click **Agents** in the sidebar.
+3. Click the **Library** button in the Activity bar.
 4. In the Console, type `document.activeElement.tagName + ' | ' + document.activeElement.textContent.trim()` and press Enter. Record it.
 5. In the Elements panel, select the `<h1>` and read its attributes.
 6. Click the gear icon (**Settings**) at the bottom of the sidebar, then repeat step 4.
@@ -667,7 +626,7 @@ If the browser tab is too narrow to read the label, hover it for the tooltip or 
 
 **Pass if — all of these**
 
-- After each of steps 3, 6 and 7, `document.activeElement.tagName` is `H1`, and its text is `Agents`, `Settings`, and the room name respectively.
+- After each of steps 3, 6 and 7, `document.activeElement.tagName` is `H1`, and its text is the Library page's heading, `Settings`, and the room name respectively.
 - The `<h1>` in the Elements panel carries `tabindex="-1"`.
 - In step 8, Tab lands on a control INSIDE the main column - not back at the top of the sidebar.
 - In step 9, on the unknown-room page, `document.activeElement.tagName` is `BODY` - there is no `<h1>` to receive focus.
@@ -702,7 +661,7 @@ If `document.activeElement` reports the DevTools console itself or an `<input>` 
 2. In the DevTools Console, type `window.__probe = 42` and press Enter.
 3. In the Network tab, set the filter to **WS** and note the `_blazor` websocket row and its start time.
 4. Click **New room** in the sidebar so the panel opens. Leave it open.
-5. Click **Agents** in the sidebar.
+5. Click the **Library** button in the Activity bar.
 6. Watch the page as it changes: note whether it white-flashes.
 7. In the Console, type `window.__probe` and press Enter.
 8. In the Network WS filter, check whether the `_blazor` websocket row is the SAME one from step 3 or a new one.
@@ -888,7 +847,7 @@ If the message sends but `Ada` never replies, the composer half still PASSED - r
 **Steps**
 
 1. In the browser, open a room page in TAB 1.
-2. Open a SECOND browser tab (TAB 2) on `http://localhost:5100/agents`.
+2. Open a SECOND browser tab (TAB 2) on `http://localhost:5100/library`.
 3. Return to TAB 1 and note the exact sidebar room list.
 4. Open a third PowerShell terminal at `<repo>`. Call it TERMINAL C.
 5. In TERMINAL C run: `pwsh tools/echo-bot.ps1 -Name mybot`
@@ -896,7 +855,7 @@ If the message sends but `Ada` never replies, the composer half still PASSED - r
 7. Without touching the browser, watch TAB 1's sidebar for up to five seconds.
 8. Switch to TAB 2 and watch its sidebar too, again without refreshing.
 9. In TAB 1, click **New room** and read the agent checkbox list.
-10. Now provoke the leak case: in TAB 1, click **Agents**, then **Settings**, then a room, then **Agents** again - four navigations in all (the **Settings** link is the gear icon at the bottom of the sidebar). Repeat the whole sequence once more so there are eight.
+10. Now provoke the leak case: in TAB 1, click **Library**, then **Settings**, then a room, then **Library** again - four navigations in all (the **Settings** link is the gear icon at the bottom of the sidebar). Repeat the whole sequence once more so there are eight.
 11. Read TAB 1's sidebar carefully for duplicate or stale entries.
 12. Scroll `T-A` and look for repeated handler errors or exception stacks.
 13. Close TAB 2 entirely, wait ten seconds, and scroll `T-A` again.
@@ -987,7 +946,7 @@ If the file watcher does not react within ten seconds, restart the app in `T-A` 
 9. Note whether the sidebar, the room heading and the transcript are all there in the FIRST frame, or whether they fill in a moment later.
 10. Note the budget figure shown on the page, if one is visible.
 11. In the same private window, navigate directly to `http://localhost:5100/settings/appearance` and watch the first paint.
-12. Navigate directly to `http://localhost:5100/agents` and watch the first paint.
+12. Navigate directly to `http://localhost:5100/library` and watch the first paint.
 
 **Pass if — all of these**
 
@@ -996,7 +955,7 @@ If the file watcher does not react within ten seconds, restart the app in `T-A` 
 - Step 5 printed `True` - the transcript is in the raw HTML, with no JavaScript involved at all.
 - Step 6 printed `False`.
 - In the private window, the sidebar, heading and transcript are complete in the first painted frame - no flash of empty layout.
-- The Appearance tab and the Agents page are likewise complete on first paint.
+- The Appearance tab and the Library page are likewise complete on first paint.
 - Interactivity (clicking **New room**, ticking a checkbox) starts working a moment later, once the websocket connects.
 
 **Fail if — any of these**
@@ -1026,7 +985,7 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 
 **Steps**
 
-1. Open TAB A on a room page and TAB B on `http://localhost:5100/agents`.
+1. Open TAB A on a room page and TAB B on `http://localhost:5100/library`.
 2. In TAB A, click **New room**, tick `Ada` and `Bo`, and click **Open room**.
 3. Without touching TAB B, switch to it and read its sidebar.
 4. Switch back to TAB A and navigate to `http://localhost:5100/settings/appearance`.
@@ -1248,7 +1207,7 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 1. Look at the drawer. Note where **Settings** sits relative to the **Library** link and **Archived** and relative to the bottom of the viewport.
 2. Note whether **Settings** shows any text, and hover it. Note what the tooltip says.
 3. In DevTools, run `document.querySelector('[aria-label="Settings"]').getAttribute('href')`. Note the value.
-4. Note whether **Agents** still shows its text, and whether an icon sits to its left.
+4. Note the order of the buttons in the Activity bar, top to bottom.
 5. Note whether **Archived** shows any text, and hover it. Note what the tooltip says.
 6. Make the browser window SHORT (about 400px tall) so the drawer's content overflows, and scroll the drawer. Note where Settings is now.
 7. Repeat steps 1 and 5 with the Huddle Dark theme selected (`Settings -> Appearance`, then **Huddle Dark** in the theme list).
@@ -1257,13 +1216,13 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 
 - **Settings** sits at the BOTTOM of the drawer, separated from the **Library** link by empty space rather than immediately below it.
 - **Settings** shows no text, hovering it reveals a tooltip reading `Settings`, and step 3 returns `/settings`.
-- **Agents** still reads "Agents", with an icon to its left.
+- The Activity bar lists Rooms, Teams, Tasks, Library, Scheduled, then Archived and Settings at the bottom (Feed and the Team shortcut tiles sit above them); there is no Agents button.
 - **Archived** shows no text and hovering it reveals a tooltip reading `Archived`.
 - The Settings and Archived icons are legible under Huddle Dark as well as light.
 
 **Fail if — any of these**
 
-- **Settings** sits immediately under **Agents** with no gap -> `margin-top: auto` is not applying. The likely cause is that the rule is in a SCOPED stylesheet: Blazor stamps its `[b-xxxxx]` scope only onto HTML elements written in the component's own markup, and `MainLayout.razor` has exactly one, `<div id="blazor-error-ui">`, which is not an ancestor of the drawer. The rules belong in `app.css`. Defect.
+- **Settings** sits immediately under the last button above it with no gap -> `margin-top: auto` is not applying. The likely cause is that the rule is in a SCOPED stylesheet: Blazor stamps its `[b-xxxxx]` scope only onto HTML elements written in the component's own markup, and `MainLayout.razor` has exactly one, `<div id="blazor-error-ui">`, which is not an ancestor of the drawer. The rules belong in `app.css`. Defect.
 - Step 3 returns `null` or anything other than `/settings` -> the link lost its href or its accessible name. Defect, and note that `SettingsPageTests` asserts the href.
 - Hovering **Settings** reveals no tooltip -> the `MudTooltip` is not wired. Defect.
 - In the short window, Settings overlaps the room list or is unreachable by scrolling -> the flex column is fighting the drawer's own scrolling. Defect.
@@ -1273,7 +1232,7 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 The drawer content is shorter than the viewport in step 6 no matter how small you make the window - some browsers clamp minimum height. Record what you could see for steps 1-5 and mark step 6 INCONCLUSIVE.
 
 > [!NOTE]
-> Settings and Archived are the only icon-only drawer entries (`MainLayout.razor:27-28`, `ArchivedLink.razor`). Do not file that as an inconsistency with **Agents**, which keeps its label on purpose. Rooms in the list have no leading icon (`RoomList.razor:53`).
+> Settings and Archived are the only icon-only drawer entries (`MainLayout.razor:27-28`, `ArchivedLink.razor`). Rooms in the list have no leading icon (`RoomList.razor:53`).
 
 ---
 
@@ -1289,14 +1248,14 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Click **Agents** in the sidebar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in the greyer secondary text colour (a kept tab's title is the body colour; no tab is italic).
+1. Click the **Library** button in the Activity bar once. Look at the strip above the page: note how many tabs there are, the title of the one that opened, and whether the title is in the greyer secondary text colour (a kept tab's title is the body colour; no tab is italic).
 2. Click Ada's Room in the sidebar once. Note the tab count, the tab titles, and which has the greyer preview title.
-3. Click **Agents** once more, then Bo's Room once. Note the tab count each time.
+3. Click **Library** once more, then Bo's Room once. Note the tab count each time.
 
 **Pass if — all of these**
 
-- Step 1 shows exactly one tab, `Agents`, with a greyer (secondary-colour) title and no italics, and the page shows the Agents list.
-- Step 2 shows exactly one tab: Ada's Room, with the greyer preview title, in place of `Agents`.
+- Step 1 shows exactly one tab, `Library`, with a greyer (secondary-colour) title and no italics, and the page shows the Library.
+- Step 2 shows exactly one tab: Ada's Room, with the greyer preview title, in place of `Library`.
 - Step 3 ends with exactly one tab, Bo's Room, with the greyer preview title. The strip never holds more than one tab.
 
 **Fail if — any of these**
@@ -1319,21 +1278,21 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Steps**
 
-1. Double-click **Agents** in the sidebar. Note the tab count and whether the title is in the greyer secondary text colour (a kept tab's title is the body colour; no tab is italic).
+1. Double-click the **Library** button in the Activity bar. Note the tab count and whether the title is in the greyer secondary text colour (a kept tab's title is the body colour; no tab is italic).
 2. Click Ada's Room in the sidebar once. Note the tab count and which tab has the greyer preview title.
 3. Double-click the greyer preview Ada tab in the strip. Note whether the title is still greyer.
 4. Click Bo's Room once. Note the tab count and titles.
 
 **Pass if — all of these**
 
-- Step 1 shows one tab, `Agents`, with a body-colour title.
-- Step 2 shows two tabs: `Agents` in the body colour and Ada's Room in the greyer preview colour, with Ada's active.
+- Step 1 shows one tab, `Library`, with a body-colour title.
+- Step 2 shows two tabs: `Library` in the body colour and Ada's Room in the greyer preview colour, with Ada's active.
 - Step 3 turns Ada's title from the greyer preview colour to the body colour.
-- Step 4 shows three tabs, `Agents`, Ada and Bo, with Bo's in the greyer preview colour. Nothing was replaced.
+- Step 4 shows three tabs, `Library`, Ada and Bo, with Bo's in the greyer preview colour. Nothing was replaced.
 
 **Fail if — any of these**
 
-- Step 2 replaces `Agents` -> the double-click did not keep it.
+- Step 2 replaces `Library` -> the double-click did not keep it.
 - Double-clicking the tab itself does not turn the title from the greyer preview colour to the body colour of a permanent tab.
 
 ---
@@ -1346,17 +1305,17 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Open http://localhost:5100/ and double-click **Agents**, then double-click Ada's Room in the sidebar, so two permanent tabs are open.
+- `P-LAUNCH-UAT`. Open http://localhost:5100/ and double-click **Library**, then double-click Ada's Room in the sidebar, so two permanent tabs are open.
 
 **Steps**
 
 1. Read the address bar. It names Ada's Room (`/rooms/<id>`).
-2. Click the `Agents` tab in the strip. Read the address bar and the page.
+2. Click the `Library` tab in the strip. Read the address bar and the page.
 3. Click Ada's tab again. Read the address bar and the page.
 
 **Pass if — all of these**
 
-- Step 2 shows `/agents` in the address bar, the Agents page, and the `Agents` tab marked active.
+- Step 2 shows `/library` in the address bar, the Library page, and the `Library` tab marked active.
 - Step 3 shows Ada's Room address and page again, with Ada's tab marked active.
 - The page is not reloaded by a tab click (Ada's Room history is still visible at once).
 
@@ -1374,18 +1333,18 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Open http://localhost:5100/ and double-click `Agents`, Ada's Room and Bo's Room in turn, so three permanent tabs are open with Bo's active.
+- `P-LAUNCH-UAT`. Open http://localhost:5100/ and double-click `Library`, Ada's Room and Bo's Room in turn, so three permanent tabs are open with Bo's active.
 
 **Steps**
 
 1. Click the **×** on the active Bo tab. Note which tab becomes active and the address bar.
-2. Middle-click the `Agents` tab. Note which tabs are left.
+2. Middle-click the `Library` tab. Note which tabs are left.
 3. Click the **×** on the last tab. Read the page.
 
 **Pass if — all of these**
 
 - Step 1 leaves two tabs, and the neighbour (Ada's Room) becomes active, with its page and address showing.
-- Step 2 closes `Agents`, leaving Ada's Room only.
+- Step 2 closes `Library`, leaving Ada's Room only.
 - Step 3 leaves no tab, and the page reads `No pages are open`.
 
 **Fail if — any of these**
@@ -1410,14 +1369,14 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 1. Click Ada's Room once, so a preview tab (greyer title) opens. Click in the message box and type `draft for Ada` without sending.
 2. Look at the Ada tab's title.
-3. Click **Agents** once. Note that a new tab opens beside Ada's instead of replacing it.
+3. Click **Library** once. Note that a new tab opens beside Ada's instead of replacing it.
 4. Click Ada's tab. Read the message box.
 5. Press F5 to reload the page. Open Ada's Room again if the strip is empty and read the message box.
 
 **Pass if — all of these**
 
 - Step 2 shows Ada's title upright: typing made it permanent.
-- Step 3 leaves two tabs, Ada and `Agents`.
+- Step 3 leaves two tabs, Ada and `Library`.
 - Step 4 shows `draft for Ada` still in the box.
 - Step 5 shows `draft for Ada` still in Ada's message box.
 
@@ -1468,18 +1427,18 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Close every tab. Double-click `Agents` and `Settings` in the menu so both are kept, then click Ada's Room once so it is a preview tab.
+- `P-LAUNCH-UAT`. Close every tab. Double-click `Library` and `Settings` in the menu so both are kept, then click Ada's Room once so it is a preview tab.
 
 **Steps**
 
-1. Read the tab strip: three tabs, `Agents`, `Settings`, and Ada's Room in the greyer preview colour.
-2. Navigate the browser to the `Agents` address and press Enter, so the page reloads on a different tab from the one active before.
+1. Read the tab strip: three tabs, `Library`, `Settings`, and Ada's Room in the greyer preview colour.
+2. Navigate the browser to the `Library` address and press Enter, so the page reloads on a different tab from the one active before.
 3. Read the strip again after about two seconds.
 4. Stop the app and start it again with `P-LAUNCH-UAT`, open the app, and read the strip once more.
 
 **Pass if — all of these**
 
-- Step 3 shows the same three tabs in the same order, `Agents` active, Ada's Room still in the greyer preview colour.
+- Step 3 shows the same three tabs in the same order, `Library` active, Ada's Room still in the greyer preview colour.
 - Step 4 shows the same tabs again.
 
 **Fail if — any of these**
@@ -1497,7 +1456,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Agents`, `Settings` and Ada's Room in the menu.
+- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Library`, `Settings` and Ada's Room in the menu.
 
 **Steps**
 
@@ -1508,7 +1467,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Pass if — all of these**
 
-- Step 1 moves to `Agents` (the strip wraps round) and the page changes with it.
+- Step 1 moves to `Library` (the strip wraps round) and the page changes with it.
 - Step 2 moves back through Ada's Room to `Settings`.
 - Step 3 closes `Settings` and the page switches to its neighbour.
 - Step 4 ends with "No pages are open".
@@ -1528,7 +1487,7 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Agents`, `Settings` and Ada's Room in the menu.
+- `P-LAUNCH-UAT`. Close every tab, then keep three: double-click `Library`, `Settings` and Ada's Room in the menu.
 
 **Steps**
 
@@ -1562,23 +1521,23 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Close every tab, then keep two: double-click `Agents` and `Settings`.
+- `P-LAUNCH-UAT`. Close every tab, then keep two: double-click `Library` and `Settings`.
 
 **Steps**
 
 1. Right-click the `Settings` tab, choose **Move right**.
 2. Look at the page and at the address bar.
 3. Right-click the `Settings` tab again and read **Move right**.
-4. Click anywhere in the `Agents` pane.
+4. Click anywhere in the `Library` pane.
 5. Look at the address bar and at the `Settings` pane.
 6. Right-click the only tab in the right pane, choose **Move left**.
 
 **Pass if — all of these**
 
-- Step 1 shows two panes side by side, `Agents` on the left and `Settings` on the right, each with its own strip.
+- Step 1 shows two panes side by side, `Library` on the left and `Settings` on the right, each with its own strip.
 - Step 2's address bar reads `/settings`, and the right pane's active tab has the accent line while the left one's is dimmed.
 - Step 3 shows **Move right** greyed out (no third pane is allowed).
-- Step 4 makes the address bar read `/agents` and moves the accent to the left pane. The `Settings` pane still shows its page, unchanged.
+- Step 4 makes the address bar read `/library` and moves the accent to the left pane. The `Settings` pane still shows its page, unchanged.
 - Step 6 closes the right pane and leaves one pane holding both tabs.
 
 **Fail if — any of these**
@@ -1597,16 +1556,16 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 
 **Before you start**
 
-- `P-LAUNCH-UAT`. Two panes as left by `SHELLNAV-40` step 1: `Agents` on the left, `Settings` on the right, the right pane focused.
+- `P-LAUNCH-UAT`. Two panes as left by `SHELLNAV-40` step 1: `Library` on the left, `Settings` on the right, the right pane focused.
 
 **Steps**
 
-1. In the menu, click `Agents`.
+1. In the menu, click `Library`.
 2. Click in the right pane, then in the menu click `Tasks` > `All Tasks`.
 
 **Pass if — all of these**
 
-- Step 1 focuses the left pane's existing `Agents` tab; no second `Agents` tab appears.
+- Step 1 focuses the left pane's existing `Library` tab; no second `Library` tab appears.
 - Step 2 opens an `All Tasks` preview tab (greyer title) in the right pane, beside `Settings`, and not in the left pane.
 
 **Fail if — any of these**
@@ -1685,14 +1644,14 @@ The drawer content is shorter than the viewport in step 6 no matter how small yo
 **Steps**
 
 1. Look at the top of the Room's pane, between the tab strip and the Room.
-2. Open **Agents**, **Settings**, a Team and one of its Projects from the sidebar, and look at the top of each page.
+2. Open **Library**, **Settings**, a Team and one of its Projects from the sidebar, and look at the top of each page.
 3. On the Project page, click the Team's name in the bar.
 4. Rename the Room, then switch to its tab.
 
 **Pass if — all of these**
 
-- Every page has a slim bar above it: *Rooms* alone on a Room (the Room's name is the page's own heading, not a crumb), *Teams › {Team} › {Project}* on a Project (the Project is the current crumb), *Teams* alone on a Team, a single crumb on Agents and Settings.
-- The page title text under the bar is not repeated on Agents, Settings and Library pages; a Room, Team or Project draws its own name as the page heading under the bar, and the bar holds only its ancestors.
+- Every page has a slim bar above it: *Rooms* alone on a Room (the Room's name is the page's own heading, not a crumb), *Teams › {Team} › {Project}* on a Project (the Project is the current crumb), *Teams* alone on a Team, a single crumb on Library and Settings.
+- The page title text under the bar is not repeated on Settings and Library pages; a Room, Team or Project draws its own name as the page heading under the bar, and the bar holds only its ancestors.
 - Step 3 changes the same tab to the Team page, leaves the tab count unchanged, and the Team's name in the bar is plain text afterwards.
 - Step 4 shows the new name in the tab and in the Room's heading; the crumb still reads `Rooms`.
 

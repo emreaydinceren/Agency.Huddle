@@ -37,8 +37,7 @@ the hub: [Huddle.EngineeringGuide.md](../Huddle.EngineeringGuide.md).
 | `Data/WaitingQuestionStore.cs` | Keeps a waiting `ask_human` card across a restart; `QuestionStore` writes through to it and loads it. |
 | `Pipes/AgentGateway.cs` | Bridges `RoomEvents` to connected Agents. Fills `Members` on every `messagePosted`. |
 | `Components/Pages/Chat.razor` | The Room view. |
-| `Components/Pages/Agents.razor` | The Persona library UI, at `/agents`. Agent tiles grouped by Team with a Team filter, the rejected-file list above them; owns the open card's state. |
-| `Components/Pages/AgentGrouping.cs` | The grouping and filtering behind that page, as a pure function — extracted because `HtmlRenderer` cannot simulate choosing a `<select>` option, so inline it would have been untestable. |
+| `Components/Pages/AgentGrouping.cs` | The grouping and filtering behind the Members tab's "From other teams" picker (`Components/Teams/AgentPickerDialog.razor`), as a pure function: one group per Team, *No team* last. |
 | `Components/Pages/Settings.razor` | The settings shell at `/settings`. A section menu (`MudNavMenu`) on the left and the active section on the right. Each row is a link to `/settings/{section}`, and the highlight is derived from the parsed `{Tab}` route parameter rather than NavLink's URL match, so `/settings/prompts` stays bookmarkable and `/settings` or an unknown segment still falls back to Profile. Owns every editable Prompt value; `PromptsPanel` holds none. |
 | `Components/Pages/Tasks.razor` | The Tasks page (Spec §13.2): holds the effective View — the saved View with the toolbar's session overrides applied — and requeries on `TasksReloaded`, `TaskChanged` and `ViewsChanged`. Its `/teams/{Team}/tasks/{ViewId}` route narrows the View to one Team for the page only (never saved to the View, like the search). |
 | `Components/Pages/TeamPage.razor` | The Team page and the Project page, one component (Spec §6.6): Members, Files and Tasks tabs driven by route parameters. Routes are `/teams/<Team>[/{Tab}]` and `/teams/<Team>/projects/<Project>[/{Tab}]`. |
@@ -579,7 +578,7 @@ Global Search — the search box in the Top Bar, its dropdown and the providers 
 | `Components/Search/LibrarySearchCard.razor` | The card for a Library hit, with its snippet. |
 | `Components/Search/TaskSearchCard.razor` | The card for a Task hit. |
 | `Components/Search/RoomSearchCard.razor` | The card for a Room hit, one per Room. |
-| `Components/Shared/AgentProfileCardOpener.cs` | Opens the Agent card the same way from search and from the Agents page. |
+| `Components/Shared/AgentProfileCardOpener.cs` | Opens the Agent card the same way from every surface that opens it (search, a Team's Members tab), and owns the card's `DialogParameters` builders. |
 
 Needs You — the sidebar card of Rooms waiting on the Human, `docs/Huddle.NeedsYou-Specifications.md`. Paths are relative to `src/Huddle.App`:
 

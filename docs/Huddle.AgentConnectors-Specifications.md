@@ -379,6 +379,9 @@ The Feed text names the Human and not an actor id, because the actor is always t
 
 ## 13. Existing installs (decision 5)
 
+> **Removed (2026-11-18).** The one-time notice below was removed with the Agents page that showed it: Huddle has no
+> installs to upgrade yet, so no notice is shown. `ConnectorsNoticeStore` and `ConnectorsNoticeDecider` are gone.
+
 On upgrade nothing is migrated, so every Agent is off. Each Agent loses its connectors the next time its host starts, which is
 the first start after the update. A resumed session keeps its conversation and loses the tools (section 3.4). The
 conversation history still holds the old connector names, but the model is not offered the tools, so it cannot call them.

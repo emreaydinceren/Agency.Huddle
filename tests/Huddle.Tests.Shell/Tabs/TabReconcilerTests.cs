@@ -27,11 +27,11 @@ public sealed class TabReconcilerTests
         TabService tabs = new();
         Tab gone = tabs.Open("/tasks/gone");
         tabs.Keep(gone.Id);
-        tabs.Open("/agents");
+        tabs.Open("/scheduled");
 
         TabReconciler.ReconcileViews(tabs, [new Tasks.Views.TaskView { Id = "my-tasks", Name = "My Tasks", Kind = Tasks.Views.ViewKind.List }]);
 
-        Assert.Equal(["gone", "Agents"], tabs.Tabs.Select(static tab => tab.Title));
+        Assert.Equal(["gone", "Scheduled"], tabs.Tabs.Select(static tab => tab.Title));
     }
 
     /// <summary>A Room's Tab takes the Room's current name.</summary>
@@ -63,7 +63,7 @@ public sealed class TabReconcilerTests
     public void ReconcileRooms_DeletedRoom_ClosesItsTabAndActivatesTheNeighbour()
     {
         TabService tabs = new();
-        Tab keep = tabs.Open("/agents");
+        Tab keep = tabs.Open("/scheduled");
         tabs.Keep(keep.Id);
         tabs.Open("/rooms/gone");
 
@@ -125,13 +125,13 @@ public sealed class TabReconcilerTests
     public void CloseTeamTabs_ClosesEveryTabOfTheTeam_AndOnlyThose()
     {
         TabService tabs = new();
-        foreach (string url in (string[])["/teams/Core", "/teams/Core/tasks/all", "/teams/Core/projects/Alpha", "/teams/Core/projects/Alpha/tasks/all", "/teams/Corefx", "/agents"])
+        foreach (string url in (string[])["/teams/Core", "/teams/Core/tasks/all", "/teams/Core/projects/Alpha", "/teams/Core/projects/Alpha/tasks/all", "/teams/Corefx", "/scheduled"])
         {
             tabs.Keep(tabs.Open(url).Id);
         }
 
         TabReconciler.CloseTeamTabs(tabs, "CORE");
 
-        Assert.Equal(["/teams/Corefx", "/agents"], tabs.Tabs.Select(static tab => tab.Url));
+        Assert.Equal(["/teams/Corefx", "/scheduled"], tabs.Tabs.Select(static tab => tab.Url));
     }
 }

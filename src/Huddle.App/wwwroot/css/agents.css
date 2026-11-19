@@ -1,89 +1,4 @@
-/* ==== Agents: the directory tiles, the profile card and the avatar library ==== */
-
-/* ---- Agents: directory tiles and the profile card -------------------- */
-
-/* A responsive grid of people, like Slack's Directories. The columns are at least 240px and share the width left
-   over, so the grid fills the page rather than leaving fixed-width tiles with wide gaps; the column count follows the
-   window with no media queries to keep in step. */
-.agents-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 16px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-/* The card: the <li> carries the border so the "Working on" Task link can sit inside it without being nested in the
-   opening <button>. */
-.agents-item {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    padding: 0;
-    list-style: none;
-    background: var(--hu-ground-raised);
-    border: 1px solid var(--ink-line);
-    border-radius: var(--hu-radius-card);
-    box-shadow: var(--hu-shadow-card);
-}
-
-.agents-item:hover {
-    background: var(--hu-hover);
-    border-color: var(--hu-line-control);
-    box-shadow: var(--hu-shadow-card-hover);
-}
-
-/* justify-content overrides MudBlazor's global button rule, which centres a flex button's content: the avatar and the
-   text start at the tile's padding, so the "Working on" line's indent lands on the name's edge. */
-.agent-tile {
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
-    gap: 16px;
-    width: 100%;
-    padding: 12px;
-    font: inherit;
-    text-align: left;
-    color: inherit;
-    background: transparent;
-    border: 0;
-    border-radius: var(--hu-radius-card);
-    cursor: pointer;
-}
-
-.agent-tile-text {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-}
-
-.agent-tile-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 4px;
-}
-
-/* "Working on SUPP-0002": 12px secondary, under the avatar's text column (12 padding + 40 avatar + 16 gap). */
-.agent-tile-context {
-    padding: 0 12px 12px calc(12px + 40px + 16px);
-    margin-top: -8px;
-    text-align: left;
-    font-size: var(--mud-typography-caption-size);
-    color: var(--mud-palette-text-secondary);
-}
-
-.agent-tile-task-link {
-    font-size: inherit;
-}
-
-/* The name is 14px at 600, the role 13px (below), the alias and state 12px, all in the tile's text column. */
-.agents-item-name {
-    font-size: var(--mud-typography-subtitle1-size);
-    font-weight: 600;
-}
+/* ==== Agents: the profile card and the avatar library ==== */
 
 /* The Avatar Library picker (Spec 6.6). The filters block stays put and the grid is the
    only scroller, so the filters are never scrolled out of reach. Selected state is shown
@@ -569,58 +484,13 @@
     color: var(--mud-palette-error);
 }
 
-/* ---- The team filter above the grouped tiles, and its InviteAgent sibling --------------- */
-
-.agents-filter {
-    max-width: 16rem;
-}
-
-/* ---- Tiles grouped by Team ------------------------------------------------------------------ */
-
-.agents-group {
-    margin-bottom: 32px;
-}
-
-/* The count beside a group's name: caption size, secondary, normal weight. */
-.agents-group-count {
-    font-size: var(--mud-typography-caption-size);
-    font-weight: 400;
-    color: var(--mud-palette-text-secondary);
-}
-
-.agent-tile-role {
-    font-size: var(--mud-typography-body2-size);
-    color: var(--mud-palette-text-secondary);
-    overflow-wrap: anywhere;
-}
-
 /* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
    Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's
    palette variables or skin tokens decide every colour. */
 
-/* ---- surface=paper: Nordic ------------------------------------------------------------------- */
-
-/* -- surface=paper: Agents, cards (13) ------------------------------------------------------------------------- */
-:root:has([data-hu-surface="paper"]) .agents-item {
-    border-radius: var(--hu-radius-panel);
-    transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-:root:has([data-hu-surface="paper"]) .agents-item:hover {
-    border-color: var(--hu-line-control);
-}
-
-:root:has([data-hu-surface="paper"]) .agent-tile-role {
-    color: var(--mud-palette-text-secondary);
-}
-
 /* ---- voice=book: Nordic ---------------------------------------------------------------------- */
-/* -- voice=book: the Agent read face, serif group headings, hero name and a mono persona (13) --------------- */
-:root:has([data-hu-voice="book"]) .agents-group-heading {
-    font-family: var(--font-read);
-}
-
+/* -- voice=book: the Agent read face, hero name and a mono persona (13) --------------- */
 :root:has([data-hu-voice="book"]) .mud-dialog:has(.agent-profile-card-avatar) .mud-dialog-title .mud-typography-h6 {
     font-family: var(--font-read);
     font-size: calc(var(--mud-typography-h5-size) * 1.5);

@@ -118,7 +118,7 @@ the per-area tables below.
 | [Room view, posting Messages and Transcript rendering](room-messaging.md) | [below](#room-messaging) |
 | [Turn streaming, Drafts, Stop and failure surfacing](streaming-turn.md) | [below](#streaming-turn) |
 | [Reply Gate, Mentions and Room Budget](reply-gate-budget.md) | [below](#reply-gate-budget) |
-| [Agents page: tiles, Teams grouping, filter and rejected files](agents-library.md) | [below](#agents-library) |
+| [Agent files: loading, rejected files, watcher, status badge and the card](agents-library.md) | [below](#agents-library) |
 | [Agent card: view, edit, create, delete](agent-profile-card.md) | [below](#agent-profile-card) |
 | [Library explorer and editor](library.md) | [below](#library) |
 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | [below](#model-effort) |
@@ -215,7 +215,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-07](shell-nav.md#shellnav-07--routes-are-case-insensitive) |  | Active |  |  |
 | [SHELLNAV-08](shell-nav.md#shellnav-08--the-drawer-is-present-identical-and-fixed-width-on-every-route) |  | Active |  |  |
 | [SHELLNAV-09](shell-nav.md#shellnav-09--the-sidebar-marks-exactly-one-room-active-with-aria-current) |  | Active |  |  |
-| [SHELLNAV-10](shell-nav.md#shellnav-10--agents-renders-and-a-bare-page-load-spawns-no-node-process) |  | Active |  |  |
+| [SHELLNAV-10](shell-nav.md#shellnav-10--agents-renders-and-a-bare-page-load-spawns-no-node-process) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [SHELLNAV-11](shell-nav.md#shellnav-11--settings-renders-the-seven-tab-bar-and-defaults-to-profile) |  | Active |  |  |
 | [SHELLNAV-12](shell-nav.md#shellnav-12--clicking-a-settings-tab-changes-the-url-and-the-url-round-trips-as-a-bookmark) |  | Active |  |  |
 | [SHELLNAV-13](shell-nav.md#shellnav-13--an-unrecognised-tab-segment-silently-falls-back-to-profile-and-the-tab-name-is-matched-without-regard-to-case) |  | Active |  |  |
@@ -260,7 +260,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-02](startup-config.md#startupconfig-02--every-stylesheet-in-the-document-head-returns-200--the-silent-assets-regression) |  | Active |  |  |
 | [STARTUPCONFIG-06](startup-config.md#startupconfig-06--every-navigation-surface-is-reachable-from-a-cold-start) |  | Active |  |  |
 | [STARTUPCONFIG-07](startup-config.md#startupconfig-07--open-room-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active |  |  |
-| [STARTUPCONFIG-08](startup-config.md#startupconfig-08--agents-lists-personas-only--pipe-clients-never-appear-there) |  | Active |  |  |
+| [STARTUPCONFIG-08](startup-config.md#startupconfig-08--agents-lists-personas-only--pipe-clients-never-appear-there) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [STARTUPCONFIG-09](startup-config.md#startupconfig-09--settings-prompts-tab-on-a-first-run-says-promptsjson-is-absent-and-offers-nothing-to-save-or-reset) |  | Active |  |  |
 | [STARTUPCONFIG-10](startup-config.md#startupconfig-10--appearance-tab-on-a-first-run-reads-lumen-light-picking-a-dark-theme-writes-appearancejson-and-applies-immediately-with-no-reload) |  | Active |  |  |
 | [STARTUPCONFIG-11](startup-config.md#startupconfig-11--rooms-and-transcripts-survive-a-restart-drafts-and-the-budget-do-not) |  | Active |  |  |
@@ -403,27 +403,27 @@ Reply Gate, Mentions and Room Budget — [area file](reply-gate-budget.md)
 
 ## agents-library
 
-Agents page: tiles, Teams grouping, filter and rejected files — [area file](agents-library.md)
+Agent files: loading, rejected files, watcher, status badge and the card — [area file](agents-library.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [AGENTSLIBRARY-01](agents-library.md#agentslibrary-01--the-page-loads-is-styled-and-spawns-nothing) |  | Active |  | rewritten 2026-10. Earlier Pass. |
-| [AGENTSLIBRARY-02](agents-library.md#agentslibrary-02--a-library-of-only-the-chief-of-staff-reads-as-one-tile-then-as-empty) |  | Active |  |  |
+| [AGENTSLIBRARY-01](agents-library.md#agentslibrary-01--the-page-loads-is-styled-and-spawns-nothing) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-02](agents-library.md#agentslibrary-02--a-library-of-only-the-chief-of-staff-reads-as-one-tile-then-as-empty) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTSLIBRARY-03](agents-library.md#agentslibrary-03--the-fixture-library-loads-and-a-tile-shows-monogram-name-title-an-alias-caption-and-status) |  | Active |  |  |
-| [AGENTSLIBRARY-04](agents-library.md#agentslibrary-04--one-heading-per-team-ordinal-order-no-team-last-no-empty-groups) |  | Active |  |  |
-| [AGENTSLIBRARY-05](agents-library.md#agentslibrary-05--a-persona-in-two-teams-renders-in-full-under-both-headings) |  | Active |  |  |
-| [AGENTSLIBRARY-06](agents-library.md#agentslibrary-06--a-personas-team-comes-from-its-field-never-from-its-folder) |  | Active |  |  |
-| [AGENTSLIBRARY-07](agents-library.md#agentslibrary-07--the-team-filters-label-options-order-and-de-duplication) |  | Active |  |  |
-| [AGENTSLIBRARY-08](agents-library.md#agentslibrary-08--choosing-a-team-narrows-to-one-heading-and-drops-the-no-team-personas) |  | Active |  |  |
-| [AGENTSLIBRARY-09](agents-library.md#agentslibrary-09--a-team-whose-membership-drops-to-zero-says-so) |  | Active |  |  |
-| [AGENTSLIBRARY-10](agents-library.md#agentslibrary-10--team-names-match-case-insensitively-and-appear-once) |  | Active |  |  |
-| [AGENTSLIBRARY-11](agents-library.md#agentslibrary-11--all-three-yaml-shapes-of-teams-group-identically-and-the-documented-comma-cost) |  | Active |  |  |
+| [AGENTSLIBRARY-04](agents-library.md#agentslibrary-04--one-heading-per-team-ordinal-order-no-team-last-no-empty-groups) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-05](agents-library.md#agentslibrary-05--a-persona-in-two-teams-renders-in-full-under-both-headings) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-06](agents-library.md#agentslibrary-06--a-personas-team-comes-from-its-field-never-from-its-folder) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-07](agents-library.md#agentslibrary-07--the-team-filters-label-options-order-and-de-duplication) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-08](agents-library.md#agentslibrary-08--choosing-a-team-narrows-to-one-heading-and-drops-the-no-team-personas) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-09](agents-library.md#agentslibrary-09--a-team-whose-membership-drops-to-zero-says-so) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-10](agents-library.md#agentslibrary-10--team-names-match-case-insensitively-and-appear-once) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTSLIBRARY-11](agents-library.md#agentslibrary-11--all-three-yaml-shapes-of-teams-group-identically-and-the-documented-comma-cost) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTSLIBRARY-12](agents-library.md#agentslibrary-12--a-rejected-file-is-named-by-path-and-reason-above-the-tiles-live) |  | Active |  |  |
 | [AGENTSLIBRARY-13](agents-library.md#agentslibrary-13--every-distinct-rejection-reason-word-for-word) |  | Active |  |  |
 | [AGENTSLIBRARY-14](agents-library.md#agentslibrary-14--a-duplicate-alias-rejects-both-files-each-naming-the-other) |  | Active |  |  |
 | [AGENTSLIBRARY-15](agents-library.md#agentslibrary-15--a-duplicate-name--including-one-differing-only-in-case--rejects-both) |  | Active |  |  |
 | [AGENTSLIBRARY-16](agents-library.md#agentslibrary-16--one-files-alias-equal-to-another-files-name-rejects-both-with-two-different-sentences--and-a-self-matching-alias-is-legal) |  | Active |  |  |
-| [AGENTSLIBRARY-17](agents-library.md#agentslibrary-17--the-rejected-block-is-ordered-survives-the-filter-and-coexists-with-the-empty-library-sentence) |  | Active |  |  |
+| [AGENTSLIBRARY-17](agents-library.md#agentslibrary-17--the-rejected-block-is-ordered-survives-the-filter-and-coexists-with-the-empty-library-sentence) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTSLIBRARY-18](agents-library.md#agentslibrary-18--non-markdown-files-are-ignored-entirely--not-loaded-not-rejected) |  | Active |  |  |
 | [AGENTSLIBRARY-19](agents-library.md#agentslibrary-19--the-watcher-is-live-an-edit-to-an-agents-definition-reloads-it-and-a-write-under-work-does-not) |  | Active |  |  |
 | [AGENTSLIBRARY-20](agents-library.md#agentslibrary-20--the-watcher-notices-creations-and-deletions-while-the-page-is-open) |  | Active |  |  |
@@ -447,7 +447,7 @@ Agents page: tiles, Teams grouping, filter and rejected files — [area file](ag
 | [AGENTSLIBRARY-36](agents-library.md#agentslibrary-36--restart-is-busy-flagged-and-cannot-be-double-fired) |  | Active |  |  |
 | [AGENTSLIBRARY-37](agents-library.md#agentslibrary-37--offline-with-a-reason-in-both-of-its-homes) |  | Active |  |  |
 | [AGENTSLIBRARY-38](agents-library.md#agentslibrary-38--health-outranks-pipe-liveness-a-live-pipe-with-a-failed-start-must-read-offline) |  | Active |  |  |
-| [AGENTSLIBRARY-39](agents-library.md#agentslibrary-39--the-whole-page-in-dark-mode-with-a-card-open-and-a-rejected-file-present) |  | Active |  |  |
+| [AGENTSLIBRARY-39](agents-library.md#agentslibrary-39--the-whole-page-in-dark-mode-with-a-card-open-and-a-rejected-file-present) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTSLIBRARY-40](agents-library.md#agentslibrary-40--degraded-with-the-reason--and-the-two-things-that-must-not-badge) | 💰 | Active |  |  |
 
 ## agent-profile-card
@@ -456,13 +456,13 @@ Agent card: view, edit, create, delete — [area file](agent-profile-card.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [AGENTPROFILECARD-01](agent-profile-card.md#agentprofilecard-01--empty-agents-page-and-the-new-agent-entry-point) |  | Active |  |  |
+| [AGENTPROFILECARD-01](agent-profile-card.md#agentprofilecard-01--empty-agents-page-and-the-new-agent-entry-point) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTPROFILECARD-02](agent-profile-card.md#agentprofilecard-02--clicking-new-agent-opens-a-card-at-all-blank-name-crash-probe) |  | Active |  |  |
 | [AGENTPROFILECARD-03](agent-profile-card.md#agentprofilecard-03--create-card-every-label-placeholder-and-hint) |  | Active |  |  |
 | [AGENTPROFILECARD-04](agent-profile-card.md#agentprofilecard-04--monogram-tracks-the-name-as-you-type) |  | Active |  |  |
 | [AGENTPROFILECARD-05](agent-profile-card.md#agentprofilecard-05--create-the-exact-name-acceptreject-set) |  | Active |  |  |
-| [AGENTPROFILECARD-06](agent-profile-card.md#agentprofilecard-06--create-alias-validation-uses-the-same-rules-and-its-own-wording) |  | Active |  |  |
-| [AGENTPROFILECARD-07](agent-profile-card.md#agentprofilecard-07--create-validation-precedence--which-error-wins) |  | Active |  |  |
+| [AGENTPROFILECARD-06](agent-profile-card.md#agentprofilecard-06--create-alias-validation-uses-the-same-rules-and-its-own-wording) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
+| [AGENTPROFILECARD-07](agent-profile-card.md#agentprofilecard-07--create-validation-precedence--which-error-wins) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTPROFILECARD-08](agent-profile-card.md#agentprofilecard-08--create-the-title-is-prose--blank-rejected-commas-preserved) |  | Active |  |  |
 | [AGENTPROFILECARD-09](agent-profile-card.md#agentprofilecard-09--create-a-failed-save-never-throws-away-what-you-typed) |  | Active |  |  |
 | [AGENTPROFILECARD-10](agent-profile-card.md#agentprofilecard-10--enter-in-an-identity-field-does-not-submit-and-saving-never-reloads-the-page) |  | Active |  |  |
@@ -472,10 +472,10 @@ Agent card: view, edit, create, delete — [area file](agent-profile-card.md)
 | [AGENTPROFILECARD-14](agent-profile-card.md#agentprofilecard-14--closing-the-dialog-focus-trap-on-open-escape-the-close-icon-cancel-scroll-locking-and-focus-return) |  | Active |  |  |
 | [AGENTPROFILECARD-15](agent-profile-card.md#agentprofilecard-15--closing-a-card-clears-every-bit-of-its-state) |  | Active |  |  |
 | [AGENTPROFILECARD-16](agent-profile-card.md#agentprofilecard-16--remove-is-a-two-step-confirm-and-cancel-backs-out-cleanly) |  | Active |  |  |
-| [AGENTPROFILECARD-17](agent-profile-card.md#agentprofilecard-17--team-headings-and-the-team-filter-come-from-the-teams-field-not-the-folder) |  | Active |  |  |
+| [AGENTPROFILECARD-17](agent-profile-card.md#agentprofilecard-17--team-headings-and-the-team-filter-come-from-the-teams-field-not-the-folder) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTPROFILECARD-18](agent-profile-card.md#agentprofilecard-18--create-exactly-what-lands-on-disk) |  | Active |  |  |
 | [AGENTPROFILECARD-19](agent-profile-card.md#agentprofilecard-19--create-an-apostrophe-in-the-title-round-trips-through-yaml-quoting) |  | Active |  |  |
-| [AGENTPROFILECARD-20](agent-profile-card.md#agentprofilecard-20--create-the-teams-field-trims-drops-blanks-and-collapses-duplicates-on-read-back) |  | Active |  |  |
+| [AGENTPROFILECARD-20](agent-profile-card.md#agentprofilecard-20--create-the-teams-field-trims-drops-blanks-and-collapses-duplicates-on-read-back) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTPROFILECARD-21](agent-profile-card.md#agentprofilecard-21--create-a-duplicate-filename-is-caught-before-anything-is-written) |  | Active |  |  |
 | [AGENTPROFILECARD-22](agent-profile-card.md#agentprofilecard-22--edit-card-what-is-editable-and-what-a-rename-announces) |  | Active |  |  |
 | [AGENTPROFILECARD-23](agent-profile-card.md#agentprofilecard-23--edit-save-writes-back-to-the-same-file-path--never-a-rename-never-a-move) |  | Active |  |  |
@@ -483,7 +483,7 @@ Agent card: view, edit, create, delete — [area file](agent-profile-card.md)
 | [AGENTPROFILECARD-25](agent-profile-card.md#agentprofilecard-25--edit-renaming-into-a-collision-is-refused-with-the-file-untouched) |  | Active |  |  |
 | [AGENTPROFILECARD-26](agent-profile-card.md#agentprofilecard-26--edit-renaming-moves-the-folder-and-keeps-the-agent-whole-adr-0011) |  | Active |  |  |
 | [AGENTPROFILECARD-27](agent-profile-card.md#agentprofilecard-27--create-a-name-colliding-with-a-persona-whose-folder-has-another-name) |  | Active |  |  |
-| [AGENTPROFILECARD-28](agent-profile-card.md#agentprofilecard-28--create-alias-collisions-and-the-one-that-is-legal) |  | Active |  |  |
+| [AGENTPROFILECARD-28](agent-profile-card.md#agentprofilecard-28--create-alias-collisions-and-the-one-that-is-legal) |  | Active |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGENTPROFILECARD-29](agent-profile-card.md#agentprofilecard-29--files-that-didnt-load-names-the-path-and-the-reason-above-the-list) |  | Active |  |  |
 | [AGENTPROFILECARD-30](agent-profile-card.md#agentprofilecard-30--an-external-file-edit-repaints-the-page--including-inside-agent-folders) |  | Active |  |  |
 | [AGENTPROFILECARD-31](agent-profile-card.md#agentprofilecard-31--a-card-whose-file-vanished-underneath-it-reports-it-instead-of-crashing) |  | Active |  |  |
@@ -1353,7 +1353,7 @@ AGENTS.md changes: a running Agent hears an edit, the skipped typo, the notice's
 | [AGCONN-03](agent-connectors.md#agconn-03--give-access-restarts-the-agent-and-records-it-in-the-feed) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
 | [AGCONN-04](agent-connectors.md#agconn-04--turning-off-applies-at-once-and-a-rename-drops-access) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
 | [AGCONN-05](agent-connectors.md#agconn-05--an-adapter-huddle-cannot-control-shows-text-not-a-switch) |  | Skipped |  | run 2026-11-06 by an agent, see the Run log |
-| [AGCONN-06](agent-connectors.md#agconn-06--the-one-time-notice-shows-after-an-upgrade-and-stays-dismissed) |  | Partial |  | run 2026-11-06 by an agent, see the Run log |
+| [AGCONN-06](agent-connectors.md#agconn-06--the-one-time-notice-shows-after-an-upgrade-and-stays-dismissed) |  | Partial |  | Retired 2026-11-18 (Agents page removed): skip. |
 | [AGCONN-07](agent-connectors.md#agconn-07--a-new-agent-lists-no-claudeai-tool-by-turn-3) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
 | [AGCONN-08](agent-connectors.md#agconn-08--with-the-switch-on-the-connectors-appear-and-every-use-asks-first) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |
 | [AGCONN-09](agent-connectors.md#agconn-09--an-agent-cannot-switch-its-own-connectors-on) |  | Pass |  | run 2026-11-06 by an agent, see the Run log |

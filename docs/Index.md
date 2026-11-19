@@ -291,8 +291,8 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [doc-history.md](engineering/manual-tests/doc-history.md) | Document history: the byline, the History, the History panel, how often Agents log |
 | [human-gate.md](engineering/manual-tests/human-gate.md) | Human gate: the Proof list, the decision card, Accept and Decline, the board drag, the Needs You page |
 | [helpers.md](engineering/manual-tests/helpers.md) | Helpers: the Helpers tab, Save and Reset, the Needs Human judgement, the Human's override, the daily cap with Continue, a failing Adapter |
-| [agent-connectors.md](engineering/manual-tests/agent-connectors.md) | Account connectors: the default off, the confirm before turning on, the switch and its Feed item, the Adapter text, the one-time notice, the paid log checks |
-| [agent-connectors.md](engineering/manual-tests/agent-connectors.md) | Account connectors: the default off, the confirm before turning on, the switch and its Feed item, the Adapter text, the one-time notice, the paid log checks |
+| [agent-connectors.md](engineering/manual-tests/agent-connectors.md) | Account connectors: the default off, the confirm before turning on, the switch and its Feed item, the Adapter text, the paid log checks |
+| [agent-connectors.md](engineering/manual-tests/agent-connectors.md) | Account connectors: the default off, the confirm before turning on, the switch and its Feed item, the Adapter text, the paid log checks |
 | [agent-browser.md](engineering/manual-tests/agent-browser.md) | Agent browser (paid, Sonnet minimum): on for a new Agent, off per Agent, a JavaScript page, a sign-in the Human types, every click and type asks, Team duplicate and reset, Work Modes, the tool-call log, two Rooms at once (run once 2026-11-16; a hand-typed sign-in is owed) |
 | [turn-queue.md](engineering/manual-tests/turn-queue.md) | Turn Queue (paid, Sonnet minimum): a Turn cut off by a close or a kill runs again once, no reply twice, a waiting Question kept, a stopped Turn stays stopped, a Restart keeps what waits, the age limit, Don't answer, the held Mention |
 | [memory-tidy.md](engineering/manual-tests/memory-tidy.md) | Memory Tidy (paid, Sonnet minimum): the `reported.md` an Agent keeps, the one-line "no change since", the age rule, the Chief of Staff reading a manager's file, the Memory Tidy Helper (not yet run by a person) |
@@ -327,7 +327,7 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [team-pages.md](engineering/manual-tests/team-pages.md) | Teams sidebar, Members tab, Files tab, shared Memory |
 | [team-playbooks.md](engineering/manual-tests/team-playbooks.md) | Team Playbooks: the Playbooks tab, Customize, Default updated, Reset, delivery and the Turn notice, an Agent in two Teams, the file guard, Project missions, and a live paid check with Haiku |
 | [agent-profile-card.md](engineering/manual-tests/agent-profile-card.md) | Agent card: create, edit, delete |
-| [agents-library.md](engineering/manual-tests/agents-library.md) | Agents page, file mirroring, Team grouping, filter, watcher |
+| [agents-library.md](engineering/manual-tests/agents-library.md) | Agent files: loading, rejected files, watcher, status badge and the card (the Agents page cases are retired) |
 | [turn-detail.md](engineering/manual-tests/turn-detail.md) | Turn detail, tool-call rows, Edit preview, Spend |
 | [second-brain-zero.md](engineering/manual-tests/second-brain-zero.md) | Second Brain from zero: three Teams hired by hand, documents ingested into memory, a Development Team building an app; documents in `../tests/manual-fixtures/second-brain-zero` |
 | [agents-md-changes.md](engineering/manual-tests/agents-md-changes.md) | `AGENTS.md` changes reaching running Agents: a Team and a Huddle-wide rule in two Rooms, a skipped typo in the Feed, the notice's wording, `/compact`, the Helper off, a real restart then resume, the cold-resume question, a save loop and a waiting Turn |

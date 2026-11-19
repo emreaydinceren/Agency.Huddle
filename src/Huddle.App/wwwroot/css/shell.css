@@ -1359,8 +1359,7 @@ body.sidebar-resizing {
    .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
    the NavLink can grow and the "..." button sits absolutely on the right; the button stays in the
    DOM (and in the Tab order) at all times, so it is reachable by keyboard even before it is
-   visible - only its opacity is gated on :hover/:focus-within, matching .agent-tile's own
-   interactive-surface shape below. */
+   visible - only its opacity is gated on :hover/:focus-within. */
 
 .hover-reveal-row {
     position: relative;

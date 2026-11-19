@@ -10,7 +10,7 @@ Read [the manual test script](../manual-tests.md) first, then [Common procedures
 
 Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-UAT`](common.md#p-launch-uat). This area adds:
 
-1. Wait until **Ada** and **Bo** are both **Online** on `/agents`. Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
+1. Wait until **Ada** and **Bo** are both **Online** (the status badge on each avatar in their Room). Two empty one-to-one Rooms, `Ada` and `Bo`, exist from that point.
 2. Open each Room once and send `hello`, so each has a Transcript file. Note each Room's id: the 32 hexadecimal characters after `/rooms/` in the address bar.
 3. In `T-B` set `$data = 'C:\seeds\huddle\uat\data'`, and `$ada = '<Ada's id>'`, `$bo = '<Bo's id>'`.
 4. This area makes an Agent Mention you by writing a Message line into the Transcript and relaunching, because the mock Agents strip every `@` from what they echo. Define the helper once:

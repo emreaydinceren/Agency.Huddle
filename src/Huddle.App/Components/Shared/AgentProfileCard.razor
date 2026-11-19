@@ -110,9 +110,17 @@
                     @* UX-E15: Title and Alias share one row so the New agent dialog fits a 900px-high window. *@
                     <div class="agent-profile-card-row agent-profile-card-identity-row">
                         <TextField Label="Title" Placeholder="e.g. Chief of Staff" @bind-Value="this.title" HelperText="Shown beside the name." />
-                        <TextField Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias" HelperText="For @@mentions." />
+                        @* A draft is hired with its Name in lower case as its Alias, so its card asks for none. *@
+                        @if (!this.OnDraftSaved.HasDelegate)
+                        {
+                            <TextField Label="Alias" Placeholder="e.g. coo" @bind-Value="this.alias" HelperText="For @@mentions." />
+                        }
                     </div>
-                    <TextField Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams" HelperText="Comma-separated. Leave blank for no team." />
+                    @* A draft joins the Team whose roster it is on, so its card asks for no Teams. *@
+                    @if (!this.OnDraftSaved.HasDelegate)
+                    {
+                        <TextField Label="Teams" Placeholder="e.g. Business, Household" @bind-Value="this.teams" HelperText="Comma-separated. Leave blank for no team." />
+                    }
                 </MudStack>
             }
             else
@@ -1017,7 +1025,7 @@
 
     private string CardTitle => this.mode switch
     {
-        AgentProfileCardMode.Create => this.OnDraftSaved.HasDelegate ? "Edit draft" : "New agent",
+        AgentProfileCardMode.Create => this.OnDraftSaved.HasDelegate && this.Name.Length > 0 ? "Edit draft" : "New agent",
         AgentProfileCardMode.Edit => $"Edit {this.name}",
         _ => this.name,
     };

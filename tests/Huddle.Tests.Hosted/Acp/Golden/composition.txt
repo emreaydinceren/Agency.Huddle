@@ -55,7 +55,6 @@ Scoped Agency.Huddle.App.Components.Layout.TeamShortcutStore -> Agency.Huddle.Ap
 Scoped Agency.Huddle.App.Components.Shared.AgentProfileCardOpener -> Agency.Huddle.App.Components.Shared.AgentProfileCardOpener
 Singleton Agency.Huddle.App.Components.Shared.AgentProfiles -> Agency.Huddle.App.Components.Shared.AgentProfiles
 Singleton Agency.Huddle.App.Data.CadenceStateStore -> Agency.Huddle.App.Data.CadenceStateStore
-Singleton Agency.Huddle.App.Data.ConnectorsNoticeStore -> Agency.Huddle.App.Data.ConnectorsNoticeStore
 Singleton Agency.Huddle.App.Data.HelperSettingsStore -> Agency.Huddle.App.Data.HelperSettingsStore
 Singleton Agency.Huddle.App.Data.HelperStatusStore -> Agency.Huddle.App.Data.HelperStatusStore
 Singleton Agency.Huddle.App.Data.HelperUsageStore -> Agency.Huddle.App.Data.HelperUsageStore
@@ -327,7 +326,6 @@ Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.A
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Goldfish.GoldfishSupervisor
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Pipes.PipeServer
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Demo.DemoAgentHost
-Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agents.ConnectorsNoticeDecider
 Singleton Microsoft.Extensions.Hosting.IHostedService -> Agency.Huddle.App.Agents.BuiltinAgentSeeder
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Acp.PersonaSupervisor
 Singleton Microsoft.Extensions.Hosting.IHostedService -> factory Agency.Huddle.App.Tasks.TaskTriggerService

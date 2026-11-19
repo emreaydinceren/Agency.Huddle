@@ -350,12 +350,12 @@ public sealed class TeamPageTests
         }
     }
 
-    /// <summary>An unknown Team shows the Warning alert naming it with a link to the Agents page, and renders no tabs.</summary>
+    /// <summary>An unknown Team shows the Warning alert naming it, with no link (there is no page listing Teams), and renders no tabs.</summary>
     /// <param name="project">A Project route value, or <see langword="null"/>: an unknown Team wins either way.</param>
     [Theory]
     [InlineData(null)]
     [InlineData("Marketing Project")]
-    public async Task UnknownTeam_ShowsTheAlertWithTheAgentsLink(string? project)
+    public async Task UnknownTeam_ShowsTheAlertWithTheTeamsLink(string? project)
     {
         await using MudBunitContext ctx = NewContext(Catalog());
 
@@ -363,9 +363,7 @@ public sealed class TeamPageTests
 
         Assert.Equal("There is no Team named \"Nope\".", cut.Find($"{AlertSelector} .team-page-notice-text").TextContent.Trim());
         Assert.Equal(Severity.Warning, cut.FindComponent<MudAlert>().Instance.Severity);
-        AngleSharp.Dom.IElement link = cut.Find($"{AlertSelector} a.team-page-notice-link");
-        Assert.Equal("/agents", link.GetAttribute("href"));
-        Assert.Equal("Agents", link.TextContent.Trim());
+        Assert.Empty(cut.FindAll($"{AlertSelector} a"));
         Assert.Empty(TabHeaders(cut));
         Assert.Empty(RenderedTabs(cut));
     }

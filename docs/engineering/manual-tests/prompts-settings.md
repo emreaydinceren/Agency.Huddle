@@ -702,7 +702,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 
 **Fail if — any of these**
 
-- A JavaScript `confirm()` dialog or a modal -> the repo deliberately uses the same inline-confirm pattern as Remove on /agents; a dialog is a different interaction model and is blocked by some browsers.
+- A JavaScript `confirm()` dialog or a modal -> the repo deliberately uses the same inline-confirm pattern as Remove on an Agent's card; a dialog is a different interaction model and is blocked by some browsers.
 - The button being enabled with nothing modified -> a user can 'reset' from an already-default state, which stages one no-op edit per prompt and makes Save look actionable for nothing.
 - The destructive action firing on the FIRST click with no confirm step -> one stray click discards every customisation on the page.
 
@@ -1526,7 +1526,7 @@ The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`
 
 **Free** · about 5 min
 
-*Proves the page that has nothing to do with models never spawns one — the same rule the repo pins for /agents.*
+*Proves the page that has nothing to do with models never spawns one.*
 
 **Before you start**
 
@@ -1557,7 +1557,7 @@ The comparison ignores line endings by design (decision D6; `PromptStore.cs:406`
 If you already have `node` processes running for unrelated reasons (an editor's language server, a dev tool), compare by process Id and StartTime rather than by count — only a NEW process started at the moment you loaded the page counts. If you cannot tell, close unrelated node processes and re-run, or mark INCONCLUSIVE rather than guessing.
 
 > [!NOTE]
-> Contrast with /agents, where opening a New or Edit card legitimately probes for models and may start an adapter. That is expected there and out of scope here.
+> Contrast with an Agent's card, where opening a New or Edit card legitimately probes for models and may start an adapter. That is expected there and out of scope here.
 
 ### PROMPTSSETTINGS-37 — Saving a Prompt must NOT restart any agent's session
 
@@ -1568,11 +1568,11 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 **Before you start**
 
 - Launched with `P-LAUNCH-UAT`: ACP on, the free mock adapter, and the Agents Ada and Bo (the stock install finds its adapter by itself, so no `Team:Acp:AdapterPath` is needed).
-- Ada shows Online on /agents.
+- Ada shows Online (the status badge on her avatar in her Room).
 
 **Steps**
 
-1. Open `http://localhost:5100/agents` in browser tab A and confirm Ada's status badge reads Online.
+1. Open `http://localhost:5100` in browser tab A, open Ada's Room and confirm her status badge reads Online.
 2. Open `http://localhost:5100/settings/prompts` in browser tab B.
 3. Clear or note the current end of the server console output. In `T-B` run `Get-Process mock-acp | Select-Object Id, StartTime` and note the rows (`O-MOCK-ADAPTERS` counts them).
 4. In tab B, type ` EDIT1` into `Room label` (a Live prompt) and click `Save`.
@@ -1611,7 +1611,7 @@ If Ada is not Online before you start (Offline or Degraded), this test cannot di
 **Before you start**
 
 - Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
-- One Persona configured on /agents with Model = Haiku and Effort = low.
+- One Persona configured on its card (`P-OPEN-AGENT`, then **Edit**) with Model = Haiku and Effort = low.
 - A Room containing that agent and you.
 - The agent shows Online.
 
@@ -1651,7 +1651,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 **Before you start**
 
 - Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
-- One Persona configured on /agents with Model = Haiku and Effort = low.
+- One Persona configured on its card (`P-OPEN-AGENT`, then **Edit**) with Model = Haiku and Effort = low.
 - A Room with that agent; the agent shows Online.
 
 **Steps**
@@ -1661,7 +1661,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 3. Click `Save`. Confirm the `Unsaved` badge clears.
 4. Watch the page and the server console for ten seconds for any message saying the edit will not apply.
 5. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 2.)
-6. Now force a new session: go to /agents, click `Restart` on that agent's card (it is offered in every state except Starting), and wait for the status to return to Online.
+6. Now force a new session: open that Agent's card (`P-OPEN-AGENT`), click `Restart` on it (it is offered in every state except Starting), and wait for the status to return to Online.
 7. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 3.)
 
 **Pass if — all of these**
@@ -1691,7 +1691,7 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 **Before you start**
 
 - Launched with `P-LAUNCH-PAID` (ACP on, the real adapter; no `Team:Acp:AdapterPath` is set by hand).
-- One Persona configured on /agents with Model = Haiku and Effort = low.
+- One Persona configured on its card (`P-OPEN-AGENT`, then **Edit**) with Model = Haiku and Effort = low.
 - A Room with that agent; the agent shows Online.
 - The agent has been running for at least one Turn.
 

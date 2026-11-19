@@ -588,7 +588,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
             .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-save-error")));
-        Assert.Equal("Rename agents on the Agents page.", cut.Find(".library-document-save-error").TextContent.Trim());
+        Assert.Equal("Rename an agent from its card.", cut.Find(".library-document-save-error").TextContent.Trim());
         Assert.Equal(original, File.ReadAllText(filePath));
     }
 

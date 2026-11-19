@@ -162,7 +162,7 @@ ZERO-03, ZERO-08 and ZERO-12 all follow these steps, with the values each test g
    Chief of Staff
    ```
 
-5. Click **Agents** in the Activity bar and open the **Chief of Staff**. Click **Edit**, check **Model** already shows Opus and **Effort** medium (a new Chief of Staff starts on them), set **Model** to Sonnet and **Effort** to low, and click **Save**.
+5. Open the **Chief of Staff**'s card (`P-OPEN-AGENT`). Click **Edit**, check **Model** already shows Opus and **Effort** medium (a new Chief of Staff starts on them), set **Model** to Sonnet and **Effort** to low, and click **Save**.
 
 **Expect**: the app opens on **Settings › Profile** with a welcome note, not on a chat. No Team exists. The sidebar's
 **Teams** view shows only **Build a team**.
@@ -247,7 +247,7 @@ Fern. Within a minute each shows **Online**, and the sidebar lists a **Family** 
    C:\HuddleZero\data\Agents\Hana\Hana.md:7:skills: ['team-management', 'ingest', 'wrap-up', 'brain-check']
    ```
 
-2. Click **Agents**, open **Hana**, and click **Edit**. Open **Skills**, and also tick `retrospective`, which ZERO-20 needs. Click an empty part of the card to close the list, then click **Save**. Hana restarts.
+2. Open **Hana**'s card (`P-OPEN-AGENT`) and click **Edit**. Open **Skills**, and also tick `retrospective`, which ZERO-20 needs. Click an empty part of the card to close the list, then click **Save**. Hana restarts.
 3. Click **Edit** on the card again, because **Process** is only in the edit form. Under **Process**, click **Use this process**. It must say `This Team already has a process. Edit it on the Process tab.` and change nothing.
 4. Open Hana's page again and find **What this Agent reads**. Check it lists `Teams/AGENTS.md`, `Teams/Family/AGENTS.md` and Hana's own file.
 

@@ -12,6 +12,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Components.Teams;
 using Agency.Huddle.App.Agents;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
@@ -22,6 +23,7 @@ using Agency.Huddle.App.Profile;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Agents;
 using Agency.Huddle.Tests.Teams;
@@ -1190,7 +1192,8 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-stepper"));
         Assert.Empty(cut.FindAll(Card));
         Assert.Empty(cut.FindAll(".build-team-details"));
-        Assert.NotNull(cut.Find("[aria-label='Add Bookkeeper']"));
+        Assert.NotNull(cut.Find("[aria-label='Add a member']"));
+        Assert.Empty(cut.FindAll(".role-picker"));
         Assert.Equal(["Ada", "Bo"], cut.FindAll(".roster-name").Select(static name => name.TextContent.Trim()));
         Assert.Equal("Manager", Assert.Single(cut.FindAll(".roster-card")[0].QuerySelectorAll(".roster-manager-badge")).TextContent.Trim());
         Assert.Equal(2, cut.FindAll(".roster-card-existing").Count);
@@ -1209,14 +1212,14 @@ public sealed class BuildTeamTests
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
         Assert.Empty(cut.FindAll(".build-team-savebar"));
 
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await AddMemberAsync(cut, "Bookkeeper");
 
         Assert.False(cut.Find(".build-team-savebar button.build-team-approve-button").HasAttribute("disabled"));
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
         Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
-    /// <summary>The roster and role headings carry their count as secondary meta text, and the roles wrap in their own grid.</summary>
+    /// <summary>The roster heading, and the role heading in the "Add a member" dialog, carry their count as secondary meta text, and the roles wrap in their own grid.</summary>
     [Fact]
     public async Task Members_Headings_CarryTheirCountAsMeta()
     {
@@ -1228,8 +1231,211 @@ public sealed class BuildTeamTests
 
         Assert.Equal("Roster", cut.Find(".build-team-roster .build-team-subhead h3").TextContent.Trim());
         Assert.Contains("chip-meta", cut.Find(".build-team-roster-summary").ClassList);
+        OpenAddMember(cut);
         Assert.Contains("chip-meta", cut.Find(".build-team-roles-subtitle").ClassList);
         Assert.Single(cut.FindAll(".role-grid"));
+    }
+
+    /// <summary>The Members tab shows only the roster, led by an "Add a member" tile; the tile opens the roles, explained, in a dialog.</summary>
+    [Fact]
+    public async Task Members_AddAMember_OpensTheRolesInADialog()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        Assert.Equal(["Roster"], cut.FindAll(".build-team-hire h3").Select(static heading => heading.TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".role-picker"));
+        IElement first = cut.Find(".roster-grid").Children[0];
+        Assert.Equal("listitem", first.GetAttribute("role"));
+        Assert.Equal("Add a member", first.QuerySelector("button")?.GetAttribute("aria-label"));
+
+        OpenAddMember(cut);
+
+        IElement dialog = cut.Find(".role-picker-dialog");
+        Assert.Equal("Roles", dialog.QuerySelector(".role-picker h3")?.TextContent.Trim());
+        Assert.Equal(RolePickerDialog.Explainer, dialog.QuerySelector(".build-team-roles-intro")?.TextContent.Trim());
+        Assert.NotNull(dialog.QuerySelector(".build-team-role-type-filter"));
+    }
+
+    /// <summary>Add on a role in the dialog closes it and puts one new draft for that role on the roster; nothing is hired yet.</summary>
+    [Fact]
+    public async Task Members_AddingFromTheDialog_ClosesItAndDraftsTheRole()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        await AddMemberAsync(cut, "Bookkeeper");
+
+        Assert.Empty(cut.FindAll(".mud-dialog"));
+        IElement draft = Assert.Single(cut.FindAll(".roster-card"), card => !card.ClassList.Contains("roster-card-existing"));
+        Assert.Equal("Bookkeeper", draft.QuerySelector(".roster-title")?.TextContent.Trim());
+        Assert.Equal(2, fixture.Personas.Entries.Count);
+    }
+
+    /// <summary>Closing the "Add a member" dialog without choosing a role adds nothing.</summary>
+    [Fact]
+    public async Task Members_ClosingTheDialog_AddsNobody()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
+
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog .mud-button-close").ClickAsync());
+
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog")));
+        Assert.Equal(2, cut.FindAll(".roster-card").Count);
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
+    }
+
+    /// <summary>An Agent file that does not load is named, with its reason, above the Members tab's roster; with none there is no notice.</summary>
+    [Fact]
+    public async Task Members_AgentFileThatDidNotLoad_IsNamedAboveTheRoster()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        Assert.Empty(cut.FindAll(".build-team-load-notice"));
+
+        string path = fixture.WriteBrokenAgent();
+
+        cut.WaitForAssertion(() => Assert.Equal(path, cut.Find(".build-team-load-notice .agents-rejected-path").TextContent.Trim()));
+        Assert.Equal("Files that didn't load", cut.Find(".build-team-load-notice h6, .build-team-load-notice .mud-typography-subtitle2").TextContent.Trim());
+        Assert.Equal(Assert.Single(fixture.Personas.RejectedFiles).Reason, cut.Find(".build-team-load-notice .agents-rejected-reason").TextContent.Trim());
+    }
+
+    /// <summary>The "Add a member" tile carries its three sources in order, and a press (a tap, or Enter) opens it, which hover and focus do in CSS.</summary>
+    [Fact]
+    public async Task Members_AddAMemberTile_OffersThreeSources_AndOpensOnPress()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        Assert.Equal("false", cut.Find("button.roster-add-card").GetAttribute("aria-expanded"));
+        Assert.DoesNotContain("roster-add-open", cut.Find(".roster-add-item").ClassList);
+
+        await cut.InvokeAsync(() => cut.Find("button.roster-add-card").ClickAsync());
+
+        Assert.Equal("true", cut.Find("button.roster-add-card").GetAttribute("aria-expanded"));
+        Assert.Contains("roster-add-open", cut.Find(".roster-add-item").ClassList);
+        Assert.Equal(["From roles catalog", "From other teams", "From scratch"],
+            cut.FindAll(".roster-add-choices button").Select(static choice => choice.TextContent.Trim()));
+    }
+
+    /// <summary>"From other teams" offers every Agent not on this Team, under the Teams they are in, with the Agents in no Team last.</summary>
+    [Fact]
+    public async Task Members_FromOtherTeams_ListsOtherAgentsByTeam()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        SeedOutsiders(fixture);
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        OpenFromOtherTeams(cut);
+
+        IElement dialog = cut.Find(".agent-picker-dialog");
+        Assert.Equal(["Orchard", "No team"], dialog.QuerySelectorAll(".agent-picker-heading").Select(static heading => heading.FirstChild?.TextContent.Trim()));
+        Assert.Equal(["Cy", "Di"], dialog.QuerySelectorAll(".agent-picker-name").Select(static name => name.TextContent.Trim()));
+    }
+
+    /// <summary>An Agent picked from another Team waits on the roster as new, and joins on save while staying in its own Team.</summary>
+    [Fact]
+    public async Task Members_FromOtherTeams_JoinsOnSave_AndKeepsItsOtherTeam()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        SeedOutsiders(fixture);
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        await JoinFromOtherTeamAsync(cut, "Cy");
+
+        Assert.Empty(cut.FindAll(".mud-dialog"));
+        Assert.Equal(["Orchard"], TeamsOf(fixture, "Cy"));
+        Assert.Equal("2 members · 1 new", cut.Find(".build-team-roster-summary").TextContent.Trim());
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(["Garden", "Orchard"], TeamsOf(fixture, "Cy").Order(StringComparer.Ordinal)));
+        Assert.Equal(4, fixture.Personas.Entries.Count);
+    }
+
+    /// <summary>Removing an Agent picked from another Team before saving takes it off the roster and changes nothing.</summary>
+    [Fact]
+    public async Task Members_FromOtherTeams_RemovedBeforeSave_ChangesNothing()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        SeedOutsiders(fixture);
+        await using MudBunitContext ctx = fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        await JoinFromOtherTeamAsync(cut, "Di");
+
+        await cut.InvokeAsync(() => cut.Find("[aria-label='Remove Di']").ClickAsync());
+
+        Assert.Equal(2, cut.FindAll(".roster-card").Count);
+        Assert.Empty(cut.FindAll(".build-team-savebar"));
+        Assert.Empty(TeamsOf(fixture, "Di"));
+    }
+
+    /// <summary>"From scratch" opens a blank New agent card that asks for no Teams and no Alias; what it saves is a draft on the roster, hired into the Team on save.</summary>
+    [Fact]
+    public async Task Members_FromScratch_DraftsTheNewAgent_AndHiresItOnSave()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.SeedGarden();
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.JSInterop.Mode = JSRuntimeMode.Loose;
+        ctx.Services.CopyFrom(
+            factory.Services,
+            typeof(PersonaSpend),
+            typeof(PersonaCommands),
+            typeof(PersonaSupervisor),
+            typeof(BuiltinAgentReset),
+            typeof(Agency.Huddle.App.Gateway.HostActions),
+            typeof(Agency.Huddle.App.Gateway.IRemoteAccessState));
+        AddProfiles(ctx, new FakeModelCatalog { Models = [new AgentModelOption("sonnet", "Sonnet", null)] });
+        IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+
+        _ = cut.InvokeAsync(() => { _ = cut.Find("button.roster-add-scratch").ClickAsync(); });
+        cut.WaitForAssertion(() => Assert.Equal("New agent", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        string[] labels = [.. cut.FindAll(".mud-dialog label").Select(static label => label.TextContent.Trim())];
+        Assert.DoesNotContain("Teams", labels);
+        Assert.DoesNotContain("Alias", labels);
+        await cut.InvokeAsync(() => cut.Find(".mud-dialog .agent-profile-card-identity-row input").ChangeAsync("Planner"));
+        await AgentProfileCardTestSupport.ClickButtonAsync(cut, "Save draft");
+
+        cut.WaitForAssertion(() => Assert.Equal(["Planner"], cut.FindAll(".roster-card")
+            .Where(static card => !card.ClassList.Contains("roster-card-existing"))
+            .Select(static card => card.QuerySelector(".roster-title")?.TextContent.Trim())));
+        Assert.Equal(2, fixture.Personas.Entries.Count);
+        await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(["Garden"],
+            Assert.Single(fixture.Personas.Entries, static entry => string.Equals(entry.Title, "Planner", StringComparison.Ordinal)).Teams));
+    }
+
+    /// <summary>Build a team keeps the roles first and the draft roster under them, with no Members-tab explainer.</summary>
+    [Fact]
+    public async Task Hire_RolesComeBeforeDraftRoster()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        await using MudBunitContext ctx = fixture.NewContext();
+        ctx.Services.GetRequiredService<NavigationManager>().NavigateTo("/teams/build?type=blank");
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+        await cut.InvokeAsync(() => cut.Find(".build-team-name input").InputAsync("Garden"));
+
+        string[] headings = [.. cut.FindAll(".build-team-hire h3").Select(static heading => heading.TextContent.Trim())];
+        Assert.Equal(["Roles", "Draft roster"], headings);
+        Assert.Empty(cut.FindAll(".build-team-roles-intro"));
+        Assert.Empty(cut.FindAll("[aria-label='Add a member']"));
     }
 
     /// <summary>A team type's icon tile is the one quiet tile for every type: no per-type hue class.</summary>
@@ -1255,7 +1461,7 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
 
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Bookkeeper']").ClickAsync());
+        await AddMemberAsync(cut, "Bookkeeper");
         await cut.InvokeAsync(() => cut.Find("button.build-team-approve-button").ClickAsync());
 
         PersonaEntry hired = Assert.Single(fixture.Personas.Entries, entry => string.Equals(entry.Title, "Bookkeeper", StringComparison.Ordinal));
@@ -1304,7 +1510,7 @@ public sealed class BuildTeamTests
         Assert.True(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
         Assert.Equal("Choose a new manager before removing Ada.",cut.Find(".build-team-approve-hint").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find("[aria-label='Add Tutor']").ClickAsync());
+        await AddMemberAsync(cut, "Tutor");
         string successor = cut.FindAll(".roster-name")[^1].TextContent.Trim();
 
         Assert.False(cut.Find("button.build-team-approve-button").HasAttribute("disabled"));
@@ -1387,7 +1593,7 @@ public sealed class BuildTeamTests
         Assert.Empty(cut.FindAll(".build-team-savebar"));
     }
 
-    /// <summary>The Members tab offers a cloud of the catalog's team types between the "Roles" heading (with its count) and the roles, without the Blank Team, which defines no roles to filter by; every role still shows.</summary>
+    /// <summary>The Members tab offers a cloud of the catalog's team types between the "Roles" heading (with its count and explainer) and the roles, without the Blank Team, which defines no roles to filter by; every role still shows.</summary>
     [Fact]
     public async Task Members_OffersATeamTypeCloudBetweenTheRolesHeadingAndTheRoles()
     {
@@ -1396,9 +1602,13 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
 
         IElement filter = cut.Find(".build-team-role-type-filter");
-        IElement? heading = filter.PreviousElementSibling;
+        IElement? intro = filter.PreviousElementSibling;
+        Assert.NotNull(intro);
+        Assert.Contains("build-team-roles-intro", intro.ClassList);
+        IElement? heading = intro.PreviousElementSibling;
         Assert.NotNull(heading);
         Assert.Contains("build-team-subhead", heading.ClassList);
         Assert.Equal("Roles", heading.QuerySelector("h3")?.TextContent.Trim());
@@ -1437,6 +1647,7 @@ public sealed class BuildTeamTests
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
 
         await cut.InvokeAsync(() => TypeChip(cut, "Books").ClickAsync());
 
@@ -1459,6 +1670,7 @@ public sealed class BuildTeamTests
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
         await cut.InvokeAsync(() => TypeChip(cut, "Books").ClickAsync());
 
         await cut.InvokeAsync(() => cut.Find("[aria-label='Clear Team type filter']").ClickAsync());
@@ -1479,6 +1691,7 @@ public sealed class BuildTeamTests
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
 
         Assert.Equal(11, RoleNames(cut).Count);
         IElement toggle = cut.Find(".role-grid-toggle");
@@ -1504,6 +1717,7 @@ public sealed class BuildTeamTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
 
         Assert.Empty(cut.FindAll(".role-grid-toggle"));
     }
@@ -1516,6 +1730,7 @@ public sealed class BuildTeamTests
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
         await cut.InvokeAsync(() => TypeChip(cut, "Books").ClickAsync());
 
         await cut.InvokeAsync(() => TypeChip(cut, "Type 01").ClickAsync());
@@ -1533,6 +1748,7 @@ public sealed class BuildTeamTests
         fixture.SeedGarden();
         await using MudBunitContext ctx = fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderMembers(ctx, "Garden");
+        OpenAddMember(cut);
 
         await cut.InvokeAsync(() => TypeChip(cut, "Solo").ClickAsync());
 
@@ -1541,9 +1757,52 @@ public sealed class BuildTeamTests
         Assert.Equal("Solo has no roles to hire from here.", cut.Find(".build-team-role-type-empty").TextContent.Trim());
     }
 
-    /// <summary>The role cards' titles in the Hire section, in the order they are drawn.</summary>
+    /// <summary>The role cards' titles in the role picker (Build a team's Hire section, or the Members tab's dialog), in the order they are drawn.</summary>
     private static IReadOnlyList<string> RoleNames(IRenderedComponent<ContainerFragment> cut) =>
-        [.. cut.FindAll(".build-team-hire .role-card .team-type-name").Select(name => name.TextContent.Trim())];
+        [.. cut.FindAll(".role-picker .role-card .team-type-name").Select(name => name.TextContent.Trim())];
+
+    /// <summary>Presses the Members tab's "From roles catalog" choice and waits for the roles dialog. The click is not awaited: it completes only when the dialog closes.</summary>
+    private static void OpenAddMember(IRenderedComponent<ContainerFragment> cut)
+    {
+        _ = cut.InvokeAsync(() => { _ = cut.Find("button.roster-add-catalog").ClickAsync(); });
+        cut.WaitForAssertion(() => Assert.Equal("Add a member", cut.Find(".mud-dialog-title").TextContent.Trim()));
+    }
+
+    /// <summary>Presses the Members tab's "From other teams" choice and waits for the Agent picker. The click is not awaited: it completes only when the dialog closes.</summary>
+    private static void OpenFromOtherTeams(IRenderedComponent<ContainerFragment> cut)
+    {
+        _ = cut.InvokeAsync(() => { _ = cut.Find("button.roster-add-teams").ClickAsync(); });
+        cut.WaitForAssertion(() => Assert.Equal("From other teams", cut.Find(".mud-dialog-title").TextContent.Trim()));
+    }
+
+    /// <summary>Picks an Agent in the "From other teams" dialog and waits for it on the roster.</summary>
+    private static async Task JoinFromOtherTeamAsync(IRenderedComponent<ContainerFragment> cut, string name)
+    {
+        int before = cut.FindAll(".roster-card").Count;
+        OpenFromOtherTeams(cut);
+        await cut.InvokeAsync(() => cut.Find($".agent-picker-tile[aria-label='Add {name}']").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(before + 1, cut.FindAll(".roster-card").Count));
+    }
+
+    /// <summary>Seeds two Agents outside Garden: Cy in the Orchard Team, and Di in no Team.</summary>
+    private static void SeedOutsiders(Fixture fixture)
+    {
+        fixture.Personas.Add(new PersonaIdentity("Cy", "Gardener", "cy", Teams: ["Orchard"]), "You grow fruit.");
+        fixture.Personas.Add(new PersonaIdentity("Di", "Analyst", "di", Teams: []), "You count things.");
+    }
+
+    /// <summary>The Teams an Agent's card names now.</summary>
+    private static IReadOnlyList<string> TeamsOf(Fixture fixture, string name) =>
+        fixture.Personas.Entries.Single(entry => string.Equals(entry.Name, name, StringComparison.Ordinal)).Teams;
+
+    /// <summary>Adds a draft member for the role through the "Add a member" dialog and waits for it on the roster.</summary>
+    private static async Task AddMemberAsync(IRenderedComponent<ContainerFragment> cut, string role)
+    {
+        int before = cut.FindAll(".roster-card").Count;
+        OpenAddMember(cut);
+        await cut.InvokeAsync(() => cut.Find($"[aria-label='Add {role}']").ClickAsync());
+        cut.WaitForAssertion(() => Assert.Equal(before + 1, cut.FindAll(".roster-card").Count));
+    }
 
     /// <summary>The names of the team types still offered as chips in the Members tab's cloud, in the order drawn: the chosen type is not among them.</summary>
     private static IReadOnlyList<string> CloudTypeNames(IRenderedComponent<ContainerFragment> cut) =>
@@ -1841,6 +2100,16 @@ public sealed class BuildTeamTests
         }
 
         public string DirPath => this.dir.Path;
+
+        /// <summary>Writes an Agent file with no Name, which does not load, and rescans so the store lists it as rejected.</summary>
+        /// <returns>The file's path.</returns>
+        public string WriteBrokenAgent()
+        {
+            AgentPaths paths = new(this.dir.Options());
+            TestPersonaFiles.Write(paths, "broken", "---\nTitle: Chief of Staff\nAlias: coo\n---\nYou are the Chief of Staff.");
+            this.Personas.RescanNow();
+            return paths.DefinitionFile("broken");
+        }
 
         public PersonaStore Personas { get; }
 

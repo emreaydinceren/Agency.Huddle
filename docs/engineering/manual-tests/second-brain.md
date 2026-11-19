@@ -92,7 +92,7 @@ Agent is restarted from its card.
 
 **Free** · about 10 min
 
-1. Click **Agents** in the sidebar and open Nova's Agent page. Find the section that shows the whole system prompt.
+1. Open Nova's card (`P-OPEN-AGENT`). Find the section that shows the whole system prompt.
 2. Read each part and its source label.
 
 **Expect**: each prompt part is listed with its source, such as `Orientation · Prompt · default`,

@@ -10,8 +10,7 @@ using static Agency.Huddle.Tests.Ui.AgentProfileCardTestSupport;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Exercises <see cref="Agency.Huddle.App.Components.Shared.AgentProfileCard"/> through the real
-/// <see cref="Agency.Huddle.App.Components.Pages.Agents"/> page and the real
+/// Exercises <see cref="Agency.Huddle.App.Components.Shared.AgentProfileCard"/> through <c>AgentCardTestHost</c>, the page that opens it, and the real
 /// <c>IDialogService</c>, via <see cref="MudBunitContext.RenderWithPopovers"/> - not, as the retired
 /// <c>HtmlRenderer</c> version did, by constructing <c>AgentProfileCard</c> in isolation from a bare
 /// parameter dictionary.
@@ -818,9 +817,8 @@ public sealed class AgentProfileCardTests
     /// The open card follows live health/presence, exactly like the tile behind it: rules.md's
     /// "Health outranks pipe liveness" applies to every surface rendering this badge. A card that kept
     /// showing its opening snapshot would still be claiming Online for an Agent that just went
-    /// offline, and the reason line under the badge would never appear. Drives the same transition
-    /// <see cref="AgentsPageTests.AgentsPage_RepaintsWhenAnAgentGoesOffline"/> does for the
-    /// tile, but on an already-open card.
+    /// offline, and the reason line under the badge would never appear. Drives a transition to Offline
+    /// on an already-open card.
     /// </summary>
     [Fact]
     public async Task ViewMode_RepaintsAndOffersRestart_WhenTheAgentGoesOffline()

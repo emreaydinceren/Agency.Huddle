@@ -19,7 +19,7 @@ standing conventions. This area adds:
 2. Know the launch profile this area keeps probing. `dotnet run --project src/Huddle.App` picks up the only profile (`http`), which sets `ASPNETCORE_ENVIRONMENT=Development`, `applicationUrl http://localhost:5100` and `launchBrowser true`. The `--urls` argument is therefore redundant but harmless.
 3. Know the environment-variable form, because this area is mostly about it: the separator is a DOUBLE underscore, and the variable must be set in the same window that then runs `dotnet run`. Precedence is environment variable, then `appsettings.Development.json`, then `appsettings.json`.
 4. AFTER EVERY ENVIRONMENT-VARIABLE TEST, clear what you set before moving on, or the next test inherits it and reports a false result.
-5. A fresh install has no Rooms with ACP off, which is what `P-LAUNCH-FREE` gives. The built-in **Chief of Staff** (alias `cos`) is seeded at every start whatever `Acp:Enabled` says, so its tile is always on **Agents**; with ACP on it also connects and gets a direct Room (a paid Greeting Turn on the real adapter), which is why a launch with ACP on that is not `P-LAUNCH-UAT` is never "empty". Tests that need an Agent to answer name [`P-LAUNCH-UAT`](common.md#p-launch-uat) in **Before you start** and use Ada and Bo. That procedure keeps its data in `C:\seeds\huddle\uat\data`, not `src\Huddle.App\App_Data`, so a disk, database or reset step in such a test points there, and re-running the seeder line of `P-LAUNCH-UAT` is its reset.
+5. A fresh install has no Rooms with ACP off, which is what `P-LAUNCH-FREE` gives. The built-in **Chief of Staff** (alias `cos`) is seeded at every start whatever `Acp:Enabled` says, so its roster card is always on its Team's **Members** tab (and Ctrl K finds it); with ACP on it also connects and gets a direct Room (a paid Greeting Turn on the real adapter), which is why a launch with ACP on that is not `P-LAUNCH-UAT` is never "empty". Tests that need an Agent to answer name [`P-LAUNCH-UAT`](common.md#p-launch-uat) in **Before you start** and use Ada and Bo. That procedure keeps its data in `C:\seeds\huddle\uat\data`, not `src\Huddle.App\App_Data`, so a disk, database or reset step in such a test points there, and re-running the seeder line of `P-LAUNCH-UAT` is its reset.
 6. For the ACP tests at the end only: `node --version` must print a version, `Test-Path tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js` must be True (if not, run `pwsh tools\acp\install.ps1`), and the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) must be met. Tests that need this say so in their preconditions.
 
 ## Tests
@@ -49,7 +49,7 @@ standing conventions. This area adds:
 - The console prints `Now listening on: http://localhost:5100`.
 - The console prints `Hosting environment: Development`.
 - The page renders as TWO columns: a narrow sidebar on the left and a wide main column on the right.
-- The sidebar contains, in this order: a button labelled exactly `New room`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, a link labelled exactly `Agents`, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived) may sit between them; their order and content are not judged here.
+- The sidebar contains, in this order: a button labelled exactly `New room`, a room list that shows the title `No rooms yet` with the line `Start an agent to create one.` under it, and, last, an icon-only Settings link (a cog with the accessible name `Settings`, tooltip `Settings`). Other entries (Teams, Tasks, Library, Archived) may sit between them; their order and content are not judged here. There is no `Agents` link.
 - On a data folder with no `profile.json` (a fresh install), the address bar reads `/settings/profile` and the main column shows the Settings **Profile** tab with its welcome line - the first-run redirect STARTUPCONFIG-35 covers. Where `profile.json` already exists, the main column shows the same empty state as the sidebar, `No rooms yet. Start an agent to create one.`, and no Room.
 
 **Fail if — any of these**
@@ -57,7 +57,7 @@ standing conventions. This area adds:
 - The console throws an address-in-use / `Failed to bind to address` exception and the process exits -> something else already holds 5100; the browser is showing a DIFFERENT process and every later result would be about that one. Stop it and restart.
 - The console prints `Hosting environment: Production` -> the launch profile was bypassed (you ran the built DLL, or passed `--no-launch-profile`); ACP will be off and the port will be 5000. Relaunch with the documented command.
 - The page renders as unstyled black-on-white text with no sidebar layout -> a stylesheet did not load. This is a real, documented regression shape, not a rendering hiccup. Run STARTUPCONFIG-02 immediately and file from there.
-- The `Agents` link text, or the `Settings` accessible name, reads anything else -> navigation copy has drifted from the shipped labels.
+- The `Settings` accessible name reads anything else -> navigation copy has drifted from the shipped labels.
 - A Room is listed in the sidebar -> the cost guard did not take (`O-ADAPTERS` should print `0`), so the Chief of Staff connected and got a Room. Stop, fix the variable and relaunch.
 
 **Inconclusive if**
@@ -126,24 +126,22 @@ If DevTools shows CSS rows served `(from disk cache)` with no status code, you d
 3. Without ticking anything, try to click the `Open room` button.
 4. Tick the checkbox beside `Ada`.
 5. Try the `Open room` button again — note whether it is now clickable. Then click `New room` again to close the panel WITHOUT starting a chat.
-6. Click `Agents` in the sidebar and read the address bar and the page heading.
-7. Click the Settings icon (the cog at the bottom of the sidebar, accessible name `Settings`) and read the address bar and the page heading.
-8. Click a Room in the sidebar room list and confirm the main column shows that Room.
+6. Click the Settings icon (the cog at the bottom of the sidebar, accessible name `Settings`) and read the address bar and the page heading.
+7. Click a Room in the sidebar room list and confirm the main column shows that Room.
 
 **Pass if — all of these**
 
 - The `New room` panel lists `Ada` and `Bo`, each with a checkbox and a small status dot. The built-in `Chief of Staff` is listed too once it is Online; ignore it.
 - With nothing ticked, the `Open room` button is present but DISABLED (clicking does nothing).
 - With `Ada` ticked, `Open room` becomes enabled.
-- `Agents` navigates to `/agents` and the page heading reads exactly `Agents`.
 - The Settings icon navigates to `/settings` and the page heading reads exactly `Settings`.
 - Clicking a Room navigates to `/rooms/<id>` and the main column heading is that Room's name.
 
 **Fail if — any of these**
 
 - `Open room` is clickable with nothing ticked -> the selection guard is gone and an empty Room can be created.
-- `Agents` or the Settings icon leads to a blank page or an error -> the route was dropped from `Routes.razor` or the page throws on load.
-- The `Agents` link text differs, or the Settings icon's accessible name is not `Settings` -> shipped navigation copy has drifted.
+- The Team or the Settings icon leads to a blank page or an error -> the route was dropped from `Routes.razor` or the page throws on load.
+- The Settings icon's accessible name is not `Settings` -> shipped navigation copy has drifted.
 
 **Inconclusive if**
 
@@ -194,42 +192,7 @@ If you have already created extra Rooms by hand in earlier exploration, the coun
 
 ### STARTUPCONFIG-08 — /agents lists Personas only — pipe clients never appear there
 
-**Free** · about 4 min
-
-*Pins the category boundary that is most often misread as a bug: an Agent tile comes from a Persona file, an Agent comes from anything that said hello on the pipe.*
-
-**Before you start**
-
-- The app is running on `P-LAUNCH-FREE` with the default `src\Huddle.App\App_Data`.
-- No Persona of your own exists: `Get-ChildItem src\Huddle.App\App_Data\Agents -Directory` lists no folder other than `Chief of Staff` (the built-in Chief of Staff is a Persona, is seeded at every start and is expected). A Persona is `Agents\<Name>\<Name>.md`.
-
-**Steps**
-
-1. In `T-C`, run `pwsh tools/echo-bot.ps1 -Name mybot` and wait for its welcome line.
-2. Confirm the sidebar shows a `mybot` Room.
-3. Click `Agents` in the sidebar.
-4. Read the page heading, the button beside it, the intro paragraph, and whatever appears below.
-5. Scan the whole page for the word `mybot`.
-6. Press Ctrl+C in `T-C`.
-
-**Pass if — all of these**
-
-- The heading reads exactly `Agents` and a text button first in the toolbar beside it reads `New agent` (not upper-cased).
-- The intro paragraph begins `A Persona is a Markdown file describing how one agent should behave`.
-- The page lists only Personas that have a definition file at `App_Data\Agents\<Name>\<Name>.md`: the built-in Chief of Staff, which is always there, and nothing you did not create. (the `No Agents yet` empty state cannot appear on this launch; the Chief of Staff is seeded whatever `Acp:Enabled` says.)
-- `mybot` does not appear anywhere on the page, although its Room is in the sidebar.
-
-**Fail if — any of these**
-
-- `mybot` appears as an Agent tile -> pipe-connected Agents are leaking into the Persona list; the two concepts have been conflated.
-- The page shows tiles for names that have no `Agents\<Name>\<Name>.md` file -> the Persona index is reading somewhere other than the Agents directory (a `.md` under `App_Data\Teams` must never produce a tile).
-
-**Inconclusive if**
-
-Expecting `mybot` here is a category error, not a defect — do not file it. If `App_Data\Agents` holds a folder an earlier test left there, remove it (or note it) before judging the list.
-
-> [!NOTE]
-> `App_Data\Teams\` holds Team folders, notes and Tasks, never Personas, so nothing there produces a tile.
+> **Retired (2026-11-18).** The Agents page was removed; nothing to run.
 
 ### STARTUPCONFIG-09 — Settings' Prompts tab on a first run says prompts.json is absent, and offers nothing to save or reset
 
@@ -403,7 +366,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 
 **Fail if — any of these**
 
-- `Agents\Chief of Staff\Chief of Staff.md` is missing from the fresh App_Data -> the Persona store or the built-in seeder never ran; `/agents` will be broken too.
+- `Agents\Chief of Staff\Chief of Staff.md` is missing from the fresh App_Data -> the Persona store or the built-in seeder never ran; Ctrl K will not find the Chief of Staff either.
 - App_Data is created somewhere other than `src\Huddle.App\` -> the working directory was not the project folder. Testers report this as 'my rooms disappeared' when the data simply moved. Check where you launched from.
 - Startup throws an exception naming `Directory.CreateDirectory` -> the path is not writable.
 - `prompts.json` or `appearance.json` exists on a clean run -> the app created an override file it must never create (see STARTUPCONFIG-09 and -10).
@@ -705,7 +668,7 @@ The `.jsonl` lines from step 1 still reading `"senderName":"You"` is CORRECT: th
 
 **Fail if — any of these**
 
-- The app starts normally with any of the three variables set -> the loud guard has regressed into exactly the silent degradation it exists to prevent; the Persona or Task directory would quietly scan nothing and `/agents` would show no Agents with no explanation anywhere.
+- The app starts normally with any of the three variables set -> the loud guard has regressed into exactly the silent degradation it exists to prevent; the Persona or Task directory would quietly scan nothing and no Agents would be found (Ctrl K, the Members tab) with no explanation anywhere.
 - The message names the OLD key as the replacement, or omits the new key (`Team:Acp:AgentsDir`, or `Team:Teams:Dir` for the Tasks key) -> the guard fires but does not tell the user how to fix it.
 
 **Inconclusive if**
@@ -847,13 +810,13 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net11
 
 **Free** · about 6 min
 
-*Proves the recommended zero-cost configuration: no child process anywhere, and the Agents page still renders and is browsable.*
+*Proves the recommended zero-cost configuration: no child process anywhere, and the Chief of Staff's card still opens and is browsable.*
 
 **Before you start**
 
 - `node` may or may not be installed — the test works either way.
 - The app is stopped.
-- The Chief of Staff is seeded whatever the ACP flag says (`BuiltinAgentSeeder.cs`), so its tile is on the page even though nothing starts.
+- The Chief of Staff is seeded whatever the ACP flag says (`BuiltinAgentSeeder.cs`), so Ctrl K still finds it even though nothing starts.
 
 **Steps**
 
@@ -861,23 +824,23 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net11
 2. In the run window set `$env:Team__Acp__Enabled = 'false'` and launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Wait 20 seconds after the app is listening.
 4. In `T-B` run `O-ADAPTERS` again.
-5. In the browser click `Agents` and read the heading, the button beside it, the intro paragraph and the body.
+5. In the browser open the Chief of Staff's card (`P-OPEN-AGENT`: Ctrl K, `Chief of Staff`, the Agent result) and read its Name, alias and status.
 6. Search the console for `Persona` and for `adapter`.
 7. Stop the app and run `Remove-Item Env:Team__Acp__Enabled`.
 
 **Pass if — all of these**
 
 - No NEW `node` process exists compared to step 1.
-- `/agents` renders with heading `Agents`, a `New agent` button (a text button, not upper-cased), and the intro paragraph beginning `A Persona is a Markdown file describing how one agent should behave`.
-- On a clean App_Data, the page shows exactly one tile, the built-in Chief of Staff (alias `@cos`), whose status does not read `Starting` or `Online` because nothing was started. `No Agents yet` never appears, because the Chief of Staff is always seeded (`Agents.razor:67-70`).
+- Ctrl K finds the built-in Chief of Staff and its card opens, with the alias `@cos`; the Agent is always seeded.
+- The status on the card does not read `Starting` or `Online` because nothing was started.
 - The console contains no `Persona '…' failed to start.` line and no adapter lines.
-- Merely loading `/agents` spends nothing and spawns nothing.
+- Merely opening the card spends nothing and spawns nothing.
 
 **Fail if — any of these**
 
 - A new `node` process appears with the flag off -> a serious bug: the supervisor must return immediately when the flag is off, and a spawned process means real money can be spent against the user's intent.
-- Loading `/agents` itself triggers a model probe (a transient node process, or an adapter line in the console on page load) -> the probe is deliberately deferred to opening a Create/Edit card, because it spawns a throwaway adapter process.
-- `/agents` errors or renders blank with ACP off -> the page must build and be browsable with no agent process at all.
+- Opening the card in View mode triggers a model probe (a transient node process, or an adapter line in the console) -> the probe is deliberately deferred to opening a Create/Edit card, because it spawns a throwaway adapter process.
+- Ctrl K finds nothing, or the card errors or renders blank with ACP off -> the card must build and be browsable with no agent process at all.
 
 **Inconclusive if**
 
@@ -905,21 +868,21 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net11
 3. Launch with `P-LAUNCH-PAID`.
 4. Wait 20 seconds after the app is listening.
 5. In `T-B` run `O-ADAPTERS` again.
-6. Open the browser, click `Agents`, and read the body.
+6. Open the browser, press Ctrl K, type `Chief of Staff`, open the Agent result (`P-OPEN-AGENT`), and read its status.
 7. Read the sidebar room list.
 
 **Pass if — all of these**
 
 - The app starts normally with ACP enabled.
 - `O-ADAPTERS` prints exactly `1` after the wait, against `0` before: the Chief of Staff's adapter, and no other.
-- `/agents` shows exactly one tile, `Chief of Staff` (`@cos`), reading `Online` (or `Starting` for a few seconds first); it never shows `No Agents yet`
+- The Chief of Staff's card (`@cos`) reads `Online` (or `Starting` for a few seconds first).
 - A `Chief of Staff` direct Room is in the sidebar.
 - Nothing beyond that one Haiku / low Greeting Turn is spent.
 
 **Fail if — any of these**
 
 - `O-ADAPTERS` prints more than `1` -> something other than the seeded Chief of Staff was started; check `Get-ChildItem -Directory src\Huddle.App\App_Data\Agents` for an Agent left behind by another test.
-- `O-ADAPTERS` prints `0` with the tile stuck `Starting` or `Offline` -> read the tile's tooltip and act on it (see STARTUPCONFIG-31).
+- `O-ADAPTERS` prints `0` with the Agent stuck `Starting` or `Offline` -> read the avatar's tooltip and act on it (see STARTUPCONFIG-31).
 - The app fails to start with ACP enabled and only the built-in Agent -> that is the first-run state of every install.
 
 **Inconclusive if**
@@ -953,33 +916,33 @@ alias: 'ops'
 You are the Operations Lead. You keep the team honest.
 ```
 3. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-4. Open the browser and click `Agents`. Read what is shown.
+4. Open the browser and open the Members tab of any Team (`Test` if none exists, `P-NEW-PERSONA` step 1). Point at **Add a member**, select **From other teams**, and read the picker. Close it without saving.
 5. Leave the app RUNNING. In a text editor, change the file's `title:` line to `title: 'Chief of Operations'` and save it.
-6. Watch the `/agents` page for up to 5 seconds WITHOUT refreshing, and read the `Ops Lead` tile.
+6. WITHOUT reloading the browser, wait 5 seconds, then press Ctrl K, type `Ops Lead`, open the Agent result (`P-OPEN-AGENT`) and read its title.
 7. Still with the app running, create a stray file: `Set-Content "src\Huddle.App\App_Data\Agents\Ops Lead\notes.md" 'scratch'`.
-8. Watch the `/agents` page for up to 5 seconds and read anything that appears ABOVE the tiles.
+8. Watch the top of the Team's Members tab for up to 5 seconds and read anything that appears there.
 9. Still with the app running, create a BROKEN definition: `New-Item -ItemType Directory -Force "src\Huddle.App\App_Data\Agents\Broken One"`, then write a file `src\Huddle.App\App_Data\Agents\Broken One\Broken One.md` containing only the two lines `---` and `---` (empty frontmatter).
-10. Watch the page again for up to 5 seconds and read the list ABOVE the tiles.
+10. Watch the top of the Members tab again for up to 5 seconds and read the list.
 11. In `T-B` run `O-ADAPTERS`.
 12. Stop the app, delete both folders (`Remove-Item -Recurse "src\Huddle.App\App_Data\Agents\Ops Lead", "src\Huddle.App\App_Data\Agents\Broken One"`), and run `Remove-Item Env:Team__Acp__Enabled`.
 
 **Pass if — all of these**
 
-- After step 3, `/agents` shows, besides the built-in Chief of Staff tile, a tile with the name `Ops Lead`, the title `Operations Lead` and an alias chip `@ops` (the name, title and chip are separate elements, not one `·`-joined line, `Agents.razor:98-104`) — a Persona in its own folder is found by the startup scan.
-- After the edit in step 5, the tile's title updates to `Chief of Operations` within 5 seconds and with no page refresh.
-- After step 7, a section headed exactly `Files that didn't load` appears ABOVE the tiles, listing the path of `notes.md` with the reason `An agent folder holds only its definition; use work/.` (`PersonaStore.cs:773`). The `Ops Lead` tile stays.
+- After step 3, the From other teams picker lists `Ops Lead` under **No team**, and its card (Ctrl K) shows the title `Operations Lead` and the alias `@ops` — a Persona in its own folder is found by the startup scan.
+- After the edit in step 5, the card's title reads `Chief of Operations` within 5 seconds and with no browser reload.
+- After step 7, a section headed exactly `Files that didn't load` appears at the top of the Members tab, listing the path of `notes.md` with the reason `An agent folder holds only its definition; use work/.` (`PersonaStore.cs:773`). `Ops Lead` stays findable.
 - After step 9, the same section also lists the path of `Broken One.md` with a reason beginning `Persona frontmatter is missing required field` (`PersonaFrontmatter.cs:595`).
 - `O-ADAPTERS` prints `0` (ACP is off, so no process was spawned at any point).
 
 **Fail if — any of these**
 
-- The tile appears at startup but does NOT update when the file is edited in place -> the directory watcher is not including sub-directories (`PersonaStore.cs:171`); a Persona would then be frozen at whatever it said when the app started, with no error, no log and nothing on screen. This is the single easiest way to break the Persona library and is exactly the documented trap.
+- The Agent appears at startup but does NOT update when the file is edited in place -> the directory watcher is not including sub-directories (`PersonaStore.cs:171`); a Persona would then be frozen at whatever it said when the app started, with no error, no log and nothing on screen. This is the single easiest way to break the Persona library and is exactly the documented trap.
 - A rejected file simply does not appear anywhere -> a rejected file is being dropped silently instead of being named with its reason, which is the whole point of the required-field decision.
-- The tile does not appear at all at startup -> the Agents directory is not being scanned.
+- The Agent does not appear at all at startup -> the Agents directory is not being scanned.
 
 **Inconclusive if**
 
-If the tile never appears even at startup, first confirm the file really is at `src\Huddle.App\App_Data\Agents\Ops Lead\Ops Lead.md` (the LIVE DataDir — read the path from `/settings` if unsure; the folder and the file must carry the same name) and that the frontmatter has all three required fields `name`, `title` and `alias`. A `.md` placed directly in `Agents\` is rejected with `A definition must be inside its agent's folder.`, and nothing under `App_Data\Teams\` is ever read as a Persona (that folder holds Teams).
+If the Agent never appears even at startup, first confirm the file really is at `src\Huddle.App\App_Data\Agents\Ops Lead\Ops Lead.md` (the LIVE DataDir — read the path from `/settings` if unsure; the folder and the file must carry the same name) and that the frontmatter has all three required fields `name`, `title` and `alias`. A `.md` placed directly in `Agents\` is rejected with `A definition must be inside its agent's folder.`, and nothing under `App_Data\Teams\` is ever read as a Persona (that folder holds Teams).
 
 > [!NOTE]
 > This test needs no ACP, no node and no money because the Persona library is indexed independently of whether any agent process runs.
@@ -1036,7 +999,7 @@ If `git status` is not clean at step 1, do NOT run this test — you risk revert
 
 **💰 Spends money** · about 10 min
 
-*Proves the supervisor really launches a Persona at startup and that all three start-failure causes reach the browser as readable tile text — the surface actually under test. The Edit card in step 7 is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
+*Proves the supervisor really launches a Persona at startup and that all three start-failure causes reach the browser as readable status text on the Agent's card — the surface actually under test. The Edit card in step 7 is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
 
 **Before you start**
 
@@ -1059,10 +1022,10 @@ You are a test agent. Answer in one short sentence.
 ```
 2. In `T-B` run `O-ADAPTERS`. It should print `0`.
 3. Launch with `P-LAUNCH-PAID`.
-4. Open the browser and go straight to `/agents` — do not wait.
-5. Read the `Tester` tile: its name, its title, its alias caption, and its status (the avatar badge: a glyph, with the word in its tooltip).
+4. Open the browser, press Ctrl K, type `Tester`, and open the Agent result (`P-OPEN-AGENT`) — do not wait.
+5. Read the `Tester` card: its name, its title, its alias, and its status (the avatar badge: a glyph, with the word in its tooltip).
 6. Keep watching the status for up to 30 seconds and record every state it passes through.
-7. Open the tile by clicking it, then click `Edit`. In the `Model` dropdown choose the option whose name contains `Haiku`; in the `Effort` dropdown choose `Low`. Click `Save`.
+7. On the card, click `Edit`. In the `Model` dropdown choose the option whose name contains `Haiku`; in the `Effort` dropdown choose `Low`. Click `Save`.
 8. Look at the sidebar room list.
 9. In `T-B` run `O-ADAPTERS` again.
 10. If the status ever reads `Offline`, hover the status and read the tooltip text in full; record it verbatim.
@@ -1070,7 +1033,7 @@ You are a test agent. Answer in one short sentence.
 
 **Pass if — all of these**
 
-- The tile shows the name `Tester`, the title `Test agent`, the alias caption `@tester` (separate elements, `Agents.razor:98-104`), and an avatar badge whose tooltip reads `Starting` (pulse glyph), then `Online` (check glyph).
+- The card shows the name `Tester`, the title `Test agent`, the alias `@tester`, and an avatar badge whose tooltip reads `Starting` (pulse glyph), then `Online` (check glyph).
 - `O-ADAPTERS` prints `2` after the start: `Tester`'s adapter and the Chief of Staff's, against `0` before.
 - A Room named `Tester` appears in the sidebar with no refresh (next to the Chief of Staff's).
 - After saving Model = Haiku and Effort = Low, the card shows those values and the agent restarts (status passes through `Starting` again).
@@ -1078,14 +1041,14 @@ You are a test agent. Answer in one short sentence.
 
 **Fail if — any of these**
 
-- The tile is stuck on `Starting` forever -> the start call never returned; the Human has no way to tell a slow start from a hung one.
-- The tile flips to `Offline` with NO reason in the tooltip -> a start failure with no recorded reason is exactly the surface this page exists to fix; the Human can see the failure but not act on it.
+- The status is stuck on `Starting` forever -> the start call never returned; the Human has no way to tell a slow start from a hung one.
+- The status flips to `Offline` with NO reason in the tooltip -> a start failure with no recorded reason is exactly the surface this card exists to fix; the Human can see the failure but not act on it.
 - No `node` process appears despite ACP being on and a valid Persona present -> the supervisor did not launch anything.
 - No `Tester` Room appears in the sidebar -> the Persona connected but did not get a Room, or the sidebar did not update live.
 
 **Inconclusive if**
 
-An `Offline` tile WITH a reason is a configuration result, not a product failure — read the tooltip and act on it: `The Adapter needs authentication: …` means the `claude` CLI is not logged in; `No ACP adapter is installed for Persona '…'. Run tools/acp/install.ps1 …` means the adapter probe found nothing; a process-start error usually means `node` is not on PATH. Fix the named cause and re-run. Note this test really does launch a child process and create a session — do not run it casually — but Tester takes no Turn, so the Chief of Staff's one Greeting is the only spend.
+An `Offline` status WITH a reason is a configuration result, not a product failure — read the tooltip and act on it: `The Adapter needs authentication: …` means the `claude` CLI is not logged in; `No ACP adapter is installed for Persona '…'. Run tools/acp/install.ps1 …` means the adapter probe found nothing; a process-start error usually means `node` is not on PATH. Fix the named cause and re-run. Note this test really does launch a child process and create a session — do not run it casually — but Tester takes no Turn, so the Chief of Staff's one Greeting is the only spend.
 
 > [!NOTE]
 > If the Model dropdown offers no options and the hint reads `This agent advertises no models, so it will use its own default.`, the model probe returned empty. A failed probe and a cancelled one look identical here — that ambiguity is a documented limit of the picker, not a defect to file.
@@ -1109,7 +1072,7 @@ An `Offline` tile WITH a reason is a configuration result, not a product failure
 4. Watch the console as the Persona starts.
 5. Search the console output for the category `Agency.Huddle.Acp.Wire`.
 6. Look for an `Authorization` header value in the traced JSON-RPC traffic.
-7. Open http://localhost:5100 and `/agents`, and look for ANY visual indication anywhere in the browser that tracing is enabled.
+7. Open http://localhost:5100 and `/settings`, and look for ANY visual indication anywhere in the browser that tracing is enabled.
 8. Stop the app IMMEDIATELY, then run `Remove-Item Env:Team__Acp__TraceWire` and `Remove-Item ${env:Logging__LogLevel__Agency.Huddle}`.
 9. Close the console window, or clear its scrollback, so the token is not left on screen.
 
@@ -1154,7 +1117,7 @@ If you see no trace lines, this test is inconclusive rather than failing until y
 
 **Steps**
 
-1. Confirm the Persona's Model is Haiku and Effort is low: open `/agents`, click the tile, and read the Model and Effort shown. Fix them via `Edit` if not.
+1. Confirm the Persona's Model is Haiku and Effort is low: open the `Tester` card (`P-OPEN-AGENT`) and read the Model and Effort shown. Fix them via `Edit` if not.
 2. Stop the app. Rewrite the body of `src\Huddle.App\App_Data\Agents\Tester\Tester.md` to `You are a test agent. Reply with one very short sentence that ends with @tester2.` and add a second Persona: create the folder `src\Huddle.App\App_Data\Agents\Tester2` and write `Tester2.md` in it:
 ```
 ---
@@ -1165,12 +1128,12 @@ alias: 'tester2'
 You are a second test agent. Reply with one very short sentence that ends with @tester.
 ```
 3. Run the variable lines of [`P-LAUNCH-PAID`](common.md#p-launch-paid-), then override two: `$env:Team__Acp__TokenBudget = '2000'` — small enough that one Turn exceeds it — and `$env:Team__AgentMessageBudget = '4'`, which bounds the ping-pong and therefore the spend.
-4. Launch with the `dotnet run` line of `P-LAUNCH-PAID` and wait for BOTH tiles to read `Online`. Set Model = Haiku and Effort = low on `Tester2` as well.
+4. Launch with the `dotnet run` line of `P-LAUNCH-PAID` and wait for BOTH Agents to read `Online` on their cards (`P-OPEN-AGENT`). Set Model = Haiku and Effort = low on `Tester2` as well.
 5. Click **New room**, tick `Tester` and `Tester2` only, and click **Open room**. The Room heading reads `Tester, Tester2`.
 6. Type exactly `Say hi @tester` and press Enter.
 7. Watch the exchange: `Tester` answers mentioning `@tester2`, then `Tester2` answers mentioning `@tester`. That second reply is an AGENT Message, so it wakes `Tester` with no reset — and that is the Turn the cap refuses.
 8. Wait 30 seconds and record that no third Agent Message arrives.
-9. Go to `/agents` and read the `Tester` tile's status line. Hover the status and read the tooltip in full.
+9. Open the `Tester` card (`P-OPEN-AGENT`) and read its status line. Hover the status and read the tooltip in full.
 10. Go back to the Room and read the area between the message list and the message box.
 11. Search the console for a line containing `token budget`.
 12. Do NOT stop the app or clear the variable — STARTUPCONFIG-34 continues from this exact state.
@@ -1179,17 +1142,17 @@ You are a second test agent. Reply with one very short sentence that ends with @
 
 - The Human Message gets a normal reply from `Tester`, and `Tester2` answers that.
 - `Tester` does NOT answer `Tester2` — the Agent-triggered Turn is the one refused.
-- The `/agents` tile reads `Degraded` (dash glyph on the avatar badge).
-- The tile's tooltip reads exactly `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
+- The `Tester` card reads `Degraded` (dash glyph on the avatar badge).
+- The status tooltip reads exactly `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The Room shows an alert strip between the message list and the message box reading `Tester is Degraded: The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The console contains `Persona 'Tester' has spent its token budget of 2000 and is taking no more turns until a human speaks to it.`
 
 **Fail if — any of these**
 
-- The tile goes `Degraded` but shows NO reason -> before ADR-0008 this condition was log-only; a Degraded tile with nothing to read is exactly that regression returning.
-- Nothing changes at all — no reply, no tile change, no banner -> the Human is left with silence and no explanation, which is the failure this whole surface exists to prevent.
+- The Agent goes `Degraded` but shows NO reason -> before ADR-0008 this condition was log-only; a Degraded status with nothing to read is exactly that regression returning.
+- Nothing changes at all — no reply, no status change, no banner -> the Human is left with silence and no explanation, which is the failure this whole surface exists to prevent.
 - The reason uses words like `quota`, `rate limit`, `LLM` or `tokens remaining` instead of the defined vocabulary (Budget, Turn, Human, Persona) -> a copy defect; the wording is part of the contract.
-- The reason appears on the tile but not in the Room, or vice versa -> the two surfaces are deriving status independently instead of from one resolver.
+- The reason appears on the card but not in the Room, or vice versa -> the two surfaces are deriving status independently instead of from one resolver.
 
 **Inconclusive if**
 
@@ -1214,26 +1177,26 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 2. Type exactly `Hello again.` and press Enter.
 3. Wait up to 60 seconds and watch the message area.
 4. Look at the area between the message list and the message box.
-5. Go to `/agents` and read the `Tester` tile's avatar badge (glyph and tooltip).
+5. Open the `Tester` card (`P-OPEN-AGENT`) and read its avatar badge (glyph and tooltip).
 6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget` and `Remove-Item Env:Team__AgentMessageBudget`.
-7. Delete both test Personas: `Remove-Item -Recurse src\Huddle.App\App_Data\Agents\Tester, src\Huddle.App\App_Data\Agents\Tester2`. Their Rooms and history stay in the database and the Agents go offline (`Agents.razor:25`); `P-RESET-ALL` gives a fully clean slate.
+7. Delete both test Personas: `Remove-Item -Recurse src\Huddle.App\App_Data\Agents\Tester, src\Huddle.App\App_Data\Agents\Tester2`. Their Rooms and history stay in the database and the Agents go offline; `P-RESET-ALL` gives a fully clean slate.
 8. Run `Get-ChildItem Env:Team__*` and confirm nothing remains set.
 
 **Pass if — all of these**
 
 - The Persona answers the new message.
 - The Room's alert strip disappears.
-- The `/agents` tile returns to `Online` (check glyph).
+- The `Tester` card returns to `Online` (check glyph).
 
 **Fail if — any of these**
 
-- The tile stays `Degraded` after a Human Message -> the reset signal was lost, and the only way back would be a restart or a manual `Restart` from the card.
+- The Agent stays `Degraded` after a Human Message -> the reset signal was lost, and the only way back would be a restart or a manual `Restart` from the card.
 - The alert strip disappears but no reply ever arrives -> the status was cleared without the runner actually resuming.
-- The Room's strip clears while the tile stays Degraded (or vice versa) -> the two surfaces disagree, meaning status is not coming from one resolver.
+- The Room's strip clears while the card stays Degraded (or vice versa) -> the two surfaces disagree, meaning status is not coming from one resolver.
 
 **Inconclusive if**
 
-A Human Message is documented to clear THIS specific condition and nothing else. If the tile stays Degraded for an UNRELATED reason (hover it and read the tooltip — an authentication or adapter message, say), that is correct behaviour, not this test's failure. In that case record the tooltip verbatim and mark the test inconclusive.
+A Human Message is documented to clear THIS specific condition and nothing else. If the Agent stays Degraded for an UNRELATED reason (hover it and read the tooltip — an authentication or adapter message, say), that is correct behaviour, not this test's failure. In that case record the tooltip verbatim and mark the test inconclusive.
 
 > [!NOTE]
 > COST: one more short Haiku turn at low effort. This test must run immediately after STARTUPCONFIG-33 — restarting the app would clear the Degraded state on its own (the counter is in memory, per runner) and the test would prove nothing. Cleanup steps 6-8 return the environment to its default state for the next tester.
@@ -1256,7 +1219,7 @@ Back to [the manual test script](../manual-tests.md).
 
 1. Launch with [`P-LAUNCH-FREE`](common.md#p-launch-free) and open http://localhost:5100.
 2. Read the address bar and the main column.
-3. Click **Agents** in the sidebar.
+3. Click **Library** in the Activity bar.
 4. Open http://localhost:5100 again in a new browser tab.
 5. In that tab, click the avatar on the profile card, choose **A short label**, type `ME` and press **Save** in the dialog.
 6. Press **Save** under the fields without changing anything.
@@ -1265,7 +1228,7 @@ Back to [the manual test script](../manual-tests.md).
 **Pass if — all of these**
 
 - After step 2 the address bar reads `/settings/profile`, the **Profile** tab is selected and a welcome line starts `Welcome. Start by telling your Agents who you are`.
-- Step 3 opens **Agents** and stays there - the redirect does not trap you.
+- Step 3 opens **Library** and stays there - the redirect does not trap you.
 - After step 5 the card's avatar reads `ME`.
 - After step 6 the welcome line is gone and `profile.json` exists under `src\Huddle.App\App_Data`.
 - Step 7 opens the app's normal landing page, not `/settings/profile`.

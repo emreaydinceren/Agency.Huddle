@@ -761,7 +761,6 @@ a.team-ref,
 
 /* A heading over a group of fields or tiles on a page: subtitle2 at 600 in the primary text colour, so it is never
    smaller or quieter than what it heads, with a light rule under it. */
-.agents-group-heading,
 .prompts-group-heading,
 .group-heading {
     margin: 0 0 8px 0;

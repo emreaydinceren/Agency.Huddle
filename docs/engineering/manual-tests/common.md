@@ -74,8 +74,8 @@ stored Model (the account default), and with ACP on and an empty direct Room it 
 a Greeting Turn, which is paid
 (`PersonaRunner.cs:481-495`, `BuiltinAgentSeeder.cs`):
 
-1. Launch with `P-LAUNCH-FREE` and open **Agents** in the sidebar.
-2. On the **Chief of Staff** card choose **Edit** (`AgentProfileCard.razor:165`), set **Model** to
+1. Launch with `P-LAUNCH-FREE` and open the **Chief of Staff**'s card with `P-OPEN-AGENT`.
+2. On the card choose **Edit** (`AgentProfileCard.razor:165`), set **Model** to
    Sonnet and **Effort** to `low`, then **Save** (`AgentProfileCard.razor:561`).
 3. `P-STOP`.
 4. Launch paid, below.
@@ -205,10 +205,22 @@ Budget counters need no reset: they live in memory and a restart clears them.
 
 ### P-NEW-PERSONA
 
-Always through the UI, never by writing the file: **Agents** in the sidebar →
-**New agent** → fill **Name**, **Title**, **Alias**, **Teams** (blank unless the
-test says otherwise), one sentence in **Persona body**, choose **Model** and
-**Effort**, then the card's **Add agent** submit button.
+Always through the UI, never by writing the file. An Agent is created inside a Team:
+
+1. Open the Team the test names (its sidebar row, or its tile in the Activity bar) and its
+   **Members** tab. If the test names no Team, use `Test`; if `Test` does not exist yet,
+   create the empty folder `<data>\Teams\Test\` ([`O-FILE`](#o-file)) and reload the page;
+   `Test` is in the sidebar's Teams list as a Team with no members. (**Build a team** cannot
+   make an empty Team: it hires at least one Agent.)
+2. Point at the **Add a member** tile and select **From scratch**. The **New agent** card opens.
+3. Fill **Name**, **Title**, one sentence in **Persona text**, choose **Model** and
+   **Effort**, then **Save draft**. The Agent is on the roster as *New*. The card has no
+   **Alias** field: the Agent is hired with its Name in lower case as its Alias.
+4. Select **Save changes**. The Agent is hired, with the Team on its `teams:` line.
+
+The card has no **Teams** field. For an Agent in **no Team**, finish the steps above, then on
+its roster card open the **More** (⋮) menu → **Remove from team** → **Save changes**; the
+Agent stays, with no `teams:` line. For an Agent in a second Team, use `P-ADD-TO-TEAM`.
 
 Writing `<data>\Agents\<Name>\<Name>.md` by hand (the definition must sit in the
 Agent's own folder; a `.md` at the `Agents` root is rejected) still skips the
@@ -216,8 +228,26 @@ Agent's own folder; a `.md` at the `Agents` root is rejected) still skips the
 default — which may be far more expensive than Sonnet. Leaving **Model** on `Agent default` does the
 same thing and is not equivalent to choosing Sonnet.
 
-A file that fails to load appears on `/agents` under **Files that didn't load**
-with its reason beside it.
+A file that fails to load appears under **Files that didn't load**, with its reason beside
+it, at the top of every Team's **Members** tab. There is no Agents page (removed
+2026-11-18); `/agents` shows "not found".
+
+### P-OPEN-AGENT
+
+Opens an Agent's card in View mode (Message, Edit, Open, Restart, Remove), the card the
+removed Agents page opened from a tile. Any of these works; use the first unless the test
+says otherwise:
+
+- Press **Ctrl K**, type the Agent's Name, and select the Agent in the results.
+- In a Team's **Members** tab, select **Edit** on its roster card.
+- In a Room, select its avatar on one of its Messages or in **Members**, then **Edit** in the
+  profile popover.
+
+### P-ADD-TO-TEAM
+
+Puts an Agent that already exists into a Team; it keeps its other Teams. Open the Team's
+**Members** tab, point at **Add a member**, select **From other teams**, select the Agent (an
+Agent in no Team is under **No team**), then **Save changes**.
 
 ### P-ECHO-BOT
 
@@ -401,8 +431,8 @@ finds where `Team:DataDir` actually resolved.
   reports a false result. `Get-ChildItem Env:Team__*` lists what is set.
 - **"Invite agent" and "Add agent" are two different controls.** The invite
   toggle in a Room header (an icon button; its tooltip and `aria-label` read
-  "Invite agent") and the submit button of the Create card on `/agents`
-  (**Add agent**). Find the Room-header one by container (`.invite-agent`
+  "Invite agent") and the submit button of a **New agent** card that is not a draft
+  (**Add agent**; a card opened from **Add a member** → **From scratch** reads **Save draft**). Find the Room-header one by container (`.invite-agent`
   wraps it) or `aria-label`, never by text alone.
 - **Four controls are icon buttons with no visible text.** **Remove** on the
   Agent card (`PersonRemove`), **Stop** on a streaming Draft (`StopCircle`),
@@ -411,9 +441,8 @@ finds where `Team:DataDir` actually resolved.
   an `aria-label` spelling the name this script uses, so **find them by
   `aria-label`, never by button text** — in DevTools,
   `document.querySelector('[aria-label="Stop"]')`. Steps written before this change
-  still name them in words; that is the same control. **New agent** on
-  `/agents` is a text button (first in the toolbar), and **Agents** in the
-  drawer and the **Add agent** submit button also show their text.
+  still name them in words; that is the same control. The **Add a member** tile and its
+  three choices, and the **Save draft** and **Add agent** submit buttons, show their text.
 - **A Room can be renamed, and a renamed Room stops auto-renaming.** The Edit icon
   beside a Room's title puts it into edit mode; Enter or blur commits, Escape
   cancels. Until somebody renames it, a Room is still named after its Agent Members
@@ -427,7 +456,7 @@ finds where `Team:DataDir` actually resolved.
   agents are off by default (`Team:DemoAgent:Enabled` is `false`) and exist for the
   automated tests only; no manual test turns them on. A test that needs an Agent to
   answer for free uses `P-LAUNCH-UAT` and **Ada** and **Bo**, which are real Personas
-  on the mock adapter, appear on `/agents`, and exist only in the data folder that
+  on the mock adapter, in no Team (open them with `P-OPEN-AGENT`), and exist only in the data folder that
   procedure builds. A test that needs an external pipe client uses `P-ECHO-BOT`.
 - **Names are permanent; Rooms are not, since 2026-09-21.** Nothing in the UI
   deletes an *Agent*, so every Name you connect under still leaves a Room behind —

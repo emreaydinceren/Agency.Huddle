@@ -300,11 +300,14 @@
 }
 
 /* Wraps, because a draft's Copy prompt, Re-roll, Edit and Remove do not fit a narrow card: without it they overlap. */
+/* margin-top: auto keeps the row at the card's bottom when the grid stretches a short card (no description) to its
+   neighbour's height, so every card's actions line up. */
 .roster-actions {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 4px;
+    margin-top: auto;
     padding-top: 8px;
     border-top: 1px solid var(--ink-line);
 }
@@ -332,10 +335,9 @@
     overflow-y: visible;
 }
 
+/* In the footer row after the Suggested chip, never pinned to a corner: pinned, it sat on top of the chip. */
 .role-card-taken {
-    position: absolute;
-    bottom: 0.5rem;
-    inset-inline-end: 0.5rem;
+    flex: 0 0 auto;
     display: inline-flex;
     color: var(--mud-palette-success-darken);
 }
