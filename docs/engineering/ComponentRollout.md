@@ -11,7 +11,7 @@ page adds only what is particular to this work.
 `ActionButton`, `DialogFooter`, `Notice`, `TextField`, `SelectField`, `SettingSwitch` with the on-or-off
 rule, `PropertyList`, `RowActionsMenu`, `ActionIconButton`, the Adapter, Model and Effort picker with
 `ProbedSelect`, `ChipRadioGroup`, `BusyLabel`), the shared browser-script helpers were done or decided
-(C1 to C4), and the convention test now holds files to rules CV14 to CV25. What is left raw is listed
+(C1 to C4), and the convention test now holds files to rules CV14 to CV25 (CV26 to CV29 came after the rollout: see the catalog). What is left raw is listed
 in the catalog's entries, as "Still raw".
 
 ## Contents
@@ -26,6 +26,7 @@ in the catalog's entries, as "Still raw".
 - Defaults taken without a ruling
 - Lessons from the pilot
 - Lessons from the area migrations
+- Lessons from the follow-up
 
 ## What is decided
 
@@ -396,3 +397,32 @@ A5 and A8 (`ChipRadioGroup` and `BusyLabel`, 2026-11-18) added:
 - **A spinner inside a button is the button's busy state, not a second component.** Two Reload buttons drew their own
   spinner beside a start icon; `ActionButton` already had `Busy`, which hides the icon and draws its own, so the rule
   exempts `ActionButton.razor` and the sites lost their hand-built spinner rather than gaining a `BusyLabel`.
+
+## Lessons from the follow-up
+
+After the rollout, a follow-up documented what other PRs had merged meanwhile (`SearchHighlight`, `GoldfishChip`,
+goldfish mode on `PresenceAnchor`, `PlaybooksTab`) and built `SystemRow` (rule CV28) and `MarkdownView` (rule CV29)
+for two shapes that repeated. What it added:
+
+- **A rule id is first come, first served: read the open PRs before numbering one.** Two branches each took `CV26`
+  (a raw `MudHighlighter`, and a raw `MudButton` with no shared style); the other PR merged first, so this one
+  renumbered to CV27 to CV29. List the open pull requests (`agents/GiteaOperations.md`) before choosing the next id,
+  and renumber with one script over the branch's changed files, matching `(CV|Cv)<n>` not followed by a digit, so a
+  test named `Cv26_...` is caught too.
+- **Merging a conflict "keep both" can eat a closing brace.** Both sides had ended with a method the other did not
+  touch, so the shared closing `}` sat after the conflict and the kept blocks lost theirs; the build caught it.
+  Read the join of every kept block, not only its content.
+- **Count the call, not the cast, when the rule guards a sink.** `MarkdownView`'s CV29 counts a
+  `MarkdownRenderer.ToHtml` or `ToTaskHtml` call, because `LibraryDocument` casts a variable
+  (`(MarkupString)html[..splitAt]`) and a rule on the literal text `(MarkupString)MarkdownRenderer` would never see
+  that site, which is the one the baseline has to hold. A `cref` that names the method is excluded.
+- **A parameter type must be public, and some resolvers are not.** `ILibraryNoteResolver` is internal, so the
+  component takes the public `ILibraryReferenceResolver` and treats it as the note resolver when `From` is set, and
+  calls the renderer's now internal `Render` so every resolver can be passed at once.
+- **A Razor child element cannot be conditional.** A goldfish return row has a detail only while its possession
+  lives, and `<Detail>` cannot sit inside an `@if`; the row builds a `RenderFragment?` variable (null when pruned)
+  and passes it as an attribute, so the row keeps drawing no detail section (a test pins zero).
+- **In a hidden Browser pane `requestAnimationFrame` never fires.** A measuring script that awaits one times out;
+  wait with `setTimeout` and read `getAnimations()` for a transition, as the A3 lesson on reading after a forced
+  style does. A Task wake-up row for a live check comes from saving a Task that is assigned to an Agent, from its
+  `/tasks/item/<id>/edit` page; it lands in the Room that holds the two of you.

@@ -126,7 +126,7 @@ public sealed partial class AuditBatchBCssTests
         string markup = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "Components", "Shared", "MessageList.razor"));
 
         Assert.Matches(@"max-width:\s*min\(75%, calc\(75ch \+ 32px\)\)", AuditBatchBCssTests.DeclarationsFor(".message-bubble"));
-        Assert.Matches(@"message-bubble message-body"">[^\r\n]*</div>\s*<MessageReferences Message=""@message"" />\s*</div>", markup);
+        Assert.Matches(@"<MarkdownView Class=""message-bubble message-body""[^\r\n]*/>\s*<MessageReferences Message=""@message"" />\s*</div>", markup);
     }
 
     /// <summary>An icon in any left-sidebar row, a section header's included, is centred in the 24px leading slot, the width of a small avatar, so its centre is on one line whatever its size.</summary>

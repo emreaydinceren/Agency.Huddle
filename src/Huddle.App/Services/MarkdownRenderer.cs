@@ -108,7 +108,10 @@ public static partial class MarkdownRenderer
     public static string ToTaskHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library) =>
         MarkdownRenderer.Render(markdown, tasks, library, noteLibrary: null, from: null, mentions: null, fullPathsInEvidence: true);
 
-    /// <summary>The single render path shared by every public and internal <see cref="ToHtml(string)"/> overload.</summary>
+    /// <summary>
+    /// The single render path shared by every public and internal <see cref="ToHtml(string)"/> overload, and the one the
+    /// <c>MarkdownView</c> component calls, so it can pass every resolver at once.
+    /// </summary>
     /// <param name="markdown">The Markdown text to render.</param>
     /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
     /// <param name="library">The resolver for chat-text paths, or <see langword="null"/> to link none.</param>
@@ -116,7 +119,7 @@ public static partial class MarkdownRenderer
     /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
     /// <param name="mentions">The handles to draw as Mention pills, or <see langword="null"/> to mark none.</param>
     /// <param name="fullPathsInEvidence">Whether a bare path in a <c>## Evidence</c> section shows in full (a Task's Description).</param>
-    private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from, MentionMarks? mentions, bool fullPathsInEvidence = false)
+    internal static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from, MentionMarks? mentions, bool fullPathsInEvidence = false)
     {
         // An unguessable per-render marker, not something a note's own authored text could ever contain: only
         // an image href this call itself resolved through RewriteRelativeLinks carries it, so IsSafe can trust

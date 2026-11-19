@@ -79,7 +79,7 @@ else if (this.archivedView && this.loaded is { } archivedTask)
         </div>
         <MudText Typo="Typo.caption" Class="task-detail-archived-id">@($"{archivedTask.Id} · {archivedTask.Status} · {archivedTask.Location.Team}")</MudText>
         <div class="task-detail-description-box">
-            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToTaskHtml(archivedTask.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+            <MarkdownView Class="task-detail-description-preview" TaskText="true" Markdown="@archivedTask.Description" Tasks="@this.Store" Library="@(this.Options.Value.Library.Enabled ? this.LibraryResolver : null)" />
         </div>
     </div>
 }
@@ -464,7 +464,7 @@ else if (this.loaded is { } task)
                 {
                     <div class="task-detail-description-box">
                         <div class="task-detail-description-bar">@this.DescriptionToggle</div>
-                        <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToTaskHtml(effective.Description, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                        <MarkdownView Class="task-detail-description-preview" TaskText="true" Markdown="@effective.Description" Tasks="@this.Store" Library="@(this.Options.Value.Library.Enabled ? this.LibraryResolver : null)" />
                     </div>
                 }
             </div>

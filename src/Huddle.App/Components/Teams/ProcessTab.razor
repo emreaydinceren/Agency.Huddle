@@ -52,7 +52,7 @@
         }
         @if (this.text is not null)
         {
-            <div class="process-tab-document library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(PersonaFrontmatter.Parse(this.text).Body))</div>
+            <MarkdownView Class="process-tab-document" LibraryStyle="true" Markdown="@PersonaFrontmatter.Parse(this.text).Body" />
         }
     }
 </div>

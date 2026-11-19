@@ -46,7 +46,7 @@
                     @switch (entry.Kind)
                     {
                         case TimelineEntryKind.Comment:
-                            <div class="task-timeline-comment-body">@((MarkupString)MarkdownRenderer.ToTaskHtml(entry.Text, this.Store, this.Options.Value.Library.Enabled ? this.LibraryResolver : null))</div>
+                            <MarkdownView Class="task-timeline-comment-body" TaskText="true" Markdown="@entry.Text" Tasks="@this.Store" Library="@(this.Options.Value.Library.Enabled ? this.LibraryResolver : null)" />
                             break;
                         case TimelineEntryKind.Evidence:
                             @this.EvidenceBody(entry)

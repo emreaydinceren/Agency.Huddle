@@ -6,7 +6,7 @@
 
 <MudDialog Class="skills-help-dialog">
     <DialogContent>
-        <div class="skills-help-text">@((MarkupString)MarkdownRenderer.ToHtml(SkillGuide.HelpFor(this.View)))</div>
+        <MarkdownView Class="skills-help-text" Markdown="@SkillGuide.HelpFor(this.View)" />
     </DialogContent>
 </MudDialog>
 

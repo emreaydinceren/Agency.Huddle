@@ -165,12 +165,25 @@ Presence appears as a small badge on an avatar's bottom-right rim (see the Membe
 
 | Component | Path | Sites | Key parameters |
 | --- | --- | --- | --- |
-| `PresenceAnchor` | `Components/Shared/PresenceAnchor.razor` | 5 (4 files) | `Cue`, `Detail`, `ChildContent` |
+| `PresenceAnchor` | `Components/Shared/PresenceAnchor.razor` | 5 (4 files: `Agents`, `AgentLabel`, `ProfileCard` twice, `MembersPanel`), every one passing `AgentName` | `Cue`, `Detail`, `AgentName`, `BadgeOnly`, `ChildContent` |
 | `PresenceBadge` | `Components/Shared/PresenceBadge.razor` | 2 (2 files) | `Cue`, `OnAvatar`, `Detail` |
 | `StatusDot` | `Components/Shared/StatusDot.razor` | 1 | `State`, `OnAvatar`, `Detail` |
 
 `PresenceCue.From(...)` turns a Health or Presence value into one of four glyphs. A badge is a
 glyph plus its own state word, never a colour alone.
+
+**Goldfish mode.** Given an `AgentName`, `PresenceAnchor` also reads `GoldfishLive` and re-renders
+whenever it changes. While that Agent is in a live possession, the fish cue (`PresenceCue.Goldfish(name)`,
+"{Name}, in goldfish mode") replaces the Health cue, so the badge's `Detail` is dropped, and the frame
+gets the class `goldfish`: `.presence-anchor.goldfish` is a 2 px Info outline ring, 2 px clear of the
+avatar (`shell.css`). The fish glyph is `.agent-dot.presence-glyph-fish`, a mask drawn like the other
+`presence-glyph-*` shapes. `BadgeOnly` draws the fish badge but not the ring, for the profile card, which
+has its own ring. Leave `AgentName` out and the anchor never looks at goldfish mode. A Message that
+carries a goldfish stamp (`message.Goldfish`) also wears a fish after the sender's name:
+`.message-goldfish` (`room.css`), a 14 px `MaterialSymbols.Fish` icon in the Info ink with a 4 px left
+gap and the `GoldfishStamp.Tooltip` title, written in the first line of a group in `MessageList`
+beside the name, which `GoldfishStamp.Apply` suffixes with " · goldfish". The Room header's chip is
+[`GoldfishChip`](#goldfish-chip).
 
 ### Profile card and popover
 
@@ -635,6 +648,33 @@ progressbar; the Library tree's labelled wrapper span is the `BusyLabel` itself
 (`library-tree-loading` kept); the inline confirm's busy spinner is now named "Working"; the chip
 and transcript spinners are hidden from assistive technology, since their containers name them.
 
+### Rendered Markdown
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `MarkdownView` | `Components/Shared/MarkdownView.razor` | 11 (8 files): `MessageList` twice (the Human's bubble and an Agent's body), `TaskDetail` twice, `TaskReadView`, `TaskTimeline` (Task text), `DocumentHistory` (a note's summary), `SkillsHelpDialog`, `PlaybooksTab` twice and `ProcessTab` | `Markdown`, `Tasks`, `Library`, `Mentions`, `From`, `TaskText`, `LibraryStyle`, `Class` |
+
+`MarkdownRenderer` returns an HTML string, and a string only becomes markup through a `(MarkupString)`
+cast, which skips Razor's encoding. `MarkdownView` is the one place that cast is made for rendered
+Markdown, so it is reviewed once: what makes the markup safe is the renderer (its pipeline disables raw
+HTML and it checks the links and images it writes), never the caller, and nothing passes the component
+HTML. It draws one `div`, and the caller's classes go in `Class`; `LibraryStyle` adds `library-rendered`
+(the Library's prose look) after them, which `PlaybooksTab` and `ProcessTab` use. The resolvers are the
+ones `MarkdownRenderer` takes, all optional: `Tasks` links Task ids, `Library` links the paths written in
+chat or a Task, `Mentions` draws Mention pills, and `TaskText` shows a bare path in a Task's `## Evidence`
+section as written. `From` is for text read from a Library note: `Library` is then the note resolver and
+wikilinks and relative links are linked instead of chat paths. It calls `MarkdownRenderer.Render`, which
+is internal for this reason, so it can pass every resolver at once.
+
+**Still raw.** `LibraryDocument` (1 call, baselined): it splits the rendered HTML after the note's first
+heading to put the byline there, inside a `library-rendered` element it builds with a `RenderTreeBuilder`
+with the properties block and tags, so the component's one div cannot serve it. Convention rule CV29
+counts a `MarkdownRenderer.ToHtml` or `ToTaskHtml` call in any component but `MarkdownView.razor` (it
+counts the call, not the cast, so a site that casts a variable is seen too); the only baseline entry is
+`LibraryDocument`. Built in the follow-up to the rollout (2026-11-18); each moved site draws the same
+`div` with the same classes it wrote by hand, and none has a scoped stylesheet, so nothing on screen
+changed.
+
 ### Settings intro and stored-at line
 
 ![A Settings panel head: the title, an intro paragraph and a Stored at line with a monospace path](../images/components/settings-intro-stored-at.png)
@@ -682,12 +722,49 @@ Its box shares the transcript's 760 px column. The browser behaviour is in `comp
 | Sites | 1 |
 | Key parameters | `RoomId`, `RoomName` |
 
+### Goldfish chip
+
+| | |
+| --- | --- |
+| Path | `Components/Chat/GoldfishChip.razor` |
+| Sites | 1 (`Pages/Chat.razor`, in the Room header; one per Room) |
+| Key parameters | `RoomId` |
+
+Renders nothing unless `GoldfishLive.InRoom(RoomId)` finds an Agent in goldfish mode in this Room.
+Then it draws a `Chip` (`Look="ChipLook.Status"`, `Color.Info`, the fish icon) inside a
+`MudTooltip` (`GoldfishStamp.Tooltip`) with "{Name} in goldfish mode · {n} min", or "{Name}
+(goldfish) is waiting · {n} min" while it waits for an answer, and an `ActionButton` "Call {Name}
+back", which posts the comeback Message as the Human exactly as the Composer would and disables
+itself after one press. The minutes count re-renders every minute from a `TimeProvider` timer, and
+the component also re-renders on `GoldfishLive.Changed`. The same state also shows on the Agent's
+[avatar badge and ring](#presence-and-status).
+
 ### The transcript
 
 The transcript is `Components/Shared/MessageList.razor` (1 site), drawn in the
 [avatar screenshot](#avatars). Cards an Agent puts in it derive from `AgentCardBase` and draw
 with `AgentCard` (5 sites in 5 files). They need a live Agent turn to appear, so they are not
 shown here (see [Not captured](#not-captured)).
+
+### System row
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `SystemRow` | `Components/Shared/SystemRow.razor` | 4 (1 file, `MessageList`: the Task wake-up, the restart line, the goldfish start row and the goldfish return row) | `MessageId`, `Icon`, `Summary`, `Time`, `Detail` |
+
+The slim, muted, expandable line in the transcript for what the Human did not type: a native
+`<details class="system-row">` whose summary is an icon, the summary text (one line, ellipsised), the
+time at the right and a chevron that turns when it opens, with an optional detail under it
+(`system-row-detail`). It carries `data-message-id` and `tabindex="-1"`, so `scroll.js` can focus the
+row when the Human jumps to its Message; Enter and Space on the summary are the browser's own. Every
+row passes an icon (`TaskAlt`, `RestartAlt` or `MaterialSymbols.Fish`), and `Summary` and `Detail` are
+`RenderFragment`s, because the wake-up draws a bold Task id and a list of changes. With no `Detail` the
+row draws no detail section at all: a goldfish return row whose possession was pruned is its summary
+only (`Detail` is a variable there, null in that case, since a Razor child element cannot be
+conditional). The rows' look is `.system-row` in `room.css`. Convention rule CV28 counts a hand-built
+`<details class="system-row"` anywhere but `SystemRow.razor` and is zero. Built in the follow-up to the
+rollout (2026-11-18); the DOM it draws is the markup `MessageList` wrote by hand, so nothing on screen
+changed.
 
 ## Tasks
 
@@ -754,6 +831,42 @@ themselves are not shared: see [Patterns still built by hand](#patterns-still-bu
 | `BuildStepper` | `Components/Teams/BuildStepper.razor` | 1 | `Steps`, `Current`, `AriaLabel` |
 
 `TeamTypeCard` takes plain values, because `TeamTypeManifest` is internal.
+
+### Playbooks tab
+
+| | |
+| --- | --- |
+| Path | `Components/Teams/PlaybooksTab.razor` (206 lines; state from `PlaybookStore.GetState`, `PlaybookStatus`) |
+| Sites | 1 (`Pages/TeamPage.razor`, the Team page's Playbooks tab) |
+| Key parameters | `Team` |
+
+One section per Playbook, the Manager's first and then the Member's, each in its own
+`section.playbook-section` (`data-kind` `manager` or `member`). Top to bottom:
+
+- **State chip.** A `Chip` (`ChipLook.Status`): "Huddle default" while the Team has no file,
+  "Customized for this Team" with one, and an Info "Default updated" when Huddle's default changed
+  after the Team customized it.
+- **Huddle rules.** The code-enforced rules (`HuddleRules`), read-only, in an outlined `MudPaper`
+  (`playbook-rules`) with a Lock icon and the caption "Huddle enforces these. They are always sent and
+  can't be edited.", rendered as Markdown.
+- **Default updated notice.** A `Notice` (Info, `playbook-updated`) with "Show changes" (only when Huddle
+  still has the earlier default to diff against), "Keep my version" and "Reset to default…", and the
+  diff in a `<pre class="playbook-diff">` once shown. An unreadable file and an over-length one are two
+  more notices (Error and Warning).
+- **The text**, rendered Markdown in a `library-rendered` div (`playbook-text`).
+- **Action row.** With no own file: "Customize for this Team" (writes the Team's file and opens it in the
+  Library; disabled with a tooltip when the Library is off) and "Edit the default" (Settings, Prompts).
+  With an own file: "Edit" (opens the file in the Library, the one Markdown editor), "Keep my version"
+  (only when the base is unknown) and "Reset to default…" behind the shared confirm.
+
+**A watch item, not a component.** "Default versus customized for this Team or Agent" (a state, then
+Customize, Edit and Reset) is built by hand here and, in different shapes, in
+`Settings/Helpers/HelperCard` (a `StatusChip` for On, Off or Paused, and a "Reset to defaults" button) and
+`Shared/AgentProfileCard` (the Chief of Staff's "Reset to default", behind an `InlineConfirm`). The
+sibling `Teams/ProcessTab` shows a Team's `AGENTS.md` with Edit and Add a process, and has no default
+or reset. That is two or three sites with different shapes, so no primitive is built (the rule is no
+primitive without a real user); if a fourth site gets a state chip with Customize, Edit and Reset,
+extract the shape then.
 
 ### The Agent card
 
@@ -959,6 +1072,21 @@ one-line sidebar form shown. Confirm takes focus and Escape cancels.
 A new kind of result fills the `SearchCardShell` slots; do not copy a card. `SearchField` is any
 toolbar search box, one debounce.
 
+### Search highlight
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `SearchHighlight` | `Components/Shared/SearchHighlight.razor` (splits through `HighlightSplitter` and `HighlightPart` beside it) | 9 (7 files): the five `Search/*SearchCard`s (`AgentSearchCard`, `LibrarySearchCard` twice, `RoomSearchCard` twice, `TaskSearchCard`, `TeamSearchCard`), `TaskCard` and `TaskListView` | `Text`, `Term` |
+
+Draws `Text` with every case-insensitive occurrence of `Term` inside a `<mark>`; a null, empty or
+blank `Term` marks nothing. `HighlightSplitter` cuts the text into matched and unmatched runs with
+`string.IndexOf`, which has no timeout to exceed. It replaced `MudHighlighter`, which splits with a
+regular expression under a fixed one-second timeout: a server stalled for a second inside one scan
+threw `RegexMatchTimeoutException` from `OnParametersSet` and ended the Human's circuit. Convention
+rule CV27 counts a raw `<MudHighlighter` anywhere and is zero-tolerance with no baseline and no
+exempt file. The mark's look is the States table's "Search match" in
+[design-system.md](design-system.md#colour).
+
 ## Helpers and browser scripts
 
 These draw nothing. Counts are lines in `.cs` and `.razor` that mention the helper, its own file
@@ -1068,7 +1196,7 @@ other sites move over area by area. Three rules held for every wrapper:
 The order was: the segmented control (the pilot), `ActionButton` with `DialogFooter`, `Notice`,
 `TextField` and `SelectField`, then the composites (the picker, `SettingSwitch`, `PropertyList`,
 `RowActionsMenu` with `ActionIconButton`), then `ChipRadioGroup`, `BusyLabel` and the browser
-scripts. Each one added a convention rule (CV14 to CV25) that holds every file to a baseline which
+scripts. Each one added a convention rule (CV14 to CV25; CV26 to CV29 came after the rollout) that holds every file to a baseline which
 may only shrink. Visual changes were proved with `agents/scripts/Css-Snapshot.ps1`, one comparison
 per wave; see [Proving a visual change](ComponentRollout.md#proving-a-visual-change).
 

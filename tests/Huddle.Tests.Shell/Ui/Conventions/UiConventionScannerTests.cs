@@ -723,4 +723,96 @@ public sealed class UiConventionScannerTests
         Assert.Equal(0, UiConventionScanner.Cv26("src/Huddle.App/Components/Shared/ActionButton.razor", source).Count);
         Assert.Equal(1, UiConventionScanner.Cv26("src/Huddle.App/Components/Shared/Composer.razor", source).Count);
     }
+
+    /// <summary>CV27: a raw <c>MudHighlighter</c> is counted in every file, but not <c>SearchHighlight</c>, a comment that names it or another Mud tag.</summary>
+    [Fact]
+    public void Cv27_MudHighlighter_IsCounted()
+    {
+        const string source = """
+            <MudHighlighter Text="@this.Hit.Title" HighlightedText="@this.Phrase" />
+            <MudHighlighter Text="a"
+                            HighlightedText="b"></MudHighlighter>
+            <SearchHighlight Text="@this.Hit.Title" Term="@this.Phrase" />
+            @* <MudHighlighter Text="c" /> was replaced by SearchHighlight. *@
+            <MudText>d</MudText>
+            """;
+
+        RuleCount result = UiConventionScanner.Cv27(RazorPath, source);
+
+        Assert.Equal("CV27", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV27: no file is exempt, so even the component that replaced the tag is counted if it ever draws one.</summary>
+    [Fact]
+    public void Cv27_SearchHighlightRazor_IsNotExempt()
+    {
+        const string source = """<MudHighlighter Text="x" HighlightedText="y" />""";
+
+        Assert.Equal(1, UiConventionScanner.Cv27("src/Huddle.App/Components/Shared/SearchHighlight.razor", source).Count);
+    }
+
+    /// <summary>CV28: a <c>details</c> with the class <c>system-row</c> is counted, in either quote style and among other classes, but not another <c>details</c>, a <c>system-row-</c> class or a comment.</summary>
+    [Fact]
+    public void Cv28_HandBuiltSystemRow_IsCounted()
+    {
+        const string source = """
+            <details class="system-row" data-message-id="@message.Id" tabindex="-1"><summary>a</summary></details>
+            <details data-message-id="x" class='tall system-row muted'><summary>b</summary></details>
+            <details class="agent-card"><summary>d</summary></details>
+            <details class="system-row-detail"><summary>e</summary></details>
+            <div class="system-row"></div>
+            @* <details class="system-row"> was replaced by SystemRow. *@
+            <SystemRow MessageId="@message.Id" Icon="@icon" Time="@time"><Summary>f</Summary></SystemRow>
+            """;
+
+        RuleCount result = UiConventionScanner.Cv28(RazorPath, source);
+
+        Assert.Equal("CV28", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV28: the one <c>SystemRow</c> component is the only file allowed to draw the row.</summary>
+    [Fact]
+    public void Cv28_SystemRowRazor_IsExempt()
+    {
+        const string source = """<details class="system-row" data-message-id="@this.MessageId" tabindex="-1"><summary>x</summary></details>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv28("src/Huddle.App/Components/Shared/SystemRow.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv28("src/Huddle.App/Components/Shared/MessageList.razor", source).Count);
+    }
+
+    /// <summary>CV29: a <c>MarkdownRenderer.ToHtml</c> or <c>ToTaskHtml</c> call is counted with or without its cast, but not a <c>cref</c>, a comment, another class's method of the same name or <c>MarkdownView</c>.</summary>
+    [Fact]
+    public void Cv29_RendererCall_IsCounted()
+    {
+        const string source = """
+            <div class="a">@((MarkupString)MarkdownRenderer.ToHtml(entry.Summary, this.Tasks))</div>
+            <div class="b">@((MarkupString) MarkdownRenderer . ToTaskHtml(task.Description, this.Store, null))</div>
+            @code {
+                string html = MarkdownRenderer.ToHtml(body);
+                /// <summary>Rendered through <see cref="MarkdownRenderer.ToHtml(string)"/>.</summary>
+                string x = OtherRenderer.ToHtml(body);
+            }
+            @* MarkdownRenderer.ToHtml(old) was replaced by MarkdownView. *@
+            <MarkdownView Class="c" Markdown="@text" />
+            """;
+
+        RuleCount result = UiConventionScanner.Cv29(RazorPath, source);
+
+        Assert.Equal("CV29", result.Rule);
+        Assert.Equal(3, result.Count);
+    }
+
+    /// <summary>CV29: the one <c>MarkdownView</c> component is the only file allowed to call the renderer.</summary>
+    [Fact]
+    public void Cv29_MarkdownViewRazor_IsExempt()
+    {
+        const string source = """<div>@((MarkupString)MarkdownRenderer.Render(this.Markdown, null, null, null, null, null))</div>""";
+        const string call = """<div>@((MarkupString)MarkdownRenderer.ToHtml(this.Markdown))</div>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv29("src/Huddle.App/Components/Shared/MarkdownView.razor", call).Count);
+        Assert.Equal(1, UiConventionScanner.Cv29("src/Huddle.App/Components/Shared/MessageList.razor", call).Count);
+        Assert.Equal(0, UiConventionScanner.Cv29("src/Huddle.App/Components/Shared/MessageList.razor", source).Count);
+    }
 }

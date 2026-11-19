@@ -37,7 +37,7 @@
                         </div>
                         @if (entry.Summary.Length > 0)
                         {
-                            <div class="doc-history-summary">@((MarkupString)MarkdownRenderer.ToHtml(entry.Summary, this.Tasks, this.NoteResolver, this.Path))</div>
+                            <MarkdownView Class="doc-history-summary" Markdown="@entry.Summary" Tasks="@this.Tasks" Library="@this.NoteResolver" From="@this.Path" />
                         }
                         <div class="doc-history-when" title="@this.FullTime(entry.At)">
                             <span class="doc-history-day-label">@dayLabel</span>, <span class="doc-history-time">@this.ClockTime(entry.At)</span>

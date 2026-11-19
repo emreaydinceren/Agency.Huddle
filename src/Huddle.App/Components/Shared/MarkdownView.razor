@@ -1,0 +1,63 @@
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@using Agency.Huddle.App.Tasks
+@*
+    The one place rendered Markdown becomes markup (ComponentCatalog MarkdownView). MarkdownRenderer returns an HTML string, and a string
+    only becomes markup through a MarkupString cast, which skips Razor's encoding; every such cast of the renderer's output is here, so it
+    is reviewed once. What makes the markup safe is the renderer, whose pipeline disables raw HTML and which checks the links and images
+    it writes, not who the caller is: do not pass this component HTML. This is the one div around that markup: the caller's classes go
+    in Class, and LibraryStyle adds the Library's prose look (library-rendered). A call of MarkdownRenderer.ToHtml or ToTaskHtml in any
+    other component fails the convention scan (CV29).
+*@
+
+<div class="@this.CssClass">@((MarkupString)this.Html)</div>
+
+@code {
+    /// <summary>The Markdown to draw.</summary>
+    [Parameter, EditorRequired]
+    public string Markdown { get; set; } = string.Empty;
+
+    /// <summary>Links every Task id it resolves; null links none (Tasks are off).</summary>
+    [Parameter]
+    public ITaskReferenceResolver? Tasks { get; set; }
+
+    /// <summary>
+    /// Links the paths written in the text it resolves (chat and a Task's Description); null links none (the Library is off). With
+    /// <see cref="From"/> set it is the note resolver instead (a <see cref="ILibraryNoteResolver"/>), and wikilinks and relative links
+    /// are linked, as in a Library note.
+    /// </summary>
+    [Parameter]
+    public ILibraryReferenceResolver? Library { get; set; }
+
+    /// <summary>The Room's mentionable handles and the Human's own, drawn as pills; null marks none.</summary>
+    [Parameter]
+    public MentionMarks? Mentions { get; set; }
+
+    /// <summary>The Library note the text was read from; set it for note text, where <see cref="Library"/> must be the note resolver.</summary>
+    [Parameter]
+    public LibraryPath? From { get; set; }
+
+    /// <summary>A Task's Description or comment: inside its <c>## Evidence</c> section a bare path shows as written, not as its file name.</summary>
+    [Parameter]
+    public bool TaskText { get; set; }
+
+    /// <summary>Adds <c>library-rendered</c>, the Library's prose look (headings, lists, tables and code), after <see cref="Class"/>.</summary>
+    [Parameter]
+    public bool LibraryStyle { get; set; }
+
+    /// <summary>The caller's own classes, for its layout and hooks.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string? CssClass => (string.IsNullOrEmpty(this.Class), this.LibraryStyle) switch
+    {
+        (true, true) => "library-rendered",
+        (false, true) => $"{this.Class} library-rendered",
+        (false, false) => this.Class,
+        (true, false) => null,
+    };
+
+    private string Html => this.From is null
+        ? MarkdownRenderer.Render(this.Markdown, this.Tasks, this.Library, noteLibrary: null, from: null, this.Mentions, this.TaskText)
+        : MarkdownRenderer.Render(this.Markdown, this.Tasks, library: null, this.Library as ILibraryNoteResolver, this.From, this.Mentions, this.TaskText);
+}
