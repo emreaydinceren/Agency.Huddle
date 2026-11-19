@@ -1133,7 +1133,7 @@ A Team's **process** says how its work is done, in two files in the Team folder:
   steps, the `## Onboarding` section and the Definition of Done. See
   [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd).
 - **`_team.md`** holds the settings Huddle enforces, as lines in its frontmatter:
-  - `gates:` lists the gates the Team enforces, from [the six gates](#the-six-gates).
+  - `gates:` lists the gates the Team enforces, from [the seven gates](#the-seven-gates).
   - `checkCommand:` names the command whose passing Evidence the merge gate looks for.
   - `wip:` sets a limit on work in progress.
   - `retro:` and `digest:` set when a retrospective and a digest run, such as
@@ -1244,7 +1244,7 @@ cap counts only the project's own spend: the Turns run in its Rooms, as its page
 cap again restarts nothing. The cap does not stop a Turn in progress. A step that went ahead shows as a Timeline entry
 on the Task, "proceeded under Team level Run inside the Team", and as an item in the Feed.
 
-### The six gates
+### The seven gates
 
 | Gate | Refuses |
 | --- | --- |
@@ -1254,6 +1254,7 @@ on the Task, "proceeded under Team level Run inside the Team", and as an item in
 | `spec-approved-before-build` | A Task moving to **In Progress** until its parent spec Task is approved. |
 | `failing-test-before-fix` | A bug Task moving to **Needs you** or **Done** until its Evidence shows a failing run followed by a passing one. A Task is a bug when it has the `bug` label or is a bug Request. |
 | `blockers-done-before-start` | A Task moving to **In Progress**, **Needs you** or **Done** while any Task it is blocked by is still open. A blocker is finished when it is Done, Cancelled, Duplicate or Rejected; one in **Needs you** still blocks, and one that no longer exists blocks nothing. The refusal names the blocker. Only the Team's manager or you can take a blocker off, and the gate judges the blockers as saved, so clearing them and starting in one call is refused too. You can override it with **Move anyway**. Every built-in process has it, so a new Team of any type starts with it on; development Teams you already had got it once, when you first started that version, and other Teams you already had keep the gates they have. Switch it off in the **Process** tab if you do not want it. It stops the move, not early work: the process text is what asks an Agent not to start. |
+| `one-in-progress-per-assignee` | A change that would leave one person with two Tasks **In Progress**: a move into In Progress, giving an In Progress Task to someone who already has one, or creating a Task as In Progress for them. It counts In Progress Tasks in every Team that are not closed; **Needs you** does not count, and an unassigned Task is never limited. It applies to every Agent and to you. The refusal names the Task already In Progress, and moving a Task out of In Progress is never refused. You can override it with **Move anyway**. Every built-in process has it, so a new Team of any type starts with it on; Teams you already had keep the gates they have. Switch it off in the **Process** tab if you do not want it. |
 
 A Task in a Team with gates shows a line such as `Gates: qa-evidence-before-done`
 in its panel.
@@ -2322,7 +2323,7 @@ offline, so this change won't reach them."
 Agents use the tools `create_task`, `get_task`, `list_tasks`, `update_task`,
 `close_task`, `reopen_task`, `add_evidence` and `add_comment`. Their changes follow the same rules
 and write the same files, and they are also subject to a Team's
-[gates](#the-six-gates) and to the [Request](#requests-between-teams) rules, which
+[gates](#the-seven-gates) and to the [Request](#requests-between-teams) rules, which
 you can override from the Task panel and they cannot.
 
 ### Chips

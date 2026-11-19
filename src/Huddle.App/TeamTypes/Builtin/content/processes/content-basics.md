@@ -1,7 +1,7 @@
 ---
 title: 'Content basics'
-template: 'content-basics@1.2.0'
-gates: ['blockers-done-before-start']
+template: 'content-basics@1.3.0'
+gates: ['blockers-done-before-start', 'one-in-progress-per-assignee']
 retro: { every: 14, unit: 'days' }
 ---
 # Content basics
@@ -42,6 +42,7 @@ Follow the voice principles in `Teams/AGENTS.md`. Write to the audience and angl
 ## Gates
 
 - `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- `one-in-progress-per-assignee`: Huddle refuses to move a Task to In Progress, or to give an In Progress Task to someone, while its assignee already has another Task In Progress, and names that Task.
 - This process declares no other hard gate. The editor-in-chief's Evidence line is the check before a piece is ready, and the Human closes each Task.
 
 ## Definition of Done

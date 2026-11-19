@@ -37,7 +37,7 @@ public sealed class ProvisionKeepsSettingsTests
         Assert.Equal(ProvisionResult.Created, result);
         Assert.Equal(3, settings.Wip);
         Assert.Equal("make test", settings.CheckCommand);
-        Assert.Equal([GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge, GateId.FailingTestBeforeFix, GateId.AcceptBeforeMerge, GateId.BlockersDoneBeforeStart], settings.Gates);
+        Assert.Equal([GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge, GateId.FailingTestBeforeFix, GateId.AcceptBeforeMerge, GateId.BlockersDoneBeforeStart, GateId.OneInProgressPerAssignee], settings.Gates);
         Assert.Equal(new RetroCadence(10, CadenceUnit.DoneTasks), settings.RetroSchedule());
         Assert.StartsWith("maintenance", settings.Template, StringComparison.Ordinal);
         Assert.Equal("Ada", folders.File.Manager);

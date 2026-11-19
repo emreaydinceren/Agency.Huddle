@@ -200,10 +200,10 @@ public sealed class ProcessDocumentTests
     /// <param name="hasDigest">Whether the template declares a digest cadence.</param>
     /// <param name="wip">The expected WIP limit, or zero for none.</param>
     [Theory]
-    [InlineData("lightweight-flow", 4, false, 0)]
-    [InlineData("spec-driven", 5, false, 0)]
-    [InlineData("sprints", 4, true, 0)]
-    [InlineData("maintenance", 5, false, 2)]
+    [InlineData("lightweight-flow", 5, false, 0)]
+    [InlineData("spec-driven", 6, false, 0)]
+    [InlineData("sprints", 5, true, 0)]
+    [InlineData("maintenance", 6, false, 2)]
     public void TryParse_ShippedTemplates_ParseCompletely(string processId, int gateCount, bool hasDigest, int wip)
     {
         Assembly assembly = typeof(TeamTypeCatalog).Assembly;
@@ -218,7 +218,7 @@ public sealed class ProcessDocumentTests
         ProcessDocument document = Parse(text);
         ProcessSettings settings = Settings(text);
 
-        Assert.Equal(processId + "@1.0.0", settings.Template);
+        Assert.Equal(processId + "@1.1.0", settings.Template);
         Assert.NotEmpty(document.Title);
         Assert.Equal(gateCount, settings.Gates.Count);
         Assert.Empty(document.MissingSections);

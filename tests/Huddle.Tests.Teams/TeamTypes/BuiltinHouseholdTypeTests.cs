@@ -199,8 +199,8 @@ public sealed class BuiltinHouseholdTypeTests
         Assert.Empty(document.MissingSections);
         Assert.True(TeamFile.TryParse(text, out TeamFile? file));
         ProcessSettings settings = file.Process;
-        Assert.Equal("household-basics@1.3.0", settings.Template);
-        Assert.Equal([GateId.BlockersDoneBeforeStart], settings.Gates);
+        Assert.Equal("household-basics@1.4.0", settings.Template);
+        Assert.Equal([GateId.BlockersDoneBeforeStart, GateId.OneInProgressPerAssignee], settings.Gates);
         Assert.Empty(settings.UnknownGates);
         Assert.Equal(new DigestCadence(7, CadenceUnit.Days), settings.DigestSchedule());
         Assert.Equal(new RetroCadence(28, CadenceUnit.Days), settings.RetroSchedule());

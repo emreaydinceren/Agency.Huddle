@@ -1293,7 +1293,7 @@ internal sealed class TaskService : IDisposable
             return new TaskResult.GateRefused(humanRefusal.Gate, humanRefusal.Message, CanOverride: false);
         }
 
-        GateRefusal? refusal = current.Status != candidate.Status ? this.CheckGates(current, candidate, text, actor) : null;
+        GateRefusal? refusal = current.Status != candidate.Status || ReassignsInProgress(current, candidate) ? this.CheckGates(current, candidate, text, actor) : null;
         if (refusal is not null && (actor.Kind != TaskActorKind.Human || !humanOverridesGates || gated))
         {
             return new TaskResult.GateRefused(refusal.Gate, refusal.Message, CanOverride: !gated);
@@ -1403,6 +1403,7 @@ internal sealed class TaskService : IDisposable
             GateContext context = new(team, current.Id, current.Status.ToWire(), candidate.Status.ToWire(), isBug, parentApproved, evidence, covers, actor.Name)
             {
                 OpenBlockers = openBlockers,
+                OtherInProgress = this.OtherInProgressOf(current, candidate),
                 HasDoneVerifyChild = hasDoneVerifyChild,
                 IsCheckTask = ReviewTags.IsReviewTask(current.Tags),
             };
@@ -1413,6 +1414,40 @@ internal sealed class TaskService : IDisposable
         }
 
         return null;
+    }
+
+    /// <summary>Tells whether a patch gives an In Progress Task to a different assignee, which <c>one-in-progress-per-assignee</c> judges though the status stays (ADR-0102).</summary>
+    /// <param name="current">The Task as stored.</param>
+    /// <param name="candidate">The Task as the patch would leave it.</param>
+    private static bool ReassignsInProgress(TaskItem current, TaskItem candidate) =>
+        current.Status == TaskState.InProgress
+        && candidate.Status == TaskState.InProgress
+        && !string.Equals(current.Assignee, candidate.Assignee, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Finds the Task the candidate's assignee already has In Progress, in any Team and not closed, when the change would give them a
+    /// second one: a move into In Progress, a reassignment of an In Progress Task, or a Task created In Progress (ADR-0102).
+    /// </summary>
+    /// <param name="current">The Task as stored (a Backlog copy of the candidate when it is being created).</param>
+    /// <param name="candidate">The Task as the change would leave it.</param>
+    /// <returns>The other Task, or <see langword="null"/> when nothing collides or the Task is unassigned.</returns>
+    private OtherInProgress? OtherInProgressOf(TaskItem current, TaskItem candidate)
+    {
+        if (candidate.Status != TaskState.InProgress
+            || candidate.Assignee is not { Length: > 0 } assignee
+            || (current.Status == TaskState.InProgress && !ReassignsInProgress(current, candidate)))
+        {
+            return null;
+        }
+
+        TaskItem? other = this.store.All
+            .Where(task => task.Id != current.Id
+                && task.Status == TaskState.InProgress
+                && !task.Location.Closed
+                && string.Equals(task.Assignee, assignee, StringComparison.OrdinalIgnoreCase))
+            .Order(Views.TaskQuery.DefaultOrder)
+            .FirstOrDefault();
+        return other is null ? null : new OtherInProgress(assignee, other.Id, other.Title);
     }
 
     /// <summary>The refusals that come before the process gates: a Request leaving Backlog without triage, and a blocker removed without authority (#538).</summary>

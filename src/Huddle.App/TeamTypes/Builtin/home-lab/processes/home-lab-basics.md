@@ -1,7 +1,7 @@
 ---
 title: 'Home lab basics'
-template: 'home-lab-basics@1.2.0'
-gates: ['blockers-done-before-start']
+template: 'home-lab-basics@1.3.0'
+gates: ['blockers-done-before-start', 'one-in-progress-per-assignee']
 retro: { every: 14, unit: 'days' }
 ---
 # Home lab basics
@@ -38,6 +38,7 @@ This Team keeps a home lab as code in one repository: its configuration, scripts
 ## Gates
 
 - `blockers-done-before-start`: Huddle refuses to move a Task to In Progress, Needs You or Done while a Task in its `blocked_by` is still open (not Done, Cancelled, Duplicate or Rejected), and names the open blocker. Only the manager or the Human removes a blocker.
+- `one-in-progress-per-assignee`: Huddle refuses to move a Task to In Progress, or to give an In Progress Task to someone, while its assignee already has another Task In Progress, and names that Task.
 - This process declares no other hard gate. The IT admin's Evidence line is the check, and the Human applies every change.
 
 ## Definition of Done

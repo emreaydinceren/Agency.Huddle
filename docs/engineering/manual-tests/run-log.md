@@ -4300,6 +4300,13 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-04--a-new-ho
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | New household Team HouseLane: `_team.md` has `gates: ['blockers-done-before-start']` and the Process tab lists it. Manager Nora asked to start HOUS-0002 (blocked by HOUS-0001): refused with the gate text and "Your next startable Task is HOUS-0001 "P first chore"."; HOUS-0002 stayed To Do. Lane spend 0.50 USD, of which 0.23 was the Chief of Staff's Greeting Turn on Opus. |
 
+### TASKORDER-05 — A second Task In Progress is refused, naming the first, until the first is Done
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-05--a-second-task-in-progress-is-refused-naming-the-first-until-the-first-is-done)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell
