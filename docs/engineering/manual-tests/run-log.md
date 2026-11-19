@@ -4306,6 +4306,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-05--a-second
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/one-in-progress` on `5c4c8bed` |  | The TASKORDER-01 to 04 lane. DevLane predates the gate, so the tester added `one-in-progress-per-assignee` to its `_team.md` by hand (the Process tab only switches gates off). Ana held DEVL-0001 In Progress; asked to start DEVL-0003, her `update_task` got exactly "Gate one-in-progress-per-assignee: Ana already has DEVL-0001 "B the prerequisite" In Progress. Finish it or move it out of In Progress before starting another." and DEVL-0003 stayed To Do. The Human moved DEVL-0001 back to To Do (allowed), and Ana then moved DEVL-0003 to In Progress herself (Timeline 23:21:30Z); the Task order panel listed it under Started. About 0.10 USD. |
 
 ## Adapters: choosing one per Persona, and running two at once
 
