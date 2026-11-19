@@ -13,16 +13,16 @@
 @inject NavigationManager Navigation
 
 @*
-    Team Playbooks spec §7.2 to §7.4: the Playbooks tab of a Team page. Two sections, Manager first, each with its state chip, the Huddle rules
-    (read-only), the Default updated notice, the text and the actions. Customize writes the Team's own file and opens it in the Library, Edit opens it
-    there (the Library's editor is the one Markdown editor), Keep my version restamps it and Reset deletes it after the shared confirm.
+    Team Playbooks spec §7.2 to §7.4: a Playbook tab of a Team page. The Team page has one tab for the Manager Playbook and one for the Member
+    Playbook, and each renders this component for its own kind: its state chip, the Huddle rules (read-only), the Default updated notice, the text
+    and the actions. Customize writes the Team's own file and opens it in the Library, Edit opens it there (the Library's editor is the one Markdown
+    editor), Keep my version restamps it and Reset deletes it after the shared confirm.
 *@
 
 <section class="playbooks-tab">
-    @foreach (PlaybookKind kind in Kinds)
-    {
-        PlaybookKind current = kind;
-        bool manager = current == PlaybookKind.Manager;
+    @{
+        PlaybookKind current = this.Kind;
+        bool manager = this.Manager;
         string label = KindLabel(current);
         PlaybookState state = this.states[current];
         bool updated = state.Status == PlaybookStatus.DefaultUpdated;
@@ -106,15 +106,20 @@
 </section>
 
 @code {
-    private static readonly PlaybookKind[] Kinds = [PlaybookKind.Manager, PlaybookKind.Member];
-
     private readonly Dictionary<PlaybookKind, PlaybookState> states = [];
     private readonly HashSet<PlaybookKind> diffShown = [];
 
-    /// <summary>The Team whose Playbooks are shown.</summary>
+    /// <summary>The Team whose Playbook is shown.</summary>
     [Parameter]
     [EditorRequired]
     public string Team { get; set; } = string.Empty;
+
+    /// <summary><see langword="true"/> for the Team's Manager Playbook, <see langword="false"/> for its Agent Playbook (the Member one in the files and Prompts).</summary>
+    [Parameter]
+    [EditorRequired]
+    public bool Manager { get; set; }
+
+    private PlaybookKind Kind => this.Manager ? PlaybookKind.Manager : PlaybookKind.Member;
 
     private bool LibraryEnabled => this.Options.Value.Library.Enabled;
 
@@ -127,7 +132,8 @@
     /// <inheritdoc />
     public void Dispose() => this.Playbooks.Changed -= this.OnStoreChanged;
 
-    private static string KindLabel(PlaybookKind kind) => kind == PlaybookKind.Manager ? "Manager" : "Member";
+    /// <summary>The name the Human sees: the Member Playbook is the Agents' own, so it reads "Agent".</summary>
+    private static string KindLabel(PlaybookKind kind) => kind == PlaybookKind.Manager ? "Manager" : "Agent";
 
     private static string RulesOf(PlaybookKind kind) =>
         kind == PlaybookKind.Manager ? HuddleRules.RenderManager(HuddleRules.BareToolNames) : HuddleRules.RenderMember(HuddleRules.BareToolNames);
@@ -137,10 +143,7 @@
 
     private void Load()
     {
-        foreach (PlaybookKind kind in Kinds)
-        {
-            this.states[kind] = this.Playbooks.GetState(this.Team, kind);
-        }
+        this.states[this.Kind] = this.Playbooks.GetState(this.Team, this.Kind);
     }
 
     private void OnStoreChanged() => _ = this.InvokeAsync(() =>

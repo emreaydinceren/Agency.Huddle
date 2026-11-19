@@ -10,11 +10,11 @@ public sealed class TeamPageTabsTests
     private static readonly TeamPageFeatures TasksOnly = new(Library: false, Tasks: true);
     private static readonly TeamPageFeatures NeitherFeature = new(Library: false, Tasks: false);
 
-    /// <summary>Team with both features on includes Members, Files, Playbooks and Details: a Team page has no Tasks tab (the sidebar lists its Task Views).</summary>
+    /// <summary>Team with both features on includes Members, Files, the two Playbook tabs and Details: a Team page has no Tasks tab (the sidebar lists its Task Views).</summary>
     [Fact]
     public void Available_Team_BothFeatures_ReturnsMembersFilesPlaybooksAndDetails_WithNoTasks()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Playbooks, TeamPageTab.Details];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, Both);
         Assert.Equal(expected, actual);
     }
@@ -23,7 +23,7 @@ public sealed class TeamPageTabsTests
     [Fact]
     public void Available_Team_LibraryOnly_ReturnsMembersAndFiles()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Playbooks, TeamPageTab.Details];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, LibraryOnly);
         Assert.Equal(expected, actual);
     }
@@ -32,7 +32,7 @@ public sealed class TeamPageTabsTests
     [Fact]
     public void Available_Team_TasksOnly_ReturnsMembersAndDetails()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Playbooks, TeamPageTab.Details];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, TasksOnly);
         Assert.Equal(expected, actual);
     }
@@ -41,7 +41,7 @@ public sealed class TeamPageTabsTests
     [Fact]
     public void Available_Team_NeitherFeature_ReturnsMembersOnly()
     {
-        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.Playbooks, TeamPageTab.Details];
+        TeamPageTab[] expected = [TeamPageTab.Members, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details];
         IReadOnlyList<TeamPageTab> actual = TeamPageTabs.Available(isProject: false, NeitherFeature);
         Assert.Equal(expected, actual);
     }
@@ -226,47 +226,55 @@ public sealed class TeamPageTabsTests
         TeamPageFeatures libraryAndProcess = new(Library: true, Tasks: false, Process: true);
         TeamPageFeatures onlyProcess = new(Library: false, Tasks: false, Process: true);
 
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.Playbooks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, withProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.Playbooks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, libraryAndProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Process, TeamPageTab.Playbooks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, onlyProcess));
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Playbooks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, Both));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, withProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.Process, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, libraryAndProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Process, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, onlyProcess));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.Files, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, Both));
     }
 
-    /// <summary>Playbooks sits between Process and Details on a Team page, whatever features are on (Team Playbooks spec §7.1).</summary>
+    /// <summary>The Manager Playbook tab and then the Agent Playbook tab sit between Process and Details on a Team page, whatever features are on (Team Playbooks spec §7.1).</summary>
     [Fact]
-    public void Available_Team_PutsPlaybooksBetweenProcessAndDetails()
+    public void Available_Team_PutsThePlaybookTabsBetweenProcessAndDetails()
     {
         List<TeamPageTab> tabs = [.. TeamPageTabs.Available(isProject: false, new TeamPageFeatures(Library: true, Tasks: true, Process: true))];
 
-        Assert.Equal(tabs.IndexOf(TeamPageTab.Process) + 1, tabs.IndexOf(TeamPageTab.Playbooks));
-        Assert.Equal(tabs.IndexOf(TeamPageTab.Playbooks) + 1, tabs.IndexOf(TeamPageTab.Details));
+        Assert.Equal(tabs.IndexOf(TeamPageTab.Process) + 1, tabs.IndexOf(TeamPageTab.ManagerPlaybook));
+        Assert.Equal(tabs.IndexOf(TeamPageTab.ManagerPlaybook) + 1, tabs.IndexOf(TeamPageTab.AgentPlaybook));
+        Assert.Equal(tabs.IndexOf(TeamPageTab.AgentPlaybook) + 1, tabs.IndexOf(TeamPageTab.Details));
     }
 
-    /// <summary>Playbooks is present with Process off, and with the Library and Tasks off: it needs neither.</summary>
+    /// <summary>The Playbook tabs are present with Process off, and with the Library and Tasks off: it needs neither.</summary>
     [Fact]
-    public void Available_Team_WithProcessOff_StillHasPlaybooks()
+    public void Available_Team_WithProcessOff_StillHasThePlaybookTabs()
     {
         TeamPageFeatures processOff = new(Library: false, Tasks: false, Process: false);
 
-        Assert.Equal([TeamPageTab.Members, TeamPageTab.Playbooks, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, processOff));
+        Assert.Equal([TeamPageTab.Members, TeamPageTab.ManagerPlaybook, TeamPageTab.AgentPlaybook, TeamPageTab.Details], TeamPageTabs.Available(isProject: false, processOff));
     }
 
-    /// <summary>A Project page has no Playbooks tab, whatever features are on.</summary>
+    /// <summary>A Project page has no Playbook tabs, whatever features are on.</summary>
     [Fact]
-    public void Available_Project_HasNoPlaybooksTab()
+    public void Available_Project_HasNoPlaybookTabs()
     {
-        Assert.DoesNotContain(TeamPageTab.Playbooks, TeamPageTabs.Available(isProject: true, new TeamPageFeatures(Library: true, Tasks: true, Process: true)));
-        Assert.DoesNotContain(TeamPageTab.Playbooks, TeamPageTabs.Available(isProject: true, Both));
+        IReadOnlyList<TeamPageTab> withEverything = TeamPageTabs.Available(isProject: true, new TeamPageFeatures(Library: true, Tasks: true, Process: true));
+
+        Assert.DoesNotContain(TeamPageTab.ManagerPlaybook, withEverything);
+        Assert.DoesNotContain(TeamPageTab.AgentPlaybook, withEverything);
+        Assert.DoesNotContain(TeamPageTab.ManagerPlaybook, TeamPageTabs.Available(isProject: true, Both));
+        Assert.DoesNotContain(TeamPageTab.AgentPlaybook, TeamPageTabs.Available(isProject: true, Both));
     }
 
-    /// <summary>The Playbooks tab is labelled "Playbooks" and its segment is "playbooks"; the segment resolves on a Team page only.</summary>
+    /// <summary>The Playbook tabs are labelled "Manager Playbook" and "Agent Playbook", their segments are "manager-playbook" and "agent-playbook", and the segments resolve on a Team page only.</summary>
     [Fact]
-    public void Playbooks_HasItsLabelAndSegment_AndResolvesOnATeamPageOnly()
+    public void PlaybookTabs_HaveTheirLabelsAndSegments_AndResolveOnATeamPageOnly()
     {
-        Assert.Equal("Playbooks", TeamPageTabs.Label(TeamPageTab.Playbooks));
-        Assert.Equal("playbooks", TeamPageTabs.Segment(TeamPageTab.Playbooks));
-        Assert.Equal(TeamPageTab.Playbooks, TeamPageTabs.Resolve(isProject: false, "Playbooks", NeitherFeature));
-        Assert.Equal(TeamPageTab.Files, TeamPageTabs.Resolve(isProject: true, "playbooks", Both));
+        Assert.Equal("Manager Playbook", TeamPageTabs.Label(TeamPageTab.ManagerPlaybook));
+        Assert.Equal("Agent Playbook", TeamPageTabs.Label(TeamPageTab.AgentPlaybook));
+        Assert.Equal("manager-playbook", TeamPageTabs.Segment(TeamPageTab.ManagerPlaybook));
+        Assert.Equal("agent-playbook", TeamPageTabs.Segment(TeamPageTab.AgentPlaybook));
+        Assert.Equal(TeamPageTab.ManagerPlaybook, TeamPageTabs.Resolve(isProject: false, "Manager-Playbook", NeitherFeature));
+        Assert.Equal(TeamPageTab.AgentPlaybook, TeamPageTabs.Resolve(isProject: false, "agent-playbook", NeitherFeature));
+        Assert.Equal(TeamPageTab.Files, TeamPageTabs.Resolve(isProject: true, "agent-playbook", Both));
     }
 
     /// <summary>The "details" segment resolves to the Details tab on a Team page, and a Project page has none.</summary>

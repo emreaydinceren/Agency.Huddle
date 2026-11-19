@@ -337,7 +337,7 @@ order decides per Token, independently.
 | `Teams/TeamCatalog.cs` | Builds and holds one immutable snapshot of Teams, rebuilt on `PersonaStore.PersonasChanged` and `TaskStore.IndexChanged` events. Swaps the snapshot in before raising `Changed`. No lock: a reader always sees a whole snapshot. |
 | `Teams/TeamSummary.cs` | One Team as the pages see it: Name (the display spelling), HasMembers, and the read-only list of Projects. Names compare ignoring case. |
 | `Teams/TeamPageFeatures.cs` | Which optional features the installation has on; decides which tabs exist on Team pages. |
-| `Teams/TeamPageTab.cs` | A tab of a Team or Project page: Members, Files or Tasks. |
+| `Teams/TeamPageTab.cs` | A tab of a Team or Project page: Members, Files, Tasks, Process, Manager Playbook, Agent Playbook or Details. |
 | `Teams/TeamPageTabs.cs` | Determines which tabs appear based on enabled features, and resolves URL segments to tabs. |
 | `Teams/ITeamMembership.cs` | Adds a Persona to a Team or removes it, by rewriting only the `teams` field of the Persona's definition. |
 | `Teams/TeamMembership.cs` | Implementation: reads the Persona, edits its YAML, saves it through `PersonaStore.Update`, which keeps the Model and Effort and raises `PersonasChanged`; it also passes `persona.WorkMode`, because `Update` has no default for it and a membership edit would otherwise wipe it. Serialises the whole read-modify-write. |
@@ -416,7 +416,7 @@ order decides per Token, independently.
 | `HiringPool/HiringPoolCatalog.cs` | Loads the embedded pool and the user pool (merged by id), serves jobs, team type names and personas; never throws for bad content. |
 | `Components/Teams/ProcessStep.razor` | The Process step on a manager's Agent card: Use this process, or Start blank. |
 | `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: the Team's `AGENTS.md` process prose and `_team.md` settings, with Edit. |
-| `Components/Teams/PlaybooksTab.razor` | The Playbooks tab of a Team page: the Manager and Member Playbook, each with its state chip, the read-only Huddle rules, the Default updated notice, Customize, Edit (opens the Library), Keep my version and Reset (Team Playbooks spec §7). |
+| `Components/Teams/PlaybooksTab.razor` | A Playbook tab of a Team page (the Manager Playbook tab or the Agent Playbook tab, by its `Manager` parameter): the state chip, the read-only Huddle rules, the Default updated notice, Customize, Edit (opens the Library), Keep my version and Reset (Team Playbooks spec §7). |
 | `Components/Teams/DuplicateTeamDialog.razor` | The Duplicate dialog: the new Team's title and an optional workspace folder. |
 | `Components/Shared/SkillProvenanceLine.razor` | The provenance line shown wherever a Skill appears, with a "modified locally" chip. |
 | `Components/Shared/RetroProposalCard.razor` | A Room's pending retro changes, with Accept and Reject. |

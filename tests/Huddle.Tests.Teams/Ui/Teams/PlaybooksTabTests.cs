@@ -59,17 +59,17 @@ public sealed class PlaybooksTabTests : IDisposable
     /// <summary>Removes the sandbox.</summary>
     public void Dispose() => Directory.Delete(this.sandbox, recursive: true);
 
-    /// <summary>The tab has the two sections, Manager first and Member second, each a labelled <c>section</c> with its kind.</summary>
+    /// <summary>The Manager tab and the Agent tab each hold one labelled <c>section</c> of their kind; the helper renders them one after the other.</summary>
     [Fact]
-    public async Task Tab_HasTheManagerSectionThenTheMemberSection()
+    public async Task EachTab_HasOneSectionOfItsKind()
     {
         await using MudBunitContext ctx = this.NewContext();
 
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
-        Assert.Single(cut.FindAll("section.playbooks-tab"));
+        Assert.Equal(2, cut.FindAll("section.playbooks-tab").Count);
         List<IElement> sections = [.. cut.FindAll("section.playbooks-tab section.playbook-section")];
-        Assert.Equal(["Manager Playbook", "Member Playbook"], sections.Select(static section => section.GetAttribute("aria-label")).ToList());
+        Assert.Equal(["Manager Playbook", "Agent Playbook"], sections.Select(static section => section.GetAttribute("aria-label")).ToList());
         Assert.Equal(["manager", "member"], sections.Select(static section => section.GetAttribute("data-kind")).ToList());
     }
 
@@ -136,7 +136,7 @@ public sealed class PlaybooksTabTests : IDisposable
         Assert.Contains("status-chip-info", chip.ClassList);
         Assert.Equal(["Edit", "Reset to default…"], ActionTexts(section));
         IElement notice = Required(section, ".playbook-updated");
-        Assert.Equal($"Huddle's default {(manager ? "Manager" : "Member")} Playbook changed after this Team customized it.", Required(notice, ".mud-alert-message div").TextContent.Trim());
+        Assert.Equal($"Huddle's default {(manager ? "Manager" : "Agent")} Playbook changed after this Team customized it.", Required(notice, ".mud-alert-message div").TextContent.Trim());
         Assert.Equal(["Show changes", "Keep my version", "Reset to default…"], notice.QuerySelectorAll("button").Select(static button => button.TextContent.Trim()).ToList());
         IElement body = Required(section, ".playbook-text");
         Assert.Contains(manager ? "Triage first." : "Keep passes short.", TextLines(body));
@@ -431,7 +431,7 @@ public sealed class PlaybooksTabTests : IDisposable
         await using MudBunitContext ctx = this.NewContext();
         this.WriteFile(manager, "sha256:" + PlaybookBaseStore.Hash(Default(manager)), OwnBody);
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
-        string kind = manager ? "Manager" : "Member";
+        string kind = manager ? "Manager" : "Agent";
 
         _ = cut.InvokeAsync(() => ButtonIn(SectionOf(cut, manager), "Reset to default…").ClickAsync());
 
@@ -488,7 +488,7 @@ public sealed class PlaybooksTabTests : IDisposable
 
         _ = cut.InvokeAsync(() => ButtonIn(Required(SectionOf(cut, manager: false), ".playbook-updated"), "Reset to default…").ClickAsync());
 
-        cut.WaitForAssertion(() => Assert.Equal("Reset the Member Playbook of Sales?", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Reset the Agent Playbook of Sales?", cut.Find(".mud-dialog-title").TextContent.Trim()));
     }
 
     /// <summary>A write the store reports (<c>Changed</c>), such as an edit saved in the Library, re-renders the tab.</summary>
@@ -509,6 +509,11 @@ public sealed class PlaybooksTabTests : IDisposable
         {
             builder.OpenComponent<App.Components.Teams.PlaybooksTab>(0);
             builder.AddAttribute(1, nameof(App.Components.Teams.PlaybooksTab.Team), Team);
+            builder.AddAttribute(2, nameof(App.Components.Teams.PlaybooksTab.Manager), true);
+            builder.CloseComponent();
+            builder.OpenComponent<App.Components.Teams.PlaybooksTab>(3);
+            builder.AddAttribute(4, nameof(App.Components.Teams.PlaybooksTab.Team), Team);
+            builder.AddAttribute(5, nameof(App.Components.Teams.PlaybooksTab.Manager), false);
             builder.CloseComponent();
         });
 

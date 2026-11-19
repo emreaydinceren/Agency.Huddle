@@ -422,10 +422,12 @@ asking lines.
 
 ### 7.1 Where it sits
 
-`TeamPageTab` gains `Playbooks` (label "Playbooks", segment `playbooks`, icon
-`Icons.Material.Outlined.MenuBook` in `TabIcons`). `TeamPageTabs.For` adds it on a Team page, after Process and
-before Details, whatever features are on: Playbooks need neither the Library nor Tasks to be read. A Project page
-has no Playbooks tab.
+`TeamPageTab` gains two tabs, one per Playbook: `ManagerPlaybook` (label "Manager Playbook", segment `manager-playbook`,
+icon `Icons.Material.Outlined.MenuBook`) and `AgentPlaybook` (label "Agent Playbook", segment `agent-playbook`, icon
+`Icons.Material.Outlined.AutoStories`), for the Member Playbook, which the Human sees as the Agents' own. `TeamPageTabs.Available` adds them
+on a Team page in that order, after Process and before Details, whatever features are on: Playbooks need neither the
+Library nor Tasks to be read. A Project page has no Playbook tab. Each tab renders `PlaybooksTab` with its `Manager` parameter, so a tab
+shows one section.
 
 ### 7.2 Layout
 

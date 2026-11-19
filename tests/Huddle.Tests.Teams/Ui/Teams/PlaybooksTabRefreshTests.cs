@@ -55,6 +55,7 @@ public sealed class PlaybooksTabRefreshTests : IDisposable
         {
             builder.OpenComponent<App.Components.Teams.PlaybooksTab>(0);
             builder.AddAttribute(1, nameof(App.Components.Teams.PlaybooksTab.Team), "Sales");
+            builder.AddAttribute(2, nameof(App.Components.Teams.PlaybooksTab.Manager), false);
             builder.CloseComponent();
         });
 
