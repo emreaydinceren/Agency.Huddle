@@ -1,6 +1,6 @@
 # Huddle.TeamPlaybooks — Design Specification
 
-**Date:** 2026-11-18 · **Status:** Designed, not built ·
+**Date:** 2026-11-18 · **Status:** Built 2026-11-18 (PR 678) ·
 **Decision record:** [ADR-0098](adr/0098-a-team-has-a-manager-and-a-member-playbook.md), which amends
 [ADR-0041](adr/0041-retro-proposals-are-applied-only-by-the-humans-click.md) and
 [ADR-0075](adr/0075-a-second-brain-layout-in-every-team.md); §13 holds the decisions this spec adds ·
