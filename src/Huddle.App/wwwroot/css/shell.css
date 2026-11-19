@@ -1657,6 +1657,14 @@ body.sidebar-resizing {
     margin-inline: auto;
 }
 
+/* The Feed is the same column: 760px, centred in the pane. The rule is global because MudContainer's root carries no scope
+   attribute, so a scoped rule in FeedPage.razor.css never matches it. Three classes outrank `.mud-container.page-reading`
+   (task-form.css), which zeroes the side margins, whichever stylesheet loads last. */
+.mud-container.page-reading.feed-page {
+    max-width: 760px;
+    margin-inline: auto;
+}
+
 /* ---- Traits: the variants a Theme chooses for this area ------------------------------------------------------
    Each rule is scoped to the marker attribute (data-hu-*) the layout renders, so a Theme that keeps the default never
    sees it. They sit after the base rules above because the :has() argument makes them more specific, and a Theme's

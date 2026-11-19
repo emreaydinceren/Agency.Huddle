@@ -1,9 +1,4 @@
 /* The Feed Tab (Feed spec 6.9): the Live chip, the read-only note, and the one-row filter bar. */
-.feed-page {
-    max-width: 760px;
-    margin-inline: auto;
-}
-
 /* The Live chip is a Status chip (Success). The wrapper carries this component's scope attribute, which MudChip's own root does not, and sets only the chip's place. */
 .feed-live-wrap ::deep .feed-live-chip {
     margin: 0 0 0 8px;
