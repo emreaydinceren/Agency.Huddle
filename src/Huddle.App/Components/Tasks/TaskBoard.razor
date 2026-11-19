@@ -23,7 +23,13 @@
     leaving Duplicate clears DuplicateOf. The save is TaskService.Update with baseVersion null, as the
     Human. A cancelled dialog, a Refused result or a NotFound result refreshes the container so the
     card snaps back; the last two also show a Snackbar error. While dragging, a caption with the
-    Preview text (computed once, at drag start) shows under every column but the card's own.
+    Preview text (computed once, at drag start) shows under every column but the card's own - except
+    while a drop there reorders (single-state column, View without a sort), which wakes the assignee too.
+
+    Reordering (rank): a drop inside a card's own single-state column, while the View has no sort,
+    saves only the card's rank (RankPlacement, from the zone's displayed order); a drop into another
+    column saves only the status. The zone keeps its order until the page passes the Tasks in their
+    new order, which refreshes the container.
 *@
 
 @using System.Globalization
@@ -75,7 +81,7 @@
                         <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
                     </ChildContent>
                 </RowActionsMenu>
-                @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
+                @if (this.dragging && this.caption is { } text && (i != this.draggedColumn || this.DropReorders(column)))
                 {
                     <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>
                 }
@@ -121,7 +127,7 @@
                                 }
                                 @if (cell.Column.States.Count == 1)
                                 {
-                                    <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
+                                    <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" AllowReorder="@this.ReorderEnabled" />
                                 }
                                 else
                                 {
@@ -519,7 +525,9 @@
     /// <param name="item">The dragged Task.</param>
     private string? CaptionFor(TaskItem item)
     {
-        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.Human));
+        // A drop in the card's own column saves a rank only; the preview names who that wakes (any rank value will do).
+        TaskItem ranked = new TaskPatch { Rank = Optional<int?>.Set(item.Rank ?? 1) }.ApplyTo(item);
+        WakePreview preview = this.Triggers.Preview(null, ranked, TaskActors.Human(this.Human));
         return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
     }
 
@@ -548,13 +556,70 @@
     private async Task OnDroppedAsync(MudItemDropInfo<TaskItem> info)
     {
         this.EndDrag();
-        if (info.Item is not { } item || !BoardLayout.TryParseZone(info.DropzoneIdentifier, out _, out TaskState state))
+        if (info.Item is not { } item || !BoardLayout.TryParseZone(info.DropzoneIdentifier, out string laneKey, out TaskState state))
         {
             this.container?.Refresh();
             return;
         }
 
+        if (state == item.Status && this.SingleStateCell(laneKey, state) is { } cell)
+        {
+            this.Reorder(item, cell, info.IndexInZone);
+            return;
+        }
+
         await this.MoveAsync(item, state);
+    }
+
+    /// <summary>Whether a drop inside a single-state column reorders: only while the View has no sort, since a sorted column shows another order than rank (decision 3).</summary>
+    private bool ReorderEnabled => this.View.Sort.Count == 0;
+
+    /// <summary>Whether a drop into <paramref name="column"/> reorders rather than moves: it is a single-state column and the View has no sort, so a drop in the card's own column saves a rank and wakes the assignee.</summary>
+    /// <param name="column">The column.</param>
+    private bool DropReorders(BoardColumn column) => this.ReorderEnabled && column.States.Count == 1;
+
+    /// <summary>The cell of the lane <paramref name="laneKey"/> whose column holds exactly <paramref name="state"/>, or <see langword="null"/> when that state sits in a multi-state column.</summary>
+    /// <param name="laneKey">The lane's raw key.</param>
+    /// <param name="state">The column's one state.</param>
+    private BoardCell? SingleStateCell(string laneKey, TaskState state) =>
+        this.model.Lanes
+            .FirstOrDefault(lane => string.Equals(lane.Key, laneKey, StringComparison.Ordinal))
+            ?.Cells.FirstOrDefault(cell => cell.Column.States.Count == 1 && cell.Column.States[0] == state);
+
+    /// <summary>
+    /// A drop inside the card's own single-state column: saves only the card's rank, as the Human, where
+    /// <see cref="RankPlacement"/> says it belongs. <c>IndexInZone</c> is the insertion index among the column's
+    /// cards without the dragged one, which is the zone list <see cref="RankPlacement"/> takes. Nothing is written
+    /// when the View sorts, when the card is dropped where it already sits, or when it keeps its rank; the zone is refreshed so it snaps to the saved order.
+    /// </summary>
+    /// <param name="item">The dragged card's Task.</param>
+    /// <param name="cell">The column's cell, in display order.</param>
+    /// <param name="indexInZone">Where the card was dropped.</param>
+    private void Reorder(TaskItem item, BoardCell cell, int indexInZone)
+    {
+        if (!this.ReorderEnabled)
+        {
+            this.container?.Refresh();
+            return;
+        }
+
+        // A card dropped back where it sits has not moved: even a first rank (10) is not worth a write.
+        if (indexInZone < 0 || indexInZone == cell.Items.ToList().FindIndex(card => card.Id == item.Id))
+        {
+            this.container?.Refresh();
+            return;
+        }
+
+        IReadOnlyList<TaskItem> others = [.. cell.Items.Where(card => card.Id != item.Id)];
+        RankPlacement.Change change = RankPlacement.Place(others, indexInZone, item);
+        if (change is RankPlacement.Change.NoChange)
+        {
+            this.container?.Refresh();
+            return;
+        }
+
+        int? rank = change is RankPlacement.Change.Set set ? set.Rank : null;
+        this.Save(item, new TaskPatch { Rank = Optional<int?>.Set(rank) });
     }
 
     /// <summary>
@@ -686,7 +751,17 @@
             reason = answer.Data as string;
         }
 
-        TaskPatch patch = new() { Status = target, DuplicateOf = duplicateOf, Reason = reason };
+        this.Save(item, new TaskPatch { Status = target, DuplicateOf = duplicateOf, Reason = reason });
+    }
+
+    /// <summary>
+    /// Saves <paramref name="patch"/> to <paramref name="item"/> as the Human with <c>baseVersion</c> null (last write wins).
+    /// A Refused, NotFound or GateRefused result shows a Snackbar error and refreshes the container so the card snaps back.
+    /// </summary>
+    /// <param name="item">The card's Task.</param>
+    /// <param name="patch">What to change.</param>
+    private void Save(TaskItem item, TaskPatch patch)
+    {
         TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.Human));
         string? error = result switch
         {

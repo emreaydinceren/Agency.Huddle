@@ -307,6 +307,14 @@ else if (this.loaded is { } task)
                         </div>
 
                         <div class="task-detail-strip-item">
+                            <span class="task-detail-strip-label" aria-hidden="true">Rank</span>
+                            <div class="task-detail-prop-value">
+                                <MudNumericField T="int?" Variant="Variant.Outlined" Margin="Margin.Dense" Value="effective.Rank" ValueChanged="this.OnRankChanged"
+                                                 Min="1" Clearable="true" HideSpinButtons="true" Class="task-detail-rank" Label="Rank" Placeholder="None" />
+                            </div>
+                        </div>
+
+                        <div class="task-detail-strip-item">
                             <span class="task-detail-strip-label" aria-hidden="true">Team</span>
                             <div class="task-detail-prop-value">
                                 <SelectField T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team"
@@ -995,6 +1003,7 @@ else if (this.loaded is { } task)
         StartDate = draft.StartDate,
         DueDate = draft.DueDate,
         Sprint = draft.Sprint,
+        Rank = draft.Rank,
         Description = draft.Description,
         Location = new TaskLocation(draft.Team, draft.Project, false),
         Path = string.Empty,
@@ -1017,7 +1026,10 @@ else if (this.loaded is { } task)
         item.StartDate,
         item.DueDate,
         item.Description,
-        item.Sprint);
+        item.Sprint)
+    {
+        Rank = item.Rank,
+    };
 
     /// <summary>Re-reads <see cref="Id"/> from <see cref="Store"/>: updates <see cref="loaded"/>, and advances <see cref="baseVersion"/> only while <see cref="pending"/> is empty (corrections-B5 D14 item 6).</summary>
     /// <param name="withProof">Whether to recompute the Proof too (a change to this Task or to one of its children).</param>
@@ -1369,6 +1381,18 @@ else if (this.loaded is { } task)
         }
 
         this.SetPending(this.pending with { Priority = value });
+    }
+
+    /// <summary>Records the Rank field's value as a pending edit; <see langword="null"/> (cleared) removes the rank on Save.</summary>
+    /// <param name="value">The entered rank, or <see langword="null"/> when the field was cleared.</param>
+    private void OnRankChanged(int? value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.SetPending(this.pending with { Rank = Optional<int?>.Set(value) });
     }
 
     private void OnAssigneeChanged(AssigneeOption value)
@@ -1731,6 +1755,7 @@ else if (this.loaded is { } task)
     {
         TaskField.Title => patch with { Title = null },
         TaskField.Priority => patch with { Priority = null },
+        TaskField.Rank => patch with { Rank = default },
         TaskField.Assignee => patch with { Assignee = default },
         TaskField.Parent => patch with { Parent = default },
         TaskField.BlockedBy => patch with { BlockedBy = null },

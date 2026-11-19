@@ -119,6 +119,17 @@ else if (this.loaded is { } task)
 
         <PropertyRow Label="Priority" Class="task-read-view-priority"><TaskPriorityChip Priority="task.Priority" /></PropertyRow>
 
+        <PropertyRow Label="Rank" Class="task-read-view-rank">
+            @if (task.Rank is { } rank)
+            {
+                @rank
+            }
+            else
+            {
+                @this.Empty()
+            }
+        </PropertyRow>
+
         <PropertyRow Label="Assignee" Class="is-wide task-read-view-assignee">
             @if (task.Assignee is { } assignee)
             {

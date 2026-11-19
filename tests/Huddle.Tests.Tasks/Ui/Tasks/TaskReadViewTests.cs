@@ -91,6 +91,35 @@ public sealed class TaskReadViewTests
         Assert.Empty(cut.FindAll(".task-read-view-status .task-state-dot"));
     }
 
+    /// <summary>A ranked Task shows a Rank row with its number, placed right after the Priority row.</summary>
+    [Fact]
+    public async Task Render_RankedTask_ShowsARankRowAfterPriority()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Ranked", "Platform", null) { Rank = 12 }, TaskActors.Human(harness.Options.Value))).Task;
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
+
+        Assert.Equal("12", cut.Find(".task-read-view-rank dd").TextContent.Trim());
+        Assert.Equal("Rank", cut.Find(".task-read-view-rank dt").TextContent.Trim());
+        Assert.True(cut.Find(".task-read-view-priority").NextElementSibling?.ClassList.Contains("task-read-view-rank"));
+    }
+
+    /// <summary>An unranked Task still shows the Rank row, with a dash in Quiet ink like any other empty value, so rows never jump.</summary>
+    [Fact]
+    public async Task Render_UnrankedTask_ShowsARankRowWithADash()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Bare", "Platform", null), TaskActors.Human(harness.Options.Value))).Task;
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
+
+        Assert.Equal("—", cut.Find(".task-read-view-rank dd .task-read-view-empty").TextContent.Trim());
+        Assert.True(cut.Find(".task-read-view-priority").NextElementSibling?.ClassList.Contains("task-read-view-rank"));
+    }
+
     /// <summary>A Task id in the property grid is a link that opens that Task, so a Human can follow the Parent and a blocker.</summary>
     [Fact]
     public async Task Render_ParentAndBlocker_AreLinksToThoseTasks()

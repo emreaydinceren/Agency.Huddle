@@ -92,6 +92,12 @@ internal sealed class CreateTaskTool(
             ["start_date"] = new JsonObject { ["type"] = "string" },
             ["due_date"] = new JsonObject { ["type"] = "string" },
             ["sprint"] = new JsonObject { ["type"] = "string" },
+            ["rank"] = new JsonObject
+            {
+                ["type"] = "integer",
+                ["minimum"] = 1,
+                ["description"] = "Where the Task sits in its Team's backlog: 1 is first. Leave it out for an unranked Task, which sorts after the ranked ones. Leave gaps such as 10, 20, 30 so one change moves one Task.",
+            },
             ["human_gate"] = new JsonObject { ["type"] = "boolean" },
             ["action"] = new JsonObject
             {
@@ -147,7 +153,8 @@ internal sealed class CreateTaskTool(
         }
 
         if (!TaskToolText.TryGetBool(arguments, "human_gate", false, out bool humanGate, out string gateRefusal)
-            || !TaskToolText.TryGetString(arguments, "action", out string? action, out gateRefusal))
+            || !TaskToolText.TryGetString(arguments, "action", out string? action, out gateRefusal)
+            || !TryReadRank(arguments, out int? rank, out gateRefusal))
         {
             return gateRefusal;
         }
@@ -156,6 +163,7 @@ internal sealed class CreateTaskTool(
         {
             HumanGate = humanGate,
             Action = string.IsNullOrWhiteSpace(action) ? null : action,
+            Rank = rank,
         };
 
         if (!TaskToolText.TryRun(() => tasks.Create(draft, actor), out TaskResult? result, out string runRefusal))
@@ -491,6 +499,28 @@ internal sealed class CreateTaskTool(
             : string.Create(CultureInfo.InvariantCulture, $"Filed in project \"{filed.Project}\" ({filed.Reason}). Pass project to file it elsewhere. ");
 
         return string.Create(CultureInfo.InvariantCulture, $"Created {task.Id} \"{task.Title}\" in {location}, {assigneeClause}. {filedClause}{notify}{TaskActionNote.For(task, levels, gates, prompts)}");
+    }
+
+    /// <summary>Reads the optional <c>rank</c> argument; absent leaves the Task unranked, and a value below 1 is left for <see cref="TaskService.Create"/> to refuse.</summary>
+    /// <param name="arguments">The tool's JSON arguments.</param>
+    /// <param name="rank">The rank, or <see langword="null"/> when the argument is absent.</param>
+    /// <param name="refusal">The refusal text when this returns <see langword="false"/>.</param>
+    private static bool TryReadRank(JsonObject arguments, out int? rank, out string refusal)
+    {
+        rank = null;
+        if (arguments["rank"] is null)
+        {
+            refusal = string.Empty;
+            return true;
+        }
+
+        if (!TaskToolText.TryGetInt(arguments, "rank", null, out int value, out refusal))
+        {
+            return false;
+        }
+
+        rank = value;
+        return true;
     }
 
     /// <summary>Parses an optional <c>yyyy-MM-dd</c> date argument (Spec §11.2 check 4).</summary>

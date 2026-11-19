@@ -663,4 +663,85 @@ public sealed class UpdateTaskToolTests
         Assert.NotNull(stored);
         Assert.Null(stored.StartDate);
     }
-}
+
+    /// <summary>The schema offers an integer <c>rank</c> of at least 0, where 0 clears it.</summary>
+    [Fact]
+    public async Task InvokeAsync_InputSchema_OffersIntegerRankOfAtLeastZero()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+
+        JsonObject? rank = tool.InputSchema["properties"]?["rank"] as JsonObject;
+
+        Assert.NotNull(rank);
+        Assert.Equal("integer", (string?)rank["type"]);
+        Assert.Equal(0, (int?)rank["minimum"]);
+        Assert.Contains("0 clears", (string?)rank["description"], StringComparison.Ordinal); // contains-ok: pins the one sentence that tells a model how to clear a rank.
+    }
+
+    /// <summary>A positive <c>rank</c> argument sets <see cref="TaskItem.Rank"/>.</summary>
+    [Fact]
+    public async Task InvokeAsync_RankGiven_SetsRank()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["rank"] = 30 };
+
+        await tool.InvokeAsync(arguments, ct);
+
+        TaskItem? updated = harness.Store.Get(task.Id);
+        Assert.NotNull(updated);
+        Assert.Equal(30, updated.Rank);
+    }
+
+    /// <summary>A <c>rank</c> of 0 clears an existing rank.</summary>
+    [Fact]
+    public async Task InvokeAsync_RankZero_ClearsRank()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+        await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["rank"] = 5 }, ct);
+        Assert.Equal(5, harness.Store.Get(task.Id)?.Rank);
+
+        await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["rank"] = 0 }, ct);
+
+        TaskItem? updated = harness.Store.Get(task.Id);
+        Assert.NotNull(updated);
+        Assert.Null(updated.Rank);
+    }
+
+    /// <summary>A negative <c>rank</c> is refused with a message that names 0 as the way to clear, and the rank is unchanged.</summary>
+    [Fact]
+    public async Task InvokeAsync_RankNegative_IsRefusedAndLeavesRank()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+        await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["rank"] = 5 }, ct);
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["rank"] = -1 }, ct);
+
+        Assert.Equal("'rank' must be a whole number of 0 or more; 0 clears it.", result);
+        Assert.Equal(5, harness.Store.Get(task.Id)?.Rank);
+    }
+
+    /// <summary>A <c>rank</c> that is not a whole number is refused, naming the argument.</summary>
+    [Fact]
+    public async Task InvokeAsync_RankNotAnInteger_IsRefusedNamingArgument()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = harness.CreateTask("Support SAML login");
+        UpdateTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["rank"] = "top" }, ct);
+
+        Assert.Equal("'rank' must be a whole number.", result);
+        Assert.Null(harness.Store.Get(task.Id)?.Rank);
+    }}

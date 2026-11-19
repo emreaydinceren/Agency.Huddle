@@ -54,7 +54,7 @@ internal static class TaskToolText
 
     /// <summary>
     /// Renders <paramref name="task"/> as the one-line summary every listing tool shows (Spec
-    /// §11.1): id, status, priority, assignee (or "unassigned"), <c>Team[/Project]</c> (with
+    /// §11.1): id, status, priority, <c>rank N</c> (only when the Task has a rank), assignee (or "unassigned"), <c>Team[/Project]</c> (with
     /// "(closed)" appended when Closed), and title, separated by " | ".
     /// </summary>
     /// <param name="task">The Task to render.</param>
@@ -71,7 +71,8 @@ internal static class TaskToolText
             location = $"{location} (closed)";
         }
 
-        return $"{task.Id} | {task.Status.ToWire()} | {task.Priority.ToWire()} | {assignee} | {location} | {task.Title}";
+        string rank = task.Rank is { } value ? string.Create(CultureInfo.InvariantCulture, $" | rank {value}") : string.Empty;
+        return $"{task.Id} | {task.Status.ToWire()} | {task.Priority.ToWire()}{rank} | {assignee} | {location} | {task.Title}";
     }
 
     /// <summary>

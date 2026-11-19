@@ -30,7 +30,7 @@ internal static partial class TaskFileFormat
     {
         "id", "title", "status", "priority", "creator", "assignee", "origin",
         "parent", "blocked_by", "duplicate_of", "tags", "start_date", "due_date",
-        "sprint", "human_gate", "action",
+        "sprint", "human_gate", "action", "rank",
     };
 
     /// <summary>The longest <c>action</c> value a Task file may carry (Human gate Spec §6.1).</summary>
@@ -81,18 +81,17 @@ internal static partial class TaskFileFormat
             return false;
         }
 
-        string? assignee = TryGetField(fields, "assignee", out string? assigneeRaw) ? NullIfEmpty(assigneeRaw) : null;
-        string? originRoomId = TryGetField(fields, "origin", out string? originRaw) ? NullIfEmpty(originRaw) : null;
         ParsedBody parsedBody = ParseBodyOf(body, required);
         task = new TaskItem
         {
+            Rank = relations.Rank,
             Id = required.Id,
             Title = required.Title,
             Status = required.Status,
             Priority = required.Priority,
             Creator = required.Creator,
-            Assignee = assignee,
-            OriginRoomId = originRoomId,
+            Assignee = TryGetField(fields, "assignee", out string? assigneeRaw) ? NullIfEmpty(assigneeRaw) : null,
+            OriginRoomId = TryGetField(fields, "origin", out string? originRaw) ? NullIfEmpty(originRaw) : null,
             Parent = relations.Parent,
             BlockedBy = relations.BlockedBy,
             DuplicateOf = relations.DuplicateOf,
@@ -149,7 +148,7 @@ internal static partial class TaskFileFormat
     }
 
     /// <summary>The optional keys that point at other records or carry dates, validated per Spec §7.2.</summary>
-    private sealed record Relations(TaskId? Parent, IReadOnlyList<TaskId> BlockedBy, TaskId? DuplicateOf, IReadOnlyList<string> Tags, DateOnly? StartDate, DateOnly? DueDate, SprintId? Sprint, bool HumanGate, string? Action);
+    private sealed record Relations(TaskId? Parent, IReadOnlyList<TaskId> BlockedBy, TaskId? DuplicateOf, IReadOnlyList<string> Tags, DateOnly? StartDate, DateOnly? DueDate, SprintId? Sprint, bool HumanGate, string? Action, int? Rank);
 
     /// <summary>Validates <c>id</c>, <c>title</c>, <c>status</c>, <c>priority</c> and <c>creator</c>; the first violation is <paramref name="error"/>.</summary>
     private static bool TryParseRequired(IReadOnlyList<PersonaFrontmatterField> fields, [NotNullWhen(true)] out RequiredFields? required, out string error)
@@ -226,14 +225,15 @@ internal static partial class TaskFileFormat
             || !TryParseDate(fields, "start_date", out DateOnly? startDate, out error)
             || !TryParseDate(fields, "due_date", out DateOnly? dueDate, out error)
             || !TryParseSprint(fields, out SprintId? sprint, out error)
-            || !TryParseAction(fields, out string? action, out error))
+            || !TryParseAction(fields, out string? action, out error)
+            || !TryParseRank(fields, out int? rank, out error))
         {
             return false;
         }
 
         bool humanGate = TryGetField(fields, "human_gate", out string? humanGateRaw)
             && string.Equals(humanGateRaw?.Trim(), "true", StringComparison.OrdinalIgnoreCase);
-        relations = new Relations(parent, blockedBy, duplicateOf, tags, startDate, dueDate, sprint, humanGate, action);
+        relations = new Relations(parent, blockedBy, duplicateOf, tags, startDate, dueDate, sprint, humanGate, action, rank);
         return true;
     }
 
@@ -322,6 +322,11 @@ internal static partial class TaskFileFormat
         lines.Add(ComposeScalarLine("title", task.Title));
         lines.Add(ComposeScalarLine("status", task.Status.ToWire()));
         lines.Add(ComposeScalarLine("priority", task.Priority.ToWire()));
+        if (task.Rank is { } rank)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"rank: {rank}"));
+        }
+
         lines.Add(ComposeScalarLine("creator", task.Creator));
 
         if (task.Assignee is { Length: > 0 } assignee)
@@ -693,6 +698,25 @@ internal static partial class TaskFileFormat
             }
 
             sprint = parsed;
+        }
+
+        error = "";
+        return true;
+    }
+
+    /// <summary>Parses the optional "rank" key: absent or empty is none, a value that is not a whole number of 1 or more rejects the file.</summary>
+    private static bool TryParseRank(IReadOnlyList<PersonaFrontmatterField> fields, out int? rank, out string error)
+    {
+        rank = null;
+        if (TryGetField(fields, "rank", out string? raw) && NullIfEmpty(raw) is { } trimmed)
+        {
+            if (!int.TryParse(trimmed, NumberStyles.None, CultureInfo.InvariantCulture, out int parsed) || parsed < 1)
+            {
+                error = string.Create(CultureInfo.InvariantCulture, $"invalid rank: '{raw}'");
+                return false;
+            }
+
+            rank = parsed;
         }
 
         error = "";

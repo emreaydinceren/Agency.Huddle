@@ -48,6 +48,45 @@ public sealed class TaskDiffTests
         Assert.Equal(expectedNew, change.New);
     }
 
+    /// <summary>Setting a rank on an unranked Task is one Rank change, summarised as <c>rank: — → 3</c>.</summary>
+    [Fact]
+    public void Compare_RankSet_OneChangeSummarisedWithDash()
+    {
+        TaskItem before = TestTasks.Make();
+        TaskItem after = before with { Rank = 3 };
+
+        IReadOnlyList<FieldChange> changes = TaskDiff.Compare(before, after);
+
+        FieldChange change = Assert.Single(changes);
+        Assert.Equal(TaskField.Rank, change.Field);
+        Assert.Null(change.Old);
+        Assert.Equal("3", change.New);
+        Assert.Equal("rank: — → 3", TaskDiff.Summarise(changes));
+    }
+
+    /// <summary>Changing and clearing a rank are summarised with both sides and the dash.</summary>
+    [Fact]
+    public void Summarise_RankChangedAndCleared_ShowsBothSides()
+    {
+        TaskItem ranked = TestTasks.Make() with { Rank = 3 };
+
+        string changed = TaskDiff.Summarise(TaskDiff.Compare(ranked, ranked with { Rank = 10 }));
+        string cleared = TaskDiff.Summarise(TaskDiff.Compare(ranked, ranked with { Rank = null }));
+
+        Assert.Equal("rank: 3 → 10", changed);
+        Assert.Equal("rank: 3 → —", cleared);
+    }
+
+    /// <summary>The same rank on both sides is no change, and the field label is the wire key.</summary>
+    [Fact]
+    public void Compare_SameRank_NoChangeAndLabelIsRank()
+    {
+        TaskItem task = TestTasks.Make() with { Rank = 5 };
+
+        Assert.Empty(TaskDiff.Compare(task, task with { Rank = 5 }));
+        Assert.Equal("rank", TaskDiff.FieldLabel(TaskField.Rank));
+    }
+
     /// <summary>BlockedBy and Tags are compared as sets: reordering the same items produces no
     /// change.</summary>
     [Fact]

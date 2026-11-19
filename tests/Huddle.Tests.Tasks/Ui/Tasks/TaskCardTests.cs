@@ -318,6 +318,30 @@ public sealed class TaskCardTests : IDisposable
         Assert.Equal("Mon, Oct 5, 2026", cut.Find(".task-card-field-due-date").GetAttribute("title"));
     }
 
+    /// <summary>A ranked Task shows "Rank N" when <c>rank</c> is in <see cref="TaskCard.Fields"/>.</summary>
+    [Fact]
+    public async Task Fields_RankShownWhenRanked()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "T") with { Rank = 3 };
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, fields: ["rank"]);
+
+        Assert.Equal("Rank 3", cut.Find(".task-card-field-rank").TextContent.Trim());
+    }
+
+    /// <summary>An unranked Task shows no rank field, like any other empty optional field.</summary>
+    [Fact]
+    public async Task Fields_RankHiddenWhenUnranked()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "T");
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, fields: ["rank"]);
+
+        Assert.Empty(cut.FindAll(".task-card-field-rank"));
+    }
+
     /// <summary>corrections-B5 D12-2: the ⋮ menu is flat - a "Move to" heading, all eight <see cref="TaskState"/>s as <c>MudMenuItem</c>s in declaration order, a divider, then "Copy id".</summary>
     [Fact]
     public async Task MoveToMenu_ListsAllEightStatesThenDividerThenCopyId()

@@ -134,6 +134,12 @@
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Sprint)</GroupTemplate>
                     </TemplateColumn>
                     break;
+                case "rank":
+                    <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("rank")" InitialDirection="@this.DirectionFor("rank")" T="TaskItem" Title="Rank" Hidden="@(!this.Shows("rank"))" Sortable="true"
+                                     SortBy="@(t => (object)(t.Rank ?? int.MaxValue))">
+                        <CellTemplate>@context.Item.Rank</CellTemplate>
+                    </TemplateColumn>
+                    break;
                 case "parent":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("parent")" InitialDirection="@this.DirectionFor("parent")" T="TaskItem" Title="Parent" Hidden="@(!this.Shows("parent"))">
                         <CellTemplate>@(context.Item.Parent?.ToString() ?? "")</CellTemplate>
@@ -321,6 +327,7 @@
         ["Team"] = "team",
         ["Project"] = "project",
         ["Sprint"] = "sprint",
+        ["Rank"] = "rank",
         ["Start date"] = "start_date",
         ["Due date"] = "due_date",
         ["Created"] = "created",

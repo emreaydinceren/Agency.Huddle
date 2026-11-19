@@ -852,6 +852,7 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKS-24](tasks.md#tasks-24--evidence-survives-description-edits-by-an-agent-and-by-the-form-and-comments-show-on-the-timeline) | 💰 | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
 | [TASKS-25](tasks.md#tasks-25--a-task-file-written-before-the-timeline-shows-the-same-timeline-and-proof-before-and-after-its-first-write) |  | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
 | [TASKS-26](tasks.md#tasks-26--follow-ups-a-manager-files-while-answering-a-projects-question-task-show-on-that-projects-board) | 💰 | Pass |  | run by an agent 2026-11-15, paid lane, see the Run log |
+| [TASKS-27](tasks.md#tasks-27--dragging-a-card-within-its-board-column-changes-only-its-rank) |  | Pass |  | run by an agent 2026-11-19, free lane, see the Run log |
 
 ## adapters
 

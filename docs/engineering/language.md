@@ -938,6 +938,13 @@ See
 : *Avoid*: ticket, issue, work item, card (a card is how a Board draws a Task),
   todo; and for the reference, tag or hashtag (the `#` isn't kept).
 
+**Rank**
+: A Task's optional place in its Team's backlog: a whole number in its `rank:` key, 1 first, unranked
+  after ranked. Ranks are sparse (gaps and ties are fine) and compare only within one Team. Huddle
+  never renumbers; a Board drag changes the dragged Task's rank alone (ADR-0099).
+: *Avoid*: order, position, sort order (a View's sort keys are something else), and priority, which
+  is the separate Low to Urgent field.
+
 **Project**
 : An optional grouping of Tasks inside one Team: the folder below the Team's
   folder. A Room of that Team may also belong to it (ADR-0082). Its name is unique only within its Team, so write it as

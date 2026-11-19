@@ -33,6 +33,7 @@ internal static class TaskDiff
         { TaskField.StartDate, "start_date" },
         { TaskField.DueDate, "due_date" },
         { TaskField.Sprint, "sprint" },
+        { TaskField.Rank, "rank" },
         { TaskField.HumanGate, "human_gate" },
         { TaskField.Action, "action" },
     };
@@ -90,11 +91,7 @@ internal static class TaskDiff
             changes.Add(new FieldChange(TaskField.Tags, string.Join(ListSeparator, before.Tags), string.Join(ListSeparator, after.Tags)));
         }
 
-        AddIfDifferent(changes, TaskField.StartDate, FormatDate(before.StartDate), FormatDate(after.StartDate));
-        AddIfDifferent(changes, TaskField.DueDate, FormatDate(before.DueDate), FormatDate(after.DueDate));
-        AddIfDifferent(changes, TaskField.Sprint, before.Sprint?.ToString(), after.Sprint?.ToString());
-        AddIfDifferent(changes, TaskField.HumanGate, GateText(before.HumanGate), GateText(after.HumanGate));
-        AddIfDifferent(changes, TaskField.Action, before.Action, after.Action);
+        AddPlanningChanges(changes, before, after);
 
         if (!string.Equals(before.Description, after.Description, StringComparison.Ordinal))
         {
@@ -119,6 +116,20 @@ internal static class TaskDiff
         }
 
         return changes;
+    }
+
+    /// <summary>Adds the date, Sprint, rank, Human gate and action changes between two versions of a Task.</summary>
+    /// <param name="changes">The list the changes are appended to.</param>
+    /// <param name="before">The Task before the change.</param>
+    /// <param name="after">The Task after the change.</param>
+    private static void AddPlanningChanges(List<FieldChange> changes, TaskItem before, TaskItem after)
+    {
+        AddIfDifferent(changes, TaskField.StartDate, FormatDate(before.StartDate), FormatDate(after.StartDate));
+        AddIfDifferent(changes, TaskField.DueDate, FormatDate(before.DueDate), FormatDate(after.DueDate));
+        AddIfDifferent(changes, TaskField.Sprint, before.Sprint?.ToString(), after.Sprint?.ToString());
+        AddIfDifferent(changes, TaskField.Rank, before.Rank?.ToString(CultureInfo.InvariantCulture), after.Rank?.ToString(CultureInfo.InvariantCulture));
+        AddIfDifferent(changes, TaskField.HumanGate, GateText(before.HumanGate), GateText(after.HumanGate));
+        AddIfDifferent(changes, TaskField.Action, before.Action, after.Action);
     }
 
     /// <summary>The Spec §7.4 summary vocabulary: one text per change, joined with "; ".</summary>

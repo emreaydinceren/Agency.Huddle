@@ -270,7 +270,7 @@ if (-not (Test-Path $solution)) {
 # -- Seed: the data set from src/Huddle.Seeder, and nothing else -----------------
 
 # -Seed only swaps the data folder. The app otherwise runs exactly as it does without it.
-$seedArgs = @()
+$dataDirArgs = @()
 $seederProject = Join-Path $scriptDir 'src/Huddle.Seeder'
 $seedCommand = $null
 if ($Seed) {
@@ -289,8 +289,13 @@ if ($Seed) {
 
         $seedCommand = "dotnet run --project `"$seederProject`" -- --root `"$SeedRoot`""
     }
+}
 
-    $seedArgs = @("--Team:DataDir=$dataDir")
+# PowerShell variables are case-insensitive, so $dataDir above has overwritten $DataDir: test the
+# switches instead. With neither -DataDir nor -Seed, pass nothing so the app keeps honouring
+# $env:Team__DataDir / App_Data.
+if ($PSBoundParameters.ContainsKey('DataDir') -or $Seed) {
+    $dataDirArgs = @("--Team:DataDir=$dataDir")
 }
 
 # -- Clean-only: skip every other check, delete, exit -------------------------
@@ -374,7 +379,7 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
 }
 
 # Everything after `--` goes to Huddle.App rather than to `dotnet run`.
-$appArgs = @($seedArgs) + @("--Team:PipeName=$PipeName")
+$appArgs = @($dataDirArgs) + @("--Team:PipeName=$PipeName")
 if ($LogLevel) {
     $appArgs += @('--log-level', $LogLevel)
 }

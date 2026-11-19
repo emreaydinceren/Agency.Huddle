@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**26 tests** · 18 free, 8 paid 💰 · about 4.6 hours.
+**27 tests** · 19 free, 8 paid 💰 · about 4.7 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -1185,6 +1185,40 @@ and says so.*
 **Fail if — any of these**
 - The follow-ups are on the Team's board -> `create_task` did not default `project` (`CreateTaskTool.DefaultProjectAsync`).
 - The wake Room is at Team level -> the fallback Room ignored the Project (`TaskTriggerService.ChooseRoomAsync`).
+
+### TASKS-27 — Dragging a card within its Board column changes only its rank
+
+**Free** · about 5 min · no Turns
+
+*Proves [ADR-0099](../../adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md): a Task's rank orders its
+Team's backlog, and a drop inside one column writes only the dragged Task.*
+
+**Before you start**
+
+- A Board View with no sort keys (the seed's **Platform board**) and a cell holding three or more unranked cards (its
+  Backlog / No project cell). A List header click adds a sort key and cannot remove it, so use a View that has none.
+- A second Board View with a sort key (the seed's **Growth by project**, sorted by due date, switched to Kanban).
+
+**Steps**
+
+1. Drag the bottom card of the cell to the top.
+2. Drag the card that is now at the bottom onto the top card, so it lands second.
+3. Drag the card that is now at the bottom onto the top card again, so it lands between the two ranked cards.
+4. Open one moved Task, Edit it, set Rank to 1 and Save; open an unranked Task too.
+5. On the sorted View, drag a card within its column.
+
+**Pass if — all of these**
+
+- After step 1 the card stays at the top, and its file alone gains `rank: 10`; the others are unchanged.
+- After step 2 that card alone gains `rank: 20`; after step 3 that card alone gains `rank: 15` and sits between them.
+- After step 4 the Board puts the rank-1 card first.
+- The read view shows each moved card's Rank (and "—" on an unranked Task), and the Timeline has a `rank: — → N` line.
+- In step 5 no Task file changes.
+
+**Fail if — any of these**
+
+- Another Task's file changes on a drop -> placement renumbered neighbours (`RankPlacement`).
+- The card jumps back after the drop -> the zone is not following the saved rank (`TaskBoard.Reorder`).
 
 ---
 

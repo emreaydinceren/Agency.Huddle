@@ -41,6 +41,9 @@ public sealed record TaskDraft(
     /// <summary>Whether the Task waits for the Human before it can be Done. Defaults to <see langword="false"/>.</summary>
     public bool HumanGate { get; init; }
 
+    /// <summary>The Task's place in its Team's backlog order, 1 or more, or <see langword="null"/> for unranked.</summary>
+    public int? Rank { get; init; }
+
     /// <summary>The one-line outward action the Task will take once accepted, or <see langword="null"/> for none.</summary>
     public string? Action { get; init; }
 

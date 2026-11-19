@@ -669,4 +669,73 @@ public sealed class CreateTaskToolTests
         Assert.DoesNotContain("Filed in project", result, StringComparison.Ordinal);
         Assert.Null(Written(harness, result).Location.Project);
     }
-}
+
+    /// <summary>The schema offers an integer <c>rank</c> of at least 1.</summary>
+    [Fact]
+    public async Task CreateTask_InputSchema_OffersIntegerRankOfAtLeastOne()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+
+        JsonObject? rank = ToolFor(harness).InputSchema["properties"]?["rank"] as JsonObject;
+
+        Assert.NotNull(rank);
+        Assert.Equal("integer", (string?)rank["type"]);
+        Assert.Equal(1, (int?)rank["minimum"]);
+    }
+
+    /// <summary>A <c>rank</c> argument is stored on the new Task.</summary>
+    [Fact]
+    public async Task CreateTask_RankGiven_StoresRank()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        JsonObject arguments = Args();
+        arguments["rank"] = 20;
+
+        string result = await ToolFor(harness).InvokeAsync(arguments, ct);
+
+        Assert.Equal(20, Written(harness, result).Rank);
+    }
+
+    /// <summary>With no <c>rank</c> argument the new Task is unranked.</summary>
+    [Fact]
+    public async Task CreateTask_NoRank_LeavesTaskUnranked()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+
+        string result = await ToolFor(harness).InvokeAsync(Args(), ct);
+
+        Assert.Null(Written(harness, result).Rank);
+    }
+
+    /// <summary>A <c>rank</c> of 0 is refused (create_task has nothing to clear) and nothing is written.</summary>
+    [Fact]
+    public async Task CreateTask_RankZero_IsRefusedAndWritesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        JsonObject arguments = Args();
+        arguments["rank"] = 0;
+
+        string result = await ToolFor(harness).InvokeAsync(arguments, ct);
+
+        Assert.Equal("Rank must be a whole number of 1 or more.", result);
+        Assert.Empty(harness.Store.All);
+    }
+
+    /// <summary>A <c>rank</c> that is not a whole number is refused, naming the argument, and nothing is written.</summary>
+    [Fact]
+    public async Task CreateTask_RankNotAnInteger_IsRefusedAndWritesNothing()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        JsonObject arguments = Args();
+        arguments["rank"] = "first";
+
+        string result = await ToolFor(harness).InvokeAsync(arguments, ct);
+
+        Assert.Equal("'rank' must be a whole number.", result);
+        Assert.Empty(harness.Store.All);
+    }}

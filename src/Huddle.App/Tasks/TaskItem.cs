@@ -45,6 +45,9 @@ public sealed record TaskItem
     /// <summary>The Sprint the Task belongs to, or null for none. The id need not be in <c>sprints.md</c>.</summary>
     public SprintId? Sprint { get; init; }
 
+    /// <summary>The Task's place in its Team's backlog order (<c>rank</c>): 1 is first, gaps and ties are allowed, and null (no key) sorts after every ranked Task.</summary>
+    public int? Rank { get; init; }
+
     /// <summary>Whether the Task waits for the Human before it can be Done (<c>human_gate: true</c>). <see langword="false"/> is the absent key.</summary>
     public bool HumanGate { get; init; }
 

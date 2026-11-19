@@ -503,4 +503,41 @@ public sealed class ListTasksToolTests
 
         Assert.Equal("'scope' must be text.", result);
     }
-}
+
+    /// <summary>list_tasks returns Tasks in rank order, ranked first and unranked last, by the shared default sort.</summary>
+    [Fact]
+    public async Task ListTasks_NoSortKeys_ReturnsTasksInRankOrder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Seed(
+            harness,
+            TestTasks.Make(id: "PLAT-0001", priority: TaskPriority.Urgent),
+            TestTasks.Make(id: "PLAT-0002") with { Rank = 20 },
+            TestTasks.Make(id: "PLAT-0003") with { Rank = 10 });
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["team"] = "Platform" }, ct);
+
+        string[] ids = [.. result.Split('\n').Select(line => line.Split(" | ")[0])];
+        Assert.Equal(["PLAT-0003", "PLAT-0002", "PLAT-0001"], ids);
+    }
+
+    /// <summary>A ranked Task's line carries <c>| rank N</c> right after its priority; an unranked Task's line has no rank segment.</summary>
+    [Fact]
+    public async Task ListTasks_RankedAndUnranked_ShowsRankSegmentOnlyWhenRanked()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Seed(
+            harness,
+            TestTasks.Make(id: "PLAT-0001", priority: TaskPriority.High) with { Rank = 7 },
+            TestTasks.Make(id: "PLAT-0002", priority: TaskPriority.High));
+        ListTasksTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+
+        string result = await tool.InvokeAsync(new JsonObject { ["team"] = "Platform" }, ct);
+
+        string[] lines = result.Split('\n');
+        Assert.Equal("PLAT-0001 | To Do | High | rank 7 | unassigned | Platform | T", lines[0]);
+        Assert.Equal("PLAT-0002 | To Do | High | unassigned | Platform | T", lines[1]);
+    }}

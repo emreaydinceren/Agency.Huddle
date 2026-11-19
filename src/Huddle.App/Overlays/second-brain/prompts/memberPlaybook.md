@@ -20,6 +20,10 @@ Work in passes. Each pass is one loop:
 End every pass in one named state: **done**, **handed off**, **blocked** or **waiting for the Human**. Name it on the last line of the comment, as `State: handed off`. Do not
 start another pass on the same Task unless something changed.
 
+## Choosing what to take
+
+When you pick your next Task, take your open Tasks in rank order, lowest first, and list them with list_tasks filtered by your team. A Task with no rank comes after the ranked ones.
+
 ## Handing off
 
 Say what is finished, where the file is, what you checked and what is left. Name who takes it next. To ask a review, create the review Task the Huddle rules describe, rather than only asking in a Room.

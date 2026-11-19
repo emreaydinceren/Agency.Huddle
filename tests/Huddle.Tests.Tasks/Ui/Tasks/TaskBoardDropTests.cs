@@ -420,8 +420,8 @@ public sealed class TaskBoardDropTests
 
     /// <summary>
     /// Plan 12.3.t and corrections-B5 D12-11: while dragging, a caption with the <c>Preview</c> text -
-    /// "Nova will be notified" - shows under every column that can take the drop, i.e. every column
-    /// header but the dragged card's own.
+    /// "Nova will be notified" - shows under every column that can take the drop: every column
+    /// header, the dragged card's own included while a same-column drop reorders (single-state column, View without a sort).
     /// </summary>
     [Fact]
     public async Task DragStarted_CaptionUnderEveryOtherColumn()
@@ -434,10 +434,10 @@ public sealed class TaskBoardDropTests
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
 
-        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
         Assert.All(rig.Board.FindAll(".task-board-drag-caption"), c => Assert.Equal("Nova will be notified", c.TextContent.Trim()));
         IReadOnlyList<IElement> headers = rig.Board.FindAll("div.task-board-column-header");
-        Assert.Null(headers[1].QuerySelector(".task-board-drag-caption"));
+        Assert.NotNull(headers[1].QuerySelector(".task-board-drag-caption"));
         Assert.NotNull(headers[2].QuerySelector(".task-board-drag-caption"));
     }
 
@@ -469,12 +469,12 @@ public sealed class TaskBoardDropTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
-        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
         harness.Options.Value.Tasks.WakeEnabled = false;
         await rig.Board.InvokeAsync(() => harness.Gateway.SetOnline(novaId));
 
         rig.Board.WaitForAssertion(() => Assert.Equal("Nova is Asleep", rig.Board.FindComponent<MudBadge>().Instance.BadgeAriaLabel));
-        Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count);
+        Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count);
         Assert.Equal("Nova will be notified", rig.Board.Find(".task-board-drag-caption").TextContent.Trim());
     }
 
@@ -489,7 +489,7 @@ public sealed class TaskBoardDropTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
-        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
         await rig.Board.InvokeAsync(() => rig.Container.CancelTransaction());
 
         rig.Board.WaitForAssertion(() => Assert.Empty(rig.Board.FindAll(".task-board-drag-caption")));

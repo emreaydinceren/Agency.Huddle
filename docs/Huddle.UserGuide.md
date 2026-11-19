@@ -2227,6 +2227,7 @@ Draft the October invoice run and check it against last month.
 | `title` | One line, 1–200 characters. |
 | `status` | One of the eight statuses below. |
 | `priority` | Low, Medium, High or Urgent. |
+| `rank` | Optional. The order of the Team's backlog: 1 is handled first, and a Task with no rank comes after the ranked ones. Gaps and ties are fine; Huddle never renumbers. Set it in the Task window, or drag a card up or down within its Board column. |
 | `creator`, `assignee` | An Agent's name, or your name. One assignee at most. |
 | `origin` | The Room the Task was created from, if any. |
 | `parent`, `blocked_by`, `duplicate_of` | Links to other Tasks. |
