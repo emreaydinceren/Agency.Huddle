@@ -538,15 +538,15 @@ b {
     background: var(--hu-hover);
 }
 
-/* A raw MudButton that reads as a link inside a form row (Link note, Add File): accent ink, body text, no side padding. */
-.mud-button-root.link-action {
+/* A raw MudButton that reads as a link inside a form row (Link note, Add File): accent ink, body text, no side padding. The :root prefix outranks the hairline trait's own text-button ink and hover rules, which are scoped by :has(). */
+:root .mud-button-root.mud-button-text.mud-button-text-default.link-action {
     padding-inline: 0;
     text-transform: none;
     color: var(--hu-accent-ink);
     font-size: var(--mud-typography-body2-size);
 }
 
-.mud-button-root.link-action:hover {
+:root .mud-button-root.mud-button-text.mud-button-text-default.link-action:hover {
     background: transparent;
     text-decoration: underline;
 }
