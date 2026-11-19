@@ -20,7 +20,7 @@ on:
 jobs:
   # Runs in parallel with the other two jobs, on every PR and every push to main, docs-only or not.
   # The callers have no `paths-ignore`, so a docs-only change reaches this job and the required
-  # checks always report. Check-DocIndex.ps1 is read-only and needs only git and pwsh; Check-All.ps1
+  # checks always report (`validate` saves the time instead, by skipping its own steps). Check-DocIndex.ps1 is read-only and needs only git and pwsh; Check-All.ps1
   # is not used here because it runs Check-Eol with -Fix and CI must report, not rewrite the tree.
   # Add further read-only docs checks as steps below.
   docs:
@@ -116,14 +116,63 @@ jobs:
           git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
           git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
 
+      # Decides whether this change can skip restore, build, test and the smoke test. They are
+      # skipped as STEPS, not by a `paths-ignore` or a job-level `if:`, so this job still runs and
+      # reports success and the required check never strands a docs-only PR. `docs` and
+      # `secret-scan` never skip: a docs page can leak a secret as easily as code.
+      #
+      # code=false only when every changed path is under docs/ and none is a page a test reads.
+      # Anything unexpected (no diff base, an empty diff, a git error) runs the full job. When you
+      # add a test that reads a file under docs/, add that file to DOCS_READ_BY_TESTS.
+      - name: 🧭 Detect docs-only change
+        id: changes
+        run: |
+          # Read by TeamOptionsDocTests, AgentIsolationMetaTests, PresenceAnchorGoldfishTests and
+          # SkillsHelpTests respectively.
+          DOCS_READ_BY_TESTS=(
+            docs/Huddle.EngineeringGuide.md
+            docs/engineering/rules.md
+            docs/engineering/design-system.md
+            docs/Huddle.UserGuide.md
+          )
+          code=true
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            # Pull request: three dots, so only what the PR changed and not what landed on main since.
+            range="origin/$GITHUB_BASE_REF...$GITHUB_SHA"
+          else
+            range="${{ github.event.before }}..$GITHUB_SHA"
+          fi
+          if changed="$(git diff --name-only "$range" 2>/dev/null)" && [ -n "$changed" ]; then
+            code=false
+            while IFS= read -r path; do
+              case "$path" in
+                docs/*) ;;
+                *) code=true; break ;;
+              esac
+              for read_by_test in "${DOCS_READ_BY_TESTS[@]}"; do
+                if [ "$path" = "$read_by_test" ]; then code=true; break 2; fi
+              done
+            done <<< "$changed"
+          else
+            echo "No usable diff for '$range'; running the full job."
+          fi
+          echo "Changed files:"; echo "${changed:-<none>}"
+          echo "code=$code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" = false ]; then
+            echo "::notice::Docs-only change: restore, build, test and smoke test are skipped."
+          fi
+
       # global.json pins SDK 11.0.100 with rollForward=latestPatch, so only an 11.0.1xx SDK
       # satisfies it. A stale huddle-ci image built from an older SDK fails here with "Requested
       # SDK version: 11.0.100 ... Install the [11.0.100] .NET SDK" — rebuild the image, don't
       # debug the code.
       - name: 📦 Restore dependencies
+        if: steps.changes.outputs.code == 'true'
         run: dotnet restore Huddle.slnx
 
       - name: 🔒 Check for vulnerable dependencies
+        if: steps.changes.outputs.code == 'true'
         run: |
           dotnet list Huddle.slnx package --vulnerable --include-transitive 2>&1 | tee vuln-scan.log
           if grep -q "has the following vulnerable packages" vuln-scan.log; then
@@ -133,6 +182,7 @@ jobs:
 
       # Directory.Build.props sets TreatWarningsAsErrors, so this step is the style gate too.
       - name: 🛠️ Build solution
+        if: steps.changes.outputs.code == 'true'
         run: dotnet build Huddle.slnx --configuration Release --no-restore
 
       # The trailing `--` is required and is not a typo. Without it this SDK's Microsoft
@@ -144,6 +194,7 @@ jobs:
       # the timing window that only made the race rarer; docs/engineering/known-limits.md has the
       # history. Do not add a --filter-not-method line without a known-limits.md entry.
       - name: 🧪 Run tests
+        if: steps.changes.outputs.code == 'true'
         run: |
           dotnet test Huddle.slnx --configuration Release --no-build --
 
@@ -156,4 +207,5 @@ jobs:
       # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:11.0.100 (the base of huddle-ci) -
       # PowerShell 7.7.0, installed as a global tool by the image (PowerShell.Linux.amd64 here).
       - name: 🩺 Health endpoint smoke test
+        if: steps.changes.outputs.code == 'true'
         run: pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
