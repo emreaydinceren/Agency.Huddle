@@ -1,6 +1,6 @@
 # Team Playbooks: the Playbooks tab, delivery to an Agent, the Turn notice and Project missions
 
-Prove in a real browser that every Team page has a Playbooks tab with a Manager and a Member Playbook, that the Huddle rules above each are read-only, that **Customize for this Team**, **Edit**, **Keep my version** and **Reset to default…** do what the spec says, that an edit reaches a running Agent once per Room as a Turn notice, that the Prompt blocks page shows the Playbook parts in the order and with the labels of an Agent in several Teams, that an Agent cannot write a Playbook file, and that a Project's goal Task becomes `mission.md` in Team Memory. The last two cases are the live check of Q-1 and Q-2: whether Claude Haiku at low effort follows the loop and recognises a goal.
+Prove in a real browser that every Team page has a Manager Playbook tab and an Agent Playbook tab, that the Huddle rules above each are read-only, that **Customize for this Team**, **Edit**, **Keep my version** and **Reset to default…** do what the spec says, that an edit reaches a running Agent once per Room as a Turn notice, that the Prompt blocks page shows the Playbook parts in the order and with the labels of an Agent in several Teams, that an Agent cannot write a Playbook file, and that a Project's goal Task becomes `mission.md` in Team Memory. The last two cases are the live check of Q-1 and Q-2: whether Claude Haiku at low effort follows the loop and recognises a goal.
 
 **12 tests** · 10 free, 2 paid 💰 · about 2.6 hours (plus about 20 minutes to build the fixture in Setup). **None of them has been run yet.** This page documents what to run, not a result.
 
@@ -66,7 +66,7 @@ Three things this page checks in more than one case, so they are described once.
 
 **Free** · about 5 min
 
-*Proves the Playbooks tab sits after Process and before Details, shows the Manager section first, and that the Huddle rules are read-only.*
+*Proves the Manager Playbook and Agent Playbook tabs sit after Process and before Details, in that order, and that the Huddle rules are read-only.*
 
 **Before you start**
 
@@ -75,22 +75,22 @@ Three things this page checks in more than one case, so they are described once.
 **Steps**
 
 1. In the sidebar Teams group, click `Sales`.
-2. Read the tab strip, then click **Playbooks**.
-3. Read the two sections top to bottom. Try to type in the Huddle rules box.
+2. Read the tab strip, then click **Manager Playbook**, then **Agent Playbook**.
+3. Read the section on each tab. Try to type in the Huddle rules box.
 4. Open a Project page under Sales if one exists (otherwise skip): read its tab strip.
 
 **Pass if — all of these**
 
-- The tab strip reads, in order, with **Playbooks** between **Process** and **Details**. The Playbooks tab has the book icon.
-- The URL ends `/teams/Sales/playbooks`.
-- Two sections: **Manager Playbook** first, then **Member Playbook**, each with the chip `Huddle default`.
+- The tab strip reads, in order, with **Manager Playbook** and then **Agent Playbook** between **Process** and **Details**. Each has its own icon (a book and an open book).
+- The URLs end `/teams/Sales/manager-playbook` and `/teams/Sales/agent-playbook`.
+- One section per tab: **Manager Playbook** on the first, **Agent Playbook** on the second, each with the chip `Huddle default`.
 - Each has a Huddle rules box with a lock icon, the caption `Huddle enforces these. They are always sent and can't be edited.` and rendered rules text. The box cannot be edited.
 - Each has the rendered default text below the rules box and two buttons: **Customize for this Team** and **Edit the default**.
-- A Project page has no Playbooks tab.
+- A Project page has no Playbook tab.
 
 **Fail if — any of these**
 
-- The tab is missing, or sits after Details -> `TeamPageTabs` order is wrong.
+- A tab is missing, or sits after Details -> `TeamPageTabs` order is wrong.
 - A text cursor appears in the rules box, or a button edits them -> the rules are editable.
 - The chip reads anything other than `Huddle default` with no file present.
 

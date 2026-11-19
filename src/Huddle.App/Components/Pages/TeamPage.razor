@@ -193,8 +193,11 @@
                             case TeamPageTab.Process:
                                 <ProcessTab Team="@summary.Name" />
                                 break;
-                            case TeamPageTab.Playbooks:
-                                <PlaybooksTab Team="@summary.Name" />
+                            case TeamPageTab.ManagerPlaybook:
+                                <PlaybooksTab Team="@summary.Name" Manager="true" />
+                                break;
+                            case TeamPageTab.AgentPlaybook:
+                                <PlaybooksTab Team="@summary.Name" Manager="false" />
                                 break;
                             case TeamPageTab.Details:
                                 <TeamDetails Team="@summary.Name" />
@@ -318,7 +321,8 @@
         TeamPageTab.Members => TabIcons.For("agents"),
         TeamPageTab.Files => TabIcons.For("library"),
         TeamPageTab.Process => Icons.Material.Outlined.AccountTree,
-        TeamPageTab.Playbooks => Icons.Material.Outlined.MenuBook,
+        TeamPageTab.ManagerPlaybook => Icons.Material.Outlined.MenuBook,
+        TeamPageTab.AgentPlaybook =>Icons.Material.Outlined.AutoStories,
         TeamPageTab.Details => Icons.Material.Outlined.Info,
         _ => TabIcons.For("tasks"),
     };

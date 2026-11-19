@@ -45,8 +45,10 @@ internal static class TeamPageTabs
                 tabs.Add(TeamPageTab.Process);
             }
 
-            // Playbooks need neither the Library nor Tasks to be read, so the tab is always on a Team page (Team Playbooks spec §7.1).
-            tabs.Add(TeamPageTab.Playbooks);
+            // Playbooks need neither the Library nor Tasks to be read, so both tabs are always on a Team page (Team Playbooks spec §7.1).
+            // Each Playbook has its own tab: the Manager's first, then the Agents'.
+            tabs.Add(TeamPageTab.ManagerPlaybook);
+            tabs.Add(TeamPageTab.AgentPlaybook);
 
             // Team pages always end with Details: the type, what it's for and the Library folder
             tabs.Add(TeamPageTab.Details);
@@ -98,27 +100,29 @@ internal static class TeamPageTabs
 
     /// <summary>Returns the label a tab shows: the Files tab reads "Library", as the sidebar's section does; the others their own name.</summary>
     /// <param name="tab">The tab to label.</param>
-    /// <returns>"Members", "Library", "Tasks", "Process" or "Details".</returns>
+    /// <returns>"Members", "Library", "Tasks", "Process", "Manager Playbook", "Agent Playbook" or "Details".</returns>
     public static string Label(TeamPageTab tab) => tab switch
     {
         TeamPageTab.Members => "Members",
         TeamPageTab.Files => "Library",
         TeamPageTab.Tasks => "Tasks",
         TeamPageTab.Process => "Process",
-        TeamPageTab.Playbooks => "Playbooks",
+        TeamPageTab.ManagerPlaybook => "Manager Playbook",
+        TeamPageTab.AgentPlaybook => "Agent Playbook",
         _ => "Details",
     };
 
     /// <summary>Returns the URL segment for a tab.</summary>
     /// <param name="tab">The tab to convert to a segment.</param>
-    /// <returns>"members", "files", "tasks", "process" or "details".</returns>
+    /// <returns>"members", "files", "tasks", "process", "manager-playbook", "agent-playbook" or "details".</returns>
     public static string Segment(TeamPageTab tab) => tab switch
     {
         TeamPageTab.Members => "members",
         TeamPageTab.Files => "files",
         TeamPageTab.Tasks => "tasks",
         TeamPageTab.Process => "process",
-        TeamPageTab.Playbooks => "playbooks",
+        TeamPageTab.ManagerPlaybook => "manager-playbook",
+        TeamPageTab.AgentPlaybook => "agent-playbook",
         TeamPageTab.Details => "details",
         _ => "members",
     };
