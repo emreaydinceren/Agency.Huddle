@@ -1,6 +1,6 @@
 # Agency.Huddle feature list
 
-What Huddle does **today**, on `main` at `a35d0559` (PR #672, 2026-11-18). It is built
+What Huddle does **today**, on `main` at `0e4f72e1` (PR #684, 2026-11-18). It is built
 from the feature log (`private/feature-logs/Prs-Feature.md`, not in the public mirror), but each entry describes the
 feature as it works now, after every later PR that changed it, not as it first shipped.
 
@@ -388,7 +388,7 @@ cannot be moved. PRs: #96, then #335, #520, #634.
 
 **7.4 Team and Project pages.** Tabs: **Members** (role cards and roster), **Library** (the
 Library scoped to the Team), **Tasks** (List or Board, one swimlane per Project),
-**Process** (for a Team with a `_team.md`) and **Details** (type, name, purpose, Library
+**Process** (for a Team with a `_team.md`), **Playbooks** and **Details** (type, name, purpose, Library
 folder, rename, archive). The header holds **Show shortcut** / **Hide shortcut**, **Edit
 avatar...**, **Duplicate** and **Archive**. A Project page has Library and Tasks only, with
 **Edit avatar...** and **Archive** in its header. PRs: #96, then #100, #101, #151, #185, #335, #516.
@@ -502,7 +502,8 @@ a line naming who can confirm, and a refused close or confirm says what is neede
 **8.7 Retrospectives.** A Retro agent reads the Team's own records (`read_records`) and proposes
 up to three exact-text changes to `AGENTS.md`, `_team.md` or a member file
 (`propose_retro_changes`). The Human accepts or declines each from a card in the Room. Accepted
-changes go into `Retro register.md`, and the next retro verifies them. PRs: #136, then #335.
+changes go into `Retro register.md`, and the next retro verifies them. A proposal may also target a Team's
+customized Playbook (8.10), never the Huddle rules. PRs: #136, then #335, #678.
 
 **8.8 Sprint proposals.** A manager can `propose_sprint`; **Approve** creates the Sprint and
 adds the Tasks. When every Task it names runs inside the Team, Huddle approves it at once
@@ -516,6 +517,21 @@ drives the Edge installed on Windows or Chrome elsewhere. It opens the app on `l
 (the Skill says so; Huddle does not enforce it), acts as a person would and checks what changed
 after each step, and a step that does nothing counts as a failure. The Evidence names the
 command, its exit code and the browser, and lists the steps driven. PRs: #553.
+
+**8.10 Team Playbooks.** Every Team has two Playbooks, a **Member Playbook** every member reads and a **Manager
+Playbook** the manager reads as well, shown on the Team page's **Playbooks** tab (Manager first). Each is sent in full at the
+start of every session, after the `AGENTS.md` levels, and an edit reaches a running Agent at its next Turn. Each has a
+read-only **Huddle rules** part, the mechanics the code enforces, which is always sent. The default of each is a Prompt
+(`systemPrompt.managerPlaybook` and `systemPrompt.memberPlaybook`, edited under **Settings > Prompts > Playbooks**).
+**Customize for this Team** writes `Teams/<Team>/_manager-playbook.md` or `_member-playbook.md` from the default and
+opens it in the Library; that file then replaces the default whole for the Team. An uncustomized Playbook is not a
+file, so an improved default reaches every such Team. When the default changes after a customization, the tab shows
+**Default updated** with **Show changes**, **Keep my version** and **Reset to default...**. A body over the limit
+shows a warning and Agents read only the first part. An Agent cannot edit a Playbook; a retro may propose a change.
+The built-in process files no longer repeat the generic text the Huddle rules now carry. A Project's **mission** is a
+Task the Human assigns the manager; the manager keeps it in the Project's Team Memory as `mission.md`, plans child
+Tasks and works through them, and only the Human creates a Project. Team-building files the goal it collected as a
+Task for the new Team's manager. PRs: #678, #681.
 
 ## 9. Tasks
 
@@ -811,7 +827,8 @@ colour, and the Top Bar button switches between them. PRs: #9 (dark mode), then 
 
 **17.2 Prompts.** Every piece of text sent to a model is configuration: defaults live in code,
 each override is one file in the **Prompts** root (deleting it restores the default), and
-**Settings > Prompts** edits them, picked up without a restart. PRs: #6, then #69, #335.
+**Settings > Prompts** edits them, picked up without a restart; the default Manager and Member Playbooks (8.10) are
+listed in a **Playbooks** group. PRs: #6, then #69, #335, #678.
 
 **17.3 Spending.** **Settings > Spending** is a read-only view of what the Adapters reported: a line
 per Team, the Chief of Staff, each Agent in no Team and the Helpers, then a **Total** that counts

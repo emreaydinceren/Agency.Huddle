@@ -69,6 +69,9 @@ Light Themes and Dark Themes separately. Older saved Theme choices map to Lumen.
 `Prompts/systemPrompt.chatRules.md`. Helper prompts are listed under **Helpers**, and an edit applies from the Helper's
 next call.
 
+The **Playbooks** group holds the default Manager and Member Playbooks. A Team can customize its own copy on its
+**Playbooks** tab, see [Running a Team](running-a-team.md#give-a-team-its-playbooks).
+
 To see which prompts reach an Agent, use **What this Agent reads** on
 [its card](agents.md#look-after-a-running-agent).
 

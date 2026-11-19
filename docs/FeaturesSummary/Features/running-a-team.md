@@ -19,6 +19,23 @@ A Team's process has two parts:
 **Build a team** writes them from the team type, or you can start from the manager's card. The
 **Process** tab shows the rules, the Team's Needs You level and a switch per gate that's on.
 
+## Give a Team its Playbooks
+
+A Playbook tells a Team's Agents how to work, in any kind of work: how they ask you, when they write to everyone, how
+a manager triages and runs a mission. Your process then holds only what is special to that kind of work.
+
+A Team has two Playbooks. Every member reads the **Member Playbook**, and the manager also reads the **Manager
+Playbook**. Both are read in full at the start of every session, and an edit reaches a running Agent at its next
+Turn. The Team page's **Playbooks** tab shows both.
+
+- **Use the default.** Huddle ships one of each. Change it for every Team on the default in **Settings > Prompts**.
+- **Customize for one Team.** **Customize for this Team** copies the default into a file for that Team and opens it
+  in the Library editor. It replaces the default whole for that Team.
+- **Follow the default.** If the default changes after you customized, the tab says so and offers **Show changes**,
+  **Keep my version** and **Reset to default...**.
+- **Give a Project a goal.** Put a Task in the Project, assign it to the manager and say it is the goal. The manager
+  keeps it as a mission, plans child Tasks and works through them.
+
 ## Choose how much waits for you
 
 The **Needs You level** says how much of a Team's work waits for your Accept. **Ask me** is the default: every merge
@@ -57,7 +74,7 @@ it in a headless browser (see [Checking a web page](#checking-a-web-page)).
 
 ## Improve with retrospectives
 
-A Retro agent reads the Team's own records and proposes up to three exact-text changes to its rules. You
+A Retro agent reads the Team's own records and proposes up to three exact-text changes to its rules, or to a customized Playbook. You
 accept or decline each from a card in the Room. Accepted changes go into `Retro register.md`, and the next
 retro checks whether they worked.
 
@@ -73,6 +90,18 @@ A manager can propose a Sprint, and **Approve** creates it and adds the Tasks. S
 how Sprints work.
 
 ## In more detail
+
+### Playbooks in depth
+
+A locked **Huddle rules** panel sits above each Playbook. It holds the mechanics Huddle enforces, such as what counts
+as Evidence and how a review works, and it is always sent and can't be edited. A Playbook is long text that every
+Agent reads every session, so keep a customized one short: the tab warns when it is over the limit, and Agents read
+only the first part. Agents can't edit a Playbook; they propose a change in a retro, or ask you.
+
+**The mission.** The manager writes the goal, what done looks like and where the work stands to `mission.md` in the
+Project's Team Memory, and reads it when it wakes, so the goal survives a restart. Change the mission by telling the
+manager, or edit `mission.md` yourself. The mission is met when its Task is Done, and archiving the Project stays
+yours. Only you start a Project; the manager suggests one when a request is too large for loose Tasks.
 
 ### The settings in `_team.md`
 
