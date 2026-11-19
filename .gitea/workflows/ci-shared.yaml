@@ -121,10 +121,15 @@ jobs:
       # reports success and the required check never strands a docs-only PR. `docs` and
       # `secret-scan` never skip: a docs page can leak a secret as easily as code.
       #
-      # code=false only when every changed path is under docs/ and none is a page a test reads.
-      # Anything unexpected (no diff base, an empty diff, a git error) runs the full job. When you
-      # add a test that reads a file under docs/, add that file to DOCS_READ_BY_TESTS.
-      - name: 🧭 Detect docs-only change
+      # code=false only when every changed path is under docs/ (and is not a page a test reads), or
+      # is a PowerShell script (*.ps1, *.psm1, *.psd1) outside src/ and tests/. Every project in
+      # Huddle.slnx lives under src/ or tests/, and no build file or test reads a script outside
+      # them, so run.ps1, installer/, tools/, perf-audit/ and agents/scripts/ change nothing this
+      # job checks. The exception is test-health.ps1: the smoke test below runs it. Anything
+      # unexpected (no diff base, an empty diff, a git error) runs the full job. When you add a test
+      # that reads a file under docs/, add that file to DOCS_READ_BY_TESTS; when a build or test
+      # starts running or reading a script outside src/ and tests/, add a case for it above `*.ps1`.
+      - name: 🧭 Detect docs- or script-only change
         id: changes
         run: |
           # Read by TeamOptionsDocTests, AgentIsolationMetaTests, PresenceAnchorGoldfishTests and
@@ -147,6 +152,8 @@ jobs:
             while IFS= read -r path; do
               case "$path" in
                 docs/*) ;;
+                src/*|tests/*|test-health.ps1) code=true; break ;;
+                *.ps1|*.psm1|*.psd1) ;;
                 *) code=true; break ;;
               esac
               for read_by_test in "${DOCS_READ_BY_TESTS[@]}"; do
@@ -160,7 +167,7 @@ jobs:
           echo "code=$code"
           echo "code=$code" >> "$GITHUB_OUTPUT"
           if [ "$code" = false ]; then
-            echo "::notice::Docs-only change: restore, build, test and smoke test are skipped."
+            echo "::notice::Docs- or script-only change: restore, build, test and smoke test are skipped."
           fi
 
       # global.json pins SDK 11.0.100 with rollForward=latestPatch, so only an 11.0.1xx SDK

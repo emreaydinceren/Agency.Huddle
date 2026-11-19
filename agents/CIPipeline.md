@@ -88,9 +88,18 @@ touching one runs the full job. The list is `DOCS_READ_BY_TESTS` in that step. A
 that reads a file under `docs/` adds the file there. Anything the step cannot read cleanly (no
 diff base, an empty diff, a git error) also runs the full job.
 
+PowerShell scripts outside `src/` and `tests/` skip the same steps: a change made only of `*.ps1`,
+`*.psm1` and `*.psd1` files there (`run.ps1`, `installer/`, `tools/`, `perf-audit/`,
+`agents/scripts/`), or of those plus `docs/` pages, is treated like a docs-only change. That
+holds because every project in `Huddle.slnx` lives under `src/` or `tests/`, and no build file or
+test reads a script outside them. `test-health.ps1` is the exception, since the smoke test runs
+it. A build or test that starts running or reading another such script gets its own case in that
+step, above the `*.ps1` line. The installer's own checks (`installer-ci.yaml`, `release.yaml`)
+run on GitHub and are not affected.
+
 ### What validate does
 
-Checkout, detect a docs-only change, install Node.js, restore, vulnerable-dependency scan, build, test.
+Checkout, detect a docs- or script-only change, install Node.js, restore, vulnerable-dependency scan, build, test.
 
 Two of those steps exist for reasons specific to this repo:
 
