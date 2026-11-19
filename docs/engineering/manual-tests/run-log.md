@@ -4274,6 +4274,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-01--the-task
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane)* | `feat/task-order` on `60eb1f86` |  | Copy of the `software-co` seed; a new development Team DevLane built in the UI. To Do Tasks: DEVL-0001 rank 40, DEVL-0002 rank 1 blocked by 0001, DEVL-0003 rank 2, DEVL-0004 rank 3. Panel on DEVL-0003: DEVL-0001 "Next · blocks DEVL-0002" (Primary dot), DEVL-0002 "blocked by DEVL-0001" (Warning), DEVL-0003 in bold, DEVL-0004. The blocker, not DEVL-0003, is Next: it is the first startable entry. Read by DOM text and computed styles. After Ana started DEVL-0001, the Team Room's panel showed it under Started without a reload. |
 
 ### TASKORDER-02 — A Developer calls `next_task` and starts what it names
 
@@ -4281,6 +4282,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-02--a-develo
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | Developer Ana (Sonnet, confirmed in `persona_models` and the session jsonl). "Call next_task, then start the Task it names": activity showed "Finding the next Task" and `next_task` named DEVL-0001. Ana first held back because the Task had no acceptance line (her process, not the tool); given one, she moved DEVL-0001 To Do → In Progress herself (Timeline 22:38:56Z, actor Ana). |
 
 ### TASKORDER-03 — A refused start names the next Task
 
@@ -4288,6 +4290,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-03--a-refuse
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | Ana asked to start DEVL-0002. The tool result in her session: the unchanged gate text naming DEVL-0001 (In Progress), then "Your next startable Task is DEVL-0003 "C the startable one"." DEVL-0002 stayed To Do. |
 
 ### TASKORDER-04 — A new household Team refuses a blocked start
 
@@ -4295,6 +4298,7 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-04--a-new-ho
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | New household Team HouseLane: `_team.md` has `gates: ['blockers-done-before-start']` and the Process tab lists it. Manager Nora asked to start HOUS-0002 (blocked by HOUS-0001): refused with the gate text and "Your next startable Task is HOUS-0001 "P first chore"."; HOUS-0002 stayed To Do. Lane spend 0.50 USD, of which 0.23 was the Chief of Staff's Greeting Turn on Opus. |
 
 ## Adapters: choosing one per Persona, and running two at once
 
