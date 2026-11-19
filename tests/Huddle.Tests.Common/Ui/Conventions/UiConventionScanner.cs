@@ -14,7 +14,7 @@ internal static partial class UiConventionScanner
 {
     /// <summary>Every rule id, in order.</summary>
     public static readonly IReadOnlyList<string> Rules =
-        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26"];
+        ["CV1", "CV2", "CV3", "CV4", "CV5", "CV6", "CV7", "CV8", "CV9", "CV10", "CV11", "CV13", "CV14", "CV15", "CV16", "CV17", "CV18", "CV19", "CV20", "CV21", "CV22", "CV23", "CV24", "CV25", "CV26", "CV27"];
 
     private static readonly HashSet<string> SizedControls = new(StringComparer.Ordinal)
     {
@@ -32,7 +32,7 @@ internal static partial class UiConventionScanner
     };
 
     /// <summary>Runs the rule named by <paramref name="rule"/> over one file.</summary>
-    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV26</c>.</param>
+    /// <param name="rule">The rule id, <c>CV1</c> to <c>CV11</c> and <c>CV13</c> to <c>CV27</c>.</param>
     /// <param name="path">Repository-relative path, forward slashes.</param>
     /// <param name="text">The file text.</param>
     public static RuleCount Scan(string rule, string path, string text) => rule switch
@@ -62,6 +62,7 @@ internal static partial class UiConventionScanner
         "CV24" => Cv24(path, text),
         "CV25" => Cv25(path, text),
         "CV26" => Cv26(path, text),
+        "CV27" => Cv27(path, text),
         _ => throw new ArgumentOutOfRangeException(nameof(rule), rule, "Unknown convention rule."),
     };
 
@@ -251,6 +252,34 @@ internal static partial class UiConventionScanner
     /// <param name="text">The file text.</param>
     public static RuleCount Cv26(string path, string text) =>
         new("CV26", path, CountTags(text, ["MudHighlighter"], static _ => true));
+
+    /// <summary>
+    /// CV27: a hand-built <c>&lt;details class="system-row"&gt;</c> in a component other than <c>SystemRow.razor</c>. The slim, muted,
+    /// expandable row of the transcript is the one <c>SystemRow</c>, which owns the icon, the summary, the time, the chevron and the
+    /// optional detail, and keeps <c>data-message-id</c> and <c>tabindex="-1"</c> for a jump to the Message (ComponentCatalog SystemRow).
+    /// A <c>&lt;details&gt;</c> with another class, and an element that only has a <c>system-row-</c> class, are not counted.
+    /// Zero-tolerance: all four rows had moved when the rule was added.
+    /// </summary>
+    /// <param name="path">Repository-relative path.</param>
+    /// <param name="text">The file text.</param>
+    public static RuleCount Cv27(string path, string text)
+    {
+        if (path.EndsWith("/SystemRow.razor", StringComparison.Ordinal))
+        {
+            return new("CV27", path, 0);
+        }
+
+        int count = 0;
+        foreach (Match tag in DetailsTag().Matches(StripRazorComments(text)))
+        {
+            if (SystemRowClass().IsMatch(tag.Groups["attrs"].Value))
+            {
+                count++;
+            }
+        }
+
+        return new("CV27", path, count);
+    }
     /// <summary>CV2: an input without <c>Variant.Outlined</c> or without <c>Margin.Dense</c>.</summary>
     /// <param name="path">Repository-relative path.</param>
     /// <param name="text">The file text.</param>
@@ -536,6 +565,12 @@ internal static partial class UiConventionScanner
 
     [GeneratedRegex(@"<dt[\s>/]", RegexOptions.CultureInvariant)]
     private static partial Regex RawTermTag();
+
+    [GeneratedRegex("""<details(?<attrs>(?:"[^"]*"|'[^']*'|[^>"'])*)>""", RegexOptions.CultureInvariant)]
+    private static partial Regex DetailsTag();
+
+    [GeneratedRegex("""(?<![\w-])class\s*=\s*["'][^"']*(?<![\w-])system-row(?![\w-])""", RegexOptions.CultureInvariant)]
+    private static partial Regex SystemRowClass();
 
     [GeneratedRegex(@"@\*.*?\*@|<!--.*?-->", RegexOptions.Singleline | RegexOptions.CultureInvariant)]
     private static partial Regex RazorComments();

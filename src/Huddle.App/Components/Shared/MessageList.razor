@@ -36,14 +36,9 @@
                so it is a slim, muted system row. The agent-facing "Call get_task ..." line is dropped from view. *@
             @if (MessageDisplay.TryParseTaskWake(message.Text, out var wake))
             {
-                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
-                    <summary>
-                        <MudIcon Icon="@Icons.Material.Outlined.TaskAlt" Size="Size.Small" />
-                        <span class="system-row-text"><strong class="task-id">@wake.TaskId</strong> changed by @wake.Actor@(wake.Changes.Count > 0 ? " · " + wake.Changes[0] : string.Empty)</span>
-                        <span class="system-row-time">@time</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
-                    </summary>
-                    <div class="system-row-detail">
+                <SystemRow MessageId="@message.Id" Icon="@Icons.Material.Outlined.TaskAlt" Time="@time">
+                    <Summary><strong class="task-id">@wake.TaskId</strong> changed by @wake.Actor@(wake.Changes.Count > 0 ? " · " + wake.Changes[0] : string.Empty)</Summary>
+                    <Detail>
                         <div>@wake.Title</div>
                         <ul>
                             @foreach (var change in wake.Changes)
@@ -51,23 +46,18 @@
                                 <li>@change</li>
                             }
                         </ul>
-                    </div>
-                </details>
+                    </Detail>
+                </SystemRow>
                 continue;
             }
 
             @* The line Huddle posts after a restart (C4c, Turn Queue spec §5.11): a slim system row, the first sentence in the summary, the rest in the detail. *@
             @if (fromHuddle && MessageDisplay.TryParseRestartLine(message.Text, out var pickedUp, out var restartDetail))
             {
-                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
-                    <summary>
-                        <MudIcon Icon="@Icons.Material.Outlined.RestartAlt" Size="Size.Small" />
-                        <span class="system-row-text">@(pickedUp ? RestartLine.Prefix : RestartLine.NotPickedUpPrefix + ".")</span>
-                        <span class="system-row-time">@time</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
-                    </summary>
-                    <div class="system-row-detail">@restartDetail</div>
-                </details>
+                <SystemRow MessageId="@message.Id" Icon="@Icons.Material.Outlined.RestartAlt" Time="@time">
+                    <Summary>@(pickedUp ? RestartLine.Prefix : RestartLine.NotPickedUpPrefix + ".")</Summary>
+                    <Detail>@restartDetail</Detail>
+                </SystemRow>
                 continue;
             }
 
@@ -75,36 +65,28 @@
                The result row carries the stamp too but parses as neither, so it stays an ordinary Huddle row. The brief is plain text, never Markdown. *@
             @if (fromHuddle && message.Goldfish is not null && GoldfishLine.TryParseStartRow(message.Text, out var startSummary, out var startBrief))
             {
-                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
-                    <summary>
-                        <MudIcon Icon="@MaterialSymbols.Fish" Size="Size.Small" />
-                        <span class="system-row-text">@startSummary</span>
-                        <span class="system-row-time">@time</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
-                    </summary>
-                    <div class="system-row-detail">
+                <SystemRow MessageId="@message.Id" Icon="@MaterialSymbols.Fish" Time="@time">
+                    <Summary>@startSummary</Summary>
+                    <Detail>
                         <div>@GoldfishLine.BriefLabel</div>
                         <div class="goldfish-brief">@startBrief</div>
-                    </div>
-                </details>
+                    </Detail>
+                </SystemRow>
                 continue;
             }
 
             @if (fromHuddle && message.Goldfish is not null && GoldfishLine.TryParseReturnRow(message.Text, out var returnSummary))
             {
                 Possession? possession = this.Live.Get(message.Goldfish);
-                <details class="system-row" data-message-id="@message.Id" tabindex="-1">
-                    <summary>
-                        <MudIcon Icon="@MaterialSymbols.Fish" Size="Size.Small" />
-                        <span class="system-row-text">@returnSummary</span>
-                        <span class="system-row-time">@time</span>
-                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
-                    </summary>
-                    @if (possession is not null)
-                    {
-                        <div class="system-row-detail">@GoldfishLine.ReturnDetail(possession.StartedAt, message.Timestamp, possession.Turns, possession.Spend, possession.Currency)</div>
-                    }
-                </details>
+                @* A possession that has been pruned leaves the summary only: no Detail at all, so the row draws no detail section. *@
+                RenderFragment? returnDetail = null;
+                if (possession is not null)
+                {
+                    returnDetail = @<text>@GoldfishLine.ReturnDetail(possession.StartedAt, message.Timestamp, possession.Turns, possession.Spend, possession.Currency)</text>;
+                }
+                <SystemRow MessageId="@message.Id" Icon="@MaterialSymbols.Fish" Time="@time" Detail="@returnDetail">
+                    <Summary>@returnSummary</Summary>
+                </SystemRow>
                 continue;
             }
 

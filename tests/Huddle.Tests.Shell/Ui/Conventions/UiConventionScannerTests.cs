@@ -723,4 +723,34 @@ public sealed class UiConventionScannerTests
 
         Assert.Equal(1, UiConventionScanner.Cv26("src/Huddle.App/Components/Shared/SearchHighlight.razor", source).Count);
     }
+
+    /// <summary>CV27: a <c>details</c> with the class <c>system-row</c> is counted, in either quote style and among other classes, but not another <c>details</c>, a <c>system-row-</c> class or a comment.</summary>
+    [Fact]
+    public void Cv27_HandBuiltSystemRow_IsCounted()
+    {
+        const string source = """
+            <details class="system-row" data-message-id="@message.Id" tabindex="-1"><summary>a</summary></details>
+            <details data-message-id="x" class='tall system-row muted'><summary>b</summary></details>
+            <details class="agent-card"><summary>d</summary></details>
+            <details class="system-row-detail"><summary>e</summary></details>
+            <div class="system-row"></div>
+            @* <details class="system-row"> was replaced by SystemRow. *@
+            <SystemRow MessageId="@message.Id" Icon="@icon" Time="@time"><Summary>f</Summary></SystemRow>
+            """;
+
+        RuleCount result = UiConventionScanner.Cv27(RazorPath, source);
+
+        Assert.Equal("CV27", result.Rule);
+        Assert.Equal(2, result.Count);
+    }
+
+    /// <summary>CV27: the one <c>SystemRow</c> component is the only file allowed to draw the row.</summary>
+    [Fact]
+    public void Cv27_SystemRowRazor_IsExempt()
+    {
+        const string source = """<details class="system-row" data-message-id="@this.MessageId" tabindex="-1"><summary>x</summary></details>""";
+
+        Assert.Equal(0, UiConventionScanner.Cv27("src/Huddle.App/Components/Shared/SystemRow.razor", source).Count);
+        Assert.Equal(1, UiConventionScanner.Cv27("src/Huddle.App/Components/Shared/MessageList.razor", source).Count);
+    }
 }

@@ -713,6 +713,26 @@ The transcript is `Components/Shared/MessageList.razor` (1 site), drawn in the
 with `AgentCard` (5 sites in 5 files). They need a live Agent turn to appear, so they are not
 shown here (see [Not captured](#not-captured)).
 
+### System row
+
+| Component | Path | Sites | Key parameters |
+| --- | --- | --- | --- |
+| `SystemRow` | `Components/Shared/SystemRow.razor` | 4 (1 file, `MessageList`: the Task wake-up, the restart line, the goldfish start row and the goldfish return row) | `MessageId`, `Icon`, `Summary`, `Time`, `Detail` |
+
+The slim, muted, expandable line in the transcript for what the Human did not type: a native
+`<details class="system-row">` whose summary is an icon, the summary text (one line, ellipsised), the
+time at the right and a chevron that turns when it opens, with an optional detail under it
+(`system-row-detail`). It carries `data-message-id` and `tabindex="-1"`, so `scroll.js` can focus the
+row when the Human jumps to its Message; Enter and Space on the summary are the browser's own. Every
+row passes an icon (`TaskAlt`, `RestartAlt` or `MaterialSymbols.Fish`), and `Summary` and `Detail` are
+`RenderFragment`s, because the wake-up draws a bold Task id and a list of changes. With no `Detail` the
+row draws no detail section at all: a goldfish return row whose possession was pruned is its summary
+only (`Detail` is a variable there, null in that case, since a Razor child element cannot be
+conditional). The rows' look is `.system-row` in `room.css`. Convention rule CV27 counts a hand-built
+`<details class="system-row"` anywhere but `SystemRow.razor` and is zero. Built in the follow-up to the
+rollout (2026-11-18); the DOM it draws is the markup `MessageList` wrote by hand, so nothing on screen
+changed.
+
 ## Tasks
 
 ### Board and card
@@ -1143,7 +1163,7 @@ other sites move over area by area. Three rules held for every wrapper:
 The order was: the segmented control (the pilot), `ActionButton` with `DialogFooter`, `Notice`,
 `TextField` and `SelectField`, then the composites (the picker, `SettingSwitch`, `PropertyList`,
 `RowActionsMenu` with `ActionIconButton`), then `ChipRadioGroup`, `BusyLabel` and the browser
-scripts. Each one added a convention rule (CV14 to CV25; CV26 was added later, outside the rollout) that holds every file to a baseline which
+scripts. Each one added a convention rule (CV14 to CV25; CV26 and CV27 came after the rollout) that holds every file to a baseline which
 may only shrink. Visual changes were proved with `agents/scripts/Css-Snapshot.ps1`, one comparison
 per wave; see [Proving a visual change](ComponentRollout.md#proving-a-visual-change).
 

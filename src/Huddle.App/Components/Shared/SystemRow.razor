@@ -1,0 +1,42 @@
+@*
+    The one slim, muted, expandable system row of the transcript (ComponentCatalog SystemRow): an icon, the summary, the time and a
+    chevron on one line, and an optional detail under it. It is a native <details>, so Enter and Space on the summary toggle it with no
+    script, and it carries data-message-id and tabindex="-1" so scroll.js can focus a Message the Human jumped to. A Task wake-up, the
+    line after a restart and the two goldfish rows are this component. A hand-built <details class="system-row"> anywhere else fails
+    the convention scan (CV27).
+*@
+
+<details class="system-row" data-message-id="@this.MessageId" tabindex="-1">
+    <summary>
+        <MudIcon Icon="@this.Icon" Size="Size.Small" />
+        <span class="system-row-text">@this.Summary</span>
+        <span class="system-row-time">@this.Time</span>
+        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Size="Size.Small" Class="system-row-chevron" />
+    </summary>
+    @if (this.Detail is not null)
+    {
+        <div class="system-row-detail">@this.Detail</div>
+    }
+</details>
+
+@code {
+    /// <summary>The Message's id, written as <c>data-message-id</c> so a jump to the Message finds the row.</summary>
+    [Parameter, EditorRequired]
+    public string MessageId { get; set; } = string.Empty;
+
+    /// <summary>The icon before the summary: the row's kind (a Task, a restart, goldfish mode).</summary>
+    [Parameter, EditorRequired]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>The first line, drawn on one line and ellipsised when it is too long.</summary>
+    [Parameter, EditorRequired]
+    public RenderFragment Summary { get; set; } = static _ => { };
+
+    /// <summary>The Message's time as shown, at the right of the summary.</summary>
+    [Parameter, EditorRequired]
+    public string Time { get; set; } = string.Empty;
+
+    /// <summary>What shows when the row is opened; when it is null the row has no detail section at all.</summary>
+    [Parameter]
+    public RenderFragment? Detail { get; set; }
+}
