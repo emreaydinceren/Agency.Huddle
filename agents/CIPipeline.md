@@ -73,13 +73,24 @@ differ only in trigger and `concurrency`. There is no second copy to keep in ste
 
 The callers have **no `paths-ignore`**, so every PR and every push to `main` runs all three jobs,
 docs-only changes included. A docs-only PR therefore never strands a required check, and the `docs`
-job runs `agents/scripts/Check-DocIndex.ps1` on every change. The price is that a docs-only PR pays
-for a full `validate` run (about 3 minutes). Required checks on `main` are the three
+job runs `agents/scripts/Check-DocIndex.ps1` on every change. Required checks on `main` are the three
 `CI (Shared) / <job> (pull_request)` contexts.
+
+A docs-only change does not pay for a full `validate` run either. Its first step after checkout,
+**Detect docs-only change**, diffs the change (a PR against `origin/main...HEAD`, a push against
+`github.event.before`). When every changed path is under `docs/`, it skips restore, the
+vulnerable-dependency scan, build, test and the smoke test. The job still runs and reports
+success, which is why the skip lives in its steps and not in a `paths-ignore` or a job-level
+`if:`: either of those leaves a required check that never reports green. Four pages are
+exceptions because tests read them (`docs/Huddle.EngineeringGuide.md`,
+`docs/engineering/rules.md`, `docs/engineering/design-system.md`, `docs/Huddle.UserGuide.md`), so
+touching one runs the full job. The list is `DOCS_READ_BY_TESTS` in that step. A test you add
+that reads a file under `docs/` adds the file there. Anything the step cannot read cleanly (no
+diff base, an empty diff, a git error) also runs the full job.
 
 ### What validate does
 
-Checkout, install Node.js, restore, vulnerable-dependency scan, build, test.
+Checkout, detect a docs-only change, install Node.js, restore, vulnerable-dependency scan, build, test.
 
 Two of those steps exist for reasons specific to this repo:
 
