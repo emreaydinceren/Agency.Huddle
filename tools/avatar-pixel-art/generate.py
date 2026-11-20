@@ -25,7 +25,7 @@ from PIL import Image
 GRID = 32                 # the art is drawn on a 32 x 32 grid
 PNG_SIDE = 256            # BundledAvatarLibraryTests pins 256 x 256
 SEED = 20261111           # changing it reshuffles hair, glasses and facial hair
-GENERATED = "2026-11-13"  # written into master.json; bump it when the art changes
+GENERATED = "2026-11-19"  # written into master.json; bump it when the art changes
 OUTLINE = "#2a1f2d"
 EYE = "#1d1626"
 LENS = "#eef5fb"
@@ -58,8 +58,10 @@ OUTFITS = {  # base, shade, light accent
 }
 FRAMES = {"red": "#c0392b", "blue": "#2f6fd0", "silver": "#a9b4c2"}  # no black: it fused with dark hair and the outline
 # A frame must stand off the skin in brightness, not only in hue: silver on tan and red on darker skin were
-# near-equal luma and read as a smudge or a mask.
-FRAME_OVERRIDES = {("silver", "fair"): "#8f9bab", ("silver", "olive"): "#d0d7e0", ("red", "darker"): "#e0524a"}
+# near-equal luma and read as a smudge or a mask. Silver also stays a mid or dark grey on every skin: a light
+# grey beside the pupil reads as the white of the eye, so tan takes gunmetal and darker takes steel.
+FRAME_OVERRIDES = {("silver", "fair"): "#8f9bab", ("silver", "olive"): "#6f7b8c", ("silver", "darker"): "#8f9bab",
+                   ("red", "darker"): "#e0524a"}
 
 
 def frame_colour(frame, skin_name):
@@ -80,6 +82,9 @@ GLASSES_RATIOS = [("none", 0.4), ("red", 0.2), ("blue", 0.2), ("silver", 0.2)]
 FACIAL_HAIR_RATIOS = [("none", 0.55), ("mustache", 0.15), ("beard", 0.3)]  # men only
 
 HEAD = {9: (12, 19), **{y: (11, 20) for y in range(10, 18)}, 18: (12, 19), 19: (13, 18), 20: (14, 17)}
+# A square jaw: full width one row lower and a chin two pixels wider than the neck, so the outline steps in
+# under it. Without the step a mustache, which moves the lip to row 19, leaves a chin as narrow as the neck.
+MALE_HEAD = {**HEAD, 19: (12, 19), 20: (13, 18)}
 TORSO = {23: (9, 22), 24: (7, 24), **{y: (5, 26) for y in range(25, 32)}}
 
 
@@ -189,11 +194,11 @@ def body(c, skin, outfit, gender):
 
 def head(c, skin, gender):
     _, s, sh, mouth, _ = skin
-    c.shape(HEAD, s)
+    c.shape(MALE_HEAD if gender == "m" else HEAD, s)
     c.dots([(10, 13), (10, 14), (10, 15), (21, 13), (21, 14), (21, 15)], s)
     c.dots([(21, 14)], sh)
     c.rect(20, 10, 1, 8, sh)
-    c.dots([(19, 18), (18, 19), (17, 20)], sh)
+    c.dots([(19, 18), (19, 19), (18, 20)] if gender == "m" else [(19, 18), (18, 19), (17, 20)], sh)  # jaw shade
     c.rect(13, 14, 1, 2, EYE)
     c.rect(18, 14, 1, 2, EYE)
     c.dots([(16, 16), (16, 17)], sh)
@@ -265,9 +270,11 @@ def glasses(c, skin, frame):
     """Round frames over the finished face and hair: a 3 x 2 lens with the eye in its middle column.
 
     Drawn last so the outer rims sit on top of the side hair and the hairline pass never sees them.
-    The lens is the skin lightened towards LENS, so it reads as glass and not as the white of an eye.
+    The lens is the skin lightened towards LENS by a fixed step in brightness, so it reads as glass and not
+    as the white of an eye. A fixed share of the way to LENS lit darker skin far more than fair skin: on
+    darker skin the lenses showed as pale patches round the eyes.
     """
-    lens = mix(skin[1], LENS, 0.55)
+    lens = mix(skin[1], LENS, min(0.55, 22 / (luma(LENS) - luma(skin[1]))))
     for x0 in (11, 16):
         c.rect(x0 + 1, 14, 3, 2, lens)
         c.rect(x0 + 2, 14, 1, 2, EYE)
