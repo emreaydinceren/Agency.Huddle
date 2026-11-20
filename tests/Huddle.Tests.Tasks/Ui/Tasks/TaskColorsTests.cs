@@ -56,6 +56,21 @@ public sealed class TaskColorsTests
         Assert.Equal(expected, actual);
     }
 
+    /// <summary>Every state draws the ring the List's status chip and the column header draw, not a Material glyph (#715): Backlog's is dashed, In Progress's half filled, the closed states' solid error dot.</summary>
+    [Fact]
+    public void Icon_EveryState_IsTheStatusRing()
+    {
+        foreach (TaskState state in TaskStates.All)
+        {
+            Assert.StartsWith("<circle", TaskColors.Icon(state), StringComparison.Ordinal);
+        }
+
+        Assert.Contains("stroke-dasharray", TaskColors.Icon(TaskState.Backlog), StringComparison.Ordinal);
+        Assert.Contains("<path", TaskColors.Icon(TaskState.InProgress), StringComparison.Ordinal);
+        Assert.Equal(TaskColors.Icon(TaskState.Cancelled), TaskColors.Icon(TaskState.Rejected));
+        Assert.Equal(TaskColors.Icon(TaskState.Cancelled), TaskColors.Icon(TaskState.Duplicate));
+    }
+
     /// <summary>A priority is always shown with an icon, so every value must carry a non-empty one.</summary>
     [Theory]
     [InlineData(TaskPriority.Low)]
