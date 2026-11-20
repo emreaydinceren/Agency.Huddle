@@ -88,6 +88,99 @@ jobs:
             --no-banner \
             --verbose
 
+  # Brings the installer checks of .github/workflows/installer-ci.yaml into this gate, so a PR that
+  # breaks them fails here rather than after the GitHub mirror sync. Like `validate`, it always runs
+  # and reports (the callers have no `paths` filter, and a required check must never strand) and
+  # skips its check STEPS when the change touches nothing they read. Pins live in
+  # .gitea/ci-image/Dockerfile.
+  #
+  # Not here, still covered by GitHub's Installer CI: the macOS sh run of the shell suites (this
+  # runner is Linux only), and the Pester suites, which are written for Windows' install.ps1
+  # (PATH, registry and Windows paths) and fail on Linux even with a real git checkout.
+  installer:
+    runs-on: dotnet-10-local
+    timeout-minutes: 15
+    container:
+      # Same image as `secret-scan`; see the note there.
+      image: huddle-ci:11.0.100
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: 📥 Checkout
+        env:
+          GIT_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
+
+      # run=true when any changed path is one the checks read; the same list as the `paths` of
+      # installer-ci.yaml, plus the image and this file (a pin bump or a step change must run them).
+      # No diff base, an empty diff or a git error runs the checks.
+      - name: 🧭 Detect installer change
+        id: changes
+        run: |
+          run=true
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            # Pull request: three dots, so only what the PR changed and not what landed on main since.
+            range="origin/$GITHUB_BASE_REF...$GITHUB_SHA"
+          else
+            range="${{ github.event.before }}..$GITHUB_SHA"
+          fi
+          if changed="$(git diff --name-only "$range" 2>/dev/null)" && [ -n "$changed" ]; then
+            run=false
+            while IFS= read -r path; do
+              case "$path" in
+                installer/*|agents/scripts/Check-Eol.ps1|.gitattributes|.gitea/ci-image/*|.gitea/workflows/ci-shared.yaml) run=true; break ;;
+              esac
+            done <<< "$changed"
+          else
+            echo "No usable diff for '$range'; running the installer checks."
+          fi
+          echo "Changed files:"; echo "${changed:-<none>}"
+          echo "run=$run"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          if [ "$run" = false ]; then
+            echo "::notice::No installer change: the installer checks are skipped."
+          fi
+
+      # -x follows the `# shellcheck source=` directives in the test files. The dialect is dash
+      # (Ubuntu's /bin/sh): the installers use `local`, which `-s sh` reports as SC3043.
+      - name: 🐚 ShellCheck
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          shellcheck --version
+          shellcheck -x -s dash installer/*.sh installer/tests/*.sh
+
+      # Any finding at Warning or Error fails the step. The settings file excludes
+      # PSAvoidUsingWriteHost (the installer prints its step lines that way on purpose).
+      - name: 🔎 PSScriptAnalyzer
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          pwsh -NoProfile -NonInteractive -Command '
+            $findings = @(Invoke-ScriptAnalyzer installer -Recurse -Severity Warning,Error -Settings installer/PSScriptAnalyzerSettings.psd1)
+            if ($findings.Count -gt 0) {
+              $findings | Format-Table -AutoSize -Wrap RuleName, Severity, ScriptName, Line, Message | Out-String -Width 200
+              throw "PSScriptAnalyzer reported $($findings.Count) finding(s)."
+            }
+            "PSScriptAnalyzer: no findings."'
+
+      # Ubuntu's /bin/sh is dash, so the plain `sh` run is the same shell as the dash one; both
+      # are kept to match GitHub's matrix and survive a change of base image.
+      - name: 🧪 Shell suites (dash)
+        if: steps.changes.outputs.run == 'true'
+        env:
+          T_SHELL: dash
+        run: sh installer/tests/run-all.sh
+
+      - name: 🧪 Shell suites (sh)
+        if: steps.changes.outputs.run == 'true'
+        run: sh installer/tests/run-all.sh
+
   validate:
     runs-on: dotnet-10-local
     timeout-minutes: 30
