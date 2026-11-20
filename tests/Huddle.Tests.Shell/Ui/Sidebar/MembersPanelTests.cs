@@ -189,9 +189,9 @@ public sealed class MembersPanelTests
         Assert.Equal("62", cut.Find(".members-context-bar").GetAttribute("aria-valuenow"));
     }
 
-    /// <summary>An Agent with no reading reads an em dash and has no bar; a Human row has neither element.</summary>
+    /// <summary>An Agent with no reading shows no trailing text and no bar (#719); a Human row has neither element.</summary>
     [Fact]
-    public async Task ContextMeter_NoReading_ShowsDashAndNoBar_HumanHasNeither()
+    public async Task ContextMeter_NoReading_ShowsNothingAndNoBar_HumanHasNeither()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using ProfileFixture fixture = new();
@@ -201,11 +201,9 @@ public sealed class MembersPanelTests
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
 
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(Row).Count));
-        Assert.Equal("—", cut.Find(".members-context").TextContent.Trim());
-        Assert.Equal("No context usage reported yet", cut.Find(".members-context").GetAttribute("title"));
+        Assert.Empty(cut.FindAll(".members-context"));
         Assert.Empty(cut.FindAll(".members-context-bar"));
-        Assert.Single(cut.FindAll(".members-context"));
-        Assert.Empty(cut.FindAll(Row)[1].QuerySelectorAll(".members-context, .members-context-bar"));
+        Assert.DoesNotContain("—", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>A Human's row never shows a meter, even if a reading were somehow reported under the Human's id.</summary>
@@ -252,7 +250,8 @@ public sealed class MembersPanelTests
         User agent = await AgentAsync(fixture, "Ada", ct);
         await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
-        cut.WaitForAssertion(() => Assert.Equal("—", cut.Find(".members-context").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(Row).Count));
+        Assert.Empty(cut.FindAll(".members-context"));
 
         fixture.ContextFill.Report(agent.Id, room.Id, 100_000, 200_000);
 
@@ -306,7 +305,7 @@ public sealed class MembersPanelTests
         Room room = await NewRoomAsync(fixture, ct, "Ada");
         await using MudBunitContext ctx = NewContext(fixture, new RoomEvents(NullLogger<RoomEvents>.Instance));
         IRenderedComponent<CascadingValue<SidebarPanelContext>> cut = RenderPanel(ctx, new SidebarPanelContext(), new RoomSubject(room.Id));
-        cut.WaitForAssertion(() => Assert.Equal("—", cut.Find(".members-context").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(Row).Count));
         Assert.NotNull(ChangedHandlers(fixture.ContextFill));
         await ctx.DisposeComponentsOnDispatcherAsync();
 
