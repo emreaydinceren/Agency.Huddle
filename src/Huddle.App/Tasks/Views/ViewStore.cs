@@ -590,12 +590,16 @@ internal sealed partial class ViewStore : IDisposable
         return defaultFactory();
     }
 
+    /// <summary>The fields a built-in List View, and a View created from the sidebar, starts with. Only a View created from now on gets them: a saved View keeps the fields it was written with.</summary>
+    public static readonly IReadOnlyList<string> DefaultListFields = ["id", "title", "status", "priority", "assignee", "due_date"];
+
     /// <summary>The default, in-memory <c>All Tasks</c> View: every open and closed Task, no filter.</summary>
     private static TaskView DefaultAllTasks() => new()
     {
         Id = AllTasksId,
         Name = "All Tasks",
         Kind = ViewKind.List,
+        Fields = DefaultListFields,
         BuiltIn = true,
     };
 
@@ -606,6 +610,7 @@ internal sealed partial class ViewStore : IDisposable
         Name = "My Tasks",
         Kind = ViewKind.List,
         Filter = new TaskFilter { Assignees = ["@me"] },
+        Fields = DefaultListFields,
         BuiltIn = true,
     };
 

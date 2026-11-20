@@ -96,7 +96,7 @@ internal static class ViewActions
     {
         ArgumentNullException.ThrowIfNull(store);
 
-        TaskView created = new() { Id = Guid.NewGuid().ToString("N"), Name = NewViewName(store), Kind = ViewKind.List };
+        TaskView created = new() { Id = Guid.NewGuid().ToString("N"), Name = NewViewName(store), Kind = ViewKind.List, Fields = ViewStore.DefaultListFields };
         return store.Save(created).Saved ? created : null;
     }
 
