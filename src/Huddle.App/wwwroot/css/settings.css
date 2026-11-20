@@ -80,16 +80,6 @@
     color: var(--mud-palette-text-primary);
 }
 
-.prompts-field-placeholders {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    margin: 0;
-    font-size: var(--mud-typography-caption-size);
-    color: var(--mud-palette-text-secondary);
-}
-
 /* A {{token}} is a quiet tag chip in the mono face at 12px. */
 .prompts-field-placeholder {
     padding: 2px 8px;
@@ -104,6 +94,215 @@
 .prompts-field-actions {
     display: flex;
     justify-content: flex-end;
+    gap: 8px;
+}
+
+/* The Prompts master-detail: a 240px list that is the only scrolling region, and one editor beside it. */
+.prompts-master-detail {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 16px;
+    /* The row is as tall as the window leaves room for, so the editor and the list use all of it. */
+    height: calc(100vh - 360px);
+    min-height: 480px;
+    margin-bottom: 16px;
+}
+
+.prompts-list-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    min-height: 0;
+}
+
+.prompts-list {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid var(--ink-line);
+    border-radius: var(--hu-radius-control);
+}
+
+/* The tooltip's root wraps each row; it must not shrink the row to its content. */
+.prompts-list-tip.mud-tooltip-root {
+    display: block;
+    width: 100%;
+}
+
+.prompts-list-heading.mud-typography {
+    margin: 0;
+    padding: 12px 12px 4px;
+    /* Bigger and bolder than a row's label, and paler, so a heading reads as a label and not as a choice. */
+    font-size: var(--mud-typography-h6-size);
+    font-weight: 600;
+    color: var(--mud-palette-text-disabled);
+}
+
+.prompts-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 4px 12px;
+    font: inherit;
+    font-size: var(--mud-typography-body2-size);
+    text-align: left;
+    color: var(--mud-palette-text-primary);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.prompts-list-item:hover {
+    background: var(--ink-wash);
+}
+
+.prompts-list-item.is-selected {
+    background: var(--hu-tone-primary-tint);
+}
+
+/* A row is two lines: the label, then the first sentence of what the prompt is for, each cut with an ellipsis. */
+.prompts-list-text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.prompts-list-label,
+.prompts-list-description {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prompts-list-description {
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
+}
+
+/* A prompt edited and not yet saved: a small dot that never relies on colour alone (its role="img" carries the words). */
+.prompts-changed-dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mud-palette-info);
+}
+
+.prompts-detail-pane {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.prompts-detail-pane .prompts-field {
+    flex: 1;
+    min-height: 0;
+    padding-top: 0;
+    border-bottom: 0;
+}
+
+/* Everything that is not the header or the editor sits under the textarea, and scrolls rather than pushing it. */
+.prompts-field-below {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 40%;
+    overflow-y: auto;
+}
+
+.prompts-field-label.mud-typography {
+    margin: 0;
+}
+
+.prompts-field-description {
+    color: var(--mud-palette-text-secondary);
+}
+
+/* The editor takes all the height the pane has left (never less than its 8 rows): the field, its input and the textarea stretch. */
+.prompts-editor.mud-input-control {
+    flex: 1;
+    min-height: 0;
+}
+
+/* MudBlazor puts a container between the field and its input; without it growing, the chain stops at the textarea's parent. */
+.prompts-editor .mud-input-control-input-container {
+    flex: 1;
+    min-height: 0;
+}
+
+/* The search field keeps its own height: only the list below it takes the pane's spare room. */
+.prompts-list-pane > .mud-input-control {
+    flex: none;
+}
+
+.prompts-editor .mud-input {
+    flex: 1;
+    align-items: stretch;
+    min-height: 0;
+}
+
+.prompts-editor .mud-input > textarea.mud-input-root {
+    height: 100%;
+    resize: none;
+}
+
+/* A row's tooltip is a whole description: it wraps at 360px rather than running out as one line. Scoped to this tooltip's own class. */
+.prompts-list-tooltip.mud-tooltip {
+    max-width: 360px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* The placeholder table: token, what Huddle puts there, and whether the text must keep it. It sits in the scrolling region under the textarea. */
+.prompts-placeholder-table {
+    flex: none;
+}
+
+.prompts-placeholder-table th:last-child,
+.prompts-placeholder-table td:last-child {
+    white-space: nowrap;
+}
+
+.prompts-default {
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+/* The narrow form of the list: a select above the editor, and the list and its search and filter put away. */
+.prompts-narrow-select {
+    display: none;
+}
+
+@media (max-width: 960px) {
+    .prompts-master-detail {
+        grid-template-columns: minmax(0, 1fr);
+        height: auto;
+        min-height: 0;
+    }
+
+    .prompts-editor .mud-input > textarea.mud-input-root {
+        height: auto;
+        resize: vertical;
+    }
+
+    .prompts-field-below {
+        max-height: none;
+    }
+
+    .prompts-list-pane {
+        display: none;
+    }
+
+    .prompts-narrow-select {
+        display: block;
+    }
 }
 
 /* Settings panel header: the intro and the "stored at" line. */
@@ -117,6 +316,16 @@
 .settings-intro {
     max-width: 75ch;
     font-size: var(--mud-typography-body1-size);
+}
+
+/* The Prompts tab is a master-detail that wants the whole centre panel, so it lifts the reading width and its intro's measure.
+   Three classes outrank `.mud-container.page-reading` and MudContainer's own max-width. */
+.mud-container.page-reading.settings-page-wide {
+    max-width: none;
+}
+
+.settings-page-wide .settings-intro {
+    max-width: none;
 }
 
 .settings-stored-at {
@@ -291,6 +500,11 @@
     z-index: 1;
     padding: 8px 0;
     background: var(--hu-ground-page);
+}
+
+.settings-prompts-unsaved {
+    flex: 1;
+    color: var(--mud-palette-text-secondary);
 }
 
 /* The Spending panel: a name on the left, its amounts (one per currency) on the right; wraps on a phone. */

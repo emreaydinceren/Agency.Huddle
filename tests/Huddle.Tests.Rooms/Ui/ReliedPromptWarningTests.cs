@@ -83,9 +83,12 @@ public sealed class ReliedPromptWarningTests
         ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, PromptFieldFactory.Build(new FakePromptSource(), new Dictionary<string, string>(StringComparer.Ordinal))));
 
-    /// <summary>The field's wrapper element; an attribute selector, because the id holds a <c>.</c> that <c>#id</c> would read as a class.</summary>
-    private static AngleSharp.Dom.IElement FieldOf(IRenderedComponent<PromptsPanel> cut, string key) =>
-        cut.Find($"[id='{PromptsPanel.PromptFieldId(key)}']");
+    /// <summary>Opens the prompt in the editor by clicking its list row, then returns the editor's wrapper element; an attribute selector, because the id holds a <c>.</c> that <c>#id</c> would read as a class.</summary>
+    private static AngleSharp.Dom.IElement FieldOf(IRenderedComponent<PromptsPanel> cut, string key)
+    {
+        cut.Find($"[id='{PromptsPanel.ListItemId(key)}']").Click();
+        return cut.Find($"[id='{PromptsPanel.PromptFieldId(key)}']");
+    }
 
     /// <summary>Asserts the field has exactly one alert, a warning, with exactly <paramref name="text"/>.</summary>
     private static void AssertSingleWarning(IRenderedComponent<PromptsPanel> cut, string key, string text)

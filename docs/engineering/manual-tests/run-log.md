@@ -2839,23 +2839,23 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### PROMPTSSETTINGS-08 — Textarea height tracks the line count and clamps at 14 rows
+### PROMPTSSETTINGS-08 — Every prompt's editor is the same fixed height, and can be dragged taller
 
-File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-08--textarea-height-tracks-the-line-count-and-clamps-at-14-rows)
-
-| Date | Result | Commit | Issue | Notes |
-| --- | --- | --- | --- | --- |
-
-### PROMPTSSETTINGS-09 — Typing raises "Modified" and "Unsaved" together and enables Save, Reset and Reset all — while writing nothing
-
-File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-09--typing-raises-modified-and-unsaved-together-and-enables-save-reset-and-reset-all--while-writing-nothing)
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-08--every-prompts-editor-is-the-same-fixed-height-and-can-be-dragged-taller)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 
-### PROMPTSSETTINGS-10 — "Modified" and "Unsaved" are independent flags — walk all three combinations
+### PROMPTSSETTINGS-09 — Typing raises "Modified" and "Changed" together and enables Save, Reset and Reset all — while writing nothing
 
-File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-10--modified-and-unsaved-are-independent-flags--walk-all-three-combinations)
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-09--typing-raises-modified-and-changed-together-and-enables-save-reset-and-reset-all--while-writing-nothing)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PROMPTSSETTINGS-10 — "Modified" and "Changed" are independent flags — walk all three combinations
+
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-10--modified-and-changed-are-independent-flags--walk-all-three-combinations)
 
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
@@ -3084,6 +3084,27 @@ File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#
 | Date | Result | Commit | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | Pass | 120ab384 |  | Playbooks group has exactly Member and Manager Playbook with the spec 7.5 helper texts, no Next session pill; typing showed Modified and Unsaved. |
+
+### PROMPTSSETTINGS-43 — Search and the All / Changed chips narrow the list; the editor stays where it was
+
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-43--search-and-the-all--changed-chips-narrow-the-list-the-editor-stays-where-it-was)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PROMPTSSETTINGS-44 — Switching between prompts keeps every edit, one Save saves them all, and the footer counts them
+
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-44--switching-between-prompts-keeps-every-edit-one-save-saves-them-all-and-the-footer-counts-them)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### PROMPTSSETTINGS-45 — A validation error shows in the list and on the detail pane; a link from another page opens its prompt; a narrow window uses a select
+
+File: [`docs/engineering/manual-tests/prompts-settings.md`](prompts-settings.md#promptssettings-45--a-validation-error-shows-in-the-list-and-on-the-detail-pane-a-link-from-another-page-opens-its-prompt-a-narrow-window-uses-a-select)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
 
 ## Appearance tab, Themes, Tokens and overrides
 

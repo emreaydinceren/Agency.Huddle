@@ -1,8 +1,8 @@
 # Settings: the Prompts, editing, per-field reset and Save
 
-Prove that the /settings Prompts editor renders every model-facing prompt in the catalog correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running agent, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
+Prove that the /settings Prompts editor renders every model-facing prompt in the catalog correctly, that its three-state badge logic (Next session / Modified / Changed) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running agent, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
 
-**42 tests** · 39 free, 3 paid 💰 · about 4.8 hours.
+**45 tests** · 42 free, 3 paid 💰 · about 5.1 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -20,8 +20,9 @@ standing conventions. This area adds:
 3. Keep a File Explorer window on `App_Data` beside the browser with the view set to Details, so the Date modified column is visible. Several tests turn on 'the file did not change'.
 4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\prompts.json` while the app is running.
 5. Open `<repo>\src\Huddle.App\prompts.default.json` in that editor and leave it open. It holds every shipped default, one key per prompt, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
-6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests PROMPTSSETTINGS-01 to -36 and -41 run on `P-LAUNCH-FREE` and cost nothing. PROMPTSSETTINGS-37 runs on `P-LAUNCH-UAT` (the mock adapter, ACP on, free); only -38 to -40 use `P-LAUNCH-PAID`.
+6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests PROMPTSSETTINGS-01 to -36, -41 and -43 to -45 run on `P-LAUNCH-FREE` and cost nothing. PROMPTSSETTINGS-37 runs on `P-LAUNCH-UAT` (the mock adapter, ACP on, free); only -38 to -40 use `P-LAUNCH-PAID`.
 7. MudBlazor renders every button and tab-panel LABEL in upper case via CSS (`text-transform: uppercase`) — this is a rendering style, not a change to the underlying text. A step below that says to look for `Reset` or `Prompts` means the control whose text (and `textContent` in DevTools) is `Reset` or `Prompts`; what you will actually SEE on screen is `RESET` / `PROMPTS`. Steps keep the title-case spelling throughout this document because that is what a DOM/`textContent` check reads and what this document's own prose uses — read every button and tab label below as its upper-case rendering, not as a mismatch to report.
+8. The Prompts tab is a master-detail (wireframe `G3c`): a 240px list on the left (a search box, the All and Changed chips, the prompts under their group headings) and ONE editor on the right. Only one prompt's textarea is on the page at a time. Wherever a test below says "find the X field", "walk every field" or "scroll to X", read it as: click X's row in the list (or pick it in the select above the editor below 960px wide), then work in the editor on the right. "Walk every field" means clicking down the list one row at a time. A field's `Unsaved` badge is now called `Changed`, and a changed prompt also wears a small dot in the list. Save, Reset all and the "N changes not saved" count sit in the footer bar under the panel.
 
 ## Tests
 
@@ -167,11 +168,11 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 
 **Steps**
 
-1. Scroll to the top of the form and find the first group heading.
-2. Write down every group heading, top to bottom.
-3. Under each heading, write down every bold field label, top to bottom.
+1. Scroll the list pane to its top and find the first group heading.
+2. Write down every group heading in the list, top to bottom.
+3. Under each heading, write down every row's label, top to bottom.
 4. Compare your list with the keys of `<repo>\src\Huddle.App\prompts.default.json`: every key must appear exactly once on the page, under the heading its prefix names (`systemPrompt.` System prompt, `turn.` Turn, `getHelp.` Get help, `tool.` Tool descriptions, `task.` Tasks, `prompt.` Cadence).
-5. Confirm each field has a textarea and a small grey sentence of helper text beneath it.
+5. Click three rows and confirm each prompt's editor shows its title, a textarea straight under the title row, and the small grey description below the textarea.
 
 **Pass if — all of these**
 
@@ -193,7 +194,7 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 
 **Inconclusive if**
 
-If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `MudPaper` elements wrapping each group (each renders as a `.mud-paper` carrying the `pa-4 mb-4` classes and one `h2.prompts-group-heading`; there must be six) and the `prompts-field` divs inside each (each group's count must equal the number of keys in `prompts.default.json` with that group's prefix). If both match, pass the test and separately report the styling problem. (The old hand-rolled `<section class="prompts-group">` wrapper no longer exists — Stage 3 of the MudBlazor migration replaced it with `MudPaper`, but `prompts-group-heading` and `prompts-field` are unchanged.)
+If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `h3.prompts-list-heading` elements in `nav.prompts-list` and the `button.prompts-list-item` rows under each (each group's count must equal the number of keys in `prompts.default.json` with that group's prefix). If both match, pass the test and separately report the styling problem.
 
 > [!NOTE]
 > Cross-check against `<repo>\src\Huddle.App\prompts.default.json`. Every label on screen must correspond to one of its keys and every key to one label. Do not skim — this test's entire value is that nothing is missing. The group list and order come from `PromptFieldFactory.cs:32-40`; the field order within a group is the order of `PromptCatalog.All`, so the lists above name only the fields the test relies on, in relative order, and the page may hold more between them. No total is asserted because the catalog grows.
@@ -252,9 +253,9 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 **Steps**
 
 1. Walk the fields named below.
-2. For each, look below the textarea for a line beginning `Placeholders:` followed by monospace chips.
+2. For each, look under the textarea for the Placeholders table: one row per token, the token in monospace in the first column, a one-sentence description in the second, and "Required" in the third on the tokens the text must keep.
 3. Write down which of them have that line and exactly which chips each shows.
-4. Scroll through the rest of the form and note any further field that shows a `Placeholders:` line; compare each with the `Placeholders:` argument of its entry in `src\Huddle.App\Prompts\PromptCatalog.cs`.
+4. Scroll through the rest of the form and note any further field that shows a Placeholders table; compare each with the `Placeholders:` argument of its entry in `src\Huddle.App\Prompts\PromptCatalog.cs`.
 
 **Pass if — all of these**
 
@@ -268,15 +269,17 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 - `Help: tool entry` shows `{{toolName}}` and `{{toolDescription}}`, in that order.
 - `Task wake-up message` shows `{{assignee}}`, `{{taskId}}`, `{{title}}`, `{{actor}}`, `{{changes}}`, `{{status}}`, `{{team}}`, in that order.
 - `Digest prompt` and `Retro prompt` each show `{{team}}` and `{{since}}`, in that order.
-- These fields show no `Placeholders:` line at all: `Chat rules`, `Help: introduction`, `Help: Rooms`, `Help: footer`, `Roll-up prompt`, and every field under `Tool descriptions` (including the nine added by the prompt-catalog change).
-- Every other field's chips equal its catalog entry's `Placeholders:` list, in that order.
-- Every chip includes both pairs of braces.
+- These fields show no Placeholders table at all: `Chat rules`, `Help: introduction`, `Help: Rooms`, `Help: footer`, `Roll-up prompt`, and every field under `Tool descriptions` (including the nine added by the prompt-catalog change).
+- Every other field's table rows equal its catalog entry's `Placeholders:` list, in that order.
+- Every token includes both pairs of braces.
+- Every row has a non-empty description, and the rows marked "Required" are exactly the entry's `RequiredPlaceholders`.
+- The table scrolls with the area under the textarea; it never makes the textarea shorter than its 8 rows.
 
 **Fail if — any of these**
 
-- A chip showing a bare name such as `helpTool` instead of `{{helpTool}}` -> the braces are part of the key everywhere in this system; a user who copies the bare name into their text produces something the renderer will never substitute, and nothing warns them.
-- A `Placeholders:` label rendered with no chips after it -> the zero-length guard around the list has been lost, which also means a no-placeholder prompt now looks like it takes some.
-- A field gaining or losing a chip relative to the list above -> the catalog and the renderer may now disagree about what a prompt accepts.
+- A token showing a bare name such as `helpTool` instead of `{{helpTool}}` -> the braces are part of the key everywhere in this system; a user who copies the bare name into their text produces something the renderer will never substitute, and nothing warns them.
+- An empty Placeholders table, or a row with a blank description -> the zero-length guard around the list has been lost, which also means a no-placeholder prompt now looks like it takes some.
+- A field gaining or losing a row relative to the list above -> the catalog and the renderer may now disagree about what a prompt accepts.
 
 **Inconclusive if**
 
@@ -320,11 +323,11 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 > [!NOTE]
 > Undo your step-5 typing (Ctrl+Z) or reset the field before moving on, and do not save it.
 
-### PROMPTSSETTINGS-08 — Textarea height tracks the line count and clamps at 14 rows
+### PROMPTSSETTINGS-08 — Every prompt's editor is the same fixed height, and can be dragged taller
 
 **Free** · about 5 min
 
-*Proves the per-keystroke re-render is alive and that no one field can take over the page.*
+*Proves the detail pane does not change size from one prompt to the next, so the page is no longer as long as the catalogue.*
 
 **Before you start**
 
@@ -333,34 +336,32 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 
 **Steps**
 
-1. Find the `Room label` field, whose shipped default is a single line.
-2. Note how tall its box is compared to a single line of text.
-3. Click at the end of its text and press Enter once. Observe the box height.
-4. Press Enter eleven more times (twelve newlines in total), watching the height after each press.
-5. Press Enter five more times, watching the height.
-6. Open devtools (F12), inspect the `Room label` field's `<textarea>` element, and read its `rows` attribute.
-7. Look at the bottom-right corner of the box for a manual resize grip, and try to drag it.
-8. Press Ctrl+Z repeatedly, or reload the page with F5, to discard these edits without saving.
+1. Click `Room label` in the list (its shipped default is a single line). Note how tall the textarea is.
+2. Click `Memory block` in the list (one of the longest defaults). Note how tall the textarea is.
+3. Click a third prompt of your choice. Note the height.
+4. Open devtools (F12), inspect each of the three `<textarea>` elements in turn, and read the `rows` attribute.
+5. Back on `Room label`, click at the end of the text and press Enter fifteen times. Watch the box.
+6. Make the browser window taller, then shorter, and watch the textarea and the list.
+7. Reload the page with F5 to discard these edits without saving.
 
 **Pass if — all of these**
 
-- Before any typing, the `Room label` box is about two text rows tall — a box, not a one-line slot.
-- Each of the first twelve Enter presses makes the box one row taller, immediately, without leaving the field (rows are the newline count plus two, so 12 newlines give 14 rows).
-- After the twelfth newline the box stops growing; the five further Enter presses add no height and the box scrolls internally instead.
-- At that point the inspected `rows` attribute reads `14`.
-- There is NO manual resize grip, and dragging the bottom-right corner does nothing — `MudTextField` sets `resize: none` on its `<textarea>` and grows it itself by recomputing `Lines`, so a manual drag handle would only fight that.
+- The textarea's top edge is at the same place, and its height the same, for all three prompts, however long each description is. The `rows` attribute reads `8` (a floor); the box is taller than 8 rows because it fills the window.
+- Pressing Enter fifteen times does not make the box taller; it scrolls inside itself.
+- Making the browser window taller makes the textarea and the list taller; there is no resize grip.
+- The list, not the page, is the only region that scrolls as you click down it.
 
 **Fail if — any of these**
 
-- The box not growing at all as newlines are added -> the height is recomputed on every keystroke, so a frozen height means the per-input re-render has stopped, which would also break the live badges and live validation in the tests below.
-- The box growing past 14 rows and dominating the page -> the clamp is gone; the longest prompts would push Save far off screen.
-- A manual resize grip appears and can drag the box independently of `Lines` -> `MudTextField`'s `resize: none` was overridden; a manual resize would drift out of sync with the automatic row count on the very next keystroke.
+- The box height differs between prompts -> the per-prompt sizing (the old `RowsFor`) is back and the detail pane will jump as the Human moves through the list.
+- The textarea's top edge moves between prompts -> something variable (a description) has crept above it.
+- The textarea stays a fixed height when the window grows -> it is not using the available room.
 
 **Inconclusive if**
 
-A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls sideways — that is not a failure, so do not test the clamp by pasting one long line. NOTE: `Room label` is a single line, which is why this test uses it; the longer shipped defaults (for example `Memory block`) already render at the 14-row cap and scroll inside the box, which is correct. The row count is the newline count plus two, clamped to 2-14 (`PromptFieldFactory.cs:104-121`).
+A very long SINGLE line with no newlines scrolls sideways or wraps — not a failure. The row count is the constant `PromptFieldFactory.EditorRows` (12).
 
-### PROMPTSSETTINGS-09 — Typing raises "Modified" and "Unsaved" together and enables Save, Reset and Reset all — while writing nothing
+### PROMPTSSETTINGS-09 — Typing raises "Modified" and "Changed" together and enables Save, Reset and Reset all — while writing nothing
 
 **Free** · about 4 min
 
@@ -387,7 +388,7 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 **Pass if — all of these**
 
 - Before typing: Save is disabled and `Reset all to defaults` is disabled.
-- Immediately on the keystroke — with no blur, no Enter, no click — the `Room label` header gains two pills: an amber `Modified` and a blue `Unsaved`.
+- Immediately on the keystroke — with no blur, no Enter, no click — the `Room label` header gains two pills: an amber `Modified` and a blue `Changed`.
 - That field's `Reset` button becomes enabled.
 - The `Save` button becomes enabled.
 - `Reset all to defaults` becomes enabled.
@@ -397,19 +398,19 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 **Fail if — any of these**
 
 - Badges appearing only after you click away -> the handler has moved from input to change, so every live behaviour in this area (validation, row growth, Save enablement) is now one interaction late.
-- Save staying disabled while `Unsaved` shows -> the Save enablement and the badge have drifted apart, and a user with pending work cannot commit it.
+- Save staying disabled while `Changed` shows -> the Save enablement and the badge have drifted apart, and a user with pending work cannot commit it.
 - `Reset` staying disabled while `Modified` shows -> the same flag drives both, so a mismatch is a real defect.
 - Badges leaking onto a neighbouring field -> the pending-edit map is keyed wrongly and a save will write the wrong key.
 - `prompts.json` appearing -> a write happened without a Save; the file must not exist until the first Save.
 
 **Inconclusive if**
 
-If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill by colour, read their text — both pills carry their word as literal text. Judge by the words.
+If you cannot distinguish the amber `Modified` pill from the blue `Changed` pill by colour, read their text — both pills carry their word as literal text. Judge by the words.
 
 > [!NOTE]
 > Leave the `X` in place if you go straight on to PROMPTSSETTINGS-10; otherwise press F5 to discard it.
 
-### PROMPTSSETTINGS-10 — "Modified" and "Unsaved" are independent flags — walk all three combinations
+### PROMPTSSETTINGS-10 — "Modified" and "Changed" are independent flags — walk all three combinations
 
 **Free** · about 10 min
 
@@ -436,11 +437,11 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 
 **Pass if — all of these**
 
-- After step 2 (saved edit): `Chat rules` shows `Modified` ONLY — no `Unsaved`.
+- After step 2 (saved edit): `Chat rules` shows `Modified` ONLY — no `Changed`.
 - After step 4: `prompts.json` holds exactly one top-level key, `systemPrompt.chatRules`.
-- After step 5: `Chat rules` shows `Modified` AND `Unsaved`.
-- After step 7 (text back to the shipped default): `Modified` DISAPPEARS, `Unsaved` REMAINS, that field's `Reset` button goes DISABLED, and `Save` stays ENABLED.
-- After step 9 (text back to the stored override): `Unsaved` DISAPPEARS, `Modified` RETURNS, and `Save` goes DISABLED again (assuming nothing else is pending).
+- After step 5: `Chat rules` shows `Modified` AND `Changed`.
+- After step 7 (text back to the shipped default): `Modified` DISAPPEARS, `Changed` REMAINS, that field's `Reset` button goes DISABLED, and `Save` stays ENABLED.
+- After step 9 (text back to the stored override): `Changed` DISAPPEARS, `Modified` RETURNS, and `Save` goes DISABLED again (assuming nothing else is pending).
 
 **Fail if — any of these**
 
@@ -481,7 +482,7 @@ Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to c
 **Pass if — all of these**
 
 - After step 3 the textarea text snaps back to `[Room: {{roomName}} (id: {{roomId}})]` — byte-for-byte the `turn.roomLabel` value in `prompts.default.json`.
-- After step 3 the `Modified` badge disappears, an `Unsaved` badge appears, `Save` is enabled, and that field's `Reset` button greys out.
+- After step 3 the `Modified` badge disappears, an `Changed` badge appears, `Save` is enabled, and that field's `Reset` button greys out.
 - At step 6 `prompts.json` is UNCHANGED: same Date modified, and it still contains the `turn.roomLabel` key with the ` HELLO` text.
 - No other field's badges or text changed.
 - Only after step 8 does the key disappear: at step 9 `prompts.json` no longer contains `turn.roomLabel`.
@@ -652,7 +653,7 @@ If you reset the wrong field, start over from a clean state rather than reasonin
 - `prompts.json` is byte-identical and its timestamp unchanged after steps 2, 3, 4, 5 and 6.
 - The file changes only after step 7.
 - On a successful Save the page does NOT reload and does NOT navigate — the URL stays `/settings` (or `/settings/prompts`) and the scroll position is preserved.
-- The only feedback from the successful Save is that the `Unsaved` badges clear and the `Save` button goes disabled. There is NO toast, NO green banner and NO `Saved` text — this is correct.
+- The only feedback from the successful Save is that the `Changed` badges clear and the `Save` button goes disabled. There is NO toast, NO green banner and NO `Saved` text — this is correct.
 
 **Fail if — any of these**
 
@@ -736,8 +737,8 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 **Pass if — all of these**
 
 - After step 3 every `Modified` badge across all fields has disappeared.
-- The three previously-overridden fields (`Room label`, `Help: budget`, `Identity`) each show an `Unsaved` badge.
-- Every other field (spot-check `Orientation`, `Chat rules`, `Message`, `Greeting`, `Help: Rooms`, `list_agents description`, `Digest prompt`) shows NO `Modified` or `Unsaved` badge. The `Next session` pill on the System prompt and Tool descriptions fields is a timing pill, not a state badge, and stays.
+- The three previously-overridden fields (`Room label`, `Help: budget`, `Identity`) each show an `Changed` badge.
+- Every other field (spot-check `Orientation`, `Chat rules`, `Message`, `Greeting`, `Help: Rooms`, `list_agents description`, `Digest prompt`) shows NO `Modified` or `Changed` badge. The `Next session` pill on the System prompt and Tool descriptions fields is a timing pill, not a state badge, and stays.
 - `Save` is ENABLED and `Reset all to defaults` is now DISABLED (nothing is modified any more).
 - The confirm pair has collapsed back to the single `Reset all to defaults` button.
 - At step 6 `prompts.json` is unchanged — same timestamp, same three keys, same content.
@@ -746,7 +747,7 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 **Fail if — any of these**
 
 - `prompts.json` being rewritten at step 6 -> the confirm commits directly, so Save is no longer the single commit point and a confirm-then-think-again is unrecoverable.
-- Every field showing `Unsaved` at step 4 -> a field whose stored value already equals the default has nothing to commit, so a badge there means the save would write a no-op key for every prompt.
+- Every field showing `Changed` at step 4 -> a field whose stored value already equals the default has nothing to commit, so a badge there means the save would write a no-op key for every prompt.
 - The confirm pair not collapsing back to the single button -> the confirm state is not being cleared and a second reset could fire unexpectedly.
 
 **Inconclusive if**
@@ -819,10 +820,10 @@ The file NOT being deleted is correct — the app never deletes it, it only ever
 **Pass if — all of these**
 
 - After step 4 a red paragraph appears directly beneath the `Settings` heading, beginning `Could not save: ` and followed by an operating-system message (on Windows, typically `Access to the path '...\prompts.json' is denied.`).
-- Your typed ` WILLFAIL` text is still in both textareas and both still carry `Unsaved` badges — nothing was lost.
+- Your typed ` WILLFAIL` text is still in both textareas and both still carry `Changed` badges — nothing was lost.
 - No yellow `An unhandled error has occurred.` strip appears at the bottom of the page.
 - `prompts.json`'s content is unchanged from the scratch copy.
-- After step 10 the red paragraph DISAPPEARS, the `Unsaved` badges clear, and `prompts.json` now contains the new overrides.
+- After step 10 the red paragraph DISAPPEARS, the `Changed` badges clear, and `prompts.json` now contains the new overrides.
 
 **Fail if — any of these**
 
@@ -1120,12 +1121,12 @@ If you are testing over a slow or remote connection, latency is expected and is 
 
 **Pass if — all of these**
 
-- After steps 2-4 both edits and both `Unsaved` badges are still present — a tab switch preserves pending work.
+- After steps 2-4 both edits and both `Changed` badges are still present — a tab switch preserves pending work.
 - Back/Forward between the two tabs behaves the same way.
 - After F5 (step 6) both edits are GONE and the fields show their defaults, with no badges.
 - After step 7 the edit is GONE — leaving the Settings page for Agents and back destroys pending work, because it is a genuinely different route with no Prompts component instance to return to.
 - After step 8 the page repaints dark IMMEDIATELY with NO page load (see `appearance-theme.md`'s APPEARANCETHEME-04) — the whole point of this step is that the theme change behaves like the harmless tab switch in steps 2-4, not like F5.
-- After step 10 the `LOSEME2` edit is STILL PRESENT with its `Unsaved` badge — the theme change did not destroy it.
+- After step 10 the `LOSEME2` edit is STILL PRESENT with its `Changed` badge — the theme change did not destroy it.
 - No unsaved-changes prompt appears at any point — this is current designed behaviour.
 
 **Fail if — any of these**
@@ -1172,7 +1173,7 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 - Clicking it shows the same inline `Reset all` / `Cancel` confirm pair there.
 - Confirming does NOT change `appearance.json` (unchanged content, or still absent).
 - `prompts.json` is UNCHANGED — still holding the `turn.roomLabel` override — because there is no Save button on this tab to commit with.
-- Switching back to the Prompts tab shows `Room label` at its shipped default with an `Unsaved` badge: the reset was staged and survived the tab switch.
+- Switching back to the Prompts tab shows `Room label` at its shipped default with an `Changed` badge: the reset was staged and survived the tab switch.
 
 **Fail if — any of these**
 
@@ -1213,7 +1214,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 **Pass if — all of these**
 
 - At step 4 tab B's `Chat rules` textarea shows tab A's new text and carries a `Modified` badge, with no reload.
-- At step 7 tab B still shows ` TYPEDINB` in `Room label` with an `Unsaved` badge — its own uncommitted typing is preserved.
+- At step 7 tab B still shows ` TYPEDINB` in `Room label` with an `Changed` badge — its own uncommitted typing is preserved.
 - At step 7 tab B's `Help: footer` has picked up tab A's second save.
 - No JavaScript errors appear in either tab's devtools Console.
 - The server console logs no exception when tab B is closed, and none across the five open/close cycles.
@@ -1658,7 +1659,7 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 
 1. In the Room, send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 1, the baseline.)
 2. In another tab open `/settings/prompts`, find the `Identity` field (it carries a `Next session` badge), and change its text to exactly: `You are a member of the Team chat application. You speak as "{{personaName}}". Always begin every reply with the word BANANA.`
-3. Click `Save`. Confirm the `Unsaved` badge clears.
+3. Click `Save`. Confirm the `Changed` badge clears.
 4. Watch the page and the server console for ten seconds for any message saying the edit will not apply.
 5. Return to the Room and send exactly: `In one short sentence, what is your name and role?` Read the reply. (Turn 2.)
 6. Now force a new session: open that Agent's card (`P-OPEN-AGENT`), click `Restart` on it (it is offered in every state except Starting), and wait for the status to return to Online.
@@ -1786,7 +1787,7 @@ If the page shows an error strip instead of the table, report it against the Lib
 - The helper text under `Manager Playbook` reads: `How a Team's manager runs it; it adds to the Member Playbook. A Team with its own ignores this one. Running Agents hear of an edit at their next Turn.`
 - Neither field carries a `Next session` pill, and no hover shows `Applies to agents started after the change`.
 - Both fields show the relied-on warning the other relied prompts show. The Huddle rules are not on this page.
-- Step 4: `Modified` and `Unsaved` appear as on any field. Discard the edit with F5.
+- Step 4: `Modified` and `Changed` appear as on any field. Discard the edit with F5.
 
 **Fail if — any of these**
 
@@ -1795,6 +1796,104 @@ If the page shows an error strip instead of the table, report it against the Lib
 
 > [!NOTE]
 > This case adds a seventh group to the six that PROMPTSSETTINGS-04 lists. Read that case's group count as seven once the Playbooks group has shipped.
+
+### PROMPTSSETTINGS-43 — Search and the All / Changed chips narrow the list; the editor stays where it was
+
+**Free** · about 5 min
+
+*Proves the list pane's search and filter, the counts on the chips, and that a prompt being edited never vanishes from the editor because a filter hides its row.*
+
+**Before you start**
+
+- The app is running, on /settings/prompts (Prompts tab). No prompts.json.
+
+**Steps**
+
+1. Read the two chips above the list: **All** and **Changed**, each with a count.
+2. Type `room` in the search box and wait about a second.
+3. Clear the search with its clear button. Type `turn.roomLabel` (a key, not a title).
+4. Clear the search. Click `Room label`, type a character in its textarea, then click `Identity` and type a character there.
+5. Click the **Changed** chip. Then type `zzzz` in the search box.
+6. Click **All** and clear the search. Press F5 to discard.
+
+**Pass if — all of these**
+
+- Step 1: **All** shows the number of prompts in the catalogue; **Changed** shows 0.
+- Step 2: only prompts whose title, key or description contains `room` stay (each row shows its label and, in grey under it, one ellipsised line of description), under their group headings; a group with no match has no heading.
+- Step 3: the `Room label` prompt is listed, found by its key.
+- Step 4: both rows wear a small dot; **Changed** now shows 2.
+- Step 5: with **Changed** chosen the list holds exactly `Room label` and `Identity`; with `zzzz` as well the list says "No prompts match" and the editor on the right still shows the prompt that was open.
+- Step 6: the full list is back.
+
+**Fail if — any of these**
+
+- The editor empties or switches prompt when the filter hides its row -> an edit in progress could be lost from view.
+- The Changed count or dots disagree with the prompts you edited.
+
+---
+
+### PROMPTSSETTINGS-44 — Switching between prompts keeps every edit, one Save saves them all, and the footer counts them
+
+**Free** · about 5 min
+
+*Proves edits stay in memory while the Human moves around, and that the footer bar tells how many are unsaved.*
+
+**Before you start**
+
+- The app is running, on /settings/prompts (Prompts tab). No prompts.json.
+
+**Steps**
+
+1. Read the footer bar at the bottom of the panel.
+2. Click `Room label`, type ` one` at the end of its text.
+3. Click `Identity`, type ` two` at the end of its text.
+4. Click `Room label` again, then `Identity` again.
+5. Read the footer. Click **Show default** on `Identity`, read the block, click **Hide default**.
+6. Click **Reset** on `Identity`. Read the footer.
+7. Click **Save**. Open `App_Data\prompts.json`.
+
+**Pass if — all of these**
+
+- Step 1: "No unsaved changes", **Save** disabled, **Reset all to defaults** disabled.
+- Step 4: each prompt's textarea still holds the text you typed.
+- Step 5: the footer reads "2 changes not saved"; Show default reveals the shipped text read-only, and it is not editable.
+- Step 6: the footer reads "1 change not saved" (Identity's text is the shipped default again, equal to what is saved).
+- Step 7: `prompts.json` holds the `Room label` override only; the footer reads "No unsaved changes" and the dots are gone.
+
+**Fail if — any of these**
+
+- Text typed in one prompt is gone after switching -> the edit was held by the editor rather than the page.
+- Save writes only the prompt that was open.
+
+---
+
+### PROMPTSSETTINGS-45 — A validation error shows in the list and on the detail pane; a link from another page opens its prompt; a narrow window uses a select
+
+**Free** · about 6 min
+
+*Proves the error marker, the `?highlight=` jump and the below-960px layout.*
+
+**Before you start**
+
+- The app is running, on /settings/prompts (Prompts tab). No prompts.json.
+
+**Steps**
+
+1. Click `Room label` and delete the `{{text}}` placeholder from its text (it is a required placeholder).
+2. Read the editor below the textarea and the `Room label` row in the list. Click another prompt and look at the `Room label` row again.
+3. Press F5 to discard. Browse to `http://localhost:5100/settings/prompts?highlight=helper.needsHuman.system`.
+4. Narrow the browser window to under 960px wide (or use devtools' device toolbar).
+
+**Pass if — all of these**
+
+- Step 2: a red error alert on the detail pane says the placeholder is missing; the list row wears a red error icon and a dot, and keeps them after another prompt is chosen.
+- Step 3: the page opens with that prompt selected, its row briefly highlighted and scrolled into view in the list.
+- Step 4: the list, its search box and the chips are put away; a select labelled "Prompt" sits above the editor, shows the open prompt, and choosing another entry opens that prompt.
+
+**Fail if — any of these**
+
+- The error is only on the detail pane (the Human cannot tell in the list which prompts are broken).
+- At narrow width neither a list nor a select is reachable.
 
 ---
 

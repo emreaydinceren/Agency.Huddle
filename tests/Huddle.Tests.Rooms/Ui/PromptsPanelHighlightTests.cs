@@ -8,8 +8,8 @@ using Agency.Huddle.App.Components.Shared;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// <see cref="PromptsPanel"/> honours <c>?highlight=&lt;key&gt;</c>: it marks that field and scrolls it into view, as a Helper
-/// card's "Edit the prompt" link needs (Helpers Spec §6.7, plan HL-17).
+/// <see cref="PromptsPanel"/> honours <c>?highlight=&lt;key&gt;</c>: it selects that prompt, marks its list row and scrolls the
+/// list to it, as a Helper card's "Edit the prompt" link needs (Helpers Spec §6.7, plan HL-17).
 /// </summary>
 public sealed class PromptsPanelHighlightTests
 {
@@ -25,32 +25,35 @@ public sealed class PromptsPanelHighlightTests
             .Add(p => p.Groups, PromptFieldFactory.Build(new FakePromptSource(), new Dictionary<string, string>(StringComparer.Ordinal))));
     }
 
-    /// <summary>Only the named field is marked, and each field has an id the scroll can find.</summary>
+    /// <summary>The named prompt is selected (open in the editor, current in the list), and only its row is marked.</summary>
     [Fact]
-    public async Task Highlight_MarksOnlyTheNamedField()
+    public async Task Highlight_SelectsAndMarksOnlyTheNamedPrompt()
     {
         await using MudBunitContext ctx = new();
 
         IRenderedComponent<PromptsPanel> cut = Render(ctx, "/settings/prompts?highlight=" + Key);
 
-        Assert.Contains("search-hit-flash", cut.Find($"[id='prompt-field-{Key}']").ClassList);
+        Assert.Contains("search-hit-flash", cut.Find($"[id='prompt-item-{Key}']").ClassList);
         Assert.Single(cut.FindAll(".search-hit-flash"));
-        Assert.NotNull(cut.Find("[id='prompt-field-helper.needsHuman.task']"));
+        Assert.Equal("true", cut.Find($"[id='prompt-item-{Key}']").GetAttribute("aria-current"));
+        Assert.NotNull(cut.Find($"[id='prompt-field-{Key}']"));
+        Assert.NotNull(cut.Find("[id='prompt-item-helper.needsHuman.task']"));
+        Assert.Empty(cut.FindAll("[id='prompt-field-helper.needsHuman.task']"));
     }
 
-    /// <summary>The named field is scrolled into view once, by the page's existing scroll helper.</summary>
+    /// <summary>The named prompt's row is scrolled into view once, by the page's existing scroll helper.</summary>
     [Fact]
-    public async Task Highlight_ScrollsTheFieldIntoView()
+    public async Task Highlight_ScrollsTheListRowIntoView()
     {
         await using MudBunitContext ctx = new();
 
         _ = Render(ctx, "/settings/prompts?highlight=" + Key);
 
         JSRuntimeInvocation call = Assert.Single(ctx.Module(JsModule.Scroll).Invocations["intoView"]);
-        Assert.Equal("prompt-field-" + Key, Assert.Single(call.Arguments));
+        Assert.Equal("prompt-item-" + Key, Assert.Single(call.Arguments));
     }
 
-    /// <summary>With no highlight, nothing is marked and nothing scrolls.</summary>
+    /// <summary>With no highlight, nothing is marked and nothing scrolls, and the editor holds the first prompt.</summary>
     [Fact]
     public async Task NoHighlight_MarksAndScrollsNothing()
     {
@@ -58,6 +61,7 @@ public sealed class PromptsPanelHighlightTests
 
         IRenderedComponent<PromptsPanel> cut = Render(ctx, "/settings/prompts");
 
+        Assert.Single(cut.FindAll(".prompts-detail-pane textarea"));
         Assert.Empty(cut.FindAll(".search-hit-flash"));
         Assert.DoesNotContain(ctx.Module(JsModule.Scroll).Invocations, static invocation => string.Equals(invocation.Identifier, "intoView", StringComparison.Ordinal));
     }

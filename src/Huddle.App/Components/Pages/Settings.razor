@@ -38,7 +38,7 @@
 }
 else if (this.isAdmin == true)
 {
-<MudContainer MaxWidth="MaxWidth.Large" Class="page-reading settings-page pa-4">
+<MudContainer MaxWidth="MaxWidth.Large" Class="@(this.CurrentTab == SettingsTab.Prompts ? "page-reading settings-page settings-page-wide pa-4" : "page-reading settings-page pa-4")">
     <PageHeader Title="Settings" />
 
     @if (this.error is not null)
@@ -91,13 +91,14 @@ else if (this.isAdmin == true)
                                     ValueChanged="this.OnFieldValueChanged"
                                     ResetRequested="this.OnResetRequested" />
                         <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="settings-prompts-actions">
-                            <ActionButton Role="ButtonRole.Primary" Submit="true"
-                                          Disabled="@(!this.HasUnsavedChanges)">Save</ActionButton>
+                            <MudText Typo="Typo.body2" Class="settings-prompts-unsaved" role="status">@(this.UnsavedCount > 0 ? Plural.Of(this.UnsavedCount, "change", "changes") + " not saved" : "No unsaved changes")</MudText>
                             <ResetAllControl AnyModified="this.AnyModified"
                                              Confirming="this.confirmingResetAll"
                                              OnBeginReset="this.BeginResetAll"
                                              OnConfirm="this.ConfirmResetAll"
                                              OnCancel="this.CancelResetAll" />
+                            <ActionButton Role="ButtonRole.Primary" Submit="true"
+                                          Disabled="@(!this.HasUnsavedChanges)">Save</ActionButton>
                         </MudStack>
                     </form>
                     break;
@@ -199,7 +200,9 @@ else if (this.isAdmin == true)
 
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
     // rather than tracked separately, so it can never drift from what PromptsPanel is actually showing.
-    private bool HasUnsavedChanges => this.groups.SelectMany(group => group.Fields).Any(row => row.HasUnsavedChange);
+    private int UnsavedCount => this.groups.SelectMany(group => group.Fields).Count(row => row.HasUnsavedChange);
+
+    private bool HasUnsavedChanges =>this.groups.SelectMany(group => group.Fields).Any(row => row.HasUnsavedChange);
 
     // Drives ResetAllControl's enabled state: nothing modified means nothing for "reset all" to do.
     private bool AnyModified => this.groups.SelectMany(group => group.Fields).Any(row => row.IsModified);

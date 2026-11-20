@@ -451,7 +451,7 @@ How the 12 multi-line sites map (old `Lines`, then the new shape):
 | `ProfilePanel` description, `TaskTimeline` comment | 3 | `LongText`, `Markdown` (4 rows) |
 | `RemoteAccessPanel` trusted proxies and allowed origins | 2, no class | `LongText` (4 rows; gains the body line height) |
 | `ConflictRow` theirs and yours | 6, no class | `LongText`, `Rows="6"` (the whole text side by side; gains the body line height) |
-| `PromptsPanel` prompt | from the text (`RowsFor`) | `Markdown`, `Rows` from the text |
+| `PromptsPanel` prompt | from the text (`RowsFor`) | `Markdown`, `Rows="12"` for every prompt (`PromptFieldFactory.EditorRows`), resizable |
 | `TaskDetail` Description | 10, auto-grow to 30 | `Markdown`, `Rows="10"`, `MaxRows="30"` |
 
 The other old parameters map one to one: `aria-label` is `AriaLabel`; `Adornment` with

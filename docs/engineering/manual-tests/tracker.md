@@ -632,9 +632,9 @@ Settings: the 24 Prompts, editing, per-field reset and Save — [area file](prom
 | [PROMPTSSETTINGS-05](prompts-settings.md#promptssettings-05--the-next-session-badge-appears-on-exactly-the-prompts-whose-edits-cannot-reach-a-running-agent) |  | Active |  |  |
 | [PROMPTSSETTINGS-06](prompts-settings.md#promptssettings-06--placeholder-chips-are-listed-on-exactly-the-prompts-that-take-placeholders-with-full-braces) |  | Active |  |  |
 | [PROMPTSSETTINGS-07](prompts-settings.md#promptssettings-07--no-prompts-default-text-contains-the-literal-string-mcp__team__) |  | Active |  |  |
-| [PROMPTSSETTINGS-08](prompts-settings.md#promptssettings-08--textarea-height-tracks-the-line-count-and-clamps-at-14-rows) |  | Active |  |  |
-| [PROMPTSSETTINGS-09](prompts-settings.md#promptssettings-09--typing-raises-modified-and-unsaved-together-and-enables-save-reset-and-reset-all--while-writing-nothing) |  | Active |  |  |
-| [PROMPTSSETTINGS-10](prompts-settings.md#promptssettings-10--modified-and-unsaved-are-independent-flags--walk-all-three-combinations) |  | Active |  |  |
+| [PROMPTSSETTINGS-08](prompts-settings.md#promptssettings-08--every-prompts-editor-is-the-same-fixed-height-and-can-be-dragged-taller) |  | Active |  |  |
+| [PROMPTSSETTINGS-09](prompts-settings.md#promptssettings-09--typing-raises-modified-and-changed-together-and-enables-save-reset-and-reset-all--while-writing-nothing) |  | Active |  |  |
+| [PROMPTSSETTINGS-10](prompts-settings.md#promptssettings-10--modified-and-changed-are-independent-flags--walk-all-three-combinations) |  | Active |  |  |
 | [PROMPTSSETTINGS-11](prompts-settings.md#promptssettings-11--per-field-reset-stages-the-shipped-default-without-writing-anything-to-disk) |  | Active |  |  |
 | [PROMPTSSETTINGS-12](prompts-settings.md#promptssettings-12--promptsjson-does-not-exist-until-the-first-save-and-then-holds-only-the-keys-you-changed) |  | Active |  |  |
 | [PROMPTSSETTINGS-13](prompts-settings.md#promptssettings-13--the-saved-file-is-human-readable-indented-with-literal-em-dashes-and-angle-brackets-not-uxxxx-escapes) |  | Active |  |  |
@@ -667,6 +667,9 @@ Settings: the 24 Prompts, editing, per-field reset and Save — [area file](prom
 | [PROMPTSSETTINGS-40](prompts-settings.md#promptssettings-40--costs-money-get_help-re-renders-on-every-call-so-its-get-help-prompts-land-on-the-next-call--while-a-tool-description-does-not) | 💰 | Active |  |  |
 | [PROMPTSSETTINGS-41](prompts-settings.md#promptssettings-41--the-library-tab-opens-its-own-pane-and-does-not-fall-back-to-prompts) |  | Active |  |  |
 | [PROMPTSSETTINGS-42](prompts-settings.md#promptssettings-42--the-playbooks-group-has-two-live-keys-with-their-helper-texts) |  | Pass |  | Playbooks group has exactly Member and Manager Playbook with the spec 7.5 helper texts, no Next session pill; typing showed Modified and Unsaved. |
+| [PROMPTSSETTINGS-43](prompts-settings.md#promptssettings-43--search-and-the-all--changed-chips-narrow-the-list-the-editor-stays-where-it-was) |  | Active |  |  |
+| [PROMPTSSETTINGS-44](prompts-settings.md#promptssettings-44--switching-between-prompts-keeps-every-edit-one-save-saves-them-all-and-the-footer-counts-them) |  | Active |  |  |
+| [PROMPTSSETTINGS-45](prompts-settings.md#promptssettings-45--a-validation-error-shows-in-the-list-and-on-the-detail-pane-a-link-from-another-page-opens-its-prompt-a-narrow-window-uses-a-select) |  | Active |  |  |
 
 ## appearance-theme
 

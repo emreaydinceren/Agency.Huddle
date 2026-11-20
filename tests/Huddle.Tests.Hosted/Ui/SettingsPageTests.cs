@@ -190,7 +190,7 @@ public sealed class SettingsPageTests
         Assert.Equal("Sessions", cut.Find(".settings-nav .settings-nav-item-active a.mud-nav-link").TextContent.Trim());
     }
 
-    /// <summary>The Prompts panel renders the Prompts panel's MudPaper-wrapped groups.</summary>
+    /// <summary>The Prompts panel renders its master-detail: the list pane with its group headings and one editor, with the unsaved count in the footer.</summary>
     [Fact]
     public async Task SettingsPromptsPage_Renders_PromptsPanel()
     {
@@ -199,7 +199,9 @@ public sealed class SettingsPageTests
 
         var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
 
-        Assert.NotEmpty(cut.FindAll(".mud-paper"));
+        Assert.Single(cut.FindAll(".prompts-master-detail .prompts-list-pane"));
+        Assert.Single(cut.FindAll(".prompts-detail-pane textarea"));
+        Assert.Contains("No unsaved changes", cut.Find(".settings-prompts-actions").TextContent, StringComparison.Ordinal);
         Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
     }
 
@@ -254,6 +256,32 @@ public sealed class SettingsPageTests
 
         response.EnsureSuccessStatusCode();
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
+    }
+
+    /// <summary>
+    /// Edits to several prompts stay in memory while the Human moves between them: the footer counts each
+    /// changed prompt, the first one's edited text is still in the editor when it is opened again, and the
+    /// Changed filter lists both.
+    /// </summary>
+    [Fact]
+    public async Task SettingsPromptsPage_SwitchingPrompts_KeepsEveryEdit()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        var cut = ctx.Render<Settings>(parameters => parameters.Add(page => page.Tab, "prompts"));
+        var rows = cut.FindAll(".prompts-list-item");
+        string firstId = rows[0].Id ?? string.Empty;
+        string secondId = rows[1].Id ?? string.Empty;
+
+        cut.Find(".prompts-detail-pane textarea").Input("first edited wording");
+        cut.Find($"[id='{secondId}']").Click();
+        cut.Find(".prompts-detail-pane textarea").Input("second edited wording");
+        cut.Find($"[id='{firstId}']").Click();
+
+        Assert.Equal("first edited wording", cut.Find(".prompts-detail-pane textarea").TextContent);
+        Assert.Contains("2 changes not saved", cut.Find(".settings-prompts-actions").TextContent, StringComparison.Ordinal);
+        Assert.Equal(2, cut.FindAll(".prompts-changed-dot").Count);
+        Assert.False(cut.Find(".settings-prompts-actions button[type='submit']").HasAttribute("disabled"));
     }
 
     /// <summary>With nothing pending, the Save button renders disabled - there is nothing yet to commit.</summary>

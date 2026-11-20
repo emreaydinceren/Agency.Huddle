@@ -24,11 +24,11 @@ internal static class PromptFieldFactory
     private const string SkillPromptPrefix = "skillPrompt.";
     private const string HelperPrefix = "helper.";
 
-    // RowsFor's clamp: 2 so a one-line prompt still reads as a text box rather than a slot, 14 so the
-    // longest defaults (getHelp.rooms, systemPrompt.tools) cannot make their own field dominate the
-    // whole page.
-    private const int MinRows = 2;
-    private const int MaxRows = 14;
+    /// <summary>
+    /// The least rows the one prompt editor shows, the same for every prompt. The stylesheet stretches
+    /// the textarea over all the height the detail pane has, so this is only a floor.
+    /// </summary>
+    internal const int MinEditorRows = 8;
 
     // The two default Playbooks (Team Playbooks spec §7.5): a group of their own, Member then Manager, not part of "System prompt".
     private static readonly string[] PlaybookKeys = ["systemPrompt.memberPlaybook", "systemPrompt.managerPlaybook"];
@@ -111,26 +111,39 @@ internal static class PromptFieldFactory
         }
     }
 
-    /// <summary>How many rows a textarea needs to show <paramref name="value"/> without scrolling, within reason.</summary>
-    /// <param name="value">The text the textarea will display; <see langword="null"/> or empty counts as one line.</param>
-    /// <returns>The line count plus one, clamped to between 2 and 14 rows.</returns>
-    internal static int RowsFor(string? value)
+    /// <summary>
+    /// Keeps the fields whose label or key contains <paramref name="search"/> (ignoring case) and, for
+    /// <see cref="PromptFilter.Changed"/>, only those with an unsaved change. A group left with no
+    /// field is dropped, so the list never shows a bare heading.
+    /// </summary>
+    /// <param name="groups">The groups to narrow, in display order.</param>
+    /// <param name="search">The text typed in the search box; <see langword="null"/> or blank matches everything.</param>
+    /// <param name="filter">Which of the matches to keep.</param>
+    /// <returns>The narrowed groups, in the same order.</returns>
+    internal static IReadOnlyList<PromptFieldGroup> Filter(IReadOnlyList<PromptFieldGroup> groups, string? search, PromptFilter filter)
     {
-        if (string.IsNullOrEmpty(value))
-        {
-            return MinRows;
-        }
+        ArgumentNullException.ThrowIfNull(groups);
 
-        var lineCount = 1;
-        foreach (var c in value)
+        var term = search?.Trim();
+        var narrowed = new List<PromptFieldGroup>();
+
+        foreach (var group in groups)
         {
-            if (c == '\n')
+            var fields = group.Fields
+                .Where(field => (filter == PromptFilter.All || field.HasUnsavedChange)
+                    && (string.IsNullOrEmpty(term)
+                        || field.Label.Contains(term, StringComparison.OrdinalIgnoreCase)
+                        || field.Key.Contains(term, StringComparison.OrdinalIgnoreCase)
+                        || field.HelperText.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                .ToList();
+
+            if (fields.Count > 0)
             {
-                lineCount++;
+                narrowed.Add(new PromptFieldGroup(group.Label, fields));
             }
         }
 
-        return Math.Clamp(lineCount + 1, MinRows, MaxRows);
+        return narrowed;
     }
 
     /// <summary>
@@ -162,6 +175,7 @@ internal static class PromptFieldFactory
             HasUnsavedChange: !string.Equals(
                 value.ReplaceLineEndings("\n"), stored.ReplaceLineEndings("\n"), StringComparison.Ordinal),
             Issues: PromptValidator.Validate(definition, value),
-            ReliedWarning: definition.ReliedWarning);
+            ReliedWarning: definition.ReliedWarning,
+            RequiredPlaceholders: definition.RequiredPlaceholders);
     }
 }
