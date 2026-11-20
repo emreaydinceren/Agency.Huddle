@@ -24,11 +24,11 @@ public sealed partial class SoftwareCoScenarioTests
     public void Description_NamesTheCoveredFeatures()
     {
         Assert.Equal(
-            "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records, and an archived Team, Project and chats to restore.",
+            "A software company and a family: Platform, Growth, Support, Home and Family and the agent development Team Storefront (14 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records, and an archived Team, Project and chats to restore.",
             new SoftwareCoScenario().Description);
     }
 
-    /// <summary>SEED-SC-1: Four working Teams, each with at least two Projects; three work Agents span two or more of them, and the household Agents stay in their own Team.</summary>
+    /// <summary>SEED-SC-1: Five working Teams, each with at least two Projects; three work Agents span two or more of them, and the household and development Agents stay in their own Team.</summary>
     [Fact]
     public void Plan_HasFourWorkingTeamsAndSharedAgents()
     {
@@ -36,18 +36,18 @@ public sealed partial class SoftwareCoScenarioTests
 
         string[] working = [.. plan.Teams.Where(t => t.Projects.Count >= 2).Select(t => t.Name)];
 
-        Assert.Equal(["Platform", "Growth", "Support", "Home and Family"], working);
+        Assert.Equal(["Platform", "Growth", "Support", "Home and Family", "Storefront"], working);
         Assert.Contains(plan.Agents, t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2);
         Assert.Equal(3, plan.Agents.Count(t => t.Teams.Intersect(working, StringComparer.OrdinalIgnoreCase).Count() >= 2));
     }
 
-    /// <summary>SEED-SC-3: The cast agreed in the interview: nine work Agents, then the four household Agents, with these Team memberships.</summary>
+    /// <summary>SEED-SC-3: The cast agreed in the interview: nine work Agents, then the four household Agents, then the six Storefront Agents, with these Team memberships.</summary>
     [Fact]
     public void Plan_HasTheAgreedCast()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben", "Hattie", "Theo", "Ravi", "Iris"], plan.Agents.Select(t => t.Name));
+        Assert.Equal(["Grace", "Marcus", "Lena", "Owen", "Sofia", "Dana", "Alan", "Maya", "Ben", "Hattie", "Theo", "Ravi", "Iris", "Priya", "Jonas", "Kenji", "Amara", "Rhys", "Noor"], plan.Agents.Select(t => t.Name));
         Assert.Equal(["Platform", "Growth"], plan.Agents.Single(t => t.Name == "Lena").Teams);
         Assert.Equal(["Growth"], plan.Agents.Single(t => t.Name == "Maya").Teams);
         Assert.Equal(["Support", "Records"], plan.Agents.Single(t => t.Name == "Dana").Teams);
@@ -79,14 +79,15 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.All(plan.Agents, t => Assert.DoesNotContain(plan.Agents.Where(o => o != t), o => string.Equals(o.Name, t.Alias, StringComparison.OrdinalIgnoreCase)));
     }
 
-    /// <summary>SEED-SC-4: All eight statuses appear, and 46 Tasks are seeded: 41 ordinary ones and 5 Requests.</summary>
+    /// <summary>SEED-SC-4: All eight statuses appear, and 79 Tasks are seeded: 43 core, 5 Requests, 18 household and 13 Storefront. Two are gated on the Human by a gate, and one more by an Action.</summary>
     [Fact]
     public void Plan_CoversEveryTaskStatus()
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(66, plan.Tasks.Count);
+        Assert.Equal(79, plan.Tasks.Count);
         Assert.Equal(2, plan.Tasks.Count(t => t.HumanGate && t.Status == "Needs You"));
+        Assert.Equal(3, plan.Tasks.Count(t => (t.HumanGate || t.Action is not null) && t.Status == "Needs You"));
         Assert.All(AllStatuses, status => Assert.Contains(plan.Tasks, t => t.Status == status));
     }
 
@@ -237,7 +238,7 @@ public sealed partial class SoftwareCoScenarioTests
         SeedPlan plan = Plan();
 
         Assert.Equal(["Grace", "Owen", "Platform standup", "Launch crew", "Q2 retro", "Incident 0412 war room"], plan.Rooms.Where(r => r.Team is null).Select(r => r.Name));
-        Assert.Equal(["Platform", "Growth", "Support", "Home and Family", SoftwareCoArchive.LegacySite], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
+        Assert.Equal(["Platform", "Growth", "Support", "Home and Family", "Storefront", SoftwareCoArchive.LegacySite], plan.Rooms.Where(r => r.IsTeamRoom).Select(r => r.Team));
         Assert.Equal(9, plan.Rooms.Count(r => r.Team is not null && !r.IsTeamRoom));
         Assert.Equal(2, plan.Rooms.Count(r => r.Team is null && r.Members.Count == 1));
         Assert.Equal(["Q2 retro", SoftwareCoArchive.LegacySite, "Checkout v1 sunset", "Log shipping spike", "Spring promo wrap-up"], plan.Rooms.Where(r => r.Archived).Select(r => r.Name));
@@ -540,6 +541,63 @@ public sealed partial class SoftwareCoScenarioTests
         Assert.Contains(home, t => t.Parent is not null);
         Assert.Contains(home, t => t.Assignee is null);
         Assert.Contains(home, t => t.HumanGate);
+    }
+
+    /// <summary>SEED-DEV-1, -2: Storefront has its two Projects and a workspace, and its six Agents belong to it alone, one in each role the Team hires.</summary>
+    [Fact]
+    public void Plan_Storefront_HasItsProjectsWorkspaceAndCast()
+    {
+        SeedPlan plan = Plan();
+
+        SeedTeam team = Assert.Single(plan.Teams, t => t.Name == SoftwareCoStorefront.Team);
+        Assert.Equal(["Checkout", "Accessibility"], team.Projects);
+        Assert.Equal("development@1.0.0", team.TeamType);
+        Assert.Equal("Priya", team.Manager);
+        Assert.NotEmpty(team.WorkspaceFiles);
+        SeedAgent[] cast = [.. plan.Agents.Where(a => a.Teams.Contains(SoftwareCoStorefront.Team))];
+        Assert.Equal(["Priya", "Jonas", "Kenji", "Amara", "Rhys", "Noor"], cast.Select(a => a.Name));
+        Assert.All(cast, a => Assert.Equal([SoftwareCoStorefront.Team], a.Teams));
+        Assert.Equal(
+            ["development-manager", "tech-lead", "developer", "developer", "reviewer", "qa-engineer"],
+            cast.Select(static a => a.Role?.Split('/')[1].Split('@')[0]));
+    }
+
+    /// <summary>
+    /// SEED-DEV-3, -4: The merge Task is in Needs You with an Action and no gate flag, has a Done review Task and a Done QA Task as children,
+    /// Evidence with exit code 0, one blocked Task, and no developer has two Tasks In Progress (the Team's one-in-progress gate).
+    /// </summary>
+    [Fact]
+    public void Plan_Storefront_TasksShowTheFlow()
+    {
+        SeedPlan plan = Plan();
+        SeedTask[] tasks = [.. plan.Tasks.Where(t => t.Location.Team == SoftwareCoStorefront.Team)];
+
+        SeedTask merge = Assert.Single(tasks, t => t.Id == SoftwareCoStorefront.MergeTask);
+        Assert.Equal("Needs You", merge.Status);
+        Assert.Equal($"Merge {SoftwareCoStorefront.MergeBranch} into main", merge.Action);
+        Assert.False(merge.HumanGate);
+        Assert.Equal(["STOR-0002", "STOR-0003"], merge.BlockedBy);
+        Assert.Equal([ReviewTags.Review, ReviewTags.Verify], tasks.Where(t => t.Parent == merge.Id).SelectMany(t => t.Tags));
+        Assert.All(tasks.Where(t => t.Parent == merge.Id), t => Assert.Equal("Done", t.Status));
+        Assert.Contains(merge.ExtraEvents, e => e.Kind == TimelineEntryKind.Evidence && e.Summary == "dotnet test | exit 0 | note: 212 passed");
+        SeedTask qa = Assert.Single(tasks, t => t.Id == SoftwareCoStorefront.EvidenceTask);
+        Assert.Equal(3, qa.ExtraEvents.Count(e => e.Kind == TimelineEntryKind.Evidence && e.Summary.Contains("| exit 0", StringComparison.Ordinal))); // contains-ok: an Evidence field, not markup
+        Assert.Contains(tasks, t => t.BlockedBy.Count > 0 && ManifestWriter.Blocked(plan).Contains(t.Id));
+        Assert.DoesNotContain(tasks.Where(t => t.Status == "In Progress").GroupBy(t => t.Assignee), g => g.Count() > 1);
+    }
+
+    /// <summary>SEED-DEV-4: The Storefront Team Room holds all six Agents, the request, the review, the QA run and the merge waiting for the Human, and ends on the Human's reply so no Mention waits.</summary>
+    [Fact]
+    public void Plan_Storefront_TeamRoomTellsTheStory()
+    {
+        SeedRoom room = Assert.Single(Plan().Rooms, r => r.Key == SoftwareCoStorefront.TeamRoom);
+
+        Assert.True(room.IsTeamRoom);
+        Assert.Equal(SoftwareCoStorefront.Team, room.Team);
+        Assert.Equal(["Priya", "Jonas", "Kenji", "Amara", "Rhys", "Noor"], room.Members);
+        Assert.Equal("You", room.Messages[0].Sender);
+        Assert.Equal("You", room.Messages[^1].Sender);
+        Assert.Equal(["Priya", "Jonas", "Kenji", "Rhys", "Noor"], room.Messages.Select(static m => m.Sender).Where(static s => s != "You").Distinct(StringComparer.Ordinal));
     }
 
     /// <summary>SEED-HOME-6: Mia's peanut allergy is a Meals memory fact, and Theo quotes it in a household Room.</summary>

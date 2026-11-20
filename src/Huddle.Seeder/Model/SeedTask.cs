@@ -72,6 +72,12 @@ internal sealed record SeedTask
     /// <summary>Whether the Task requires the Human's acceptance (<c>human_gate: true</c>).</summary>
     public bool HumanGate { get; init; }
 
+    /// <summary>
+    /// The one-line outward action the Task takes once the Human accepts, such as <c>Merge feat/STOR-0001-x into main</c> (<c>action:</c>),
+    /// or <see langword="null"/> for none. A Task with an Action is gated, so it needs no <see cref="HumanGate"/> as well.
+    /// </summary>
+    public string? Action { get; init; }
+
     /// <summary>The Sprint id the Task is in, such as <c>S2</c>, or <see langword="null"/>.</summary>
     public string? Sprint { get; init; }
 

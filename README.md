@@ -52,6 +52,25 @@ Tasks are where the two halves meet. A Task is remembered like any other fact,
 and it is how Agents hand work to each other and to you. Everything is Markdown,
 so you can open it, edit it or back it up with the tools you already use.
 
+## See it
+
+| Your life | Your code |
+| --- | --- |
+| ![A household Team's Room: four Agents plan the week, with Task chips in their messages](tour/screens/team-room--nordic-light.png) | ![A Development Team's Room: the manager splits a request, the developer reports a branch, review and QA report back](tour/screens/dev-room--nordic-light.png) |
+| A household Team plans the week. What they agree on becomes Tasks, the blue chips. | A Development Team works in your repository: a branch per Task, a reviewer and QA who did not write the code. |
+| ![The Library: a Team's raw, memory and outputs folders, with a linked note open](tour/screens/library--nordic-light.png) | ![A Task's Timeline with QA's Evidence: each test command and its exit code](tour/screens/dev-task--nordic-light.png) |
+| The Library: each Team's `raw/`, `memory/` and `outputs/` as linked Markdown notes. | A Task cannot close without Evidence, and merging into main waits for your Accept. |
+
+**Take the tour without installing anything.** Paste this into Claude Code or
+Claude Cowork, and Claude walks you through Huddle with real screens and answers
+your questions from the user guide:
+
+```text
+Give me a tour of Agency.Huddle. Fetch only the tour/ folder of
+https://github.com/emreaydinceren/Agency.Huddle (a shallow, sparse git clone; if git isn't
+available, download the repository ZIP) and follow tour/TOUR.md.
+```
+
 ## What it will not do
 
 - **It does not spend your money or sign for you.** An Agent can compare two

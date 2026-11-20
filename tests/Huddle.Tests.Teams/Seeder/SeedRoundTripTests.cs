@@ -29,7 +29,7 @@ namespace Agency.Huddle.Tests.Seeder;
 public sealed class SeedRoundTripTests
 {
     private static readonly string[] SavedViewIds =
-        ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "current-sprint", "closed-work", "home-this-week", "who-owns-what", "home-board"];
+        ["platform-board", "growth-by-project", "my-open-work", "blocked-work", "awaiting-review", "support-urgent", "unassigned", "current-sprint", "closed-work", "home-this-week", "who-owns-what", "home-board", "storefront-board"];
 
     /// <summary>SEED-RT-1: Every Agent loads, none is rejected, and Team membership survives.</summary>
     [Fact]
@@ -111,7 +111,7 @@ public sealed class SeedRoundTripTests
             {
                 Assert.Equal(expected[i].At, parsed.Timeline[i].At);
                 Assert.Equal(expected[i].Author, parsed.Timeline[i].Author);
-                Assert.Equal(TimelineEntryKind.Event, parsed.Timeline[i].Kind);
+                Assert.Equal(expected[i].Kind, parsed.Timeline[i].Kind);
                 Assert.Equal(expected[i].Text, parsed.Timeline[i].Text);
             }
         });
@@ -379,6 +379,68 @@ public sealed class SeedRoundTripTests
         Assert.Equal(expected.ReplaceLineEndings("\n").TrimEnd('\n'), process.ReplaceLineEndings("\n").TrimEnd('\n'));
         Assert.True(ProcessDocument.TryParse(process, out _));
         Assert.Equal(["household/household-manager@1.1.0", "household/meal-planner@1.1.0", "household/home-keeper@1.1.0", "household/schedule-keeper@1.1.0"], await RolesAsync(seed, ["Hattie", "Theo", "Ravi", "Iris"], ct));
+    }
+
+    /// <summary>
+    /// SEED-DEV-1, -2, -6: Storefront is set up as a hire from <c>development@1.0.0</c> would leave it: a typed, onboarded <c>_team.md</c>
+    /// naming Priya as manager, the lightweight flow's gates, a workspace the app reads as a repository, the process prose as
+    /// <c>AGENTS.md</c>, and a <c>_role</c> of that version on every member.
+    /// </summary>
+    [Fact]
+    public async Task Teams_StorefrontIsSetUpFromTheDevelopmentType()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        string folder = Path.Combine(seed.DataDir, "Teams", SoftwareCoStorefront.Team);
+
+        Assert.True(TeamFile.TryParse(await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.TeamFileName), ct), out TeamFile? file));
+        string process = await File.ReadAllTextAsync(Path.Combine(folder, TeamPaths.AgentsMdFileName), ct);
+
+        Assert.Equal("development@1.0.0", file.TeamType.ToString());
+        Assert.Equal("Priya", file.Manager);
+        Assert.True(file.Onboarded);
+        Assert.False(string.IsNullOrWhiteSpace(file.Owns));
+        Assert.Equal(
+            [GateId.QaEvidenceBeforeDone, GateId.ChecksBeforeMerge, GateId.AcceptBeforeMerge, GateId.BlockersDoneBeforeStart, GateId.OneInProgressPerAssignee],
+            file.Process.Gates);
+        Assert.Equal("dotnet test", file.Process.CheckCommand);
+        Assert.True(ProcessDocument.TryParse(process, out ProcessDocument? document));
+        Assert.Equal(["Review", "QA evidence", "Tests pass"], document.DefinitionOfDone.Select(static item => item.Label));
+        Assert.NotNull(file.Workspace);
+        Assert.Equal(WorkspaceState.Repository, WorkspaceProbe.StateOf(file.Workspace));
+        Assert.Equal(Path.Combine(seed.Root, "workspaces", "storefront"), file.Workspace);
+        Assert.Equal(
+            ["development/development-manager@1.0.0", "development/tech-lead@1.0.0", "development/developer@1.0.0", "development/developer@1.0.0", "development/reviewer@1.0.0", "development/qa-engineer@1.0.0"],
+            await RolesAsync(seed, ["Priya", "Jonas", "Kenji", "Amara", "Rhys", "Noor"], ct));
+    }
+
+    /// <summary>
+    /// SEED-DEV-4, -5: The Storefront merge Task is in Needs You with an Action and waits on the Human, its review and QA children are Done
+    /// and tagged, the Evidence reads back as commands with exit codes, and a Task is blocked by an open one.
+    /// </summary>
+    [Fact]
+    public async Task Tasks_StorefrontMergeWaitsOnTheHumanWithItsEvidence()
+    {
+        using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
+        var options = seed.Options();
+        using PersonaStore personas = new(new AgentPaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
+        using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
+
+        TaskItem merge = Assert.Single(store.All, t => t.Id.ToString() == SoftwareCoStorefront.MergeTask);
+        TaskItem[] children = [.. store.All.Where(t => t.Parent == merge.Id)];
+        TaskItem qa = Assert.Single(store.All, t => t.Id.ToString() == SoftwareCoStorefront.EvidenceTask);
+        TaskItem blocked = Assert.Single(store.All, t => t.Id.ToString() == SoftwareCoStorefront.BlockedTask);
+
+        Assert.Equal(TaskState.NeedsYou, merge.Status);
+        Assert.Equal($"Merge {SoftwareCoStorefront.MergeBranch} into main", merge.Action);
+        Assert.True(TaskQuery.WaitsOnHuman(merge));
+        Assert.Equal(["review", "verify"], children.SelectMany(static c => c.Tags).Order(StringComparer.Ordinal));
+        Assert.All(children, static c => Assert.Equal(TaskState.Done, c.Status));
+        Assert.Contains(merge.Evidence, static line => line.RunsCommand("dotnet test") && line.ExitCode == 0);
+        Assert.All(qa.Evidence, static line => Assert.Equal(0, line.ExitCode));
+        Assert.Equal(["dotnet test --filter Category=Checkout", "browser-check /checkout", "dotnet test"], qa.Evidence.Select(static line => line.Command));
+        Assert.Contains(qa.Comments, static entry => entry.Kind == TimelineEntryKind.Evidence);
+        Assert.Contains(blocked.BlockedBy, id => store.All.Single(t => t.Id == id).Status != TaskState.Done);
     }
 
     /// <summary>SEED-RT-6: The layout marker exists, so Huddle's one-time migration will not move the seeded notes.</summary>

@@ -131,13 +131,24 @@ internal static class FeedSeeder
             FeedSourceType.TaskGateOn => item.ActorKind == FeedActorKind.Helper
                 ? new TaskGatePayload(task.Id, task.Title, team, null, item.Detail)
                 : new TaskGatePayload(task.Id, task.Title, team, item.Detail),
-            FeedSourceType.TaskNeedsYou => new TaskNeedsYouPayload(task.Id, task.Title, team, 4, 4),
+            FeedSourceType.TaskNeedsYou => NeedsYou(task, team, item.Extra),
             FeedSourceType.RequestAwaitsYou => new RequestAwaitsPayload(task.Id, task.Title, team, item.Extra ?? team, "bug"),
             FeedSourceType.GateDecisionDue => new GateDecisionPayload(task.Id, task.Title, team, item.Extra ?? "gate", item.Detail ?? string.Empty, "In Progress", "Done"),
             _ => new TaskCreatedPayload(task.Id, task.Title, team, task.Assignee),
         };
 
         return (task.Id, payload);
+    }
+
+    /// <summary>The Needs You payload; <paramref name="proof"/> is the Proof as <c>met/total</c> (such as <c>3/3</c>), or <see langword="null"/> for the default 4 of 4.</summary>
+    private static TaskNeedsYouPayload NeedsYou(SeedTask task, string team, string? proof)
+    {
+        string[] parts = proof?.Split('/') ?? [];
+        return parts.Length == 2
+            && int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int met)
+            && int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int total)
+            ? new TaskNeedsYouPayload(task.Id, task.Title, team, met, total)
+            : new TaskNeedsYouPayload(task.Id, task.Title, team, 4, 4);
     }
 
     /// <summary>Gives the Needs Human Helper the day its items describe: its calls used up with two saves skipped, three failures in a row after a good run.</summary>

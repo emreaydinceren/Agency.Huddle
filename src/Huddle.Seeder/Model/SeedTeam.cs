@@ -18,6 +18,15 @@ internal sealed record SeedTeam(string Name, IReadOnlyList<string> Projects)
     public string? Owns { get; init; }
 
     /// <summary>
+    /// The folder name of the Team's workspace below <c>&lt;root&gt;/workspaces/</c>, or <see langword="null"/> for none. The seeder creates
+    /// it as an empty git repository holding <see cref="WorkspaceFiles"/> and writes its full path as the Team's <c>workspace:</c>.
+    /// </summary>
+    public string? Workspace { get; init; }
+
+    /// <summary>The files of the workspace, as paths relative to its folder; read only when <see cref="Workspace"/> is set.</summary>
+    public IReadOnlyList<SeedFile> WorkspaceFiles { get; init; } = [];
+
+    /// <summary>
     /// Projects already archived, each at <c>Archive/&lt;Team&gt;/&lt;Project&gt;</c>, where the app's Archive project moves them
     /// (Seeder spec SEED-SC-17). They are not in <see cref="Projects"/>, which lists the live ones only.
     /// </summary>

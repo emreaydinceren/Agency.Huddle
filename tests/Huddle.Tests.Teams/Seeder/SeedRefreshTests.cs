@@ -48,7 +48,7 @@ public sealed class SeedRefreshTests
         SeedPlan plan = seed.Summary.Plan;
         SqliteTeamDirectory directory = new(seed.Options());
 
-        foreach (string team in new[] { "Platform", "Growth", "Support", SoftwareCoHome.Team })
+        foreach (string team in new[] { "Platform", "Growth", "Support", SoftwareCoHome.Team, SoftwareCoStorefront.Team })
         {
             Room? teamRoom = await directory.FindTeamRoomAsync(team, ct);
             Assert.NotNull(teamRoom);
@@ -61,7 +61,7 @@ public sealed class SeedRefreshTests
 
         IReadOnlyList<Room> scoped = [.. (await directory.GetRoomsAsync(ct)).Where(r => r.Team is not null)];
         Assert.Equal(plan.Rooms.Count(r => r.Team is not null), scoped.Count);
-        Assert.Equal(4, scoped.Count(r => r.IsTeamRoom && !r.Archived));
+        Assert.Equal(5, scoped.Count(r => r.IsTeamRoom && !r.Archived));
         Room archivedTeamRoom = Assert.Single(scoped, r => r.IsTeamRoom && r.Archived);
         Assert.Equal(SoftwareCoArchive.LegacySite, archivedTeamRoom.Team);
         Room chat = Assert.Single(scoped, r => r.Id == seed.Summary.Ids.RoomIds[SoftwareCoRooms.ChatPlatformPagination]);
