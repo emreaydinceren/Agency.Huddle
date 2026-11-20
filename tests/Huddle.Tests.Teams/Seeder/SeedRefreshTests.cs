@@ -143,7 +143,13 @@ public sealed class SeedRefreshTests
                 MessageReference[] gone = [.. stored.Where(r => r.Kind == ReferenceKind.LibraryFile && !File.Exists(r.Key))];
                 unavailable.AddRange(gone);
                 renamed += stored.Count(r => r.Kind == ReferenceKind.Task && plan.Tasks.First(t => t.Id == r.Key).FormerTitle is not null);
-                Assert.Equal(expected.Select(r => ReferenceKey(r, plan)), stored.Except(gone).Select(r => ReferenceKey(r, plan)));
+
+                // A Library file named by a token shows as a file-name link, not its path (#700), so the text scan cannot
+                // find it; its stored reference must still be a file that resolves, and the rest must match exactly.
+                HashSet<string> scanned = new(expected.Where(r => r.Kind == ReferenceKind.LibraryFile).Select(r => r.Key), StringComparer.OrdinalIgnoreCase);
+                MessageReference[] linked = [.. stored.Except(gone).Where(r => r.Kind == ReferenceKind.LibraryFile && !scanned.Contains(r.Key))];
+                Assert.All(linked, r => Assert.True(library.Resolver.TryResolveAbsolute(r.Key, out _), r.Key));
+                Assert.Equal(expected.Select(r => ReferenceKey(r, plan)), stored.Except(gone).Except(linked).Select(r => ReferenceKey(r, plan)));
             }
         }
 
@@ -191,6 +197,20 @@ public sealed class SeedRefreshTests
 
         IReadOnlyList<ChatMessage> standup = await chat.ReadAllAsync(seed.Summary.Ids.RoomIds[SoftwareCoRooms.PlatformStandup], ct);
         Assert.Contains(standup.SelectMany(m => m.References ?? []).Where(r => r.Kind == ReferenceKind.LibraryFile).GroupBy(r => r.Key), g => g.Count() > 1);
+    }
+
+    /// <summary>#700: A Library file named by a token reads as its file name linked to its Library address; no Message prints the data folder's path.</summary>
+    [Fact]
+    public async Task LibraryTokens_ShowFileNameLinks_NotAbsolutePaths()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using SeededFolder seed = await SeededFolder.CreateAsync(ct);
+        FileChatStore chat = new(seed.Options(), NullLogger<FileChatStore>.Instance);
+
+        Assert.Equal("[Pagination.md](?library=teams/Platform/API%20v2/Pagination.md)",MessageReferences.LibraryLink("Teams/Platform/API v2/Pagination.md"));
+        IReadOnlyList<ChatMessage> messages = await chat.ReadAllAsync(seed.Summary.Ids.RoomIds[SoftwareCoRooms.IncidentWarRoom], ct);
+        Assert.DoesNotContain(messages, m => m.Text.Contains(seed.DataDir, StringComparison.OrdinalIgnoreCase)); // contains-ok: Message prose, pins that no machine path is printed.
+        Assert.Contains(messages, m => m.Text.Contains("[Incident-0412.md](?library=teams/Support/Incident%20Tooling/Incident-0412.md)", StringComparison.Ordinal)); // contains-ok: Message prose around the link.
     }
 
     /// <summary>SEED-INV-11: Uploads sit in the folder the app's upload flow resolves for the Room, and a Message cites each the way the composer writes it: a blank line, then the path in backticks.</summary>
