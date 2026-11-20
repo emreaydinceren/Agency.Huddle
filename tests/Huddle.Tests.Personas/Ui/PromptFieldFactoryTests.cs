@@ -287,40 +287,65 @@ public sealed class PromptFieldFactoryTests
         }
     }
 
-    /// <summary>A single-line value needs two rows: one for the line, one so it still reads as a box rather than a slot.</summary>
+    /// <summary>The editor's row count is only a floor of eight, the same for every prompt; the stylesheet stretches the textarea to the pane.</summary>
     [Fact]
-    public void RowsFor_OneLineValue_ReturnsTwo()
+    public void MinEditorRows_IsAFloorOfEight()
     {
-        var rows = PromptFieldFactory.RowsFor("{{roomLabel}} {{sender}}: {{text}}");
-
-        Assert.Equal(2, rows);
+        Assert.Equal(8, PromptFieldFactory.MinEditorRows);
     }
 
-    /// <summary>A multi-line value gets one row per line plus one, unclamped while still short.</summary>
+    /// <summary>A search matches a prompt's description as well as its title and key.</summary>
     [Fact]
-    public void RowsFor_MultiLineValue_ReturnsLineCountPlusOne()
+    public void Filter_Search_MatchesTheDescription()
     {
-        var rows = PromptFieldFactory.RowsFor("line one\nline two\nline three");
+        var groups = PromptFieldFactory.Build(new FakePromptSource(), NoPendingEdits);
+        var target = groups.SelectMany(g => g.Fields).First(field => field.HelperText.Length > 20);
+        var phrase = target.HelperText.Substring(5, 12);
 
-        Assert.Equal(4, rows);
+        var filtered = PromptFieldFactory.Filter(groups, phrase, PromptFilter.All);
+
+        Assert.Contains(filtered.SelectMany(g => g.Fields), field => field.Key == target.Key);
     }
 
-    /// <summary>A value with more newlines than the clamp allows is capped at 14 rows, not left to dominate the page.</summary>
+    /// <summary>Filtering with a blank search and the All filter returns every group and field unchanged.</summary>
     [Fact]
-    public void RowsFor_ValueLongerThanTheClamp_IsCappedAtFourteen()
+    public void Filter_NoSearchAllFilter_KeepsEverything()
     {
-        var value = string.Join('\n', Enumerable.Repeat("a line", 30));
+        var groups = PromptFieldFactory.Build(new FakePromptSource(), NoPendingEdits);
 
-        var rows = PromptFieldFactory.RowsFor(value);
+        var filtered = PromptFieldFactory.Filter(groups, "  ", PromptFilter.All);
 
-        Assert.Equal(14, rows);
+        Assert.Equal(groups.Select(g => g.Label), filtered.Select(g => g.Label));
+        Assert.Equal(groups.Sum(g => g.Fields.Count), filtered.Sum(g => g.Fields.Count));
     }
 
-    /// <summary>A null or empty value is not an error - it just needs the minimum of two rows.</summary>
+    /// <summary>A search matches a prompt's title or its key, ignoring case, and drops a group left with no match.</summary>
     [Fact]
-    public void RowsFor_NullOrEmptyValue_ReturnsTheMinimum()
+    public void Filter_Search_MatchesTitleOrKeyIgnoringCase_AndDropsEmptyGroups()
     {
-        Assert.Equal(2, PromptFieldFactory.RowsFor(null));
-        Assert.Equal(2, PromptFieldFactory.RowsFor(string.Empty));
+        var groups = PromptFieldFactory.Build(new FakePromptSource(), NoPendingEdits);
+        var target = PromptCatalog.All.First(definition => definition.Key.StartsWith("turn.", StringComparison.Ordinal));
+
+        var byKey = PromptFieldFactory.Filter(groups, target.Key.ToUpperInvariant(), PromptFilter.All);
+        var byLabel = PromptFieldFactory.Filter(groups, target.Label.ToLowerInvariant(), PromptFilter.All);
+
+        Assert.Contains(byKey.SelectMany(g => g.Fields), field => field.Key == target.Key);
+        Assert.Contains(byLabel.SelectMany(g => g.Fields), field => field.Key == target.Key);
+        Assert.DoesNotContain(byKey, group => group.Fields.Count == 0);
+        Assert.Contains(byKey, group => group.Label == "Turn");
+        Assert.DoesNotContain(byKey, group => group.Label == "Playbooks");
+    }
+
+    /// <summary>The Changed filter keeps only a prompt whose pending text differs from what is saved.</summary>
+    [Fact]
+    public void Filter_Changed_KeepsOnlyUnsavedChanges()
+    {
+        var edited = PromptCatalog.All[0];
+        var pending = new Dictionary<string, string>(StringComparer.Ordinal) { [edited.Key] = edited.Default + " edited" };
+        var groups = PromptFieldFactory.Build(new FakePromptSource(), pending);
+
+        var filtered = PromptFieldFactory.Filter(groups, null, PromptFilter.Changed);
+
+        Assert.Equal(edited.Key, Assert.Single(filtered.SelectMany(g => g.Fields)).Key);
     }
 }

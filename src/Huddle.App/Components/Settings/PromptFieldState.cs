@@ -34,6 +34,7 @@ namespace Agency.Huddle.App.Components.Settings;
 /// <param name="HasUnsavedChange">Whether <see cref="Value"/> differs from the prompt's currently stored value. Drives the Save button and the "Unsaved" badge.</param>
 /// <param name="Issues">Validation findings for <see cref="Value"/>, from <c>PromptValidator.Validate</c>. Never blocks a save — see <c>PromptValidator</c>'s remarks.</param>
 /// <param name="ReliedWarning">The catalog's <see cref="PromptDefinition.ReliedWarning"/>, shown as a warning under the field; <see langword="null"/> when nothing relies on this prompt.</param>
+/// <param name="RequiredPlaceholders">The subset of <see cref="Placeholders"/> the text must keep; marked "Required" in the placeholder table. <see langword="null"/> means none.</param>
 public sealed record PromptFieldState(
     string Key,
     string Label,
@@ -45,4 +46,5 @@ public sealed record PromptFieldState(
     bool IsModified,
     bool HasUnsavedChange,
     IReadOnlyList<PromptIssue> Issues,
-    string? ReliedWarning = null);
+    string? ReliedWarning = null,
+    IReadOnlyList<string>? RequiredPlaceholders = null);
