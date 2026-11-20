@@ -121,9 +121,11 @@ decides how much waits for you, and says plainly what it cannot catch.
 
 ### Take the tour in Claude
 
-**See it without installing anything.** Paste this into Claude Code or
-Claude Cowork, and Claude walks you through Huddle with real screens and answers
-your questions from the user guide:
+The screens above are a preview. The tour is a conversation: Claude shows you
+around at your pace, and you can stop at any point to ask how something works,
+what it costs or whether it fits what you have in mind. It answers from the user
+guide, and it ends by sketching a first Team for whatever you tell it is on your
+plate. Nothing is installed. Paste this into Claude Code or Claude Cowork:
 
 ```text
 Give me a tour of Agency.Huddle. Fetch only the tour/ folder of
