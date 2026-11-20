@@ -308,6 +308,33 @@
     scroll-snap-type: x proximity;
     max-height: calc(100vh - 12rem);
     background: var(--hu-board-background);
+    /* Edge cue: the columns fade out over the edge that has more columns beyond it. Two mask layers are intersected:
+       the first fades the left 40px, the second the right 40px, and a scroll-driven animation on the board itself
+       slides each fade out of the box as the scroll reaches that end (the left layer's position, the right layer's
+       size, so the two animations never share a property). While the board does not scroll sideways it has no scroll
+       timeline, no animation applies, and the static values below leave both fades outside the box. A mask paints
+       nothing and takes no pointer events, so a card's action stays clickable, and it fades to the page behind, so it
+       reads right in every Theme. */
+    mask-image:
+        linear-gradient(to right, transparent, var(--hu-ground-page) 40px),
+        linear-gradient(to right, var(--hu-ground-page) calc(100% - 40px), transparent);
+    mask-repeat: no-repeat;
+    mask-composite: intersect;
+    mask-position: -40px 0, 0 0;
+    mask-size: calc(100% + 40px) 100%, calc(100% + 40px) 100%;
+    animation: board-fade-left linear both, board-fade-right linear both;
+    animation-timeline: scroll(self x), scroll(self x);
+    animation-range: 0 40px, calc(100% - 40px) 100%;
+}
+
+@keyframes board-fade-left {
+    from { mask-position: -40px 0, 0 0; }
+    to { mask-position: 0 0, 0 0; }
+}
+
+@keyframes board-fade-right {
+    from { mask-size: calc(100% + 40px) 100%, 100% 100%; }
+    to { mask-size: calc(100% + 40px) 100%, calc(100% + 40px) 100%; }
 }
 
 .tab-body > .tasks-page:has(> .task-board) {
