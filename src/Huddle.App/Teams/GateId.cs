@@ -24,6 +24,9 @@ internal enum GateId
     /// <summary>A change cannot leave one assignee with two Tasks In Progress, in any Team; unassigned Tasks are never limited (ADR-0102).</summary>
     OneInProgressPerAssignee,
 
+    /// <summary>A Team or Project that asks for one Task at a time refuses a second In Progress in the same Project (ADR-0103); a refusal id only, never written in _team.md.</summary>
+    OneInProgressPerProject,
+
     /// <summary>A Human-gated Task cannot skip the Human's acceptance; never written in _team.md.</summary>
     HumanGate,
 

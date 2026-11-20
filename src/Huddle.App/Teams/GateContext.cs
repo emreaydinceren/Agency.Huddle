@@ -29,6 +29,12 @@ internal sealed record GateContext(
     /// <summary>Another Task, In Progress and not closed in any Team, held by the assignee this change would leave the Task with; <see langword="null"/> when there is none, the change gives no one an In Progress Task, or the Task is unassigned (ADR-0102).</summary>
     public OtherInProgress? OtherInProgress { get; init; }
 
+    /// <summary>The Project of the Task as the change would leave it, or <see langword="null"/> for a Task with none; the Project file that sets <c>oneInProgressPerProject</c> is read for it (ADR-0103).</summary>
+    public string? Project { get; init; }
+
+    /// <summary>Another Task In Progress in the group (same Team and Project, not closed) the change would put the Task into; <see langword="null"/> when there is none or the change does not enter the group (ADR-0103).</summary>
+    public GroupInProgress? OtherInGroup { get; init; }
+
     /// <summary>Whether a child of the Task tagged <c>verify</c> is Done (#669, D-16): a QA check is a Task, and it meets <c>qa-evidence-before-done</c>.</summary>
     public bool HasDoneVerifyChild { get; init; }
 
