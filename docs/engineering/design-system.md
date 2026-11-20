@@ -146,7 +146,9 @@ ratio of each rung in each Theme is evidence, not a rule; it lives in
 > **Lines are ranked:** Line < Field <= Chrome. Each sits on its ink rung (18%, 30%, 30%). Every
 > input, long-text fields included, draws the Field line. No line is drawn in Ink, Quiet ink or
 > Accent, except a focused field (Accent) and a drop target (dashed Accent).
-> `SkinColourRulesTests` holds every Theme to the order, on resolved colours.
+> `SkinColourRulesTests` holds every Theme to the order, on resolved colours. Fluent's field
+> outlines are deliberately stronger than its chrome, so Field <= Chrome does not apply to Fluent;
+> Line < Field and Line < Chrome still do (the text census lists the exemption in `order.exempt`).
 
 > **A wash never defines a shape on its own.** A washed shape (tag chip, reference chip, preview
 > block) also carries a Line, so it keeps its outline where the wash can't (dark grounds,

@@ -56,6 +56,8 @@ For every visible element with a non-transparent border side or background fill,
 
 The required order is Line < Field <= Chrome (`ORDER_RULES`). Each tier is summarised by the median rung of its on-ladder lines, and `order.violations` names every pair out of order, for example `Line < Field required, but Line is Ink 21% and Field is Ink 14%`. An empty list means the order holds. To classify a new class name, add one row to `CLASSIFIER`; to change a tier's order, edit `ORDER_RULES`.
 
+Fluent (`fluent-light`, `fluent-dark`) is exempt from Field <= Chrome: its input outlines are deliberately stronger than its chrome. The census reads the Theme from the page's `[data-huddle-theme]` marker, skips only that comparison for Fluent (`ORDER_EXEMPT`), and lists it in `order.exempt` so a clean `violations` never reads as a pass by accident. Line < Field and Line < Chrome still apply to Fluent.
+
 ## Thresholds
 
 - **Contrast:** 4.5:1 for normal text; 3:1 for large text. Large is 24px or more, or 18.66px or more at weight 700 or above, in rendered px.

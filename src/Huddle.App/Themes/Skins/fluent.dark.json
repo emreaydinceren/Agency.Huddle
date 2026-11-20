@@ -29,6 +29,7 @@
     "ground.sunk": "#333333",
     "ink.strip": "ref(ground.sunk)",
     "ink.wash": "ref(ground.sunk)",
+    "line.region": "palette.divider",
     "current.shadow": "0 0 2px rgba(0,0,0,.24), 0 1px 2px rgba(0,0,0,.28)",
     "selected.background": "#0e2a45",
     "selected.background.hover": "#123a5e",
