@@ -89,13 +89,87 @@ Then run the beats for their answer:
 
 | They pick | Beats |
 | --- | --- |
-| 1, life and notes | 1, 2, 3, 4, 5, 7, 8, 9 |
-| 2, software | 1, 2, 6, 4, 5 (short), 8, 9 |
-| 3, both | 1 to 9 |
+| 1, life and notes | 0A, 1, 2, 3, 4, 5, 7, 8, 9 |
+| 2, software | 0B, 1, 2, 6, 4, 5 (short), 8, 9 |
+| 3, both | 0A, 1 to 5, then 0B, 6 to 9 |
 
 If they don't pick, take "both".
 
 ---
+
+## Beat 0A: The pile (life and notes)
+
+This beat shows the problem before naming it. Don't explain Huddle yet, and don't show a
+picture: the pile is the picture.
+
+**Say:** Start with the idea most people already hold, and let them agree with it:
+
+> Most people's picture of the ideal AI is one assistant that remembers everything about you.
+> Here's a week of what it would keep:
+>
+> - Mia is allergic to tree nuts
+> - Q3 board deck due Friday
+> - Dentist, Tuesday 15:30
+> - Boiler service overdue
+> - Museum trip next Thursday, consent form due tomorrow
+> - Car insurance renews at the end of the month
+> - Leo's swimming kit is on Sam's list
+> - Flight to the offsite, Thursday morning
+> - Ms Patel is Mia's new teacher
+>
+> Spot the problem?
+
+**Then stop and wait for their answer.** Whatever they say, take it seriously.
+
+- **If they found it** (the trip and the flight are the same day), say so warmly.
+- **If they didn't,** point at the two lines.
+
+Then name it, in two or three sentences: one memory for everything means nothing notices when
+two facts collide, and the longer the pile grows, the less any one line matters. Then ask
+the question the rest of the tour answers: *who would notice the trip is on your travel day?*
+
+**The answer, as an example:** In Huddle, say the school emails arrive one evening. Hattie,
+who owns school mail, files the trip and makes a Task for the consent form. Iris, who keeps the
+family calendar, sees it's the day you fly, and asks you who does pick-up. Neither was told to
+look. Then go to beat 1.
+
+**Keep it honest.** Say "say" or "for example": this exchange is not in the screenshots. An
+Agent can only notice the clash if your travel is on record: you told it, a work Team holds
+it, or you switched on a calendar connector for that Agent.
+
+## Beat 0B: The pile (software)
+
+Same shape as 0A, for the software path. No picture yet.
+
+**Say:**
+
+> The usual way to code with AI is one capable agent that does the lot. Here's its log for one
+> small feature:
+>
+> - Read the issue: add a coupon field at checkout
+> - Wrote the coupon service and the form field
+> - Wrote tests for the coupon service
+> - Ran the tests: all pass
+> - Reviewed the change: looks good
+> - Merged into main
+>
+> Spot the problem?
+
+**Then stop and wait for their answer.**
+
+- **If they found it,** say so.
+- **If they didn't,** point at "all pass", "looks good" and "merged": the agent that wrote the
+  code also tested it, reviewed it and shipped it. "All pass" is its own word, with nothing
+  anyone can check.
+
+Then name it: no second pair of eyes, and no evidence. Then ask: *what would you want to be
+true before that reached main?*
+
+**The answer:** In Huddle, a development team splits those jobs between separate Agents. A
+developer writes the code on a branch named after the Task, a reviewer who didn't write it
+reviews it, and QA records each test run as Evidence, with the command and its exit code.
+Huddle won't let the Task close without that Evidence, and the merge into main waits for your
+Accept. Beat 6 shows it on real screens. Then go to beat 1.
 
 ## Beat 1: What Huddle is
 

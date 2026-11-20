@@ -14,14 +14,18 @@ It takes about ten minutes. You choose the way in: a Second Brain for your life 
 teams that build software, or both. Nothing is installed: your assistant downloads this folder and
 the documentation it answers from, and that's all.
 
+**Rather read it yourself?** [The walkthrough](walkthrough.md) is the same tour as one page you
+scroll, no assistant needed.
+
 ## What's here
 
 | File | What it is |
 | --- | --- |
+| [walkthrough.md](walkthrough.md) | The same tour for people to read: one page, top to bottom |
 | [TOUR.md](TOUR.md) | The guide's script: the beats, what each picture shows, and the rules the assistant follows |
 | [screens/](screens/) | The screenshots, from Huddle's demo data, each in the light Theme (Nordic Light) and the dark one (Cobalt Soft Dark) |
 | [AGENTS.md](AGENTS.md), [CLAUDE.md](CLAUDE.md) | Point the assistant at `TOUR.md` |
 
-Prefer to read? The [User Guide](../docs/Huddle.UserGuide.md) and
+Want the full detail? The [User Guide](../docs/Huddle.UserGuide.md) and
 [Features & Capabilities](../docs/FeaturesSummary/Features-&-Capabilities.md) cover everything the
 tour does, and more.
