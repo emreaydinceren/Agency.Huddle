@@ -1140,7 +1140,7 @@
 }
 
 /* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
-   numbers only a step heavier, "need you" in the warning colour. */
+   numbers body colour at 600, the "assigned to you" count in the Needs colour. */
 .tasks-counts {
     display: flex;
     flex-wrap: wrap;
@@ -1156,10 +1156,11 @@
 }
 
 .tasks-counts strong {
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
 }
 
-/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
+/* The Needs colour (the Top bar pill and its dot use it too) mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
    A count wears its signal only above 0, so a zero ("is-zero") reads as the other counts do. */
 .tasks-count-need-you:not(.is-zero) {
     color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
@@ -1371,8 +1372,7 @@
 }
 
 :root:has([data-hu-surface="paper"]) .tasks-count-need-you:not(.is-zero) {
-    color: var(--hu-tone-warning-ink);
-    font-weight: 600;
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
 }
 
 /* ---- Task state and priority: a glyph then a small label, with no chip. This is every Theme's look except status=pill (Nordic).

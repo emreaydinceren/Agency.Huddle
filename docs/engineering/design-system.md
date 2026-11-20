@@ -812,8 +812,8 @@ The Room is the Transcript over the Composer in one column.
   card is dragged, so the column still takes the drop.
 - **Overdue** is the warning icon and the date in one span; see [Colour](#colour). An overdue
   card shows its date even when the View hides `due_date`.
-- **Header counts** are 13px, with the numbers at 600 in body colour; "need you" is the
-  warning colour mixed 70% toward body text. A count wears its signal only above 0.
+- **Header counts** are 13px, with the numbers at 600 in body colour; "assigned to you" is the
+  Needs colour (`--hu-needs`, the one the Top bar pill and its dot use) mixed 70% toward body text. A count wears its signal only above 0.
 - **Hover and focus reveal** (see [Patterns worth copying](#patterns-worth-copying)) applies
   to Board cards and List rows.
 - **The List** has 32px rows, 13px body and header cells at 12px/600

@@ -152,7 +152,8 @@ public sealed partial class ChromeTraitsTests
 
         Assert.Contains("display: inline-flex;", kind, StringComparison.Ordinal);
         Assert.Contains("border: 1px solid var(--hu-line-control);", kind, StringComparison.Ordinal);
-        Assert.Contains("border: 1px solid var(--hu-tone-warning-line);", pill, StringComparison.Ordinal);
+        Assert.Contains("border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);", pill, StringComparison.Ordinal);
+        Assert.DoesNotContain("--hu-tone-warning", pill, StringComparison.Ordinal);
         Assert.Contains("background: var(--hu-tone-warning-tint);", notice, StringComparison.Ordinal);
         Assert.Contains("background: var(--hu-accent-ink);", primary, StringComparison.Ordinal);
         Assert.Contains("background: var(--hu-ground-raised);", dialog, StringComparison.Ordinal);

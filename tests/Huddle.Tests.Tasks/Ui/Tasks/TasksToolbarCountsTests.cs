@@ -37,13 +37,13 @@ public sealed class TasksToolbarCountsTests
         IRenderedComponent<ContainerFragment> cut = RenderProjectPage(ctx);
 
         Assert.Equal("4", cut.Find(".tasks-count-open strong").TextContent);
-        Assert.Equal("2", cut.Find(".tasks-count-need-you strong").TextContent);
+        Assert.Equal("0", cut.Find(".tasks-count-need-you strong").TextContent);
         Assert.Equal("4", cut.Find(".tasks-count-all strong").TextContent);
     }
 
-    /// <summary>A gated Task assigned to an Agent that waits in Needs You counts in "need you".</summary>
+    /// <summary>A gated Task assigned to an Agent is not "assigned to you": it waits in the Needs You column, not in this count.</summary>
     [Fact]
-    public async Task NeedYou_GatedAgentTaskWaitingInNeedsYou_Counts()
+    public async Task AssignedToYou_GatedAgentTaskWaitingInNeedsYou_DoesNotCount()
     {
         using TaskToolHarness harness = new();
         _ = harness.SeedOnDisk(Gated("PLAT-0001", "Nova"));
@@ -51,7 +51,34 @@ public sealed class TasksToolbarCountsTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
         IRenderedComponent<ContainerFragment> cut = RenderProjectPage(ctx);
 
+        Assert.Equal("0", cut.Find(".tasks-count-need-you strong").TextContent);
+    }
+
+    /// <summary>An open Task assigned to the Human counts, and the count is labelled "assigned to you", not "need you".</summary>
+    [Fact]
+    public async Task AssignedToYou_OpenTaskOfTheHuman_CountsAndIsLabelled()
+    {
+        using TaskToolHarness harness = new();
+        _ = harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0001", status: TaskState.ToDo, assignee: harness.Options.Value.HumanName, location: AlphaProject));
+
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<ContainerFragment> cut = RenderProjectPage(ctx);
+
         Assert.Equal("1", cut.Find(".tasks-count-need-you strong").TextContent);
+        Assert.Equal("1 assigned to you", cut.Find(".tasks-count-need-you").TextContent.Trim());
+    }
+
+    /// <summary>The pill counts only Tasks waiting on the Human's answer: an open Task merely assigned to the Human does not make it show.</summary>
+    [Fact]
+    public async Task Pill_OpenTaskAssignedToTheHuman_RendersNothing()
+    {
+        using TaskToolHarness harness = new();
+        _ = harness.SeedOnDisk(TestTasks.Make(id: "PLAT-0001", status: TaskState.ToDo, assignee: harness.Options.Value.HumanName, location: AlphaProject));
+
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        IRenderedComponent<TasksNeedYouPill> cut = ctx.Render<TasksNeedYouPill>();
+
+        Assert.Empty(cut.FindAll(".tasks-need-you-pill"));
     }
 
     /// <summary>The same Task once accepted at its current content no longer counts, though it is still in Needs You.</summary>
