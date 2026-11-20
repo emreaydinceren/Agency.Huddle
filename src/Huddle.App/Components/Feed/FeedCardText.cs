@@ -62,11 +62,11 @@ internal static class FeedCardText
 
     /// <summary>The context word of the meta line: where the item belongs.</summary>
     /// <param name="kind">What the item is about.</param>
-    /// <returns>"Tasks", "Rooms", "Library" or "Helpers"; empty when the item is unreadable.</returns>
+    /// <returns>"Tasks", "Room", "Library" or "Helpers"; empty when the item is unreadable.</returns>
     public static string ContextWord(FeedTargetKind kind) => kind switch
     {
         FeedTargetKind.Task => "Tasks",
-        FeedTargetKind.Room => "Rooms",
+        FeedTargetKind.Room => "Room",
         FeedTargetKind.Document => "Library",
         FeedTargetKind.Helper => "Helpers",
         FeedTargetKind.Device => "Devices",
