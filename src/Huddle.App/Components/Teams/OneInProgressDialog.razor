@@ -1,0 +1,26 @@
+@using Agency.Huddle.App.Components.Shared.Dialogs
+
+@*
+    A Project's one-Task-at-a-time setting (ADR-0103). A Project has no tab for settings, so the Project page's "One at a time…" button
+    opens the shared OneInProgressControl in this dialog, with no actions row: the control acts at once and the title's close button is
+    the way out. Pass the Team and the Project by name: an open dialog ignores new parameters.
+*@
+
+<MudDialog ContentClass="one-in-progress-dialog">
+    <DialogContent>
+        <OneInProgressControl Team="@this.Team" Project="@this.Project" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    /// <summary>How the Project page shows this dialog: small, full-width, with a close button.</summary>
+    public static DialogOptions Options => HuddleDialogOptions.SmallForm;
+
+    /// <summary>The Team the Project belongs to.</summary>
+    [Parameter, EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project whose setting is shown.</summary>
+    [Parameter, EditorRequired]
+    public string Project { get; set; } = string.Empty;
+}

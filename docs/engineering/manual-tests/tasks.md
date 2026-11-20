@@ -1365,6 +1365,46 @@ asked what to work on gets its own order, and the Task it names starts.*
 - Both Tasks reach In Progress -> `TaskService` is not computing the assignee's other In Progress Task.
 - The second Task still refuses after the first is Done -> a Task that is not In Progress is being counted.
 
+### TASKORDER-06 — A Team that asks for one Task at a time refuses a second in one Project; a Project set to Parallel accepts both
+
+**Paid 💰** · about 15 min · 4 Turns
+
+*Proves ADR-0103: the Team's switch and the Project's three-way control decide whether a Project may have two Tasks In Progress, and
+the refusal names the first.*
+
+**Before you start**
+
+- A Team with an Agent on a live Adapter (Sonnet or better) and two Projects, **Alpha** and **Beta**. Two **To Do** Tasks in each
+  Project, assigned to different Agents or to none, neither blocked. The Team's switch is off and both Projects are on Inherit.
+
+**Steps**
+
+1. Open the Team's **Process** tab, switch on **One Task at a time in each Project**, then open **Alpha**'s page, press
+   **One at a time…** and read the line under the control.
+2. Ask the Agent to start the first Task of **Alpha**, then the second while the first is still In Progress.
+3. Open **Beta**'s page, press **One at a time…**, choose **Parallel**, and close the dialog. Ask the Agent to start both of
+   **Beta**'s Tasks.
+4. Move the first Task of **Alpha** to **Done** and ask the Agent to start the second again.
+
+**Pass if — all of these**
+
+- The Process tab shows the switch on after you reload the page. The Project dialog's control has **Inherit** chosen, and the
+  line reads `Inherit (Team: One at a time)`.
+- The first Task of **Alpha** moves to **In Progress**. The second stays in **To Do**, and the refusal reads
+  `One In Progress per Project: <id> "<title>" is already In Progress in Alpha. The Team setting asks for one at a time.` followed by
+  `Finish it or move it out of In Progress before starting another.`, naming the first Task.
+- Both Tasks of **Beta** reach **In Progress**.
+- After the first Task of **Alpha** is Done, its second Task moves to **In Progress**.
+- Switching the Team's switch off and reloading the Process tab shows it off, and `_team.md` no longer holds
+  `oneInProgressPerProject`. **Alpha**'s Project folder has no `_project.md` unless you gave it an avatar.
+
+**Fail if — any of these**
+
+- The switch is back off after a reload -> the Team file was not written.
+- The second Task of **Alpha** starts -> the gate does not read the Team's key, or the Team's switch wrote another key.
+- **Beta**'s second Task is refused -> the Project's `off` does not beat the Team's `on`.
+- **Alpha** has a `_project.md` holding `oneInProgressPerProject` -> Inherit wrote a value.
+
 ---
 
 Back to [the manual test tracker](tracker.md) and [the manual test script](../manual-tests.md).
