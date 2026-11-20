@@ -459,7 +459,7 @@ When you change one of these on purpose, change the test in the same commit.
 | `Plan_HasTheAgreedCast` | The thirteen names in order, the Teams of Lena, Maya, Dana and Ben, and Alan's Skill |
 | `Plan_HasFourWorkingTeamsAndSharedAgents` | Exactly Platform, Growth, Support and Home and Family have two or more Projects, and exactly three Agents span two or more of them |
 | `Plan_HasTheEdgeTeams` | Records' members are exactly Grace and Dana |
-| `Plan_CoversEveryTaskStatus` | 64 Tasks (41 core, 5 Requests, 18 Home and Family) |
+| `Plan_CoversEveryTaskStatus` | 66 Tasks (43 core, 5 Requests, 18 Home and Family); two are gated on the Human in Needs You |
 | `Plan_HasTheAgreedRooms` | The six root Room names in order, the five Team Rooms (Legacy Site's last), nine other Team-scoped Rooms, two root one-to-ones, and the five archived Rooms in order |
 | `Plan_HasArchivedTeamChatsInEveryKindOfScope` | The four archived Team chats' keys, Teams and Projects in order |
 | `Plan_LibraryHasBacklinksAndOneUnresolvedLink` | The only unresolved link is `Legal-Checklist` |
@@ -467,7 +467,7 @@ When you change one of these on purpose, change the test in the same commit.
 | `SeedRoundTripTests.SavedViewIds` | The twelve View ids |
 | `SeedRefreshTests.NeedsYou_OneRoomHoldsAnUnansweredMention` | Exactly `launch-crew` and `chat-home-grandma-70th` wait on You |
 | `SeedRefreshTests.TeamRooms_AreScopedAsSeeded` | Four live Team Rooms and Legacy Site's archived one |
-| `SeedCliTests.Run_FreshRoot_SeedsAndPrintsTheLaunchCommand` | The printed summary "Seeded 13 Agents, 6 Teams, 64 Tasks" |
+| `SeedCliTests.Run_FreshRoot_SeedsAndPrintsTheLaunchCommand` | The printed summary "Seeded 13 Agents, 6 Teams, 66 Tasks" |
 | `SeedRefreshTests.Sprints_ParseWithTheAppsParser_AndTasksHoldThem` | Two Sprints |
 | `SeedFeedTests` | Five TaskCreated items by Owen; the Helper has three consecutive failures |
 | `Plan_HasJobsInEveryShape` | Thirteen Jobs, two for the Human, one paused, the time zones `America/New_York`, `Europe/London` and `UTC`, and the unreadable sections' titles in order |

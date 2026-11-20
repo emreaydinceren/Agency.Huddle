@@ -111,6 +111,20 @@ internal static partial class MessageReferences
         Path.Combine([dataDir, .. relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries)]);
 
     /// <summary>
+    /// The body text of a Library file token: its file name as a link to the file's Library address (<c>?library=</c> root id, then the
+    /// path below the root), so a message never prints the machine path and the link works on a copied data folder. The reference
+    /// stored beside it keeps the absolute path, the only key the app resolves.
+    /// </summary>
+    /// <param name="relativePath">The path below the data folder, using <c>/</c>; its first segment is a built-in root's folder.</param>
+    /// <returns>The Markdown link.</returns>
+    internal static string LibraryLink(string relativePath)
+    {
+        string[] segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string address = string.Join('/', segments.Select((segment, index) => Uri.EscapeDataString(index == 0 ? segment.ToLowerInvariant() : segment)));
+        return "[" + Escape(segments[^1]) + "](?library=" + address + ")";
+    }
+
+    /// <summary>
     /// The folder a Room's attachments go to: <c>Raw/&lt;roomId&gt;</c> for a root Room, and
     /// <c>Teams/&lt;Team&gt;/raw/&lt;roomId&gt;</c> for a Room scoped to a Team (<c>ChatUploadService</c> saves into the last candidate).
     /// </summary>
@@ -174,7 +188,7 @@ internal static partial class MessageReferences
             case "lib":
             {
                 string path = LibraryPath(dataDir, value);
-                output.Append('`').Append(path).Append('`');
+                output.Append(LibraryLink(value));
                 return new MessageReference(ReferenceKind.LibraryFile, path, Path.GetFileName(path));
             }
 
