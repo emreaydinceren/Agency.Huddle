@@ -864,7 +864,7 @@ public sealed class TeamPageTests
         Assert.Contains("mud-avatar-small", avatar.ClassList);
         Assert.DoesNotContain("avatar-transcript", avatar.ClassList);
         Assert.Equal("🚀", avatar.TextContent.Trim());
-        Assert.Equal(["Edit avatar…", "Needs You level…", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
+        Assert.Equal(["Edit avatar…", "Needs You level…", "One at a time…", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
 
         await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions button"));
         cut.WaitForElement(AgentProfileCardTestSupport.EditorDialog);

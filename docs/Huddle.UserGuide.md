@@ -907,6 +907,8 @@ Select **Teams** in the Activity bar, then a Team or Project in the sidebar.
 Changes you make with the Tasks tab toolbar (filter, group, sort, search) last for
 the current visit only, and always stay inside the Team or Project.
 
+To have only one Task In Progress at a time in each Project, switch on **One Task at a time in each Project** on the Team's **Process** tab. A Project can differ: its **One at a time…** button offers **Inherit**, **One at a time** or **Parallel**, and a Project that has never been changed keeps no file.
+
 The Files tab is hidden when the Library is turned off (`Team:Library:Enabled`).
 The Tasks tab is hidden when Tasks are turned off (`Team:Tasks:Enabled`).
 
