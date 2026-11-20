@@ -580,10 +580,10 @@ emoji-picker {
     height: 28px;
     padding: 0 12px;
     margin-inline-end: 4px;
-    border: 1px solid var(--hu-tone-warning-line);
+    border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);
     border-radius: var(--hu-radius-full);
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
+    background: color-mix(in srgb, var(--hu-needs) 12%, transparent);
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     text-decoration: none;
@@ -1842,10 +1842,10 @@ body.sidebar-resizing {
     height: 32px;
     padding: 0 12px;
     margin-inline-end: 8px;
-    border: 1px solid var(--hu-tone-warning-line);
+    border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);
     border-radius: var(--hu-radius-full);
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
+    background: color-mix(in srgb, var(--hu-needs) 12%, transparent);
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     text-decoration: none;
@@ -1854,7 +1854,7 @@ body.sidebar-resizing {
 }
 
 :root:has([data-hu-surface="paper"]) .tasks-need-you-pill:hover {
-    background: var(--hu-tone-warning-tint);
+    background: color-mix(in srgb, var(--hu-needs) 20%, transparent);
 }
 
 :root:has([data-hu-surface="paper"]) .tasks-need-you-dot {
@@ -1977,10 +1977,10 @@ body.sidebar-resizing {
     height: 28px;
     padding: 0 12px;
     margin-inline-end: 4px;
-    border: 1px solid var(--hu-tone-warning-line);
+    border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);
     border-radius: var(--hu-radius-full);
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
+    background: color-mix(in srgb, var(--hu-needs) 12%, transparent);
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     text-decoration: none;
