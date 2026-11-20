@@ -150,9 +150,6 @@
                     @* A Project has no tab for settings, so its Needs You level (ADR-0088) opens in a dialog. *@
                     <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.NotificationsActive"
                                   Class="team-project-needs-you-level" OnClick="@(() => this.EditProjectLevelAsync(projectTeam, projectName))">Needs You level…</ActionButton>
-                    @* ADR-0103: the Project's one-Task-at-a-time setting (Inherit, One at a time, Parallel) opens in a dialog the same way. *@
-                    <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.LooksOne"
-                                  Class="team-project-one-in-progress" OnClick="@(() => this.EditProjectOneInProgressAsync(projectTeam, projectName))">One at a time…</ActionButton>
                     @* No confirmation: a Project's files and Tasks only move, and Restore on the Archived page brings them back. *@
                     <ActionButton Role="ButtonRole.Secondary" StartIcon="@Icons.Material.Outlined.Inventory2"
                                   Class="team-project-archive" OnClick="@(() => this.ArchiveProjectAsync(projectTeam, projectName))">Archive</ActionButton>
@@ -193,7 +190,14 @@
                                               SearchChanged="@(text => this.SetSearch(current, text))" />
                                 break;
                             case TeamPageTab.Process:
-                                <ProcessTab Team="@summary.Name" />
+                                @if (project is null)
+                                {
+                                    <ProcessTab Team="@summary.Name" />
+                                }
+                                else
+                                {
+                                    <ProjectProcessTab Team="@summary.Name" Project="@project" />
+                                }
                                 break;
                             case TeamPageTab.ManagerPlaybook:
                                 <PlaybooksTab Team="@summary.Name" Manager="true" />
@@ -453,17 +457,6 @@
             { dialog => dialog.Project, project },
         };
         _ = await this.DialogService.ShowAsync<NeedsYouLevelDialog>($"Needs You level of {project}", parameters, NeedsYouLevelDialog.Options);
-    }
-
-    /// <summary>Opens <see cref="OneInProgressDialog"/> for <paramref name="project"/>'s one-Task-at-a-time setting (ADR-0103).</summary>
-    private async Task EditProjectOneInProgressAsync(string team, string project)
-    {
-        DialogParameters<OneInProgressDialog> parameters = new()
-        {
-            { dialog => dialog.Team, team },
-            { dialog => dialog.Project, project },
-        };
-        _ = await this.DialogService.ShowAsync<OneInProgressDialog>($"One Task at a time in {project}", parameters, OneInProgressDialog.Options);
     }
 
     /// <summary>Asks T16's question and archives the Team; once archived the page goes Home, as the Details tab's Archive does.</summary>

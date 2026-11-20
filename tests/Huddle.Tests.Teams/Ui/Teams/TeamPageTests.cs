@@ -864,7 +864,7 @@ public sealed class TeamPageTests
         Assert.Contains("mud-avatar-small", avatar.ClassList);
         Assert.DoesNotContain("avatar-transcript", avatar.ClassList);
         Assert.Equal("🚀", avatar.TextContent.Trim());
-        Assert.Equal(["Edit avatar…", "Needs You level…", "One at a time…", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
+        Assert.Equal(["Edit avatar…", "Needs You level…", "Archive"], cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim()));
 
         await AgentProfileCardTestSupport.ClickAsync(cut, () => cut.Find(".page-header-actions button"));
         cut.WaitForElement(AgentProfileCardTestSupport.EditorDialog);
@@ -888,5 +888,38 @@ public sealed class TeamPageTests
             ["Hide shortcut", "Duplicate", "Archive"],
             cut.FindAll(".page-header-actions button").Select(static button => button.TextContent.Trim())));
         Assert.Empty(cut.FindAll("button.team-page-avatar"));
+    }
+
+    /// <summary>
+    /// A Project page of a Team with a process has a Process tab after Library and Tasks, at <c>/process</c>, holding the one-Task-at-a-time
+    /// control under its heading and helper sentence, with no header button for it; choosing Parallel writes the Project's file at once.
+    /// </summary>
+    [Fact]
+    public async Task ProjectPage_ProcessTab_ShowsTheOneAtATimeControl_AndChoosingWritesTheProjectFile()
+    {
+        FakeTeamFolders folders = new() { UpdateResult = true, ReadResult = NewTeamFile(Avatar.None) };
+        await using MudBunitContext ctx = NewContext(Catalog());
+        ctx.Services.AddSingleton<ITeamFolders>(folders);
+        IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TeamPage>(0);
+            builder.AddAttribute(1, nameof(TeamPage.Team), "Business");
+            builder.AddAttribute(2, nameof(TeamPage.Project), "Marketing Project");
+            builder.AddAttribute(3, nameof(TeamPage.Tab), "process");
+            builder.CloseComponent();
+        });
+
+        Assert.Equal(["Library", "Tasks", "Process"], cut.FindAll(TabHeaderSelector).Select(static header => header.TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".team-project-one-in-progress"));
+        Assert.Equal("One Task at a time", cut.Find(".project-process-tab .group-label").TextContent.Trim());
+        Assert.Equal(
+            "Inherit follows the Team. One at a time keeps at most one Task In Progress in this Project. Parallel allows several at once, whatever the Team sets.",
+            cut.Find(".project-process-tab-note").TextContent.Trim());
+        Assert.Equal("Inherit (Team: Parallel)", cut.Find(".one-in-progress-hint").TextContent.Trim());
+
+        IElement parallel = cut.FindAll(".one-in-progress .segmented-group .mud-toggle-item").First(static item => string.Equals(item.TextContent.Trim(), "Parallel", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => parallel.ClickAsync(new()));
+
+        Assert.Equal(RuleSetting.Off, folders.ProjectFiles["Marketing Project"].OneInProgressPerProject);
     }
 }

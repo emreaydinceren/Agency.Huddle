@@ -363,8 +363,8 @@ not change; this adds a refusal and teaches `next_task` and the panel about it.
 | Refusal text | `One In Progress per Project: <id> "<title>" is already In Progress in <Project or the Team>. The <Project or Team> setting asks for one at a time. Finish it or move it out of In Progress before starting another.` The words live where the other refusal texts live |
 | Override | As every refusal, the Human can override one move |
 | Where it runs | Beside the per-person check in `ProcessGateService.CheckTaskChange`, but it is **not** a `GateId` and is not in `gates:`. Both checks run; the first refusal wins |
-| Team window | A toggle, "One Task at a time in each Project", with the existing Team save path. Writes the Team's key |
-| Project window | A three-way control, Inherit, One at a time, Parallel. The hint under Inherit shows what it resolves to: "Inherit (Team: One at a time)". Writes or removes the Project's key |
+| Team Process tab | A toggle, "One Task at a time in each Project", with the existing Team save path. Writes the Team's key |
+| Project Process tab | A three-way control, Inherit, One at a time, Parallel. The hint under Inherit shows what it resolves to: "Inherit (Team: One at a time)". Writes or removes the Project's key |
 
 ### 10.2 Reading and writing the setting
 

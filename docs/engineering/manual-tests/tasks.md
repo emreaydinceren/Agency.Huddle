@@ -1379,17 +1379,17 @@ the refusal names the first.*
 
 **Steps**
 
-1. Open the Team's **Process** tab, switch on **One Task at a time in each Project**, then open **Alpha**'s page, press
-   **One at a time…** and read the line under the control.
+1. Open the Team's **Process** tab, switch on **One Task at a time in each Project**, then open **Alpha**'s page, open its
+   **Process** tab and read the line under the control.
 2. Ask the Agent to start the first Task of **Alpha**, then the second while the first is still In Progress.
-3. Open **Beta**'s page, press **One at a time…**, choose **Parallel**, and close the dialog. Ask the Agent to start both of
+3. Open **Beta**'s page, open its **Process** tab and choose **Parallel**. Ask the Agent to start both of
    **Beta**'s Tasks.
 4. Move the first Task of **Alpha** to **Done** and ask the Agent to start the second again.
 
 **Pass if — all of these**
 
-- The Process tab shows the switch on after you reload the page. The Project dialog's control has **Inherit** chosen, and the
-  line reads `Inherit (Team: One at a time)`.
+- The Process tab shows the switch on after you reload the page. **Alpha**'s Process tab has **Inherit** chosen under **One Task at a time**, and the
+  line under the control reads `Inherit (Team: One at a time)`.
 - The first Task of **Alpha** moves to **In Progress**. The second stays in **To Do**, and the refusal reads
   `One In Progress per Project: <id> "<title>" is already In Progress in Alpha. The Team setting asks for one at a time.` followed by
   `Finish it or move it out of In Progress before starting another.`, naming the first Task.

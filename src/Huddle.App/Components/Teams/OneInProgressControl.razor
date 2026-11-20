@@ -7,7 +7,7 @@
     The one control for the oneInProgressPerProject setting (ADR-0103, TaskOrder spec section 10). With no Project it is the Team's switch,
     "One Task at a time in each Project", drawn on the Team page's Process tab: on writes 'on' to _team.md and off removes the key (an
     absent Team value already means off). With a Project it is the Project's three-way control, Inherit, One at a time, Parallel, drawn in
-    the Project page's dialog: Inherit removes the key from _project.md, so a Project nobody changed keeps no file (ADR-0083). Both act at
+    the Project page's Process tab (ProjectProcessTab): Inherit removes the key from _project.md, so a Project nobody changed keeps no file (ADR-0083). Both act at
     once, as SettingSwitch does, and read the file again after each write.
 *@
 

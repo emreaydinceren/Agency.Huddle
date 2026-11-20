@@ -22,7 +22,7 @@ with `on`, `off` or `inherit`. A Task with no Project follows the Team setting a
 | Counts | Status In Progress only, outside `_closed/`, in the same Team and the same Project. Tasks with no Project are one group per Team. Needs You does not count, as in ADR-0102 |
 | Refuses | A move into In Progress, a move of an In Progress Task into another Project, or a create as In Progress that would make two in one group |
 | Text | Names the Task already In Progress, with its id and title, and says whether the Project or the Team set the rule |
-| Override | The Human can override one move, as with every refusal. The setting itself is changed in the Team window and the Project window, not in the Process tab |
+| Override | The Human can override one move, as with every refusal. The setting itself is changed on the Process tab of the Team page and of the Project page, not as a gate switch |
 | Separate from | The `gates:` list and the per-person gate. The two rules combine: either can refuse |
 
 ## Consequences

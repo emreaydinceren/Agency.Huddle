@@ -415,6 +415,7 @@ order decides per Token, independently.
 | `HiringPool/HiringPoolCatalog.cs` | Loads the embedded pool and the user pool (merged by id), serves jobs, team type names and personas; never throws for bad content. |
 | `Components/Teams/ProcessStep.razor` | The Process step on a manager's Agent card: Use this process, or Start blank. |
 | `Components/Teams/ProcessTab.razor` | The Process tab of a Team page: the Team's `AGENTS.md` process prose and `_team.md` settings, with Edit. |
+| `Components/Teams/ProjectProcessTab.razor` | The Process tab of a Project page: the Project's one-Task-at-a-time setting (`OneInProgressControl` with the Project) and a note on its three choices. |
 | `Components/Teams/PlaybooksTab.razor` | A Playbook tab of a Team page (the Manager Playbook tab or the Agent Playbook tab, by its `Manager` parameter): the state chip, the read-only Huddle rules, the Default updated notice, Customize, Edit (opens the Library), Keep my version and Reset (Team Playbooks spec §7). |
 | `Components/Teams/DuplicateTeamDialog.razor` | The Duplicate dialog: the new Team's title and an optional workspace folder. |
 | `Components/Shared/SkillProvenanceLine.razor` | The provenance line shown wherever a Skill appears, with a "modified locally" chip. |

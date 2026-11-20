@@ -286,13 +286,17 @@ public sealed class TeamPageTabsTests
         Assert.DoesNotContain(TeamPageTab.Details, TeamPageTabs.Available(isProject: true, Both));
     }
 
-    /// <summary>A Project never has a Process tab.</summary>
+    /// <summary>A Project has a Process tab after Library and Tasks when the Team has a process, and none without one.</summary>
     [Fact]
-    public void Available_Project_WithProcess_HasNoProcessTab()
+    public void Available_Project_WithProcess_EndsWithTheProcessTab()
     {
         TeamPageFeatures withProcess = new(Library: true, Tasks: true, Process: true);
+        TeamPageFeatures onlyProcess = new(Library: false, Tasks: false, Process: true);
 
-        Assert.Equal([TeamPageTab.Files, TeamPageTab.Tasks], TeamPageTabs.Available(isProject: true, withProcess));
+        Assert.Equal([TeamPageTab.Files, TeamPageTab.Tasks, TeamPageTab.Process], TeamPageTabs.Available(isProject: true, withProcess));
+        Assert.Equal([TeamPageTab.Process], TeamPageTabs.Available(isProject: true, onlyProcess));
+        Assert.Equal([TeamPageTab.Files, TeamPageTab.Tasks], TeamPageTabs.Available(isProject: true, Both));
+        Assert.Equal(TeamPageTab.Process, TeamPageTabs.Resolve(isProject: true, "process", withProcess));
     }
 
     /// <summary>The "process" segment resolves to the Process tab when it exists and falls back to Members when it does not.</summary>
