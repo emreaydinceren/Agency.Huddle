@@ -12,6 +12,7 @@
 @implements IDisposable
 
 @inject SessionSettingsStore Settings
+@inject ISnackbar Snackbar
 
 <SettingsIntro>
     When a session starts afresh it rereads the latest Messages of the Room. Choose how many,
@@ -46,6 +47,9 @@
 </MudStack>
 
 @code {
+    /// <summary>What the Snackbar says after a field is saved.</summary>
+    internal const string SavedText = "Saved.";
+
     private int capEntered;
     private int budgetEntered;
     private string? capError;
@@ -68,24 +72,38 @@
     {
         this.capEntered = value;
         this.capError = this.Settings.SaveMessages(value);
+        this.ConfirmSaved(this.capError);
     }
 
     private void SaveBudget(int value)
     {
         this.budgetEntered = value;
         this.budgetError = this.Settings.SaveTokens(value);
+        this.ConfirmSaved(this.budgetError);
     }
 
     private void ResetCap()
     {
         this.capError = null;
         _ = this.Settings.SaveMessages(null);
+        this.ConfirmSaved(null);
     }
 
     private void ResetBudget()
     {
         this.budgetError = null;
         _ = this.Settings.SaveTokens(null);
+        this.ConfirmSaved(null);
+    }
+
+    /// <summary>Says a save-on-blur field was written, in the Snackbar the Skills section confirms its own changes with; a refusal shows under the field instead.</summary>
+    /// <param name="refusal">The store's refusal text, or <see langword="null"/> when the value was written.</param>
+    private void ConfirmSaved(string? refusal)
+    {
+        if (refusal is null)
+        {
+            this.Snackbar.Add(SavedText, Severity.Success, configure: null, key: "sessions-saved");
+        }
     }
 
     private void OnChanged() => _ = RendererDispatch.Repaint(this.InvokeAsync, this.StateHasChanged);
