@@ -3,6 +3,8 @@
 **A team of AI specialists that works for you, and a second brain that remembers
 everything they learn, kept as plain files on your own machine.**
 
+[See it](#see-it) · [Take the tour](#take-the-tour-with-your-ai-assistant) · [Try it](#try-it) · [Build it from source](#build-it-from-source)
+
 You talk to your Agents in chat, the way you would talk to colleagues. Each one has
 one job and knows only its part of your life: school, meals, the house, your work.
 What matters in a conversation does not stay in the scrollback. It is filed as a
