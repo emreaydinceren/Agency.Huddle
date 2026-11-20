@@ -22,7 +22,7 @@ internal static class TabIcons
         "tasks" => Icons.Material.Outlined.Checklist,
         "agents" => Icons.Material.Filled.Person,
         "settings" => Icons.Material.Outlined.Settings,
-        "library" => MaterialSymbols.Newsstand,
+        "library" => Icons.Material.Outlined.MenuBook,
         "needs-you" => Icons.Material.Filled.NotificationsActive,
         "feed" => Icons.Material.Outlined.Feed,
         "scheduled" => Icons.Material.Outlined.Schedule,
