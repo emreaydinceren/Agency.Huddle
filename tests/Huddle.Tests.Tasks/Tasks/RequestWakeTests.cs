@@ -55,9 +55,9 @@ public sealed class RequestWakeTests
         harness.Events.RaiseTaskChanged(new TaskChange(
             task,
             task,
-            [new FieldChange(TaskField.Status, "To Do", "In Progress")],
+            [new FieldChange(TaskField.Status, "In Progress", "Done")],
             actor,
-            new ChangeLogEntry(harness.Clock.GetUtcNow(), actor.Name, "Status: To Do → In Progress")));
+            new ChangeLogEntry(harness.Clock.GetUtcNow(), actor.Name, "Status: In Progress → Done")));
         harness.Clock.Advance(DefaultWindow);
         await harness.Trigger.WhenIdleAsync();
     }
@@ -155,7 +155,7 @@ public sealed class RequestWakeTests
         Assert.Equal("Request PLAT-0001: nobody to wake for RequestingManager.", Assert.Single(logger.Entries).Message);
     }
 
-    /// <summary>A status change by the receiving Team wakes the requesting Team's manager.</summary>
+    /// <summary>A status change by the receiving Team wakes the requesting Team's manager when it is a C-5 move (In Progress to Done); the receiving Team's own wake is silent here because the Task has no assignee and its Team has no manager.</summary>
     [Fact]
     public async Task StatusChange_ByReceivingTeam_WakesRequestingManager()
     {
@@ -168,7 +168,7 @@ public sealed class RequestWakeTests
 
         await ChangeStatusAsync(harness, task, cast.KaiActor);
 
-        Assert.Equal(["Mia|PLAT-0001|Kai|- Status: To Do → In Progress"], harness.Posts.Select(p => p.Message.Text).ToArray());
+        Assert.Equal(["Mia|PLAT-0001|Kai|- Status: In Progress → Done"], harness.Posts.Select(p => p.Message.Text).ToArray());
     }
 
     /// <summary>The requesting manager's own status change does not wake that manager.</summary>

@@ -19,13 +19,13 @@ public sealed class CloseTaskToolTests
     private static CloseTaskTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
         new(harness.Service, harness.Store, harness.Triggers, harness.Directory, new FakePromptSource(), callerAgentId);
 
-    /// <summary>Closing an Active Task moves it into "_closed" and reports success with the notify clause (Spec §11.6, §10.2).</summary>
+    /// <summary>Closing a Task that is In Progress moves it into "_closed" and reports success with the notify clause: it stops work in flight (Spec §11.6, §10.2; smart wakes spec 3.2).</summary>
     [Fact]
     public async Task InvokeAsync_ActiveTask_ClosesAndReturnsSuccessTextWithNotifyClause()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = harness.CreateTask("Support SAML login", assignee: "Kai");
+        TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.InProgress, assignee: "Kai");
         CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
@@ -37,13 +37,32 @@ public sealed class CloseTaskToolTests
         Assert.True(stored.Location.Closed);
     }
 
-    /// <summary>Closing an unassigned Task's notify clause says no one is notified (Spec §10.2, <see cref="WakeBlock.NoAssignee"/>).</summary>
+    /// <summary>
+    /// Closing a To Do Task files it away and wakes no one (smart wakes correction 13, an owner call): the notify clause says the assignee is
+    /// not woken, and the Task is closed all the same.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_ToDoTask_ClosesAndSaysTheAssigneeIsNotWoken()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.ToDo, assignee: "Kai");
+        CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"Closed {task.Id}. The assignee is not woken: nothing they act on changed.", result);
+        Assert.True(harness.Store.Get(task.Id)?.Location.Closed);
+    }
+
+    /// <summary>Closing an unassigned In Progress Task's notify clause says no one is notified (Spec §10.2, <see cref="WakeBlock.NoAssignee"/>): the close wakes, so the guard speaks.</summary>
     [Fact]
     public async Task InvokeAsync_UnassignedTask_SuccessTextSaysNoOneIsNotified()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = harness.CreateTask("Support SAML login");
+        TaskItem task = harness.CreateTask("Support SAML login", status: TaskState.InProgress);
         CloseTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 

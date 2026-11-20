@@ -1533,7 +1533,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Adds a comment to a Task's timeline, where everyone working on the Task reads it: a question, a hand-off or what you found. Comments, like Evidence, are never edited or deleted. To record a check you ran, use add_evidence instead.
+                Adds a comment to a Task's timeline, where everyone working on the Task reads it: a question, a hand-off or what you found. Comments, like Evidence, are never edited or deleted. A comment wakes only the Agents it Mentions: write @Name for each one who must act on it. A comment with no Mention wakes no one, not even the assignee. To record a check you ran, use add_evidence instead.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2500,7 +2500,7 @@ internal static class PromptCatalog
                 "placeholders.",
             Default:
                 """
-                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Done. A review is not a status: it is a Task tagged review, assigned to the reviewer, a child of the Task and in its blocked_by. A Task with a Human gate or an Action goes from In Progress to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint. rank is the order of a Team's backlog: 1 comes first, and an unranked Task comes after the ranked ones. Ranks compare only within a Team, so filter list_tasks by team when you order a backlog. Pass 0 to clear a rank, and leave gaps such as 10, 20, 30 so one change moves one Task.
+                Changes one or more fields on a Task. Changing the assignee, title, description, blocked_by, action, team or project wakes the assignee and the Team's manager, unless that is you. A status change wakes them when work starts, stops, finishes or is reopened; filing away a Task nobody started (Backlog to Cancelled) or relabelling a finished one wakes no one, Backlog to To Do wakes only the assignee, and In Progress to Needs You wakes no one. Rank, priority, tags, dates, sprint, parent, origin, duplicate_of and human_gate are saved without waking anyone. Set status as you work through it: To Do, then In Progress, then Done. A review is not a status: it is a Task tagged review, assigned to the reviewer, a child of the Task and in its blocked_by. A Task with a Human gate or an Action goes from In Progress to Needs You; Huddle moves it there when its Proof is complete, and when a Proof item completes with no write to the Task (such as role coverage) you move it yourself. Don't ask for approval in chat: the Human accepts in Needs You. Do the Action only after that, then move the Task to Done. The Action is the one outward step, such as merging or sending. Never use it for hand-offs or status: put those in a Message or the Task's description. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates. A sprint groups Tasks in time and spans Teams. Optionally set sprint to a sprint's name or id, or to current for the newest sprint; it must already exist, because you cannot create one. Pass an empty sprint to take the Task out of its sprint. rank is the order of a Team's backlog: 1 comes first, and an unranked Task comes after the ranked ones. Ranks compare only within a Team, so filter list_tasks by team when you order a backlog. Pass 0 to clear a rank, and leave gaps such as 10, 20, 30 so one change moves one Task.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -2553,8 +2553,12 @@ internal static class PromptCatalog
             Default:
                 """
                 TASKS
-                Tasks track work outside this conversation. Changing one wakes its assignee, unless
-                you are the assignee. Use create_task, get_task, list_tasks, update_task, close_task,
+                Tasks track work outside this conversation. Changing the assignee, title, description, blocked_by, action, team or project wakes
+                the assignee and the Team's manager, unless that is you. A status change wakes them when work starts, stops, finishes or is
+                reopened; filing away a Task nobody started (Backlog to Cancelled) or relabelling a finished one wakes no one, Backlog to To Do
+                wakes only the assignee, and In Progress to Needs You wakes no one. Rank, priority, tags, dates, sprint, parent, origin,
+                duplicate_of and human_gate are saved without waking anyone. A comment wakes only the Agents it Mentions: write @Name for each
+                one who must act on it. A comment with no Mention wakes no one, not even the assignee. Use create_task, get_task, list_tasks, update_task, close_task,
                 reopen_task, add_evidence and add_comment to work with them. A Task's description is
                 the only text you edit; its comments and Evidence are a timeline that nobody edits or
                 deletes. Write a Task's id, for example PLAT-0042, to refer
@@ -2570,7 +2574,7 @@ internal static class PromptCatalog
                 a message, publishing, paying or deleting for good. Create such a Task with
                 human_gate true, or set it with update_task. Set the Action, the one outward step,
                 with the action argument; set the Action before you do it. Never use the Action for
-                hand-offs or status: put those in a Message or a comment on the Task. When the Proof
+                hand-offs or status: put those in a Message or in a comment on the Task that Mentions who takes it. When the Proof
                 is complete, Huddle moves the Task from In Progress to Needs You. Until then it stays
                 In Progress: tell the Human a Task waits for them in Needs You only when its status is
                 Needs You, and otherwise say which Proof item is open; add_evidence and get_task
@@ -2593,7 +2597,7 @@ internal static class PromptCatalog
                 A review is a Task, not a status. To ask for one, create a Task tagged review (or tagged verify, for a QA check)
                 as a child of the Task being reviewed, assigned to the reviewer, and add it to that Task's blocked_by.
                 A Task waits In Progress while a blocker is open. The reviewer approves by moving the review Task to Done,
-                or leaves it open with the findings as a comment; fix the work and comment that it is ready.
+                or leaves it open with the findings as a comment that Mentions the owner; fix the work and comment that it is ready, Mentioning the reviewer.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

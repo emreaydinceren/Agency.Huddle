@@ -22,13 +22,13 @@ writes exactly one Task file.**
 | Scope | A rank means something only within its Team. Across Teams, ranks compare as plain numbers and interleave |
 | Who sets it | Anyone, as with priority: the Human in the Task window or by dragging a card within a Board column, an Agent with `create_task` or `update_task` (`rank: 0` clears it) |
 | Dragging | A drop within one column sets the dragged card's rank only, to a value between its new neighbours; with no integer gap it ties with a neighbour, the one under which the fallback order keeps it in place. A drop into another column changes status only. Reordering is off when the View has explicit sort keys |
-| Wakes | Not changed by this decision. A rank change is a field change and wakes as any other does ([ADR-0026](0026-a-change-to-a-task-wakes-its-assignee.md)). Making rank silent is left to the field-aware wake work |
+| Wakes | A rank change is silent since [ADR-0100](0100-a-task-change-wakes-only-for-what-its-readers-act-on.md): it is saved and logged and wakes no one. This decision first left it waking as any field change did ([ADR-0026](0026-a-change-to-a-task-wakes-its-assignee.md)) |
 
 ## Consequences
 
 - A manager can order its Team's backlog, and the Playbooks and tool descriptions tell Agents to take their open
   Tasks in rank order.
-- Until rank changes are silent, each drag wakes the dragged Task's assignee. The owner accepted that cost for this
-  version; sparse ranks keep it to one Task per drag rather than every renumbered one.
+- A drag wakes no one: rank changes are silent since [ADR-0100](0100-a-task-change-wakes-only-for-what-its-readers-act-on.md).
+  Until then each drag woke the dragged Task's assignee, and sparse ranks kept that to one Task per drag rather than every renumbered one.
 - Sparse ranks can collect ties after many drops into the same gap. Ties are harmless (the fallback order decides),
   and the Human can type a rank in the Task window to separate them.

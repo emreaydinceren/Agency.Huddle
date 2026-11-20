@@ -76,7 +76,7 @@ public sealed class RequestWakeOnceTests
             },
             ct);
 
-    /// <summary>Filing, accepting and working a Request wakes every recipient exactly once per event.</summary>
+    /// <summary>Filing, accepting and finishing a Request wakes every recipient exactly once per event. Smart wakes: starting it (To Do to In Progress) wakes no one, since it is neither a C-5 move nor a manager's concern.</summary>
     [Fact]
     public async Task Request_FileAcceptWork_WakesEachRecipientOncePerEvent()
     {
@@ -100,12 +100,19 @@ public sealed class RequestWakeOnceTests
         TaskItem current = harness.Store.Get(filedRequest.Id) ?? throw new InvalidOperationException("Request vanished.");
         _ = scene.Tasks.Update(current.Id, new TaskPatch { Status = TaskState.InProgress }, current.Version, scene.Kai);
         await SettleAsync(harness);
+        string[] afterStart = Recipients(harness, seen);
+        seen = harness.Posts.Count;
+
+        current = harness.Store.Get(filedRequest.Id) ?? throw new InvalidOperationException("Request vanished.");
+        _ = scene.Tasks.Update(current.Id, new TaskPatch { Status = TaskState.Done }, current.Version, scene.Kai);
+        await SettleAsync(harness);
         string[] afterWork = Recipients(harness, seen);
 
         Assert.Equal(string.Concat("Filed ", id, " in Platform."), filed);
         Assert.Equal(string.Concat("Accepted ", id, "; assigned to Kai."), accepted);
         Assert.Equal(["Nova"], afterFile);
         Assert.Equal(["Kai", "Mia"], afterAccept);
+        Assert.Empty(afterStart);
         Assert.Equal(["Mia", "Nova"], afterWork);
     }
 

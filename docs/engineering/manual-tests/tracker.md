@@ -859,6 +859,15 @@ Tasks: creating, moving, viewing and referencing a unit of work — [area file](
 | [TASKORDER-04](tasks.md#taskorder-04--a-new-household-team-refuses-a-blocked-start) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
 | [TASKORDER-05](tasks.md#taskorder-05--a-second-task-in-progress-is-refused-naming-the-first-until-the-first-is-done) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), see the Run log |
 | [TASKORDER-06](tasks.md#taskorder-06--a-team-that-asks-for-one-task-at-a-time-refuses-a-second-in-one-project-a-project-set-to-parallel-accepts-both) | 💰 | Pass |  | run by the manager 2026-11-19, paid lane (Sonnet), see the Run log |
+| [SMARTWAKE-01](tasks.md#smartwake-01--dragging-a-card-within-its-column-changes-its-rank-and-wakes-no-one) |  | Pass |  | run by an agent 2026-11-19, free lane, see the Run log |
+| [SMARTWAKE-02](tasks.md#smartwake-02--a-human-moving-an-in-progress-task-into-done-wakes-the-assignee-and-the-manager-once-each) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), 0.045 USD, see the Run log |
+| [SMARTWAKE-03](tasks.md#smartwake-03--a-comment-wakes-only-the-agents-it-mentions) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), 0.029 USD, see the Run log |
+| [SMARTWAKE-04](tasks.md#smartwake-04--the-development-review-loop-runs-to-done-on-mentions-alone) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), 1.043 USD; no findings-then-fix round, see the Run log |
+| [SMARTWAKE-05](tasks.md#smartwake-05--approving-a-sprint-wakes-no-one) |  | Pass |  | run by an agent 2026-11-19, 0.038 USD (the Sprint approval's own manager Turn, not a Task wake), see the Run log |
+| [SMARTWAKE-06](tasks.md#smartwake-06--renaming-a-team-folder-in-explorer-wakes-no-one) |  | Pass |  | run by an agent 2026-11-19, free lane, see the Run log |
+| [SMARTWAKE-07](tasks.md#smartwake-07--the-board-shows-notifies-nova-only-on-the-zones-whose-drop-wakes) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), 0.126 USD, see the Run log |
+| [SMARTWAKE-08](tasks.md#smartwake-08--turning-the-human-gate-on-wakes-no-one-and-the-gate-still-stops-the-task) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), 0.063 USD, see the Run log |
+| [SMARTWAKE-09](tasks.md#smartwake-09--add_comment-says-who-it-wakes) | 💰 | Pass |  | run by an agent 2026-11-19, paid lane (Sonnet), 0.296 USD, see the Run log |
 
 ## adapters
 

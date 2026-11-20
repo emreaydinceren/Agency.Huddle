@@ -1,7 +1,7 @@
 # Huddle.TaskOrder — Design Specification
 
 **Date:** 2026-11-19 · **Status:** Designed and built 2026-11-19 (branch `feat/task-order`); TASKORDER-01 to 04 passed on a paid lane. Builds on Task Rank (merged, PR #693). Smart wakes
-(ADR-0100, designed separately) is built after this and assumes it · **Source:** the owner's decisions of 2026-11-19
+(ADR-0100, built 2026-11-19 on `feat/smart-wakes`) builds on it and makes rank changes silent · **Source:** the owner's decisions of 2026-11-19
 (§2) · **Decision record:** [ADR-0101](adr/0101-taskorder-derives-which-task-is-next-and-writes-nothing.md); amends
 [ADR-0085](adr/0085-a-blocked-task-waits-for-its-blockers.md) · **Amends:**
 [Huddle.Tasks-Specifications.md](Huddle.Tasks-Specifications.md) §11 (a new tool) · **Vocabulary:**

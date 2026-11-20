@@ -629,7 +629,7 @@ internal sealed class TaskService : IDisposable
 
         ChangeLogEntry entry = new(TruncateToSeconds(now), TaskActors.Huddle.Name, NeedsYouRelease.SummaryFor(source.ForTask(task).Scope));
         TaskItem? written = this.store.Write(task, task.Version, TaskFileFormat.AppendEntry(text, entry));
-        return written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry);
+        return written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry, Kind: TaskChangeKind.Release);
     }
 
     /// <summary>
@@ -650,7 +650,7 @@ internal sealed class TaskService : IDisposable
             {
                 ChangeLogEntry entry = new(TruncateToSeconds(this.clock.GetUtcNow()), TaskActors.Huddle.Name, summary);
                 TaskItem? written = this.store.Write(task, task.Version, TaskFileFormat.AppendEntry(text, entry));
-                change = written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry);
+                change = written is null ? null : new TaskChange(task, written, [], TaskActors.Huddle, entry, Kind: TaskChangeKind.HuddleStep);
             }
         }
 
@@ -699,7 +699,7 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
         }
 
-        TaskChange change = new(current, written, [], actor, entry);
+        TaskChange change = new(current, written, [], actor, entry, Kind: TaskChangeKind.Evidence);
         return (new TaskResult.Saved(written, change), change);
     }
 
@@ -723,7 +723,7 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
         }
 
-        TaskChange change = new(current, written, [], actor, entry);
+        TaskChange change = new(current, written, [], actor, entry, Kind: TaskChangeKind.Comment, Comment: text);
         return (new TaskResult.Saved(written, change), change);
     }
 
@@ -931,7 +931,7 @@ internal sealed class TaskService : IDisposable
         // null means the disk version moved again before this append reached it; a newer save
         // will be reported by the next rebuild, so this one is silently skipped (Settled
         // corrections-B2 D6 item 8).
-        return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
+        return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry, Kind: TaskChangeKind.Create);
     }
 
     /// <summary>
@@ -1202,7 +1202,7 @@ internal sealed class TaskService : IDisposable
         }
 
         this.levels?.Place(written);
-        TaskChange change = new(null, written, [], actor, entry);
+        TaskChange change = new(null, written, [], actor, entry, Kind: TaskChangeKind.Create);
         return (new TaskResult.Saved(written, change), change);
     }
 
@@ -1632,7 +1632,7 @@ internal sealed class TaskService : IDisposable
             return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
         }
 
-        TaskChange change = new(current, written, [], actor, entry);
+        TaskChange change = new(current, written, [], actor, entry, Kind: closing ? TaskChangeKind.Close : TaskChangeKind.Reopen);
         return (new TaskResult.Saved(written, change), change);
     }
 

@@ -67,6 +67,19 @@ internal sealed class WakeRuleKit : IDisposable
     public RequestingManagerWakeRule RequestingManagerRule() =>
         new(this.Teams, this.Human, this.Personas, this.Options);
 
+    /// <summary>Builds the Mention rule over this kit's collaborators.</summary>
+    /// <returns>The rule.</returns>
+    public MentionWakeRule MentionRule() =>
+        new(this.Human, this.Personas, this.Options);
+
+    /// <summary>A round whose batch's comments Mention <paramref name="mentioned"/>, made by an Agent called <paramref name="actorName"/>.</summary>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="actorName">Who made the change.</param>
+    /// <param name="mentioned">The Agent names the comments Mention, in first-mention order.</param>
+    /// <returns>The round.</returns>
+    public static TaskWakeRound MentionRound(TaskItem latest, string actorName, params string[] mentioned) =>
+        new(latest, new TaskActor(TaskActorKind.Agent, actorName, null), false, new WakePreview(null, null, WakeBlock.None), false, false, mentioned);
+
     /// <summary>A round for the rule under test; the assignee preview is a clear one for nobody, which only the assignee rule reads.</summary>
     /// <param name="latest">The Task's latest state.</param>
     /// <param name="actorName">Who made the change.</param>

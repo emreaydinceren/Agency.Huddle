@@ -26,13 +26,13 @@ public sealed class ReopenTaskToolTests
     private static ReopenTaskTool CreateTool(TaskToolHarness harness, string callerAgentId) =>
         new(harness.Service, harness.Store, harness.Triggers, harness.Directory, new FakePromptSource(), callerAgentId);
 
-    /// <summary>Reopening a Closed Task moves it back out of "_closed" and reports success with the notify clause (Spec §11.6, §10.2).</summary>
+    /// <summary>Reopening a closed In Progress Task moves it back out of "_closed" and reports success with the notify clause: the work comes back (Spec §11.6, §10.2; smart wakes spec 3.2).</summary>
     [Fact]
     public async Task InvokeAsync_ClosedTask_ReopensAndReturnsSuccessTextWithNotifyClause()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskItem task = CloseTask(harness, harness.CreateTask("Support SAML login", assignee: "Kai"));
+        TaskItem task = CloseTask(harness, harness.CreateTask("Support SAML login", status: TaskState.InProgress, assignee: "Kai"));
         ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
 
@@ -42,6 +42,25 @@ public sealed class ReopenTaskToolTests
         TaskItem? stored = harness.Store.Get(task.Id);
         Assert.NotNull(stored);
         Assert.False(stored.Location.Closed);
+    }
+
+    /// <summary>
+    /// Reopening a To Do Task wakes no one (smart wakes correction 13, an owner call): the notify clause says the assignee is not woken, and the
+    /// Task is reopened all the same.
+    /// </summary>
+    [Fact]
+    public async Task InvokeAsync_ClosedToDoTask_ReopensAndSaysTheAssigneeIsNotWoken()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = CloseTask(harness, harness.CreateTask("Support SAML login", status: TaskState.ToDo, assignee: "Kai"));
+        ReopenTaskTool tool = CreateTool(harness, harness.NovaIdOrThrow());
+        JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Equal($"Reopened {task.Id}. The assignee is not woken: nothing they act on changed.", result);
+        Assert.False(harness.Store.Get(task.Id)?.Location.Closed);
     }
 
     /// <summary>Reopening an Active Task is refused, naming it, and leaves it as it was (Spec §11.6).</summary>

@@ -113,11 +113,11 @@ internal sealed class UpdateTaskTool(
         };
     }
 
-    /// <summary>Formats the Spec §11.5 success text: the Change log summary, then the notify clause from <see cref="TaskTriggerService.Preview"/>.</summary>
+    /// <summary>Formats the Spec §11.5 success text: the Change log summary, then the notify clause from <see cref="TaskTriggerService.Preview(TaskChange, TaskActor)"/>.</summary>
     private string FormatSaved(TaskResult.Saved saved, TaskActor actor)
     {
         string summary = TaskDiff.Summarise(saved.Change.Changes);
-        WakePreview preview = triggers.Preview(saved.Change.Before, saved.Task, actor);
+        WakePreview preview = triggers.Preview(saved.Change, actor);
         string notify = TaskToolText.NotifyClause(preview, actor.Name);
         return $"Updated {saved.Task.Id}: {summary}. {notify}{TaskActionNote.For(saved.Task, levels, gates, prompts)}";
     }

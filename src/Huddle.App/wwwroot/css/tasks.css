@@ -411,14 +411,6 @@
     flex: 0 0 auto;
 }
 
-/* Claims its own row under the label/count/menu, the same way .budget-prompt-warning claims a
-   full-width row inside a wrapping flex header - so the caption reads under the header rather
-   than crowding the menu button. */
-.task-board-drag-caption {
-    flex: 1 1 100%;
-    color: var(--mud-palette-text-secondary);
-}
-
 .task-board-hidden-count {
     margin-bottom: 8px;
 }
@@ -511,6 +503,14 @@
 
 .task-ghost-bucket-label {
     font-size: var(--mud-typography-body2-size);
+}
+
+/* A zone's drag hint ("Notifies Nova"): 12px secondary, inside the zone it describes. Transparent to the pointer so it
+   never takes the drop or the drag-over highlight from the zone around it. */
+.task-zone-wake-hint {
+    color: var(--mud-palette-text-secondary);
+    font-size: var(--mud-typography-caption-size);
+    pointer-events: none;
 }
 
 /* A ghost bucket: a drop zone with nothing in it, its icon and state name laid out in a row.

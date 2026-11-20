@@ -141,6 +141,20 @@ public sealed class TaskToolTextTests
         Assert.Equal("Kai will be notified.", clause);
     }
 
+    /// <summary>
+    /// <see cref="WakeBlock.NothingWakes"/> says the assignee is not woken because nothing they act on changed. The clause is about the assignee
+    /// only (a Request move still wakes its requesting manager), and it names no one.
+    /// </summary>
+    [Fact]
+    public void NotifyClause_BlockNothingWakes_SaysTheAssigneeIsNotWoken()
+    {
+        WakePreview preview = new("Kai", null, WakeBlock.NothingWakes);
+
+        string clause = TaskToolText.NotifyClause(preview, "Nova");
+
+        Assert.Equal("The assignee is not woken: nothing they act on changed.", clause);
+    }
+
     /// <summary><see cref="WakeBlock.NoAssignee"/> says no one is notified.</summary>
     [Fact]
     public void NotifyClause_BlockNoAssignee_SaysNoOneIsNotified()

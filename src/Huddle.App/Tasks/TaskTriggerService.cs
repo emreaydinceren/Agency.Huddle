@@ -150,6 +150,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
     /// <summary>The wake rules, in <see cref="TaskWakeRules.ProductionOrder"/>.</summary>
     private readonly IReadOnlyList<ITaskWakeRule> wakeRules;
+
+    /// <summary>Resolves the Agents a Task comment Mentions (smart wakes spec 3.3).</summary>
+    private readonly MentionResolver mentions;
     private OutsideWindow? outsideWindow;
     private bool subscribed;
     private bool stopped;
@@ -159,12 +162,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="events">Raises <see cref="TaskEvents.TaskChanged"/>, subscribed to in <see cref="StartAsync"/>.</param>
     /// <param name="store">Reads a Task's latest state when a coalesced batch fires.</param>
     /// <param name="activity">The per-Task wake budget (Spec §10.6): guard 6, and the count a fired Agent-made wake consumes.</param>
-    /// <param name="turns">Reports whether the assignee has a Turn running, for <see cref="Preview"/>'s presence.</param>
+    /// <param name="turns">Reports whether the assignee has a Turn running, for <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>'s presence.</param>
     /// <param name="chat">Posts the wake-up Message.</param>
     /// <param name="directory">Resolves Users and Rooms: presence, the assignee's user, the sender and the Room.</param>
     /// <param name="personas">Resolves whether the assignee is still a known Persona (guard 5).</param>
-    /// <param name="gateway">Reports whether the assignee's pipe connection is live, for <see cref="Preview"/>'s presence.</param>
-    /// <param name="health">Reports the assignee's latest health, for <see cref="Preview"/>'s presence.</param>
+    /// <param name="gateway">Reports whether the assignee's pipe connection is live, for <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>'s presence.</param>
+    /// <param name="health">Reports the assignee's latest health, for <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>'s presence.</param>
     /// <param name="prompts">Renders the <c>task.wake.message</c> Prompt.</param>
     /// <param name="options">Supplies <see cref="TasksOptions"/> (guards 1 and 6, the coalesce window) and the first-run Human Name when <paramref name="human"/> is <see langword="null"/>.</param>
     /// <param name="clock">Creates the coalescing timers.</param>
@@ -235,7 +238,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             new AssigneeWakeRule(),
             new ManagerWakeRule(teams, this.human, personas, this.teamOptions),
             new RequestingManagerWakeRule(teams, this.human, personas, this.teamOptions, logger),
+            new MentionWakeRule(this.human, personas, this.teamOptions),
         ];
+        this.mentions = new MentionResolver(directory, personas, this.human, this.teamOptions);
     }
 
     /// <summary>
@@ -243,7 +248,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// every guard without posting anything or touching the wake budget. Pure over its inputs and
     /// this service's injected collaborators.
     /// </summary>
-    /// <param name="before">The Task before the change, or <see langword="null"/> for a Create. Unused by the guards themselves - Spec §10.2 considers only <paramref name="after"/>'s assignee, so a reassignment never tells the previous assignee.</param>
+    /// <param name="before">The Task before the change, or <see langword="null"/> for a change that wakes (a Create, the unblock path, the trigger round): then nothing is diffed. When given, a diff of it against <paramref name="after"/> that holds nothing the assignee acts on is <see cref="WakeBlock.NothingWakes"/> (smart wakes spec 5.4). The assignee guards themselves consider only <paramref name="after"/>'s assignee, so a reassignment never tells the previous assignee.</param>
     /// <param name="after">The Task as it would be saved.</param>
     /// <param name="actor">Who made the change.</param>
     /// <returns>The resolved <see cref="WakePreview"/>.</returns>
@@ -251,13 +256,44 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     {
         ArgumentNullException.ThrowIfNull(after);
         ArgumentNullException.ThrowIfNull(actor);
-        _ = before;
 
+        bool wakes = before is null
+            || WakeRelevance.Wakes(TaskDiff.Compare(before, after), actor.Kind, WakeRecipient.Assignee);
+        return this.PreviewAssignee(after, actor, wakes);
+    }
+
+    /// <summary>
+    /// What <paramref name="change"/> would do to its assignee, judged by the same rule the receipt uses (<see cref="WakeRelevance.Wakes(TaskChange, WakeRecipient)"/>),
+    /// so a close of an In Progress Task, a Create and a Decision wake and a rank-only edit does not (smart wakes correction 5). The guards that follow are those of
+    /// <see cref="Preview(TaskItem?, TaskItem, TaskActor)"/>.
+    /// </summary>
+    /// <param name="change">The change as saved.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <returns>The resolved <see cref="WakePreview"/>.</returns>
+    public WakePreview Preview(TaskChange change, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        return this.PreviewAssignee(change.After, actor, WakeRelevance.Wakes(change, WakeRecipient.Assignee));
+    }
+
+    /// <summary>The guards of Spec §10.2 in order: Disabled, then <see cref="WakeBlock.NothingWakes"/> when <paramref name="wakes"/> is <see langword="false"/>, then the assignee checks.</summary>
+    /// <param name="after">The Task as saved.</param>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="wakes">Whether the change holds something the assignee acts on.</param>
+    private WakePreview PreviewAssignee(TaskItem after, TaskActor actor, bool wakes)
+    {
         string? assignee = after.Assignee;
 
         if (!this.teamOptions.Tasks.Enabled || !this.teamOptions.Tasks.WakeEnabled)
         {
             return new WakePreview(assignee, null, WakeBlock.Disabled);
+        }
+
+        if (!wakes)
+        {
+            return new WakePreview(assignee, null, WakeBlock.NothingWakes);
         }
 
         if (string.IsNullOrEmpty(assignee))
@@ -434,19 +470,29 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
+        if (change.After.Status.IsTerminal() && !FinishedBefore(change))
+        {
+            // Before the silent drop: a blocker reaching a finished status wakes the Tasks it blocked, even when the move
+            // itself wakes no one (Backlog to Cancelled; smart wakes correction 1).
+            this.StartUnblock(change);
+        }
+
+        if (IsSilent(change))
+        {
+            // Smart wakes spec 5.3: a change that wakes neither recipient (and is not a comment or a Request's C-5 move) is saved and
+            // logged, then dropped here. It joins no batch, resets no wake budget, forgets no held wake, holds nothing and counts
+            // toward no outside-edit flood window (corrections 1 and 2).
+            return;
+        }
+
         if (change.Actor.Kind == TaskActorKind.Human)
         {
-            // Corrections-B3 D9 item 15: on receipt, before any guard - a Human change resets the Task's
+            // Corrections-B3 D9 item 15: on receipt, before any guard - a kept Human change resets the Task's
             // wake budget even when it wakes nobody. An OutsideHuddle actor never resets it (item 18).
             this.activity.ResetForHuman(change.After.Id);
 
             // The Human's own change wakes whoever it concerns, so what was waiting is covered, and a pause it ended is over.
             this.ForgetHeld(change.After.Id);
-        }
-
-        if (change.After.Status.IsTerminal() && !(change.Before?.Status.IsTerminal() ?? false))
-        {
-            this.StartUnblock(change);
         }
 
         BatchKey key = new(change.After.Id, change.Actor.Name);
@@ -467,6 +513,36 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         {
             this.StartFire(key);
         }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="change"/> is dropped on receipt (smart wakes spec 5.3): a comment is kept only when its text holds an <c>@</c> (the
+    /// Mention rule decides later whom it wakes); any other change is kept when it wakes the assignee or the manager or is a Request's C-5 status move.
+    /// </summary>
+    /// <param name="change">The change.</param>
+    private static bool IsSilent(TaskChange change) =>
+        change.Kind == TaskChangeKind.Comment
+            ? change.Comment?.Contains('@', StringComparison.Ordinal) != true
+            : !WakeRelevance.Wakes(change, WakeRecipient.Assignee)
+                && !WakeRelevance.Wakes(change, WakeRecipient.Manager)
+                && !WakeRelevance.RequestStatusWakes(change);
+
+    /// <summary>
+    /// Whether the Task was already finished (Done, Cancelled, Duplicate or Rejected) before <paramref name="change"/>. A status field decides from its
+    /// old value (correction 4), since a change may carry the same Task as <c>Before</c> and <c>After</c>; with no status field it is <c>Before</c>'s status.
+    /// </summary>
+    /// <param name="change">The change.</param>
+    private static bool FinishedBefore(TaskChange change)
+    {
+        foreach (FieldChange field in change.Changes)
+        {
+            if (field.Field == TaskField.Status && TaskStates.TryParse(field.Old, out TaskState old))
+            {
+                return old.IsTerminal();
+            }
+        }
+
+        return change.Before?.Status.IsTerminal() ?? false;
     }
 
     /// <summary>
@@ -503,17 +579,18 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             }
 
             batch.Actor = change.Actor;
-            batch.Entries.Add(change.Entry);
+            batch.Add(change.Entry, change.Comment);
             if (change.Decision is { } decision)
             {
                 batch.Decision = decision;
                 batch.Note = change.Note;
             }
 
+            batch.WakesAssignee |= WakeRelevance.Wakes(change, WakeRecipient.Assignee);
+            batch.WakesManager |= WakeRelevance.Wakes(change, WakeRecipient.Manager);
+            batch.RequestStatusWakes |= WakeRelevance.RequestStatusWakes(change);
             if (change.Changes.Any(static field => field.Field == TaskField.Status))
             {
-                batch.StatusChanged = true;
-
                 // The last status change decides: a Request moved into Done and straight out again is not waiting to be confirmed.
                 batch.MovedToDone = change.After.Status == TaskState.Done && change.Before?.Status != TaskState.Done;
             }
@@ -717,7 +794,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         ChangeLogEntry unblocked = new(this.clock.GetUtcNow(), actor.Name, marker);
         Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
-        batch.Entries.Add(unblocked);
+        batch.Add(unblocked, null);
         if (!await this.DeliverAsync(batch, blocked, recipient, ct).ConfigureAwait(false))
         {
             return;
@@ -806,13 +883,17 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
-        TaskWakeRound round = new(latest, batch.Actor, batch.StatusChanged, this.Preview(null, latest, batch.Actor));
+        IReadOnlyList<string> mentioned = await this.ResolveMentionedAsync(batch, latest, ct).ConfigureAwait(false);
+        TaskWakeRound round = new(latest, batch.Actor, batch.RequestStatusWakes, this.Preview(null, latest, batch.Actor), batch.WakesAssignee, batch.WakesManager, mentioned);
+
+        // Every name a rule chose this round (woken, held, or its delivery did not post), so an Agent gets one Message per batch.
+        HashSet<string> chosen = new(StringComparer.OrdinalIgnoreCase);
         foreach (ITaskWakeRule rule in this.wakeRules)
         {
             try
             {
                 TaskWakeChoice choice = rule.Choose(round);
-                await this.ActOnAsync(choice, batch, latest, ct).ConfigureAwait(false);
+                await this.ActOnAsync(choice, batch, latest, chosen, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -826,20 +907,77 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
     }
 
+    /// <summary>The Agents the batch's comments Mention: the union over its comment texts, in first-mention order, each once (ignoring case).</summary>
+    /// <param name="batch">The batch about to be woken for.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>The canonical Persona names; empty when the batch holds no comment.</returns>
+    private async Task<IReadOnlyList<string>> ResolveMentionedAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    {
+        List<string> names = [];
+        foreach (string? text in batch.CommentTexts)
+        {
+            if (text is null)
+            {
+                continue;
+            }
+
+            foreach (string name in await this.ResolveCommentMentionsAsync(latest, text, batch.Actor, ct).ConfigureAwait(false))
+            {
+                if (!names.Contains(name, StringComparer.OrdinalIgnoreCase))
+                {
+                    names.Add(name);
+                }
+            }
+        }
+
+        return names;
+    }
+
+    /// <summary>Whether Tasks and wake-ups are both on right now, read live from the same options <see cref="ResolveCommentMentionsAsync"/> reads.</summary>
+    internal bool WakesEnabled => this.teamOptions.Tasks.Enabled && this.teamOptions.Tasks.WakeEnabled;
+
+    /// <summary>
+    /// The Agents a comment on <paramref name="task"/> would wake after the guards (smart wakes spec 3.3): the registered Personas it Mentions by Name or Alias,
+    /// without the author or the Human, and without the <c>@all</c> expansion. Empty while Tasks or wake-ups are off. The Task's wake budget is a delivery
+    /// matter and is not applied. The batch fire and <c>add_comment</c>'s reply both ask this.
+    /// </summary>
+    /// <param name="task">The Task commented on.</param>
+    /// <param name="comment">The whole comment text.</param>
+    /// <param name="author">Who wrote the comment.</param>
+    /// <param name="ct">Cancels the directory read.</param>
+    /// <returns>The canonical Persona names in first-mention order.</returns>
+    internal async Task<IReadOnlyList<string>> ResolveCommentMentionsAsync(TaskItem task, string comment, TaskActor author, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(comment);
+        ArgumentNullException.ThrowIfNull(author);
+
+        IReadOnlyList<string> names = await this.mentions.ResolveAsync(comment, author, ct).ConfigureAwait(false);
+        LogMentionsResolved(this.logger, task.Id, names.Count);
+        return names;
+    }
+
     /// <summary>Carries out one rule's choice: delivers a wake, holds one for the Task's wake budget, or logs the guard that stopped it.</summary>
     /// <param name="choice">What the rule chose.</param>
     /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
     /// <param name="latest">The Task's latest state.</param>
+    /// <param name="chosen">The names already chosen this round, which this adds to.</param>
     /// <param name="ct">The service lifetime.</param>
     /// <returns>A task that completes when the choice was carried out.</returns>
-    private async Task ActOnAsync(TaskWakeChoice choice, Batch batch, TaskItem latest, CancellationToken ct)
+    private async Task ActOnAsync(TaskWakeChoice choice, Batch batch, TaskItem latest, HashSet<string> chosen, CancellationToken ct)
     {
         switch (choice)
         {
             case TaskWakeChoice.Wake wake:
+                _ = chosen.Add(wake.Name);
                 _ = await this.DeliverAsync(batch, latest, wake.Name, ct).ConfigureAwait(false);
                 break;
+            case TaskWakeChoice.WakeEach each:
+                await this.WakeEachAsync(each, batch, latest, chosen, ct).ConfigureAwait(false);
+                break;
             case TaskWakeChoice.HoldForBudget hold:
+                _ = chosen.Add(hold.Name);
                 LogBlocked(this.logger, latest.Id, WakeBlock.BudgetPaused);
                 this.RecordOutcome(latest.Id, hold.Name, null, WakeOutcome.WakePaused);
                 this.HoldForWakeBudget(batch, latest, hold.Name);
@@ -847,8 +985,41 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             case TaskWakeChoice.Skip { Block: { } block }:
                 LogBlocked(this.logger, latest.Id, block);
                 break;
-            default:
+            case TaskWakeChoice.Skip:
                 break;
+            default:
+                throw new InvalidOperationException($"Unhandled wake choice {choice.GetType().Name}.");
+        }
+    }
+
+    /// <summary>Wakes each Mentioned Agent through <see cref="DeliverAsync"/>, skipping a name already chosen this round; one failing delivery does not stop the rest.</summary>
+    /// <param name="each">The names the Mention rule chose.</param>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="chosen">The names already chosen this round, which this adds to.</param>
+    /// <param name="ct">The service lifetime.</param>
+    private async Task WakeEachAsync(TaskWakeChoice.WakeEach each, Batch batch, TaskItem latest, HashSet<string> chosen, CancellationToken ct)
+    {
+        foreach (string name in each.Names)
+        {
+            if (!chosen.Add(name))
+            {
+                continue;
+            }
+
+            try
+            {
+                _ = await this.DeliverAsync(batch, latest, name, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // One Mentioned Agent's failed delivery must not keep the others from being woken (S-B2).
+                LogWakeRuleFailed(this.logger, "Mention", latest.Id, ex);
+            }
         }
     }
 
@@ -880,7 +1051,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
 
         Batch batch = new(new BatchKey(request.Id, actor.Name)) { Actor = actor };
-        batch.Entries.Add(new ChangeLogEntry(this.clock.GetUtcNow(), actor.Name, summary));
+        batch.Add(new ChangeLogEntry(this.clock.GetUtcNow(), actor.Name, summary), null);
         await this.fireGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -1034,9 +1205,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             FirstChangeAt = batch.FirstChangeAt,
             Decision = batch.Decision,
             Note = batch.Note,
-            StatusChanged = batch.StatusChanged,
+            WakesAssignee = batch.WakesAssignee,
+            WakesManager = batch.WakesManager,
+            RequestStatusWakes = batch.RequestStatusWakes,
+            MovedToDone = batch.MovedToDone,
         };
-        held.Entries.AddRange(batch.Entries);
+        held.AddRange(batch);
         bool forAssignee = string.Equals(name, latest.Assignee, StringComparison.OrdinalIgnoreCase);
         lock (this.gate)
         {
@@ -1047,9 +1221,12 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
             if (this.heldWakes.Remove(key, out HeldWake? earlier))
             {
-                held.Entries.InsertRange(0, earlier.Batch.Entries);
+                held.InsertBefore(earlier.Batch);
                 held.Decision ??= earlier.Batch.Decision;
                 held.Note ??= earlier.Batch.Note;
+                held.WakesAssignee |= earlier.Batch.WakesAssignee;
+                held.WakesManager |= earlier.Batch.WakesManager;
+                held.RequestStatusWakes |= earlier.Batch.RequestStatusWakes;
             }
 
             this.heldWakes[key] = new HeldWake(latest.Id, name, roomId, forAssignee, held);
@@ -1497,7 +1674,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <returns>The Message text.</returns>
     private string WakeText(Batch batch, TaskItem latest, string assigneeName)
     {
-        string text = this.Render(latest, batch.Actor, assigneeName, batch.Entries);
+        string text = this.Render(latest, batch.Actor, assigneeName, batch);
         bool toManager = this.teams?.Find(latest.Location.Team)?.Manager is { Length: > 0 } manager
             && string.Equals(manager, assigneeName, StringComparison.OrdinalIgnoreCase);
         if (DecisionSentence(latest, batch.Decision, batch.Note, toManager) is { } sentence)
@@ -1522,7 +1699,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     }
 
     /// <summary>The line a review or verify Task's assignee gets on every wake: the outcome is recorded on the Task, not in chat (D-9).</summary>
-    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. When the owner comments that the work is ready again, review it again on this Task.";
+    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. A comment wakes you only when it Mentions you: when the owner comments that the work is ready again and Mentions you, review it again on this Task.";
 
     /// <summary>The line a release (ADR-0088) adds to the wake: the merge needs no Accept, a push still does.</summary>
     /// <param name="latest">The Task's latest state.</param>
@@ -1587,9 +1764,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="task">The latest Task.</param>
     /// <param name="actor">Who made the changes.</param>
     /// <param name="assigneeName">The latest assignee's Name.</param>
-    /// <param name="entries">The batch's Change log entries, in arrival order.</param>
+    /// <param name="batch">The batch: its Change log entries in arrival order, and the comment text of each entry that is a comment.</param>
     /// <returns>The Message text.</returns>
-    private string Render(TaskItem task, TaskActor actor, string assigneeName, IReadOnlyList<ChangeLogEntry> entries)
+    private string Render(TaskItem task, TaskActor actor, string assigneeName, Batch batch)
     {
         Dictionary<string, string> values = new(StringComparer.Ordinal)
         {
@@ -1599,11 +1776,27 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             ["{{status}}"] = task.Status.ToWire(),
             ["{{team}}"] = task.Location.Team,
             ["{{actor}}"] = actor.Name,
-            ["{{changes}}"] = string.Join('\n', entries.Select(static e => "- " + NeutraliseMentions(e.Summary))),
+            ["{{changes}}"] = string.Join('\n', batch.Entries.Select((entry, index) => ChangeBullet(entry, batch.CommentTexts, index))),
         };
 
         return this.prompts.Render(WakeMessageKey, values);
     }
+
+    /// <summary>The bullet of one batched change: a comment's author and text (cut, then neutralised), otherwise the Change log summary, neutralised.</summary>
+    /// <param name="entry">The Change log entry.</param>
+    /// <param name="commentTexts">The batch's comment texts, aligned with its entries.</param>
+    /// <param name="index">The entry's position.</param>
+    private static string ChangeBullet(ChangeLogEntry entry, List<string?> commentTexts, int index) =>
+        index < commentTexts.Count && commentTexts[index] is { } text
+            ? CommentExcerpt.Bullet(entry.Actor, text, NeutraliseMentions)
+            : "- " + NeutraliseMentions(entry.Summary);
+
+    /// <summary>Logs the Agents a Task comment resolved to.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="count">How many Agents the comment's Mentions resolved to.</param>
+    [LoggerMessage(Level = LogLevel.Debug, Message = "A comment on Task {TaskId} Mentions {Count} Agent(s) that can be woken.")]
+    private static partial void LogMentionsResolved(ILogger logger, TaskId taskId, int count);
 
     /// <summary>Logs that more outside-edit changes than the limit arrived within one coalesce window.</summary>
     /// <param name="logger">The logger to write to.</param>
@@ -1715,6 +1908,34 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         /// <summary>Every batched change's Change log entry, in arrival order.</summary>
         public List<ChangeLogEntry> Entries { get; } = [];
 
+        /// <summary>The comment text of each entry in <see cref="Entries"/>, aligned with it by index: <see langword="null"/> for a change that is no comment.</summary>
+        public List<string?> CommentTexts { get; } = [];
+
+        /// <summary>Adds an entry with its comment text, keeping <see cref="CommentTexts"/> aligned.</summary>
+        /// <param name="entry">The Change log entry.</param>
+        /// <param name="comment">The comment text, or <see langword="null"/> when the change is no comment.</param>
+        public void Add(ChangeLogEntry entry, string? comment)
+        {
+            this.Entries.Add(entry);
+            this.CommentTexts.Add(comment);
+        }
+
+        /// <summary>Appends every entry of <paramref name="other"/>, with its comment text, after this batch's own.</summary>
+        /// <param name="other">The batch to copy from.</param>
+        public void AddRange(Batch other)
+        {
+            this.Entries.AddRange(other.Entries);
+            this.CommentTexts.AddRange(other.CommentTexts);
+        }
+
+        /// <summary>Puts every entry of <paramref name="earlier"/>, with its comment text, before this batch's own.</summary>
+        /// <param name="earlier">The batch whose entries came first.</param>
+        public void InsertBefore(Batch earlier)
+        {
+            this.Entries.InsertRange(0, earlier.Entries);
+            this.CommentTexts.InsertRange(0, earlier.CommentTexts);
+        }
+
         /// <summary>The Human's latest decision in this batch, or <see langword="null"/> when none was made.</summary>
         public Agency.Huddle.App.Tasks.HumanGate.TaskDecision? Decision { get; set; }
 
@@ -1724,8 +1945,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         /// <summary>The coalescing timer, or <see langword="null"/> when the batch fires directly.</summary>
         public ITimer? Timer { get; set; }
 
-        /// <summary>Whether any batched change moved the Task's status (RQ-4 wakes the requesting manager on those).</summary>
-        public bool StatusChanged { get; set; }
+        /// <summary>Whether any batched change wakes the assignee (<see cref="WakeRelevance"/>). A batch built for a Request lifecycle event sets none: it is delivered, not run through the rules.</summary>
+        public bool WakesAssignee { get; set; }
+
+        /// <summary>Whether any batched change wakes the Team's manager.</summary>
+        public bool WakesManager { get; set; }
+
+        /// <summary>Whether any batched change is a status move that wakes a Request's requesting manager (RQ-4, narrowed by C-5).</summary>
+        public bool RequestStatusWakes { get; set; }
 
         /// <summary>Whether any batched change moved the Task into Done (#350: a Request that gets there waits for its requesting Team to confirm it).</summary>
         public bool MovedToDone { get; set; }

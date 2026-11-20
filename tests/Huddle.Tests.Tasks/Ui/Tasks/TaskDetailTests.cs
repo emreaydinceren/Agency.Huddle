@@ -80,6 +80,7 @@ public sealed class TaskDetailTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderPanel(ctx, task.Id);
+        await EditTitleAsync(cut);
 
         Assert.Equal("Nova is asleep and will be notified.", cut.TextOf(".task-detail-wake-notice"));
         Assert.Equal("Save & notify Nova", cut.FindButton("Save & notify Nova").TextContent.Trim());
@@ -97,6 +98,7 @@ public sealed class TaskDetailTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderPanel(ctx, task.Id);
+        await EditTitleAsync(cut);
 
         Assert.Equal("Nova is awake and will be notified.", cut.TextOf(".task-detail-wake-notice"));
         Assert.Equal("Save & notify Nova", cut.FindButton("Save & notify Nova").TextContent.Trim());
@@ -115,6 +117,7 @@ public sealed class TaskDetailTests
         await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
 
         var cut = RenderPanel(ctx, task.Id);
+        await EditTitleAsync(cut);
 
         Assert.Equal("Nova is offline, so this change won't reach them.", cut.TextOf(".task-detail-wake-notice"));
         Assert.Equal("Save", cut.FindButton("Save").TextContent.Trim());
@@ -127,9 +130,9 @@ public sealed class TaskDetailTests
     /// input, so each gets its own case rather than one exemplar for the whole Spec §13.6 row.
     /// <see cref="WakeBlock.AssigneeIsActor"/> is the row's third member but has no case here: it is
     /// structurally unreachable from <c>TaskDetail</c>, not merely untested. <c>TaskDetail</c> always
-    /// calls <see cref="TaskTriggerService.Preview"/> with the Human actor (Spec §13.6), so
+    /// calls <see cref="TaskTriggerService.Preview(TaskItem?, TaskItem, TaskActor)"/> with the Human actor (Spec §13.6), so
     /// "assignee == actor.Name" can only be true when the assignee IS the Human - exactly the
-    /// <c>AssigneeIsHuman</c> input above - and <see cref="TaskTriggerService.Preview"/>'s own guard
+    /// <c>AssigneeIsHuman</c> input above - and <see cref="TaskTriggerService.Preview(TaskItem?, TaskItem, TaskActor)"/>'s own guard
     /// order checks <c>AssigneeIsHuman</c> first and returns before ever reaching the
     /// <c>AssigneeIsActor</c> check (<c>TaskTriggerService.cs</c>). There is no assignee value that
     /// makes <c>TaskDetail</c> see <c>AssigneeIsActor</c>; that guard only fires for an Agent's own
@@ -390,7 +393,7 @@ public sealed class TaskDetailTests
     /// once <see cref="TaskActivity.Budget(TaskId)"/> is <see cref="WakeBudget.Exhausted"/>, the exact
     /// Spec §13.6 <c>BudgetPaused</c> text appears with an "Allow 10 more" button, and the Save label
     /// stays the plain "Save" - never "Save &amp; Notify", since (as item 4 states) a Human save can
-    /// never itself see <see cref="WakeBlock.BudgetPaused"/> from <see cref="TaskTriggerService.Preview"/>.
+    /// never itself see <see cref="WakeBlock.BudgetPaused"/> from <see cref="TaskTriggerService.Preview(TaskItem?, TaskItem, TaskActor)"/>.
     /// </summary>
     [Fact]
     public async Task BudgetBanner_Exhausted_ShowsExactTextAndAllowMoreButton_SaveLabelStaysPlain()
@@ -460,6 +463,18 @@ public sealed class TaskDetailTests
             new TaskDraft(title, "Platform", null, Priority: priority, Assignee: assignee),
             TaskActors.Human(harness.Options.Value));
         return Assert.IsType<TaskResult.Saved>(result).Task;
+    }
+
+    /// <summary>
+    /// Leaves a pending Title edit on <paramref name="cut"/>: a Title change wakes the assignee (smart wakes spec 3.1), so the Save label and the
+    /// wake notice show what the assignee's presence says. A render with no pending edit is <see cref="WakeBlock.NothingWakes"/>.
+    /// </summary>
+    /// <param name="cut">The rendered panel.</param>
+    private static async Task EditTitleAsync(IRenderedComponent<ContainerFragment> cut)
+    {
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Edit title\"]").ClickAsync());
+        IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-title", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => titleField.Instance.ValueChanged.InvokeAsync("Retitled by the Human"));
     }
 
     /// <summary>Renders <c>TaskDetail</c> in Panel mode for <paramref name="id"/>, inside <see cref="MudBunitContext.RenderWithPopovers"/> (the Won't-do menu and pickers are popovers).</summary>

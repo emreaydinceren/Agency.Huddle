@@ -208,7 +208,7 @@ public sealed class CreateTaskToolTests
         Assert.Empty(harness.Store.All);
     }
 
-    /// <summary>A successful create says who is assigned, and reports the notify clause <see cref="TaskTriggerService.Preview"/> resolves for it.</summary>
+    /// <summary>A successful create says who is assigned, and reports the notify clause <see cref="TaskTriggerService.Preview(TaskChange, TaskActor)"/> resolves for it.</summary>
     [Fact]
     public async Task CreateTask_Success_AssignedToAgent_ReportsCreatedAndNotified()
     {

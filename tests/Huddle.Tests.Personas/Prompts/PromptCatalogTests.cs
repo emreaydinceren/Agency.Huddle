@@ -957,7 +957,44 @@ public sealed partial class PromptCatalogTests
 
         Assert.Contains("reopen_task, add_evidence and add_comment to work with them", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Contains("A Task's description is the only text you edit; its comments and Evidence are a timeline that nobody edits or deletes.", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
-        Assert.Contains("put those in a Message or a comment on the Task", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+        Assert.Contains("put those in a Message or in a comment on the Task that Mentions who takes it", help, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
+    }
+
+    private const string SmartWakesFieldSentences = "Changing the assignee, title, description, blocked_by, action, team or project wakes the assignee and the Team's manager, unless that is you. A status change wakes them when work starts, stops, finishes or is reopened; filing away a Task nobody started (Backlog to Cancelled) or relabelling a finished one wakes no one, Backlog to To Do wakes only the assignee, and In Progress to Needs You wakes no one. Rank, priority, tags, dates, sprint, parent, origin, duplicate_of and human_gate are saved without waking anyone.";
+
+    private const string SmartWakesMentionSentences = "A comment wakes only the Agents it Mentions: write @Name for each one who must act on it. A comment with no Mention wakes no one, not even the assignee.";
+
+    /// <summary>Returns the text from <paramref name="start"/> to the end of <paramref name="end"/>, or an empty string when either is missing, so an assertion on it reads as a whole sentence.</summary>
+    /// <param name="text">The prompt text with line endings collapsed to spaces.</param>
+    /// <param name="start">Where the slice begins.</param>
+    /// <param name="end">The text the slice ends with.</param>
+    /// <returns>The slice, or an empty string.</returns>
+    private static string Slice(string text, string start, string end)
+    {
+        int from = text.IndexOf(start, StringComparison.Ordinal);
+        int to = text.IndexOf(end, from < 0 ? 0 : from, StringComparison.Ordinal);
+        return from < 0 || to < 0 ? string.Empty : text[from..(to + end.Length)];
+    }
+
+    /// <summary>Smart wakes spec 6 (SW-T8): update_task, add_comment and <c>getHelp.tasks</c> state the wake rule whole, with the comment Mention sentence, and the old "Changing a field wakes the assignee" sentence is gone from all three.</summary>
+    [Fact]
+    public void TaskPrompts_StateTheSmartWakeRule()
+    {
+        string update = PromptCatalog.Get("tool.updateTask.description").Default.ReplaceLineEndings(" ");
+        string comment = PromptCatalog.Get("tool.addComment.description").Default.ReplaceLineEndings(" ");
+        string help = PromptCatalog.Get("getHelp.tasks").Default.ReplaceLineEndings(" ");
+
+        Assert.Equal(SmartWakesFieldSentences, Slice(update, "Changing the assignee", "without waking anyone."));
+        Assert.Equal(SmartWakesMentionSentences, Slice(comment, "A comment wakes only", "not even the assignee."));
+        Assert.Equal(SmartWakesFieldSentences + " " + SmartWakesMentionSentences, Slice(help, "Changing the assignee", "not even the assignee."));
+        Assert.Equal(
+            "The reviewer approves by moving the review Task to Done, or leaves it open with the findings as a comment that Mentions the owner; fix the work and comment that it is ready, Mentioning the reviewer.",
+            Slice(help, "The reviewer approves", "Mentioning the reviewer."));
+        foreach (string text in new[] { update, comment, help })
+        {
+            Assert.DoesNotContain("Changing a field wakes the assignee", text, StringComparison.Ordinal);
+            Assert.DoesNotContain("Changing one wakes its assignee", text, StringComparison.Ordinal);
+        }
     }
 
     /// <summary>#586: <c>tool.addComment.description</c> sends a check you ran to add_evidence, and an override saved for it is what the tool's Description returns.</summary>
@@ -970,7 +1007,7 @@ public sealed partial class PromptCatalogTests
         const string overriddenText = "Leaves a remark on a Task.";
         store.Save("tool.addComment.description", overriddenText);
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        AddCommentTool tool = new(harness.Service, harness.Store, harness.Directory, "caller-id", store);
+        AddCommentTool tool = new(harness.Service, harness.Store, harness.Triggers, harness.Directory, "caller-id", store);
 
         Assert.Contains("use add_evidence instead", PromptCatalog.Get("tool.addComment.description").Default, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Equal(overriddenText, tool.Description);

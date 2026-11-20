@@ -22,9 +22,9 @@ using Agency.Huddle.Tests.Tasks;
 /// <c>Save</c>; the reason dialog's title <c>Mark {id} as {State}</c>, its field label
 /// <c>Reason (optional)</c> and buttons <c>Skip</c> / <c>Save</c> plus the dialog's close (X) button;
 /// the Snackbar errors <c>Could not move {id}: {problems}</c> and
-/// <c>Could not move {id}: it no longer exists.</c>; the drag caption <c>{Name} will be notified</c>
-/// (the Spec's own example) in <c>.task-board-drag-caption</c> under every column header except the
-/// dragged card's own, and no caption when <c>Preview</c> blocks the wake.
+/// <c>Could not move {id}: it no longer exists.</c>; the per-zone drag hint <c>Notifies {Name}</c>
+/// (smart wakes spec 5.5) in <c>.task-zone-wake-hint</c> inside each drop zone whose drop would wake the
+/// assignee, never in the dragged card's own zone, and none when <c>Preview</c> blocks the wake.
 /// </para>
 /// </summary>
 public sealed class TaskBoardDropTests
@@ -418,13 +418,21 @@ public sealed class TaskBoardDropTests
         await move;
     }
 
+    /// <summary>The hints a To Do card assigned to Nova gets: Planning to Planning and Planning to Active wake, so Backlog, In Progress and Needs You show; Planning to Done and to Won't do are silent, so Done and the three Won't do buckets do not; the card's own zone never does (smart wakes 3.4, 5.5).</summary>
+    private static readonly string[] ToDoCardHints =
+    [
+        BoardWakeHints.Entry(NoLane, TaskState.Backlog, "Nova"),
+        BoardWakeHints.Entry(NoLane, TaskState.InProgress, "Nova"),
+        BoardWakeHints.Entry(NoLane, TaskState.NeedsYou, "Nova"),
+    ];
+
     /// <summary>
-    /// Plan 12.3.t and corrections-B5 D12-11: while dragging, a caption with the <c>Preview</c> text -
-    /// "Nova will be notified" - shows under every column that can take the drop: every column
-    /// header, the dragged card's own included while a same-column drop reorders (single-state column, View without a sort).
+    /// Smart wakes 5.5: while a To Do card assigned to Nova is dragged, exactly the zones whose drop wakes Nova say
+    /// "Notifies Nova" - Backlog, In Progress and Needs You - and no other zone does: not Done, not the Cancelled,
+    /// Duplicate and Rejected buckets, and not the card's own To Do zone.
     /// </summary>
     [Fact]
-    public async Task DragStarted_CaptionUnderEveryOtherColumn()
+    public async Task DragStarted_ToDoCard_HintsOnlyOnZonesWhoseDropWakesTheAssignee()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -434,16 +442,57 @@ public sealed class TaskBoardDropTests
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
 
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
-        Assert.All(rig.Board.FindAll(".task-board-drag-caption"), c => Assert.Equal("Nova will be notified", c.TextContent.Trim()));
-        IReadOnlyList<IElement> headers = rig.Board.FindAll("div.task-board-column-header");
-        Assert.NotNull(headers[1].QuerySelector(".task-board-drag-caption"));
-        Assert.NotNull(headers[2].QuerySelector(".task-board-drag-caption"));
+        rig.Board.WaitForAssertion(() => Assert.Equal(ToDoCardHints, BoardWakeHints.Of(rig.Board)));
+        Assert.Equal(3, rig.Board.FindAll(".task-ghost-bucket").Count);
     }
 
-    /// <summary>Provisional (flagged): when <c>Preview</c> blocks the wake - here an unassigned card - no caption is shown.</summary>
+    /// <summary>
+    /// Smart wakes 3.4 and 5.5: whether a drop wakes depends on where it lands. An In Progress card assigned to Nova
+    /// shows the hint on Backlog, To Do, Done and all three Won't do buckets (work in flight is put back, finished or
+    /// dropped) but not on Needs You, where the assignee's own hand-off is silent, nor on its own In Progress zone.
+    /// </summary>
     [Fact]
-    public async Task DragStarted_UnassignedCard_NoCaption()
+    public async Task DragStarted_InProgressCard_HintFollowsTheDestination()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem moved = CreateTask(harness, "Ship it", TaskState.InProgress, assignee: "Nova");
+        string[] expected =
+        [
+            BoardWakeHints.Entry(NoLane, TaskState.Backlog, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.ToDo, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.Done, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.Cancelled, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.Duplicate, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.Rejected, "Nova"),
+        ];
+
+        await using MudBunitContext ctx = new();
+        Rig rig = Render(ctx, harness, [moved]);
+        await rig.StartDragAsync(moved);
+
+        rig.Board.WaitForAssertion(() => Assert.Equal(expected, BoardWakeHints.Of(rig.Board)));
+    }
+
+    /// <summary>Smart wakes 5.5: the Board-wide caption element is gone - no <c>.task-board-drag-caption</c> under any column header while a card is dragged.</summary>
+    [Fact]
+    public async Task DragStarted_NoBoardWideCaption()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo, assignee: "Nova");
+
+        await using MudBunitContext ctx = new();
+        Rig rig = Render(ctx, harness, [moved]);
+        await rig.StartDragAsync(moved);
+
+        rig.Board.WaitForAssertion(() => Assert.Equal(ToDoCardHints, BoardWakeHints.Of(rig.Board)));
+        Assert.Empty(rig.Board.FindAll($".{BoardWakeHints.RetiredCaptionClass}"));
+    }
+
+    /// <summary>Smart wakes 5.5: an unassigned card has no one to notify, so no zone shows a hint (the drag still shows the ghost buckets).</summary>
+    [Fact]
+    public async Task DragStarted_UnassignedCard_NoHintAnywhere()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -454,12 +503,12 @@ public sealed class TaskBoardDropTests
         await rig.StartDragAsync(moved);
 
         rig.Board.WaitForAssertion(() => Assert.Equal(3, rig.Board.FindAll(".task-ghost-bucket").Count));
-        Assert.Empty(rig.Board.FindAll(".task-board-drag-caption"));
+        Assert.Empty(BoardWakeHints.Of(rig.Board));
     }
 
-    /// <summary>corrections-B5 D12-11: the caption is computed once, at drag start - turning wake-ups off mid-drag and re-rendering doesn't change it.</summary>
+    /// <summary>Smart wakes 5.5: the hints are computed once, at drag start - turning wake-ups off mid-drag and re-rendering doesn't change them.</summary>
     [Fact]
-    public async Task Caption_ComputedOnceAtDragStart()
+    public async Task Hints_ComputedOnceAtDragStart()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -469,18 +518,17 @@ public sealed class TaskBoardDropTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(ToDoCardHints, BoardWakeHints.Of(rig.Board)));
         harness.Options.Value.Tasks.WakeEnabled = false;
         await rig.Board.InvokeAsync(() => harness.Gateway.SetOnline(novaId));
 
         rig.Board.WaitForAssertion(() => Assert.Equal("Nova is Asleep", rig.Board.FindComponent<MudBadge>().Instance.BadgeAriaLabel));
-        Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count);
-        Assert.Equal("Nova will be notified", rig.Board.Find(".task-board-drag-caption").TextContent.Trim());
+        Assert.Equal(ToDoCardHints, BoardWakeHints.Of(rig.Board));
     }
 
-    /// <summary>The caption goes away when the drag ends.</summary>
+    /// <summary>Smart wakes 5.5: the hints go away when the drag is cancelled.</summary>
     [Fact]
-    public async Task DragEnded_CaptionGone()
+    public async Task DragEnded_HintsGone()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -489,10 +537,28 @@ public sealed class TaskBoardDropTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, [moved]);
         await rig.StartDragAsync(moved);
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
+        rig.Board.WaitForAssertion(() => Assert.Equal(ToDoCardHints, BoardWakeHints.Of(rig.Board)));
         await rig.Board.InvokeAsync(() => rig.Container.CancelTransaction());
 
-        rig.Board.WaitForAssertion(() => Assert.Empty(rig.Board.FindAll(".task-board-drag-caption")));
+        rig.Board.WaitForAssertion(() => Assert.Empty(BoardWakeHints.Of(rig.Board)));
+    }
+
+    /// <summary>Smart wakes 5.5: the hints go away when the card is dropped too (the drop clears the drag first, as it does the ghost buckets).</summary>
+    [Fact]
+    public async Task Dropped_HintsGone()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem moved = CreateTask(harness, "Ship it", TaskState.ToDo, assignee: "Nova");
+
+        await using MudBunitContext ctx = new();
+        Rig rig = Render(ctx, harness, [moved]);
+        await rig.StartDragAsync(moved);
+        rig.Board.WaitForAssertion(() => Assert.Equal(ToDoCardHints, BoardWakeHints.Of(rig.Board)));
+        await rig.Board.InvokeAsync(() => rig.Container.CommitTransaction(BoardLayout.ZoneId(NoLane, TaskState.InProgress), false));
+
+        rig.Board.WaitForAssertion(() => Assert.Empty(BoardWakeHints.Of(rig.Board)));
+        Assert.Equal(TaskState.InProgress, harness.Store.Get(moved.Id)?.Status);
     }
 
     /// <summary>12.3.i: <c>CommitTransaction</c> doesn't re-check <c>CanDrop</c>, so a drop that lands on a multi-state column's display zone (not a state zone) moves nothing.</summary>

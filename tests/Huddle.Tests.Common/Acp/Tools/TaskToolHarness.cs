@@ -40,7 +40,7 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 /// constructor has a real but unseeded <see cref="Directory"/>, and <see cref="NovaId"/>/
 /// <see cref="KaiId"/> stay <see langword="null"/>. D10 tools that resolve a caller or an assignee
 /// through <see cref="Directory"/>, and D12/D14 tests that call <see cref="Triggers"/>'s
-/// <see cref="TaskTriggerService.Preview"/>, construct the harness through <see cref="CreateAsync"/>.
+/// <see cref="TaskTriggerService.Preview(TaskChange, TaskActor)"/>, construct the harness through <see cref="CreateAsync"/>.
 /// </remarks>
 internal sealed class TaskToolHarness : IDisposable
 {
@@ -246,9 +246,9 @@ internal sealed class TaskToolHarness : IDisposable
 
     /// <summary>
     /// A real <see cref="TaskTriggerService"/> built from this harness's own services, for D10 tools
-    /// and D12/D14 tests that need <see cref="TaskTriggerService.Preview"/> to phrase who a Task change
+    /// and D12/D14 tests that need <see cref="TaskTriggerService.Preview(TaskChange, TaskActor)"/> to phrase who a Task change
     /// would notify. Never started - <see cref="Microsoft.Extensions.Hosting.IHostedService.StartAsync"/>
-    /// is never called, so it exists to call <see cref="TaskTriggerService.Preview"/>, not to actually
+    /// is never called, so it exists to call <see cref="TaskTriggerService.Preview(TaskChange, TaskActor)"/>, not to actually
     /// wake anyone.
     /// </summary>
     public TaskTriggerService Triggers { get; }

@@ -27,7 +27,7 @@ internal sealed partial class RequestingManagerWakeRule(ITeamCatalog? teams, IHu
         ArgumentNullException.ThrowIfNull(round);
 
         TaskItem latest = round.Latest;
-        if (!round.StatusChanged || !options.Tasks.Enabled || !options.Tasks.WakeEnabled)
+        if (!round.RequestStatusWakes || !options.Tasks.Enabled || !options.Tasks.WakeEnabled)
         {
             return new TaskWakeChoice.Skip(null);
         }

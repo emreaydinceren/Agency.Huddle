@@ -229,6 +229,22 @@ public sealed class TaskTimelineTests
         Assert.False(cut.Find(".task-timeline-comment-send").HasAttribute("disabled"));
     }
 
+    /// <summary>The comment box says where the rule is: under the field, in both hosts, the helper text names the only Agents a comment wakes (spec 5.6).</summary>
+    /// <param name="editForm">Whether the edit form hosts the timeline, otherwise the read view.</param>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CommentBox_ShowsTheMentionRuleAsHelperText(bool editForm)
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(new TaskDraft("Quiet", "Platform", null), TaskActors.Human(harness.Options.Value))).Task;
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = editForm ? RenderEditForm(ctx, task.Id) : RenderReadView(ctx, task.Id);
+
+        Assert.Equal("A comment wakes only the Agents you @-mention.", cut.Find(".task-timeline-comment-box .mud-input-helper-text").TextContent.Trim());
+    }
+
     /// <summary>A comment over the length limit is refused: the refusal shows under the field, the text stays for editing, and nothing is added.</summary>
     [Fact]
     public async Task Comment_TooLong_ShowsTheRefusalAndAddsNothing()

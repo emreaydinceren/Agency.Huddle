@@ -139,7 +139,7 @@ public sealed partial class BuiltInProcessWordingTests
         string root = RepoRoot();
         string text = process == "developer" ? PersonaText(root, process) : File.ReadAllText(ProcessPath(root, process));
 
-        Assert.Contains("on that same review Task that it is ready", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        Assert.Contains("on that same review Task, Mentioning the reviewer, that it is ready", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
         Assert.Contains("never create a second review Task for the same work", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
     }
 
@@ -154,7 +154,7 @@ public sealed partial class BuiltInProcessWordingTests
     {
         string text = File.ReadAllText(ProcessPath(RepoRoot(), process));
 
-        Assert.Contains("on that same QA Task that it is ready", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        Assert.Contains("on that same QA Task, Mentioning QA, that it is ready", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
         Assert.Contains("never create a second QA Task for the same work", text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
     }
 
@@ -167,6 +167,50 @@ public sealed partial class BuiltInProcessWordingTests
         Assert.Contains("you review again on the same review Task", PersonaText(root, "reviewer"), StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
         Assert.Contains("check again on the same verify Task", PersonaText(root, "qa-engineer"), StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
     }
+
+    /// <summary>The built-in clauses that route a comment to the Agent who must act on it, by file under <c>src/Huddle.App</c> (a comment wakes only the Agents it Mentions).</summary>
+    public static TheoryData<string, string[]> MentionClauses() => new()
+    {
+        { "TeamTypes/Builtin/development/processes/lightweight-flow.md", ProcessClauses("on that same review Task", "comments the findings on the review Task, Mentioning the owner.") },
+        { "TeamTypes/Builtin/development/processes/sprints.md", ProcessClauses("on that same review Task", "comments the findings on the review Task, Mentioning the owner.") },
+        { "TeamTypes/Builtin/development/processes/spec-driven.md", ProcessClauses("on that same review Task", "comments the findings on the review Task, Mentioning the owner.") },
+        { "TeamTypes/Builtin/development/processes/maintenance.md", ProcessClauses("on that same review Task") },
+        { "HiringPool/personas/developer.md", ["comment on that same review Task, Mentioning the reviewer, that it is ready"] },
+        { "HiringPool/personas/reviewer.md", ["each tied to a line or to a criterion, Mentioning the owner; the developer fixes the work and comments, Mentioning the reviewer, that it is ready"] },
+        { "HiringPool/personas/qa-engineer.md", ["the owner fixes the work and comments, Mentioning QA, that it is ready", "with that line as a comment for the developer, Mentioning the owner."] },
+        { "HiringPool/personas/security-engineer.md", ["and say what would close it, Mentioning the owner; review again when the developer comments, Mentioning the reviewer, that it is ready"] },
+        { "Playbooks/HuddleRules/member.md", ["findings go on it as a comment that Mentions the owner, and it stays open."] },
+        { "Overlays/second-brain/prompts/memberPlaybook.md", ["A comment wakes only the Agents it Mentions: a pass that ends `State: handed off`, `State: blocked` or `State: waiting for the Human` Mentions the manager in that comment. `State: done` needs no Mention, because the status change wakes the manager."] },
+    };
+
+    /// <summary>Each file that tells an Agent to comment for attention names who the comment Mentions, because a comment wakes only the Agents it Mentions.</summary>
+    /// <param name="relativePath">The file under <c>src/Huddle.App</c>.</param>
+    /// <param name="clauses">The clauses the file must carry, each on one line once its whitespace is collapsed.</param>
+    [Theory]
+    [MemberData(nameof(MentionClauses))]
+    public void BuiltInSources_CommentsThatMustWakeSomeone_NameTheMention(string relativePath, string[] clauses)
+    {
+        ArgumentNullException.ThrowIfNull(clauses);
+        string text = string.Join(' ', File.ReadAllText(Path.Combine(RepoRoot(), "src", "Huddle.App", relativePath)).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
+        foreach (string clause in clauses)
+        {
+            Assert.Contains(clause, text, StringComparison.Ordinal); // contains-ok: pins the wording an Agent reads
+        }
+    }
+
+    /// <summary>The clauses every development process carries about the review and QA Tasks, plus any process-specific ones.</summary>
+    /// <param name="reviewClause">The review answer clause stem (its Mention form is built here).</param>
+    /// <param name="extra">Further clauses only some processes carry.</param>
+    /// <returns>The clauses.</returns>
+    private static string[] ProcessClauses(string reviewClause, params string[] extra) =>
+    [
+        reviewClause + ", Mentioning the reviewer, that it is ready",
+        "on that same QA Task, Mentioning QA, that it is ready",
+        "with the findings as a comment, Mentioning the owner",
+        "When QA leaves findings as a comment, Mentioning the owner",
+        .. extra,
+    ];
 
     /// <summary>Lists every shipped process, team type, persona and the pool file.</summary>
     /// <param name="root">The repository root.</param>

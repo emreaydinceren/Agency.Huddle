@@ -71,10 +71,29 @@ public sealed class TaskGoldfishStampTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
         string novaId = harness.NovaId ?? throw new InvalidOperationException("No Nova.");
         TaskItem task = harness.CreateTask("Fix login");
-        AddCommentTool tool = new(harness.Service, harness.Store, harness.Directory, novaId, new FakePromptSource(), goldfish: GuardFor(harness, novaId, possessed: true));
+        AddCommentTool tool = new(harness.Service, harness.Store, harness.Triggers, harness.Directory, novaId, new FakePromptSource(), goldfish: GuardFor(harness, novaId, possessed: true));
 
         _ = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["text"] = "Found it." }, ct);
 
+        Assert.Equal(StampedNova, Assert.Single(Stored(harness, task).Comments).Author);
+    }
+
+    /// <summary>
+    /// A possessed Agent's <c>add_comment</c> reply leaves the Agent itself out of the names it wakes, though the author is written as "Nova · goldfish":
+    /// the stamp is stripped before the author is compared with a Mention, so <c>@Nova</c> is a self-mention and <c>@Kai</c> is the one woken.
+    /// </summary>
+    [Fact]
+    public async Task AddCommentTool_PossessedSelfMention_RepliesWithoutTheCaller()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
+        string novaId = harness.NovaId ?? throw new InvalidOperationException("No Nova.");
+        TaskItem task = harness.CreateTask("Fix login");
+        AddCommentTool tool = new(harness.Service, harness.Store, harness.Triggers, harness.Directory, novaId, new FakePromptSource(), goldfish: GuardFor(harness, novaId, possessed: true));
+
+        string result = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["text"] = "@Nova and @Kai, found it." }, ct);
+
+        Assert.Equal($"Added a comment to {task.Id}. Wakes Kai.", result);
         Assert.Equal(StampedNova, Assert.Single(Stored(harness, task).Comments).Author);
     }
 
@@ -86,7 +105,7 @@ public sealed class TaskGoldfishStampTests
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct, new ManualTimeProvider(Noon));
         string novaId = harness.NovaId ?? throw new InvalidOperationException("No Nova.");
         TaskItem task = harness.CreateTask("Fix login");
-        AddCommentTool tool = new(harness.Service, harness.Store, harness.Directory, novaId, new FakePromptSource(), goldfish: GuardFor(harness, novaId, possessed: false));
+        AddCommentTool tool = new(harness.Service, harness.Store, harness.Triggers, harness.Directory, novaId, new FakePromptSource(), goldfish: GuardFor(harness, novaId, possessed: false));
 
         _ = await tool.InvokeAsync(new JsonObject { ["taskId"] = task.Id.ToString(), ["text"] = "Found it." }, ct);
 

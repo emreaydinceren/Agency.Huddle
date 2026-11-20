@@ -97,8 +97,8 @@ public sealed class TeamsPhase4EndToEndTests
         Assert.Equal(apiDeveloper.Name, working.Assignee);
         Assert.Equal(1, run.Wakes(webManager.Name, "Request event: Accept"));
 
+        // Smart wakes C-5: To Do -> In Progress is not a move the requesting manager acts on, so no wake is awaited here; the assertion after Done checks it stayed silent.
         _ = Saved(service.Update(request.Id, new TaskPatch { Status = TaskState.InProgress }, null, apiDeveloper));
-        await Eventually.UntilAsync(() => run.WakesOf(webManager.Name, apiDeveloper.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50), describe: run.Describe);
 
         await ReviewAsync(run, teams.Api, service, request.Id, ct);
         _ = Saved(service.AddEvidence(request.Id, new EvidenceLine(DateTimeOffset.UtcNow, apiQa.Name, CheckCommand, 0, null, null, string.Empty), apiQa));
@@ -108,6 +108,7 @@ public sealed class TeamsPhase4EndToEndTests
 
         Assert.Equal(TaskState.Done, Current(store, request.Id).Status);
         Assert.Equal(1, run.Wakes(webDeveloper.Name, UnblockedMarker));
+        Assert.Equal(0, run.WakesOf(webManager.Name, apiDeveloper.Name));
 
         string confirmed = await Tool<ConfirmRequestTool>(run, webQa).InvokeAsync(new JsonObject { ["taskId"] = request.Id.ToString(), ["note"] = "Checked on staging." }, ct);
 

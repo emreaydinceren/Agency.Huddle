@@ -4316,6 +4316,78 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-06--a-team-t
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by the manager, paid lane, Sonnet)* | `docs/one-in-progress-per-project` on `90c5cfd6` |  | Isolated lane `C:\seeds\huddle\pp-live`, port 1121, Platform Team with new Projects Alpha and Beta (two unassigned To Do Tasks each); only Alan ran, on Sonnet (`persona_models` row read). Team switch on: `_team.md` held `oneInProgressPerProject: 'on'` and the switch stayed on after a reload; Alpha's Process tab read "Inherit (Team: One at a time)". Alan started PLAT-0101, then PLAT-0102 got exactly "One In Progress per Project: PLAT-0101 "Alpha one: draft the rollout checklist" is already In Progress in Alpha. The Team setting asks for one at a time. Finish it or move it out of In Progress before starting another."; the Task order panel showed "PLAT-0102 · waits for PLAT-0101 in Alpha". Beta set to Parallel (`_project.md` held `'off'`): Alan moved PLAT-0103 and PLAT-0104 to In Progress, both accepted. The Human moved PLAT-0101 to Done and Alan then moved PLAT-0102 to In Progress. Switch off: the key left `_team.md`, and Alpha has no `_project.md`. Cost about 0.10 USD for 4 Turns (Alan 0.169 to 0.269). Two things to watch: Alan sent the two Beta calls in one step, so Beta shows the setting, not a race, but a concurrent pair in a full Project was not tried; and two transcript records in the first second of the run are tagged `claude-opus-5-5` although all later ones are Sonnet and the persona row was `sonnet`, which was not explained. |
 
+### SMARTWAKE-01 — Dragging a card within its column changes its rank and wakes no one
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-01--dragging-a-card-within-its-column-changes-its-rank-and-wakes-no-one)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, free)* | `feat/smart-wakes` on `e338a666` |  | Isolated paid lane `C:\seeds\huddle\smartwakes`, port 5391, shared by SMARTWAKE-01 to 09. PLAT-0005 was dragged above the first To Do card: the file got `rank: 10` and the Timeline read "rank: — → 10". No Message, no toast, no wake log line, and spend unchanged. The comment box helper text read "A comment wakes only the Agents you @-mention." Browser notes (01 and 07): the hint is a small secondary caption at the top of its zone with pointer-events none and no overlap with cards; the zone top shifts at drag start with or without hints (so the hint is not the cause) and a zone with a hint grows about 6 px; a rank drop and a status drop both work with the hint in the zone. Open: the pane's CDP drag does not start MudBlazor's HTML5 drag, so every drag in this run was driven by dispatched DragEvents; one real-pointer drag by the owner is still to do. Lane spend 1.881 USD in all (Chief of Staff Greeting on Sonnet 0.239, 07 0.126, 09 0.296, 02 0.045, 03 0.029, 08 0.063, 05 0.038, 04 1.043, 01 and 06 free); every Persona was set to Sonnet/low in `persona_models` and `persona_efforts` before its first Turn, and the Adapter logs show only `claude-sonnet-5-5`. |
+
+### SMARTWAKE-02 — A Human moving an In Progress Task into Done wakes the assignee and the manager once each
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-02--a-human-moving-an-in-progress-task-into-done-wakes-the-assignee-and-the-manager-once-each)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/smart-wakes` on `e338a666` |  | In Progress → Done on the Board (a dispatched drag, see SMARTWAKE-01) woke the assignee and the manager once each. About 0.045 USD. |
+
+### SMARTWAKE-03 — A comment wakes only the Agents it Mentions
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-03--a-comment-wakes-only-the-agents-it-mentions)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/smart-wakes` on `e338a666` |  | A comment with no Mention posted nothing and started no Turn. "@Alan ..." woke Alan only, and the wake Message quotes the comment. About 0.029 USD. |
+
+### SMARTWAKE-04 — The development review loop runs to Done on Mentions alone
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-04--the-development-review-loop-runs-to-done-on-mentions-alone)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/smart-wakes` on `e338a666` |  | A development Team (Manager, Developer, Reviewer on Sonnet low) ran the review loop on Mentions alone, with no Human nudge: the Developer's request comment Mentioned the Reviewer, the Manager's comment Mentioned the Reviewer and told them to Mention the Developer on findings, the review Task went Done, and the Reviewer's comment Mentioned the Manager and the Developer. A QA Task was created and done; Huddle moved the work Task to Needs You (Proof 3/3), the Human accepted, the Agent merged and called `close_task`. Notes: (a) the Reviewer judged the planted defect non-blocking, so there was no findings-then-fix round; (b) the work Task ended closed with status Needs You (the Agent used `close_task` instead of moving it to Done), which the test now says is the Agent's choice; (c) the Team check command was changed from `dotnet test` to `git status --short` because the demo repo has no project. About 1.043 USD. |
+
+### SMARTWAKE-05 — Approving a Sprint wakes no one
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-05--approving-a-sprint-wakes-no-one)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, with a note)* | `feat/smart-wakes` on `e338a666` |  | Three Tasks got `sprint: S3` and the Timeline read "sprint: — → S3", with no toast and no per-Task wake Message. The Sprint approval's own Room Message (`SprintProposalService`, ADR-0037) mentions the manager and started one manager Turn (0.038 USD): that Message is not a Task wake, and the test's Pass-if now says so. |
+
+### SMARTWAKE-06 — Renaming a Team folder in Explorer wakes no one
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-06--renaming-a-team-folder-in-explorer-wakes-no-one)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, free)* | `feat/smart-wakes` on `e338a666` |  | The Team folder was renamed in Explorer while the app ran: every Task logged "edited outside Huddle: moved: Platform → Platform2", with no Message, Turn or spend within 20 s. Side observation: the Teams list then shows Platform with its Agents and an empty Platform2. |
+
+### SMARTWAKE-07 — The Board shows "Notifies Nova" only on the zones whose drop wakes
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-07--the-board-shows-notifies-nova-only-on-the-zones-whose-drop-wakes)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/smart-wakes` on `e338a666` |  | Backlog card (Alan): "Notifies Alan" on To Do, In Progress and Needs You only; none on its own zone, Done, or the Cancelled, Duplicate and Rejected buckets; no column caption; its drop in Cancelled woke no one. In Progress card: hints on Backlog, To Do, Done and the three Won't-do buckets, none on Needs You or its own zone; its drop in Cancelled woke Alan and Grace, one Message each. Drags were dispatched DragEvents (open item in SMARTWAKE-01); browser notes on the hint are there too. About 0.126 USD. |
+
+### SMARTWAKE-08 — Turning the Human gate on wakes no one, and the gate still stops the Task
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-08--turning-the-human-gate-on-wakes-no-one-and-the-gate-still-stops-the-task)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/smart-wakes` on `e338a666` |  | Switching the gate on woke no one. The Agent's `update_task` to Done was refused ("needs You's acceptance. Move it to Needs You when the Proof is complete"), and the Agent then moved the Task to Needs You. Huddle refused and the Agent made the move; it did not auto-move on a blank Team (Proof 0/0), and the test's Pass-if now says so. About 0.063 USD. |
+
+### SMARTWAKE-09 — `add_comment` says who it wakes
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-09--add_comment-says-who-it-wakes)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/smart-wakes` on `e338a666` |  | An Agent's `add_comment` replied "Added a comment to PLAT-0003. Wakes Marcus." with a Mention, and "...No one is woken: Mention an Agent with @Name to wake them." without. About 0.296 USD. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

@@ -209,7 +209,8 @@ public sealed class SprintToolTests
 
     /// <summary>
     /// The agent's success text and the Change log entry (the text a wake-up Message is built from) both carry the
-    /// id-and-name form, <c>sprint: S1 (Sprint 1) → S2 (Auth hardening)</c>.
+    /// id-and-name form, <c>sprint: S1 (Sprint 1) → S2 (Auth hardening)</c>. A Sprint change is silent (smart wakes spec 3.1), so the notify
+    /// clause says the assignee is not woken.
     /// </summary>
     [Fact]
     public async Task UpdateTask_MovingSprint_ChangeLogAndSuccessTextCarryIdAndName()
@@ -221,7 +222,7 @@ public sealed class SprintToolTests
 
         string result = await UpdateTool(harness).InvokeAsync(arguments, ct);
 
-        Assert.Equal($"Updated {task.Id}: sprint: S1 (Sprint 1) → S2 (Auth hardening). Kai will be notified.", result);
+        Assert.Equal($"Updated {task.Id}: sprint: S1 (Sprint 1) → S2 (Auth hardening). The assignee is not woken: nothing they act on changed.", result);
         TaskItem saved = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("task missing");
         ChangeLogEntry entry = saved.ChangeLog[^1];
         Assert.Equal("Nova", entry.Actor);

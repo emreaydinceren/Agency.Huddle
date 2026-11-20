@@ -49,7 +49,7 @@ internal sealed class TaskTransition(
             return TaskToolText.Refusal(result, toolName);
         }
 
-        WakePreview preview = triggers.Preview(saved.Change.Before, saved.Task, target.Actor);
+        WakePreview preview = triggers.Preview(saved.Change, target.Actor);
         string notify = TaskToolText.NotifyClause(preview, target.Actor.Name);
         return $"{verb} {saved.Task.Id}. {notify}";
     }
