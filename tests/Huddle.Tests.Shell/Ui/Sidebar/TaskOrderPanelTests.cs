@@ -102,8 +102,25 @@ public sealed class TaskOrderPanelTests
 
         Assert.Equal(["Import parser", "Import", "Docs"], Titles(cut));
         Assert.Equal(
-            [$"{parser.Id} · Next · blocks {import.Id}", $"{import.Id} · blocked by {parser.Id}", $"{docs.Id}"],
+            [$"{parser.Id} · blocks {import.Id}", $"{import.Id} · blocked by {parser.Id}", $"{docs.Id}"],
             cut.FindAll(Item + " .task-order-meta").Select(static e => e.TextContent.Trim()));
+    }
+
+    /// <summary>The header counts the panel's rows, not the Tasks that can start, and a Task id in a row is its own unbreakable run (#717).</summary>
+    [Fact]
+    public async Task HeaderCountIsRowCount_AndIdsDoNotBreak()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem blocker = Create(harness, "Blocker", rank: 1);
+        TaskItem waiting = Create(harness, "Waiting", rank: 2, blockedBy: [blocker.Id]);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+        SidebarPanelContext panel = new();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, panel, new TaskSubject(waiting.Id));
+
+        Assert.Equal(2, panel.Count);
+        Assert.Contains(cut.FindAll(Item + " .task-order-meta .task-order-id"), id => string.Equals(id.TextContent, blocker.Id.ToString(), StringComparison.Ordinal));
+        Assert.DoesNotContain("Next", cut.Find(Item + " .task-order-meta").TextContent, StringComparison.Ordinal);
     }
 
     /// <summary>A Backlog Task listed ahead of the Task it blocks says so, and names that Task.</summary>
@@ -149,7 +166,7 @@ public sealed class TaskOrderPanelTests
         Assert.Equal(["Open one"], cut.FindAll(".task-order-current").Select(static e => e.TextContent.Trim()));
     }
 
-    /// <summary>The Backlog group is collapsed with its count, opens on a click, and the frame counts the startable Tasks only.</summary>
+    /// <summary>The Backlog group is collapsed with its count, opens on a click, and the frame counts every row, the collapsed Backlog's too.</summary>
     [Fact]
     public async Task Backlog_IsCollapsedWithItsCount_AndOpensOnClick()
     {
@@ -163,7 +180,7 @@ public sealed class TaskOrderPanelTests
 
         Assert.Equal(["Next one"], Titles(cut));
         Assert.Equal("Backlog (1)", cut.Find(".task-order-backlog-toggle").TextContent.Trim());
-        Assert.Equal(1, panel.Count);
+        Assert.Equal(2, panel.Count);
 
         cut.Find(".task-order-backlog-toggle").Click();
 
