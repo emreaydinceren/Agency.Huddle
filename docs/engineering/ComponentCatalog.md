@@ -333,7 +333,7 @@ because each is not a plain role button. They share one look instead of a compon
 | `Shared/QuestionCard.razor` | 1 | `list-option` | An answer option that toggles between Outlined and Filled |
 | `Shared/InviteAgent.razor` | 1 | `list-option` | An Agent row with an avatar and name as its content |
 | `Sidebar/TagsPanel.razor` | 1 | `list-option` | A tree row inside `MudTreeViewItem` |
-| `Tasks/TaskDetail.razor` | 2 | `link-action` | "Link note" and "Add File": accent ink, body text, no side padding |
+| `Tasks/TaskDetail.razor` | 2 | `link-action` | "Link note" and "Add file": accent ink, body text, no side padding |
 
 `list-option` is flush left, no capitals, 28 px tall at the control radius, with the hover tint on a
 text row. `link-action` is accent ink at body size with no side padding and underlines on hover.

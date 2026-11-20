@@ -599,6 +599,14 @@ b {
     color: var(--mud-palette-text-primary);
 }
 
+/* The labels the rule above leaves out are visually hidden (a visible one sits elsewhere), but MudBlazor still scales them to 0.75 of the
+   14px body size, 10.5px, under the 11px floor. They stay unscaled at caption size, which is as invisible and is a size that reads
+   if a Theme ever shows one. The chain is one class longer than MudBlazor's floated-label rule (0,5,1), so it wins on specificity. */
+.mud-input-control:is(.task-detail-prop-value *, .task-detail-description-field *) > .mud-input-control-input-container > label.mud-input-label.mud-input-label-inputcontrol.mud-input-label-outlined {
+    transform: none;
+    font-size: var(--mud-typography-caption-size);
+}
+
 /* With the label above, the border is drawn whole: no notch is cut for a floated label. */
 .mud-input.mud-input-outlined > .mud-input-outlined-border legend {
     display: none;

@@ -334,7 +334,7 @@ else if (this.loaded is { } task)
                             </div>
                         </div>
 
-                        <div class="task-detail-strip-item">
+                        <div class="task-detail-strip-item task-detail-strip-item-wide">
                             <span class="task-detail-strip-label" aria-hidden="true">Sprint</span>
                             <div class="task-detail-prop-value">
                                 <div class="task-detail-sprint">
@@ -516,7 +516,7 @@ else if (this.loaded is { } task)
                                    aria-label="Link a Library file" OnClick="this.LinkLibraryFileAsync">Link note</MudButton>
                     </div>
                 </div>
-                @* Files: the same row style as Library, holding Add File, which uploads a file from this computer into the Task's folder. *@
+                @* Files: the same row style as Library, holding Add file, which uploads a file from this computer into the Task's folder. *@
                 <div class="task-detail-library task-detail-files">
                     <span class="task-detail-library-label">Files</span>
                     <div class="task-detail-library-links">
@@ -526,7 +526,7 @@ else if (this.loaded is { } task)
                                 <MudTooltip Text="@(this.createMode ? "Save the Task first to attach files." : "Attach a file from this computer")">
                                     <MudButton Variant="Variant.Text" Size="Size.Small" StartIcon="@Icons.Material.Outlined.AttachFile" aria-label="Attach a file"
                                                Class="link-action task-detail-attach-file" Disabled="@(this.createMode || this.uploading)"
-                                               OnClick="@(() => fileUpload.OpenFilePickerAsync())">Add File</MudButton>
+                                               OnClick="@(() => fileUpload.OpenFilePickerAsync())">Add file</MudButton>
                                 </MudTooltip>
                             </CustomContent>
                         </MudFileUpload>
