@@ -34,6 +34,9 @@
     ['Field', 'Chrome', '<='],
     ['Line', 'Chrome', '<']
   ];
+  // Themes exempt from one rule, by the id the page's [data-huddle-theme] marker carries. Fluent draws strong
+  // input outlines on purpose (design-system.md#colour), so Field <= Chrome does not apply to it.
+  const ORDER_EXEMPT = { 'fluent-light': ['Field <= Chrome'], 'fluent-dark': ['Field <= Chrome'] };
   function hasClass(el, pattern) {
     const cls = typeof el.className === 'string' ? el.className : '';
     return pattern.test(cls);
@@ -254,7 +257,7 @@
   }
 
   /** Checks the tier medians against ORDER_RULES and returns the per-tier summary and the violations. */
-  function orderCheck(byTier) {
+  function orderCheck(byTier, themeId) {
     const tiers = Object.keys(TIER_RANK).map(function (t) {
       const v = byTier[t] || [];
       return {
@@ -268,7 +271,13 @@
     const med = {};
     tiers.forEach(function (t) { med[t.tier] = t.median; });
     const violations = [];
+    const exempt = [];
+    const exemptRules = (themeId && ORDER_EXEMPT[themeId]) || [];
     ORDER_RULES.forEach(function (r) {
+      if (exemptRules.indexOf(r[0] + ' ' + r[2] + ' ' + r[1]) >= 0) {
+        exempt.push(r[0] + ' ' + r[2] + ' ' + r[1] + ' (not applied to ' + themeId + ')');
+        return;
+      }
       const lo = med[r[0]];
       const hi = med[r[1]];
       if (lo === null || hi === null) {
@@ -279,7 +288,7 @@
         violations.push(r[0] + ' ' + r[2] + ' ' + r[1] + ' required, but ' + r[0] + ' is Ink ' + lo + '% and ' + r[1] + ' is Ink ' + hi + '%');
       }
     });
-    return { tiers: tiers, violations: violations };
+    return { tiers: tiers, violations: violations, exempt: exempt };
   }
 
   /**
@@ -465,7 +474,8 @@
       }
     }
 
-    const order = orderCheck(byTier);
+    const marker = document.querySelector('[data-huddle-theme]');
+    const order = orderCheck(byTier, marker ? marker.getAttribute('data-huddle-theme') : null);
     order.unclassifiedBorders = unclassified.count;
     return {
       ink: 'rgb(' + Math.round(ink.r) + ', ' + Math.round(ink.g) + ', ' + Math.round(ink.b) + ')',

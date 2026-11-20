@@ -82,7 +82,7 @@
     "ground.rail": "#e1e6ec",
     "ink.strip": "palette.surface",
     "ink.wash": "ref(ground.page)",
-    "line.region": "palette.dividerLight",
+    "line.region": "palette.divider",
     "line.control": "palette.linesInputs",
     "ink.line": "palette.dividerLight",
     "ink.field": "palette.textDisabled",
