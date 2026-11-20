@@ -134,7 +134,7 @@ resolve_asset() {
     if [ -n "$OPT_BASE_URL" ]; then
         base=${OPT_BASE_URL%/}
         if [ -d "$OPT_BASE_URL" ]; then
-            ASSET_KIND=file
+            ASSET_KIND='file'
         else
             case $OPT_BASE_URL in
                 https://*) ASSET_KIND=url ;;
@@ -396,7 +396,7 @@ http_get() {
 
 # Seam: waits $1 seconds (a seam so tests do not wait).
 sleep_seconds() {
-    sleep "$1" </dev/null
+    sleep "$1"
 }
 
 # Prints the lower-case SHA-256 of the file in $1 (sha256sum, else shasum -a 256). Returns 1 with
@@ -491,7 +491,7 @@ get_verified_asset() {
     source=$3
     cache=$4
     case $source in
-        file:*) kind=file; location=${source#file:} ;;
+        file:*) kind='file'; location=${source#file:} ;;
         url:*) kind=url; location=${source#url:} ;;
         *)
             printf "install.sh: unknown source '%s' for %s (expected file:<path> or url:<url>)\n" "$source" "$name" >&2
@@ -634,7 +634,7 @@ process_running() {
 # exist. macOS and Linux `ps -o comm=` print the path or the name; leading and trailing blanks go.
 process_command_of() {
     local comm
-    comm=$(ps -p "$1" -o comm= 2>/dev/null </dev/null) || comm=""
+    comm=$(ps -p "$1" -o comm= 2>/dev/null) || comm=""
     comm=${comm#"${comm%%[![:space:]]*}"}
     comm=${comm%"${comm##*[![:space:]]}"}
     printf '%s\n' "${comm##*/}"
@@ -942,7 +942,7 @@ install_app() {
         fi
         for item in node tools/acp/node_modules; do
             if [ -e "$root/$item" ]; then
-                if mkdir -p "$(dirname "$staging/$item")" && rm -rf "$staging/$item" && mv "$root/$item" "$staging/$item"; then
+                if mkdir -p "$(dirname "$staging/$item")" && rm -rf "${staging:?}/$item" && mv "$root/$item" "$staging/$item"; then
                     carried="$carried $item"
                 else
                     install_app_restore "$staging" "$old" "$carried" 0 || true
@@ -1042,7 +1042,7 @@ install_node() {
     fi
     base=${base%/}
     if [ -d "$base" ]; then
-        kind=file
+        kind='file'
     else
         case $base in
             https://*) kind=url ;;
@@ -1196,6 +1196,7 @@ install_adapter() {
     fi
     log_step work adapter "installing the adapter with npm ci"
     rc=0
+    # shellcheck disable=SC2030 # the subshell is deliberate: the node/bin PATH prefix must not leak into the installer
     (
         cd "$staging" && PATH="$root/node/bin:$PATH" && export PATH && run_npm_ci ci --omit=dev --no-audit --no-fund
     ) >"$log" 2>&1 </dev/null || rc=$?
@@ -1415,6 +1416,7 @@ install_launcher() {
         log_step skip launcher "up to date"
     fi
     if [ "$link_ok" -eq 1 ]; then
+        # shellcheck disable=SC2031 # reads the installer's own PATH; the adapter subshell's PATH prefix is deliberately gone
         case ":$PATH:" in
             *":$link_dir:"*) ;;
             *) printf 'hint: %s is not on your PATH, so "huddle" will not run from a terminal; add it to your shell profile.\n' "$link_dir" ;;

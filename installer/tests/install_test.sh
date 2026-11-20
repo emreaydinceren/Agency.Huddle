@@ -1,6 +1,11 @@
 #!/bin/sh
 # Tests for installer/install.sh. Run with sh or dash; macOS commands are only ever reached
 # through the seam functions, which tests override after sourcing.
+# File-level suppressions (before the first command, so they cover the file), each deliberate:
+# SC2329: test_* functions and seams are called by name from t_run (lib.sh) or by the sourced install.sh.
+# SC2016: single quotes keep a literal $ in code handed to a child shell or written into a stub script.
+# SC2030/SC2031: tests change PATH or HOME in a subshell on purpose so the change cannot leak into later tests.
+# shellcheck disable=SC2329,SC2016,SC2030,SC2031
 set -eu
 
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -238,13 +243,13 @@ test_release_replacement_keeps_comparison_intact() {
 
 test_script_run_directly() {
     rc=0
-    HUDDLE_INSTALL_NO_MAIN= "$T_SHELL" "$HERE/../install.sh" --bogus >/dev/null 2>&1 || rc=$?
+    HUDDLE_INSTALL_NO_MAIN="" "$T_SHELL" "$HERE/../install.sh" --bogus >/dev/null 2>&1 || rc=$?
     t_assert_eq "3" "$rc" "direct run, unknown flag"
     rc=0
-    HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO="owner/repo" "$T_SHELL" -s -- --bogus <"$HERE/../install.sh" >/dev/null 2>&1 || rc=$?
+    HUDDLE_INSTALL_NO_MAIN="" HUDDLE_REPO="owner/repo" "$T_SHELL" -s -- --bogus <"$HERE/../install.sh" >/dev/null 2>&1 || rc=$?
     t_assert_eq "3" "$rc" "piped run (curl | sh), unknown flag"
     rc=0
-    HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO="owner/repo" "$T_SHELL" "$HERE/../install.sh" --base-url "$TEST_HOME" --uninstall >/dev/null 2>&1 || rc=$?
+    HUDDLE_INSTALL_NO_MAIN="" HUDDLE_REPO="owner/repo" "$T_SHELL" "$HERE/../install.sh" --base-url "$TEST_HOME" --uninstall >/dev/null 2>&1 || rc=$?
     t_assert_eq "0" "$rc" "direct run, folder base url"
 }
 
@@ -574,7 +579,6 @@ test_env_check_only_reaches_main() {
 HELLO_SHA=5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
 A_SHA=$(printf '%064d' 0 | tr 0 a)
 B_SHA=$(printf '%064d' 0 | tr 0 b)
-ZERO_SHA=$(printf '%064d' 0)
 TAMPERED_SHA=92e78d0b032962f47792a9fa95fd981ef63e1e3ef074d536d6304c75eddbe29f
 
 # Fresh scratch folder for one download test. The cache path has a space in it on purpose (the
@@ -649,13 +653,15 @@ test_file_sha256_without_tool_fails_with_message() {
 
 # Writes a SHA256SUMS fixture. $1 is the line ending ("\n" or "\r\n").
 write_sums() {
-    printf '%s  huddle-osx-arm64.tar.gz%b' "$A_SHA" "$2" >"$1"
-    printf '%s  huddle-win-arm64.zip%b' "$(printf '%064d' 0 | tr 0 B)" "$2" >>"$1"
-    printf '%s *install.sh%b' "$B_SHA" "$2" >>"$1"
-    printf '%b' "$2" >>"$1"
-    printf 'this is not a hash line%b' "$2" >>"$1"
-    printf 'abc123  short.txt%b' "$2" >>"$1"
-    printf '%s  my file.txt%b' "$A_SHA" "$2" >>"$1"
+    {
+        printf '%s  huddle-osx-arm64.tar.gz%b' "$A_SHA" "$2"
+        printf '%s  huddle-win-arm64.zip%b' "$(printf '%064d' 0 | tr 0 B)" "$2"
+        printf '%s *install.sh%b' "$B_SHA" "$2"
+        printf '%b' "$2"
+        printf 'this is not a hash line%b' "$2"
+        printf 'abc123  short.txt%b' "$2"
+        printf '%s  my file.txt%b' "$A_SHA" "$2"
+    } >"$1"
 }
 
 test_parse_sums_and_expected_hash() {
@@ -960,7 +966,7 @@ test_write_state_key_no_temp_left() {
     state_file=$(mktemp)
     rm -f "$state_file"
     write_state_key "$state_file" "schema" "1"
-    tmp_files=$(find "$(dirname "$state_file")" -maxdepth 1 -name "$(basename "$state_file").tmp*" 2>/dev/null | wc -l)
+    tmp_files=$(find "$(dirname "$state_file")" -maxdepth 1 -name "$(basename "$state_file").tmp*" 2>/dev/null | wc -l | tr -d ' ')
     t_assert_eq "0" "$tmp_files" "no .tmp files left"
     rm -f "$state_file"
 }
@@ -1080,7 +1086,7 @@ ap_setup() {
     AP_ALIVE=0
     AP_SIGN_RC=0
     unset AP_COMM
-    APP_CHANGED=unset
+    APP_CHANGED='unset'
     ap_stubs
     parse_args --install-root "$AP/root dir/Agency Huddle" --data-root "$AP/data dir"
     resolve_paths
@@ -1138,7 +1144,7 @@ test_t_run_honours_t_only_and_prints_run_lines_only_for_failures() {
     shell_path=$(command -v "$T_SHELL")
     only_alpha=$(T_ONLY=alpha "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
     only_beta=$(T_ONLY=beta "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
-    everything=$(T_ONLY= "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
+    everything=$(T_ONLY="" "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
     t_assert_eq "1 passed, 0 failed" "$only_alpha" "T_ONLY=alpha runs one passing test and prints no RUN line"
     t_assert_contains "$only_beta" "RUN  test_beta" "a failing test prints its RUN line"
     t_assert_contains "$only_beta" "FAIL [test_beta]" "a failing test prints its FAIL line"
@@ -1786,6 +1792,7 @@ test_run_kill_process_kills_and_waits_a_bounded_time() {
         'process_running() { return 0; }' \
         'if run_kill_process 4242; then echo gone; else echo stays; fi')
     expected="kill -KILL 4242${NL}gone${NL}kill -KILL 4242"
+    # shellcheck disable=SC2034 # the loop variable only counts ten repetitions
     for ap_i in 1 2 3 4 5 6 7 8 9 10; do
         expected="$expected${NL}sleep 1"
     done
@@ -1829,7 +1836,7 @@ test_install_app_leaves_the_script_with_one_placeholder() {
 nd_setup() {
     ap_setup
     HOST_RID=osx-arm64
-    NODE_CHANGED=unset
+    NODE_CHANGED='unset'
     mkdir -p "$INSTALL_ROOT"
     printf '{"version": "1.0.0", "nodeVersion": "v24.21.0"}\n' >"$INSTALL_ROOT/release-info.json"
     node_version_of() {
@@ -1899,7 +1906,7 @@ test_install_node_is_skipped_when_state_and_binary_agree() {
     write_state_key "$STATE_FILE" node_version v24.21.0
     printf 'keep\n' >"$INSTALL_ROOT/node/marker"
     : >"$AP_CALLS"
-    NODE_CHANGED=unset
+    NODE_CHANGED='unset'
     nd_run
     t_assert_eq "0" "$NDRC" "second run succeeded"
     t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED after a skip"
@@ -2077,7 +2084,7 @@ test_install_node_uses_local_variables() {
 # AD_NPM_RC is non-zero (it then prints 20 numbered lines and returns that status).
 ad_setup() {
     ap_setup
-    ADAPTER_CHANGED=unset
+    ADAPTER_CHANGED='unset'
     AD_NPM_RC=0
     AD_NPM_ENTRY=1
     mkdir -p "$INSTALL_ROOT/node/bin" "$INSTALL_ROOT/node/lib/node_modules/npm/bin" "$INSTALL_ROOT/tools/acp"
@@ -2088,6 +2095,7 @@ ad_setup() {
     printf '{"name": "acp"}\n' >"$INSTALL_ROOT/tools/acp/package.json"
     run_npm_ci() {
         printf 'npm_ci pwd=%s path1=%s args=%s\n' "$(pwd)" "${PATH%%:*}" "$*" >>"$AP_CALLS"
+        # shellcheck disable=SC2012 # the folder holds only this test's own plainly named files
         printf 'files=%s\n' "$(ls | tr '\n' ' ')" >>"$AP_CALLS"
         if [ "$AD_NPM_RC" -ne 0 ]; then
             ad_n=1
@@ -3171,7 +3179,7 @@ la_setup() {
     LINK_PATH="$LA_HOME/.local/bin/huddle"
     mkdir -p "$INSTALL_ROOT"
     printf '{"version": "1.2.3", "nodeVersion": "v24.21.0"}\n' >"$INSTALL_ROOT/release-info.json"
-    LAUNCHER_CHANGED=unset
+    LAUNCHER_CHANGED='unset'
 }
 
 # la_run: runs install_launcher in this shell; sets LA_RC and LA_OUT (stdout and stderr).

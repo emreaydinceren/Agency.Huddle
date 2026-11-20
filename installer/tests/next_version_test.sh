@@ -5,6 +5,7 @@ set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
 SCRIPT="$ROOT/installer/next-version.sh"
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$HERE/lib.sh"
 
 # next <tags, one per line> [args...]: prints stdout, then "rc=<code>" on its own line.

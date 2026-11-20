@@ -191,6 +191,7 @@ show_step_rows() {
 
 # Runs the installer the way `curl ... | sh` does: the script text arrives on stdin of `sh -s --`.
 # The redirect here overrides the </dev/null that run_timed puts on every command.
+# shellcheck disable=SC2329 # run by name through run_timed, which ShellCheck cannot follow
 run_installer_from_stdin() {
     sh -s -- "$@" <"$STEP1_INSTALLER"
 }
@@ -297,6 +298,7 @@ installed_version() {
 
 # ---- cleanup --------------------------------------------------------------------------------
 
+# shellcheck disable=SC2329 # runs from the EXIT trap
 cleanup() {
     # $? must be read before anything else: `local` itself would reset it to 0.
     status=$?
@@ -396,6 +398,7 @@ Team__Desktop__OpenBrowser=false
 export Team__Desktop__OpenBrowser
 echo "Sandbox: $SANDBOX"
 
+# shellcheck disable=SC2009 # needs the full command line and a count; macOS pgrep has no -c
 others=$(ps -axww -o command= | grep -c '/app/Huddle\.App' || true)
 if [ "$others" -gt 0 ]; then
     echo "Note: $others other HuddleApp process(es) are running outside the sandbox; they are left alone."
