@@ -17,9 +17,9 @@ public sealed class RightSidebarTests
 {
     private static IElement ToggleButton(IRenderedComponent<RightSidebarToggle> toggle) => toggle.Find("button.right-sidebar-toggle");
 
-    /// <summary>With nothing remembered the sidebar opens by itself, and the viewer's choice is written to local storage when they close it.</summary>
+    /// <summary>With nothing remembered and no panel for the page, the sidebar stays closed rather than sitting open on its empty state; the viewer's own open is remembered (#702).</summary>
     [Fact]
-    public async Task NothingRemembered_OpensByDefault_AndRemembersAClose()
+    public async Task NothingRemembered_NoPanels_StaysClosed_AndRemembersTheViewersOpen()
     {
         await using MudBunitContext ctx = UiTestHost.Create(services => services.AddSingleton(new SidebarPanelCatalog([], TestOptions.Create()))).WithTabs().WithRoutes("/sidebar");
         ctx.RememberSidebarOpen(null);
@@ -27,10 +27,12 @@ public sealed class RightSidebarTests
         IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();
         RightSidebarService service = ctx.Services.GetRequiredService<RightSidebarService>();
 
-        sidebar.WaitForAssertion(() => Assert.True(service.IsOpen));
+        Assert.False(service.IsOpen);
         await sidebar.InvokeAsync(service.Toggle);
 
-        sidebar.WaitForAssertion(() => Assert.Contains(ctx.Module(JsModule.Storage).Invocations["set"], static call => call.Arguments is ["shell:rightSidebarOpen", "false"]));
+        Assert.True(service.IsOpen);
+        sidebar.WaitForAssertion(() => Assert.Contains(ctx.Module(JsModule.Storage).Invocations["set"], static call => call.Arguments is ["shell:rightSidebarOpen", "true"]));
+        Assert.Equal("Open a Room or a Task to see its panels.", sidebar.Find(".empty-state-text").TextContent.Trim());
     }
 
     /// <summary>A sidebar the viewer left closed stays closed.</summary>

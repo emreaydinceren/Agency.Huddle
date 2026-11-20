@@ -225,13 +225,14 @@ public sealed partial class AuditBatchBCssTests
         Assert.DoesNotContain("letter-spacing", declarations, StringComparison.Ordinal);
     }
 
-    /// <summary>Below 1100px the Right sidebar floats over the Workspace instead of pushing it, so the Workspace keeps its width (#466).</summary>
+    /// <summary>The Right sidebar pushes the Workspace aside at every width: no rule zeroes the Workspace's right margin or floats the drawer over the page (#701).</summary>
     [Fact]
-    public void AppCss_NarrowWindow_RightSidebarOverlaysTheWorkspace()
+    public void AppCss_NarrowWindow_RightSidebarStillPushesTheWorkspace()
     {
-        Assert.Matches(
-            @"@media \(max-width: 1099px\) \{\s*\.mud-layout\.mud-drawer-open-persistent-right \.mud-main-content\.main-column \{\s*margin-right:\s*0;",
-            CssText.AppCss(CssNewlines.AsIs));
+        string css = CssText.AppCss(CssNewlines.AsIs);
+
+        Assert.DoesNotMatch(@"mud-drawer-open-persistent-right \.mud-main-content\.main-column\s*\{[^}]*margin-right:\s*0", css);
+        Assert.DoesNotMatch(@"\.mud-drawer\.mud-drawer--open\.right-sidebar\s*\{", css);
     }
 
     /// <summary>The New chat panel is fixed and anchored to its link, so the scrolling folder around the link cannot clip it or leave it below the window (#465).</summary>

@@ -1113,21 +1113,6 @@ body.sidebar-resizing {
     display: none;
 }
 
-/* A narrow window: the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
-   left only leave it a usable width from about 1100px up; at 768px it was 199px. Below that the Right sidebar stops pushing and
-   floats over the Workspace's right edge, on a panel shadow, so the Workspace keeps its width and the Human can still open and close
-   the panels. The doubled .mud-main-content selector outranks MudBlazor's margin for an open pair of persistent drawers. */
-@media (max-width: 1099px) {
-    .mud-layout.mud-drawer-open-persistent-right .mud-main-content.main-column {
-        margin-right: 0;
-    }
-
-    .mud-drawer.mud-drawer--open.right-sidebar {
-        box-shadow: var(--hu-shadow-panel);
-        max-width: calc(100vw - 48px);
-    }
-}
-
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
    A top-level left-menu row (Agents, Settings) is a MudNavLink with no MudNavGroup
    ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
@@ -1412,7 +1397,8 @@ body.sidebar-resizing {
     white-space: nowrap;
 }
 
-.room-row-name-line > .sidebar-row-label {
+/* The 60% cap leaves the scope badge its room, so it applies only to a row that has one. */
+.room-row-name-line:has(> .room-row-scope) > .sidebar-row-label {
     flex: 0 0 auto;
     max-width: 60%;
 }

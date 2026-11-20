@@ -7,6 +7,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Sidebar;
 using Agency.Huddle.App.Tabs;
 using Agency.Huddle.Tests.Factories;
+using Agency.Huddle.App.Components.Shared;
 
 namespace Agency.Huddle.Tests.Ui.Sidebar;
 
@@ -46,6 +47,23 @@ public sealed class RightSidebarHostTests
     {
         string tabId = ctx.Services.GetRequiredService<TabService>().Active?.Id ?? string.Empty;
         return sidebar.InvokeAsync(() => ctx.Services.GetRequiredService<RightSidebarService>().Set(handle, tabId, subject));
+    }
+
+    /// <summary>With nothing remembered the sidebar opens by itself once a page with panels is the active Tab's, and that automatic open is not remembered (#702).</summary>
+    [Fact]
+    public async Task NothingRemembered_OpensWhenAPageWithPanelsPublishes_WithoutRemembering()
+    {
+        await using MudBunitContext ctx = NewContext("/settings", DocumentPanel("doc", "Doc", 10));
+        ctx.RememberSidebarOpen(null);
+        _ = ctx.Render<TabHost>();
+        IRenderedComponent<RightSidebar> sidebar = ctx.Render<RightSidebar>();
+        RightSidebarService service = ctx.Services.GetRequiredService<RightSidebarService>();
+        Assert.False(service.IsOpen);
+
+        await PublishAsync(ctx, sidebar, service.NewId(), new DocumentSubject(NotePath, LibraryFileKind.Markdown, "first"));
+
+        sidebar.WaitForAssertion(() => Assert.True(service.IsOpen));
+        Assert.DoesNotContain(ctx.Module(JsModule.Storage).Invocations["set"], static call => call.Arguments is ["shell:rightSidebarOpen", _]);
     }
 
     /// <summary>Each panel that applies is drawn under its own title, in Order; one that does not apply is not drawn.</summary>
