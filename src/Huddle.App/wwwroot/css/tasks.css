@@ -567,7 +567,7 @@
     gap: 4px;
     border-radius: var(--hu-radius-full);
     background-color: transparent;
-    border: 1px solid var(--hu-line-region);
+    border: 1px solid var(--ink-line);
     color: var(--hu-text-subtle);
 }
 
@@ -1529,7 +1529,7 @@
 
 :root:has([data-hu-surface="hairline"]) .task-card {
     background: var(--hu-ground-raised);
-    border: 1px solid var(--hu-line-region);
+    border: 1px solid var(--ink-line);
     border-radius: var(--hu-radius-card);
     box-shadow: none;
     padding: 8px 12px;

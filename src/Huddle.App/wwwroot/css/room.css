@@ -1213,7 +1213,7 @@
 :root:has([data-hu-surface="hairline"]) .team-type-card,
 :root:has([data-hu-surface="hairline"]) .roster-card {
     background: var(--hu-ground-raised);
-    border: 1px solid var(--hu-line-region);
+    border: 1px solid var(--ink-line);
     border-radius: var(--hu-radius-panel);
     box-shadow: none;
 }
