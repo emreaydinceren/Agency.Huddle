@@ -22,10 +22,7 @@
     @if (this.isOpen)
     {
         <div class="new-chat-panel floating-panel" role="group" aria-label="@(this.Team is null ? "New room" : $"New room in {this.Scope}")">
-            @if (this.Team is not null)
-            {
-                <MudText Typo="Typo.subtitle2" Class="new-chat-heading">New room in @this.Scope</MudText>
-            }
+            <MudText Typo="Typo.subtitle2" Class="new-chat-heading">@(this.Team is null ? "New room" : $"New room in {this.Scope}")</MudText>
 
             @if (this.agents.Count == 0)
             {
