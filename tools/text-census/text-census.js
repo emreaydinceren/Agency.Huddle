@@ -49,18 +49,72 @@
     { tier: 'Line', label: 'cards and tiles (.mud-card, .mud-paper-outlined, *-card, *-tile)', test: function (el) { return hasClass(el, /(^|\s)(mud-card|mud-paper-outlined|[\w-]+-card|[\w-]+-tile)(\s|$)/); } }
   ];
 
+  function toSrgbByte(linear) {
+    const v = linear <= 0.0031308 ? 12.92 * linear : 1.055 * Math.pow(linear, 1 / 2.4) - 0.055;
+    return Math.min(255, Math.max(0, v * 255));
+  }
+
+  /** Oklab to {r,g,b} in 0-255 sRGB (clamped to gamut). */
+  function oklabToRgb(L, a, b) {
+    const l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3);
+    const m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3);
+    const s = Math.pow(L - 0.0894841775 * a - 1.2914855480 * b, 3);
+    return {
+      r: toSrgbByte(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+      g: toSrgbByte(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+      b: toSrgbByte(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)
+    };
+  }
+
+  /** Splits "x y z / a" into numbers (percent signs read as fractions, "none" as 0) and the alpha. */
+  function colorArgs(body, percentScale) {
+    const halves = body.split('/');
+    const nums = halves[0].trim().split(/\s+/).map(function (t) {
+      if (t === 'none') {
+        return 0;
+      }
+      return t.endsWith('%') ? parseFloat(t) / 100 * percentScale : parseFloat(t);
+    });
+    let alpha = 1;
+    if (halves.length > 1) {
+      const t = halves[1].trim();
+      alpha = t === 'none' ? 0 : t.endsWith('%') ? parseFloat(t) / 100 : parseFloat(t);
+    }
+    return nums.length === 3 && nums.every(isFinite) && isFinite(alpha) ? { n: nums, a: alpha } : null;
+  }
+
+  /**
+   * Reads the CSS Color 4 forms a browser reports for a resolved color-mix(): color(srgb ...),
+   * color(srgb-linear ...), oklab(...) and oklch(...). Returns {r,g,b,a} (0-255) or null.
+   */
+  function parseColor4(t) {
+    const m = /^(?:color\((srgb-linear|srgb)|(oklab|oklch)\()\s*([^)]*)\)$/.exec(t);
+    if (!m) {
+      return null;
+    }
+    const x = colorArgs(m[3], 1);
+    if (!x) {
+      return null;
+    }
+    if (m[2]) {
+      const hue = x.n[2] * Math.PI / 180;
+      const rgb = m[2] === 'oklab' ? oklabToRgb(x.n[0], x.n[1], x.n[2]) : oklabToRgb(x.n[0], x.n[1] * Math.cos(hue), x.n[1] * Math.sin(hue));
+      return { r: rgb.r, g: rgb.g, b: rgb.b, a: x.a };
+    }
+    if (m[1] === 'srgb') {
+      return { r: x.n[0] * 255, g: x.n[1] * 255, b: x.n[2] * 255, a: x.a };
+    }
+    return { r: toSrgbByte(x.n[0]), g: toSrgbByte(x.n[1]), b: toSrgbByte(x.n[2]), a: x.a };
+  }
+
   /**
    * Parses "rgb(...)" or "rgba(...)" (comma or space syntax) into {r,g,b,a}, or null. Also reads
    * "color(srgb r g b / a)", which is how a browser reports a resolved color-mix().
    */
   function parseColor(text) {
-    const srgb = /^color\(srgb\s+([\d.e-]+)\s+([\d.e-]+)\s+([\d.e-]+)(?:\s*\/\s*([\d.]+)(%?))?\s*\)$/.exec((text || '').trim());
-    if (srgb) {
-      let alpha = srgb[4] === undefined ? 1 : parseFloat(srgb[4]);
-      if (srgb[5] === '%') {
-        alpha /= 100;
-      }
-      return { r: parseFloat(srgb[1]) * 255, g: parseFloat(srgb[2]) * 255, b: parseFloat(srgb[3]) * 255, a: alpha };
+    const wide = parseColor4((text || '').trim());
+    if (wide) {
+      return wide;
     }
     const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:\s*[,/]\s*([\d.]+)(%?))?\s*\)$/.exec((text || '').trim());
     if (!m) {
@@ -228,8 +282,45 @@
     return { tiers: tiers, violations: violations };
   }
 
+  /**
+   * An opaque background painted under the centre of el by an element that is not one of el's ancestors, or null.
+   * It is how a label drawn over a sibling (an absolutely placed, pointer-events:none word over a button) is
+   * measured against the fill it sits on, not against the ancestor behind both.
+   */
+  function underlay(el) {
+    if (typeof document.elementsFromPoint !== 'function') {
+      return null;
+    }
+    const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) {
+      return null;
+    }
+    const hits = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    if (hits.indexOf(el) >= 0) {
+      return null;
+    }
+    for (let i = 0; i < hits.length; i++) {
+      const h = hits[i];
+      if (h.contains(el)) {
+        return null;
+      }
+      if (el.contains(h)) {
+        continue;
+      }
+      const c = parseColor(getComputedStyle(h).backgroundColor);
+      if (c && c.a >= 1) {
+        return c;
+      }
+    }
+    return null;
+  }
+
   /** Nearest ancestor background that is fully opaque; translucent fills are skipped. Falls back to white. */
-  function opaqueBackground(el) {
+  function opaqueBackground(el, checkUnderlay) {
+    const under = checkUnderlay ? underlay(el) : null;
+    if (under) {
+      return { color: under, found: true };
+    }
     for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
       const c = parseColor(getComputedStyle(e).backgroundColor);
       if (c && c.a >= 1) {
@@ -438,7 +529,7 @@
       }
 
       let fg = parseColor(cs.color);
-      const bg = opaqueBackground(el);
+      const bg = opaqueBackground(el, true);
       if (!bg.found) {
         noOpaqueBackground++;
       }

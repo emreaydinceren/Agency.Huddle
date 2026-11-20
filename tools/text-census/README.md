@@ -10,7 +10,7 @@ For each visible text node:
 
 - **Rendered size:** `getComputedStyle(parent).fontSize` times the product of the computed `zoom` and the transform scale (the `transform` matrix and the `scale` property) of the parent and all its ancestors, so it is correct with or without a page zoom, and a floated MudBlazor label scaled by 0.857 reports its true size.
 - **Weight, colour and font style** of the parent element.
-- **Contrast:** the WCAG 2.x relative-luminance ratio between the text colour and the nearest ancestor with an opaque background colour. Translucent backgrounds are skipped and the walk continues upward. If none is found, white is assumed and the failure shows `(assumed)`.
+- **Contrast:** the WCAG 2.x relative-luminance ratio between the text colour and the background it sits on. That is, first, an opaque fill painted under the centre of the text by an element that is not an ancestor (an absolutely placed, `pointer-events: none` label over a sibling button, such as the Composer's "Send" word); otherwise the nearest ancestor with an opaque background colour. Translucent backgrounds are skipped and the walk continues upward. Colours are read in `rgb()`, `color(srgb ...)`, `color(srgb-linear ...)`, `oklab()` and `oklch()`, the forms a browser returns for a resolved `color-mix()`; other colour spaces (`display-p3`, `lab`) are not read and are skipped like a transparent fill. If none is found, white is assumed and the failure shows `(assumed)`.
 - **A selector and a text sample**, to find the element.
 
 ## How to run
