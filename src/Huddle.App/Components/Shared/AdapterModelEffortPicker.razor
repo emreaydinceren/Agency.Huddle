@@ -40,7 +40,7 @@
     <div class="agent-profile-card-cell">
         <ProbedSelect Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
                       Disabled="@this.Disabled" Probing="@this.modelsLoading" ProbeLabel="Reading the models this adapter offers"
-                      ToStringFunc="@(this.modelsLoading ? LoadingText : null)">
+                      ToStringFunc="@(this.modelsLoading ? this.LoadingModelText : null)">
             <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
             @foreach (AgentModelOption choice in this.ModelChoices)
             {
@@ -54,7 +54,7 @@
     <div class="agent-profile-card-cell">
         <ProbedSelect Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
                       Disabled="@this.Disabled" Probing="@this.effortsLoading" ProbeLabel="Reading the effort levels this model offers"
-                      ToStringFunc="@(this.effortsLoading ? LoadingText : null)">
+                      ToStringFunc="@(this.effortsLoading ? this.LoadingEffortText : null)">
             <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
             @foreach (AgentEffortOption choice in this.EffortChoices)
             {
@@ -106,8 +106,8 @@
 }
 
 @code {
-    /// <summary>What a probed select shows while its list is being read: the stored id is a slug until the list names it.</summary>
-    private static readonly Func<string?, string?> LoadingText = static _ => "Loading…";
+    /// <summary>What a select shows while its list is being read and nothing is stored.</summary>
+    private const string LoadingPlaceholder = "Loading…";
 
     private IReadOnlyList<AgentModelOption> availableModels = [];
     private IReadOnlyList<AgentEffortOption> availableEfforts = [];
@@ -253,6 +253,16 @@
     /// <summary>The name a stored effort shows when the probe did not list it: the cached name, else the id with a capital.</summary>
     /// <param name="id">The stored effort id.</param>
     private string PeekedEffortName(string id) => this.ModelCatalog.PeekRuntime(this.adapter, this.model, id).Effort ?? Capitalised(id);
+
+    /// <summary>What the Model select shows while its list is read: the known name of the stored model, else the stored id as stored, else "Loading…" when nothing is stored (#566).</summary>
+    /// <param name="stored">The stored model id.</param>
+    private string? LoadingModelText(string? stored) =>
+        string.IsNullOrEmpty(stored) ? LoadingPlaceholder : this.ModelCatalog.PeekRuntime(this.adapter, stored, null).Model ?? stored;
+
+    /// <summary>What the Effort select shows while its list is read: the known name of the stored effort, else the stored id as stored, else "Loading…" when nothing is stored.</summary>
+    /// <param name="stored">The stored effort id.</param>
+    private string? LoadingEffortText(string? stored) =>
+        string.IsNullOrEmpty(stored) ? LoadingPlaceholder : this.ModelCatalog.PeekRuntime(this.adapter, this.model, stored).Effort ?? stored;
 
     private static string Capitalised(string id) => id.Length == 0 ? id : string.Concat(char.ToUpperInvariant(id[0]).ToString(), id.AsSpan(1));
 
