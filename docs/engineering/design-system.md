@@ -430,11 +430,11 @@ small mark below them). A row is 32px; there is no density switch and no other r
 | 50px | An avatar on a card or tile, a Feed card's avatar included, and a Message's avatar in the Transcript |
 | 44px | The least a touch target gets: a Library tree row on a touch screen |
 
-An icon is 14, 16 or 18px, and 32px in an empty state. The window switches layout at three widths only:
-MudBlazor's 600px and 960px and the shell's 1099px, which its stylesheet derives from the two sidebars.
+An icon is 14, 16 or 18px, and 32px in an empty state. The window switches layout at MudBlazor's 600px and
+960px only; the shell has no breakpoint of its own (the 1099px one went with the narrow-window overlay rule).
 Anything inside a pane uses a container query instead (the Task List does). CV11 checks the sizes and
 the window widths in every stylesheet: a width or height from 17px to 47px must be on the ladder, a
-glyph on the icon sizes, and a window `@media` width one of the three.
+glyph on the icon sizes, and a window `@media` width one of its allowed set.
 
 The page is not zoomed, so a size in a stylesheet is the size on screen and a full-height
 area is plain `100vh`. See
