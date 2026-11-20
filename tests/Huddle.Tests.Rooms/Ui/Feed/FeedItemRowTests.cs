@@ -39,13 +39,13 @@ public sealed class FeedItemRowTests
         FeedActor huddle = FeedActor.Huddle;
         (FeedItem Item, string Summary, string? Status)[] rows =
         [
-            (Item(FeedSourceType.TaskCreated, new TaskCreatedPayload("GRO-41", "Draft the pricing page", "Growth", null)), "Nova created #GRO-41 Draft the pricing page · in Growth", null),
-            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", null)), "Nova turned on Requires your acceptance for #GRO-1 T · in Growth", null),
-            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", "Publish")), "Nova set the Action \"Publish\" on #GRO-1 T · in Growth", null),
-            (Item(FeedSourceType.TaskNeedsYou, new TaskNeedsYouPayload("GRO-2", "T", "Growth", 3, 3), notify: true), "Nova stopped to wait for your approval on #GRO-2 T · in Growth", "Asked 12:00 · proof 3/3 · waiting for you"),
-            (Item(FeedSourceType.TaskAssignedToYou, new TaskAssignedPayload("GRO-3", "T", "Growth", null), notify: true), "Nova assigned you #GRO-3 T", "Asked 12:00 · waiting for you"),
-            (Item(FeedSourceType.RequestAwaitsYou, new RequestAwaitsPayload("GRO-4", "T", "Growth", "Design", "request"), notify: true), "Nova finished the Request #GRO-4 T from Design · only you can confirm it", "Asked 12:00 · waiting for you"),
-            (Item(FeedSourceType.GateDecisionDue, new GateDecisionPayload("GRO-5", "T", "Growth", "g1", "Needs a human", "Review", "Done"), notify: true), "Nova was stopped by a gate moving #GRO-5 T to Done · Needs a human", "Asked 12:00 · only you can move it anyway"),
+            (Item(FeedSourceType.TaskCreated, new TaskCreatedPayload("GRO-41", "Draft the pricing page", "Growth", null)), "Nova created GRO-41 Draft the pricing page · in Growth", null),
+            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", null)), "Nova turned on Requires your acceptance for GRO-1 T · in Growth", null),
+            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", "Publish")), "Nova set the Action \"Publish\" on GRO-1 T · in Growth", null),
+            (Item(FeedSourceType.TaskNeedsYou, new TaskNeedsYouPayload("GRO-2", "T", "Growth", 3, 3), notify: true), "Nova stopped to wait for your approval on GRO-2 T · in Growth", "Asked 12:00 · proof 3/3 · waiting for you"),
+            (Item(FeedSourceType.TaskAssignedToYou, new TaskAssignedPayload("GRO-3", "T", "Growth", null), notify: true), "Nova assigned you GRO-3 T", "Asked 12:00 · waiting for you"),
+            (Item(FeedSourceType.RequestAwaitsYou, new RequestAwaitsPayload("GRO-4", "T", "Growth", "Design", "request"), notify: true), "Nova finished the Request GRO-4 T from Design · only you can confirm it", "Asked 12:00 · waiting for you"),
+            (Item(FeedSourceType.GateDecisionDue, new GateDecisionPayload("GRO-5", "T", "Growth", "g1", "Needs a human", "Review", "Done"), notify: true), "Nova was stopped by a gate moving GRO-5 T to Done · Needs a human", "Asked 12:00 · only you can move it anyway"),
             (Item(FeedSourceType.RoomMention, new RoomWaitPayload("r1", "Backend", null), notify: true), "Nova mentioned you in Backend", "Asked 12:00 · waiting for you"),
             (Item(FeedSourceType.RoomQuestion, new RoomWaitPayload("r1", "Backend", null), notify: true), "Nova asked you a Question in Backend", "Asked 12:00 · waiting for you"),
             (Item(FeedSourceType.RoomForm, new RoomWaitPayload("r1", "Backend", null), notify: true), "Nova is waiting for you to fill in a Form in Backend", "Asked 12:00 · waiting for you"),
@@ -54,7 +54,7 @@ public sealed class FeedItemRowTests
             (Item(FeedSourceType.RoomJoined, new RoomJoinedPayload("r1", "Backend", null, "Kai")), "Kai joined Backend", null),
             (Item(FeedSourceType.RoomArchived, new RoomArchivedPayload("r1", "Backend", null)), "Nova archived Backend", null),
             (Item(FeedSourceType.DocumentChanged, new DocumentChangedPayload(Path.Combine(root, "plan.md"), "Notes", "plan.md", "edited", "Reworded the intro")), "Nova edited plan.md · Reworded the intro", null),
-            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", null, "Sends a document outside the Team"), notify: true, actor: new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)")), "Needs Human (Helper) turned on Requires your acceptance for #GRO-1 T · Sends a document outside the Team", "Asked 12:00 · you can turn it off on the Task"),
+            (Item(FeedSourceType.TaskGateOn, new TaskGatePayload("GRO-1", "T", "Growth", null, "Sends a document outside the Team"), notify: true, actor: new FeedActor(FeedActorKind.Helper, "Needs Human (Helper)")), "Needs Human (Helper) turned on Requires your acceptance for GRO-1 T · Sends a document outside the Team", "Asked 12:00 · you can turn it off on the Task"),
             (Item(FeedSourceType.HelperPaused, new HelperPausedPayload("NeedsHuman", "Needs Human", 50, 0), notify: true, actor: huddle), "Huddle paused Needs Human: its daily cap of 50 calls is reached · Agents' Tasks are not judged until you continue or the day ends", "Paused 12:00 · Continue is on the Helper's card"),
             (Item(FeedSourceType.HelperFailing, new HelperFailingPayload("NeedsHuman", "Needs Human", 3, "The adapter isn't signed in"), notify: true, actor: huddle), "Huddle Needs Human failed 3 times in a row · The adapter isn't signed in", "Since 12:00 · Tasks are not being judged"),
         ];
@@ -105,7 +105,7 @@ public sealed class FeedItemRowTests
         IRenderedComponent<FeedItemRow> document = this.Render(ctx, [Item(FeedSourceType.DocumentChanged, new DocumentChangedPayload(note.FullPath, "Notes", "plan.md", "edited", string.Empty))]);
 
         Assert.Equal("/tasks/item/GRO-41", task.Find(".feed-chip-task a").GetAttribute("href"));
-        Assert.Equal("#GRO-41", task.Find(".feed-chip-task .feed-chip-id").TextContent);
+        Assert.Equal("GRO-41", task.Find(".feed-chip-task .feed-chip-id").TextContent);
         Assert.NotEmpty(task.FindAll(".feed-chip-task .task-state-dot"));
         Assert.Equal("/rooms/r1", room.Find(".feed-chip-room a").GetAttribute("href"));
         Assert.Equal(LibraryLinkQuery.BuildPageUri(note), document.Find(".feed-chip-document a").GetAttribute("href"));

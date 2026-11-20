@@ -79,8 +79,8 @@ else
         </span>
         @if (this.CanDismiss)
         {
-            <span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
-                <MudTooltip Text="Dismiss" Class="hover-reveal-menu">
+            <span class="feed-row-dismiss-slot" @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
+                <MudTooltip Text="Dismiss">
                     <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Dismiss"
                                    Class="hover-reveal-menu-button feed-row-dismiss"
                                    OnClick="this.DismissAsync" />

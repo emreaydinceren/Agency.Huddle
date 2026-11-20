@@ -134,7 +134,27 @@ public sealed class FeedCardTests
         Assert.Equal("UP", card.Find(".feed-team-chip .mud-avatar.avatar-square").TextContent.Trim());
     }
 
-    /// <summary>A Room item carries the Room chip in its meta line, and a document item reads "Library" with no Team chip.</summary>
+    /// <summary>
+    /// A Room item names its Room once, in the summary's chip: the meta line says "Room" in the singular and the Team, and never repeats
+    /// the Room's name (F10d). A Room that is the Team Room, with the Room's name the Team's, never names the Team twice. The Room chip
+    /// wears the sidebar's Room icon.
+    /// </summary>
+    [Fact]
+    public async Task Card_MetaLine_NamesTheRoomAndTheTeamOnce()
+    {
+        using FeedCardHost host = await FeedCardHost.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        await using MudBunitContext ctx = host.NewContext();
+
+        IRenderedComponent<FeedCard> joined = Render(ctx, FeedTestData.Item(FeedSourceType.RoomJoined, new RoomJoinedPayload("room-1", "Home and Family", "Home and Family", "Sakura")));
+        IRenderedComponent<FeedCard> created = Render(ctx, FeedTestData.Item(FeedSourceType.RoomCreated, new RoomCreatedPayload("room-2", "Grace, Alan", "Platform", ["Grace", "Alan"])));
+
+        Assert.Equal("Room • HF Home and Family", Words(joined.Find(".feed-card-meta").TextContent));
+        Assert.Equal("Room • PL Platform", Words(created.Find(".feed-card-meta").TextContent));
+        Assert.Empty(joined.FindAll(".feed-meta-room"));
+        Assert.Contains("M5.7898124", joined.Find(".feed-chip-room svg").InnerHtml, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Room item carries the Team chip in its meta line, and a document item reads "Library" with no Team chip.</summary>
     [Fact]
     public async Task Card_MetaLine_RoomChipAndLibraryWord()
     {
@@ -144,7 +164,7 @@ public sealed class FeedCardTests
         IRenderedComponent<FeedCard> room = Render(ctx, FeedTestData.Item(FeedSourceType.RoomMention, new RoomWaitPayload("room-1", "Backend", "Support Desk"), notify: true));
         IRenderedComponent<FeedCard> document = Render(ctx, FeedTestData.Item(FeedSourceType.DocumentChanged, PayloadFor(FeedSourceType.DocumentChanged)));
 
-        Assert.Equal("Rooms • Backend • SD Support Desk", Words(room.Find(".feed-card-meta").TextContent));
+        Assert.Equal("Room • SD Support Desk", Words(room.Find(".feed-card-meta").TextContent));
         Assert.Equal("Library", Words(document.Find(".feed-card-meta").TextContent));
         Assert.Empty(document.FindAll(".feed-team-chip"));
     }
