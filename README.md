@@ -119,13 +119,14 @@ decides how much waits for you, and says plainly what it cannot catch.
 
 ![Settings, Needs You level: Ask me or Run inside the Team, and what this cannot catch](tour/screens/needs-you-level--nordic-light.png)
 
-### Take the tour in Claude
+### Take the tour with your AI assistant
 
-The screens above are a preview. The tour is a conversation: Claude shows you
+The screens above are a preview. The tour is a conversation: your assistant shows you
 around at your pace, and you can stop at any point to ask how something works,
 what it costs or whether it fits what you have in mind. It answers from the user
 guide, and it ends by sketching a first Team for whatever you tell it is on your
-plate. Nothing is installed. Paste this into Claude Code or Claude Cowork:
+plate. Nothing is installed. Paste this into any AI assistant that can run
+commands and read files, such as Claude Code, Claude Cowork, Codex or GitHub Copilot:
 
 ```text
 Give me a tour of Agency.Huddle. Fetch only the tour/ folder of

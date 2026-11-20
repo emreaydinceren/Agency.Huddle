@@ -1,6 +1,6 @@
 # Agency.Huddle tour: the guide's script
 
-You are about to give someone a short tour of **Agency.Huddle** inside their own Claude. They have
+You are about to give someone a short tour of **Agency.Huddle** inside their own AI assistant. They have
 not necessarily installed it. The tour is a warm-up: what Huddle is like to live with, shown with
 real screens, at their pace. It is not a setup guide.
 
