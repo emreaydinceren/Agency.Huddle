@@ -42,7 +42,10 @@
                         @if (member.Kind == UserKind.Agent)
                         {
                             ContextFillReading? reading = this.ReadingOf(member);
-                            <span class="sidebar-row-meta members-context" title="@ContextFillText.Tooltip(reading, member.Name)">@ContextFillText.Label(reading)</span>
+                            @if (reading?.Percent is not null)
+                            {
+                                <span class="sidebar-row-meta members-context" title="@ContextFillText.Tooltip(reading, member.Name)">@ContextFillText.Label(reading)</span>
+                            }
                         }
                     </div>
                     @if (member.Kind == UserKind.Agent && this.ReadingOf(member)?.Percent is { } percent)

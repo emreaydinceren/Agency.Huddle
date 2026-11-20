@@ -98,10 +98,14 @@ internal static class SoftwareCoLibrary
     internal static IReadOnlyList<SeedTeam> Teams { get; } =
     [
         new("Platform", ["API v2", "Observability"]),
-        new("Growth", ["Onboarding Revamp", "Pricing Page", "Lifecycle Emails"]) { ArchivedProjects = [SoftwareCoArchive.SpringPromo] },
-        new("Support", ["Help Center", "Incident Tooling"]),
-        new("Sandbox", []),
-        new("Records", []),
+        new("Growth", ["Onboarding Revamp", "Pricing Page", "Lifecycle Emails"])
+        {
+            ArchivedProjects = [SoftwareCoArchive.SpringPromo],
+            Owns = "Grows the user base: onboarding, pricing and lifecycle emails.",
+        },
+        new("Support", ["Help Center", "Incident Tooling"]) { Owns = "Answers customers and keeps incidents from repeating." },
+        new("Sandbox", []) { Owns = "A scratch space for trying ideas before they belong to a Team." },
+        new("Records", []) { Owns = "Keeps the company's records, filings and paperwork in order." },
     ];
 
     /// <summary>The picture files: a chart in a Team folder (Library image preview). Agent avatars come from the Avatar Library (<c>AvatarWriter</c>).</summary>

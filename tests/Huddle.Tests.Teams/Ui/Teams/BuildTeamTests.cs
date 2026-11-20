@@ -172,6 +172,24 @@ public sealed class BuildTeamTests
         Assert.Equal("Huddle hires a manager and the roles around it. 3 types — you already run Type 02.", cut.Find(".build-team-intro").TextContent.Trim());
     }
 
+    /// <summary>On a Team's own Details tab the type cards carry no "You have one" (#709), and the empty purpose and Library folder show a placeholder.</summary>
+    [Fact]
+    public async Task EditMode_ShowsNoYouHaveOne_AndPlaceholdersOnEmptyOptionalFields()
+    {
+        using Fixture fixture = new(typeCount: 3);
+        fixture.Catalog.Teams = [new TeamSummary("Core", [], [], true) { TeamType = new VersionedRef("t02", "1.0.0") }];
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = RenderEdit(ctx, "Core");
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Empty(cut.FindAll(".team-type-owned"));
+            Assert.Equal("Add a line about this Team…", cut.Find(".build-team-purpose textarea").GetAttribute("placeholder"));
+            Assert.Equal("None", cut.Find(".build-team-workspace input").GetAttribute("placeholder"));
+        });
+    }
+
     /// <summary>With no Chief of Staff Persona the header has no subtitle.</summary>
     [Fact]
     public async Task NoChiefOfStaff_HasNoSubtitle()

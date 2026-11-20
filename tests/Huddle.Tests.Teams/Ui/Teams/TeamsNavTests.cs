@@ -20,6 +20,7 @@ using Agency.Huddle.App.Tabs;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teams;
+using Agency.Huddle.App.TeamTypes;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Teams;
 using Agency.Huddle.Tests.Factories;
@@ -141,6 +142,19 @@ public sealed class TeamsNavTests
             Assert.Equal("Business", card.QuerySelector(".teams-nav-scope-label")?.TextContent.Trim());
             Assert.Equal("Web · 8 Agents", card.QuerySelector(".teams-nav-scope-subtitle")?.TextContent.Trim());
         });
+    }
+
+    /// <summary>A Team of the Blank Team template shows the Agent count alone (#709): the template is not a kind of Team, so its name is never the subtitle.</summary>
+    [Fact]
+    public async Task TeamHeaderCard_OfTheBlankTeam_ShowsOnlyTheMemberCount()
+    {
+        TeamSummary team = Team("Business") with { Members = ["A", "B", "C", "D"], TeamType = new VersionedRef(BlankTeamType.Id, BlankTeamType.Manifest.Version) };
+        FakeTeamCatalog catalog = new() { Teams = [team] };
+
+        await using MudBunitContext ctx = NewContext(catalog, stored: AllOpen);
+        IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
+
+        cut.WaitForAssertion(() => Assert.Equal("4 Agents", cut.Find(".teams-nav-scope-row[data-scope='team'] .teams-nav-scope-subtitle").TextContent.Trim()));
     }
 
     /// <summary>A Team with no type shows just its member count under the name, singular for one member.</summary>
@@ -348,7 +362,7 @@ public sealed class TeamsNavTests
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".new-chat-panel")));
     }
 
-    /// <summary>Under a Team shortcut, the header card's Unfold More button unfolds every Team inside the same card (not a popover) in catalog order, the shown one marked in its own place so no Team moves with the selection, each drawn as the Team row is, and picking one folds it, raises <see cref="TeamsNav.TeamChanged"/> with it and opens its Team page.</summary>
+    /// <summary>Under a Team shortcut, the header card's Unfold More button unfolds every Team inside the same card (not a popover) in catalog order, without the shown one (the header card above is that Team, #709), each drawn as the Team row is, and picking one folds it, raises <see cref="TeamsNav.TeamChanged"/> with it and opens its Team page.</summary>
     [Fact]
     public async Task Team_Set_Switcher_UnfoldsEveryTeamInCatalogOrder_AndRaisesThePickedOne()
     {
@@ -369,18 +383,15 @@ public sealed class TeamsNavTests
             IElement card = cut.Find(".teams-nav-team-card.teams-nav-team-card-open");
             IElement list = Assert.Single(card.Children, child => child.ClassList.Contains("teams-nav-switcher-list"));
             Assert.True(list.PreviousElementSibling?.ClassList.Contains("teams-nav-scope-header"));
-            string[] expected = ["Lab #2", "Business", "Sales"];
+            string[] expected = ["Lab #2", "Sales"];
             string[] names = [.. list.QuerySelectorAll(".teams-nav-switcher-item:not(.teams-nav-switcher-build) .teams-nav-scope-label").Select(label => label.TextContent.Trim())];
             Assert.Equal(expected, names);
             Assert.Equal("Build a team", list.Children[^1].TextContent.Trim());
             string[] subtitles = [.. list.QuerySelectorAll(".teams-nav-switcher-item .teams-nav-scope-subtitle").Select(subtitle => subtitle.TextContent.Trim())];
-            string[] expectedSubtitles = ["1 Agent", "1 Agent", "1 Agent"];
+            string[] expectedSubtitles = ["1 Agent", "1 Agent"];
             Assert.Equal(expectedSubtitles, subtitles);
-            Assert.Equal(3, list.QuerySelectorAll(".teams-nav-switcher-item .mud-avatar.teams-nav-scope-avatar").Length);
-            IElement current = Assert.Single(list.QuerySelectorAll(".teams-nav-switcher-item[aria-current='true']"));
-            Assert.Equal("Business", current.GetAttribute("title"));
-            Assert.Same(current, list.Children[1]);
-            Assert.Contains("selected-shape", current.ClassList);
+            Assert.Equal(2, list.QuerySelectorAll(".teams-nav-switcher-item .mud-avatar.teams-nav-scope-avatar").Length);
+            Assert.Empty(list.QuerySelectorAll(".teams-nav-switcher-item[aria-current='true']"));
         });
         Assert.Equal("true", cut.Find("button.teams-nav-switcher-button").GetAttribute("aria-expanded"));
 
@@ -2235,9 +2246,9 @@ public sealed class TeamsNavTests
         Assert.Equal("Marketing", tab.Title);
     }
 
-    /// <summary>Each Project row counts its open Tasks (not Done, Cancelled, Duplicate or Rejected, as the Tasks page counts them), a Project with none shows an em dash, and the tooltip says what the number is; the Team's header card shows no count.</summary>
+    /// <summary>Each Project row counts its open Tasks (not Done, Cancelled, Duplicate or Rejected, as the Tasks page counts them), a Project with none shows no count at all (#719), and the tooltip says what the number is; the Team's header card shows no count.</summary>
     [Fact]
-    public async Task Counts_ShowTheOpenTasksOfEachScope_AndADashForZero()
+    public async Task Counts_ShowTheOpenTasksOfEachScope_AndNothingForZero()
     {
         TaskItem[] tasks =
         [
@@ -2257,9 +2268,8 @@ public sealed class TeamsNavTests
         {
             Assert.Empty(ScopeRow(cut, "Business").QuerySelectorAll(".teams-nav-scope-count"));
             Assert.Equal("1", CountOf(cut, "Marketing"));
-            Assert.Equal("—", CountOf(cut, "Taxes"));
+            Assert.Empty(ScopeRow(cut, "Taxes").QuerySelectorAll(".teams-nav-scope-count"));
             Assert.Equal("1 open task", ScopeRow(cut, "Marketing").QuerySelector(".teams-nav-scope-count")?.GetAttribute("title"));
-            Assert.Equal("No open tasks", ScopeRow(cut, "Taxes").QuerySelector(".teams-nav-scope-count")?.GetAttribute("title"));
         });
     }
 
