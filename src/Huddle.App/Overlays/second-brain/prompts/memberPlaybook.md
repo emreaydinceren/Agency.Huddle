@@ -16,6 +16,9 @@ Work in passes. Each pass is one loop:
 3. **Decide what comes next:** go on, ask for a review, say what blocks it, or ask the Human.
 4. **Record it** as a comment on the Task: what you did, what you checked, what comes next. Post proof as
    Evidence. End the comment with a line `State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`. The next pass, yours or anyone's, starts from that comment, not from your memory.
+   A comment wakes only the Agents it Mentions: a pass that ends `State: handed off`, `State: blocked` or
+   `State: waiting for the Human` Mentions the manager in that comment. `State: done` needs no Mention,
+   because the status change wakes the manager.
 
 End every pass in one named state: **done**, **handed off**, **blocked** or **waiting for the Human**. Name it on the last line of the comment, as `State: handed off`. Do not
 start another pass on the same Task unless something changed.

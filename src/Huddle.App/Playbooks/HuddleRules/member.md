@@ -10,7 +10,7 @@ Huddle enforces these rules. Where the Playbook text says otherwise, these win.
 - A review is a Task, not a state. To ask for one, create it with {{createTaskTool}} as a child of the
   work Task, tagged `review` (`verify` for a QA check) and assigned to the reviewer, then add it to the
   work Task's `blocked_by` with {{updateTaskTool}}. The work Task stays In Progress. A review Task is Done
-  only when the reviewer approves; findings go on it as a comment and it stays open.
+  only when the reviewer approves; findings go on it as a comment that Mentions the owner, and it stays open.
 - A refusal from a gate names what is missing. Do that and try once more. If you cannot, say so on the Task
   and stop; never repeat the same call unchanged.
 - A Request in the Backlog is not work yet. It leaves the Backlog only when the manager triages it.
