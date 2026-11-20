@@ -1,6 +1,6 @@
 # Huddle.SmartWakes — Design Specification
 
-**Date:** 2026-11-19 · **Status:** Built 2026-11-19 on `feat/smart-wakes` (designed the same day); SMARTWAKE-01 to 09 not run. It builds on Task Rank
+**Date:** 2026-11-19 · **Status:** Built 2026-11-19 on `feat/smart-wakes` (designed the same day); SMARTWAKE-01 to 09 pass on a paid lane (1.88 USD); a real-pointer drag by the owner is still to do. It builds on Task Rank
 ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md), PR #693) and TaskOrder
 ([Huddle.TaskOrder-Specifications.md](Huddle.TaskOrder-Specifications.md), [ADR-0101](adr/0101-taskorder-derives-which-task-is-next-and-writes-nothing.md),
 PR #694), both merged to `main` on 2026-11-19. This spec is only about **when someone is woken**; it does not design
@@ -432,7 +432,8 @@ work moved ahead of the Board, so that no commit leaves the review loop waking n
 ## 9. Manual tests
 
 Added to [tasks.md](engineering/manual-tests/tasks.md) in slice 3, run on a real Adapter (Sonnet, per the live-test rule).
-Not run yet.
+Run 2026-11-19 on a paid lane at `e338a666` (1.88 USD): all nine pass. The drags were dispatched DragEvents, because the browser
+pane's drag does not start MudBlazor's; one real-pointer drag by the owner is still to do.
 
 | Id | Steps | Expected |
 | --- | --- | --- |
@@ -440,10 +441,10 @@ Not run yet.
 | SMARTWAKE-02 | As the Human, drag an In Progress Task into Done (it needs no Accept). | The assignee and the manager are woken once each; the Message lists the status change. |
 | SMARTWAKE-03 | As the Human, comment on the Task with no Mention, then with `@Name` of the assignee. | The first wakes no one; the second wakes the assignee only, and the Message quotes the comment. |
 | SMARTWAKE-04 | Run a review loop on the development Team to Done. | The developer's "ready" comment Mentions the reviewer and wakes them; the findings comment Mentions the developer; the loop needs no Human nudge. |
-| SMARTWAKE-05 | Approve a Sprint of three Tasks. | No wake for the Sprint assignment. |
+| SMARTWAKE-05 | Approve a Sprint of three Tasks. | No per-Task wake for the Sprint assignment (the approval's own Room Message that names the manager may start a manager Turn; that is not a Task wake). |
 | SMARTWAKE-06 | Rename a Team folder in Explorer while Huddle runs. | No wakes for the moved Tasks. |
 | SMARTWAKE-07 | Drag a Backlog card assigned to an Agent; look at the zones; drop it in Cancelled. Then drag an In Progress card to Cancelled. | During the first drag, To Do and In Progress show "Notifies Nova" and Cancelled does not; the first drop wakes no one; the second wakes the assignee and the manager. |
-| SMARTWAKE-08 | Turn the Human gate on for a Task an Agent is working on. | No wake; when the Agent next moves the Task toward Done, Huddle stops it in Needs You. |
+| SMARTWAKE-08 | Turn the Human gate on for a Task an Agent is working on. | No wake; when the Agent next moves the Task toward Done, Huddle refuses Done while the Proof is incomplete and the Agent moves the Task to Needs You. |
 | SMARTWAKE-09 | An Agent calls `add_comment` on a Task, once with a Mention (`@Name`) and once without. | The replies read "Wakes Name." and "No one is woken: Mention an Agent with @Name to wake them."; only the first posts a wake Message. |
 
 ## 10. Open questions and owner calls

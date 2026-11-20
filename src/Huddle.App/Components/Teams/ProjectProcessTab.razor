@@ -1,0 +1,23 @@
+@*
+    The Process tab of a Project page (ADR-0103): the Project's one-Task-at-a-time setting. The shared OneInProgressControl draws the
+    three-way choice (Inherit, One at a time, Parallel) and, under it, what Inherit resolves to; this tab adds one sentence on what the
+    three choices mean. The control acts at once, so the tab has no Save. Pass the Team and the Project by name.
+*@
+
+<div class="project-process-tab">
+    <section class="project-process-tab-one-in-progress" aria-label="One Task at a time">
+        <div class="group-label">One Task at a time</div>
+        <OneInProgressControl Team="@this.Team" Project="@this.Project" />
+        <MudText Typo="Typo.caption" Class="project-process-tab-note">Inherit follows the Team. One at a time keeps at most one Task In Progress in this Project. Parallel allows several at once, whatever the Team sets.</MudText>
+    </section>
+</div>
+
+@code {
+    /// <summary>The Team the Project belongs to.</summary>
+    [Parameter, EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project whose setting is shown.</summary>
+    [Parameter, EditorRequired]
+    public string Project { get; set; } = string.Empty;
+}

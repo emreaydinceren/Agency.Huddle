@@ -25,6 +25,8 @@ Huddle enforces these rules. Where the Playbook text says otherwise, these win.
   only when the reviewer approves; findings go on it as a comment that Mentions the owner, and it stays open.
 - A refusal from a gate names what is missing. Do that and try once more. If you cannot, say so on the Task
   and stop; never repeat the same call unchanged.
+- You have at most one Task In Progress. Finish it, or move it to Needs You or back to To Do, before you start
+  another.
 - A Request in the Backlog is not work yet. It leaves the Backlog only when the manager triages it.
 - `AGENTS.md` and the Playbooks are the Human's files. Huddle refuses your edits to them; propose a change
   in a retro instead.

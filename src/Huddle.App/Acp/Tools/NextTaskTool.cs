@@ -19,7 +19,8 @@ internal sealed class NextTaskTool(
     TaskStore store,
     ITeamDirectory directory,
     IPromptSource prompts,
-    string callerAgentId) : IAppTool
+    string callerAgentId,
+    ITaskGroupRule? groupRule = null) : IAppTool
 {
     /// <summary>How many startable Tasks the answer names after the next one.</summary>
     private const int AfterLimit = 5;
@@ -56,7 +57,7 @@ internal sealed class NextTaskTool(
             return actorRefusal;
         }
 
-        return Render(prompts, Compute(store, actor.Name, string.IsNullOrWhiteSpace(team) ? null : team));
+        return Render(prompts, Compute(store, actor.Name, string.IsNullOrWhiteSpace(team) ? null : team, groupRule));
     }
 
     /// <summary>
@@ -65,23 +66,25 @@ internal sealed class NextTaskTool(
     /// <param name="taskStore">Where the Tasks and their blockers are looked up.</param>
     /// <param name="assignee">The Name the Tasks are assigned to.</param>
     /// <param name="team">The one Team to order, or <see langword="null"/> for every Team.</param>
-    internal static TaskOrderResult Compute(TaskStore taskStore, string assignee, string? team)
+    /// <param name="groupRule">Says which Projects admit one In Progress Task at a time; <see langword="null"/> means none does.</param>
+    internal static TaskOrderResult Compute(TaskStore taskStore, string assignee, string? team, ITaskGroupRule? groupRule = null)
     {
         List<TaskItem> scope = taskStore.All
             .Where(task => !task.Location.Closed
                 && string.Equals(task.Assignee, assignee, StringComparison.OrdinalIgnoreCase)
                 && (team is null || string.Equals(task.Location.Team, team, StringComparison.OrdinalIgnoreCase)))
             .ToList();
-        return TaskOrder.Compute(scope, taskStore.Get);
+        return TaskOrder.Compute(scope, taskStore.Get, groupRule);
     }
 
     /// <summary>The line <c>update_task</c> adds to a refused start: the caller's next startable Task, or that it has none.</summary>
     /// <param name="taskStore">Where the Tasks are looked up.</param>
     /// <param name="promptSource">Where the wording comes from.</param>
     /// <param name="assignee">The refused caller's Name.</param>
-    internal static string RefusalLine(TaskStore taskStore, IPromptSource promptSource, string assignee)
+    /// <param name="groupRule">Says which Projects admit one In Progress Task at a time; <see langword="null"/> means none does.</param>
+    internal static string RefusalLine(TaskStore taskStore, IPromptSource promptSource, string assignee, ITaskGroupRule? groupRule = null)
     {
-        TaskOrderEntry? next = Compute(taskStore, assignee, null).Next;
+        TaskOrderEntry? next = Compute(taskStore, assignee, null, groupRule).Next;
         return next is null
             ? promptSource.Render("tool.nextTask.refusalNone")
             : promptSource.Render("tool.nextTask.refusalNext", Values(("{{id}}", next.Task.Id.ToString()), ("{{title}}", next.Task.Title)));
@@ -142,6 +145,11 @@ internal sealed class NextTaskTool(
                 {
                     reasons.Add(promptSource.Render("tool.nextTask.waitCycle", Values(("{{ids}}", JoinIds(entry.Cycle)))));
                 }
+            }
+            else if (entry.WaitsFor is { } holder)
+            {
+                string place = entry.Task.Location.Project is { } project ? $" in {project}" : string.Empty;
+                reasons.Add(promptSource.Render("tool.nextTask.waitGroup", Values(("{{id}}", id), ("{{title}}", entry.Task.Title), ("{{holder}}", holder.ToString()), ("{{place}}", place))));
             }
             else if (entry.BlockedBy.Count > 0)
             {

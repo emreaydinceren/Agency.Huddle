@@ -1,0 +1,113 @@
+@using Agency.Huddle.App.Components.Shared
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Teams
+@inject ITeamFolders Folders
+
+@*
+    The one control for the oneInProgressPerProject setting (ADR-0103, TaskOrder spec section 10). With no Project it is the Team's switch,
+    "One Task at a time in each Project", drawn on the Team page's Process tab: on writes 'on' to _team.md and off removes the key (an
+    absent Team value already means off). With a Project it is the Project's three-way control, Inherit, One at a time, Parallel, drawn in
+    the Project page's Process tab (ProjectProcessTab): Inherit removes the key from _project.md, so a Project nobody changed keeps no file (ADR-0083). Both act at
+    once, as SettingSwitch does, and read the file again after each write.
+*@
+
+<div class="one-in-progress" data-scope="@(this.IsProject ? "project" : "team")">
+    @if (this.IsProject)
+    {
+        <SegmentedControl T="string" Options="Choices" Value="@this.ProjectChoice" ValueChanged="this.OnProjectChanged" />
+        <MudText Typo="Typo.caption" Class="one-in-progress-hint" role="status">@this.Hint</MudText>
+    }
+    else
+    {
+        <SettingSwitch Value="@(this.team == RuleSetting.On)" ValueChanged="this.OnTeamChanged" Label="One Task at a time in each Project"
+                       Helper="Each Project of this Team then has at most one Task In Progress. A Project can override it." LineHookClass="one-in-progress-hint" />
+    }
+
+    @if (this.error is not null)
+    {
+        <Notice Severity="NoticeLevel.Error" Class="one-in-progress-error">@this.error</Notice>
+    }
+</div>
+
+@code {
+    private const string InheritChoice = "inherit";
+    private const string OnChoice = "on";
+    private const string OffChoice = "off";
+    private const string SaveFailed = "The setting could not be saved. Check that the folder can be written.";
+
+    private static readonly IReadOnlyList<SegmentedOption<string>> Choices =
+        [new(InheritChoice, "Inherit"), new(OnChoice, "One at a time"), new(OffChoice, "Parallel")];
+
+    private RuleSetting team;
+    private RuleSetting project;
+    private string? error;
+
+    /// <summary>The Team whose setting is shown, or whose Project's is.</summary>
+    [Parameter, EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project whose setting this is; <see langword="null"/> shows the Team's own switch.</summary>
+    [Parameter]
+    public string? Project { get; set; }
+
+    private bool IsProject => !string.IsNullOrWhiteSpace(this.Project);
+
+    private string ProjectChoice => this.project switch
+    {
+        RuleSetting.On => OnChoice,
+        RuleSetting.Off => OffChoice,
+        _ => InheritChoice,
+    };
+
+    /// <summary>The line under the Project's control: what Inherit resolves to, or what the explicit choice means.</summary>
+    private string Hint => this.project switch
+    {
+        RuleSetting.On => "This Project has at most one Task In Progress, whatever its Team sets.",
+        RuleSetting.Off => "This Project can have several Tasks In Progress at once, whatever its Team sets.",
+        _ => $"Inherit (Team: {(this.team == RuleSetting.On ? "One at a time" : "Parallel")})",
+    };
+
+    /// <inheritdoc />
+    protected override void OnParametersSet() => this.Load();
+
+    private void Load()
+    {
+        this.team = this.Folders.ReadTeamFile(this.Team)?.OneInProgressPerProject ?? RuleSetting.Absent;
+        this.project = this.IsProject
+            ? this.Folders.ReadProjectFile(this.Team, this.Project ?? string.Empty)?.OneInProgressPerProject ?? RuleSetting.Absent
+            : RuleSetting.Absent;
+    }
+
+    private void OnTeamChanged(bool on) =>
+        this.Write(() => this.Folders.UpdateTeamFile(this.Team, file => file with { OneInProgressPerProject = on ? RuleSetting.On : RuleSetting.Absent }));
+
+    private void OnProjectChanged(string? choice)
+    {
+        RuleSetting wanted = choice switch
+        {
+            OnChoice => RuleSetting.On,
+            OffChoice => RuleSetting.Off,
+            _ => RuleSetting.Absent,
+        };
+        this.Write(() => this.Folders.UpdateProjectFile(this.Team, this.Project ?? string.Empty, file => file with { OneInProgressPerProject = wanted }));
+    }
+
+    /// <summary>Runs a write, shows a refusal or an IO failure as an error under the control, and reads the files again either way.</summary>
+    private void Write(Func<bool> write)
+    {
+        try
+        {
+            this.error = write() ? null : SaveFailed;
+        }
+        catch (IOException)
+        {
+            this.error = SaveFailed;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            this.error = SaveFailed;
+        }
+
+        this.Load();
+    }
+}

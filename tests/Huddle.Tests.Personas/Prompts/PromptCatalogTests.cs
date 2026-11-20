@@ -48,7 +48,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExpectedPromptCount()
     {
-        Assert.Equal(239, PromptCatalog.All.Count);
+        Assert.Equal(240,PromptCatalog.All.Count);
     }
 
     /// <summary>

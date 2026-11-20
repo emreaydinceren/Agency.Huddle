@@ -13,6 +13,7 @@
 @inject TaskStore Store
 @inject TaskEvents TaskEvents
 @inject ITeamDirectory TeamDirectory
+@inject ITaskGroupRule GroupRule
 
 @if (this.entries.Count > 0)
 {
@@ -117,7 +118,7 @@
         }
 
         IReadOnlyList<TaskItem> scope = [.. this.Store.All.Where(task => !task.Location.Closed && string.Equals(task.Location.Team, teamName, StringComparison.Ordinal))];
-        TaskOrderResult result = TaskOrder.Compute(scope, this.Store.Get);
+        TaskOrderResult result = TaskOrder.Compute(scope, this.Store.Get, this.GroupRule);
         this.entries = result.Entries;
         this.nextId = result.Next?.Task.Id;
         this.Panel?.SetCount(this.entries.Count(static entry => entry.IsStartable));
@@ -132,7 +133,7 @@
         { Group: TaskOrderGroup.Started } => Color.Info,
         _ when this.IsNext(entry) => Color.Primary,
         { Group: TaskOrderGroup.Backlog } => Color.Default,
-        { IsStartable: false } => Color.Warning,
+        { IsStartable: false, WaitsFor: null } => Color.Warning,
         _ => Color.Default,
     };
 
@@ -152,6 +153,11 @@
         if (entry.Group == TaskOrderGroup.Next && entry.Task.Status == TaskState.Backlog)
         {
             parts.Add("in Backlog");
+        }
+
+        if (entry.WaitsFor is { } holder)
+        {
+            parts.Add(entry.Task.Location.Project is { } project ? $"waits for {holder} in {project}" : $"waits for {holder}");
         }
 
         if (entry.Blocks is { } blocks)

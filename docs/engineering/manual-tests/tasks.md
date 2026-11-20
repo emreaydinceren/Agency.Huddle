@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**40 tests** · 23 free, 17 paid 💰 · about 7 hours.
+**42 tests** · 23 free, 19 paid 💰 · about 7.25 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -45,6 +45,17 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
    and record which browser you used.
 7. MONEY. TASKS-01 to -09, -13/-14 and -16 to -18 are free. TASKS-10, -11, -12, -15, -19 and -23 are
    marked and each spends the Persona's Budget the same way any Room does.
+8. A seeded lane's `team.db` has no `persona_models` or `persona_efforts` table until the app has started once: launch with
+   Agents off, stop, write `sonnet`/`low` for every Persona and the Chief of Staff, then launch with Agents on. The Chief of
+   Staff Greeting on Sonnet still costs about 0.24 USD.
+9. Hand-written Sprint proposals load once at start, and a proposal name that looks like an id (`S3`) is refused ("A sprint name
+   can't look like an id").
+10. Build a team: **Approve & hire** stays disabled while a draft has "needs setup" Skills (untick them); drafts show Effort
+    "Model default" (set **Low** per draft); hire refuses at "14 of 16 agent processes" unless `Team__Acp__MaxLiveProcesses` is
+    raised (40).
+11. In the browser pane, screenshots lag one action, and a CDP drag does not start MudBlazor's drag: dispatch `dragstart`,
+    `dragenter`, `dragover`, `drop` and `dragend` DragEvents by JavaScript, and still do one real-pointer drag by hand.
+12. A chat message that names two Agents with `@` wakes both: write "Mentions the Agent Marcus" in chat to wake one.
 
 ## Tests
 
@@ -1334,6 +1345,77 @@ asked what to work on gets its own order, and the Task it names starts.*
 - The gate is missing from the Process tab -> the type's `processes/*.md` files do not list it.
 - The Task moves -> the Team's process was not the one loaded.
 
+### TASKORDER-05 — A second Task In Progress is refused, naming the first, until the first is Done
+
+**Paid 💰** · about 10 min · 3 Turns
+
+*Proves ADR-0102: an assignee has at most one Task In Progress, and the refusal names it.*
+
+**Before you start**
+
+- A Team whose process lists `one-in-progress-per-assignee` (any built-in type), with its Agent on a live Adapter
+  (Sonnet or better). Two **To Do** Tasks assigned to that Agent, neither blocked.
+
+**Steps**
+
+1. Open the Team's **Process** tab and read the gates.
+2. Ask the Agent to start the first Task, then to start the second while the first is still In Progress.
+3. Move the first Task to **Done**, then ask the Agent to start the second again.
+
+**Pass if — all of these**
+
+- The Process tab lists `one-in-progress-per-assignee`.
+- The first Task moves to **In Progress**. The second stays in **To Do**, and the refusal reads
+  `Gate one-in-progress-per-assignee: <Agent> already has <id> "<title>" In Progress.` followed by `Finish it or move it
+  out of In Progress before starting another.`, naming the first Task.
+- After the first Task is Done, the second moves to **In Progress**.
+
+**Fail if — any of these**
+
+- The gate is missing from the Process tab -> the type's `processes/*.md` files do not list it.
+- Both Tasks reach In Progress -> `TaskService` is not computing the assignee's other In Progress Task.
+- The second Task still refuses after the first is Done -> a Task that is not In Progress is being counted.
+
+### TASKORDER-06 — A Team that asks for one Task at a time refuses a second in one Project; a Project set to Parallel accepts both
+
+**Paid 💰** · about 15 min · 4 Turns
+
+*Proves ADR-0103: the Team's switch and the Project's three-way control decide whether a Project may have two Tasks In Progress, and
+the refusal names the first.*
+
+**Before you start**
+
+- A Team with an Agent on a live Adapter (Sonnet or better) and two Projects, **Alpha** and **Beta**. Two **To Do** Tasks in each
+  Project, assigned to different Agents or to none, neither blocked. The Team's switch is off and both Projects are on Inherit.
+
+**Steps**
+
+1. Open the Team's **Process** tab, switch on **One Task at a time in each Project**, then open **Alpha**'s page, open its
+   **Process** tab and read the line under the control.
+2. Ask the Agent to start the first Task of **Alpha**, then the second while the first is still In Progress.
+3. Open **Beta**'s page, open its **Process** tab and choose **Parallel**. Ask the Agent to start both of
+   **Beta**'s Tasks.
+4. Move the first Task of **Alpha** to **Done** and ask the Agent to start the second again.
+
+**Pass if — all of these**
+
+- The Process tab shows the switch on after you reload the page. **Alpha**'s Process tab has **Inherit** chosen under **One Task at a time**, and the
+  line under the control reads `Inherit (Team: One at a time)`.
+- The first Task of **Alpha** moves to **In Progress**. The second stays in **To Do**, and the refusal reads
+  `One In Progress per Project: <id> "<title>" is already In Progress in Alpha. The Team setting asks for one at a time.` followed by
+  `Finish it or move it out of In Progress before starting another.`, naming the first Task.
+- Both Tasks of **Beta** reach **In Progress**.
+- After the first Task of **Alpha** is Done, its second Task moves to **In Progress**.
+- Switching the Team's switch off and reloading the Process tab shows it off, and `_team.md` no longer holds
+  `oneInProgressPerProject`. **Alpha**'s Project folder has no `_project.md` unless you gave it an avatar.
+
+**Fail if — any of these**
+
+- The switch is back off after a reload -> the Team file was not written.
+- The second Task of **Alpha** starts -> the gate does not read the Team's key, or the Team's switch wrote another key.
+- **Beta**'s second Task is refused -> the Project's `off` does not beat the Team's `on`.
+- **Alpha** has a `_project.md` holding `oneInProgressPerProject` -> Inherit wrote a value.
+
 ### SMARTWAKE-01 — Dragging a card within its column changes its rank and wakes no one
 
 **Free** · about 8 min · no Turns
@@ -1433,7 +1515,8 @@ when each comment must Mention the Agent who acts on it.*
 **Pass if — all of these**
 
 - The Developer's "ready" comment Mentions the Reviewer and wakes them; the findings comment Mentions the Developer.
-- The review Task reaches **Done** and the Task follows, with no Human nudge.
+- The review Task reaches **Done** and the Task follows, with no Human nudge. Whether the Agent ends the work Task in **Done**
+  or closes it from **Needs You** is the Agent's choice and either passes.
 
 **Fail if — any of these**
 
@@ -1456,11 +1539,13 @@ when each comment must Mention the Agent who acts on it.*
 
 **Pass if — all of these**
 
-- The three Tasks carry the sprint, and no wake Message or toast appears.
+- The three Tasks carry the sprint, and there is no per-Task wake Message, no Task wake and no toast. The Sprint approval's own
+  Room Message that names the manager may start a manager Turn (`SprintProposalService`, ADR-0037); that is not a Task wake and
+  not a failure.
 
 **Fail if — any of these**
 
-- A wake appears -> `TaskField.Sprint` is waking in `WakeRelevance`.
+- A per-Task wake appears -> `TaskField.Sprint` is waking in `WakeRelevance`.
 
 ### SMARTWAKE-06 — Renaming a Team folder in Explorer wakes no one
 
@@ -1529,7 +1614,7 @@ when each comment must Mention the Agent who acts on it.*
 **Pass if — all of these**
 
 - Step 2's first part posts no wake Message.
-- Huddle stops the Task in **Needs You** when the Agent moves it.
+- Huddle refuses **Done** while the Proof is incomplete, and the Agent moves the Task to **Needs You**.
 
 **Fail if — any of these**
 

@@ -32,6 +32,7 @@ public sealed partial class ProcessTemplatesTests
         "spec-approved-before-build",
         "failing-test-before-fix",
         "blockers-done-before-start",
+        "one-in-progress-per-assignee",
     ];
 
     /// <summary>A process file split into the lines between its frontmatter fences and the lines of its body.</summary>
@@ -165,7 +166,7 @@ public sealed partial class ProcessTemplatesTests
         Assert.Equal(OutlineHeadings, Headings(file));
     }
 
-    /// <summary>Each process has a title and a template id that is its file name at version 1.0.0.</summary>
+    /// <summary>Each process has a title and a template id that is its file name at version 1.1.0.</summary>
     /// <param name="processId">The process file to check.</param>
     [Theory]
     [InlineData("lightweight-flow")]
@@ -177,17 +178,17 @@ public sealed partial class ProcessTemplatesTests
         ProcessFile file = LoadProcess(processId);
 
         Assert.NotEmpty(Scalar(file, "title"));
-        Assert.Equal(processId + "@1.0.0", Scalar(file, "template"));
+        Assert.Equal(processId + "@1.1.0", Scalar(file, "template"));
     }
 
     /// <summary>Each process declares exactly the gates the plan gives it, and every gate is one of the six known ids.</summary>
     /// <param name="processId">The process file to check.</param>
     /// <param name="expectedGates">The expected gate ids, in file order.</param>
     [Theory]
-    [InlineData("lightweight-flow", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge", "blockers-done-before-start" })]
-    [InlineData("spec-driven", new[] { "qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build", "accept-before-merge", "blockers-done-before-start" })]
-    [InlineData("sprints", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge", "blockers-done-before-start" })]
-    [InlineData("maintenance", new[] { "qa-evidence-before-done", "checks-before-merge", "failing-test-before-fix", "accept-before-merge", "blockers-done-before-start" })]
+    [InlineData("lightweight-flow", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge", "blockers-done-before-start", "one-in-progress-per-assignee" })]
+    [InlineData("spec-driven", new[] { "qa-evidence-before-done", "checks-before-merge", "spec-approved-before-build", "accept-before-merge", "blockers-done-before-start", "one-in-progress-per-assignee" })]
+    [InlineData("sprints", new[] { "qa-evidence-before-done", "checks-before-merge", "accept-before-merge", "blockers-done-before-start", "one-in-progress-per-assignee" })]
+    [InlineData("maintenance", new[] { "qa-evidence-before-done", "checks-before-merge", "failing-test-before-fix", "accept-before-merge", "blockers-done-before-start", "one-in-progress-per-assignee" })]
     public void Process_Gates_AreExpectedKnownIds(string processId, string[] expectedGates)
     {
         ProcessFile file = LoadProcess(processId);
@@ -399,6 +400,37 @@ public sealed partial class ProcessTemplatesTests
 
         Assert.True(missingGate.Count == 0, "No blockers gate in the gates: line of: " + string.Join(", ", missingGate));
         Assert.True(missingBullet.Count == 0, "No blockers gate bullet in: " + string.Join(", ", missingBullet));
+    }
+
+    /// <summary>ADR-0102: every built-in process, whatever its Team type, lists the one-in-progress gate in its <c>gates:</c> line and has the exact Gates bullet for it.</summary>
+    [Fact]
+    public void Process_EveryBuiltIn_ListsTheOneInProgressGateAndItsBullet()
+    {
+        string[] resources = typeof(TeamTypeCatalog).Assembly.GetManifestResourceNames()
+            .Select(static n => n.Replace('\\', '/'))
+            .Where(static n => n.Contains("TeamTypes/Builtin/", StringComparison.Ordinal) && n.Contains("/processes/", StringComparison.Ordinal) && n.EndsWith(".md", StringComparison.Ordinal)) // contains-ok: resource path filter
+            .ToArray();
+
+        Assert.True(resources.Length >= 29, "Expected every built-in process, found " + resources.Length);
+        List<string> missingGate = [];
+        List<string> missingBullet = [];
+        foreach (string resource in resources)
+        {
+            string text = ReadResourceText(resource);
+            string gatesLine = text.Split('\n').First(static l => l.StartsWith("gates:", StringComparison.Ordinal));
+            if (!gatesLine.Contains("'one-in-progress-per-assignee'", StringComparison.Ordinal)) // contains-ok: scanning shipped front matter
+            {
+                missingGate.Add(resource);
+            }
+
+            if (!GatesLines(text).Contains("- `one-in-progress-per-assignee`: Huddle refuses to move a Task to In Progress, or to give an In Progress Task to someone, while its assignee already has another Task In Progress, and names that Task.", StringComparer.Ordinal))
+            {
+                missingBullet.Add(resource);
+            }
+        }
+
+        Assert.True(missingGate.Count == 0, "No one-in-progress gate in the gates: line of: " + string.Join(", ", missingGate));
+        Assert.True(missingBullet.Count == 0, "No one-in-progress gate bullet in: " + string.Join(", ", missingBullet));
     }
 
     /// <summary>Returns the trimmed lines of the Gates section of a raw process file.</summary>

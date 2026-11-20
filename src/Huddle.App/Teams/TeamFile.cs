@@ -71,6 +71,9 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
     /// <summary>The process settings (Spec §7.2): gates, wip, retro, digest, check command and template.</summary>
     public ProcessSettings Process { get; init; } = ProcessSettings.Empty;
 
+    /// <summary>The Team's <c>oneInProgressPerProject</c> value (ADR-0103); <see cref="RuleSetting.Absent"/> is never written and counts as off.</summary>
+    public RuleSetting OneInProgressPerProject { get; init; }
+
     /// <summary>The Names of members archived out of the Team; the <c>archivedMembers</c> key is written only while any are.</summary>
     public IReadOnlyList<string> ArchivedMembers { get; init; } = [];
 
@@ -144,6 +147,7 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
             Onboarded = string.Equals(values.GetValueOrDefault(OnboardedKey), "true", StringComparison.OrdinalIgnoreCase),
             Avatar = ReadAvatar(values),
             Process = ProcessSettings.Parse(values),
+            OneInProgressPerProject = OneInProgressRule.Parse(values.GetValueOrDefault(OneInProgressRule.Key)),
             ArchivedMembers = values.TryGetValue(ArchivedMembersKey, out string? archived) ? ProcessDocument.SplitList(archived) : [],
             ArchivedRooms = values.TryGetValue(ArchivedRoomsKey, out string? archivedRooms) ? ProcessDocument.SplitList(archivedRooms) : [],
             ArchivedManager = NullIfBlank(values.GetValueOrDefault(ArchivedManagerKey)),
@@ -261,6 +265,10 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         AppendOptional(builder, AvatarImageKey, this.Avatar.Image);
         AppendOptional(builder, AvatarBackgroundKey, this.Avatar.Background);
         this.AppendProcess(builder);
+        if (OneInProgressRule.TryToWire(this.OneInProgressPerProject, out string? wire))
+        {
+            AppendScalar(builder, OneInProgressRule.Key, wire);
+        }
 
         foreach (string line in this.UnknownLines)
         {
@@ -333,7 +341,8 @@ internal sealed record TeamFile(VersionedRef TeamType, string? Manager, string? 
         || string.Equals(key, OnboardedKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, AvatarLabelKey, StringComparison.OrdinalIgnoreCase)
         || string.Equals(key, AvatarImageKey, StringComparison.OrdinalIgnoreCase)
-        || string.Equals(key, AvatarBackgroundKey, StringComparison.OrdinalIgnoreCase);
+        || string.Equals(key, AvatarBackgroundKey, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(key, OneInProgressRule.Key, StringComparison.OrdinalIgnoreCase);
 
     private static string? NullIfBlank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 

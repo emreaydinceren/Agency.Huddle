@@ -281,6 +281,22 @@ public sealed class TeamFolderProvisionerCreateTeamTests
         Assert.Null(provisioner.ReadProjectFile("Business", "Nope"));
     }
 
+    /// <summary>A Project nobody changed keeps no <c>_project.md</c> when the rule is left absent, and the rule is written and read back once set (ADR-0083, ADR-0103).</summary>
+    [Fact]
+    public void UpdateProjectFile_OneInProgressRule_IsWrittenOnlyWhenSet()
+    {
+        using Fixture fixture = new("Business", Path.Combine("Business", "Launch"));
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        string path = Path.Combine(fixture.TeamsRoot, "Business", "Launch", TeamPaths.ProjectFileName);
+
+        Assert.True(provisioner.UpdateProjectFile("Business", "Launch", file => file with { OneInProgressPerProject = RuleSetting.Absent }));
+        Assert.False(File.Exists(path));
+
+        Assert.True(provisioner.UpdateProjectFile("Business", "Launch", file => file with { OneInProgressPerProject = RuleSetting.On }));
+        Assert.Equal("---\noneInProgressPerProject: 'on'\n---\n", File.ReadAllText(path));
+        Assert.Equal(RuleSetting.On, provisioner.ReadProjectFile("Business", "Launch")?.OneInProgressPerProject);
+    }
+
     /// <summary>Reading a Team that does not exist, or has no file, returns null.</summary>
     [Fact]
     public void ReadTeamFile_MissingTeamOrFile_ReturnsNull()

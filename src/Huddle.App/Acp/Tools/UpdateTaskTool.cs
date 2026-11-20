@@ -8,6 +8,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Goldfish;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Ordering;
 using Agency.Huddle.App.Teams;
 
 /// <summary>
@@ -27,7 +28,8 @@ internal sealed class UpdateTaskTool(
     string callerAgentId,
     NeedsYouLevels? levels = null,
     ProcessGateService? gates = null,
-    GoldfishGuard? goldfish = null) : IAppTool
+    GoldfishGuard? goldfish = null,
+    ITaskGroupRule? groupRule = null) : IAppTool
 {
     /// <inheritdoc />
     public string Name => "update_task";
@@ -106,7 +108,7 @@ internal sealed class UpdateTaskTool(
             TaskResult.Saved saved => this.FormatSaved(saved, actor),
             TaskResult.Unchanged unchanged => $"{unchanged.Task.Id} already has those values; nothing changed.",
             TaskResult.GateRefused { Gate: GateId.BlockersDoneBeforeStart } refused =>
-                $"{refused.Message}\n{NextTaskTool.RefusalLine(store, prompts, actor.Name)}",
+                $"{refused.Message}\n{NextTaskTool.RefusalLine(store, prompts, actor.Name, groupRule)}",
             _ => TaskToolText.Refusal(result, this.Name),
         };
     }

@@ -206,6 +206,12 @@ internal sealed class TaskToolHarness : IDisposable
     /// <summary>Tracks each Persona's degraded/healthy status.</summary>
     public PersonaHealth Health { get; }
 
+    /// <summary>Hand-driven Team and Project files; a test sets <c>ReadResult</c> and <c>ProjectFiles</c> to switch "one Task In Progress per Project" on or off.</summary>
+    public Agency.Huddle.Tests.Ui.Teams.FakeTeamFolders Folders { get; } = new();
+
+    /// <summary>The group rule the Task order panel and <c>next_task</c> use, reading <see cref="Folders"/> and <see cref="Store"/>.</summary>
+    public Agency.Huddle.App.Tasks.Ordering.ITaskGroupRule GroupRule => new Agency.Huddle.App.Tasks.Ordering.TaskGroupRule(this.Folders, this.Store);
+
     /// <summary>The shell's Tabs, which hold the breadcrumb trail the Tasks page sets.</summary>
     public Agency.Huddle.App.Tabs.TabService Tabs { get; } = new();
 
@@ -326,6 +332,9 @@ internal sealed class TaskToolHarness : IDisposable
             services.AddSingleton(this.gates);
         }
 
+        // The Task order panel reads each Project's one-at-a-time rule through these; a test sets it on Folders. TryAdd: a test may bring its own.
+        services.TryAddSingleton<Agency.Huddle.App.Library.ITeamFolders>(this.Folders);
+        services.TryAddSingleton<Agency.Huddle.App.Tasks.Ordering.ITaskGroupRule>(this.GroupRule);
         services.AddSingleton(this.Views);
         services.AddSingleton(this.TurnActivity);
         services.AddSingleton(this.TaskActivity);

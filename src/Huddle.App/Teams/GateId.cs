@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Teams;
 
-/// <summary>The six hard gates a process document can declare in <c>_team.md</c> (PR-7, Spec §Process), and the two refusal ids that are never declared.</summary>
+/// <summary>The seven hard gates a process document can declare in <c>_team.md</c> (PR-7, Spec §Process), and the two refusal ids that are never declared.</summary>
 internal enum GateId
 {
     /// <summary>A Task cannot move to Done until a verifying member has added an Evidence line.</summary>
@@ -20,6 +20,12 @@ internal enum GateId
 
     /// <summary>A Task cannot move to In Progress, Needs You or Done while a Task it is blocked by is still open (#538).</summary>
     BlockersDoneBeforeStart,
+
+    /// <summary>A change cannot leave one assignee with two Tasks In Progress, in any Team; unassigned Tasks are never limited (ADR-0102).</summary>
+    OneInProgressPerAssignee,
+
+    /// <summary>A Team or Project that asks for one Task at a time refuses a second In Progress in the same Project (ADR-0103); a refusal id only, never written in _team.md.</summary>
+    OneInProgressPerProject,
 
     /// <summary>A Human-gated Task cannot skip the Human's acceptance; never written in _team.md.</summary>
     HumanGate,

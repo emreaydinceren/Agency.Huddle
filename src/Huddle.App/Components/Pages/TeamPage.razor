@@ -190,7 +190,14 @@
                                               SearchChanged="@(text => this.SetSearch(current, text))" />
                                 break;
                             case TeamPageTab.Process:
-                                <ProcessTab Team="@summary.Name" />
+                                @if (project is null)
+                                {
+                                    <ProcessTab Team="@summary.Name" />
+                                }
+                                else
+                                {
+                                    <ProjectProcessTab Team="@summary.Name" Project="@project" />
+                                }
                                 break;
                             case TeamPageTab.ManagerPlaybook:
                                 <PlaybooksTab Team="@summary.Name" Manager="true" />

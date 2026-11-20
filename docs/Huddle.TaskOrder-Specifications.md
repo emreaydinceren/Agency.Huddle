@@ -280,8 +280,7 @@ Across Teams, ranks compare as plain numbers and interleave. ADR-0099 already ac
 
 ## 6. Out of scope
 
-- **One In Progress Task per person** (question D in the brief): not decided. If it is ever built, it is a gate, and
-  TaskOrder does not need to change.
+- **One In Progress Task per person:** decided later, in §9.
 - **Wakes.** TaskOrder writes nothing, so it wakes no one. What a change to rank, priority or `blocked_by` wakes is
   decided in the smart-wakes spec.
 - **Reordering anything.** No rank is written by TaskOrder or by the panel.
@@ -309,3 +308,97 @@ Prove each new test can fail, as [agents/Testing.md](../agents/Testing.md) requi
 | 4 | **Panel:** `TaskOrderPanel`, its registration, bUnit tests, `wireframes.md`, the manual tests and a User Guide line | 1 |
 
 Slices 3 and 4 touch different files and can run in parallel.
+
+## 9. One Task In Progress per person (added 2026-11-19)
+
+The owner decided question D after the slices above shipped (PR 694): **each person has at most one Task In
+Progress.** Decision record: [ADR-0102](adr/0102-a-person-has-at-most-one-task-in-progress.md). TaskOrder itself does
+not change: `next_task` already tells an Agent to finish its started Task first. This makes it a rule.
+
+### 9.1 The rule
+
+| | Decision |
+| --- | --- |
+| Gate | A new gate, `one-in-progress-per-assignee` (`GateId.OneInProgressPerAssignee`, display name "One In Progress per assignee"), enforced in `ProcessGateService.CheckTaskChange` like the others |
+| What counts | Only Tasks whose status is **In Progress**, not in `_closed/`, in **any** Team. Needs You does not count: that Task waits on the Human, not on its assignee |
+| Who | Every assignee: each Agent and the Human. An unassigned Task is never limited |
+| When it refuses | A change that would leave an assignee with two In Progress Tasks: a move into In Progress; giving an In Progress Task to someone who already has one; creating a Task as In Progress. A move out of In Progress, or any change that leaves the count at one, always passes. |
+| Refusal text | `Gate one-in-progress-per-assignee: <assignee> already has <id> "<title>" In Progress. Finish it or move it out of In Progress before starting another.` The words live where the other gates' refusal texts live, so the gate test style applies |
+| Override | As every gate: the Human can override one move, and can switch the gate off for a Team in the Process tab |
+| Default | Listed in the `gates:` of every one of the 29 built-in processes, with a Gates bullet worded like the refusal, and each process's template minor version bumped |
+| Which Team's gates | The Team of the Task being changed (the same loop over the current and candidate Team that the other gates use) |
+
+What Huddle itself does is not limited: its own status moves (`MoveReadyToNeedsYou`) only leave In Progress.
+
+### 9.2 Where Agents learn it
+
+- `Playbooks/HuddleRules/member.md` (the read-only list of what the code enforces) gains one bullet: "You have at most
+  one Task In Progress. Finish it, or move it to Needs You or back to To Do, before you start another." Regenerate
+  the prompt defaults and goldens it reaches.
+- The `next_task` Started line ("Finish it before you start another") already says the same; leave it.
+
+### 9.3 Tests that must exist
+
+| Area | Pins |
+| --- | --- |
+| Gate | Refuses a second move into In Progress for the same assignee, naming the first Task exactly; passes when the other Task is Needs You, Done or closed; counts across Teams; passes for an unassigned Task; refuses reassigning an In Progress Task to someone who has one; refuses creating a Task as In Progress for such an assignee; never refuses a move out of In Progress; the Human's override passes; off when the Team's `_team.md` does not list it |
+| Process files | Every built-in process lists the gate and its bullet (extend the slice 2 test) |
+| Prompts | The Huddle rules bullet reaches the member prompt (goldens) |
+| Manual | `TASKORDER-05` in [tasks.md](engineering/manual-tests/tasks.md): an Agent with one Task In Progress is asked to start a second, is refused naming the first, and starts it once the first is Done |
+
+## 10. One Task In Progress per Project (proposed 2026-11-19)
+
+Decision record: [ADR-0103](adr/0103-one-task-in-progress-per-project-is-a-team-setting-a-project-can-override.md). A Team can
+ask for its Projects to be worked one Task at a time, and a Project can differ from its Team. TaskOrder's algorithm does
+not change; this adds a refusal and teaches `next_task` and the panel about it.
+
+### 10.1 The rule
+
+| | Decision |
+| --- | --- |
+| Setting | One key, `oneInProgressPerProject`, in two files. `Teams/<Team>/_team.md`: `'on'` or `'off'`, absent is `off`. `Teams/<Team>/<Project>/_project.md`: `'on'`, `'off'`, or absent for inherit |
+| Effective rule | `EffectiveRule(team, project)`: the Project's value when present, else the Team's. A Task with no Project (`TaskLocation.Project is null`) uses the Team's |
+| Group | The set of In Progress Tasks the rule counts: same Team and same Project, outside `_closed/`. Tasks with no Project form one group per Team. Needs You does not count |
+| Refuses | A move into In Progress, a move of an In Progress Task to another Project, a create as In Progress, when the group already has another In Progress Task and the effective rule is `on`. A move out of In Progress, or any change that leaves the count at one, always passes |
+| Refusal text | `One In Progress per Project: <id> "<title>" is already In Progress in <Project or the Team>. The <Project or Team> setting asks for one at a time. Finish it or move it out of In Progress before starting another.` The words live where the other refusal texts live |
+| Override | As every refusal, the Human can override one move |
+| Where it runs | Beside the per-person check in `ProcessGateService.CheckTaskChange`, but it is **not** a `GateId` and is not in `gates:`. Both checks run; the first refusal wins |
+| Team Process tab | A toggle, "One Task at a time in each Project", with the existing Team save path. Writes the Team's key |
+| Project Process tab | A three-way control, Inherit, One at a time, Parallel. The hint under Inherit shows what it resolves to: "Inherit (Team: One at a time)". Writes or removes the Project's key |
+
+### 10.2 Reading and writing the setting
+
+- `TeamFile` and `ProjectFile` each gain an optional tri-state value. `ProjectFile` already keeps unknown frontmatter lines;
+  the new key is a known one, so a rewrite keeps it and an absent one is never written (a Project nobody changed keeps no
+  `_project.md`, as ADR-0083 requires).
+- One small pure function resolves the effective rule from the two values. The gate, `next_task` and the panel all call it;
+  nobody re-derives it.
+
+### 10.3 Surfaces that follow the rule
+
+- **`next_task` and the Task order panel:** within a group whose rule is `on`, only the first startable Task counts
+  toward "can start now" and carries the Next tag. The rest keep their place in the order and show the reason
+  ("waits for PLAT-0002 in API v2"). Groups whose rule is `off` behave as today.
+- **Agents:** `Playbooks/HuddleRules/member.md` gains a conditional bullet only if the rule is on for the Team; regenerate the
+  prompt defaults and goldens it reaches. The refusal text is what an Agent meets otherwise.
+
+### 10.4 Tests that must exist
+
+| Area | Pins |
+| --- | --- |
+| Resolution | Project `on` beats Team `off`; Project `off` beats Team `on`; absent inherits; a Task with no Project uses the Team; an unreadable value counts as absent |
+| Gate | Refuses a second In Progress in one Project naming the first and which level set the rule; passes in another Project of the same Team; no-Project Tasks form their own group; passes when the other Task is Needs You, Done or closed; moving a Task into a Project that is full refuses; never refuses a move out; the Human's override passes; off when nothing sets it |
+| Files | `_team.md` and `_project.md` round-trip the key; a Project with no change writes no file; hand-edited lines survive |
+| Panel and `next_task` | With the rule on, exactly one Task per group is Next and counted; with it off, today's result |
+| Components | The Team toggle and the Project three-way control write the right value and the hint resolves Inherit (bUnit) |
+| Manual | `TASKORDER-06` in [tasks.md](engineering/manual-tests/tasks.md): Team `on`, two Tasks in one Project, the second is refused naming the first; a Project set to Parallel accepts both |
+
+### 10.5 Slices
+
+| Slice | Content | Needs |
+| --- | --- | --- |
+| 1 | **Core:** the two file keys, the resolver, the refusal in `ProcessGateService`, tests | none |
+| 2 | **Surfaces:** `next_task`, the panel, the Playbook bullet, prompt defaults and goldens | 1 |
+| 3 | **Windows:** the Team toggle, the Project control, `wireframes.md`, the User Guide line and `TASKORDER-06` | 1 |
+
+Slices 2 and 3 touch different files and can run in parallel.

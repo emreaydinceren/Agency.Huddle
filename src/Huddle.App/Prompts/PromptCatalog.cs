@@ -2449,6 +2449,19 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "tool.nextTask.waitGroup",
+            Label: "next_task, waiting for one at a time",
+            HelperText:
+                "The reason for a Task that could start but whose Project admits one In Progress Task at a time. {{id}} and {{title}} name it; {{holder}} is the Task it waits for; {{place}} is empty, or the Project as ' in <Project>'.",
+            Default:
+                """
+                {{id}} "{{title}}" waits for {{holder}}{{place}}; only one Task there can be In Progress at a time.
+                """,
+            Placeholders: ["{{id}}", "{{title}}", "{{holder}}", "{{place}}"],
+            RequiredPlaceholders: ["{{id}}", "{{holder}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "tool.nextTask.refusalNext",
             Label: "update_task refusal, next startable Task",
             HelperText:
