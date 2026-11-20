@@ -16,8 +16,11 @@
     @* The Needs You level (ADR-0088) replaced the accept-before-merge switch: it is the Team's one standing answer to what waits for the Human. *@
     <section class="process-tab-level" aria-label="Needs You level">
         <div class="group-label">Needs You level</div>
-        <NeedsYouLevelControl Team="@this.Team" />
-        <MudText Typo="Typo.caption" Class="process-tab-gate-note">A merge into main and every push that Huddle sees in an Agent's command wait for your Accept. The level above decides which merges wait.</MudText>
+        <NeedsYouLevelControl Team="@this.Team">
+            <BeforeLimits>
+                <MudText Typo="Typo.caption" Class="process-tab-gate-note">A merge into main and every push that Huddle sees in an Agent's command wait for your Accept. The level above decides which merges wait.</MudText>
+            </BeforeLimits>
+        </NeedsYouLevelControl>
     </section>
     @* ADR-0103: the Team's answer to "one Task In Progress at a time in each Project"; a Project can override it from its own page. *@
     <section class="process-tab-one-in-progress" aria-label="Tasks in a Project">

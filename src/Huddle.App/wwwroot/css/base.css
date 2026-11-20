@@ -676,6 +676,11 @@ b {
 .page-header-subtitle,
 .page-lead,
 .empty-state,
+.playbook-rules p,
+.playbook-rules li,
+.process-tab-gate-note,
+.needs-you-level-limits,
+.spending-overlap-note,
 .mud-input-helper-text {
     max-width: 75ch;
 }
