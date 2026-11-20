@@ -488,12 +488,12 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 
 | Entity | Icon |
 | --- | --- |
-| Room (chat) | `Filled.Chat` |
+| Room (chat) | `ActionIcons.Chat` (two outlined bubbles), the sidebar's glyph, in every Feed chip, meta line, preview and Search result |
 | Team | `Filled.Group` (the old Agents page's icon, since 2026-11-18) |
 | Project | `Filled.LibraryBooks`, for nothing else |
 | A Team's members (the Agents tab, the Members panel) | `Filled.Person` |
 | Tasks | `Outlined.TaskAlt` |
-| Library | `Filled.MenuBook` |
+| Library | `Outlined.MenuBook`, in the Activity bar, Library Tabs and Settings › Library |
 | A folder, including a Library root | `Outlined.Folder` |
 | A note or document | `Filled.Description` |
 | Settings | `Filled.Settings` |

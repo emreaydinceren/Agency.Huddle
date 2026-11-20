@@ -12,7 +12,7 @@
 <SearchCardShell Archived="this.Hit.IsArchived" AccessibleName="@this.AccessibleName"
                  Meta="@(this.Meta.Length > 0 ? this.Plain(this.Meta) : null)"
                  Snippet="@(this.Hit.Snippet is { } snippet ? this.Highlighted(snippet) : null)">
-    <Icon><MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Small" /></Icon>
+    <Icon><MudIcon Icon="@ActionIcons.Chat" Size="Size.Small" /></Icon>
     <Title><SearchHighlight Text="@this.Hit.Title" Term="@this.Phrase" /></Title>
 </SearchCardShell>
 

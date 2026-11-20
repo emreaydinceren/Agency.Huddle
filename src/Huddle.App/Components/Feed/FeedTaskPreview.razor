@@ -58,7 +58,7 @@
             <PropertyRow Label="Room">
                 <span @onclick:stopPropagation="true">
                     <NavTabLink Href="@("/rooms/" + room.Id)" TabTitle="@room.Name" Match="NavLinkMatch.All" Class="feed-preview-room">
-                        <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /> @room.Name
+                        <MudIcon Icon="@ActionIcons.Chat" Size="Size.Small" /> @room.Name
                     </NavTabLink>
                 </span>
             </PropertyRow>
