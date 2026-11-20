@@ -26,7 +26,7 @@
     {
         FeedSegmentKind.Strong => @<strong>@segment.Text</strong>,
         FeedSegmentKind.Task => this.TaskChip(segment),
-        FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, Icons.Material.Filled.ChatBubbleOutline),
+        FeedSegmentKind.Room => this.LinkChip("feed-chip-room", "/rooms/" + segment.TargetId, segment.Text, ActionIcons.Chat),
         FeedSegmentKind.Document => this.DocumentChip(segment),
         FeedSegmentKind.Helper => this.LinkChip("feed-chip-helper", FeedTarget.HelperAddress(segment.TargetId ?? string.Empty), segment.Text, Icons.Material.Outlined.Psychology),
         FeedSegmentKind.Device => this.LinkChip("feed-chip-device", FeedTarget.DevicesAddress, segment.Text, Icons.Material.Outlined.Devices),
@@ -40,7 +40,7 @@
                 <TaskStateDot State="state" />
                 @(" ")
             }
-            <span class="feed-chip-id">#@segment.TargetId</span>
+            <span class="feed-chip-id">@segment.TargetId</span>
             @(" ")
             <span class="feed-chip-title">@segment.Text</span>
         </NavTabLink>
