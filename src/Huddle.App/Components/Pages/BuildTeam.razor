@@ -95,7 +95,7 @@
                               Roles="@RoleCount(type)"
                               MetaText="@(IsBlank(type) ? "You decide everything" : null)"
                               Selected="@string.Equals(type.Id, this.selected?.Id, StringComparison.Ordinal)"
-                              Owned="@this.Owned(type.Id)"
+                              Owned="@(!this.EditMode && this.Owned(type.Id))"
                               OnPick="this.Pick" />
             }
         </div>
@@ -116,8 +116,8 @@
                     <TextField Label="Team name" Immediate="true" Disabled="this.EditMode"
                                   Value="@this.name" ValueChanged="this.OnNameChanged"
                                   Error="@(this.NameProblem is not null)" ErrorText="@this.NameProblem" Class="build-team-name" />
-                    <TextField Shape="TextFieldShape.LongText" Label="What it&#8217;s for" Immediate="true" Value="@this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
-                    <TextField Label="@LibraryFolderLabel" Immediate="true"
+                    <TextField Shape="TextFieldShape.LongText" Label="What it&#8217;s for" Placeholder="Add a line about this Team…" Immediate="true" Value="@this.purpose" ValueChanged="this.OnPurposeChanged" Class="build-team-purpose" />
+                    <TextField Label="@LibraryFolderLabel" Placeholder="None" Immediate="true"
                                   Value="@this.workspace" ValueChanged="this.OnWorkspaceChanged" EndIcon="@(this.RemoteAccess.IsConfigured ? null : Icons.Material.Outlined.Folder)"
                                   EndIconLabel="Browse for library folder" OnEndIconClick="this.BrowseAsync"
                                   Error="@(this.WorkspaceProblem is not null)" ErrorText="@this.WorkspaceProblem" Class="build-team-workspace" />
