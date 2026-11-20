@@ -109,7 +109,7 @@ public sealed class NewChatTests
         Assert.Equal($"rooms/{room.Id}", navigation.ToBaseRelativePath(navigation.Uri));
     }
 
-    /// <summary>T7: without a Team there is no heading, the "New room" link opens the panel, and Start creates the root Room.</summary>
+    /// <summary>T7: without a Team the panel is headed "New room" once the "New room" link opens it, and Start creates the root Room (#720).</summary>
     [Fact]
     public async Task WithoutTeam_Start_CreatesARootRoom()
     {
@@ -120,6 +120,7 @@ public sealed class NewChatTests
         Assert.Empty(cut.FindAll(".new-chat-heading"));
 
         await cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").ClickAsync());
+        Assert.Equal("New room", cut.Find(".new-chat-heading").TextContent.Trim());
         IElement nova = cut.FindAll(".new-chat-agents input[type=checkbox]")[0];
         await cut.InvokeAsync(() => nova.ChangeAsync(new ChangeEventArgs { Value = true }));
         await cut.InvokeAsync(() => cut.Find(".new-chat-start").ClickAsync());

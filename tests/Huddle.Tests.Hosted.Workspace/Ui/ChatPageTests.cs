@@ -269,6 +269,25 @@ public sealed class ChatPageTests
         Assert.NotNull(control.QuerySelector("input[aria-label=\"Room name\"]"));
     }
 
+    /// <summary>A Room with no Agent member (a Job's Room) reads "Just you", has no "Group" chip, and its Composer placeholder does not repeat the name's leading emoji (#718).</summary>
+    [Fact]
+    public async Task ChatPage_RoomWithNoAgents_SaysJustYou_HasNoGroupChip_AndNoEmojiInThePlaceholder()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(60));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, _, _) = ChatPageTests.Services(factory);
+        Room room = await directory.CreateRoomAsync("⏰ Daily plan", [KnownIds.Human], null, false, ct: ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        cut.WaitForAssertion(() => Assert.Equal("Just you", cut.Find(".room-members-label").TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".room-kind-chip"));
+        Assert.Equal("Message Daily plan… (/invite @Agent)", cut.Find("textarea").GetAttribute("placeholder"));
+    }
+
     /// <summary>T10a: a Team's Team Room is named after its Team, so its header offers no Rename pencil.</summary>
     [Fact]
     public async Task ChatPage_RoomHeader_TeamRoom_HasNoRenamePencil()

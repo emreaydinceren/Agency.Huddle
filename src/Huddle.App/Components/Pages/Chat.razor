@@ -49,7 +49,10 @@ else
                         <TeamAvatar Team="@roomTeam" Avatar="this.TeamCatalog.Find(roomTeam)?.Avatar ?? Avatar.None" Size="Size.Small" Class="avatar-transcript room-team-avatar" />
                     }
                     @* The Room's kind as a pill, drawn in every Theme (shell.css); a style pack may restyle it (ADR-0057). *@
-                    <span class="room-kind-chip">@this.RoomKind</span>
+                    @if (this.RoomKind is { } roomKind)
+                    {
+                        <span class="room-kind-chip">@roomKind</span>
+                    }
                     @if (!this.isRenaming && !this.isTeamRoom)
                     {
                         <ActionIconButton Icon="@Icons.Material.Filled.Edit" Label="Rename room" Tooltip="Rename" OnClick="this.BeginRename" />
@@ -75,7 +78,7 @@ else
                                 <MudAvatar Size="Size.Small" Color="Color.Default" Class="room-members-more" aria-label="@($"{Plural.Of(more, "more member", "more members")}")">+@more</MudAvatar>
                             }
                         </MudAvatarGroup>
-                        <MudText Typo="Typo.caption" Class="room-members-label">@Plural.Of(agentMembers.Count, "Agent", "Agents") + you</MudText>
+                        <MudText Typo="Typo.caption" Class="room-members-label">@(agentMembers.Count == 0 ? "Just you" : Plural.Of(agentMembers.Count, "Agent", "Agents") + " + you")</MudText>
                         @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
                         <InviteAgent RoomId="@this.room.Id" RoomName="@this.room.Name" />
                     </MudStack>
@@ -345,10 +348,11 @@ else
     /// <summary>True when the shown Room is its Team's Team Room, which is named after the Team and so has no Rename pencil.</summary>
     private bool isTeamRoom;
 
-    /// <summary>The Room's kind as its header chip names it: its Team's Team Room, a one-to-one with one Agent, or a group.</summary>
-    private string RoomKind => (this.isTeamRoom, this.members.Count(static member => member.Kind == UserKind.Agent)) switch
+    /// <summary>The Room's kind as its header chip names it: its Team's Team Room, a one-to-one with one Agent, or a group; <see langword="null"/> for a Room with no Agent (a Job's Room), which is no group.</summary>
+    private string? RoomKind => (this.isTeamRoom, this.members.Count(static member => member.Kind == UserKind.Agent)) switch
     {
         (true, _) => "Team",
+        (false, 0) => null,
         (false, 1) => "1:1",
         _ => "Group",
     };
