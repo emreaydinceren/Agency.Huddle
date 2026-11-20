@@ -65,7 +65,7 @@
     {
         @* The comment box: independent of the form's pending edits, so it never saves or discards them. *@
         <div class="task-timeline-comment-box">
-            <TextField Shape="TextFieldShape.Markdown" Label="Add a comment" Immediate="true"
+            <TextField Shape="TextFieldShape.Markdown" Label="Add a comment" HelperText="A comment wakes only the Agents you @@-mention." Immediate="true"
                           Value="@this.commentText" ValueChanged="this.OnCommentChanged"
                           Error="@(this.commentError is not null)" ErrorText="@this.commentError" Class="task-timeline-comment-field" />
             <div class="task-timeline-comment-actions">

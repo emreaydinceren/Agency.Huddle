@@ -934,6 +934,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         return names;
     }
 
+    /// <summary>Whether Tasks and wake-ups are both on right now, read live from the same options <see cref="ResolveCommentMentionsAsync"/> reads.</summary>
+    internal bool WakesEnabled => this.teamOptions.Tasks.Enabled && this.teamOptions.Tasks.WakeEnabled;
+
     /// <summary>
     /// The Agents a comment on <paramref name="task"/> would wake after the guards (smart wakes spec 3.3): the registered Personas it Mentions by Name or Alias,
     /// without the author or the Human, and without the <c>@all</c> expansion. Empty while Tasks or wake-ups are off. The Task's wake budget is a delivery

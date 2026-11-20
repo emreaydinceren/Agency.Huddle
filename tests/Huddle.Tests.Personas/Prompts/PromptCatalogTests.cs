@@ -970,7 +970,7 @@ public sealed partial class PromptCatalogTests
         const string overriddenText = "Leaves a remark on a Task.";
         store.Save("tool.addComment.description", overriddenText);
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        AddCommentTool tool = new(harness.Service, harness.Store, harness.Directory, "caller-id", store);
+        AddCommentTool tool = new(harness.Service, harness.Store, harness.Triggers, harness.Directory, "caller-id", store);
 
         Assert.Contains("use add_evidence instead", PromptCatalog.Get("tool.addComment.description").Default, StringComparison.Ordinal); // contains-ok: pins the prompt term an Agent reads
         Assert.Equal(overriddenText, tool.Description);
