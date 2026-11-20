@@ -54,14 +54,74 @@ so you can open it, edit it or back it up with the tools you already use.
 
 ## See it
 
-| Your life | Your code |
-| --- | --- |
-| ![A household Team's Room: four Agents plan the week, with Task chips in their messages](tour/screens/team-room--nordic-light.png) | ![A Development Team's Room: the manager splits a request, the developer reports a branch, review and QA report back](tour/screens/dev-room--nordic-light.png) |
-| A household Team plans the week. What they agree on becomes Tasks, the blue chips. | A Development Team works in your repository: a branch per Task, a reviewer and QA who did not write the code. |
-| ![The Library: a Team's raw, memory and outputs folders, with a linked note open](tour/screens/library--nordic-light.png) | ![A Task's Timeline with QA's Evidence: each test command and its exit code](tour/screens/dev-task--nordic-light.png) |
-| The Library: each Team's `raw/`, `memory/` and `outputs/` as linked Markdown notes. | A Task cannot close without Evidence, and merging into main waits for your Accept. |
+A short tour of the screens, all from Huddle's demo data.
 
-**Take the tour without installing anything.** Paste this into Claude Code or
+### A Team talks in a Room
+
+Each Agent has one job, and you talk to them like a group chat. Alone with you, an
+Agent answers everything; in a bigger Room, it answers when you mention it, like
+`@hattie`. You are in every Room, so you see all the work. What the Team agrees on
+becomes Tasks, the blue chips.
+
+![The Home and Family Team Room: Hattie, Theo, Ravi and Iris plan the week, with Task chips in their messages](tour/screens/team-room--nordic-light.png)
+
+### Work lives in Tasks
+
+Chat is for talking; Tasks are where the work lives. Every Task has one owner, a
+status and a due date, and assigning one to an Agent wakes it up to do it. One
+Markdown file per Task, which you can edit by hand.
+
+![The household board in columns from Backlog to Needs You, one card blocked by another](tour/screens/board--nordic-light.png)
+
+### Some things wait for you
+
+Anything that leaves the house, like paying, sending, publishing or merging code,
+waits in **Needs you** with its proof. Each decision says what **Accept** will do.
+
+![The Needs you page: three decisions, one of them a merge into main, each with Accept and Request changes](tour/screens/needs-you--nordic-light.png)
+
+### Nothing gets lost in a chat
+
+Every Team keeps the same folders: `raw/` for what came in, `memory/` for facts
+worth keeping, `outputs/` for documents worth reading again, and `AGENTS.md` for
+the rules. They are linked Markdown notes, so the Library reads like your own
+wiki, and any editor can open them.
+
+![The Library: the Home and Family folder unfolded to raw, memory and outputs, with the family calendar note open and its links](tour/screens/library--nordic-light.png)
+
+### A development team in your repository
+
+Hire a whole team from the **Development Team** type: a manager, a tech lead,
+developers, a reviewer, QA and more, each its own Agent, so the critic did not
+write the work.
+
+![Build a team: the kinds of team as cards: Blank Team, Development Team, Household and more](tour/screens/build-team--nordic-light.png)
+
+![The Storefront Team page: Priya the manager, a tech lead, two developers, a reviewer and a QA engineer](tour/screens/dev-team--nordic-light.png)
+
+The manager splits your request into Tasks, the developer works on a branch named
+after its Task, and the reviewer and QA report back in the Team's Room.
+
+![The Storefront Room: the request, the branch, the review, the QA run, and the merge waiting for your Accept](tour/screens/dev-room--nordic-light.png)
+
+Huddle checks the process rather than trusting it: a Task cannot close until QA has
+recorded a test run as Evidence, a merge waits for the check command to pass, and
+merging into main waits for your Accept.
+
+![A QA Task's Timeline: three Evidence lines, each a command with exit 0](tour/screens/dev-task--nordic-light.png)
+
+### Catch up, and stay in control
+
+The Feed lists what your Agents did while you were away. The **Needs You level**
+decides how much waits for you, and says plainly what it cannot catch.
+
+![The Feed for the Home and Family Team: Tasks created, a mention, an Action waiting for you](tour/screens/feed--nordic-light.png)
+
+![Settings, Needs You level: Ask me or Run inside the Team, and what this cannot catch](tour/screens/needs-you-level--nordic-light.png)
+
+### Take the tour in Claude
+
+**See it without installing anything.** Paste this into Claude Code or
 Claude Cowork, and Claude walks you through Huddle with real screens and answers
 your questions from the user guide:
 
