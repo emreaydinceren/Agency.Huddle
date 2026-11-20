@@ -139,8 +139,10 @@ public sealed class SeedAvatarTests
     }
 
     /// <summary>
-    /// SEED-AV-5: the Team colours of <c>software-co</c> are distinct palette colours, one per colour family, and no two are closer
-    /// than ΔE 50 in CIE L*a*b*. The old hue-only spread put its closest pair (violet beside magenta) at ΔE 26, which reads as one colour.
+    /// SEED-AV-5: the Team colours of <c>software-co</c> are distinct palette colours, the first six one per colour family, and no two
+    /// are closer than ΔE 49 in CIE L*a*b*. The families are 50 apart; the palette holds no seventh colour that far from all six, and
+    /// its farthest (ΔE 49.3) is the seventh Team's. The old hue-only spread put its closest pair (violet beside magenta) at ΔE 26,
+    /// which reads as one colour.
     /// </summary>
     [Fact]
     public void Spread_KeepsTeamColoursApartAsTheEyeSeesThem()
@@ -149,11 +151,11 @@ public sealed class SeedAvatarTests
 
         IReadOnlyList<string> colours = AvatarWriter.Spread(teams);
 
-        Assert.Equal(AvatarWriter.Families.Take(teams), colours);
+        Assert.Equal(AvatarWriter.Families.Take(teams), colours.Take(AvatarWriter.Families.Count));
         MudColor[] parsed = [.. colours.Select(static hex => new MudColor(hex))];
         Assert.All(
             parsed.SelectMany((first, i) => parsed.Skip(i + 1).Select(second => AvatarWriter.Difference(first, second))),
-            distance => Assert.True(distance >= 50, $"Two Team colours are only ΔE {distance:0.0} apart."));
+            distance => Assert.True(distance >= 49, $"Two Team colours are only ΔE {distance:0.0} apart."));
     }
 
     /// <summary>

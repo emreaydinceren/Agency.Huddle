@@ -157,6 +157,24 @@ internal sealed class SoftwareCoScenario : IScenario
                 { "label": "Done", "states": ["Done"] },
                 { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] }
               ]
+            },
+            {
+              "id": "storefront-board",
+              "name": "Storefront board",
+              "kind": "kanban",
+              "scope": "active",
+              "fields": ["priority", "assignee", "due_date"],
+              "filter": { "teams": ["Storefront"] },
+              "grouping": ["project"],
+              "sort": [],
+              "columns": [
+                { "label": "Backlog", "states": ["Backlog"] },
+                { "label": "To Do", "states": ["To Do"] },
+                { "label": "In Progress", "states": ["In Progress"] },
+                { "label": "Needs You", "states": ["Needs You"] },
+                { "label": "Done", "states": ["Done"] },
+                { "label": "Won't do", "states": ["Cancelled", "Duplicate", "Rejected"] }
+              ]
             }
           ]
         }
@@ -166,26 +184,26 @@ internal sealed class SoftwareCoScenario : IScenario
     public string Name => "software-co";
 
     /// <inheritdoc/>
-    public string Description => "A software company and a family: Platform, Growth, Support and Home and Family (12 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records, and an archived Team, Project and chats to restore.";
+    public string Description => "A software company and a family: Platform, Growth, Support, Home and Family and the agent development Team Storefront (14 Projects, shared Agents, Team Rooms, Sprints and Requests), plus empty-state Teams Sandbox and Records, and an archived Team, Project and chats to restore.";
 
     /// <inheritdoc/>
     public SeedPlan Build(DateOnly today) => new()
     {
         Scenario = this.Name,
         HumanName = "You",
-        Agents = [.. SoftwareCoAgents.All, .. SoftwareCoHome.Agents],
+        Agents = [.. SoftwareCoAgents.All, .. SoftwareCoHome.Agents, .. SoftwareCoStorefront.Agents],
         Skills = SoftwareCoAgents.Skills,
-        Teams = [.. SoftwareCoLibrary.Teams, SoftwareCoHome.Definition],
+        Teams = [.. SoftwareCoLibrary.Teams, SoftwareCoHome.Definition, SoftwareCoStorefront.Definition],
         ArchivedTeams = SoftwareCoArchive.Teams,
-        Tasks = [.. SoftwareCoTasks.All, .. SoftwareCoHome.Tasks],
-        Files = [.. SoftwareCoLibrary.Files, .. SoftwareCoNotes.Documents, .. SoftwareCoNotes.Memory, .. SoftwareCoHomeNotes.Documents, .. SoftwareCoHomeNotes.Memory, .. SoftwareCoArchive.Files],
-        Rooms = [.. SoftwareCoRooms.All, .. SoftwareCoHome.Rooms, .. SoftwareCoArchive.Rooms],
+        Tasks = [.. SoftwareCoTasks.All, .. SoftwareCoHome.Tasks, .. SoftwareCoStorefront.Tasks],
+        Files = [.. SoftwareCoLibrary.Files, .. SoftwareCoNotes.Documents, .. SoftwareCoNotes.Memory, .. SoftwareCoHomeNotes.Documents, .. SoftwareCoHomeNotes.Memory, .. SoftwareCoStorefrontNotes.Documents, .. SoftwareCoStorefrontNotes.Memory, .. SoftwareCoArchive.Files],
+        Rooms = [.. SoftwareCoRooms.All, .. SoftwareCoHome.Rooms, .. SoftwareCoStorefront.Rooms, .. SoftwareCoArchive.Rooms],
         BinaryFiles = SoftwareCoLibrary.BinaryFiles,
         Uploads = SoftwareCoLibrary.Uploads,
         TaskUploads = SoftwareCoLibrary.TaskUploads,
         DocHistory = SoftwareCoLibrary.DocHistory,
         Sprints = SoftwareCoTasks.Sprints,
-        Feed = [.. SoftwareCoFeed.All, .. SoftwareCoHome.Feed],
+        Feed = [.. SoftwareCoFeed.All, .. SoftwareCoHome.Feed, .. SoftwareCoStorefront.Feed],
         Jobs = SoftwareCoJobs.All(today),
         JobProblems = SoftwareCoJobs.Problems,
         ViewsJson = ViewsJson,

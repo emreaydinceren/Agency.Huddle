@@ -51,6 +51,7 @@ internal static class SeedRunner
     private static void WriteFolders(SeedPlan plan, string dataDir, DatabaseResult ids)
     {
         TeamFileWriter.Write(plan, dataDir, ids.RoomIds);
+        WorkspaceWriter.Write(plan, dataDir);
         foreach (SeedTeam team in plan.Teams)
         {
             foreach (string project in team.Projects)

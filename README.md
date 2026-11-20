@@ -3,41 +3,178 @@
 **A team of AI specialists that works for you, and a second brain that remembers
 everything they learn, kept as plain files on your own machine.**
 
-You talk to your Agents in chat, the way you would talk to colleagues. Each one has
-one job and knows only its part of your life: school, meals, the house, your work.
-What matters in a conversation does not stay in the scrollback. It is filed as a
-Task, a remembered fact or a document, so the next Agent who needs it finds it
-without you repeating yourself.
+![Licence: Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)
+![Built on .NET 11](https://img.shields.io/badge/.NET-11-512BD4)
+![Runs on Windows and Apple Silicon macOS](https://img.shields.io/badge/runs%20on-Windows%20%C2%B7%20macOS-555)
 
-```text
-#  home · kids-and-school                                   You, Hattie, Iris
+👀 [See it](#see-it) · 🧭 [Take the tour](#take-the-tour) · 🚀 [Try it](#try-it) · 🛠️ [Build it from source](#build-it-from-source)
 
-   Hattie   Three school emails tonight. Filed: the museum trip is next
-            Thursday, Ms Patel is Mia's new teacher. One needs you:
-            HOME-0001 Sign the consent form, due tomorrow. It waits for you.
-   Iris     The trip is the day you fly to the offsite. I've put the
-            pick-up on Sam's list instead. Your call.
-   You      Good. Sam does pick-up.
-   Hattie   Noted. This week's school feed is in outputs/School-Feed.md.
+One assistant that remembers everything about you. Sounds ideal, right? Here is
+one week of what it remembers:
+
+```diff
+  Mia is allergic to tree nuts
+  Q3 board deck due Friday
+  Dentist, Tuesday 15:30
+  Boiler service overdue
+- Museum trip next Thursday, consent form due tomorrow
+  Car insurance renews at the end of the month
+  Leo's swimming kit is on Sam's list
+- Flight to the offsite, Thursday morning
+  Ms Patel is Mia's new teacher
 ```
 
-Hattie read the emails. Iris knew about the trip only because Hattie filed it,
-and spotted the clash only because your travel was already on record. Neither
-was told.
+Look at the two red lines. Same Thursday. Nobody noticed, because a pile doesn't
+notice things. And the longer the pile gets, the less any one line matters.
 
-## Two ideas that need each other
+Huddle splits the work instead. You chat with a team of Agents, and each one has
+one job: school, meals, the house, your work. Behind the chat is a **second
+brain**: what matters is filed as a Task, a fact or a document, in the same
+folders for every part of your life. Your Agents read it, so nobody asks you
+twice, and you can read, search and edit it like any notes.
+
+So who notices that the museum trip is on the day you fly? Say three school emails
+arrive one evening. Here's how that would go:
+
+<p align="center">
+  <img src="docs/images/readme/who-notices-room.svg" width="560"
+       alt="Example Room, Kids and school. Hattie: Three school emails tonight. Filed: the museum trip is next Thursday, and Ms Patel is Mia's new teacher. One needs you: HOME-0001, sign the consent form, due tomorrow. Iris: The trip is the day you fly to the offsite. I've put the pick-up on Sam's list instead. Your call. You: Good. Sam does pick-up. Hattie: Noted. This week's school feed is in outputs/School-Feed.md.">
+</p>
+
+Nobody asked Iris to check. Hattie filed the trip, your flight was already on
+record, and Iris put two and two together. That's the whole trick.
+
+Here's a real Team Room, from Huddle's demo data:
+
+![The Home and Family Team Room: Hattie, Theo, Ravi and Iris plan the week, with Task chips in their messages](tour/screens/team-room--nordic-light.png)
+
+> [!TIP]
+> Want to look around before installing anything? [Take the tour](#take-the-tour):
+> read it yourself, or let your own AI assistant walk you through it and answer
+> your questions.
+
+<a id="see-it"></a>
+
+## 👀 See it
+
+> [!NOTE]
+> Every screen here is from Huddle's demo data: a family of four and a small
+> software company.
+
+### Talk to a Team like a group chat
+
+Alone with you, an Agent answers everything. In a bigger Room, it answers when you
+mention it, like `@hattie`. You're in every Room, so you see all the work, even
+the bits nobody asked you about.
+
+### Chat is talk. Tasks are the work
+
+Every Task has one owner, a status and a due date, and assigning one to an Agent
+wakes it up to get on with it. It's one Markdown file per Task, so you can edit it
+by hand.
+
+![The household board in columns from Backlog to Needs You, one card blocked by another](tour/screens/board--nordic-light.png)
+
+### The big stuff waits for you
+
+Anything that leaves the house, like paying, sending, publishing or pushing code,
+waits in **Needs you** with its proof. Each decision says exactly what **Accept**
+will do.
+
+![The Needs you page: three decisions, one of them a merge into main, each with Accept and Request changes](tour/screens/needs-you--nordic-light.png)
+
+### Nothing gets lost in the scrollback
+
+Every Team keeps the same folders: `raw/` for what came in, `memory/` for facts
+worth keeping, `outputs/` for documents worth reading again, and `AGENTS.md` for
+the rules. They're linked Markdown notes, so the Library reads like your own wiki,
+and any editor can open them.
+
+![The Library: the Home and Family folder unfolded to raw, memory and outputs, with the family calendar note open and its links](tour/screens/library--nordic-light.png)
+
+### Catch up over coffee
+
+The Feed lists what your Agents did while you were away, and the bell only rings
+for what needs you.
+
+![The Feed for the Home and Family Team: Tasks created, a mention, an Action waiting for you](tour/screens/feed--nordic-light.png)
+
+<details>
+<summary>And decide how much waits for you</summary>
+
+The **Needs You level** sets how much of a Team's work waits for your Accept, and
+says plainly what it cannot catch.
+
+![Settings, Needs You level: Ask me or Run inside the Team, and what this cannot catch](tour/screens/needs-you-level--nordic-light.png)
+
+</details>
+
+## 💻 A development team in your repository
+
+Hire a whole team from the **Development Team** type: a manager, a tech lead,
+developers, a reviewer, QA and more. Each is its own Agent, so the critic didn't
+write the work.
+
+![The Storefront Team page: Priya the manager, a tech lead, two developers, a reviewer and a QA engineer](tour/screens/dev-team--nordic-light.png)
+
+Huddle checks the process instead of trusting it: a Task can't close until QA has
+recorded a test run as Evidence, a merge waits for the check command to pass, and
+merging into main waits for your Accept.
+
+<details>
+<summary>Follow one request from ask to merge</summary>
+
+Pick the kind of team:
+
+![Build a team: the kinds of team as cards: Blank Team, Development Team, Household and more](tour/screens/build-team--nordic-light.png)
+
+The manager splits your request into Tasks, the developer works on a branch named
+after its Task, and the reviewer and QA report back in the Team's Room:
+
+![The Storefront Room: the request, the branch, the review, the QA run, and the merge waiting for your Accept](tour/screens/dev-room--nordic-light.png)
+
+QA's Evidence on the Task, each command with its exit code:
+
+![A QA Task's Timeline: three Evidence lines, each a command with exit 0](tour/screens/dev-task--nordic-light.png)
+
+</details>
+
+<a id="take-the-tour"></a>
+
+## 🧭 Take the tour
+
+The screens above are a preview. The full tour takes about ten minutes and
+installs nothing. Pick whichever suits you:
+
+| | 📖 Read it yourself | 💬 Ask your AI assistant |
+| --- | --- | --- |
+| **What it is** | One page you scroll from top to bottom | A conversation that shows you around at your pace |
+| **Questions** | Look them up in the user guide | Ask anything along the way; it answers from the user guide |
+| **At the end** | A table of ready-made teams to start from | It sketches a first team for whatever is on your plate |
+| **You need** | Nothing but this browser tab | An AI assistant that can run commands and read files |
+| **Start** | [Open the walkthrough](tour/walkthrough.md) | Paste the prompt below |
+
+To take it with your assistant, paste this into Claude Code, Claude Cowork, Codex,
+GitHub Copilot or any assistant like them:
+
+```text
+Give me a tour of Agency.Huddle. Fetch only the tour/ folder of
+https://github.com/emreaydinceren/Agency.Huddle (a shallow, sparse git clone; if git isn't
+available, download the repository ZIP) and follow tour/TOUR.md.
+```
+
+## 🧠 Why it works: two ideas that need each other
 
 **Agent teams without a second brain have amnesia.** Every specialist starts from
 zero, you brief them again each time, and what they produce disappears into chat.
 
-**A second brain without agents is a filing cabinet you maintain yourself.**
-Capturing, filing, linking and summarising is work, and it is the work that
-usually stops happening.
+**A second brain without agents is a filing cabinet, and you're the filing clerk.**
+Unpaid. Capturing, filing and linking is work, and it's the work that usually
+stops happening.
 
-In Huddle they are one design. A specialist is useful because its context is
-small and relevant, and a second brain is useful because it is organised by
-area. **The scope that keeps an Agent focused is the same scope that organises
-what it remembers.** A Team's folder is both its workspace and its memory:
+In Huddle they're one design. **The scope that keeps an Agent focused is the same
+scope that organises what it remembers.** A Team's folder is both its workspace
+and its memory:
 
 ```text
 Teams/Home and Family/
@@ -48,11 +185,14 @@ Teams/Home and Family/
   _tasks/      what needs doing, who owns it, and the proof it was done
 ```
 
-Tasks are where the two halves meet. A Task is remembered like any other fact,
-and it is how Agents hand work to each other and to you. Everything is Markdown,
-so you can open it, edit it or back it up with the tools you already use.
+Tasks are where the two halves meet: remembered like any other fact, and the way
+Agents hand work to each other and to you.
 
-## What it will not do
+## 🛑 What it will not do
+
+> [!IMPORTANT]
+> Anything that leaves the house waits for your Accept. Your Agents get it ready;
+> you make the call.
 
 - **It does not spend your money or sign for you.** An Agent can compare two
   quotes; a Human-gated Task waits in **Needs you** until you accept it.
@@ -64,7 +204,7 @@ so you can open it, edit it or back it up with the tools you already use.
 - **It does not keep your life in someone else's database.** Rooms, Tasks, memory
   and documents are files under your own folders.
 
-## Why it is built this way
+## 🧱 Why it is built this way
 
 Every significant choice has a decision record that says what was chosen, what
 was rejected and why. Four that shape the product:
@@ -80,7 +220,9 @@ Every record is listed in [docs/Index.md](docs/Index.md#4-decisions-adrs). The l
 argument for agents as colleagues rather than a pipeline, and what is still
 unsolved, is in [docs/why-agency-huddle.md](docs/why-agency-huddle.md).
 
-## Try it
+<a id="try-it"></a>
+
+## 🚀 Try it
 
 One command installs it, with no admin rights and nothing installed first. On
 Windows, in a normal PowerShell window:
@@ -89,7 +231,7 @@ Windows, in a normal PowerShell window:
 irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.ps1 | iex
 ```
 
-On macOS, in Terminal:
+On macOS (Apple Silicon), in Terminal:
 
 ```sh
 curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.sh | sh
@@ -97,7 +239,7 @@ curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/downl
 
 It opens in your browser, and the **Chief of Staff** is the first Agent you meet:
 tell it what you want help with and it proposes a Team. Start Huddle later with
-`huddle` and stop it with `huddle stop`. If you are not signed in to Claude yet,
+`huddle` and stop it with `huddle stop`. If you're not signed in to Claude yet,
 the installer prints `claude auth login` for you to run once.
 
 > [!CAUTION]
@@ -105,14 +247,18 @@ the installer prints `claude auth login` for you to run once.
 > your account. The budgets above limit a runaway, but a busy Team still costs
 > more than a single chat.
 
-Run it on your own machine. It has no sign-in of its own, and an Agent's work
-directory is real disk, not a sandbox. Everything deliberately left out is listed
-with its reasoning in [Known limits](docs/engineering/known-limits.md).
+> [!WARNING]
+> Run it on your own machine. It has no sign-in of its own, and an Agent's work
+> directory is real disk, not a sandbox.
 
-[The user guide](docs/Huddle.UserGuide.md) walks through Rooms, Teams, Tasks, the
+Everything deliberately left out is listed with its reasoning in
+[Known limits](docs/engineering/known-limits.md), and
+[the user guide](docs/Huddle.UserGuide.md) walks through Rooms, Teams, Tasks, the
 Library and the Second Brain.
 
-## Build it from source
+<a id="build-it-from-source"></a>
+
+## 🛠️ Build it from source
 
 You need the .NET 11 SDK. For a first run that spends nothing, turn the Agent
 process off, because the development configuration starts one per Agent:
@@ -139,7 +285,7 @@ Start at [docs/Index.md](docs/Index.md), which routes you to the one page that
 owns each answer. [docs/Huddle.EngineeringGuide.md](docs/Huddle.EngineeringGuide.md)
 holds the design of the app.
 
-## How Agents connect
+## 🔌 How Agents connect
 
 The app drives each Agent as a Claude session over the
 [Agent Client Protocol](https://agentclientprotocol.com), through the official
@@ -147,12 +293,17 @@ adapter, which reuses your existing `claude` login, so no API key is needed. Too
 bodies run inside the app, so an Agent can create a Room or a Task without ever
 touching storage directly.
 
+<details>
+<summary>Where it started</summary>
+
 `src/Huddle.Console` is the terminal proof of concept the app grew from: one
 Claude agent driven from C#, with streamed replies and human-in-the-loop
 approvals. What it found about the protocol that its reference does not say is in
 [docs/engineering/acp-agent-guide.md](docs/engineering/acp-agent-guide.md).
 
-## Licence
+</details>
+
+## 📄 Licence
 
 [Apache License 2.0](LICENSE). Use it, fork it, ship it. The licence includes an
 express patent grant, so adopting it leaves no patent question open.

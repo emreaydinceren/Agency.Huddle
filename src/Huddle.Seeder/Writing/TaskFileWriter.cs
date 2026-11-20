@@ -41,31 +41,35 @@ internal static class TaskFileWriter
     internal static IReadOnlyList<TimelineEntry> BuildTimeline(SeedTask task, DateOnly today)
     {
         string worker = task.Assignee ?? task.Creator;
-        List<(string Actor, string Summary)> steps = [(task.Creator, "created")];
+        List<(string Actor, TimelineEntryKind Kind, string Summary)> steps = [(task.Creator, TimelineEntryKind.Event, "created")];
 
         if (task.Assignee is not null)
         {
-            steps.Add((task.Creator, $"assignee: {Empty} → {task.Assignee}"));
+            steps.Add((task.Creator, TimelineEntryKind.Event, $"assignee: {Empty} → {task.Assignee}"));
         }
 
         foreach (string tag in task.Tags)
         {
-            steps.Add((task.Creator, $"tags: +{tag}"));
+            steps.Add((task.Creator, TimelineEntryKind.Event, $"tags: +{tag}"));
         }
 
-        foreach (string change in StatusChanges(task.Status))
+        string[] statusChanges = [.. StatusChanges(task.Status)];
+        for (int index = 0; index < statusChanges.Length; index++)
         {
-            steps.Add((worker, $"status: {change}"));
+            // Entries that come before the last status change (Evidence on a finished Task) are written just ahead of it.
+            if (index == statusChanges.Length - 1)
+            {
+                steps.AddRange(task.ExtraEvents.Where(static e => e.BeforeLastStatus).Select(static e => (e.Actor, e.Kind, e.Summary)));
+            }
+
+            steps.Add((worker, TimelineEntryKind.Event, $"status: {statusChanges[index]}"));
         }
 
-        foreach (SeedTimelineEvent note in task.ExtraEvents)
-        {
-            steps.Add((note.Actor, note.Summary));
-        }
+        steps.AddRange(task.ExtraEvents.Where(e => !e.BeforeLastStatus || statusChanges.Length == 0).Select(static e => (e.Actor, e.Kind, e.Summary)));
 
         if (task.Closed)
         {
-            steps.Add((worker, "closed"));
+            steps.Add((worker, TimelineEntryKind.Event, "closed"));
         }
 
         DateTimeOffset start = At(today, -task.CreatedDaysAgo, "09:00");
@@ -74,7 +78,7 @@ internal static class TaskFileWriter
         for (int i = 0; i < steps.Count; i++)
         {
             DateTimeOffset at = steps.Count == 1 ? start : start + ((end - start) * i / (steps.Count - 1));
-            timeline.Add(new TimelineEntry(new DateTimeOffset(at.Year, at.Month, at.Day, at.Hour, at.Minute, 0, TimeSpan.Zero), steps[i].Actor, TimelineEntryKind.Event, steps[i].Summary));
+            timeline.Add(new TimelineEntry(new DateTimeOffset(at.Year, at.Month, at.Day, at.Hour, at.Minute, 0, TimeSpan.Zero), steps[i].Actor, steps[i].Kind, steps[i].Summary));
         }
 
         return timeline;
@@ -127,6 +131,7 @@ internal static class TaskFileWriter
         AppendIfPresent(text, "start_date", task.StartOffset is { } start ? Date(today, start) : null);
         AppendIfPresent(text, "due_date", task.DueOffset is { } due ? Date(today, due) : null);
         AppendIfPresent(text, "sprint", task.Sprint);
+        AppendIfPresent(text, "action", task.Action is null ? null : Scalar(task.Action));
         if (task.HumanGate)
         {
             text.Append("human_gate: true\n");

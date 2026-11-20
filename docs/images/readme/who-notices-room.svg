@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 472" role="img" aria-labelledby="t d">
+  <title id="t">Example Room: who notices the clash</title>
+  <desc id="d">An illustrated Huddle Room, Kids and school, with Hattie, Iris and you. Hattie: Three school emails tonight. Filed: the museum trip is next Thursday, and Ms Patel is Mia's new teacher. One needs you: HOME-0001, sign the consent form, due tomorrow. Iris: The trip is the day you fly to the offsite. I've put the pick-up on Sam's list instead. Your call. You: Good. Sam does pick-up. Hattie: Noted. This week's school feed is in outputs/School-Feed.md.</desc>
+  <style>
+    .frame { fill: #FBFAF6; stroke: #D9D4C7; }
+    .rule { stroke: #D9D4C7; }
+    .ink { fill: #1F2A2E; }
+    .muted { fill: #666D70; }
+    .pill { fill: none; stroke: #9AA1A3; }
+    .chip { fill: #EEF1F4; stroke: #B8C4D0; }
+    .chiptext { fill: #2F5D8A; }
+    .dot { fill: #3B6EA5; }
+    .badge { fill: #E3E7E9; stroke: #C9CED1; }
+    .ha { fill: #F4B6A6; } .ha-ink { fill: #7A2E1E; }
+    .ir { fill: #CDB4DB; } .ir-ink { fill: #4A2B5E; }
+    .me { fill: #F2C6A0; } .me-ink { fill: #6B3A12; }
+    .ring { stroke: #FBFAF6; stroke-width: 2; }
+    text { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 16px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; font-size: 13px; }
+    .name { font-size: 15px; font-weight: 700; }
+    .meta { font-size: 13px; }
+    .title { font-size: 17px; font-weight: 700; }
+    .initials { font-size: 13px; font-weight: 700; }
+    .pilltext { font-size: 13px; font-weight: 700; letter-spacing: 1px; }
+    @media (prefers-color-scheme: dark) {
+      .frame { fill: #111A2E; stroke: #2A3654; }
+      .rule { stroke: #2A3654; }
+      .ink { fill: #E6EAF2; }
+      .muted { fill: #94A0B8; }
+      .pill { stroke: #5A6684; }
+      .chip { fill: #1B2742; stroke: #3A4A75; }
+      .chiptext { fill: #A9C1FF; }
+      .dot { fill: #22D3EE; }
+      .badge { fill: #1B2742; stroke: #3A4A75; }
+      .ha { fill: #7A2E1E; } .ha-ink { fill: #FFD2C4; }
+      .ir { fill: #4A2B5E; } .ir-ink { fill: #E7D3F2; }
+      .me { fill: #6B3A12; } .me-ink { fill: #FFD9B5; }
+      .ring { stroke: #111A2E; }
+    }
+  </style>
+
+  <rect class="frame" x="1" y="1" width="518" height="470" rx="10" stroke-width="1"/>
+
+  <!-- Header -->
+  <text class="title ink" x="20" y="34">Kids and school</text>
+  <rect class="badge" x="160" y="16" width="28" height="24" rx="4" stroke-width="1"/>
+  <text class="initials ink" x="174" y="33" text-anchor="middle">HF</text>
+  <circle class="ha ring" cx="318" cy="28" r="13"/>
+  <text class="ha-ink" x="318" y="32" text-anchor="middle" font-size="10" font-weight="700">HA</text>
+  <circle class="ir ring" cx="347" cy="28" r="13"/>
+  <text class="ir-ink" x="347" y="32" text-anchor="middle" font-size="10" font-weight="700">IR</text>
+  <circle class="me ring" cx="376" cy="28" r="13"/>
+  <text class="me-ink" x="376" y="32" text-anchor="middle" font-size="10" font-weight="700">ME</text>
+  <rect class="pill" x="410" y="16" width="90" height="24" rx="12" stroke-width="1"/>
+  <text class="pilltext muted" x="455" y="33" text-anchor="middle">EXAMPLE</text>
+  <line class="rule" x1="1" y1="56" x2="519" y2="56" stroke-width="1"/>
+
+  <!-- Row 1: Hattie -->
+  <circle class="ha" cx="38" cy="96" r="18"/>
+  <text class="initials ha-ink" x="38" y="101" text-anchor="middle">HA</text>
+  <text x="68" y="90"><tspan class="name ink">Hattie</tspan><tspan class="meta muted" dx="8">Household Coordinator · 19:40</tspan></text>
+  <text class="ink" x="68" y="114">Three school emails tonight. Filed: the museum</text>
+  <text class="ink" x="68" y="138">trip is next Thursday, and Ms Patel is Mia's</text>
+  <text class="ink" x="68" y="162">new teacher. One needs you:</text>
+  <rect class="chip" x="68" y="171" width="100" height="22" rx="4" stroke-width="1"/>
+  <circle class="dot" cx="80" cy="182" r="3"/>
+  <text class="mono chiptext" x="88" y="187">HOME-0001</text>
+  <text class="ink" x="176" y="187">Sign the consent form, due tomorrow.</text>
+
+  <!-- Row 2: Iris -->
+  <circle class="ir" cx="38" cy="232" r="18"/>
+  <text class="initials ir-ink" x="38" y="237" text-anchor="middle">IR</text>
+  <text x="68" y="226"><tspan class="name ink">Iris</tspan><tspan class="meta muted" dx="8">Family Admin · 19:41</tspan></text>
+  <text class="ink" x="68" y="250">The trip is the day you fly to the offsite.</text>
+  <text class="ink" x="68" y="274">I've put the pick-up on Sam's list instead.</text>
+  <text class="ink" x="68" y="298">Your call.</text>
+
+  <!-- Row 3: You -->
+  <circle class="me" cx="38" cy="342" r="18"/>
+  <text class="initials me-ink" x="38" y="347" text-anchor="middle">ME</text>
+  <text x="68" y="336"><tspan class="name ink">You</tspan><tspan class="meta muted" dx="8">19:44</tspan></text>
+  <text class="ink" x="68" y="360">Good. Sam does pick-up.</text>
+
+  <!-- Row 4: Hattie -->
+  <circle class="ha" cx="38" cy="404" r="18"/>
+  <text class="initials ha-ink" x="38" y="409" text-anchor="middle">HA</text>
+  <text x="68" y="398"><tspan class="name ink">Hattie</tspan><tspan class="meta muted" dx="8">Household Coordinator · 19:44</tspan></text>
+  <text class="ink" x="68" y="422">Noted. This week's school feed is in</text>
+  <rect class="chip" x="68" y="431" width="190" height="22" rx="4" stroke-width="1"/>
+  <text class="mono chiptext" x="78" y="446">outputs/School-Feed.md</text>
+</svg>
