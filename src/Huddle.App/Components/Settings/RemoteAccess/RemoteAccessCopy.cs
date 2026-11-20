@@ -66,6 +66,39 @@ internal static class RemoteAccessCopy
         return "Restart Huddle to apply: " + string.Join(", ", pending.Select(static change => $"{change.Setting} {change.Running} → {change.Stored}"));
     }
 
+    /// <summary>The name a Bind choice goes by on screen; the id is for the settings file.</summary>
+    /// <param name="bind">The bind id, such as <c>loopback</c>.</param>
+    public static string BindLabel(string? bind) => bind switch
+    {
+        "loopback" => "This computer only",
+        "lan" => "Local network",
+        "tailnet" => "Tailscale address",
+        "auto" => "Automatic",
+        "custom" => "Custom address",
+        _ => bind ?? string.Empty,
+    };
+
+    /// <summary>The name an Auth mode choice goes by on screen.</summary>
+    /// <param name="authMode">The auth mode id, such as <c>trusted-proxy</c>.</param>
+    public static string AuthLabel(string? authMode) => authMode switch
+    {
+        "none" => "None",
+        "token" => "Token",
+        "password" => "Password",
+        "trusted-proxy" => "Trusted proxy",
+        _ => authMode ?? string.Empty,
+    };
+
+    /// <summary>The name a Tailscale mode choice goes by on screen.</summary>
+    /// <param name="tailscaleMode">The Tailscale mode id, such as <c>funnel</c>.</param>
+    public static string TailscaleLabel(string? tailscaleMode) => tailscaleMode switch
+    {
+        "off" => "Off",
+        "serve" => "Tailscale Serve",
+        "funnel" => "Tailscale Funnel",
+        _ => tailscaleMode ?? string.Empty,
+    };
+
     /// <summary>What Save reports: what applies now and what waits for the next start.</summary>
     /// <param name="result">The save result.</param>
     public static string SaveResult(GatewayAdminService.SaveResult result)

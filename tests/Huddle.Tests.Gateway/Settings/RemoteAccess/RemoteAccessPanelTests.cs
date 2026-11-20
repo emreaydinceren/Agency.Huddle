@@ -248,6 +248,17 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
         Assert.Equal("Restart Huddle to apply: Bind loopback → lan, Auth mode token → password", cut.TextOf("[data-testid=restart-line]"));
     }
 
+    /// <summary>The Bind, Auth mode and Tailscale mode selects show display names, never the ids the settings file holds (#735).</summary>
+    [Fact]
+    public void Gateway_Selects_ShowDisplayNamesNotIds()
+    {
+        IRenderedComponent<ContainerFragment> cut = this.Render();
+
+        List<string?> shown = [.. cut.FindAll(".mud-select input").Select(static input => input.GetAttribute("value"))];
+
+        Assert.Equal(["This computer only", "Token", "Off"], shown);
+    }
+
     /// <summary>Stored and running values are both drawn: the control shows the stored value and the running one is labelled.</summary>
     [Fact]
     public void Gateway_PendingBind_ShowsStoredAndRunningSideBySide()
@@ -256,8 +267,8 @@ public sealed class RemoteAccessPanelTests : IAsyncDisposable
         _ = this.H.Service.SaveSettings(GatewayAdminHarness.Admin(), running with { Bind = "lan" });
         IRenderedComponent<ContainerFragment> cut = this.Render();
 
-        Assert.Equal("Running: loopback", cut.TextOf("[data-testid=running-bind]"));
-        Assert.Equal("lan", cut.Find("[data-testid=stored-bind] input").GetAttribute("value"));
+        Assert.Equal("Running: This computer only", cut.TextOf("[data-testid=running-bind]"));
+        Assert.Equal("Local network", cut.Find("[data-testid=stored-bind] input").GetAttribute("value"));
     }
 
     /// <summary>Saving a change that applies now says it applies now and changes the running options.</summary>
