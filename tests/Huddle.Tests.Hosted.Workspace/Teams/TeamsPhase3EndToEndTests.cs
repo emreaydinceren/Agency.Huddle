@@ -205,7 +205,10 @@ public sealed class TeamsPhase3EndToEndTests
         TaskItem blocked = Assert.IsType<TaskResult.Saved>(service.Create(new TaskDraft("Blocked", TeamName, null, TaskState.ToDo, Assignee: developer.Name, OriginRoomId: room.Id, BlockedBy: [blocker.Id]), human)).Task;
 
         _ = service.Update(blocker.Id, new TaskPatch { Title = "Blocker, renamed" }, null, developer);
-        await Eventually.UntilAsync(() => run.WakesOf(manager.Name, developer.Name) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
+
+        // The Blocked Task's creation wake to its assignee is a separate coalesced batch with its own timer, so it is not ordered against the
+        // manager's wake for the retitle: wait for both before the baseline, or a late creation wake is counted as the unblock wake.
+        await Eventually.UntilAsync(() => run.WakesOf(manager.Name, developer.Name) >= 1 && run.WakesOf(developer.Name, null) >= 1, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));
         int developerWakesBefore = run.WakesOf(developer.Name, null);
         _ = service.Update(blocker.Id, new TaskPatch { Status = TaskState.Done }, null, human, humanOverridesGates: true);
         await Eventually.UntilAsync(() => run.WakesOf(developer.Name, null) > developerWakesBefore, ct, timeout: TestBudgets.Slowest, interval: TimeSpan.FromMilliseconds(50));

@@ -183,11 +183,13 @@ public sealed class TaskTriggerServiceSilentTests
     }
 
     /// <summary>
-    /// Slice 1 keeps a comment waking exactly as today (correction 11): a silent change and then a comment in one window post one Message per
-    /// recipient listing only the comment, so the comment is neither dropped nor does it drag the silent change into the Message.
+    /// From slice 2 a comment wakes only the Agents it Mentions (correction 11): a silent change and then a comment Mentioning Nova in one window post
+    /// one Message, to Nova alone (not to the manager Mia), listing only the comment, so the comment is neither dropped nor does it drag the silent
+    /// change into the Message. Changed from <c>SilentThenComment_InOneWindow_PostsOneMessageListingOnlyTheComment</c>, which expected a Message to each
+    /// recipient for a comment that Mentioned no one.
     /// </summary>
     [Fact]
-    public async Task SilentThenComment_InOneWindow_PostsOneMessageListingOnlyTheComment()
+    public async Task SilentThenMentioningComment_InOneWindow_PostsOneMessageToTheMentionedAgentListingOnlyTheComment()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
@@ -202,13 +204,13 @@ public sealed class TaskTriggerServiceSilentTests
             cast.KaiActor,
             new ChangeLogEntry(harness.Clock.GetUtcNow(), "Kai", "comment added by Kai"),
             Kind: TaskChangeKind.Comment,
-            Comment: "Ready for another look.");
+            Comment: "Ready for another look, @Nova.");
 
         harness.Events.RaiseTaskChanged(Change(harness, task, cast.KaiActor, "Rank: 2 → 1", Rank));
         harness.Events.RaiseTaskChanged(comment);
         await FireAsync(harness);
 
-        Assert.Equal(["Nova|Kai|- comment added by Kai", "Mia|Kai|- comment added by Kai"], Texts(harness));
+        Assert.Equal(["Nova|Kai|- comment by Kai: \"Ready for another look, " + NeutralisedAt + "Nova.\""], Texts(harness));
     }
 
     /// <summary>

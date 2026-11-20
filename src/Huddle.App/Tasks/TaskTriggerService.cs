@@ -150,6 +150,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
     /// <summary>The wake rules, in <see cref="TaskWakeRules.ProductionOrder"/>.</summary>
     private readonly IReadOnlyList<ITaskWakeRule> wakeRules;
+
+    /// <summary>Resolves the Agents a Task comment Mentions (smart wakes spec 3.3).</summary>
+    private readonly MentionResolver mentions;
     private OutsideWindow? outsideWindow;
     private bool subscribed;
     private bool stopped;
@@ -235,7 +238,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             new AssigneeWakeRule(),
             new ManagerWakeRule(teams, this.human, personas, this.teamOptions),
             new RequestingManagerWakeRule(teams, this.human, personas, this.teamOptions, logger),
+            new MentionWakeRule(this.human, personas, this.teamOptions),
         ];
+        this.mentions = new MentionResolver(directory, personas, this.human, this.teamOptions);
     }
 
     /// <summary>
@@ -511,15 +516,16 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     }
 
     /// <summary>
-    /// Whether <paramref name="change"/> is dropped on receipt (smart wakes spec 5.3): it wakes neither the assignee nor the manager, is not a
-    /// Request's C-5 status move and is not a comment (slice 1 keeps a comment waking exactly as today, correction 11).
+    /// Whether <paramref name="change"/> is dropped on receipt (smart wakes spec 5.3): a comment is kept only when its text holds an <c>@</c> (the
+    /// Mention rule decides later whom it wakes); any other change is kept when it wakes the assignee or the manager or is a Request's C-5 status move.
     /// </summary>
     /// <param name="change">The change.</param>
     private static bool IsSilent(TaskChange change) =>
-        change.Kind != TaskChangeKind.Comment
-        && !WakeRelevance.Wakes(change, WakeRecipient.Assignee)
-        && !WakeRelevance.Wakes(change, WakeRecipient.Manager)
-        && !WakeRelevance.RequestStatusWakes(change);
+        change.Kind == TaskChangeKind.Comment
+            ? change.Comment?.Contains('@', StringComparison.Ordinal) != true
+            : !WakeRelevance.Wakes(change, WakeRecipient.Assignee)
+                && !WakeRelevance.Wakes(change, WakeRecipient.Manager)
+                && !WakeRelevance.RequestStatusWakes(change);
 
     /// <summary>
     /// Whether the Task was already finished (Done, Cancelled, Duplicate or Rejected) before <paramref name="change"/>. A status field decides from its
@@ -573,7 +579,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             }
 
             batch.Actor = change.Actor;
-            batch.Entries.Add(change.Entry);
+            batch.Add(change.Entry, change.Comment);
             if (change.Decision is { } decision)
             {
                 batch.Decision = decision;
@@ -788,7 +794,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         ChangeLogEntry unblocked = new(this.clock.GetUtcNow(), actor.Name, marker);
         Batch batch = new(new BatchKey(blocked.Id, actor.Name)) { Actor = actor };
-        batch.Entries.Add(unblocked);
+        batch.Add(unblocked, null);
         if (!await this.DeliverAsync(batch, blocked, recipient, ct).ConfigureAwait(false))
         {
             return;
@@ -877,13 +883,17 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             return;
         }
 
-        TaskWakeRound round = new(latest, batch.Actor, batch.RequestStatusWakes, this.Preview(null, latest, batch.Actor), batch.WakesAssignee, batch.WakesManager);
+        IReadOnlyList<string> mentioned = await this.ResolveMentionedAsync(batch, latest, ct).ConfigureAwait(false);
+        TaskWakeRound round = new(latest, batch.Actor, batch.RequestStatusWakes, this.Preview(null, latest, batch.Actor), batch.WakesAssignee, batch.WakesManager, mentioned);
+
+        // Every name a rule chose this round (woken, held, or its delivery did not post), so an Agent gets one Message per batch.
+        HashSet<string> chosen = new(StringComparer.OrdinalIgnoreCase);
         foreach (ITaskWakeRule rule in this.wakeRules)
         {
             try
             {
                 TaskWakeChoice choice = rule.Choose(round);
-                await this.ActOnAsync(choice, batch, latest, ct).ConfigureAwait(false);
+                await this.ActOnAsync(choice, batch, latest, chosen, ct).ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -897,20 +907,74 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
     }
 
+    /// <summary>The Agents the batch's comments Mention: the union over its comment texts, in first-mention order, each once (ignoring case).</summary>
+    /// <param name="batch">The batch about to be woken for.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>The canonical Persona names; empty when the batch holds no comment.</returns>
+    private async Task<IReadOnlyList<string>> ResolveMentionedAsync(Batch batch, TaskItem latest, CancellationToken ct)
+    {
+        List<string> names = [];
+        foreach (string? text in batch.CommentTexts)
+        {
+            if (text is null)
+            {
+                continue;
+            }
+
+            foreach (string name in await this.ResolveCommentMentionsAsync(latest, text, batch.Actor, ct).ConfigureAwait(false))
+            {
+                if (!names.Contains(name, StringComparer.OrdinalIgnoreCase))
+                {
+                    names.Add(name);
+                }
+            }
+        }
+
+        return names;
+    }
+
+    /// <summary>
+    /// The Agents a comment on <paramref name="task"/> would wake after the guards (smart wakes spec 3.3): the registered Personas it Mentions by Name or Alias,
+    /// without the author or the Human, and without the <c>@all</c> expansion. Empty while Tasks or wake-ups are off. The Task's wake budget is a delivery
+    /// matter and is not applied. The batch fire and <c>add_comment</c>'s reply both ask this.
+    /// </summary>
+    /// <param name="task">The Task commented on.</param>
+    /// <param name="comment">The whole comment text.</param>
+    /// <param name="author">Who wrote the comment.</param>
+    /// <param name="ct">Cancels the directory read.</param>
+    /// <returns>The canonical Persona names in first-mention order.</returns>
+    internal async Task<IReadOnlyList<string>> ResolveCommentMentionsAsync(TaskItem task, string comment, TaskActor author, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(comment);
+        ArgumentNullException.ThrowIfNull(author);
+
+        IReadOnlyList<string> names = await this.mentions.ResolveAsync(comment, author, ct).ConfigureAwait(false);
+        LogMentionsResolved(this.logger, task.Id, names.Count);
+        return names;
+    }
+
     /// <summary>Carries out one rule's choice: delivers a wake, holds one for the Task's wake budget, or logs the guard that stopped it.</summary>
     /// <param name="choice">What the rule chose.</param>
     /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
     /// <param name="latest">The Task's latest state.</param>
+    /// <param name="chosen">The names already chosen this round, which this adds to.</param>
     /// <param name="ct">The service lifetime.</param>
     /// <returns>A task that completes when the choice was carried out.</returns>
-    private async Task ActOnAsync(TaskWakeChoice choice, Batch batch, TaskItem latest, CancellationToken ct)
+    private async Task ActOnAsync(TaskWakeChoice choice, Batch batch, TaskItem latest, HashSet<string> chosen, CancellationToken ct)
     {
         switch (choice)
         {
             case TaskWakeChoice.Wake wake:
+                _ = chosen.Add(wake.Name);
                 _ = await this.DeliverAsync(batch, latest, wake.Name, ct).ConfigureAwait(false);
                 break;
+            case TaskWakeChoice.WakeEach each:
+                await this.WakeEachAsync(each, batch, latest, chosen, ct).ConfigureAwait(false);
+                break;
             case TaskWakeChoice.HoldForBudget hold:
+                _ = chosen.Add(hold.Name);
                 LogBlocked(this.logger, latest.Id, WakeBlock.BudgetPaused);
                 this.RecordOutcome(latest.Id, hold.Name, null, WakeOutcome.WakePaused);
                 this.HoldForWakeBudget(batch, latest, hold.Name);
@@ -918,8 +982,41 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             case TaskWakeChoice.Skip { Block: { } block }:
                 LogBlocked(this.logger, latest.Id, block);
                 break;
-            default:
+            case TaskWakeChoice.Skip:
                 break;
+            default:
+                throw new InvalidOperationException($"Unhandled wake choice {choice.GetType().Name}.");
+        }
+    }
+
+    /// <summary>Wakes each Mentioned Agent through <see cref="DeliverAsync"/>, skipping a name already chosen this round; one failing delivery does not stop the rest.</summary>
+    /// <param name="each">The names the Mention rule chose.</param>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="latest">The Task's latest state.</param>
+    /// <param name="chosen">The names already chosen this round, which this adds to.</param>
+    /// <param name="ct">The service lifetime.</param>
+    private async Task WakeEachAsync(TaskWakeChoice.WakeEach each, Batch batch, TaskItem latest, HashSet<string> chosen, CancellationToken ct)
+    {
+        foreach (string name in each.Names)
+        {
+            if (!chosen.Add(name))
+            {
+                continue;
+            }
+
+            try
+            {
+                _ = await this.DeliverAsync(batch, latest, name, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                // One Mentioned Agent's failed delivery must not keep the others from being woken (S-B2).
+                LogWakeRuleFailed(this.logger, "Mention", latest.Id, ex);
+            }
         }
     }
 
@@ -951,7 +1048,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
         }
 
         Batch batch = new(new BatchKey(request.Id, actor.Name)) { Actor = actor };
-        batch.Entries.Add(new ChangeLogEntry(this.clock.GetUtcNow(), actor.Name, summary));
+        batch.Add(new ChangeLogEntry(this.clock.GetUtcNow(), actor.Name, summary), null);
         await this.fireGate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
@@ -1110,7 +1207,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             RequestStatusWakes = batch.RequestStatusWakes,
             MovedToDone = batch.MovedToDone,
         };
-        held.Entries.AddRange(batch.Entries);
+        held.AddRange(batch);
         bool forAssignee = string.Equals(name, latest.Assignee, StringComparison.OrdinalIgnoreCase);
         lock (this.gate)
         {
@@ -1121,7 +1218,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
             if (this.heldWakes.Remove(key, out HeldWake? earlier))
             {
-                held.Entries.InsertRange(0, earlier.Batch.Entries);
+                held.InsertBefore(earlier.Batch);
                 held.Decision ??= earlier.Batch.Decision;
                 held.Note ??= earlier.Batch.Note;
                 held.WakesAssignee |= earlier.Batch.WakesAssignee;
@@ -1574,7 +1671,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <returns>The Message text.</returns>
     private string WakeText(Batch batch, TaskItem latest, string assigneeName)
     {
-        string text = this.Render(latest, batch.Actor, assigneeName, batch.Entries);
+        string text = this.Render(latest, batch.Actor, assigneeName, batch);
         bool toManager = this.teams?.Find(latest.Location.Team)?.Manager is { Length: > 0 } manager
             && string.Equals(manager, assigneeName, StringComparison.OrdinalIgnoreCase);
         if (DecisionSentence(latest, batch.Decision, batch.Note, toManager) is { } sentence)
@@ -1599,7 +1696,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     }
 
     /// <summary>The line a review or verify Task's assignee gets on every wake: the outcome is recorded on the Task, not in chat (D-9).</summary>
-    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. When the owner comments that the work is ready again, review it again on this Task.";
+    private const string ReviewSentence = "Review the work, then record the outcome on this Task: approve by moving it to Done, or leave it open with your findings as a comment; a reply in chat alone does not move it. A comment wakes you only when it Mentions you: when the owner comments that the work is ready again and Mentions you, review it again on this Task.";
 
     /// <summary>The line a release (ADR-0088) adds to the wake: the merge needs no Accept, a push still does.</summary>
     /// <param name="latest">The Task's latest state.</param>
@@ -1664,9 +1761,9 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
     /// <param name="task">The latest Task.</param>
     /// <param name="actor">Who made the changes.</param>
     /// <param name="assigneeName">The latest assignee's Name.</param>
-    /// <param name="entries">The batch's Change log entries, in arrival order.</param>
+    /// <param name="batch">The batch: its Change log entries in arrival order, and the comment text of each entry that is a comment.</param>
     /// <returns>The Message text.</returns>
-    private string Render(TaskItem task, TaskActor actor, string assigneeName, IReadOnlyList<ChangeLogEntry> entries)
+    private string Render(TaskItem task, TaskActor actor, string assigneeName, Batch batch)
     {
         Dictionary<string, string> values = new(StringComparer.Ordinal)
         {
@@ -1676,11 +1773,27 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
             ["{{status}}"] = task.Status.ToWire(),
             ["{{team}}"] = task.Location.Team,
             ["{{actor}}"] = actor.Name,
-            ["{{changes}}"] = string.Join('\n', entries.Select(static e => "- " + NeutraliseMentions(e.Summary))),
+            ["{{changes}}"] = string.Join('\n', batch.Entries.Select((entry, index) => ChangeBullet(entry, batch.CommentTexts, index))),
         };
 
         return this.prompts.Render(WakeMessageKey, values);
     }
+
+    /// <summary>The bullet of one batched change: a comment's author and text (cut, then neutralised), otherwise the Change log summary, neutralised.</summary>
+    /// <param name="entry">The Change log entry.</param>
+    /// <param name="commentTexts">The batch's comment texts, aligned with its entries.</param>
+    /// <param name="index">The entry's position.</param>
+    private static string ChangeBullet(ChangeLogEntry entry, List<string?> commentTexts, int index) =>
+        index < commentTexts.Count && commentTexts[index] is { } text
+            ? CommentExcerpt.Bullet(entry.Actor, text, NeutraliseMentions)
+            : "- " + NeutraliseMentions(entry.Summary);
+
+    /// <summary>Logs the Agents a Task comment resolved to.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="count">How many Agents the comment's Mentions resolved to.</param>
+    [LoggerMessage(Level = LogLevel.Debug, Message = "A comment on Task {TaskId} Mentions {Count} Agent(s) that can be woken.")]
+    private static partial void LogMentionsResolved(ILogger logger, TaskId taskId, int count);
 
     /// <summary>Logs that more outside-edit changes than the limit arrived within one coalesce window.</summary>
     /// <param name="logger">The logger to write to.</param>
@@ -1791,6 +1904,34 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable, 
 
         /// <summary>Every batched change's Change log entry, in arrival order.</summary>
         public List<ChangeLogEntry> Entries { get; } = [];
+
+        /// <summary>The comment text of each entry in <see cref="Entries"/>, aligned with it by index: <see langword="null"/> for a change that is no comment.</summary>
+        public List<string?> CommentTexts { get; } = [];
+
+        /// <summary>Adds an entry with its comment text, keeping <see cref="CommentTexts"/> aligned.</summary>
+        /// <param name="entry">The Change log entry.</param>
+        /// <param name="comment">The comment text, or <see langword="null"/> when the change is no comment.</param>
+        public void Add(ChangeLogEntry entry, string? comment)
+        {
+            this.Entries.Add(entry);
+            this.CommentTexts.Add(comment);
+        }
+
+        /// <summary>Appends every entry of <paramref name="other"/>, with its comment text, after this batch's own.</summary>
+        /// <param name="other">The batch to copy from.</param>
+        public void AddRange(Batch other)
+        {
+            this.Entries.AddRange(other.Entries);
+            this.CommentTexts.AddRange(other.CommentTexts);
+        }
+
+        /// <summary>Puts every entry of <paramref name="earlier"/>, with its comment text, before this batch's own.</summary>
+        /// <param name="earlier">The batch whose entries came first.</param>
+        public void InsertBefore(Batch earlier)
+        {
+            this.Entries.InsertRange(0, earlier.Entries);
+            this.CommentTexts.InsertRange(0, earlier.CommentTexts);
+        }
 
         /// <summary>The Human's latest decision in this batch, or <see langword="null"/> when none was made.</summary>
         public Agency.Huddle.App.Tasks.HumanGate.TaskDecision? Decision { get; set; }

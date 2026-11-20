@@ -94,7 +94,7 @@ internal static class WakeRelevance
             TaskChangeKind.Create => true,
             TaskChangeKind.Evidence => true,
             TaskChangeKind.Release => true,
-            TaskChangeKind.Comment => true,
+            TaskChangeKind.Comment => false,
             TaskChangeKind.HuddleStep => false,
             TaskChangeKind.Close => IsActive(change.After.Status),
             TaskChangeKind.Reopen => IsActive(change.After.Status),

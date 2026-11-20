@@ -225,13 +225,13 @@ public sealed class WakeRelevanceTests
             Verdicts(WakeChanges.Bare(TaskChangeKind.Evidence)));
     }
 
-    /// <summary>In slice 1 a comment still wakes exactly as today (correction 11): <c>Wakes</c> is true for the Comment kind, for both recipients.</summary>
+    /// <summary>From slice 2 (correction 11) a comment wakes neither the assignee nor the manager by itself, even when its text Mentions them: only the Mention rule wakes, by name.</summary>
     [Fact]
-    public void Wakes_KindComment_StillWakesBothInThisSlice()
+    public void Wakes_KindComment_WakesNeitherRecipient()
     {
-        TaskChange comment = WakeChanges.Make(WakeChanges.Task(), WakeChanges.Task(), [], TaskActorKind.Agent, TaskChangeKind.Comment, comment: "Looks good.");
+        TaskChange comment = WakeChanges.Make(WakeChanges.Task(), WakeChanges.Task(), [], TaskActorKind.Agent, TaskChangeKind.Comment, comment: "Looks good, @Nova.");
 
-        Assert.Equal((true, true), Verdicts(comment));
+        Assert.Equal((false, false), Verdicts(comment));
     }
 
     /// <summary>An edit with an empty field list and no other sign (a gate's refusal, a reset creation, a forged Accept) is silent, while the same Task with a Release kind wakes.</summary>
