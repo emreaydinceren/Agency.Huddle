@@ -1434,7 +1434,12 @@
 }
 
 /* Priority keeps the app's one priority icon set (TaskColors.Icon: arrows and a dash), as in every other Theme; only the chip's fill and
-   border are dropped above. Urgent wears the error hue. */
+   border are dropped above. Low and Medium keep the subtle ink; High wears the warning hue and Urgent the error hue, as TaskColors.For
+   gives them in status=pill (#728). */
+:root:not(:has([data-hu-status="pill"])) .mud-chip.priority-high {
+    color: var(--mud-palette-warning);
+}
+
 :root:not(:has([data-hu-status="pill"])) .mud-chip.priority-urgent {
     color: var(--mud-palette-error);
 }
