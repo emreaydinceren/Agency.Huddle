@@ -25,9 +25,6 @@ public enum SettingsTab
     /// <summary>Choosing a theme, the accent colour and the Library pane side.</summary>
     Appearance,
 
-    /// <summary>Where the Persona files and the SQLite database live on disk.</summary>
-    Personas,
-
     /// <summary>Every Skill this installation currently resolves - what it is, where it came from, and any problems found reading it.</summary>
     Skills,
 

@@ -47,7 +47,7 @@ configuring models; see [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Give every Agent, or one Team, standing rules | [Writing rules in `AGENTS.md`](#writing-rules-in-agentsmd) |
 | See what Agents remember and which files they changed | [Memory and file changes](#memory-and-file-changes) |
 | Use Huddle from a phone, a tablet or another computer | [Using Huddle from another device](#using-huddle-from-another-device) |
-| Change prompts, Themes, Personas, Skills or Library roots | [Settings](#settings) |
+| Change prompts, Themes, Skills or Library roots | [Settings](#settings) |
 | Turn a Helper on or off, or change what it may spend | [Helpers](#helpers) |
 | Fix something that went wrong | [Troubleshooting](#troubleshooting) |
 
@@ -155,7 +155,7 @@ Every page has its own address, so you can bookmark it:
 | `/tasks/item/{TaskId}` | One Task, opened over your last View, for example `/tasks/item/BUSI-0001` |
 | `/tasks/item/{TaskId}/edit` | One Task in edit mode, in a Tab of its own, for example `/tasks/item/BUSI-0001/edit` |
 | `/library?scopeRoot=teams&scopePath=` | The Library, scoped to a root |
-| `/settings/{tab}` | Settings: Profile, Prompts, Helpers, Spending, Appearance, Personas, Skills, Team types, Library, Sessions, Remote access. A blank system opens on `/settings/profile` until you save a profile |
+| `/settings/{tab}` | Settings: Profile, Prompts, Helpers, Spending, Appearance, Skills, Team types, Library, Sessions, Remote access. A blank system opens on `/settings/profile` until you save a profile |
 
 ### Needs you
 
@@ -2886,10 +2886,9 @@ Run these on the computer that runs Huddle, in a plain PowerShell window. `huddl
 | **Helpers** | The small background agents that make one judgement for you, such as whether a Task an Agent wrote needs your acceptance. Each has a card: on or off, the Adapter, Model and Effort it runs on, a daily cap, what it spent today, its last run and its last error. See [Helpers](#helpers). | `team.db` |
 | **Appearance** | You pick one light Theme and one dark Theme; the picker lists the Light Themes and the Dark Themes separately. The button in the top bar switches between your two. An accent colour is set here too; your own avatar moved to **Profile**. | `appearance.json` |
 | **Needs You level** | How much of the Teams' work waits for you: **Ask me** or **Run inside the Team**, with an optional **Spend cap (USD)**. Every Team and project inherits it until it sets its own. See [The Needs You level](#the-needs-you-level). | `team.db` |
-| **Personas** | The Agent definitions. | `Agents/…` |
 | **Skills** | Three tabs: **Skills** (every Skill, its state and who uses it), **Packs** (Packs from SKILLS.md, **Add with your AI tool**) and **Sources** (where Skills come from, the Skill Sources folder). See [Adding Skills with your AI tool](#adding-skills-with-your-ai-tool). | `Skills/…`, `SkillSources/` |
 | **Team types** | Read-only list of team types, built-in or yours, with **Reload** and a **Problems** list. | `TeamTypes/…` |
-| **Library** | Pinned folders; hide the built-in roots. | `library-roots.json` |
+| **Library** | Pinned folders (**Pin a folder**); show or hide the built-in roots. It also says where the Agent files (`Agents/…`) and the Room database (`team.db`) are stored. | `library-roots.json` |
 | **Sessions** | How much a fresh session rereads of a Room: a limit in Messages and an estimated limit in tokens. Applies from the next fresh session, with no restart. | `session-settings.json` |
 
 **Spending** (**Settings › Spending**, read-only) shows what the Adapters have reported as spent: one line per Team, the Chief of Staff, each Agent in no Team and the Helpers, each with its cost and, for Helpers, its calls. Then a **Total** counts every Agent once, however many Teams it is in, so a line appears when an Agent's spend counts in more than one Team. Amounts are shown per currency and are never added across currencies. The panel covers only what the Adapters report, and removing an Agent removes its spend from it. It sets no budgets or limits.
