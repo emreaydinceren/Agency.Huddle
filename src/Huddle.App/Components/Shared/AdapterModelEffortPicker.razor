@@ -39,7 +39,8 @@
 <div class="agent-profile-card-row agent-profile-card-model-row mb-1">
     <div class="agent-profile-card-cell">
         <ProbedSelect Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
-                      Disabled="@this.Disabled" Probing="@this.modelsLoading" ProbeLabel="Reading the models this adapter offers">
+                      Disabled="@this.Disabled" Probing="@this.modelsLoading" ProbeLabel="Reading the models this adapter offers"
+                      ToStringFunc="@(this.modelsLoading ? LoadingText : null)">
             <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
             @foreach (AgentModelOption choice in this.ModelChoices)
             {
@@ -52,7 +53,8 @@
        moments, so each select waits only on the list it offers. *@
     <div class="agent-profile-card-cell">
         <ProbedSelect Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChangedAsync"
-                      Disabled="@this.Disabled" Probing="@this.effortsLoading" ProbeLabel="Reading the effort levels this model offers">
+                      Disabled="@this.Disabled" Probing="@this.effortsLoading" ProbeLabel="Reading the effort levels this model offers"
+                      ToStringFunc="@(this.effortsLoading ? LoadingText : null)">
             <MudSelectItem T="string" Value="@string.Empty">@this.DefaultOptionText</MudSelectItem>
             @foreach (AgentEffortOption choice in this.EffortChoices)
             {
@@ -104,6 +106,9 @@
 }
 
 @code {
+    /// <summary>What a probed select shows while its list is being read: the stored id is a slug until the list names it.</summary>
+    private static readonly Func<string?, string?> LoadingText = static _ => "Loading…";
+
     private IReadOnlyList<AgentModelOption> availableModels = [];
     private IReadOnlyList<AgentEffortOption> availableEfforts = [];
     private IReadOnlyList<AgentModeOption> availableWorkModes = [];
@@ -233,13 +238,23 @@
     private IReadOnlyList<AgentModelOption> ModelChoices =>
         this.model is null || this.availableModels.Any(m => string.Equals(m.Id, this.model, StringComparison.Ordinal))
             ? this.availableModels
-            : [new AgentModelOption(this.model, this.model, null), .. this.availableModels];
+            : [new AgentModelOption(this.model, this.PeekedModelName(this.model), null), .. this.availableModels];
 
     /// <summary>The probed Efforts, plus the stored one when the probe failed or no longer lists it.</summary>
     private IReadOnlyList<AgentEffortOption> EffortChoices =>
         this.effort is null || this.availableEfforts.Any(e => string.Equals(e.Id, this.effort, StringComparison.Ordinal))
             ? this.availableEfforts
-            : [new AgentEffortOption(this.effort, this.effort, null), .. this.availableEfforts];
+            : [new AgentEffortOption(this.effort, this.PeekedEffortName(this.effort), null), .. this.availableEfforts];
+
+    /// <summary>The name a stored model shows when the probe did not list it: the cached or alias name, else the id with a capital. Peeking never probes.</summary>
+    /// <param name="id">The stored model id.</param>
+    private string PeekedModelName(string id) => this.ModelCatalog.PeekRuntime(this.adapter, id, null).Model ?? Capitalised(id);
+
+    /// <summary>The name a stored effort shows when the probe did not list it: the cached name, else the id with a capital.</summary>
+    /// <param name="id">The stored effort id.</param>
+    private string PeekedEffortName(string id) => this.ModelCatalog.PeekRuntime(this.adapter, this.model, id).Effort ?? Capitalised(id);
+
+    private static string Capitalised(string id) => id.Length == 0 ? id : string.Concat(char.ToUpperInvariant(id[0]).ToString(), id.AsSpan(1));
 
     /// <summary>
     /// Whether the Work mode select is shown: only when offered, and then while the probe is out (an unread list is not an empty

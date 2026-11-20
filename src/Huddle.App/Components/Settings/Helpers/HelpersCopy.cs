@@ -17,6 +17,9 @@ internal static class HelpersCopy
     /// <summary>The chip on a Helper the Human turned off.</summary>
     public const string ChipOff = "Off";
 
+    /// <summary>The chip on a Helper that is on but cannot run, because Adapters are off.</summary>
+    public const string ChipNotRunning = "Not running";
+
     /// <summary>The chip on a Helper that reached its daily cap.</summary>
     public const string ChipPaused = "Paused";
 

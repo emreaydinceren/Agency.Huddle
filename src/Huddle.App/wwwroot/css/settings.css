@@ -135,10 +135,10 @@
 .prompts-list-heading.mud-typography {
     margin: 0;
     padding: 12px 12px 4px;
-    /* Bigger and bolder than a row's label, and paler, so a heading reads as a label and not as a choice. */
+    /* Bigger and bolder than a row's label, and in the secondary ink (4.5:1; the disabled ink fails it), so a heading reads as a label and not as a choice. */
     font-size: var(--mud-typography-h6-size);
     font-weight: 600;
-    color: var(--mud-palette-text-disabled);
+    color: var(--mud-palette-text-secondary);
 }
 
 .prompts-list-item {
@@ -423,23 +423,9 @@
     margin-inline-end: 0;
 }
 
-/* The Library panel's rows: the add row is one 28px height, fields and button aligned. */
+/* The Library panel's "Pin a folder" row: two labelled fields and the button on one line. */
 .library-panel-add-row {
     align-items: center;
-}
-
-.library-panel-add-row .mud-input-control {
-    height: 28px;
-    margin-top: 0;
-}
-
-.library-panel-add-row .mud-input.mud-input-outlined .mud-input-root.mud-input-root-outlined {
-    padding-block: 0;
-    font-size: var(--mud-typography-body2-size);
-}
-
-.library-panel-add-row .mud-button-root {
-    height: 28px;
 }
 
 /* The Skills grid: the name leads and the description under it is meta text, a caption in the name's cell. */

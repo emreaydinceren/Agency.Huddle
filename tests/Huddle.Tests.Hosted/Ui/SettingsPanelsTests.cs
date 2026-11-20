@@ -49,7 +49,7 @@ public sealed partial class SettingsPanelsTests
         var cut = ctx.Render<Settings>();
 
         var rows = cut.FindAll(".settings-nav a.mud-nav-link");
-        Assert.Equal(12, rows.Count);
+        Assert.Equal(11, rows.Count);
         Assert.All(rows, static row => Assert.NotEmpty(row.QuerySelectorAll("svg")));
     }
 
@@ -107,10 +107,9 @@ public sealed partial class SettingsPanelsTests
     [Theory]
     [InlineData("/settings/prompts", 1)]
     [InlineData("/settings/appearance", 1)]
-    [InlineData("/settings/personas", 2)]
     [InlineData("/settings/skills", 1)]
     [InlineData("/settings/teamtypes", 1)]
-    [InlineData("/settings/library", 1)]
+    [InlineData("/settings/library", 3)]
     public async Task EveryPanel_HasOneIntroAndItsStoredAtLines(string route, int storedAtLines)
     {
         await using var factory = new TeamWebApplicationFactory();

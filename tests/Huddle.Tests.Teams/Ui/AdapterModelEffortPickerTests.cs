@@ -128,6 +128,21 @@ public sealed class AdapterModelEffortPickerTests
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Model")));
     }
 
+    /// <summary>While the Model list is being read the select shows "Loading…", never the stored id (#735); once it lands the stored one shows.</summary>
+    [Fact]
+    public async Task WhileTheModelProbeIsOut_ModelSelectShowsLoadingNotTheStoredId()
+    {
+        await using MudBunitContext ctx = new();
+        TaskCompletionSource gate = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku], ModelsGate = gate };
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], [], model: "haiku");
+
+        cut.WaitForAssertion(() => Assert.Equal("Loading…", FindSelectInput(cut, "Model").GetAttribute("value")));
+        gate.SetResult();
+        cut.WaitForAssertion(() => Assert.NotEqual("Loading…", FindSelectInput(cut, "Model").GetAttribute("value")));
+    }
+
     /// <summary>Changing the Adapter clears Model and Effort, says so in a status note, raises the cleared selection and probes the new Adapter.</summary>
     [Fact]
     public async Task AdapterChange_ClearsModelAndEffort_WithANote_AndReprobes()

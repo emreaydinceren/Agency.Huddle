@@ -99,27 +99,27 @@
         <div class="d-flex flex-wrap gap-3">
             <div>
                 <div data-testid="stored-bind">
-                    <SelectField T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning">
+                    <SelectField T="string" Label="Bind" @bind-Value="this.bind" Disabled="@this.StrictRunning" ToStringFunc="@RemoteAccessCopy.BindLabel">
                         @foreach (string choice in BindChoices)
                         {
-                            <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
+                            <MudSelectItem T="string" Value="@choice">@RemoteAccessCopy.BindLabel(choice)</MudSelectItem>
                         }
                     </SelectField>
                 </div>
-                <MudText Typo="Typo.caption" data-testid="running-bind">Running: @this.settingsView.Running.Bind</MudText>
+                <MudText Typo="Typo.caption" data-testid="running-bind">Running: @RemoteAccessCopy.BindLabel(this.settingsView.Running.Bind)</MudText>
             </div>
-            <SelectField T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning">
+            <SelectField T="string" Label="Auth mode" @bind-Value="this.authMode" Disabled="@this.StrictRunning" ToStringFunc="@RemoteAccessCopy.AuthLabel">
                 @foreach (string choice in AuthChoices)
                 {
-                    <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
+                    <MudSelectItem T="string" Value="@choice">@RemoteAccessCopy.AuthLabel(choice)</MudSelectItem>
                 }
             </SelectField>
             <MudNumericField T="int?" Label="Port" @bind-Value="this.port" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />
             <TextField Label="Custom bind host" @bind-Value="this.customBindHost" Disabled="@this.StrictRunning" />
-            <SelectField T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning">
+            <SelectField T="string" Label="Tailscale mode" @bind-Value="this.tailscaleMode" Disabled="@this.StrictRunning" ToStringFunc="@RemoteAccessCopy.TailscaleLabel">
                 @foreach (string choice in TailscaleChoices)
                 {
-                    <MudSelectItem T="string" Value="@choice">@choice</MudSelectItem>
+                    <MudSelectItem T="string" Value="@choice">@RemoteAccessCopy.TailscaleLabel(choice)</MudSelectItem>
                 }
             </SelectField>
             <MudNumericField T="int?" Label="Tailscale HTTPS port" @bind-Value="this.tailscaleHttpsPort" Disabled="@this.StrictRunning" HideSpinButtons="true" Variant="Variant.Outlined" Margin="Margin.Dense" />

@@ -38,7 +38,7 @@ public sealed class LibraryPanelTests
         var cut = ctx.Render<Settings>();
 
         List<string> tabLabels = [.. cut.FindAll(".settings-nav a.mud-nav-link").Select(e => e.TextContent.Trim())];
-        Assert.Equal(["Profile", "Prompts", "Helpers", "Spending", "Needs You level", "Appearance", "Personas", "Skills", "Team types", "Library", "Sessions", "Remote access"], tabLabels);
+        Assert.Equal(["Profile", "Prompts", "Helpers", "Spending", "Needs You level", "Appearance", "Skills", "Team types", "Library", "Sessions", "Remote access"], tabLabels);
     }
 
     /// <summary>The roots table lists the two built-ins first, then any pinned root, in
@@ -260,6 +260,37 @@ public sealed class LibraryPanelTests
         cut.WaitForAssertion(() => Assert.False(File.Exists(filePath)), TimeSpan.FromSeconds(5));
     }
 
+    /// <summary>Reset is disabled while nothing is pinned and enabled once a folder is (#741).</summary>
+    [Fact]
+    public async Task Reset_IsDisabledUntilAFolderIsPinned()
+    {
+        using PanelFixture none = PanelFixture.Build();
+        await using MudBunitContext noneCtx = none.NewContext();
+        Assert.True(noneCtx.RenderWithPopovers(RenderPanel).Find(".library-panel-reset-button").HasAttribute("disabled"));
+
+        using PanelFixture pinned = PanelFixture.Build(pinnedName: "Docs", pinnedPath: null, createPinned: true);
+        await using MudBunitContext pinnedCtx = pinned.NewContext();
+        Assert.False(pinnedCtx.RenderWithPopovers(RenderPanel).Find(".library-panel-reset-button").HasAttribute("disabled"));
+    }
+
+    /// <summary>The add row is one labelled task: a "Pin a folder" heading, the trust warning under it, and labelled Name and Path fields; the built-in switch reads Show (#741, #738).</summary>
+    [Fact]
+    public async Task AddRow_HasHeading_LabelledFields_AndShowSwitch_AndTheStoragePaths()
+    {
+        using PanelFixture fixture = PanelFixture.Build();
+        await using MudBunitContext ctx = fixture.NewContext();
+
+        var cut = ctx.RenderWithPopovers(RenderPanel);
+
+        Assert.Equal("Pin a folder", cut.Find("h3").TextContent.Trim());
+        Assert.Equal("Name", cut.Find(".library-panel-name-field label").TextContent.Trim());
+        Assert.Equal("Path", cut.Find(".library-panel-path-field label").TextContent.Trim());
+        Assert.Equal("Show", cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch").TextContent.Trim());
+        Assert.True(cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").HasAttribute("checked"));
+        Assert.Contains(fixture.Paths.DefinitionsRoot, cut.FindAll(".settings-stored-at code").Select(code => code.TextContent));
+        Assert.Contains(Path.Combine(fixture.DataDir, "team.db"), cut.FindAll(".settings-stored-at code").Select(code => code.TextContent));
+    }
+
     /// <summary>Cancelling Reset leaves <c>library-roots.json</c> untouched on disk.</summary>
     [Fact]
     public async Task Reset_Cancel_LeavesFileUntouched()
@@ -288,7 +319,7 @@ public sealed class LibraryPanelTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").ChangeAsync(true));
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").ChangeAsync(false));
 
         LibraryRootStore reloaded = new(fixture.Options, fixture.Paths, NullLogger<LibraryRootStore>.Instance);
         Assert.Equal(["agents", "raw", "archive", "prompts", "memory-backups", "skill-sources"], reloaded.VisibleRoots.Select(r => r.Id));
@@ -361,6 +392,8 @@ public sealed class LibraryPanelTests
         {
             MudBunitContext ctx = new();
             ctx.Services.AddSingleton(this.Store);
+            ctx.Services.AddSingleton(this.Options);
+            ctx.Services.AddSingleton(this.Paths);
             return ctx;
         }
 
