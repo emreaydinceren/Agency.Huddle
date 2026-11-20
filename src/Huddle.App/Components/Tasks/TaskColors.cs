@@ -37,16 +37,20 @@ internal static class TaskColors
         _ => Color.Default,
     };
 
-    /// <summary>The icon that always accompanies a state alongside its colour and word.</summary>
+    /// <summary>
+    /// The glyph of a state: the same ring the List's Status chip and the Board's column header draw (<c>.task-status-chip::before</c>,
+    /// <c>.task-state-dot</c>), as SVG markup for a 24-unit icon box: Backlog a dashed ring, To Do a ring, In Progress a half-filled ring,
+    /// Needs You a solid dot, Done and the three closed states a solid dot in their colour.
+    /// </summary>
     public static string Icon(TaskState state) => state switch
     {
-        TaskState.Backlog => Icons.Material.Filled.Inbox,
-        TaskState.ToDo => Icons.Material.Filled.RadioButtonUnchecked,
-        TaskState.InProgress => Icons.Material.Filled.PlayCircleOutline,
-        TaskState.NeedsYou => Icons.Material.Filled.PriorityHigh,
-        TaskState.Done => Icons.Material.Filled.CheckCircle,
-        TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Icons.Material.Filled.Cancel,
-        _ => Icons.Material.Filled.Inbox,
+        TaskState.Backlog => Ring("var(--mud-palette-text-disabled)", dashed: true),
+        TaskState.ToDo => Ring("var(--hu-text-subtle)"),
+        TaskState.InProgress => Ring("var(--mud-palette-info)") + """<path d="M12 5.75A6.25 6.25 0 0 0 12 18.25Z" fill="var(--mud-palette-info)"/>""",
+        TaskState.NeedsYou => Ring("var(--mud-palette-tertiary)", fill: "var(--mud-palette-tertiary)"),
+        TaskState.Done => Ring("var(--mud-palette-success)", fill: "var(--mud-palette-success)"),
+        TaskState.Cancelled or TaskState.Duplicate or TaskState.Rejected => Ring("var(--mud-palette-error)", fill: "var(--mud-palette-error)"),
+        _ => Ring("var(--hu-text-subtle)"),
     };
 
     /// <summary>The icon that always accompanies a priority alongside its colour and word.</summary>
@@ -58,4 +62,11 @@ internal static class TaskColors
         TaskPriority.Urgent => Icons.Material.Filled.KeyboardDoubleArrowUp,
         _ => Icons.Material.Filled.Remove,
     };
+
+    /// <summary>One 12.5-unit ring, hollow or filled, solid or dashed.</summary>
+    /// <param name="stroke">The ring's colour.</param>
+    /// <param name="fill">The fill colour, or <see langword="null"/> for a hollow ring.</param>
+    /// <param name="dashed">Whether the ring is dashed.</param>
+    private static string Ring(string stroke, string? fill = null, bool dashed = false) =>
+        $"""<circle cx="12" cy="12" r="6.25" fill="{fill ?? "none"}" stroke="{stroke}" stroke-width="2"{(dashed ? " stroke-dasharray=\"3 2.4\"" : string.Empty)}/>""";
 }

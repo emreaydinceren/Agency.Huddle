@@ -1093,11 +1093,28 @@ body.sidebar-resizing {
     flex: 0 0 auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+/* A finished Task in a Blocked by row: the title greys to Quiet ink and its state is spelled out beside the dot (#705). */
+.sidebar-row.room-task-closed .mud-link.sidebar-row-text {
+    color: var(--mud-palette-text-secondary);
+}
+
+.room-task-closed-state {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Task order panel: a small group label over each timeline, the open Task's title in bold, the Backlog toggle flush left. */
 .task-order-group-label {
     margin-top: 8px;
+}
+
+/* A Task id never breaks across lines: the hyphen would otherwise be a break opportunity. */
+.task-order-id {
+    white-space: nowrap;
 }
 
 .task-order-current {

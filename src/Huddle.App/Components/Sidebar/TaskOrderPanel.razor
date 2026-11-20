@@ -2,7 +2,7 @@
     The Right sidebar's Task order panel (docs/Huddle.TaskOrder-Specifications.md, §5.2): the Team's active Tasks in the order
     TaskOrder gives, one timeline per group (Started, Next, Backlog). Read-only; the Backlog is collapsed until opened.
     A Task Subject shows its Team with that Task in bold; a Room Subject shows the Room's Team; anything else renders nothing.
-    The count in the frame is the number of Tasks that can start now.
+    The count in the frame is the number of rows, as in every other panel.
 *@
 @using Agency.Huddle.App.Data
 @using Agency.Huddle.App.Sidebar
@@ -52,7 +52,19 @@
                 <div class="task-order-body">
                     <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="@this.TitleClass(entry)" title="@($"{entry.Task.Id} {entry.Task.Title}")"
                              Href="@($"/tasks/item/{Uri.EscapeDataString(entry.Task.Id.ToString())}")">@entry.Task.Title</MudLink>
-                    <div class="chip-meta task-order-meta">@this.Meta(entry)</div>
+                    <div class="chip-meta task-order-meta">
+                        @foreach ((string text, bool isId) in this.Meta(entry))
+                        {
+                            @if (isId)
+                            {
+                                <span class="task-order-id">@text</span>
+                            }
+                            else
+                            {
+                                @text
+                            }
+                        }
+                    </div>
                 </div>
             </MudTimelineItem>
         }
@@ -121,7 +133,7 @@
         TaskOrderResult result = TaskOrder.Compute(scope, this.Store.Get, this.GroupRule);
         this.entries = result.Entries;
         this.nextId = result.Next?.Task.Id;
-        this.Panel?.SetCount(this.entries.Count(static entry => entry.IsStartable));
+        this.Panel?.SetCount(this.entries.Count);
     }
 
     private IReadOnlyList<TaskOrderEntry> InGroup(TaskOrderGroup group) => [.. this.entries.Where(entry => entry.Group == group)];
@@ -140,43 +152,66 @@
     private string TitleClass(TaskOrderEntry entry) =>
         this.OpenTaskId() is { } id && id == entry.Task.Id ? "task-order-title task-order-current" : "task-order-title";
 
-    /// <summary>The id, then the reason where it is not plain rank, joined with a middle dot.</summary>
+    /// <summary>
+    /// The id, then the reason where it is not plain rank, joined with a middle dot, as text runs with each Task id flagged so it
+    /// is drawn unbreakable. A Task in the Next group is not marked "Next": its heading says so.
+    /// </summary>
     /// <param name="entry">The entry to describe.</param>
-    private string Meta(TaskOrderEntry entry)
+    private List<(string Text, bool IsId)> Meta(TaskOrderEntry entry)
     {
-        List<string> parts = [entry.Task.Id.ToString()];
-        if (this.IsNext(entry))
+        List<(string Text, bool IsId)> runs = [(entry.Task.Id.ToString(), true)];
+        if (this.IsNext(entry) && entry.Group != TaskOrderGroup.Next)
         {
-            parts.Add("Next");
+            runs.Add((" · Next", false));
         }
 
         if (entry.Group == TaskOrderGroup.Next && entry.Task.Status == TaskState.Backlog)
         {
-            parts.Add("in Backlog");
+            runs.Add((" · in Backlog", false));
         }
 
         if (entry.WaitsFor is { } holder)
         {
-            parts.Add(entry.Task.Location.Project is { } project ? $"waits for {holder} in {project}" : $"waits for {holder}");
+            runs.Add((" · waits for ", false));
+            runs.Add((holder.ToString(), true));
+            if (entry.Task.Location.Project is { } project)
+            {
+                runs.Add(($" in {project}", false));
+            }
         }
 
         if (entry.Blocks is { } blocks)
         {
-            parts.Add($"blocks {blocks}");
+            runs.Add((" · blocks ", false));
+            runs.Add((blocks.ToString(), true));
         }
 
-        if (entry.BlockedBy.Count > 0)
+        AddIds(runs, " · blocked by ", [.. entry.BlockedBy.Select(static blocker => blocker.Id)]);
+        AddIds(runs, " · cycle with ", [.. entry.Cycle.Where(id => id != entry.Task.Id)]);
+        return runs;
+    }
+
+    /// <summary>Adds <paramref name="lead"/> and the ids comma-separated, each id its own run; nothing when there are none.</summary>
+    /// <param name="runs">The runs so far.</param>
+    /// <param name="lead">The text before the first id.</param>
+    /// <param name="ids">The ids to list.</param>
+    private static void AddIds(List<(string Text, bool IsId)> runs, string lead, IReadOnlyList<TaskId> ids)
+    {
+        if (ids.Count == 0)
         {
-            parts.Add("blocked by " + string.Join(", ", entry.BlockedBy.Select(static blocker => blocker.Id.ToString())));
+            return;
         }
 
-        List<string> others = [.. entry.Cycle.Where(id => id != entry.Task.Id).Select(static id => id.ToString())];
-        if (others.Count > 0)
+        runs.Add((lead, false));
+        for (int index = 0; index < ids.Count; index++)
         {
-            parts.Add("cycle with " + string.Join(", ", others));
-        }
+            if (index > 0)
+            {
+                runs.Add((", ", false));
+            }
 
-        return string.Join(" · ", parts);
+            runs.Add((ids[index].ToString(), true));
+        }
     }
 
     private void ToggleBacklog() => this.backlogOpen = !this.backlogOpen;

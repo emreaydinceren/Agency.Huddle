@@ -41,10 +41,6 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-.task-read-view-due-date.task-overdue dd {
-    color: var(--mud-palette-error);
-}
-
 .task-read-view-description-empty {
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-body2-size);
@@ -976,6 +972,14 @@
 
 .task-list-grid thead th.task-list-title-header {
     width: auto;
+}
+
+/* Every body cell but the Title stays on one line: a long value ends in an ellipsis (its span carries the full value as a tooltip), so a row is 32px. Only the Title may wrap, to two lines. */
+.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell:not(.task-list-title-cell):not(.mud-datagrid-group) {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .task-list-title-cell {

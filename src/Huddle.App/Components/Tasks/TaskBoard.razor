@@ -159,6 +159,7 @@
         </ChildContent>
         <ItemRenderer>
             <TaskCard Task="@context" Fields="@this.View.Fields" Presence="@this.PresenceOf(context)"
+                      OpenBlockers="@this.OpenBlockersOf(context)"
                       LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search" Selected="@(this.SelectedId is { } open && open == context.Id)"
                       OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))"
                       OnMoveTo="@(state => this.MoveAsync(context, state))"
@@ -465,6 +466,10 @@
         BoardLayout.TryParseZone(zone, out string laneKey, out _)
         && this.laneOf.TryGetValue(item.Id, out string? ownLane)
         && string.Equals(ownLane, laneKey, StringComparison.Ordinal);
+
+    /// <summary>The card's blockers that are not finished, by the one rule the start gate and the Task order use (<c>TaskBlockers.Open</c>).</summary>
+    /// <param name="task">The card's Task.</param>
+    private IReadOnlyList<TaskId> OpenBlockersOf(TaskItem task) => [.. TaskBlockers.Open(task, this.Store.Get).Select(static blocker => blocker.Id)];
 
     /// <summary>The card's presence badge, from <c>TaskPresence.For</c> (D12-4); none for an unassigned Task.</summary>
     /// <param name="task">The card's Task.</param>

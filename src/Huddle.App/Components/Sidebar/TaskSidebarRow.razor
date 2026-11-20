@@ -8,6 +8,10 @@
     <span class="room-task-id">@this.Task.Id</span>
     <MudLink Typo="Typo.body2" Color="Color.Inherit" Underline="Underline.None" Class="sidebar-row-text" title="@($"{this.Task.Id} {this.Task.Title}")"
              Href="@($"/tasks/item/{Uri.EscapeDataString(this.Task.Id.ToString())}")">@this.Task.Title</MudLink>
+    @if (this.Task.Status.IsTerminal())
+    {
+        <span class="room-task-closed-state">@this.Task.Status.ToWire()</span>
+    }
     <span class="@TaskStateDot.ClassFor(this.Task.Status)" role="img" aria-label="@this.Task.Status.ToWire()" title="@this.Task.Status.ToWire()"></span>
 </div>
 

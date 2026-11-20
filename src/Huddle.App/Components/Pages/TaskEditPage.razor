@@ -23,8 +23,6 @@
 @inject IOptions<TeamOptions> Options
 @inject TabService Tabs
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
-@inject ISnackbar Snackbar
 
 @if (!this.Options.Value.Tasks.Enabled)
 {
@@ -62,10 +60,9 @@ else
 
                         <PageHeader Title="@this.PageTitle" SetPageTitle="false" Chrome="true" TitleEditor="@title.TitleEditor" TitleTrailing="@title.Trailing">
                             <Actions>
-                                @if (this.editing is { } id)
+                                @if (this.editing is not null)
                                 {
                                     <ActionButton Class="task-edit-page-view" OnClick="this.ViewTask">View task</ActionButton>
-                                    <ActionIconButton Icon="@Icons.Material.Outlined.ContentCopy" Label="@($"Copy task id {id}")" Tooltip="Copy id" Class="task-edit-page-copy-id" OnClick="@(() => this.CopyIdAsync(id))" />
                                 }
 
                                 @* K2a: always shown, because a page has no other way out. Save is the header's one filled button. *@
@@ -247,10 +244,6 @@ else
             this.Navigation.NavigateTo(target.Url);
         }
     }
-
-    /// <summary>Copy id, called straight from the click so the browser's clipboard permission stays inside the click's own user activation.</summary>
-    /// <param name="id">The Task id to copy.</param>
-    private Task CopyIdAsync(TaskId id) => TaskClipboard.CopyIdAsync(this.JS, this.Snackbar, id, CancellationToken.None);
 
     /// <summary>The editor's pending edits appeared or went: redraw Save, and mark the Tab.</summary>
     /// <param name="pending">Whether the editor now has an unsaved edit.</param>

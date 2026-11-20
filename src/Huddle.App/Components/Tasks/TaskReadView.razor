@@ -198,8 +198,11 @@ else if (this.loaded is { } task)
         <PropertyRow Label="Due date" Class="@(TaskDates.IsOverdue(task, this.Clock) ? "task-read-view-due-date task-overdue" : "task-read-view-due-date")">
             @if (task.DueDate is { } due && TaskDates.IsOverdue(task, this.Clock))
             {
-                <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
-                <span title="@TaskDates.Tooltip(due)">@TaskDates.Human(due, this.Clock)</span>
+                @* The card's own overdue treatment (task-due-overdue): the warning icon, weight 600, the error mixed toward body text. *@
+                <span class="task-due-overdue" title="@TaskDates.Tooltip(due)">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="task-due-icon" aria-label="Overdue" />
+                    @TaskDates.Human(due, this.Clock)
+                </span>
             }
             else
             {

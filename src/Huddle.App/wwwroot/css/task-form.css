@@ -116,6 +116,11 @@
     .task-detail-strip {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
+
+    /* The Sprint's value ("Launch prep") plus its clear and arrow icons need more than one column; the last row has the room. */
+    .task-detail-strip-item-wide {
+        grid-column: span 2;
+    }
 }
 
 /* The title field replaces the header's h1 while the title is edited; it takes the free width of the title's line. */
