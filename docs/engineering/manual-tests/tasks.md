@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**32 tests** · 20 free, 12 paid 💰 · about 5.5 hours.
+**33 tests** · 20 free, 12 paid 💰 · about 5.5 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the

@@ -4308,6 +4308,13 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-05--a-second
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/one-in-progress` on `5c4c8bed` |  | The TASKORDER-01 to 04 lane. DevLane predates the gate, so the tester added `one-in-progress-per-assignee` to its `_team.md` by hand (the Process tab only switches gates off). Ana held DEVL-0001 In Progress; asked to start DEVL-0003, her `update_task` got exactly "Gate one-in-progress-per-assignee: Ana already has DEVL-0001 "B the prerequisite" In Progress. Finish it or move it out of In Progress before starting another." and DEVL-0003 stayed To Do. The Human moved DEVL-0001 back to To Do (allowed), and Ana then moved DEVL-0003 to In Progress herself (Timeline 23:21:30Z); the Task order panel listed it under Started. About 0.10 USD. |
 
+### TASKORDER-06 — A Team that asks for one Task at a time refuses a second in one Project; a Project set to Parallel accepts both
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-06--a-team-that-asks-for-one-task-at-a-time-refuses-a-second-in-one-project-a-project-set-to-parallel-accepts-both)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell
