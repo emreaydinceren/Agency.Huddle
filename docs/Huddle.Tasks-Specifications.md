@@ -10,8 +10,9 @@ spec turns into components
 
 This is the design for **Tasks**: work items that the Human and the AI Agents share. Each Task
 is a markdown file on disk. The Human sees Tasks through saved **Views**, either as a List or as a
-Kanban Board. Agents read and change Tasks through six App Tools. Every change to a Task wakes its
-AI assignee, which is done by posting a Message into a Room.
+Kanban Board. Agents read and change Tasks through six App Tools. A change to a Task that its assignee acts on
+wakes its AI assignee, which is done by posting a Message into a Room ([SmartWakes](Huddle.SmartWakes-Specifications.md)
+says which changes).
 
 It is written for the engineers and **subagents** building it, none of whom saw the conversation
 that produced it. Every workstream in Appendix A names the sections it depends on and the
@@ -54,7 +55,7 @@ Task.
 2. **The same rules apply to every change.** The UI, the App Tools and hand edits in a text
    editor all go through `TaskService`, which validates the change, writes the file, appends to
    the Change log and raises one event.
-3. **A change to a Task wakes its AI assignee.** A Message that Mentions the assignee is posted
+3. **A change to a Task that the assignee acts on wakes its AI assignee.** A Message that Mentions the assignee is posted
    into a Room chosen by the rules in §10.4. Before and after the change, the interface shows who
    will be or was woken.
 4. **Views** are saved List and Board layouts, each with its own fields, filters, grouping, sort
@@ -934,7 +935,7 @@ public sealed partial class TaskTriggerService : IHostedService, IDisposable
     public WakePreview Preview(TaskItem? before, TaskItem after, TaskActor actor);
 }
 public sealed record WakePreview(string? AssigneeName, PresenceState? Presence, WakeBlock Block);
-public enum WakeBlock { None, NoAssignee, AssigneeIsHuman, AssigneeIsActor, BudgetPaused, Disabled }
+public enum WakeBlock { None, NoAssignee, AssigneeIsHuman, AssigneeIsActor, BudgetPaused, Disabled, NothingWakes }
 ```
 
 `Preview` applies the same guards as §10.2 without doing anything. **Every** UI label about who
@@ -945,15 +946,19 @@ will be woken comes from `Preview`. The UI never re-derives these rules.
 A `TaskChange` produces **no** wake-up when:
 
 1. `Tasks.WakeEnabled` is false.
-2. `After.Assignee` is null.
-3. The assignee is the Human, compared case-insensitively with the Human's Name.
-4. The assignee **is the actor**, compared by Name case-insensitively. This is the self-edit
+2. Nothing the assignee acts on changed: every change in it is silent (rank, priority, tags, dates, sprint, parent, origin,
+   the Human gate, a silent status move, a location change made outside Huddle). `Preview` returns `WakeBlock.NothingWakes`.
+   The list is [Huddle.SmartWakes-Specifications.md](Huddle.SmartWakes-Specifications.md) §3; it is one list for every actor.
+3. `After.Assignee` is null.
+4. The assignee is the Human, compared case-insensitively with the Human's Name.
+5. The assignee **is the actor**, compared by Name case-insensitively. This is the self-edit
    guard.
-5. The assignee isn't a known Persona. This covers a removed Persona.
-6. The actor is an Agent and the Task's **wake budget** is spent (§10.6).
+6. The assignee isn't a known Persona. This covers a removed Persona.
+7. The actor is an Agent and the Task's **wake budget** is spent (§10.6).
 
 Reassignment is covered by the same rules: only `After.Assignee` is considered, so the previous
-assignee isn't told. Closing and reopening are changes, so they wake the assignee too.
+assignee isn't told. Closing and reopening wake the assignee only when the Task is In Progress or Needs You; a comment
+wakes only the Agents it Mentions, not the assignee as such (SmartWakes §3.2, §3.3).
 
 ### 10.3 Coalescing
 
@@ -966,6 +971,10 @@ assignee isn't told. Closing and reopening are changes, so they wake the assigne
   assignee. If the assignee changed during the window, the new assignee gets one Message listing
   every change.
 - A change by a *different* actor starts its own batch.
+- **Silent changes are dropped on receipt**, before any of this: a change that wakes neither the assignee nor the manager
+  (and is not a Request's status move or a comment that holds an `@`) joins no batch, resets no wake budget, drops no held
+  wake and counts toward no outside-edit flood window. It is still saved and logged. A blocker reaching a finished status
+  still wakes the Tasks it blocked before the drop (SmartWakes §5.3).
 
 ### 10.4 Choosing the Room and the sender
 
@@ -1035,7 +1044,9 @@ placeholders: `assignee`, `taskId`, `title`, `actor`, `changes`, `status`, `team
 Call get_task with taskId {{taskId}} for the full task.
 ```
 
-- `{{changes}}` is one `- ` bullet per coalesced Change log summary.
+- `{{changes}}` is one `- ` bullet per coalesced Change log summary. A comment's bullet quotes its text instead, as
+  `- comment by Dev: "…"`, neutralised and cut at 1,000 characters with `… (get_task has the rest)`. A comment wakes only the
+  Agents it Mentions, each in a Message of its own with the Mentioned Agent in place of the assignee (SmartWakes §3.3, §5.3).
 - The Mention comes first, and `MentionParser` resolves it because the assignee is a Member.
 - Post with `chat.PostAsync(room.Id, senderId, text, ct: …)`.
 - In a two-Member Room the Reply Gate always answers. In a larger Room it answers the Mention
@@ -1750,9 +1761,9 @@ Writing `TransactionStarted="…"` in markup doesn't compile, because it isn't a
 4. Call `TaskService.Update(id, new TaskPatch { Status = …, DuplicateOf = …, Reason = … }, baseVersion: null, humanActor)`.
 5. If the result is `Refused`, show a Snackbar error and `Refresh()`.
 
-**While dragging**, a caption under the target column shows the `Preview` text for the dragged
-card, for example *"Nova will be notified"*. It uses `TaskTriggerService.Preview`. Changes made by
-dragging are saved immediately; that is by design (D-20).
+**While dragging**, each drop zone whose drop would wake the assignee shows *"Notifies Nova"*, from
+`TaskTriggerService.Preview` for the dragged card moved to that zone's status (SmartWakes §5.5). The card's own zone never
+shows it, because a drop there saves a rank only. Changes made by dragging are saved immediately; that is by design (D-20).
 
 **Reordering within a column** ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)).
 A drop into the card's own column sets the dragged card's `rank` only, and writes only that Task
@@ -1762,7 +1773,9 @@ default order puts the card between them, else the rank above; at the top, half 
 (a drop above a rank-1 card ties at 1, and the fallback order decides which shows first); after the last
 ranked card, that rank plus 10 (10 when nothing is ranked); among unranked cards, the rank is
 cleared. Neighbours from another Team are skipped. Reordering is off when the View has sort keys,
-because the drop position would mean nothing. A drop into another column changes status only.
+because the drop position would mean nothing. A drop into another column changes status only. A rank change is silent
+([ADR-0100](adr/0100-a-task-change-wakes-only-for-what-its-readers-act-on.md)): a drop in the card's own column wakes no
+one, so no hint is shown there.
 
 **Keyboard.** Every card has a `MudMenu` (an icon button with `aria-label="Move PLAT-0042"`) that
 lists all eight states. Choosing one takes the same path as a drop, so Duplicate still asks for its
@@ -2266,7 +2279,7 @@ exists; see ADR-0030.
 | E-4 | The origin Room was deleted | It fails step 1 of §10.4, and the next step applies |
 | E-5 | The creator's Persona was removed | `FindUserByName` returns null, so S is {Human, assignee} |
 | E-6 | The assignee was renamed during the coalescing window | The rename cascade rewrote the file. The timer reads the **latest** Task |
-| E-7 | A Team folder is renamed in Explorer | Every Task in it shows up as moved outside Huddle. Each gets `edited outside Huddle: moved: A → B` and a wake-up, coalesced per Task. This is accepted; it was the Human's action |
+| E-7 | A Team folder is renamed in Explorer | Every Task in it shows up as moved outside Huddle. Each gets `edited outside Huddle: moved: A → B`, and no wake-up, because a location change made outside Huddle is silent (SmartWakes D-4) |
 | E-8 | A task file is copied, so two files have the same id | Both are rejected with each other's paths (§8.1). Fix one id by hand |
 | E-9 | A task file is deleted by hand | It leaves the index. No log entry and no wake-up, because there's no file to log into. Its references elsewhere show *(missing)* |
 | E-10 | The description includes `## Change log` inside a code fence | Allowed, because §7.3 skips fenced blocks |
@@ -2275,7 +2288,7 @@ exists; see ADR-0030.
 | E-13 | An agent-made wake-up hits a paused Room | Outcome `BudgetSpent`. There's no retry: the change is saved, and the Human continues the Room |
 | E-14 | `views.json` is deleted while the app runs | The built-ins remain in memory, and the file isn't recreated until something is saved |
 | E-15 | A View filters on a Team with no folder and no label | Shown as *(missing)*, and it still filters, matching nothing |
-| E-16 | A card is dropped on its own column | With no sort keys on the View, only its `rank` is saved (§13.4 Reordering). Dropped where it already sits, or on a View with sort keys: nothing happens (`Unchanged`, no event) |
+| E-16 | A card is dropped on its own column | With no sort keys on the View, only its `rank` is saved and no one is woken (§13.4 Reordering). Dropped where it already sits, or on a View with sort keys: nothing happens (`Unchanged`, no event) |
 | E-17 | A Task file is over 1 MB | It's read normally. There's no limit in V1 |
 | E-18 | A Task in `_closed/` has status In Progress | Allowed (owner decision: closing doesn't need a terminal state) |
 
@@ -2337,7 +2350,7 @@ TASKS-10 to TASKS-12 are paid 💰.
 | D-3 | **One assignee** | Several, plus watchers | Simpler grouping and wake-up routing. *Owner* |
 | D-4 | **Eight fixed states**, with four terminal ones | Custom states | Tool schemas and validation stay static. *Owner* |
 | D-5 | **Closing doesn't require a terminal state**, and nothing closes automatically | Requiring one, or auto-closing Done | Done work stays visible until the Human closes it. *Owner* |
-| D-6 | **Any change wakes the assignee** | Waking only on assignment | *Owner*. The guards in §10.2 and §10.6 keep it bounded |
+| D-6 | **A change wakes the assignee only when it changes what they act on** (first: any change) | Waking only on assignment | *Owner*. Narrowed by [ADR-0100](adr/0100-a-task-change-wakes-only-for-what-its-readers-act-on.md). The guards in §10.2 and §10.6 keep it bounded |
 | D-7 | **Room choice: origin, then {Human, creator, assignee}, then create** | Always the direct Room | *Owner* |
 | D-8 | **The Change log is in the file**, and created, updated and closed are derived from it | Timestamps in the frontmatter | One source of truth. *Owner* |
 | D-9 | **Views in `{DataDir}/views.json`** | `team.db`, or browser storage | *Owner*. Only the last-opened View uses browser storage |
@@ -2367,7 +2380,7 @@ TASKS-10 to TASKS-12 are paid 💰.
 | D-33 | **`#` opens the picker and is then removed**; the inserted text is the plain id | Keeping `#PLAT-0042` as a marker | One format whether the id was pasted or picked, and no marker for a model to drop or copy. *Owner* |
 | D-34 | **Task links are plain `href`s to `/tasks/item/{id}`** | Opening a dialog over the chat | Messages render as a `MarkupString`, so Blazor can't handle clicks inside them without new JavaScript. Back returns to the Room |
 | D-35 | **`IsSafe` allows `/tasks/item/<valid id>` exactly, and no other relative URL** | Allowing relative URLs in general | A general allowance would reopen what the link rewriter closes |
-| D-36 | **An optional, sparse `rank` orders a Team's backlog, 1 first, never renumbered** ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)) | No rank (the V1 non-goal); dense ranks renumbered on every move | Priority orders only coarsely. Sparse ranks keep a move to one file write and one wake. A rank change still wakes as any field does, until field-aware wakes. *Owner* |
+| D-36 | **An optional, sparse `rank` orders a Team's backlog, 1 first, never renumbered** ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)) | No rank (the V1 non-goal); dense ranks renumbered on every move | Priority orders only coarsely. Sparse ranks keep a move to one file write and one wake. A rank change is silent ([ADR-0100](adr/0100-a-task-change-wakes-only-for-what-its-readers-act-on.md)). *Owner* |
 
 ---
 

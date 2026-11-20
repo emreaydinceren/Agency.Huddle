@@ -83,3 +83,19 @@ A save of only silent fields reads **Save**, not **Save & Notify Nova**.
   that no one will, so an Agent learns the rule from the tool as it uses it.
 - **`TaskChange` carries its kind,** so a rule never has to guess from an empty field list what kind of change it was.
 - **Adding a `TaskField` fails the build until it is classified** as waking or silent.
+
+## As built
+
+Built 2026-11-19 on `feat/smart-wakes`; the full design as built is the spec. The build differs from the decision text in these places:
+
+- **A Human decision is checked first.** A decline closes the Task (status Rejected) and must still wake, so a decision wakes
+  before the closed-flag rule is read.
+- **Closing or reopening a To Do or Backlog Task is silent.** The decision text says a close or reopen wakes only when the
+  Task is In Progress or Needs You; the build applies that to every Task, a To Do one included, and the owner may flip it
+  (spec C-6). The `close_task` and `reopen_task` replies for such a Task say the assignee is not woken.
+- **`@all` in a Task comment wakes no one** (spec C-7).
+- **The requesting manager's reopen reading:** it wakes on a move into Done, Cancelled or Rejected and on a move out of a
+  finished status into a non-finished one; a move from one finished status into Duplicate is silent.
+- **`add_comment` has a fourth reply,** "No one is woken: wake-ups are off.", when wake-ups are off.
+- **A kept Human change still runs both `ResetForHuman` and `ForgetHeld`;** only a dropped change runs neither.
+- **The unblock check runs before the silent drop,** so a blocker that moves Backlog → Cancelled still wakes what it blocked.

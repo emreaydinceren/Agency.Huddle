@@ -1,6 +1,6 @@
 # Tasks: creating, moving, viewing and referencing a unit of work
 
-**31 tests** · 20 free, 11 paid 💰 · about 5.3 hours.
+**40 tests** · 23 free, 17 paid 💰 · about 7 hours.
 
 Prove, in a real browser against a real `node` adapter where a test says so, everything between "a
 Task file exists on disk" and "an Agent reacts to it": that the UI writes the exact frontmatter the
@@ -1333,6 +1333,232 @@ asked what to work on gets its own order, and the Task it names starts.*
 
 - The gate is missing from the Process tab -> the type's `processes/*.md` files do not list it.
 - The Task moves -> the Team's process was not the one loaded.
+
+### SMARTWAKE-01 — Dragging a card within its column changes its rank and wakes no one
+
+**Free** · about 8 min · no Turns
+
+*Proves [the SmartWakes spec §3.1](../../Huddle.SmartWakes-Specifications.md#31-fields): a rank change is saved and logged
+and wakes neither the assignee nor the manager.*
+
+**Before you start**
+
+- A Team (seed Platform) with three **To Do** Tasks assigned to an Agent, the Board open on a View with no sort keys, and the
+  Agent's Room with the Team open in another Tab.
+
+**Steps**
+
+1. Drag the third card above the first within the **To Do** column.
+2. Open the dragged Task's Timeline, then look at the Agent's Room and the toasts.
+
+**Pass if — all of these**
+
+- The Task's rank changed and the Timeline logs the rank change.
+- No Message was posted in any Room and no wake toast appeared.
+
+**Fail if — any of these**
+
+- A wake Message or toast appears -> `OnTaskChanged` kept the change (`WakeRelevance.FieldWakes` has Rank as waking).
+
+### SMARTWAKE-02 — A Human moving an In Progress Task into Done wakes the assignee and the manager once each
+
+**Paid 💰** · about 10 min · 2 Turns
+
+*Proves [spec §3.4](../../Huddle.SmartWakes-Specifications.md#34-status-moves): Active → Done wakes both, in one Message each.*
+
+**Before you start**
+
+- A development Team with a manager and a Developer on a live Adapter (Sonnet or better). One **In Progress** Task assigned
+  to the Developer that needs no Accept (no Human gate, no Action).
+
+**Steps**
+
+1. Drag the Task into **Done** on the Board.
+2. Read the Team Room and the Developer's Room.
+
+**Pass if — all of these**
+
+- The Developer and the manager each get one wake Message, and the Message lists the status change.
+
+**Fail if — any of these**
+
+- Either is not woken -> `StatusWakes` has the wrong verdict for Active → Done.
+- One of them gets two Messages -> the round's woken set did not hold.
+
+### SMARTWAKE-03 — A comment wakes only the Agents it Mentions
+
+**Paid 💰** · about 12 min · 2 Turns
+
+*Proves [spec §3.3](../../Huddle.SmartWakes-Specifications.md#33-mentions-in-a-comment): the assignee is woken by a Mention, not by a comment as such.*
+
+**Before you start**
+
+- A Task assigned to an Agent (call it Nova) on a live Adapter (Sonnet or better). The Task window open on its Timeline.
+
+**Steps**
+
+1. Read the helper text under **Add a comment**.
+2. Type a comment with no Mention and press **Comment**. Wait 10 seconds.
+3. Type a second comment that has `@Nova` in it (the Human types `@Name`) and press **Comment**.
+
+**Pass if — all of these**
+
+- The helper text reads "A comment wakes only the Agents you @-mention."
+- Step 2 posts no Message and starts no Turn.
+- Step 3 wakes Nova only, and the wake Message quotes the comment as `comment by <you>: "…"`.
+
+**Fail if — any of these**
+
+- Step 2 wakes anyone -> the receipt drop kept a comment with no `@` (`TaskTriggerService.IsSilent`).
+- Step 3 wakes the manager too -> the Mention rule is waking someone it did not resolve.
+
+### SMARTWAKE-04 — The development review loop runs to Done on Mentions alone
+
+**Paid 💰** · about 30 min · 6-8 Turns
+
+*Proves [spec §6.1](../../Huddle.SmartWakes-Specifications.md#61-playbooks-and-personas): the built-in review loop still closes
+when each comment must Mention the Agent who acts on it.*
+
+**Before you start**
+
+- A new development Team (Developer, Reviewer, manager) on a live Adapter (Sonnet or better), created after this build.
+  A small Task assigned to the Developer, with an acceptance line that has one defect the Reviewer will find.
+
+**Steps**
+
+1. Start the Task and let the Developer ask for a review. Let the Reviewer leave findings.
+2. Let the Developer fix the work and comment that it is ready. Do not nudge anyone.
+3. Let the Reviewer approve and the Developer finish the Task.
+
+**Pass if — all of these**
+
+- The Developer's "ready" comment Mentions the Reviewer and wakes them; the findings comment Mentions the Developer.
+- The review Task reaches **Done** and the Task follows, with no Human nudge.
+
+**Fail if — any of these**
+
+- The loop stalls after a comment -> the persona or process text lost its Mention clause (`lightweight-flow.md`, `reviewer.md`).
+
+### SMARTWAKE-05 — Approving a Sprint wakes no one
+
+**Free** · about 8 min · no Turns
+
+*Proves [spec §3.1](../../Huddle.SmartWakes-Specifications.md#31-fields): Sprint is silent, so one click is not N wakes.*
+
+**Before you start**
+
+- A Sprint proposal of three Tasks assigned to Agents, from the Sprint proposal card.
+
+**Steps**
+
+1. Approve the Sprint.
+2. Look at the Rooms and the toasts.
+
+**Pass if — all of these**
+
+- The three Tasks carry the sprint, and no wake Message or toast appears.
+
+**Fail if — any of these**
+
+- A wake appears -> `TaskField.Sprint` is waking in `WakeRelevance`.
+
+### SMARTWAKE-06 — Renaming a Team folder in Explorer wakes no one
+
+**Free** · about 6 min · no Turns
+
+*Proves [spec D-4](../../Huddle.SmartWakes-Specifications.md#2-owner-decisions-2026-11-19): a location change made outside Huddle is silent.*
+
+**Before you start**
+
+- A Team with two Tasks assigned to Agents, Huddle running.
+
+**Steps**
+
+1. In Explorer, rename the Team's folder under `<data>\Teams\`.
+2. Wait 15 seconds and look at the Rooms.
+
+**Pass if — all of these**
+
+- Each Task shows `edited outside Huddle: moved` in its Timeline, and no wake Message appears.
+
+**Fail if — any of these**
+
+- Any Agent is woken -> the Location rule is not reading the OutsideHuddle actor.
+
+### SMARTWAKE-07 — The Board shows "Notifies Nova" only on the zones whose drop wakes
+
+**Paid 💰** · about 12 min · 1 Turn
+
+*Proves [spec §5.5](../../Huddle.SmartWakes-Specifications.md#55-the-board-drag-caption) and §3.4 together.*
+
+**Before you start**
+
+- A Team with a manager and an Agent named Nova on a live Adapter (Sonnet or better). A **Backlog** card and an
+  **In Progress** card, both assigned to Nova, the Board showing all eight states.
+
+**Steps**
+
+1. Start dragging the Backlog card and look at the zones. Drop it in **Cancelled**.
+2. Drag the In Progress card to **Cancelled**.
+
+**Pass if — all of these**
+
+- During the first drag, **To Do** and **In Progress** show "Notifies Nova"; **Cancelled** and the card's own zone do not;
+  there is no caption on top of a column.
+- The first drop wakes no one. The second wakes Nova and the manager.
+
+**Fail if — any of these**
+
+- A zone shows a hint that its drop does not honour -> the per-zone `Preview` disagrees with `StatusWakes`.
+
+### SMARTWAKE-08 — Turning the Human gate on wakes no one, and the gate still stops the Task
+
+**Paid 💰** · about 10 min · 2 Turns
+
+*Proves [spec D-8](../../Huddle.SmartWakes-Specifications.md#2-owner-decisions-2026-11-19): the gate is enforced when the Task next moves.*
+
+**Before you start**
+
+- A Task In Progress, assigned to an Agent on a live Adapter (Sonnet or better), with Proof that can complete.
+
+**Steps**
+
+1. Switch **Requires your acceptance** on in the Task window and save.
+2. Look at the Rooms. Then let the Agent complete the Proof and move the Task toward Done.
+
+**Pass if — all of these**
+
+- Step 2's first part posts no wake Message.
+- Huddle stops the Task in **Needs You** when the Agent moves it.
+
+**Fail if — any of these**
+
+- Switching the gate wakes the Agent -> `TaskField.HumanGate` is waking.
+
+### SMARTWAKE-09 — `add_comment` says who it wakes
+
+**Paid 💰** · about 8 min · 2 Turns
+
+*Proves [spec §5.6](../../Huddle.SmartWakes-Specifications.md#56-comments-where-the-rule-is-said-d-6): the tool teaches the rule in its reply.*
+
+**Before you start**
+
+- Two Agents on a live Adapter (Sonnet or better), one of them Rex, in a Team with a Task.
+
+**Steps**
+
+1. Ask the other Agent to comment on the Task and to Mention Rex.
+2. Ask it to comment again with no Mention.
+3. Read the tool result of each call.
+
+**Pass if — all of these**
+
+- The first reply ends "Wakes Rex." and Rex is woken.
+- The second ends "No one is woken: Mention an Agent with @Name to wake them." and no one is woken.
+
+**Fail if — any of these**
+
+- The replies carry no wake sentence -> `AddCommentTool` is not reading `ResolveCommentMentionsAsync`.
 
 ---
 

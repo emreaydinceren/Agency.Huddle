@@ -5,6 +5,10 @@ date: 2026-09-24
 
 # A change to a Task wakes its assignee
 
+> **Amended by [ADR-0100](0100-a-task-change-wakes-only-for-what-its-readers-act-on.md)** (proposed). "Any change wakes the
+> assignee" no longer holds: a change wakes only when it alters what the assignee or the manager acts on, and a comment
+> wakes only the Agents it Mentions. Renaming a Team folder in Explorer no longer wakes the assignee of every Task inside it.
+
 When a **Task** changes, its AI assignee is **woken**. A Message that Mentions the assignee is
 posted into a Room, listing what changed, and the ordinary Reply Gate starts the assignee's Turn.
 The change can come from the Human in the interface, from another Agent through an App Tool, or

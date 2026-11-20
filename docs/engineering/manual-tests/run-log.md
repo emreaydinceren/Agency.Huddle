@@ -4300,6 +4300,69 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-04--a-new-ho
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/task-order` on `60eb1f86` |  | New household Team HouseLane: `_team.md` has `gates: ['blockers-done-before-start']` and the Process tab lists it. Manager Nora asked to start HOUS-0002 (blocked by HOUS-0001): refused with the gate text and "Your next startable Task is HOUS-0001 "P first chore"."; HOUS-0002 stayed To Do. Lane spend 0.50 USD, of which 0.23 was the Chief of Staff's Greeting Turn on Opus. |
 
+### SMARTWAKE-01 — Dragging a card within its column changes its rank and wakes no one
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-01--dragging-a-card-within-its-column-changes-its-rank-and-wakes-no-one)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-02 — A Human moving an In Progress Task into Done wakes the assignee and the manager once each
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-02--a-human-moving-an-in-progress-task-into-done-wakes-the-assignee-and-the-manager-once-each)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-03 — A comment wakes only the Agents it Mentions
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-03--a-comment-wakes-only-the-agents-it-mentions)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-04 — The development review loop runs to Done on Mentions alone
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-04--the-development-review-loop-runs-to-done-on-mentions-alone)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-05 — Approving a Sprint wakes no one
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-05--approving-a-sprint-wakes-no-one)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-06 — Renaming a Team folder in Explorer wakes no one
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-06--renaming-a-team-folder-in-explorer-wakes-no-one)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-07 — The Board shows "Notifies Nova" only on the zones whose drop wakes
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-07--the-board-shows-notifies-nova-only-on-the-zones-whose-drop-wakes)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-08 — Turning the Human gate on wakes no one, and the gate still stops the Task
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-08--turning-the-human-gate-on-wakes-no-one-and-the-gate-still-stops-the-task)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
+### SMARTWAKE-09 — `add_comment` says who it wakes
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#smartwake-09--add_comment-says-who-it-wakes)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

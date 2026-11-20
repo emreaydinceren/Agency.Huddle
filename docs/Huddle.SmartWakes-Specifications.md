@@ -1,24 +1,25 @@
 # Huddle.SmartWakes — Design Specification
 
-**Date:** 2026-11-19 · **Status:** Designed 2026-11-19; not built. It builds on Task Rank
+**Date:** 2026-11-19 · **Status:** Built 2026-11-19 on `feat/smart-wakes` (designed the same day); SMARTWAKE-01 to 09 not run. It builds on Task Rank
 ([ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md), PR #693) and TaskOrder
 ([Huddle.TaskOrder-Specifications.md](Huddle.TaskOrder-Specifications.md), [ADR-0101](adr/0101-taskorder-derives-which-task-is-next-and-writes-nothing.md),
 PR #694), both merged to `main` on 2026-11-19. This spec is only about **when someone is woken**; it does not design
 either of them · **Source:** owner decisions of 2026-11-19 (§2) and a field-by-field
 review of what each Task field means to the Agents it wakes · **Decision record:**
-[ADR-0100](adr/0100-a-task-change-wakes-only-for-what-its-readers-act-on.md); amends
+[ADR-0100](adr/0100-a-task-change-wakes-only-for-what-its-readers-act-on.md) (proposed; the owner accepts it); amends
 [ADR-0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) · **Amends:**
 [Huddle.Tasks-Specifications.md](Huddle.Tasks-Specifications.md) §10.2, §10.3, §10.5, D-36, E-16 and §13.4 and
 [ADR-0099](adr/0099-a-task-has-an-optional-sparse-rank-within-its-team.md)'s Wakes row · **Vocabulary:**
 [language.md](engineering/language.md) (**Task**, **Agent**, **Human**, **Mention**, **Team**, **manager**)
 
-Today any change to a Task wakes its assignee and its Team's manager. This design makes a wake depend on what changed:
+Before this change any change to a Task woke its assignee and its Team's manager. Now a wake depends on what changed:
 a change an Agent would act on wakes them, a change that only reorders or files the work is saved and logged without
-waking anyone, and a comment wakes only the Agents it Mentions. It is written for the engineers or agents building it,
-with no memory of the conversation that produced it. Section 3 is the rule, section 5 the design, section 8 the slices.
+waking anyone, and a comment wakes only the Agents it Mentions. It is written for the engineers or agents maintaining it,
+with no memory of the conversation that produced it. Section 3 is the rule, section 5 the design as built, section 8 the slices.
+Where the first design and the build differed, this text says what was built.
 
 > [!IMPORTANT]
-> Two pages are binding before any code here is written: [rules.md](engineering/rules.md) before editing `src/Huddle.App`,
+> Two pages are binding before any code here is changed: [rules.md](engineering/rules.md) before editing `src/Huddle.App`,
 > and [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Model-facing text is changed only in
 > `PromptCatalog` and regenerated into `prompts.default.json` with `agents/scripts/Regenerate-PromptDefaults.ps1`; never
 > hand-edit `prompts.default.json` or a golden.
@@ -31,14 +32,14 @@ A wake is a Message that Mentions an Agent and starts its Turn, so every wake co
 also spend the Task's wake budget (Spec §10.6, default 10). Waking on every change was right when a Task had few
 fields; it is wrong for fields whose change asks nothing of anyone:
 
-- **Rank** (ADR-0099, merged) is set by a same-column drag on the Board, in the Task window, or by `update_task`. It is
-  a field change like any other, so today every reorder wakes the assignee and the manager of the dragged Task, and a
-  manager grooming its backlog spends the wake budget of every Task it touches. ADR-0099 and the Tasks spec (D-36) accept
+- **Rank** (ADR-0099, merged) is set by a same-column drag on the Board, in the Task window, or by `update_task`. It was
+  a field change like any other, so every reorder woke the assignee and the manager of the dragged Task, and a
+  manager grooming its backlog spent the wake budget of every Task it touched. ADR-0099 and the Tasks spec (D-36) accepted
   that cost only "until field-aware wakes", which is this spec.
 - **Sprint approval** sets `sprint` on N Tasks (as the Human in `SprintProposalService`, as Huddle in `SprintApprover`),
-  which today is N assignee wakes and N manager wakes from one click.
+  which was N assignee wakes and N manager wakes from one click.
 - **Comments** are the most frequent change. The Member Playbook has a member comment at the end of every pass, and each
-  comment wakes the manager.
+  comment woke the manager.
 
 ## 2. Owner decisions (2026-11-19)
 
@@ -53,7 +54,7 @@ fields; it is wrong for fields whose change asks nothing of anyone:
 | D-7 | **A status move wakes only when work starts, stops, finishes or comes back** (§3.4). Moves that file away work nobody was doing (Backlog → Cancelled, Backlog → Done) or relabel a finished Task (Cancelled → Duplicate) wake no one. The assignee and the manager are judged separately. |
 | D-8 | **The Human gate is silent.** Code enforces it when the Task next moves, so no Agent has to act when it is switched on or off. |
 
-These calls were made in writing this spec and can be flipped by the owner without touching the design:
+These calls were made in writing and building this spec and can be flipped by the owner without touching the design (§10 lists them again):
 
 | # | Call | Why |
 | --- | --- | --- |
@@ -61,7 +62,9 @@ These calls were made in writing this spec and can be flipped by the owner witho
 | C-2 | Tags are silent, although adding or removing `review` or `verify` changes the Proof. | A review Task is created already tagged, so retagging is rare; one rule beats a tag exception. |
 | C-3 | Backlog ↔ To Do **wakes the assignee**, not the manager. | Agents act only when woken. To Do is where an assignee starts, so a silent move into it could leave the Task unseen; moving it back to Backlog withdraws that. The manager usually made the move. |
 | C-4 | Backlog or To Do → Done is **silent for every actor**, an Agent's included. | D-2's one list. The Done gates (`blockers-done-before-start`, the Proof) still apply to an Agent's move, and the manager sees the Task on its next pass. |
-| C-5 | The requesting manager's status rule (RQ-4) narrows to the moves that Team acts on: into Done (to confirm), into Cancelled or Rejected (its Request was refused), and out of a finished status (reopened). | The same idea as D-7. Request lifecycle wakes from `RequestNotifier` are separate and unchanged. |
+| C-5 | The requesting manager's status rule (RQ-4) narrows to the moves that Team acts on: **into Done** (to confirm), **into Cancelled or Rejected** (its Request was refused), and **a reopen**: out of a finished status into a non-finished one (To Do, Backlog, In Progress, Needs You). A move from one finished status into Duplicate (Done, Cancelled or Rejected → Duplicate) is silent, and so is a move to the same status. | The same idea as D-7. Request lifecycle wakes from `RequestNotifier` are separate and unchanged. |
+| C-6 | **Closing or reopening a To Do or Backlog Task is silent** (a flipped `_closed/` flag wakes only a Task In Progress or in Needs You). | Nobody was working on it, so closing stops nothing and reopening resumes nothing. It follows C-4's reasoning; it changed the `close_task` and `reopen_task` replies for To Do Tasks, which now say the assignee is not woken. |
+| C-7 | **`@all` in a Task comment wakes no one.** | `@all` is a chat convenience for a Room's members; a Task has no member list, and waking every Agent would defeat D-5. Name the Agents. |
 
 ## 3. The rule
 
@@ -101,14 +104,16 @@ A change wakes when **any** of its fields wakes. A drop that sets status and ran
 ### 3.2 Changes that carry no field
 
 Several producers raise a `TaskChange` whose `Changes` list is empty. An empty list therefore means neither "silent" nor
-"wakes"; each producer says which kind of change it is (§5.1).
+"wakes"; each producer says which kind of change it is (§5.1), and an `Edit` with an empty list and none of the cases
+below is silent (this covers `ResetGatedCreation`, an outside close or reopen, `RefuseOutsideRequestClose` and
+`RefuseForgedAcceptance`).
 
 | Change | Producer (`TaskService`) | Wakes assignee and manager |
 | --- | --- | --- |
-| Create, in Huddle or outside it | `WriteNewTask`, `OnOutsideCreation` | Yes |
+| A Human decision: accept, changes requested, decline | `Decide` (`TaskChange.Decision` is set) | Yes: it carries the decision sentence. **Checked first**: a decline closes the Task (status Rejected) and must still wake. |
+| Create, in Huddle or outside it | `WriteNewTask`, `OnOutsideCreation` | Yes: `Before` is null, whatever the kind |
+| Close, Reopen (into or out of `_closed/`; the status is unchanged) | `CloseOrReopenCore` | Only when the status is In Progress or Needs You: closing stops work in flight, reopening brings it back. Closing or reopening a finished, To Do or Backlog Task wakes no one (C-6). Judged from the flipped `Location.Closed` flag, whatever the kind, so an outside close is judged the same way. |
 | Evidence | `AddEvidenceCore` | Yes: the manager checks Evidence (Manager Playbook) |
-| Close, Reopen (into or out of `_closed/`; the status is unchanged) | `CloseOrReopenCore` | Only when the status is In Progress or Needs You: closing stops work in flight, reopening brings it back. Closing a finished Task files it away and wakes no one. |
-| A Human decision: accept, changes requested, decline | `Decide` (`TaskChange.Decision` is set) | Yes: it carries the decision sentence |
 | Release (merge allowed without an Accept) | `Release` | Yes: it carries "merge now" |
 | Huddle's Sprint step | `RecordHuddleStep` | No: a log line only |
 | Huddle's move to Needs You | `MoveReadyToNeedsYou` | No, as today (#349, `TaskActors.IsReadyMove`) |
@@ -119,8 +124,9 @@ therefore wakes, as today.
 
 ### 3.3 Mentions in a comment
 
-- A Mention is resolved with `MentionParser.Parse`, the parser Messages use, against the users of every known Persona
-  (any Team, not only the Task's), so `@Nova` and an Alias of Nova both resolve.
+- A Mention is resolved with `MentionParser.Parse`, the parser Messages use, against the registered Agent Personas (any
+  Team, not only the Task's) and the Aliases in `PersonaStore`, so `@Nova` and an Alias of Nova both resolve. The Human
+  types `@Name`. **`@all` wakes no one** (C-7).
 - The usual guards apply to each Mentioned Agent: wake-ups on (`Tasks.Enabled`, `Tasks.WakeEnabled`), not the comment's
   author, not the Human, a known Persona that has registered, and the Task's wake budget for an Agent author. A Mention of
   the Human wakes no one; the Human reads the timeline.
@@ -141,7 +147,7 @@ The eight statuses fall into four phases:
 | Won't do | Cancelled, Duplicate, Rejected |
 
 A move wakes when work **starts**, **stops**, **finishes** or **comes back**, and is silent when it files away work nobody
-was doing or relabels a finished Task:
+was doing or relabels a finished Task. A move to the same status is no move and is silent:
 
 | From → to | Assignee | Manager | Example |
 | --- | --- | --- | --- |
@@ -162,7 +168,8 @@ The usual guards still apply on top of the table: nobody is woken by their own m
 
 Unblocking is not changed by this table: a blocker that moves from an open status to a finished one wakes the Tasks it
 blocked (`StartUnblock`), so Backlog → Cancelled still releases them, and Cancelled → Duplicate, already finished, does not
-run it again.
+run it again. `StartUnblock` runs on receipt **before** the silent drop (§5.3), because the move that releases the blocked
+Tasks may itself wake no one.
 
 ## 4. Non-goals
 
@@ -173,17 +180,20 @@ run it again.
   `TaskOrder` re-derives its answer from the Tasks and wakes no one itself.
 - **The Feed.** `TaskFeedRules` reads every change on its own and is unchanged.
 - **Request lifecycle wakes.** `RequestNotifier` calls `WakeForRequestAsync` directly and is unchanged.
-- **Unblocking.** `WakeUnblockedTaskAsync` runs when a blocker reaches a terminal status, which always wakes; unchanged.
+- **Unblocking.** `WakeUnblockedTaskAsync` runs when a blocker reaches a terminal status, which always wakes; unchanged, and
+  it still runs for a blocker whose own move is silent (§3.4).
+- **Held wakes and the Human Wake button.** The Human Wake button, held-wake replay (`DeliverHeldAsync`) and
+  `WakeUnblockedTaskAsync` bypass the rules and are unchanged.
 - **An `@` picker in the comment box.** The helper text says how; the picker from References in a Message
   ([Huddle.AtTagging-Specifications.md](Huddle.AtTagging-Specifications.md)) may come later.
 - **Per-actor or per-recipient lists, and a setting for the list.** D-2: one list, in code.
 - **Migrating installed Teams.** Built-in Playbooks and personas are changed at the source only.
 
-## 5. Design
+## 5. Design (as built)
 
 ### 5.1 `TaskChange` says what kind of change it is
 
-`TaskChange` gains two trailing optional parameters, so every existing constructor call keeps compiling:
+`TaskChange` gained two trailing optional parameters, so every existing constructor call keeps compiling:
 
 ```csharp
 internal sealed record TaskChange(
@@ -196,62 +206,58 @@ internal sealed record TaskChange(
 internal enum TaskChangeKind { Edit, Create, Comment, Evidence, Close, Reopen, Release, HuddleStep }
 ```
 
-Each producer in the §3.2 table passes its kind; `AddCommentCore` also passes the comment text. `Edit` (the default)
-covers every change that has fields: in-app updates, decisions, outside edits and gate refusals.
+Each producer in the §3.2 table passes its kind; `AddCommentCore` also passes `Comment`, the **trimmed** comment text. `Edit`
+(the default) covers every change that has fields: in-app updates, decisions, outside edits and gate refusals. The
+`ChangeLogEntry` summaries ("comment added by", "evidence added by") are unchanged; the Feed reads them.
 
 ### 5.2 `WakeRelevance`: the rule, pure
 
-A new static class in `src/Huddle.App/Tasks/Wake/WakeRelevance.cs` holds §3 and nothing else: no I/O, no clock, no options.
+`src/Huddle.App/Tasks/Wake/WakeRelevance.cs` holds §3 and nothing else: no I/O, no clock, no options. `WakeRecipient`
+(`Assignee`, `Manager`) and `TaskPhase` (`Planning`, `Active`, `Done`, `WontDo`) are enums beside it.
 
 ```csharp
-/// <summary>Who a wake rule is judging for. Only Status moves (§3.4) tell the two apart.</summary>
-internal enum WakeRecipient { Assignee, Manager }
-
-/// <summary>The phase of a status (§3.4).</summary>
-internal enum TaskPhase { Planning, Active, Done, WontDo }
-
 internal static class WakeRelevance
 {
-    /// <summary>The phase of <paramref name="state"/>.</summary>
     public static TaskPhase PhaseOf(TaskState state);
-
-    /// <summary>Whether moving from <paramref name="from"/> to <paramref name="to"/> wakes <paramref name="recipient"/> (the §3.4 table).</summary>
-    public static bool StatusWakes(TaskState from, TaskState to, WakeRecipient recipient);
-
-    /// <summary>Whether <paramref name="changes"/>, made by an actor of <paramref name="kind"/>, hold a change that wakes <paramref name="recipient"/> (§3.1, §3.4).</summary>
-    public static bool Wakes(IReadOnlyList<FieldChange> changes, TaskActorKind kind, WakeRecipient recipient);
-
-    /// <summary>Whether <paramref name="change"/> wakes <paramref name="recipient"/> (§3.1, §3.2, §3.4). A comment never does.</summary>
-    public static bool Wakes(TaskChange change, WakeRecipient recipient);
-
-    /// <summary>Whether <paramref name="change"/> is a status move of a Request that wakes its requesting manager (C-5).</summary>
-    public static bool RequestStatusWakes(TaskChange change);
+    public static bool StatusWakes(TaskState from, TaskState to, WakeRecipient recipient);                       // the §3.4 table
+    public static bool Wakes(IReadOnlyList<FieldChange> changes, TaskActorKind kind, WakeRecipient recipient);  // §3.1, §3.4
+    public static bool Wakes(TaskChange change, WakeRecipient recipient);                                       // §3.1, §3.2, §3.4
+    public static bool RequestStatusWakes(TaskChange change);                                                   // C-5
 }
 ```
 
-`Wakes(TaskChange, recipient)` is true when `Decision` is set, or `Kind` is `Create`, `Evidence` or `Release`, or
-`Kind` is `Close` or `Reopen` and the Task's status is Active, or `Kind` is `Edit` and a change wakes the recipient. It
-is false for `Comment` and `HuddleStep`. A Status change is judged by `StatusWakes` from the `FieldChange`'s old and new
-values (`Before.Status`, `After.Status`); every other field wakes both recipients or neither. The field table is a
-`switch` expression over `TaskField`, and `StatusWakes` a `switch` over the pair of phases, both with no default arm, so
-adding a `TaskField` or a `TaskState` value fails the build until it is classified.
+`Wakes(TaskChange, recipient)` checks, in this order:
+
+1. `Decision` is set, or `Before` is null (a Create): wakes. The decision comes first because a decline closes the Task.
+2. `Before.Location.Closed` differs from `After.Location.Closed` (a close or reopen), whatever the `Kind`: wakes only when
+   the Task's status is In Progress or Needs You, or when the kind is `Edit` and a field wakes (C-6).
+3. By `Kind`: `Create`, `Evidence` and `Release` wake; `Comment` and `HuddleStep` never do; `Close` and `Reopen` wake only
+   when the status is In Progress or Needs You; `Edit` wakes when a field does. An `Edit` with no field is silent.
+
+A Status field change is judged from the `FieldChange`'s `Old` and `New` wire strings, parsed to `TaskState` (not from
+`Before.Status` and `After.Status`: a test or a producer may build a `TaskChange` whose `Before` and `After` are the same
+Task with only a `FieldChange`). A value that does not parse wakes, since Huddle cannot judge a move it cannot read.
+`RequestStatusWakes` reads the same strings: into Done, Cancelled or Rejected, or out of a finished status into a
+non-finished one (C-5). Every other field wakes both recipients or neither. The field table is a `switch` expression over
+`TaskField`, and `StatusWakes` a `switch` over the pair of phases, both with no default arm, so adding a `TaskField` or a
+`TaskState` value fails the build until it is classified (the file suppresses CS8524 so that CS8509 stays live).
 
 ### 5.3 `TaskTriggerService`
 
-**On receipt (`OnTaskChanged`).** A change that neither wakes nor is a comment that might Mention someone is dropped
-first, beside the existing `IsReadyMove` return:
+**On receipt (`OnTaskChanged`), in this order:**
 
-```csharp
-bool wakes = WakeRelevance.Wakes(change, WakeRecipient.Assignee) || WakeRelevance.Wakes(change, WakeRecipient.Manager);
-bool mentions = change.Kind == TaskChangeKind.Comment && change.Comment is { } text && text.Contains('@');
-bool requestWakes = WakeRelevance.RequestStatusWakes(change); // C-5, true only for a Request
-if (TaskActors.IsReadyMove(change) || (!wakes && !mentions && !requestWakes))
-{
-    return; // Saved and logged; joins no batch, resets nothing, holds nothing, counts toward no flood window.
-}
-```
+1. `TaskActors.IsReadyMove(change)` returns, as before.
+2. `StartUnblock(change)` runs when the new status is finished and the old one (the Status field's `Old`, else
+   `Before.Status`) was not.
+3. **The receipt drop.** A change that is silent returns. A comment is kept only when its text contains `@` (the Mention
+   rule decides later whom it wakes); any other change is kept when it wakes the assignee, wakes the manager, or is a
+   Request's C-5 move (`RequestStatusWakes`). A dropped change is saved and logged, and joins no batch, resets nothing, holds
+   nothing and counts toward no flood window.
+4. For a kept Human change, `ResetForHuman` **and** `ForgetHeld` run exactly as before. (The first design ran `ForgetHeld`
+   only when the change woke; that would leave a kept Mention comment from the Human unable to clear a wake held on a spent budget.)
+5. `TryAddToBatch`.
 
-Dropping it there, before anything else, matters for three reasons:
+Dropping before step 4 matters for three reasons:
 
 1. A Human change resets the Task's wake budget and drops its held wakes on receipt (`ResetForHuman`, `ForgetHeld`),
    because that code assumes the Human's change wakes whoever it concerns. A silent Rank drag must not wipe a paused
@@ -260,66 +266,81 @@ Dropping it there, before anything else, matters for three reasons:
    "flood" and so skip a real change made in the same window.
 3. A silent change must not start a batch whose Message would then list only silent lines.
 
-For a Human change that is kept, `ResetForHuman` runs as today. `ForgetHeld` runs only when the change **wakes**: a
-comment Mentioning Rex does not cover a wake held for Nova.
+**The batch.** `Batch` gained `WakesAssignee`, `WakesManager` and `RequestStatusWakes` (each true when any change in the
+batch has it; `RequestStatusWakes` replaces the old `StatusChanged`), and stores **each entry together with its comment
+text** (`Add(entry, comment)`; `CommentTexts` is aligned with `Entries`, null for a non-comment). `Hold`, which copies a
+batch field by field, now copies and merges the three flags and the aligned texts, and also copies `MovedToDone` (it
+dropped it before; nothing wider changed). `TaskWakeRound` gained optional trailing parameters, `bool WakesAssignee = true,
+bool WakesManager = true, IReadOnlyList<string>? Mentioned = null`, so `WakeRuleKit` and the rule tests keep compiling and
+the flags default to true. `Mentioned` is filled at fire time in `WakeAsync` by `ResolveMentionedAsync`, before the rules run
+(the directory lookup is async; the rules stay synchronous).
 
-**The batch.** `Batch` gains `bool WakesAssignee` and `bool WakesManager` (any change in it wakes that recipient), and
-`List<string> Comments` (the text of each comment in it, in order). `TaskWakeRound` gains the same two flags and
-`IReadOnlyList<string> Mentioned`, the Agent names resolved from
-the batch's comments at fire time in `WakeAsync`, before the rules run (the directory lookup may be async; rules stay
-synchronous).
+**Mention resolution** is `MentionResolver` (`Tasks/Wake`): it asks `ITeamDirectory.GetUsersAsync`, keeps the users that are
+Agents with a Persona in `PersonaStore`, adds the `PersonaStore` Aliases, runs `MentionParser.Parse`, and drops the author
+and the Human. `TaskTriggerService` exposes it as `ResolveCommentMentionsAsync` and `WakesEnabled`, so the `add_comment`
+tool (§5.6) says who a comment wakes with the same code the wake uses. When wake-ups are off it returns no one.
 
 **The rules.**
 
 | Rule | Change |
 | --- | --- |
 | `AssigneeWakeRule` | Returns `Skip(null)` when `!round.WakesAssignee`. |
-| `ManagerWakeRule` | Returns `Skip(null)` when `!round.WakesManager`. |
-| `RequestingManagerWakeRule` | Wakes only on the C-5 moves. `Batch.StatusChanged` becomes `RequestStatusWakes`, set when a batched status change moves into Done, Cancelled or Rejected, or out of Done or Won't do. The move must reach the batch even when it wakes neither the assignee nor the manager (Backlog → Rejected), so the receipt drop also keeps a change of a Request that sets this flag. |
+| `ManagerWakeRule` | Returns `Skip(null)` when `!round.WakesManager`. Its own "manager is the assignee" check stays. |
+| `RequestingManagerWakeRule` | Wakes only on `round.RequestStatusWakes`, the C-5 moves. The move reaches the batch even when it wakes neither the assignee nor the manager (Backlog → Rejected), because the receipt drop keeps it (step 3). |
 | `MentionWakeRule` (new, last) | Returns `WakeEach(names)` for `round.Mentioned` minus the actor, the Human and unknown Personas, after the wake-up switches. |
 
-`TaskWakeChoice` gains `WakeEach(IReadOnlyList<string> Names)`. `ProductionOrder` becomes
+`TaskWakeChoice` gained `WakeEach(IReadOnlyList<string> Names)`. `ProductionOrder` is
 `["Assignee", "Manager", "RequestingManager", "Mention"]`.
 
-**One Message per Agent per batch.** `WakeAsync` keeps the names already woken, or held, in this round
-(case-insensitive) and `ActOnAsync` skips a name already in it. `ManagerWakeRule`'s own "manager is the assignee" check
-stays; the round set makes it belt and braces.
+**One Message per Agent per batch.** `WakeAsync` keeps a case-insensitive set of the names a rule chose in this round (woken,
+held, or a delivery that did not post) and `ActOnAsync` and the `WakeEach` handler skip a name already in it. One Mentioned
+Agent's failed delivery is logged and does not keep the others from being woken.
 
 **The Message.** The template `task.wake.message` is unchanged. In `{{changes}}`, a comment's bullet carries its text
-instead of the bare summary: `- comment by Dev: "Ready for another look, @Rex."`, Mentions neutralised by
-`NeutraliseMentions` like every other Task-authored text, and cut at 1,000 characters with
+instead of the bare summary: `- comment by Dev: "Ready for another look, @Rex."` (`CommentExcerpt.Bullet`), Mentions
+neutralised by `NeutraliseMentions` like every other Task-authored text, and cut at 1,000 characters with
 `… (get_task has the rest)`. The `ChangeLogEntry` summary ("comment added by Dev") is not changed, because the Feed reads it.
+`ReviewSentence`, the line a review wake carries, reads: "…or leave it open with your findings as a comment; a reply in chat
+alone does not move it. A comment wakes you only when it Mentions you: when the owner comments that the work is ready again
+and Mentions you, review it again on this Task."
 
 ### 5.4 `Preview` diffs before and after
 
-`Preview(before, after, actor)` today ignores `before` (`_ = before;`). It now uses it: when `before` is not null and
-`WakeRelevance.Wakes(TaskDiff.Compare(before, after), actor.Kind, WakeRecipient.Assignee)` is false, it returns the new
-`WakeBlock.NothingWakes`, after the `Disabled` check and before the assignee checks. A `null` before keeps today's
-meaning, "a change that wakes": `CreateTaskTool`, the unblock path (`WakeUnblockedTaskAsync`) and the trigger round pass
-null and must keep waking.
+`Preview` has two overloads over one private `PreviewAssignee`. Both answer only for the **assignee**.
+
+- `Preview(TaskItem? before, TaskItem after, TaskActor actor)` serves the Board and `TaskDetail`. A null `before` keeps
+  today's meaning, "a change that wakes". Otherwise it wakes when
+  `WakeRelevance.Wakes(TaskDiff.Compare(before, after), actor.Kind, WakeRecipient.Assignee)` does. `TaskDetail` in create
+  mode passes `before = null` (it used to pass the draft), as do the unblock path (`WakeUnblockedTaskAsync`) and the trigger round.
+- `Preview(TaskChange change, TaskActor actor)` serves `UpdateTaskTool`, `TaskTransition` (`close_task`, `reopen_task`) and
+  `CreateTaskTool`. It uses `Wakes(change, Assignee)`, so a close of an In Progress Task is not `NothingWakes` and a create
+  always wakes.
+
+When the change does not wake the assignee, `PreviewAssignee` returns the new `WakeBlock.NothingWakes`, after the `Disabled`
+check and before the assignee checks.
 
 ```csharp
 /// <summary>Nothing that wakes the assignee changed: only silent fields (rank, priority, tags, dates, sprint, parent, origin, the Human gate) or a silent status move.</summary>
 NothingWakes,
 ```
 
-Every switch on `WakeBlock` gains an arm (a switch expression without one fails the build):
+Every consumer of `WakeBlock` has an explicit `NothingWakes` arm (none relies on `_`), each with a test:
 
 | Caller | What the arm shows |
 | --- | --- |
 | `TaskDetail.SaveLabel` | **Save**, not **Save & Notify Nova** |
 | `TaskDetail.NoticeText` | No notice |
-| `TaskToolText.NotifyClause` (`update_task`, `close_task`, `reopen_task`, `create_task`) | "No one is woken: nothing the assignee acts on changed." |
-| The Board drag caption | §5.5 |
+| `TaskToolText.NotifyClause` (`update_task`, `close_task`, `reopen_task`, `create_task`) | "The assignee is not woken: nothing they act on changed." The clause speaks only of the assignee: a Request move such as Backlog → Rejected still wakes the requesting manager, so "No one is woken" would be false. |
+| The Board drag hint | §5.5 |
 
 ### 5.5 The Board drag caption
 
 The merged Board (ADR-0099, `TaskBoard.razor`) sets status only on a drop into another column and rank only on a drop
-within the card's own single-state column, while the View has no sort. To say who a drop wakes it today computes one
+within the card's own single-state column, while the View has no sort. To say who a drop wakes it computed one
 caption at drag start (`CaptionFor`, which previews a rank-only patch because that is what an own-column drop saves) and
-shows it under every column but the card's own, and under the own column too while `DropReorders` is true. That is
-right only while a rank change wakes. Once rank is silent the caption would lie under the own column, and it has never
-been right for the other columns, since whether a drop into another column wakes now depends on the §3.4 table (To Do →
+showed it under every column but the card's own, and under the own column too while `DropReorders` was true. That is
+right only while a rank change wakes. Once rank is silent the caption would lie under the own column, and it was never
+right for the other columns, since whether a drop into another column wakes depends on the §3.4 table (To Do →
 In Progress wakes, Backlog → Cancelled does not). So the hint moves onto the targets:
 
 - Every drop zone is already one status (a single-state column or a ghost bucket, `BoardLayout.ZoneId(lane, state)`).
@@ -334,28 +355,29 @@ In Progress wakes, Backlog → Cancelled does not). So the hint moves onto the t
 | Place | Text |
 | --- | --- |
 | Task window, under the comment box (`TaskTimeline.razor`), as the field's helper text | **A comment wakes only the Agents you @-mention.** |
-| `add_comment` reply (`AddCommentTool`) | `Added a comment to DEV-0042. Wakes Rex.` · `… Wakes Rex and Nova.` · `… No one is woken: Mention an Agent with @Name to wake them.` The names come from the same resolution and guards as §3.3, without delivering. |
+| `add_comment` reply (`AddCommentTool`) | `Added a comment to DEV-0042. Wakes Rex.` · `… Wakes Rex and Nova.` (`Wakes A, B and C.` for more) · `… No one is woken: Mention an Agent with @Name to wake them.` · `… No one is woken: wake-ups are off.` The names come from `ResolveCommentMentionsAsync` (§5.3), without delivering; the wake budget is checked at delivery, not here. |
 
 The helper text is the shared `TextField`'s `HelperText` parameter, so it needs no new component; see
-[UXDesignGuidelines.md](engineering/UXDesignGuidelines.md) and update the Task window's container in
-[wireframes.md](engineering/wireframes.md).
+[UXDesignGuidelines.md](engineering/UXDesignGuidelines.md) and the Task window's container in
+[wireframes.md](engineering/wireframes.md). `AddCommentTool` now takes the `TaskTriggerService`, so its constructor, its
+registration (`DotAcpAgentHostFactory`) and the `TaskToolHarness` changed.
 
 ## 6. Model-facing text
 
-Each change is made in `PromptCatalog`, then `prompts.default.json` and the prompt goldens are regenerated. The wording
-below is the intent; the builder may tighten it but keeps every fact.
+Each change is made in `PromptCatalog`, then `prompts.default.json` and the prompt goldens are regenerated. As built:
 
 | Prompt key | Today | New |
 | --- | --- | --- |
-| `tool.updateTask.description` | "Changing a field wakes the assignee, unless you are the assignee." | "Changing the assignee, title, description, blocked_by, action, team or project wakes the assignee and the Team's manager, unless that is you. A status change wakes them when work starts, stops, finishes or is reopened; filing away a Task nobody started (Backlog to Cancelled) or relabelling a finished one wakes no one. Rank, priority, tags, dates, sprint, parent and human_gate are saved without waking anyone." |
+| `tool.updateTask.description` | "Changing a field wakes the assignee, unless you are the assignee." | "Changing the assignee, title, description, blocked_by, action, team or project wakes the assignee and the Team's manager, unless that is you. A status change wakes them when work starts, stops, finishes or is reopened; filing away a Task nobody started (Backlog to Cancelled) or relabelling a finished one wakes no one, Backlog to To Do wakes only the assignee, and In Progress to Needs You wakes no one. Rank, priority, tags, dates, sprint, parent, origin, duplicate_of and human_gate are saved without waking anyone." |
 | `tool.addComment.description` | (no wake sentence) | Append: "A comment wakes only the Agents it Mentions: write @Name for each one who must act on it. A comment with no Mention wakes no one, not even the assignee." |
-| `getHelp.tasks`, first paragraph | "Changing one wakes its assignee, unless you are the assignee." | The `update_task` sentence above, then the `add_comment` sentence. |
-| `getHelp.tasks`, review paragraph | "…fix the work and comment that it is ready." | "…leaves it open with the findings as a comment that Mentions you; fix the work and comment that it is ready, Mentioning the reviewer." |
+| `getHelp.tasks`, first paragraph | "Changing one wakes its assignee, unless you are the assignee." | The `update_task` sentences above, then the `add_comment` sentences. |
+| `getHelp.tasks`, Action paragraph | "…put those in a Message or a comment on the Task." | "…put those in a Message or in a comment on the Task that Mentions who takes it." |
+| `getHelp.tasks`, review paragraph | "…fix the work and comment that it is ready." | "…leaves it open with the findings as a comment that Mentions the owner; fix the work and comment that it is ready, Mentioning the reviewer." |
 
 ### 6.1 Playbooks and personas
 
 The review loop relies on "comments that it is ready" waking the reviewer, and on findings reaching the owner. Under
-D-5 both need a Mention. Change these built-in sources (no migration for installed Teams, §4):
+D-5 both need a Mention. These built-in sources were changed (no migration for installed Teams, §4):
 
 | File | Change |
 | --- | --- |
@@ -363,6 +385,7 @@ D-5 both need a Mention. Change these built-in sources (no migration for install
 | `HiringPool/personas/developer.md`, `reviewer.md`, `qa-engineer.md`, `security-engineer.md` | The same two clauses. |
 | `Overlays/second-brain/prompts/memberPlaybook.md` | A pass that ends `State: handed off`, `State: blocked` or `State: waiting for the Human` Mentions the manager in that comment; `State: done` needs no Mention, because the status change wakes the manager. |
 | `Playbooks/HuddleRules/member.md` | "findings go on it as a comment" → "findings go on it as a comment that Mentions the owner". |
+| `Teams/OutdatedReviewWording.json` | The replacement text the review-stage migration writes into an old Team's process files carries the same Mention clauses, so a migrated Team does not get the old wording back. |
 
 ## 7. Tests
 
@@ -370,56 +393,62 @@ Every test has a `///` summary and is first seen failing (agents/Testing.md). Na
 
 | Id | Class | Pins |
 | --- | --- | --- |
-| SW-T1 | `WakeRelevanceTests` | One `[Theory]` row per `TaskField` value and verdict of §3.1, including Location by an Agent, the Human and an outside actor, and HumanGate silent; one row per `TaskChangeKind`, with Close and Reopen on an Active and on a finished Task; a decision with no fields wakes; a mix of a silent and a waking field wakes. |
+| SW-T1 | `WakeRelevanceTests` | One `[Theory]` row per `TaskField` value and verdict of §3.1, including Location by an Agent, the Human and an outside actor, and HumanGate silent; one row per `TaskChangeKind`, with Close and Reopen on an Active and on a finished Task; a decision with no fields wakes (a decline too); a mix of a silent and a waking field wakes. |
 | SW-T1b | `WakeRelevanceStatusTests` | One `[Theory]` row per ordered pair of the eight statuses (56 rows) and recipient, against the §3.4 table, written out in the test rather than computed from `PhaseOf`; `PhaseOf` for each status; the C-5 Request moves. |
 | SW-T2 | `TaskServiceChangeKindTests` | Each producer of §3.2 raises the kind it should; `AddComment` carries the trimmed text. |
 | SW-T3 | `TaskTriggerServiceSilentTests` | A rank-only change by an Agent posts nothing and leaves the wake budget untouched; a rank-only change by the Human leaves a held wake held and posts nothing; a silent outside edit is not counted toward the flood window; a silent change then a waking one in one window posts one Message listing only the waking change; Backlog → Cancelled posts nothing and still wakes the Task it blocked; To Do → In Progress by the manager wakes the assignee only; In Progress → Cancelled wakes both; Backlog → Rejected on a Request wakes its requesting manager only. |
-| SW-T4 | `TaskTriggerServiceMentionTests` | A comment with no Mention wakes no one, the assignee included; `@Rex` wakes Rex only; a Mention of the author, the Human or an unknown name wakes no one; Rex Mentioned and also the assignee of a status change in the same batch gets one Message with both bullets; an Agent's Mentions spend the wake budget and are held when it is spent; the comment bullet is neutralised and cut at 1,000 characters. |
-| SW-T5 | `TaskTriggerServicePreviewTests` | `Preview` with a before and a rank-only after is `NothingWakes`; with a status change is `None`; with a null before is unchanged. |
+| SW-T4 | `TaskTriggerServiceMentionTests` | A comment with no Mention wakes no one, the assignee included; `@Rex` wakes Rex only; a Mention of the author, the Human or an unknown name wakes no one; `@all` wakes no one; Rex Mentioned and also the assignee of a status change in the same batch gets one Message with both bullets; an Agent's Mentions spend the wake budget and are held when it is spent; the comment bullet is neutralised and cut at 1,000 characters. |
+| SW-T5 | `TaskTriggerServicePreviewTests` | `Preview` with a before and a rank-only after is `NothingWakes`; with a status change is `None`; with a null before is unchanged; `Preview(TaskChange, actor)` for a close of an In Progress Task is not `NothingWakes`. |
 | SW-T6 | bUnit: `TaskDetailFieldsTests`, `TaskTimelineTests`, `TaskBoardReorderTests` | A pending rank edit labels the button Save; the comment box shows the helper text; while dragging a To Do card, the In Progress zone shows "Notifies Nova", the Cancelled bucket and the card's own zone do not, and the Board-wide caption is gone. |
-| SW-T7 | `AddCommentToolTests`, `UpdateTaskToolTests` | The three `add_comment` replies; the `NothingWakes` notify clause. |
+| SW-T7 | `AddCommentToolTests`, `UpdateTaskToolTests` | The `add_comment` replies, including "wake-ups are off"; the `NothingWakes` notify clause. |
 | SW-T8 | Prompt goldens | Regenerated, and the old "Changing a field wakes the assignee" sentence is gone. |
 
-Existing tests that assert a wake for a now-silent field (rank, priority, tags, dates, sprint, the Human gate) or a
-now-silent status move are changed to assert silence, each named in the PR. Grep `TaskTriggerService*Tests` and the
-Request wake tests for `Priority`, `Tags`, `DueDate`, `Sprint`, `HumanGate` and `TaskState.` before starting. Rank added
-its own: in `TaskBoardReorderTests`, the test that a drag shows "Nova will be notified" under the card's own column
-(`TaskBoardReorderTests.cs` ~206, about line 222) asserts the caption this spec removes; the other tests that name a
-notification (`TaskBoardDropTests`, `R3TasksTests`, `TaskTriggerOutcomeTests`, `TaskTriggerTeamScopeTests`,
-`RequestWakeTests`) are checked one by one. `TaskServiceRankTests` and `TaskDetailFieldsTests` assert no wake.
+Existing tests that asserted a wake for a now-silent field (rank, priority, tags, dates, sprint, the Human gate) or a
+now-silent status move were changed to assert silence, each named in its PR. They include `RequestWakeTests`,
+`TaskTriggerRuleIsolationTests`, `TaskTriggerRequestDoneWakeTests`, `TeamsPhase4EndToEndTests`, `TaskDetailTests`,
+`TaskDetailSprintTests`, `SprintToolTests`, `CloseTaskToolTests` and `ReopenTaskToolTests` (C-6), `TaskWakeRulesOrderTests`
+and `ReviewTaskWakeTests`. The Board tests that name a notification (`TaskBoardReorderTests`, `TaskBoardDropTests`) change with slice 3.
 
-## 8. Slices
+## 8. Slices (as delivered)
 
-Each slice builds, tests green and passes `Check-All.ps1` on its own.
+Each slice builds, tests green and passes `Check-All.ps1` on its own. Slice 1 was split and the Mention and review-loop
+work moved ahead of the Board, so that no commit leaves the review loop waking no one.
 
-1. **The rule.** §5.1, §5.2 (fields, phases, status moves, the Request moves), the receipt drop and the batch flags of
-   §5.3, the narrowed `RequestingManagerWakeRule`, §5.4 with every `WakeBlock` arm. SW-T1, T1b, T2, T3, T5, T7 (notify
-   clause). The Requests spec's RQ-4 is amended in this slice.
-2. **Mentions.** `MentionWakeRule`, `WakeEach`, the round's woken set, the comment bullet, the `add_comment` reply,
-   the Task window helper text. SW-T4, T6 (comment box), T7 (`add_comment`).
-3. **Words and docs.** §5.5 caption, §6 prompts and §6.1 Playbooks and personas, then: Tasks spec §10.2 (the guard list
-   gains "nothing that wakes changed", with a pointer here), §10.3 (the receipt drop) and §10.5 (the comment bullet);
-   ADR-0026 status "amended by ADR-0100"; ADR-0099's Wakes row and Consequences ("until rank changes are silent"), the
-   Tasks spec's D-36, E-16 and §13.4 "Reordering within a column" (a rank change is now silent, and the own-column drop
-   shows no hint); `docs/Huddle.UserGuide.md` (what wakes whom; drop its claim that Evidence
-   wakes the requesting manager, which the code never did); `wireframes.md`; manual tests in
-   [tasks.md](engineering/manual-tests/tasks.md) (§9); `docs/Index.md`. SW-T6 (caption), T8.
+1. **1a. The kind and the rule (`b313bf12`).** §5.1 and §5.2: `TaskChangeKind`, the `TaskChange` parameters, every
+   producer passing its kind, `WakeRelevance`, `WakeRecipient`, `TaskPhase`. SW-T1, T1b, T2. Nothing read the new parameters
+   yet, so behaviour was unchanged.
+2. **1b. The wiring (`d7a5e63b`).** The receipt drop, the batch flags, `Hold`, the round flags, the narrowed
+   `RequestingManagerWakeRule`, §5.4 with every `WakeBlock` arm. SW-T3, T5, T7 (notify clause). A comment still woke as before.
+3. **2a. Mentions (`cc733d66`).** `MentionResolver`, `MentionWakeRule`, `WakeEach`, the round's woken set, the comment bullet;
+   a comment is now silent unless it Mentions. SW-T4.
+4. **2b. Where the rule is said (`6f3695a7`).** The `add_comment` reply and the Task window's helper text. SW-T6 (comment
+   box), T7 (`add_comment`).
+5. **2c. Words (`3a1524b4`).** §6 prompts, §6.1 Playbooks and personas, `ReviewSentence`, `OutdatedReviewWording.json`.
+   SW-T8.
+6. **3. The Board hints and docs.** §5.5, then Tasks spec §10.2, §10.3, §10.5, D-36, E-16 and §13.4; ADR-0026 status
+   "amended by ADR-0100"; ADR-0099's Wakes row and Consequences; ADR-0100's "As built" note; `docs/Huddle.UserGuide.md`;
+   `wireframes.md`; manual tests in [tasks.md](engineering/manual-tests/tasks.md) (§9); `docs/Index.md`. SW-T6 (caption).
 
-## 9. Manual tests to add
+## 9. Manual tests
 
-Added to [tasks.md](engineering/manual-tests/tasks.md) in slice 3, run on a real Adapter (Sonnet, per the live-test rule):
+Added to [tasks.md](engineering/manual-tests/tasks.md) in slice 3, run on a real Adapter (Sonnet, per the live-test rule).
+Not run yet.
 
 | Id | Steps | Expected |
 | --- | --- | --- |
 | SMARTWAKE-01 | Drag a Task assigned to an Agent within its column. | Rank changes; no Message in any Room; no wake toast; the Timeline logs the rank change. |
 | SMARTWAKE-02 | As the Human, drag an In Progress Task into Done (it needs no Accept). | The assignee and the manager are woken once each; the Message lists the status change. |
-| SMARTWAKE-03 | As the Human, comment on the Task with no Mention, then with `@` and the assignee's Name. | The first wakes no one; the second wakes the assignee only, and the Message quotes the comment. |
+| SMARTWAKE-03 | As the Human, comment on the Task with no Mention, then with `@Name` of the assignee. | The first wakes no one; the second wakes the assignee only, and the Message quotes the comment. |
 | SMARTWAKE-04 | Run a review loop on the development Team to Done. | The developer's "ready" comment Mentions the reviewer and wakes them; the findings comment Mentions the developer; the loop needs no Human nudge. |
 | SMARTWAKE-05 | Approve a Sprint of three Tasks. | No wake for the Sprint assignment. |
 | SMARTWAKE-06 | Rename a Team folder in Explorer while Huddle runs. | No wakes for the moved Tasks. |
 | SMARTWAKE-07 | Drag a Backlog card assigned to an Agent; look at the zones; drop it in Cancelled. Then drag an In Progress card to Cancelled. | During the first drag, To Do and In Progress show "Notifies Nova" and Cancelled does not; the first drop wakes no one; the second wakes the assignee and the manager. |
 | SMARTWAKE-08 | Turn the Human gate on for a Task an Agent is working on. | No wake; when the Agent next moves the Task toward Done, Huddle stops it in Needs You. |
+| SMARTWAKE-09 | An Agent calls `add_comment` on a Task, once with a Mention (`@Name`) and once without. | The replies read "Wakes Name." and "No one is woken: Mention an Agent with @Name to wake them."; only the first posts a wake Message. |
 
-## 10. Open questions
+## 10. Open questions and owner calls
 
-None block slice 1. C-1 to C-5 in §2 are the owner's to flip.
+No open questions. The calls the owner may flip, each without touching the design: C-1 (`Unknown` wakes), C-2 (tags are
+silent), C-3 (Backlog ↔ To Do wakes the assignee), C-4 (Backlog or To Do → Done is silent), C-5 (the requesting manager's
+narrowed moves, with a reopen waking and a move into Duplicate silent), C-6 (closing or reopening a To Do or Backlog Task
+is silent) and C-7 (`@all` in a Task comment wakes no one). ADR-0100 stays `proposed` until the owner accepts it.

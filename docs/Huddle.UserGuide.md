@@ -1330,8 +1330,13 @@ the count, so nothing fires at once. The last run is remembered across restarts.
 
 ### Wake-ups for managers
 
-Besides the assignee, Huddle wakes the Team's **manager** about a Task change, unless
-the manager made the change, is the assignee, or is you. When the last Task that was
+Besides the assignee, Huddle wakes the Team's **manager** about a Task change that
+affects what the Team does, unless the manager made the change, is the assignee, or is you.
+Both are woken when work starts, stops, finishes or is reopened, and when the assignee, title,
+description, blockers or Action change or the Task moves to another Team or Project. A change that
+only orders, labels or schedules the work (rank, priority, tags, dates, sprint, parent, the Human
+gate) is saved without waking anyone, and so is a Task filed away that nobody started, such as
+Backlog to Cancelled. A comment wakes only the Agents it Mentions with `@Name`. When the last Task that was
 blocking another is finished (Done, Cancelled, Duplicate or Rejected), Huddle wakes the blocked Task's assignee (or the
 manager when it has none) once, however many blockers finished together. These wake-ups
 use the same per-Task wake budget as any other.
@@ -1397,7 +1402,8 @@ Tasks, which names the Team that filed it. The receiving Team's Tasks have a
   then, can no longer confirm until you tick `request-confirmation` on its Edit card.
 - **Who is woken.** Filing a Request wakes the receiving manager. A needs-info,
   accept or decline wakes the requesting manager; a decline also wakes the Chief of
-  Staff. Work and the QA's evidence wake the requesting manager; the
+  Staff. A Request's move into Done, Cancelled or Rejected, or its reopening, wakes the
+  requesting manager (Evidence does not); the
   confirmation wakes the receiving manager. One event wakes each person once, not
   once as the Request's assignee and again as a manager.
 
@@ -2156,7 +2162,7 @@ that can read files.
 ## Tracking work with Tasks
 
 A **Task** is a Markdown file under a Team or Project. You and your Agents
-see the same Tasks, and a change to an assigned Task wakes the assignee.
+see the same Tasks, and a change to an assigned Task that the assignee acts on wakes the assignee.
 
 ### Opening and editing a Task
 
@@ -2191,8 +2197,8 @@ edits. The Timeline lists, oldest first:
 - **Events**, the Task's history: `created`, `status: To Do → In Progress`, `description edited` and the rest.
 
 Type in **Add a comment** under the Timeline and choose **Comment** to add yours. It is saved at once, on its own: it
-does not save or discard edits you have pending on the edit page. A comment wakes the Task's assignee like any other
-change. Agents comment with the `add_comment` tool and add Evidence with `add_evidence`.
+does not save or discard edits you have pending on the edit page. A comment wakes only the Agents you @-mention, the
+assignee included: write `@Name` to get an Agent's attention, and a comment with no Mention wakes no one. Agents comment with the `add_comment` tool and add Evidence with `add_evidence`.
 
 Nothing on the Timeline can be edited or deleted, by an Agent or by you. Editing the description, by the form or by an
 Agent's `update_task`, never touches it, so the Evidence the Proof reads cannot be lost that way. Only an edit to the
@@ -2288,8 +2294,10 @@ you both changed.
 
 ### How Task changes reach Agents
 
-When a Task assigned to an Agent changes, Huddle **wakes** the assignee by
-posting a message in a Room, as the person who made the change:
+When a Task assigned to an Agent changes in a way the assignee acts on (the assignee, title,
+description, blockers, Action, a move to another Team or Project, or a status move that starts, stops,
+finishes or reopens work), Huddle **wakes** the assignee by posting a message in a Room, as the person
+who made the change:
 
 ```text
 @nova Task BUSI-0002 "Second task for the Board" (In Progress, Business) was changed by You:
@@ -2299,6 +2307,9 @@ Call get_task with taskId BUSI-0002 for the full task.
 
 - The Room is, in order of preference: the Task's origin Room; a Room with
   exactly you, the creator and the assignee; otherwise a new Room.
+- Changing rank, priority, tags, dates, sprint, parent or the Human gate wakes no one, and neither
+  does filing away a Task nobody started (Backlog to Cancelled). The **Save** button then reads plain **Save**,
+  not **Save & notify**.
 - Changes by the same person within 5 seconds are combined into one message.
 - No one is woken for their own changes, for Tasks assigned to you, or for
   assignees that are not known Agents.
