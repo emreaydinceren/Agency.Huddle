@@ -2,6 +2,7 @@ using Agency.Huddle.SkillPacks.Folders;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Skills.Ui;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -151,7 +152,18 @@ public sealed class SkillProvenanceLineTests
 
         IRenderedComponent<SkillsPanel> cut = ctx.Render<SkillsPanel>();
 
-        Assert.Equal("Acme", cut.Find(".skill-provenance-publisher").TextContent.Trim());
-        Assert.Equal("0123456", cut.Find(".skill-provenance-commit").TextContent.Trim());
+        AngleSharp.Dom.IElement row = cut.FindAll(".skills-grid-row").First(static candidate => candidate.QuerySelector("[data-skill='imported-skill']") is not null);
+        Assert.Equal("Acme", row.QuerySelector(".skills-origin")?.TextContent.Trim());
+        Assert.Empty(cut.FindAll(".skill-provenance-commit"));
+    }
+
+    /// <summary>The grid's Source cell names the publisher only; the repository, short commit and licence go to the tooltip, and a missing publisher falls back to the repository (#739).</summary>
+    [Fact]
+    public void SkillOriginText_ShortNameAndTooltipDetail()
+    {
+        Assert.Equal("Anthropic", SkillOriginText.Short("Anthropic", "https://github.com/anthropics/skills/tree/683bc88aaaa/skills/x"));
+        Assert.Equal("anthropics/skills", SkillOriginText.Short(null, "https://github.com/anthropics/skills/tree/683bc88aaaa/skills/x"));
+        Assert.Equal("anthropics/skills · 683bc88 · Apache-2.0", SkillOriginText.Detail("anthropics/skills", "683bc88", "Apache-2.0"));
+        Assert.Equal("anthropics/skills", SkillOriginText.Detail("anthropics/skills", string.Empty, null));
     }
 }

@@ -31,4 +31,12 @@ internal static class SkillOriginText
         (string repository, string commit) = Parts(origin);
         return string.Join(" · ", new[] { publisher, repository, commit, license }.Where(static part => !string.IsNullOrWhiteSpace(part)));
     }
+
+    /// <summary>The short Source name a grid cell shows: the publisher, or the repository when no publisher is named.</summary>
+    public static string Short(string? publisher, string origin) =>
+        string.IsNullOrWhiteSpace(publisher) ? Parts(origin).Repository : publisher.Trim();
+
+    /// <summary>What the short name leaves out, for a tooltip: <i>repository · short commit · licence</i>, the empty parts left out.</summary>
+    public static string Detail(string repository, string commit, string? license) =>
+        string.Join(" · ", new[] { repository, commit, license }.Where(static part => !string.IsNullOrWhiteSpace(part)));
 }
