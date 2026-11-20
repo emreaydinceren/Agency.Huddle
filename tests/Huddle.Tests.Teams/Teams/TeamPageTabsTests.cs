@@ -264,12 +264,12 @@ public sealed class TeamPageTabsTests
         Assert.DoesNotContain(TeamPageTab.AgentPlaybook, TeamPageTabs.Available(isProject: true, Both));
     }
 
-    /// <summary>The Playbook tabs are labelled "Manager Playbook" and "Agent Playbook", their segments are "manager-playbook" and "agent-playbook", and the segments resolve on a Team page only.</summary>
+    /// <summary>The Playbook tabs are labelled "Manager playbook" and "Agent playbook", their segments are "manager-playbook" and "agent-playbook", and the segments resolve on a Team page only.</summary>
     [Fact]
     public void PlaybookTabs_HaveTheirLabelsAndSegments_AndResolveOnATeamPageOnly()
     {
-        Assert.Equal("Manager Playbook", TeamPageTabs.Label(TeamPageTab.ManagerPlaybook));
-        Assert.Equal("Agent Playbook", TeamPageTabs.Label(TeamPageTab.AgentPlaybook));
+        Assert.Equal("Manager playbook", TeamPageTabs.Label(TeamPageTab.ManagerPlaybook));
+        Assert.Equal("Agent playbook", TeamPageTabs.Label(TeamPageTab.AgentPlaybook));
         Assert.Equal("manager-playbook", TeamPageTabs.Segment(TeamPageTab.ManagerPlaybook));
         Assert.Equal("agent-playbook", TeamPageTabs.Segment(TeamPageTab.AgentPlaybook));
         Assert.Equal(TeamPageTab.ManagerPlaybook, TeamPageTabs.Resolve(isProject: false, "Manager-Playbook", NeitherFeature));

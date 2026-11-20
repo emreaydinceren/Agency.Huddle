@@ -104,8 +104,10 @@
     /// <summary>The ids of the Rooms waiting on the Human, as the tracker holds them.</summary>
     private HashSet<string> waitingIds = new(StringComparer.Ordinal);
 
-    /// <summary>The listed Rooms that wait on the Human, in the list's own order.</summary>
-    private List<Room> WaitingRooms => [.. this.rooms.Where(room => this.waitingIds.Contains(room.Id))];
+    /// <summary>Every unarchived Room that waits on the Human, a Team's group Rooms included: the Needs you card lists the same ones.</summary>
+    private IReadOnlyList<Room> WaitingRooms => this.waitingRooms;
+
+    private IReadOnlyList<Room> waitingRooms = [];
 
     /// <summary>The listed Rooms that do not wait on the Human, in the list's own order.</summary>
     private List<Room> RestRooms => [.. this.rooms.Where(room => !this.waitingIds.Contains(room.Id))];
@@ -262,6 +264,7 @@
             && (room.Team is null || this.Catalog.Find(room.Team) is null || RoomScopeLabel.IsScopedOneToOne(room, this.MembersOf(room))))];
         this.groups = RoomGroups.ByTeam([.. all.Where(static room => !room.Archived)]);
         this.waitingIds = new HashSet<string>(this.Tracker.Snapshot().Select(static entry => entry.RoomId), StringComparer.Ordinal);
+        this.waitingRooms = [.. all.Where(room => !room.Archived && this.waitingIds.Contains(room.Id))];
     }
 
     /// <summary>The Room's Members from the last load, or none for a Room created since.</summary>

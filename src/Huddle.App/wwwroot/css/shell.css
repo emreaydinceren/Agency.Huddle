@@ -580,10 +580,10 @@ emoji-picker {
     height: 28px;
     padding: 0 12px;
     margin-inline-end: 4px;
-    border: 1px solid var(--hu-tone-warning-line);
+    border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);
     border-radius: var(--hu-radius-full);
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
+    background: color-mix(in srgb, var(--hu-needs) 12%, transparent);
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     text-decoration: none;
@@ -1093,11 +1093,28 @@ body.sidebar-resizing {
     flex: 0 0 auto;
     font-size: var(--mud-typography-caption-size);
     color: var(--mud-palette-text-secondary);
+    white-space: nowrap;
+}
+
+/* A finished Task in a Blocked by row: the title greys to Quiet ink and its state is spelled out beside the dot (#705). */
+.sidebar-row.room-task-closed .mud-link.sidebar-row-text {
+    color: var(--mud-palette-text-secondary);
+}
+
+.room-task-closed-state {
+    flex: 0 0 auto;
+    font-size: var(--mud-typography-caption-size);
+    color: var(--mud-palette-text-secondary);
 }
 
 /* Task order panel: a small group label over each timeline, the open Task's title in bold, the Backlog toggle flush left. */
 .task-order-group-label {
     margin-top: 8px;
+}
+
+/* A Task id never breaks across lines: the hyphen would otherwise be a break opportunity. */
+.task-order-id {
+    white-space: nowrap;
 }
 
 .task-order-current {
@@ -1111,21 +1128,6 @@ body.sidebar-resizing {
 /* Nothing to show: the sentence alone, so the empty text line takes no room. */
 .right-sidebar .empty-state-text:empty {
     display: none;
-}
-
-/* A narrow window: the Sidebar (289px) and the Right sidebar (280px by default, up to 560px dragged) both pushing the Workspace
-   left only leave it a usable width from about 1100px up; at 768px it was 199px. Below that the Right sidebar stops pushing and
-   floats over the Workspace's right edge, on a panel shadow, so the Workspace keeps its width and the Human can still open and close
-   the panels. The doubled .mud-main-content selector outranks MudBlazor's margin for an open pair of persistent drawers. */
-@media (max-width: 1099px) {
-    .mud-layout.mud-drawer-open-persistent-right .mud-main-content.main-column {
-        margin-right: 0;
-    }
-
-    .mud-drawer.mud-drawer--open.right-sidebar {
-        box-shadow: var(--hu-shadow-panel);
-        max-width: calc(100vw - 48px);
-    }
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
@@ -1412,7 +1414,8 @@ body.sidebar-resizing {
     white-space: nowrap;
 }
 
-.room-row-name-line > .sidebar-row-label {
+/* The 60% cap leaves the scope badge its room, so it applies only to a row that has one. */
+.room-row-name-line:has(> .room-row-scope) > .sidebar-row-label {
     flex: 0 0 auto;
     max-width: 60%;
 }
@@ -1842,10 +1845,10 @@ body.sidebar-resizing {
     height: 32px;
     padding: 0 12px;
     margin-inline-end: 8px;
-    border: 1px solid var(--hu-tone-warning-line);
+    border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);
     border-radius: var(--hu-radius-full);
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
+    background: color-mix(in srgb, var(--hu-needs) 12%, transparent);
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
     text-decoration: none;
@@ -1854,7 +1857,7 @@ body.sidebar-resizing {
 }
 
 :root:has([data-hu-surface="paper"]) .tasks-need-you-pill:hover {
-    background: var(--hu-tone-warning-tint);
+    background: color-mix(in srgb, var(--hu-needs) 20%, transparent);
 }
 
 :root:has([data-hu-surface="paper"]) .tasks-need-you-dot {
@@ -1977,10 +1980,10 @@ body.sidebar-resizing {
     height: 28px;
     padding: 0 12px;
     margin-inline-end: 4px;
-    border: 1px solid var(--hu-tone-warning-line);
+    border: 1px solid color-mix(in srgb, var(--hu-needs) 45%, transparent);
     border-radius: var(--hu-radius-full);
-    background: var(--hu-tone-warning-soft);
-    color: var(--hu-tone-warning-ink);
+    background: color-mix(in srgb, var(--hu-needs) 12%, transparent);
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
     font-size: var(--mud-typography-caption-size);
     font-weight: 500;
     text-decoration: none;

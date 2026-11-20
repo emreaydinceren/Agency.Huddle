@@ -39,12 +39,12 @@
             <SearchHighlight Text="@this.Task.Title" Term="@this.Search" />
         </div>
 
-        @if (this.Task.BlockedBy.Count > 0 && !this.Fields.Contains("blocked_by", StringComparer.Ordinal))
+        @if (this.Blockers.Count > 0 && !this.Fields.Contains("blocked_by", StringComparer.Ordinal))
         {
-            @* A blocked Task says so and names its blockers, in every Theme; a tint or an edge alone left the reader guessing why. *@
+            @* A blocked Task says so and names its open blockers, in every Theme; a tint or an edge alone left the reader guessing why. *@
             <span class="task-card-blocked-by">
                 <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" aria-hidden="true" />
-                Blocked by @string.Join(", ", this.Task.BlockedBy)
+                Blocked by @string.Join(", ", this.Blockers)
             </span>
         }
 
@@ -145,6 +145,13 @@
     [Parameter]
     public EventCallback OnCopyLink { get; set; }
 
+    /// <summary>The Task's blockers that are not finished (<c>TaskBlockers.Open</c>), computed by the caller; <see langword="null"/> means every <c>blocked_by</c> entry counts.</summary>
+    [Parameter]
+    public IReadOnlyList<TaskId>? OpenBlockers { get; set; }
+
+    /// <summary>The blockers the card says it waits on: the open ones, or every <c>blocked_by</c> entry when the caller gave none.</summary>
+    private IReadOnlyList<TaskId> Blockers => this.OpenBlockers ?? this.Task.BlockedBy;
+
     /// <summary>Room names by id, so the Origin field shows the Room's name (UX-047).</summary>
     [Parameter]
     public IReadOnlyDictionary<string, string>? RoomNames { get; set; }
@@ -173,7 +180,7 @@
         get
         {
             string root = this.IsOverdue ? "task-card task-overdue" : "task-card";
-            if (this.Task.BlockedBy.Count > 0)
+            if (this.Blockers.Count > 0)
             {
                 root += " task-card-blocked";
             }

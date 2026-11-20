@@ -7,8 +7,8 @@ internal static class SkillGuide
     /// <summary>The Skills tab's intro, before <b>Learn more</b>.</summary>
     public const string SkillsIntro =
         "A Skill is a folder of instructions that an Agent reads when its work calls for it. "
-        + "This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. "
-        + "A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. "
+        + "This list shows every Skill Huddle knows about: built in, fetched by your Agents, or listed in a catalog but not on this computer yet. "
+        + "A Skill marked Not downloaded has no folder here; Copy prompt gives your Agents what it needs to fetch it. "
         + "Huddle never downloads Skills itself. "
         + "Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update.";
 

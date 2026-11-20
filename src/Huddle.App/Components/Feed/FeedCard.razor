@@ -71,7 +71,7 @@
 
                     <span @onclick:stopPropagation="true" @onkeydown:stopPropagation="true">
                         <NavTabLink Href="@("/rooms/" + this.target.Id)" TabTitle="@roomName" Match="NavLinkMatch.All" Class="feed-meta-chip">
-                            <MudIcon Icon="@Icons.Material.Filled.ChatBubbleOutline" Size="Size.Small" /> <span class="feed-meta-room">@roomName</span>
+                            <MudIcon Icon="@ActionIcons.Chat" Size="Size.Small" /> <span class="feed-meta-room">@roomName</span>
                         </NavTabLink>
                     </span>
                 }
@@ -171,7 +171,7 @@
                     }
                     @if (this.OriginRoomId is { } originRoom)
                     {
-                        <ActionButton StartIcon="@Icons.Material.Filled.ChatBubbleOutline" Class="feed-btn feed-btn-room" OnClick="@(() => this.Go("/rooms/" + originRoom))">Open Room</ActionButton>
+                        <ActionButton StartIcon="@ActionIcons.Chat" Class="feed-btn feed-btn-room" OnClick="@(() => this.Go("/rooms/" + originRoom))">Open Room</ActionButton>
                     }
                 </div>
             }
@@ -371,7 +371,24 @@
 
     private string ContextWord => FeedCardText.ContextWord(this.target.Kind);
 
-    private string? MetaRoomName => this.target.Kind == FeedTargetKind.Room ? RoomNameOf(this.Lead.Payload) : null;
+    /// <summary>
+    /// The Room chip of the meta line (F10d). It is left out when the summary already holds a Room chip, and when the Room is the
+    /// Team Room (its name is the Team's, which the Team chip already names), so a Room and a Team are each named once.
+    /// </summary>
+    private string? MetaRoomName
+    {
+        get
+        {
+            if (this.target.Kind != FeedTargetKind.Room || RoomNameOf(this.Lead.Payload) is not { } roomName)
+            {
+                return null;
+            }
+
+            bool inSummary = FeedSummary.Of(this.Lead).Segments.Any(segment => segment.Kind == FeedSegmentKind.Room);
+            bool isTeamRoom = string.Equals(roomName, this.MetaTeam, StringComparison.OrdinalIgnoreCase);
+            return inSummary || isTeamRoom ? null : roomName;
+        }
+    }
 
     private string? MetaTeam => FeedSummary.TeamOf(this.Lead.Payload) is { Length: > 0 } team ? team : null;
 

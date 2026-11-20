@@ -171,6 +171,20 @@ public sealed class SessionsPanelTests : IAsyncDisposable
         Assert.Null(this.Store.TokensOverride);
     }
 
+    /// <summary>A save on blur says so (a Snackbar, as Skills does), and a refused value says nothing of the kind (#737).</summary>
+    [Fact]
+    public async Task SaveOnBlur_ConfirmsInASnackbar_ButARefusalDoesNot()
+    {
+        IRenderedComponent<ContainerFragment> cut = this.Render();
+        ISnackbar snackbar = this.ctx.Services.GetRequiredService<ISnackbar>();
+
+        await EnterAsync(cut, Cap(cut), "0");
+        Assert.Empty(snackbar.ShownSnackbars);
+
+        await EnterAsync(cut, Cap(cut), "400");
+        Assert.Equal("Saved.", Assert.Single(snackbar.ShownSnackbars).Message?.ToString());
+    }
+
     /// <summary>Entering 400 in the cap saves it: the file holds 400 and the field shows it.</summary>
     [Fact]
     public async Task Cap_EnteringFourHundred_SavesAndShowsIt()

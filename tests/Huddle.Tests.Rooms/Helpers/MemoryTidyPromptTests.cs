@@ -52,8 +52,7 @@ public sealed class MemoryTidyPromptTests
 
         Assert.Equal(
             "The memory of the Agent Ada. Today is 2026-11-22.\n"
-            + "Give at most 12 actions. At most 3 files may be dropped or mostly emptied. All the \"text\" you\n"
-            + "write together may be at most 40000 characters: tidy fewer files rather than cut one short.\n"
+            + "Give at most 12 actions. At most 3 files may be dropped or mostly emptied. All the \"text\" you write together may be at most 40000 characters: tidy fewer files rather than cut one short.\n"
             + "\n"
             + "\n"
             + "Every file, with its description and the day it was written:\n"
@@ -76,8 +75,7 @@ public sealed class MemoryTidyPromptTests
 
         Assert.Equal(
             "The memory of the Agent Ada. Today is 2026-11-22.\n"
-            + "Give at most 12 actions. At most 3 files may be dropped or mostly emptied. All the \"text\" you\n"
-            + "write together may be at most 40000 characters: tidy fewer files rather than cut one short.\n"
+            + "Give at most 12 actions. At most 3 files may be dropped or mostly emptied. All the \"text\" you write together may be at most 40000 characters: tidy fewer files rather than cut one short.\n"
             + "In this folder descriptions do not change: give no \"describe\" action and no \"description\" at all.\n"
             + "\n"
             + "Every file, with its description and the day it was written:\n"

@@ -128,6 +128,47 @@ public sealed class AdapterModelEffortPickerTests
         cut.WaitForAssertion(() => Assert.False(IsSelectInert(cut, "Model")));
     }
 
+    /// <summary>While the Model list is being read a stored Model shows its known display name (#735), not the raw id and not "Loading…".</summary>
+    [Fact]
+    public async Task WhileTheModelProbeIsOut_StoredModelShowsItsKnownName()
+    {
+        await using MudBunitContext ctx = new();
+        TaskCompletionSource gate = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku], ModelsGate = gate, Runtime = new RuntimeNames("Haiku", null) };
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], [], model: "haiku");
+
+        cut.WaitForAssertion(() => Assert.True(IsSelectInert(cut, "Model")));
+        Assert.Equal("Haiku", FindSelectInput(cut, "Model").GetAttribute("value"));
+    }
+
+    /// <summary>While the Model list is being read a stored Model with no known name shows exactly as stored (#566), not "Loading…".</summary>
+    [Fact]
+    public async Task WhileTheModelProbeIsOut_StoredModelWithNoKnownNameShowsAsStored()
+    {
+        await using MudBunitContext ctx = new();
+        TaskCompletionSource gate = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku], ModelsGate = gate };
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], [], model: "haiku");
+
+        cut.WaitForAssertion(() => Assert.True(IsSelectInert(cut, "Model")));
+        Assert.Equal("haiku", FindSelectInput(cut, "Model").GetAttribute("value"));
+    }
+
+    /// <summary>While the Model list is being read and nothing is stored the select shows "Loading…".</summary>
+    [Fact]
+    public async Task WhileTheModelProbeIsOut_NothingStored_ShowsLoading()
+    {
+        await using MudBunitContext ctx = new();
+        TaskCompletionSource gate = new();
+        FakeModelCatalog catalog = new() { Models = [Haiku], ModelsGate = gate };
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, catalog, [("claude", "Claude")], []);
+
+        cut.WaitForAssertion(() => Assert.Equal("Loading…", FindSelectInput(cut, "Model").GetAttribute("value")));
+    }
+
     /// <summary>Changing the Adapter clears Model and Effort, says so in a status note, raises the cleared selection and probes the new Adapter.</summary>
     [Fact]
     public async Task AdapterChange_ClearsModelAndEffort_WithANote_AndReprobes()

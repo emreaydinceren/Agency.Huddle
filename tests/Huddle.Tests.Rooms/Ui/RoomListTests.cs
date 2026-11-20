@@ -736,6 +736,30 @@ public sealed class RoomListTests
         Assert.Empty(cut.FindAll(".hover-reveal-link a"));
     }
 
+    /// <summary>#703: a Team's group Room waiting on the Human is in the "Needs you" folder, as it is in the Needs you card.</summary>
+    [Fact]
+    public async Task GroupBy_All_TeamGroupRoomWaitingOnTheHuman_IsInTheNeedsYouFolder()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = await dir.CreateDirectoryAsync(ct);
+        var coo = await directory.UpsertAgentUserAsync("coo", null, ct);
+        var cto = await directory.UpsertAgentUserAsync("cto", null, ct);
+        Assert.NotNull(coo);
+        Assert.NotNull(cto);
+        var groupRoom = await directory.CreateRoomAsync("Standup", [KnownIds.Human, coo.Id, cto.Id], "Development Team", teamRoom: false, ct: ct);
+        var chat = ChatServiceFactory.Create(directory, dir.Options(), events: events, teams: KnownTeam("Development Team")).Chat;
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+        ctx.Services.GetRequiredService<Agency.Huddle.App.NeedsYou.NeedsYouTracker>().Seed(groupRoom.Id, DateTimeOffset.UtcNow, "coo");
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            [groupRoom.Name],
+            cut.Find(".room-folder-needs-you").QuerySelectorAll(".sidebar-row-label").Select(label => label.TextContent.Trim())));
+    }
+
     /// <summary>The link's text without the 1:1 avatar's monogram (UX-016), trimmed.</summary>
     /// <param name="link">The row's link element.</param>
     private static string NameText(IElement link)

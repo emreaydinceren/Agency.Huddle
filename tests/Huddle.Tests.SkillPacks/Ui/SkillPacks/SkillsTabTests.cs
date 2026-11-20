@@ -85,6 +85,33 @@ public sealed class SkillsTabTests : IDisposable
         Assert.Null(row.QuerySelector(".skill-state-chip-available"));
     }
 
+    /// <summary>The Source cell is one short name, never the joined repository, commit and licence line, and a Skill nobody holds reads "None" in Used by (#739).</summary>
+    [Fact]
+    public async Task SourceCell_IsAShortName_AndAnEmptyUsedByReadsNone()
+    {
+        await this.fixture.SeedAsync("alpha");
+        await using MudBunitContext ctx = this.fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        IElement row = Row(cut, "alpha");
+        string source = Assert.IsAssignableFrom<IElement>(row.QuerySelector(".skills-origin")).TextContent.Trim();
+        Assert.DoesNotContain(" · ", source, StringComparison.Ordinal);
+        Assert.Equal("None", Assert.IsAssignableFrom<IElement>(row.QuerySelector(".skills-used-by-none")).TextContent.Trim());
+    }
+
+    /// <summary>The Skills intro does not say "AI" (#739).</summary>
+    [Fact]
+    public async Task Intro_DoesNotSayAI()
+    {
+        await this.fixture.SeedAsync();
+        await using MudBunitContext ctx = this.fixture.NewContext();
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx);
+
+        Assert.DoesNotContain("AI tool", cut.Find(".settings-intro").TextContent, StringComparison.Ordinal);
+    }
+
     /// <summary>Hide removes the row; Show hidden brings it back with the Hidden chip.</summary>
     [Fact]
     public async Task Hide_RemovesRow_ShowHiddenBringsItBack()

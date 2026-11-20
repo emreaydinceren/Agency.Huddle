@@ -30,7 +30,27 @@ public sealed class ScheduledPageFollowUpTests
 
         IRenderedComponent<ScheduledPage> cut = ctx.Render<ScheduledPage>();
 
-        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Ops · Next: Mon 2 Nov, 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Ops · Next: Today 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
+    }
+
+    /// <summary>A section that cannot be read is named by whose schedule and which job it is in, with one link that opens the file.</summary>
+    [Fact]
+    public async Task List_UnreadableSection_NamesTheScheduleAndLinksTheFile()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        await using MudBunitContext ctx = new();
+        using Rig rig = await Rig.CreateAsync(ctx, ct);
+        File.AppendAllText(rig.Store.FileOf(JobOwner.Agent("Nova")), "\n## Fortnightly report\n- id: job-bad\n- when: fortnightly at 09:00\n\nDo it.\n");
+        _ = rig.Store.Update(rig.Job with { Instruction = "Look again." });
+
+        IRenderedComponent<ScheduledPage> cut = ctx.Render<ScheduledPage>();
+
+        cut.WaitForAssertion(() =>
+        {
+            AngleSharp.Dom.IElement notice = cut.Find(".scheduled-problems");
+            Assert.Contains("Nova's schedule has a job called \"Fortnightly report\" that does not run.", notice.TextContent, StringComparison.Ordinal);
+            Assert.Equal("?library=agents/Nova/schedule.md", notice.QuerySelector("a.scheduled-problem-open")?.GetAttribute("href"));
+        });
     }
 
     /// <summary>The detail view shows the Room as a link to its page.</summary>
@@ -59,12 +79,12 @@ public sealed class ScheduledPageFollowUpTests
         await using MudBunitContext ctx = new();
         using Rig rig = await Rig.CreateAsync(ctx, ct);
         IRenderedComponent<ScheduledPage> cut = ctx.Render<ScheduledPage>();
-        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Ops · Next: Mon 2 Nov, 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Ops · Next: Today 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
 
         await rig.Team.RenameRoomAsync(rig.RoomId, "Platform", ct);
         _ = rig.Store.Update(rig.Job with { Instruction = "Look again." });
 
-        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Platform · Next: Mon 2 Nov, 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("For Nova · Follow-up in Platform · Next: Today 09:30", cut.Find(".scheduled-row .mud-text-secondary").TextContent.Trim()));
     }
 
     private sealed class Rig : IDisposable
@@ -108,6 +128,7 @@ public sealed class ScheduledPageFollowUpTests
             ctx.Services.AddSingleton(store);
             ctx.Services.AddSingleton(scheduler);
             ctx.Services.AddSingleton<TimeProvider>(clock);
+            ctx.Services.AddSingleton<Agency.Huddle.App.Library.ILibraryReferenceResolver>(new Agency.Huddle.Tests.Library.FakeLibraryNoteResolver(static path => new Agency.Huddle.App.Library.LibraryReference("agents", "Nova/schedule.md", true)));
             ctx.Services.AddSingleton(new JobRoomStore(options));
             ctx.Services.AddSingleton<ITeamDirectory>(fixture.Team);
             ctx.Services.AddSingleton<IHumanIdentity>(new ConfiguredHumanIdentity("You"));

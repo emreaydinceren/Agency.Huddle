@@ -135,9 +135,9 @@ public sealed class NordicSkinTests
         Assert.True(CssText.RuleBody(css, paper + ".segmented-control").Contains("border: 1px solid var(--hu-line-region);", StringComparison.Ordinal));
         // 4: the selected card keeps the paper shadow beside the inset bar.
         Assert.True(CssText.RuleBody(css, paper + ".task-card.task-card-selected").Contains("var(--hu-selected-task-bar), var(--hu-shadow-card);", StringComparison.Ordinal));
-        // 5: the need-you count wears the warning ink at 600.
+        // 5: the assigned-to-you count wears the Needs colour mixed toward body text (#704).
         string count = CssText.RuleBody(css, paper + ".tasks-count-need-you:not(.is-zero)");
-        Assert.True(count.Contains("color: var(--hu-tone-warning-ink);", StringComparison.Ordinal) && count.Contains("font-weight: 600;", StringComparison.Ordinal));
+        Assert.True(count.Contains("color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));", StringComparison.Ordinal));
         // 6: the clay priority recipe never applied under the pack and is not carried over.
         Assert.DoesNotContain("priority-high,", CssText.ScopedRules(css, "[data-hu-status=\"pill\"]"), StringComparison.Ordinal);
         // 8: the Library split's panes read the page and sunk grounds.

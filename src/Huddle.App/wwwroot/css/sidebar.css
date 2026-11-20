@@ -388,8 +388,8 @@
     white-space: nowrap;
 }
 
-/* A section of the selected scope: a hairline above its header, then the caption-size label (the labels=upper look,
-   always) and an optional trailing icon button, ending on the trailing line. Headers do not collapse. */
+/* A section of the selected scope: a hairline above its header, then the caption-size label (uppercase only in a Theme
+   with labels=upper, as shell.css gates it) and an optional trailing icon button, ending on the trailing line. Headers do not collapse. */
 .teams-nav-host .teams-nav-section-header {
     display: flex;
     align-items: center;
@@ -404,9 +404,13 @@
     flex: 1 1 auto;
     font-size: var(--mud-typography-caption-size);
     font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
+:root:has([data-hu-labels="upper"]) .teams-nav-host .teams-nav-section-title,
+:root:has([data-hu-labels="upper"]) .library-sidebar-title {
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--mud-palette-text-secondary);
 }
 
 /* The Library view's heading (LibrarySidebarTree.razor), an h2 for the outline, lines up with the search field below it.

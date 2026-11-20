@@ -42,6 +42,8 @@
     "ground.sidebar": "palette.drawerBackground",
     "ground.right": "ref(ground.page)",
     "ink.strip": "palette.background",
+    "line.region": "palette.linesInputs",
+    "switcher.background": "ref(ground.raised)",
     "selected.task.background": "mix(palette.info 18%, palette.background)",
     "tone.primary.soft": "mix(palette.primary 14%, palette.background)",
     "tone.primary.tint": "mix(palette.primary 7%, palette.background)",

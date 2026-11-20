@@ -80,7 +80,7 @@
     "ground.sidebar": "palette.drawerBackground",
     "ground.rail": "palette.backgroundGray",
     "ground.sunk": "palette.drawerBackground",
-    "line.region": "palette.dividerLight",
+    "line.region": "mix(palette.textPrimary 17%, palette.surface)",
     "line.control": "palette.linesInputs",
     "hover": "palette.tableHover",
     "accent.ink": "palette.primaryDarken",

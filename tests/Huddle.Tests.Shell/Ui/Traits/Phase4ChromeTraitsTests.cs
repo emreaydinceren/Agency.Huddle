@@ -72,9 +72,10 @@ public sealed partial class Phase4ChromeTraitsTests
 
         Assert.Contains("border: 1px solid var(--hu-line-control);", kind, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border-radius: var(--hu-radius-full);", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("var(--hu-tone-warning-line)", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
+        Assert.Contains("var(--hu-needs)", pill, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
+        Assert.DoesNotContain("--hu-tone-warning", pill, StringComparison.Ordinal);
         Assert.Contains("box-shadow: none;", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
-        Assert.Contains("border: 1px solid var(--hu-line-region);", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
+        Assert.Contains("border: 1px solid var(--ink-line);", card, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: none;", agent, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("box-shadow: var(--hu-shadow-panel);", dialog, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup
         Assert.Contains("border: 0;", dialog, StringComparison.Ordinal); // contains-ok: stylesheet text, not markup

@@ -32,16 +32,16 @@ public sealed class SkinColoursTests
         }
     }
 
-    /// <summary>Lumen Light sets its one line rung, <c>ink.line</c>, to <c>palette.dividerLight</c> (#e7e7eb), and the region line is the same colour.</summary>
+    /// <summary>Lumen Light sets its Line rung, <c>ink.line</c>, to <c>palette.dividerLight</c> (#e7e7eb), and the region (Chrome) line is a rung stronger, so Line &lt; Chrome holds on the page (#742).</summary>
     [Fact]
     public void LumenLight_InkLineIsTheDividerLight()
     {
         SkinColours lumen = SkinColours.All.Single(static colours => colours.Id == "lumen-light");
 
         Assert.Equal("#e7e7eb", lumen.Token("ink.line")?.Hex);
-        Assert.Equal(lumen.Token("line.region"), lumen.Token("ink.line"));
+        Assert.NotEqual(lumen.Token("line.region"), lumen.Token("ink.line"));
         Assert.Equal("#f0f0f2", lumen.Token("ink.wash")?.Hex);
-        Assert.Equal(0.0, lumen.Difference("ink.line", "line.region"));
+        Assert.True(lumen.Difference("ink.line", "line.region") > 2);
         Assert.True(lumen.Difference("ink.line", "ink.field") > 2);
     }
 

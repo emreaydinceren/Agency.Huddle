@@ -153,6 +153,7 @@ internal static class ServicePresets
         typeof(AppearanceStore),
         typeof(SkillStore),
         typeof(LibraryRootStore),
+        typeof(Agency.Huddle.App.Acp.AgentPaths),
         typeof(Agency.Huddle.App.Acp.Sessions.SessionSettingsStore),
         typeof(Agency.Huddle.App.Gateway.GatewayAdminService),
         typeof(Agency.Huddle.App.Gateway.IGatewayRuntimeView),

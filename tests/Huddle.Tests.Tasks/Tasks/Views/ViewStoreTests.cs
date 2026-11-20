@@ -32,6 +32,20 @@ public sealed class ViewStoreTests
         };
     }
 
+    /// <summary>The built-in All Tasks and My Tasks Views, and a View created from the sidebar, start with id, title, status, priority, assignee and due date (#721).</summary>
+    [Fact]
+    public void BuiltInsAndANewView_StartWithTheDefaultListFields()
+    {
+        string[] expected = ["id", "title", "status", "priority", "assignee", "due_date"];
+        using TempDataDir dataDir = new();
+        using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
+
+        Assert.Equal(expected, Assert.Single(store.Views, v => v.Id == "all-tasks").Fields);
+        Assert.Equal(expected, Assert.Single(store.Views, v => v.Id == "my-tasks").Fields);
+        TaskView created = Agency.Huddle.App.Components.Tasks.ViewActions.CreateNew(store) ?? throw new InvalidOperationException("The View was not saved.");
+        Assert.Equal(expected, created.Fields);
+    }
+
     /// <summary>No file is the normal first-run case: the two built-ins are in memory and nothing is written just to read them.</summary>
     [Fact]
     public void NoFile_BuiltInsOnly_FileNotCreated()

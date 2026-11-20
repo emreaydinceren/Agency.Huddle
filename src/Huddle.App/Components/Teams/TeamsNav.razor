@@ -272,9 +272,9 @@
                         aria-pressed="@(selected ? "true" : "false")" title="Rooms, Tasks and files that belong to no project"
                         @onclick="@(() => this.ToggleNoProject(team))">
             <span class="sidebar-row-label">@Tasks.NoProjectLabel</span>
-            @if (this.TeamConfig.Value.Tasks.Enabled)
+            @if (this.TeamConfig.Value.Tasks.Enabled && open > 0)
             {
-                <span class="sidebar-row-meta teams-nav-scope-count" title="@(open == 0 ? "No open tasks" : Plural.Of(open, "open task", "open tasks"))">@(open == 0 ? "—" : open.ToString(CultureInfo.InvariantCulture))</span>
+                <span class="sidebar-row-meta teams-nav-scope-count" title="@Plural.Of(open, "open task", "open tasks")">@open.ToString(CultureInfo.InvariantCulture)</span>
             }
         </button>;
     }
@@ -328,9 +328,9 @@
                     <ProjectAvatar Project="@project" Avatar="team.ProjectAvatar(project)" Class="teams-nav-scope-avatar teams-nav-project-avatar" />
                     <span class="sidebar-row-label teams-nav-scope-label">@label</span>
                 }
-                @if (project is not null && this.TeamConfig.Value.Tasks.Enabled)
+                @if (project is not null && this.TeamConfig.Value.Tasks.Enabled && open > 0)
                 {
-                    <span class="sidebar-row-meta teams-nav-scope-count" title="@(open == 0 ? "No open tasks" : Plural.Of(open, "open task", "open tasks"))">@(open == 0 ? "—" : open.ToString(CultureInfo.InvariantCulture))</span>
+                    <span class="sidebar-row-meta teams-nav-scope-count" title="@Plural.Of(open, "open task", "open tasks")">@open.ToString(CultureInfo.InvariantCulture)</span>
                 }
             </a>
             @* The Team's own row in a one-Team view, and every Project row, carry an Archive menu; in the list of every
@@ -470,18 +470,22 @@
 
     /// <summary>
     /// Every Team in catalog order, unfolded under the header card while <see cref="switcherOpen"/>, then "Build a team".
-    /// The Team shown stays in its own place, marked, so a Team's position never moves with the selection; picking
-    /// another shows its view, as its shortcut tile would.
+    /// The Team shown is the header card above, so the list leaves it out; picking another shows its view, as its
+    /// shortcut tile would.
     /// </summary>
-    /// <param name="current">The Team the view shows, marked in the list.</param>
+    /// <param name="current">The Team the view shows, left out of the list.</param>
     private RenderFragment TeamSwitcherList(string current) =>
         @<div class="teams-nav-switcher-list" role="list" aria-label="Teams">
             @foreach (TeamSummary other in this.Catalog.Teams)
             {
                 string name = other.Name;
-                bool isCurrent = string.Equals(name, current, StringComparison.OrdinalIgnoreCase);
-                <button type="button" role="listitem" class="@(isCurrent ? "teams-nav-switcher-item selected-shape" : "teams-nav-switcher-item")"
-                        @key="name" title="@name" aria-current="@(isCurrent ? "true" : null)"
+                if (string.Equals(name, current, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                <button type="button" role="listitem" class="teams-nav-switcher-item"
+                        @key="name" title="@name"
                         @onclick="@(() => this.SwitchTeamAsync(name))">
                     <TeamAvatar Team="@name" Avatar="other.Avatar" Size="Size.Medium" Class="teams-nav-scope-avatar" />
                     <span class="teams-nav-scope-text">
@@ -528,19 +532,17 @@
         this.Navigation.NavigateTo(href);
     }
 
-    /// <summary>The Team header card's second line: the Team type's display name and the Agent count ("Research Team · 8 Agents"), or just the count when the Team has no type.</summary>
+    /// <summary>The Team header card's second line: the Team type's display name and the Agent count ("Research Team · 8 Agents"), or just the count when the Team has no type or the Blank Team one (a creation template, not a kind of Team).</summary>
     /// <param name="team">The Team.</param>
     private string TeamSubtitle(TeamSummary team)
     {
         string members = Plural.Of(team.Members.Count, "Agent", "Agents");
-        if (team.TeamType is not { } type)
+        if (team.TeamType is not { } type || string.Equals(type.Id, BlankTeamType.Id, StringComparison.Ordinal))
         {
             return members;
         }
 
-        string name = string.Equals(type.Id, BlankTeamType.Id, StringComparison.Ordinal)
-            ? BlankTeamType.Manifest.DisplayName
-            : this.TeamTypes.Find(type.Id)?.DisplayName ?? type.Id;
+        string name = this.TeamTypes.Find(type.Id)?.DisplayName ?? type.Id;
         return $"{name} · {members}";
     }
 

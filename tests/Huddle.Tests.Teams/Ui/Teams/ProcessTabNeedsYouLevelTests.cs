@@ -53,6 +53,24 @@ public sealed class ProcessTabNeedsYouLevelTests
         Assert.Equal(LevelNote, cut.Find(".process-tab-level .process-tab-gate-note").TextContent.Trim());
     }
 
+    /// <summary>The gate statement reads before the "What this cannot catch" caveat that qualifies it (#726).</summary>
+    [Fact]
+    public async Task Tab_GateStatement_ComesBeforeTheCaveat()
+    {
+        await using MudBunitContext ctx = new();
+        using NeedsYouLevelUiRig rig = new(ctx);
+        rig.Folders.ReadResult = new TeamFile(new VersionedRef("development", "1.0.0"), null, null, null, string.Empty)
+        {
+            Process = ProcessSettings.Empty with { Gates = [] },
+        };
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        IReadOnlyList<string> order = [.. cut.FindAll(".process-tab-level .process-tab-gate-note, .process-tab-level .needs-you-level-limits")
+            .Select(static note => note.ClassList.Contains("process-tab-gate-note") ? "statement" : "caveat")];
+        Assert.Equal(["statement", "caveat"], order);
+    }
+
     /// <summary>A Team whose only gate is accept-before-merge shows the level and no switch at all.</summary>
     [Fact]
     public async Task Tab_OnlyAcceptBeforeMerge_ShowsNoSwitches()

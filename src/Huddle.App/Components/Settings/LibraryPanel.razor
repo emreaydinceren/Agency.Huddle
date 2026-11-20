@@ -10,10 +10,14 @@
 *@
 
 @using Agency.Huddle.App.Components.Shared.Dialogs
+@using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Library
+@using Microsoft.Extensions.Options
 @implements IDisposable
 
 @inject LibraryRootStore Roots
+@inject IOptions<TeamOptions> Options
+@inject AgentPaths AgentPaths
 @inject IDialogService DialogService
 
 <SettingsIntro>
@@ -22,9 +26,11 @@
 </SettingsIntro>
 
 <StoredAt Path="@this.Roots.FilePath" />
+<StoredAt Label="Agent files stored at" Path="@this.AgentPaths.DefinitionsRoot" />
+<StoredAt Label="Room database stored at" Path="@(System.IO.Path.Combine(this.Options.Value.DataDir, "team.db"))" />
 
 <MudStack Row="true" Spacing="2" Class="mb-2">
-    <ActionButton Role="ButtonRole.Secondary" Class="library-panel-reset-button" OnClick="this.ResetAsync">Reset pinned folders</ActionButton>
+    <ActionButton Role="ButtonRole.Secondary" Class="library-panel-reset-button" Disabled="@(this.Roots.Pinned.Count == 0)" OnClick="this.ResetAsync">Reset pinned folders</ActionButton>
 </MudStack>
 
 <MudSimpleTable Hover="true" Dense="true" Class="library-panel-roots-table">
@@ -61,7 +67,7 @@
                                 <MudText Typo="Typo.caption" HtmlTag="span" Class="library-panel-read-only mud-text-secondary mr-2">Read only</MudText>
                             }
 
-                            <SettingSwitch Value="@this.IsHidden(root.Id)" ValueChanged="@((bool hidden) => this.ToggleHiddenAsync(root.Id, hidden))" Class="library-panel-hide-switch" Label="Hide" />
+                            <SettingSwitch Value="@(!this.IsHidden(root.Id))" ValueChanged="@((bool shown) => this.ToggleHiddenAsync(root.Id, !shown))" Class="library-panel-hide-switch" Label="Show" />
                         </div>
                     }
                 </td>
@@ -70,7 +76,9 @@
     </tbody>
 </MudSimpleTable>
 
-<MudText Typo="Typo.body2" Class="library-panel-trust-warning mt-2">@LibraryRootStore.TrustWarning</MudText>
+@* One labelled task: the heading names it and the trust warning is its helper text. *@
+<MudText Typo="Typo.subtitle1" HtmlTag="h3" Class="card-title mt-4">Pin a folder</MudText>
+<MudText Typo="Typo.caption" Class="library-panel-trust-warning mud-text-secondary">@LibraryRootStore.TrustWarning</MudText>
 
 @if (this.addError is not null)
 {
@@ -78,8 +86,8 @@
 }
 
 <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Class="mt-2 library-panel-add-row">
-    <TextField Shape="TextFieldShape.Compact" Placeholder="Name" AriaLabel="Name" @bind-Value="this.name" Class="library-panel-name-field" />
-    <TextField Shape="TextFieldShape.Compact" Placeholder="Path" AriaLabel="Path" @bind-Value="this.path" Class="library-panel-path-field" />
+    <TextField Label="Name" @bind-Value="this.name" Class="library-panel-name-field" />
+    <TextField Label="Path" @bind-Value="this.path" Class="library-panel-path-field" />
     <ActionButton Role="ButtonRole.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</ActionButton>
 </MudStack>
 

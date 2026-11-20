@@ -69,11 +69,12 @@
             </Notice>
         }
 
-        <MudStack Row="true" Spacing="2" Class="mt-3">
-            <ActionButton Role="ButtonRole.Primary" Class="helper-card-save"
-                          Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</ActionButton>
+        @* Reset, then Save, at the right: the order of the Prompts footer. *@
+        <MudStack Row="true" Spacing="2" Justify="Justify.FlexEnd" Class="mt-3">
             <ActionButton Class="helper-card-reset"
                           Disabled="@(!this.AdaptersOn)" OnClick="this.OnReset">@HelpersCopy.Reset</ActionButton>
+            <ActionButton Role="ButtonRole.Primary" Class="helper-card-save"
+                          Disabled="@(!this.CanSave)" OnClick="this.OnSave">@HelpersCopy.Save</ActionButton>
         </MudStack>
     </MudPaper>
 }
@@ -127,7 +128,7 @@
             || !string.Equals(this.effort, this.baseline.Effort, StringComparison.Ordinal)
             || this.dailyCap != this.baseline.DailyCap);
 
-    /// <summary>The chip: Off when the Human turned it off, Paused at its cap, otherwise On. The icon carries the state beside the colour.</summary>
+    /// <summary>The chip: Off when the Human turned it off, Not running while Adapters are off, Paused at its cap, otherwise On. The icon carries the state beside the colour.</summary>
     private (string Text, Color Color, string Icon) Chip
     {
         get
@@ -136,6 +137,11 @@
             if (!this.baseline.Enabled)
             {
                 return (HelpersCopy.ChipOff, Color.Default, Icons.Material.Filled.PowerSettingsNew);
+            }
+
+            if (!this.AdaptersOn)
+            {
+                return (HelpersCopy.ChipNotRunning, Color.Default, Icons.Material.Filled.PowerSettingsNew);
             }
 
             return this.IsPaused

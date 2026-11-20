@@ -109,6 +109,20 @@ public sealed class HelperCardTests : IDisposable
         Assert.Equal("Edit the prompt", cut.Find("a[href^='/settings/prompts']").TextContent.Trim());
     }
 
+    /// <summary>With Adapters off an enabled Helper cannot run, so its chip says Not running in the neutral colour, never a green On (#731); Reset comes before Save (#737).</summary>
+    [Fact]
+    public async Task AdaptersOff_EnabledHelper_ChipSaysNotRunning_AndResetPrecedesSave()
+    {
+        await using MudBunitContext ctx = new();
+        this.Register(ctx);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, adaptersOn: false);
+
+        Assert.Equal("Not running", Chip(cut));
+        Assert.DoesNotContain("success", cut.Find(".helper-card-chip").ClassName ?? string.Empty, StringComparison.Ordinal);
+        Assert.True(cut.Markup.IndexOf("helper-card-reset", StringComparison.Ordinal) < cut.Markup.IndexOf("helper-card-save", StringComparison.Ordinal));
+    }
+
     /// <summary>The daily cap field carries its helper text and refuses a cap below 1 by keeping 1.</summary>
     [Fact]
     public async Task DailyCap_HasHelperText_AndRefusesZero()

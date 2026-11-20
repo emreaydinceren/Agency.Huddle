@@ -430,11 +430,11 @@ small mark below them). A row is 32px; there is no density switch and no other r
 | 50px | An avatar on a card or tile, a Feed card's avatar included, and a Message's avatar in the Transcript |
 | 44px | The least a touch target gets: a Library tree row on a touch screen |
 
-An icon is 14, 16 or 18px, and 32px in an empty state. The window switches layout at three widths only:
-MudBlazor's 600px and 960px and the shell's 1099px, which its stylesheet derives from the two sidebars.
+An icon is 14, 16 or 18px, and 32px in an empty state. The window switches layout at MudBlazor's 600px and
+960px only; the shell has no breakpoint of its own (the 1099px one went with the narrow-window overlay rule).
 Anything inside a pane uses a container query instead (the Task List does). CV11 checks the sizes and
 the window widths in every stylesheet: a width or height from 17px to 47px must be on the ladder, a
-glyph on the icon sizes, and a window `@media` width one of the three.
+glyph on the icon sizes, and a window `@media` width one of its allowed set.
 
 The page is not zoomed, so a size in a stylesheet is the size on screen and a full-height
 area is plain `100vh`. See
@@ -488,12 +488,12 @@ row here before it gets an icon in the code (UX-083, UX-084, UX-R26).
 
 | Entity | Icon |
 | --- | --- |
-| Room (chat) | `Filled.Chat` |
+| Room (chat) | `ActionIcons.Chat` (two outlined bubbles), the sidebar's glyph, in every Feed chip, meta line, preview and Search result |
 | Team | `Filled.Group` (the old Agents page's icon, since 2026-11-18) |
 | Project | `Filled.LibraryBooks`, for nothing else |
 | A Team's members (the Agents tab, the Members panel) | `Filled.Person` |
 | Tasks | `Outlined.TaskAlt` |
-| Library | `Filled.MenuBook` |
+| Library | `Outlined.MenuBook`, in the Activity bar, Library Tabs and Settings › Library |
 | A folder, including a Library root | `Outlined.Folder` |
 | A note or document | `Filled.Description` |
 | Settings | `Filled.Settings` |
@@ -812,8 +812,8 @@ The Room is the Transcript over the Composer in one column.
   card is dragged, so the column still takes the drop.
 - **Overdue** is the warning icon and the date in one span; see [Colour](#colour). An overdue
   card shows its date even when the View hides `due_date`.
-- **Header counts** are 13px, with the numbers at 600 in body colour; "need you" is the
-  warning colour mixed 70% toward body text. A count wears its signal only above 0.
+- **Header counts** are 13px, with the numbers at 600 in body colour; "assigned to you" is the
+  Needs colour (`--hu-needs`, the one the Top bar pill and its dot use) mixed 70% toward body text. A count wears its signal only above 0.
 - **Hover and focus reveal** (see [Patterns worth copying](#patterns-worth-copying)) applies
   to Board cards and List rows.
 - **The List** has 32px rows, 13px body and header cells at 12px/600

@@ -41,6 +41,32 @@ public sealed class AppearanceTabTests
 
         Assert.DoesNotContain("Initials of the name", cut.Markup, StringComparison.Ordinal);
         Assert.Single(cut.FindAll("a[href='/settings/profile']"));
+        Assert.Single(cut.FindAll(".settings-intro a[href='/settings/profile']"));
+    }
+
+    /// <summary>The chosen Theme of each list carries a check as a second cue besides the tint, and no other row does (#736).</summary>
+    [Fact]
+    public async Task ThemePicker_MarksTheChosenRowOfEachListWithACheck()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        Assert.Single(cut.FindAll("[aria-label='Light theme'] .theme-row-check"));
+        Assert.Single(cut.FindAll("[aria-label='Dark theme'] .theme-row-check"));
+    }
+
+    /// <summary>The Accent field says "Theme default" while no accent is set (#736).</summary>
+    [Fact]
+    public async Task AccentField_ShowsThemeDefaultAsItsPlaceholder()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        await using MudBunitContext ctx = NewContext(factory);
+
+        IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
+
+        Assert.Equal("Theme default", cut.Find(".theme-picker-accent-colour input").GetAttribute("placeholder"));
     }
 
     /// <summary>The Light and Dark theme headings are <c>h3</c> sub-sections under the tab's <c>h2</c> title (#473), and the accent field is outlined, not underlined (#480).</summary>

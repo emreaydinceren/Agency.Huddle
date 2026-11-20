@@ -51,6 +51,24 @@ public sealed class TaskReadViewTests
             builder.CloseComponent();
         });
 
+    /// <summary>An overdue due date wears the card's own treatment (#722): the shared <c>task-due-overdue</c> span holding the warning icon and the date.</summary>
+    [Fact]
+    public async Task Render_OverdueDueDate_UsesTheCardsOverdueSpan()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskItem task = Assert.IsType<TaskResult.Saved>(harness.Service.Create(
+            new TaskDraft("Late", "Platform", null, DueDate: new DateOnly(2000, 1, 1)),
+            TaskActors.Human(harness.Options.Value))).Task;
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, task.Id);
+
+        AngleSharp.Dom.IElement overdue = cut.Find(".task-read-view-due-date dd .task-due-overdue");
+        Assert.NotEmpty(overdue.QuerySelectorAll(".task-due-icon"));
+        Assert.Equal(TaskDates.Human(new DateOnly(2000, 1, 1), harness.Clock), overdue.TextContent.Trim());
+    }
+
     /// <summary>Every field the editor shows is a value here: Status, Priority, Assignee, Team, Parent, Blocked by, Tags, both dates, Origin and the rendered Description.</summary>
     [Fact]
     public async Task Render_TaskWithEveryField_ShowsEveryValueAsText()

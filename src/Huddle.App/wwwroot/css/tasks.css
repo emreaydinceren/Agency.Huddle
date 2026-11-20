@@ -41,10 +41,6 @@
     font-size: var(--mud-typography-caption-size);
 }
 
-.task-read-view-due-date.task-overdue dd {
-    color: var(--mud-palette-error);
-}
-
 .task-read-view-description-empty {
     color: var(--mud-palette-text-secondary);
     font-size: var(--mud-typography-body2-size);
@@ -308,6 +304,8 @@
    (the Team page's Tasks tab) the cap still bounds the board. */
 .task-board {
     overflow: auto;
+    /* A scroll along the columns settles on a column's left edge, so no header is left cut in the middle of its name. */
+    scroll-snap-type: x proximity;
     max-height: calc(100vh - 12rem);
     background: var(--hu-board-background);
 }
@@ -343,6 +341,11 @@
     grid-auto-columns: minmax(260px, 300px);
     justify-content: start;
     column-gap: 8px;
+}
+
+.task-board-columns > *,
+.task-board-lane-columns > * {
+    scroll-snap-align: start;
 }
 
 .task-board-column-header {
@@ -393,7 +396,9 @@
     min-width: 0;
     font-size: var(--mud-typography-body2-size);
     font-weight: 600;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .task-board-column-count {
@@ -567,7 +572,7 @@
     gap: 4px;
     border-radius: var(--hu-radius-full);
     background-color: transparent;
-    border: 1px solid var(--hu-line-region);
+    border: 1px solid var(--ink-line);
     color: var(--hu-text-subtle);
 }
 
@@ -978,6 +983,14 @@
     width: auto;
 }
 
+/* Every body cell but the Title stays on one line: a long value ends in an ellipsis (its span carries the full value as a tooltip), so a row is 32px. Only the Title may wrap, to two lines. */
+.mud-table.task-list-grid .mud-table-body .mud-table-row .mud-table-cell:not(.task-list-title-cell):not(.mud-datagrid-group) {
+    max-width: 16rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .task-list-title-cell {
     width: auto;
     min-width: 12rem;
@@ -1140,7 +1153,7 @@
 }
 
 /* The header row's counts ("14 open · 3 need you · 52 all"): one quiet secondary line, the counts dot-separated and the
-   numbers only a step heavier, "need you" in the warning colour. */
+   numbers body colour at 600, the "assigned to you" count in the Needs colour. */
 .tasks-counts {
     display: flex;
     flex-wrap: wrap;
@@ -1156,10 +1169,11 @@
 }
 
 .tasks-counts strong {
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--mud-palette-text-primary);
 }
 
-/* "need you" is the warning colour mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
+/* The Needs colour (the Top bar pill and its dot use it too) mixed toward body text so it keeps 4.5:1 on the page; the number stays body colour.
    A count wears its signal only above 0, so a zero ("is-zero") reads as the other counts do. */
 .tasks-count-need-you:not(.is-zero) {
     color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
@@ -1371,8 +1385,7 @@
 }
 
 :root:has([data-hu-surface="paper"]) .tasks-count-need-you:not(.is-zero) {
-    color: var(--hu-tone-warning-ink);
-    font-weight: 600;
+    color: color-mix(in srgb, var(--hu-needs) 70%, var(--mud-palette-text-primary));
 }
 
 /* ---- Task state and priority: a glyph then a small label, with no chip. This is every Theme's look except status=pill (Nordic).
@@ -1529,7 +1542,7 @@
 
 :root:has([data-hu-surface="hairline"]) .task-card {
     background: var(--hu-ground-raised);
-    border: 1px solid var(--hu-line-region);
+    border: 1px solid var(--ink-line);
     border-radius: var(--hu-radius-card);
     box-shadow: none;
     padding: 8px 12px;

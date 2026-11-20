@@ -66,7 +66,7 @@ public sealed class TasksPageTests
         Assert.Contains("task-toolbar-kind", header.Children[0].ClassList);
         Assert.Contains("tasks-counts", header.Children[1].ClassList);
         Assert.EndsWith("open", NormalizeWhitespace(header.QuerySelector(".tasks-count-open")?.TextContent ?? string.Empty), StringComparison.Ordinal);
-        Assert.EndsWith("need you", NormalizeWhitespace(header.QuerySelector(".tasks-count-need-you")?.TextContent ?? string.Empty), StringComparison.Ordinal);
+        Assert.EndsWith("assigned to you",NormalizeWhitespace(header.QuerySelector(".tasks-count-need-you")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.EndsWith("all", NormalizeWhitespace(header.QuerySelector(".tasks-count-all")?.TextContent ?? string.Empty), StringComparison.Ordinal);
         Assert.Equal(["List", "Kanban"], header.QuerySelectorAll(".task-toolbar-kind .mud-toggle-item").Select(item => NormalizeWhitespace(item.TextContent)));
 

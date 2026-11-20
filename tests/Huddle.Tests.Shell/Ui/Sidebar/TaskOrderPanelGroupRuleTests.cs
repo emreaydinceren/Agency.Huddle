@@ -58,7 +58,7 @@ public sealed class TaskOrderPanelGroupRuleTests
     private static string DotClass(IElement item) =>
         string.Join(' ', item.QuerySelectorAll(".mud-timeline-item-dot-inner").SelectMany(static dot => dot.ClassList).Where(static c => c.StartsWith("mud-timeline-dot-", StringComparison.Ordinal)));
 
-    /// <summary>With the rule on, only the first Task of a Project is Next and counted; the second says it waits for it, in a Default dot.</summary>
+    /// <summary>With the rule on, only the first Task of a Project is Next (a Primary dot, no "Next" in its row); the second says it waits for it, in a Default dot; the header counts all three rows.</summary>
     [Fact]
     public async Task RuleOn_OneTaskPerProjectIsNextAndCounted_TheOtherWaits()
     {
@@ -70,9 +70,9 @@ public sealed class TaskOrderPanelGroupRuleTests
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx, panel, new TaskId("PLAT", 1));
 
-        Assert.Equal(2, panel.Count);
+        Assert.Equal(3, panel.Count);
         Assert.Equal(
-            ["PLAT-0001 · Next", "PLAT-0002 · waits for PLAT-0001 in API", "PLAT-0003"],
+            ["PLAT-0001", "PLAT-0002 · waits for PLAT-0001 in API", "PLAT-0003"],
             cut.FindAll(Item + " .task-order-meta").Select(static e => e.TextContent.Trim()));
         Assert.Equal(
             ["mud-timeline-dot-primary", "mud-timeline-dot-default", "mud-timeline-dot-default"],
@@ -91,7 +91,7 @@ public sealed class TaskOrderPanelGroupRuleTests
         IRenderedComponent<ContainerFragment> cut = Render(ctx, panel, new TaskId("PLAT", 1));
 
         Assert.Equal(2, panel.Count);
-        Assert.Equal(["PLAT-0001 · Next", "PLAT-0002"], cut.FindAll(Item + " .task-order-meta").Select(static e => e.TextContent.Trim()));
+        Assert.Equal(["PLAT-0001", "PLAT-0002"], cut.FindAll(Item + " .task-order-meta").Select(static e => e.TextContent.Trim()));
     }
 
     /// <summary>A Project set to Parallel over a Team set to one at a time counts both of its Tasks.</summary>

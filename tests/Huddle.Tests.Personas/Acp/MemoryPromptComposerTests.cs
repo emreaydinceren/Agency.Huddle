@@ -92,7 +92,7 @@ public sealed class MemoryPromptComposerTests
         string actual = Compose(["mcp__team__get_help", "mcp__team__memory"], SessionScope.PerRoom, memoryChangesListed: false);
 
         Assert.Contains("Save as you go.", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
-        Assert.Contains("Do not claim to\nremember what is not in your memory", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
+        Assert.Contains("Do not claim to remember what is not in your memory", actual.ReplaceLineEndings("\n"), StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup
         Assert.DoesNotContain("the change is listed at the start of your next Turn", actual, StringComparison.Ordinal);
         Assert.DoesNotContain("Two things do cross between your Rooms", actual, StringComparison.Ordinal);
         Assert.Contains("Each Room you are in is a separate conversation", actual, StringComparison.Ordinal); // contains-ok: prompt or tool-result text, not markup

@@ -59,8 +59,8 @@ public sealed partial class R3SettingsTests
 
         string html = await client.GetStringAsync("/settings/library", TestContext.Current.CancellationToken);
 
-        Assert.DoesNotContain("HideHide", html, StringComparison.Ordinal);
-        Assert.Contains("Hide", html, StringComparison.Ordinal); // contains-ok: rendered markup text
+        Assert.DoesNotContain("ShowShow", html, StringComparison.Ordinal);
+        Assert.Contains("Show", html, StringComparison.Ordinal); // contains-ok: rendered markup text
     }
 
     /// <summary>The hyphenated team-types address redirects to the canonical one (E7).</summary>

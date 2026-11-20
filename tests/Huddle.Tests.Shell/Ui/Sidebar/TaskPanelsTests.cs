@@ -99,6 +99,8 @@ public sealed class TaskPanelsTests
         Assert.Equal(["Open blocker", "Done blocker"], cut.FindAll(".room-tasks-row a").Select(static a => a.TextContent.Trim()));
         Assert.Equal($"/tasks/item/{open.Id}", cut.FindAll(".room-tasks-row a")[0].GetAttribute("href"));
         Assert.Equal(1, panel.Count);
+        Assert.Equal(["Done"], cut.FindAll(".room-task-closed .room-task-closed-state").Select(static e => e.TextContent.Trim()));
+        Assert.Single(cut.FindAll(".room-tasks-row:not(.room-task-closed)"));
     }
 
     /// <summary>The count follows the blockers: finishing the open one drops it to zero.</summary>

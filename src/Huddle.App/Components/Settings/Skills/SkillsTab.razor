@@ -75,13 +75,15 @@
         </TemplateColumn>
         <TemplateColumn T="SkillRow" Title="Source" Sortable="false">
             <CellTemplate>
-                @if (context.Item.Copy is { Provenance: not null } copy)
-                {
-                    <SkillProvenanceLine Skill="@copy" SourceRemoved="@this.SourceRemoved(copy)" />
+                @{
+                    (string sourceName, string sourceDetail) = SourceCell(context.Item);
                 }
-                else
+                <MudTooltip Text="@sourceDetail" Disabled="@(sourceDetail.Length == 0)">
+                    <span class="skills-origin">@sourceName</span>
+                </MudTooltip>
+                @if (context.Item.Copy is { Provenance: not null } copy && this.SourceRemoved(copy))
                 {
-                    <span class="skills-origin">@OriginText(context.Item)</span>
+                    <StatusChip Color="Color.Default" Icon="@Icons.Material.Filled.LinkOff" Class="skill-provenance-source-removed ml-1">Source removed</StatusChip>
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -106,6 +108,10 @@
                     <MudTooltip Text="@string.Join(", ", context.Item.Holders)">
                         <span class="skills-used-by truncate">@string.Join(", ", context.Item.Holders)</span>
                     </MudTooltip>
+                }
+                else
+                {
+                    <span class="skills-used-by-none">None</span>
                 }
             </CellTemplate>
         </TemplateColumn>
@@ -206,20 +212,28 @@
     /// <summary>The filter's word for a state.</summary>
     private static string FilterLabel(ItemState state) => state == ItemState.InUse ? "In use" : SkillStateText.For(state).Text;
 
-    /// <summary>The Source column for a row without a provenance line.</summary>
-    private static string OriginText(SkillRow row)
+    /// <summary>The Source column: the short Source name, and for the tooltip the repository, commit and licence that name leaves out.</summary>
+    private static (string Name, string Detail) SourceCell(SkillRow row)
     {
+        if (row.Copy?.Provenance is { } provenance)
+        {
+            string commit = provenance.Commit.Length > 7 ? provenance.Commit[..7] : provenance.Commit;
+            string? license = string.Equals(provenance.License?.Trim(), "none", StringComparison.OrdinalIgnoreCase) ? null : provenance.License;
+            return (SkillOriginText.Short(provenance.Publisher, provenance.Repo), SkillOriginText.Detail(SkillOriginText.Parts(provenance.Repo).Repository, commit, license));
+        }
+
         if (row.Origin == SkillRowOrigin.BuiltIn)
         {
-            return "Built in";
+            return ("Built in", string.Empty);
         }
 
         if (row.Origin == SkillRowOrigin.Yours || row.Entry is null)
         {
-            return "Yours";
+            return ("Yours", string.Empty);
         }
 
-        return SkillOriginText.Line(row.Entry.Publisher, row.Entry.Origin, row.Entry.License);
+        (string repository, string entryCommit) = SkillOriginText.Parts(row.Entry.Origin);
+        return (SkillOriginText.Short(row.Entry.Publisher, row.Entry.Origin), SkillOriginText.Detail(repository, entryCommit, row.Entry.License));
     }
 
     /// <summary>Whether a row passes Show hidden, the State filter and the search.</summary>

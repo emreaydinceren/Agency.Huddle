@@ -191,6 +191,20 @@ public sealed class TaskEditPageTests
         Assert.Equal($"{task.Id} · Platform", cut.Find(".task-edit-page-eyebrow").TextContent.Trim());
     }
 
+    /// <summary>A saved Task's header has one Copy id control (the one beside the title), and the files button reads "Add file" (#729).</summary>
+    [Fact]
+    public async Task Header_HasOneCopyIdControl_AndTheFilesButtonIsSentenceCase()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = UiTestHost.Create().WithHarness(harness);
+
+        IRenderedComponent<ContainerFragment> cut = RenderInTab(ctx, harness, task.Id.ToString(), out _);
+
+        Assert.Single(cut.FindAll(".task-edit-page-header button[aria-label^='Copy task id']"));
+        Assert.Equal("Add file", cut.Find(".task-detail-attach-file").TextContent.Trim());
+    }
+
     /// <summary>Cancel and Save sit in the header's last item, Cancel first and Save last, and Save is the one filled button (D-5, K2a).</summary>
     [Fact]
     public async Task Header_HoldsCancelThenSave_SaveFilled()
