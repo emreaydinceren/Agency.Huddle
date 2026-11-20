@@ -6,7 +6,7 @@ set -e
 
 # Test 1: Basic functionality with two files
 test_dir=$(mktemp -d)
-trap "rm -rf '$test_dir'" EXIT
+trap 'rm -rf "$test_dir"' EXIT
 
 # Create test files
 printf 'abc' > "$test_dir/a.txt"
@@ -65,7 +65,7 @@ fi
 
 # Test 2: Missing file argument should exit non-zero and not create SHA256SUMS
 test_dir2=$(mktemp -d)
-trap "rm -rf '$test_dir' '$test_dir2'" EXIT
+trap 'rm -rf "$test_dir" "$test_dir2"' EXIT
 
 if sh installer/make-sums.sh "$test_dir2" 2>/dev/null; then
     echo "FAIL: make-sums.sh should exit non-zero with missing file argument"
@@ -79,7 +79,7 @@ fi
 
 # Test 3: C-locale sorting (uppercase before lowercase)
 test_dir3=$(mktemp -d)
-trap "rm -rf '$test_dir' '$test_dir2' '$test_dir3'" EXIT
+trap 'rm -rf "$test_dir" "$test_dir2" "$test_dir3"' EXIT
 
 # Create files with mixed case names
 touch "$test_dir3/c.txt"

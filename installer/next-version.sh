@@ -40,7 +40,7 @@ version_key() {
 }
 
 main() {
-    bump=patch
+    bump='patch'
     version=""
     while [ $# -gt 0 ]; do
         case "$1" in
@@ -74,7 +74,7 @@ main() {
         version=${version#v}
         is_release_version "$version" || die "'$version' is not a release version such as 1.0.0 or 1.0.0-rc.1"
         if [ -n "$highest" ]; then
-            # shellcheck disable=SC2086 # word splitting into four numbers is the point
+            # shellcheck disable=SC2046,SC2086 # word splitting into four numbers is the point
             set -- $(version_key "$version") $highest
             # Compare major, minor, patch, then final over pre-release. Two pre-releases of one
             # version (rc.1 then rc.2) count as newer.

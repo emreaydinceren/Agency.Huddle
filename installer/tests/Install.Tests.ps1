@@ -1,3 +1,6 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '', Justification = 'False positive: Pester sets variables in BeforeAll and reads them in It blocks, which the analyzer cannot see across scopes.')]
+param()
+
 BeforeDiscovery {
     $script:Ps51Path = Join-Path ([string]$env:SystemRoot) 'System32\WindowsPowerShell\v1.0\powershell.exe'
     $script:NoPs51 = -not (Test-Path -LiteralPath $script:Ps51Path)
