@@ -432,7 +432,7 @@ feature's name. A new rule goes in the file of the feature it styles, after the 
 | `.search-hit-flash` | A brief highlight with a reduced-motion branch: the model for any longer animation |
 | `.room-column`, `.main-column` | The fill-the-pane layout that the page rule points to |
 | `.task-col-resizer` | The column drag handle `task-list-resize.js` adds to each List header cell: a hairline that turns into a 3px primary bar on hover or drag |
-| `.tasks-counts` | The header row's "N open, N need you, N all": secondary text, the numbers in primary text at 600, "need you" in the warning colour mixed toward body text |
+| `.tasks-counts` | The header row's "N open, N assigned to you, N all": secondary text, the numbers in primary text at 600, "assigned to you" in the Needs colour mixed toward body text |
 
 ### Browser scripts
 

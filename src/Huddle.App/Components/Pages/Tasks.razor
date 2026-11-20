@@ -130,7 +130,7 @@
                     <div class="tasks-counts" role="status">
                         <span class="tasks-count-open"><strong>@this.OpenCount</strong> open</span>
                         @* A count wears its signal only above 0 (audit B4e). *@
-                        <span class="@(this.NeedYouCount > 0 ? "tasks-count-need-you" : "tasks-count-need-you is-zero")"><strong>@this.NeedYouCount</strong> need you</span>
+                        <span class="@(this.NeedYouCount > 0 ? "tasks-count-need-you" : "tasks-count-need-you is-zero")"><strong>@this.NeedYouCount</strong> assigned to you</span>
                         <span class="tasks-count-all"><strong>@this.AllCount</strong> all</span>
                     </div>
                 </HeaderLeading>
@@ -553,13 +553,13 @@
     /// <summary>How many of the Tasks the page shows are not yet Done, Cancelled, Duplicate or Rejected.</summary>
     private int OpenCount => this.FilteredTasks(this.search).Count(static task => !task.Status.IsTerminal());
 
-    /// <summary>How many of the Tasks the page shows need the Human: open and assigned to them, or gated and waiting in Needs You (once each).</summary>
+    /// <summary>How many of the Tasks the page shows are open and assigned to the Human ("assigned to you"). A gated Task waiting on the Human's answer is the Needs You column's, not this count's.</summary>
     private int NeedYouCount
     {
         get
         {
             string human = this.Human.Name;
-            return this.FilteredTasks(this.search).Count(task => TaskQuery.NeedsHuman(task, human));
+            return this.FilteredTasks(this.search).Count(task => TaskQuery.NeedsYou(task, human));
         }
     }
 
