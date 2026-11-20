@@ -256,6 +256,23 @@ public sealed class TaskCardTests : IDisposable
         Assert.Equal("Blocked by PLAT-0001, PLAT-0002", cut.Find(".task-card-blocked-by").TextContent.Trim());
     }
 
+    /// <summary>A blocker that is finished is not a blocker (#705): with no open blocker the card shows no chip and no blocked styling, and with one it names only that one.</summary>
+    [Fact]
+    public async Task Blocked_OnlyOpenBlockersCount()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0003", title: "T", status: TaskState.ToDo, blockedBy: [ParseId("PLAT-0001"), ParseId("PLAT-0002")]);
+
+        await using MudBunitContext noneCtx = new();
+        IRenderedComponent<ContainerFragment> none = this.Render(noneCtx, task, openBlockers: []);
+        await using MudBunitContext oneCtx = new();
+        IRenderedComponent<ContainerFragment> one = this.Render(oneCtx, task, openBlockers: [ParseId("PLAT-0002")]);
+
+        Assert.Empty(none.FindAll(".task-card-blocked-by"));
+        Assert.DoesNotContain("task-card-blocked", ClassTokens(none.Find("div.task-card")));
+        Assert.Equal("Blocked by PLAT-0002", one.Find(".task-card-blocked-by").TextContent.Trim());
+        Assert.Contains("task-card-blocked", ClassTokens(one.Find("div.task-card")));
+    }
+
     /// <summary>The chip is not repeated when the View already lists the <c>blocked_by</c> field, and an unblocked Task has none.</summary>
     [Fact]
     public async Task BlockedByChip_AbsentWhenUnblockedOrWhenTheViewListsTheField()
@@ -433,7 +450,8 @@ public sealed class TaskCardTests : IDisposable
         string? search = null,
         Action<TaskState>? onMoveTo = null,
         Action? onOpen = null,
-        Action? onCopyId = null)
+        Action? onCopyId = null,
+        IReadOnlyList<TaskId>? openBlockers = null)
     {
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero) };
         ctx.Services.AddSingleton<TimeProvider>(clock);
@@ -449,6 +467,7 @@ public sealed class TaskCardTests : IDisposable
             builder.AddAttribute(4, nameof(TaskCard.LastWake), lastWake);
             builder.AddAttribute(5, nameof(TaskCard.Busy), busy);
             builder.AddAttribute(6, nameof(TaskCard.Search), search);
+            builder.AddAttribute(10, nameof(TaskCard.OpenBlockers), openBlockers);
             if (onMoveTo is not null)
             {
                 builder.AddAttribute(7, nameof(TaskCard.OnMoveTo), EventCallback.Factory.Create<TaskState>(onMoveTo, onMoveTo));
