@@ -97,6 +97,10 @@ regexes = [
   '''@example\.(test|invalid)\b''',
   # Invented addresses in old revisions of MarkdownRendererMentionTests (now a@example.com).
   '''^a@(b|ops)\.com$''',
+  # Placeholders in old revisions of the Memory Tidy work: a mixed-case address in
+  # MemoryTidyTokensTests (now upper-cased at run time) and the spec's `local@domain.tld`
+  # (now local@example.com). The example.com rule above is case-sensitive; the sync scans history.
+  '''^(Jo\.Smith@Example\.com|jo\.smith@example\.COM|local@domain\.tld)$''',
   # Razor, not an email: class="doc-history-kind-@entry.Kind.ToString()..." in DocumentHistory.razor.
   '''-@entry\.Kind\.ToString$''',
   # Bot/commit noreply addresses, incl. the maintainer's public GitHub noreply identity
