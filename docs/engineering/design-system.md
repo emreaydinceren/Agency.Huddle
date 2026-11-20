@@ -915,7 +915,8 @@ Persona file works belongs in the User Guide.
    inner regions scroll instead of the page growing past the window (`.room-column` is the
    model). Split panes fill the height too (UX-006).
 5. **Scroll inside the page, not the window.** A horizontally scrolling region keeps its
-   scrollbar and headers in view (UX-007).
+   scrollbar and headers in view (UX-007), and fades at an edge that has more content beyond it
+   (the Tasks board does, in CSS, with a scroll-driven mask; no fade when everything fits).
 
 Two patterns for sections. A **tab rail** holds up to five sections (the Team page). A
 **section nav** holds six or more (Settings), with the sidebar's row geometry and the Selected
