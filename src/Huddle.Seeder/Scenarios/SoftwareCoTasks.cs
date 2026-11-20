@@ -309,6 +309,16 @@ internal static class SoftwareCoTasks
             Body = "Confirm nothing on the page is a promise we cannot keep. See the unresolved Legal Checklist link in the Pricing Brief.",
         },
 
+        new()
+        {
+            Id = "GROW-0017", Location = new(Growth, Pricing), Title = "Publish the pricing page",
+            Status = "Needs You", Priority = "High", Creator = "Owen", Assignee = "Maya",
+            Tags = ["pricing", "launch"], DueOffset = 2, CreatedDaysAgo = 6, LastTouchedDaysAgo = 1,
+            HumanGate = true,
+            ExtraEvents = [new("Maya", "human gate on (reason: Publishes the new prices to the public site)")],
+            Body = "The copy, the comparison table and the legal check are done. Publishing puts the three tiers and their prices live, so Maya waits for the Human's answer.",
+        },
+
         // ---- Growth team root ----
         new()
         {
@@ -390,6 +400,17 @@ internal static class SoftwareCoTasks
             Attachments = ["Agents/Alan/work/Postmortem-Draft-0412.md", SeedTaskUpload.PathFor(new(Support, IncidentTooling), "SUPP-0008","action-items.txt")],
         },
 
+        new()
+        {
+            Id = "SUPP-0012", Location = new(Support, IncidentTooling), Title = "Send the incident 0412 apology to affected customers",
+            Status = "Needs You", Priority = "Urgent", Creator = "Dana", Assignee = "Dana",
+            Tags = ["incident", "customer-facing"], DueOffset = 1, CreatedDaysAgo = 3, LastTouchedDaysAgo = 1,
+            OriginRoom = SoftwareCoRooms.IncidentWarRoom,
+            HumanGate = true,
+            ExtraEvents = [new("Dana", "human gate on (reason: Emails every customer hit by the incident)")],
+            Body = "The wording follows the escalation guide. The email goes to 212 customers, so Dana will not send it without the Human's approval.",
+        },
+
         // ---- Support team root ----
         new()
         {
@@ -416,7 +437,7 @@ internal static class SoftwareCoTasks
         },
     ];
 
-    /// <summary>All 46 Tasks: the original 41 with their Sprints and former titles, then the five Requests in <see cref="SoftwareCoRequests"/>. Declared after <see cref="Core"/> because static initialisers run in order.</summary>
+    /// <summary>All 48 Tasks: the original 43 with their Sprints and former titles, then the five Requests in <see cref="SoftwareCoRequests"/>. Declared after <see cref="Core"/> because static initialisers run in order.</summary>
     internal static IReadOnlyList<SeedTask> All { get; } =
     [
         .. Core.Select(static task => task with

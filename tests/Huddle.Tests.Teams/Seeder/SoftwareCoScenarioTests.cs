@@ -85,7 +85,8 @@ public sealed partial class SoftwareCoScenarioTests
     {
         SeedPlan plan = Plan();
 
-        Assert.Equal(64, plan.Tasks.Count);
+        Assert.Equal(66, plan.Tasks.Count);
+        Assert.Equal(2, plan.Tasks.Count(t => t.HumanGate && t.Status == "Needs You"));
         Assert.All(AllStatuses, status => Assert.Contains(plan.Tasks, t => t.Status == status));
     }
 
