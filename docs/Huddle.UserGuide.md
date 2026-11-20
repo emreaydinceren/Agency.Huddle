@@ -2767,7 +2767,7 @@ An installed Skill keeps a `.source.json` file in its folder, which records wher
 
 ### The Skills tab
 
-A Skill is a folder of instructions that an Agent reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your Agents, or listed in a catalog but not on this computer yet. A Skill marked Not downloaded has no folder here; Copy prompt gives your Agents what it needs to fetch it. Huddle never downloads Skills itself. Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update.
+A Skill is a folder of instructions that an Agent reads when its work calls for it. This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. Huddle never downloads Skills itself. Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update.
 
 Each row shows the Skill's name and description, where it came from, its state and the Agents that use it. Search by name, narrow the list with the **State** filter, or turn on **Show hidden** to see what you hid. The **⋯** menu on a row offers **Copy prompt**, **Hide** or **Unhide**, **Show catalog in Library** and, for a built-in Skill you changed, **Restore default**.
 

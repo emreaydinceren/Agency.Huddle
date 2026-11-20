@@ -100,16 +100,23 @@ public sealed class SkillsTabTests : IDisposable
         Assert.Equal("None", Assert.IsAssignableFrom<IElement>(row.QuerySelector(".skills-used-by-none")).TextContent.Trim());
     }
 
-    /// <summary>The Skills intro does not say "AI" (#739).</summary>
+    /// <summary>The Skills intro names "your AI tool" as what fetches Skills, never "your Agents": Agents do not fetch Skills (#739).</summary>
     [Fact]
-    public async Task Intro_DoesNotSayAI()
+    public async Task Intro_NamesYourAiTool_NotYourAgents()
     {
         await this.fixture.SeedAsync();
         await using MudBunitContext ctx = this.fixture.NewContext();
 
         IRenderedComponent<ContainerFragment> cut = Render(ctx);
 
-        Assert.DoesNotContain("AI tool", cut.Find(".settings-intro").TextContent, StringComparison.Ordinal);
+        string intro = cut.Find(".settings-intro").TextContent.Trim();
+        Assert.Equal(
+            "A Skill is a folder of instructions that an Agent reads when its work calls for it. "
+            + "This list shows every Skill Huddle knows about: built in, fetched by your AI tool, or listed in a catalog but not on this computer yet. "
+            + "A Skill marked Not downloaded has no folder here; Copy prompt gives your AI tool what it needs to fetch it. "
+            + "Huddle never downloads Skills itself. "
+            + "Giving an Agent a Skill copies it to that Agent, so later changes reach it only when you apply an update.",
+            intro);
     }
 
     /// <summary>Hide removes the row; Show hidden brings it back with the Hidden chip.</summary>
