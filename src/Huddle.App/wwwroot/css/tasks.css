@@ -308,6 +308,8 @@
    (the Team page's Tasks tab) the cap still bounds the board. */
 .task-board {
     overflow: auto;
+    /* A scroll along the columns settles on a column's left edge, so no header is left cut in the middle of its name. */
+    scroll-snap-type: x proximity;
     max-height: calc(100vh - 12rem);
     background: var(--hu-board-background);
 }
@@ -343,6 +345,11 @@
     grid-auto-columns: minmax(260px, 300px);
     justify-content: start;
     column-gap: 8px;
+}
+
+.task-board-columns > *,
+.task-board-lane-columns > * {
+    scroll-snap-align: start;
 }
 
 .task-board-column-header {
@@ -393,7 +400,9 @@
     min-width: 0;
     font-size: var(--mud-typography-body2-size);
     font-weight: 600;
-    overflow-wrap: anywhere;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .task-board-column-count {
