@@ -562,6 +562,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TaskStore>();
         services.AddSingleton<ITaskReferenceResolver>(sp => sp.GetRequiredService<TaskStore>());
 
+        // ADR-0103: the Task order panel and next_task read each Project's one-at-a-time rule through this.
+        services.AddSingleton<Tasks.Ordering.ITaskGroupRule, Tasks.Ordering.TaskGroupRule>();
+
         // A plain hub with no dependencies of its own (Spec §9.5). TaskService is a lazy singleton
         // (Settled corrections-B2 D6 item 10): nothing constructs it until 6.6.i injects it into the
         // hosted PersonaRenameCascade below, so registering it here costs nothing before then.

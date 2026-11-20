@@ -26,6 +26,9 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
     /// </summary>
     public IReadOnlyList<string> UnknownLines { get; init; } = [];
 
+    /// <summary>The Project's <c>oneInProgressPerProject</c> value (ADR-0103); <see cref="RuleSetting.Absent"/> inherits the Team's and is never written.</summary>
+    public RuleSetting OneInProgressPerProject { get; init; }
+
     /// <summary>
     /// Parses the text of a <c>_project.md</c> file. It never fails: a file with no frontmatter, or one that never closes, is all notes
     /// and no avatar, so a rewrite puts the avatar in front of the text rather than losing it.
@@ -46,6 +49,7 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
 
         string? label = null;
         string? background = null;
+        RuleSetting rule = RuleSetting.Absent;
         List<string> unknown = [];
         for (int index = 1; index < closing; index++)
         {
@@ -60,6 +64,10 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
             {
                 background = Unquote(line[(colon + 1)..]);
             }
+            else if (string.Equals(key, OneInProgressRule.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                rule = OneInProgressRule.Parse(Unquote(line[(colon + 1)..]));
+            }
             else if (line.Length > 0)
             {
                 unknown.Add(line);
@@ -70,6 +78,7 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
         return new ProjectFile(avatar, string.Join('\n', lines[(closing + 1)..]))
         {
             UnknownLines = unknown,
+            OneInProgressPerProject = rule,
         };
     }
 
@@ -85,6 +94,7 @@ internal sealed record ProjectFile(Avatar Avatar, string Notes)
         builder.Append(Delimiter).Append('\n');
         AppendOptional(builder, AvatarLabelKey, this.Avatar.Label);
         AppendOptional(builder, AvatarBackgroundKey, this.Avatar.Background);
+        AppendOptional(builder, OneInProgressRule.Key, OneInProgressRule.TryToWire(this.OneInProgressPerProject, out string? wire) ? wire : null);
         foreach (string line in this.UnknownLines)
         {
             builder.Append(line).Append('\n');

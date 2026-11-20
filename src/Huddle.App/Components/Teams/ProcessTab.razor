@@ -19,6 +19,10 @@
         <NeedsYouLevelControl Team="@this.Team" />
         <MudText Typo="Typo.caption" Class="process-tab-gate-note">A merge into main and every push that Huddle sees in an Agent's command wait for your Accept. The level above decides which merges wait.</MudText>
     </section>
+    @* ADR-0103: the Team's answer to "one Task In Progress at a time in each Project"; a Project can override it from its own page. *@
+    <section class="process-tab-one-in-progress" aria-label="Tasks in a Project">
+        <OneInProgressControl Team="@this.Team" />
+    </section>
     @if (this.text is null && this.gates.Count == 0)
     {
         <EmptyState Icon="@Icons.Material.Outlined.AccountTree" Title="No process yet"

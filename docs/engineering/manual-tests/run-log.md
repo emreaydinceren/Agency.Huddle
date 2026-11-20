@@ -4308,6 +4308,14 @@ File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-05--a-second
 | --- | --- | --- | --- | --- |
 | 2026-11-19 | Pass *(run by an agent, paid lane, Sonnet)* | `feat/one-in-progress` on `5c4c8bed` |  | The TASKORDER-01 to 04 lane. DevLane predates the gate, so the tester added `one-in-progress-per-assignee` to its `_team.md` by hand (the Process tab only switches gates off). Ana held DEVL-0001 In Progress; asked to start DEVL-0003, her `update_task` got exactly "Gate one-in-progress-per-assignee: Ana already has DEVL-0001 "B the prerequisite" In Progress. Finish it or move it out of In Progress before starting another." and DEVL-0003 stayed To Do. The Human moved DEVL-0001 back to To Do (allowed), and Ana then moved DEVL-0003 to In Progress herself (Timeline 23:21:30Z); the Task order panel listed it under Started. About 0.10 USD. |
 
+### TASKORDER-06 — A Team that asks for one Task at a time refuses a second in one Project; a Project set to Parallel accepts both
+
+File: [`docs/engineering/manual-tests/tasks.md`](tasks.md#taskorder-06--a-team-that-asks-for-one-task-at-a-time-refuses-a-second-in-one-project-a-project-set-to-parallel-accepts-both)
+
+| Date | Result | Commit | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| 2026-11-19 | Pass *(run by the manager, paid lane, Sonnet)* | `docs/one-in-progress-per-project` on `90c5cfd6` |  | Isolated lane `C:\seeds\huddle\pp-live`, port 1121, Platform Team with new Projects Alpha and Beta (two unassigned To Do Tasks each); only Alan ran, on Sonnet (`persona_models` row read). Team switch on: `_team.md` held `oneInProgressPerProject: 'on'` and the switch stayed on after a reload; Alpha's Process tab read "Inherit (Team: One at a time)". Alan started PLAT-0101, then PLAT-0102 got exactly "One In Progress per Project: PLAT-0101 "Alpha one: draft the rollout checklist" is already In Progress in Alpha. The Team setting asks for one at a time. Finish it or move it out of In Progress before starting another."; the Task order panel showed "PLAT-0102 · waits for PLAT-0101 in Alpha". Beta set to Parallel (`_project.md` held `'off'`): Alan moved PLAT-0103 and PLAT-0104 to In Progress, both accepted. The Human moved PLAT-0101 to Done and Alan then moved PLAT-0102 to In Progress. Switch off: the key left `_team.md`, and Alpha has no `_project.md`. Cost about 0.10 USD for 4 Turns (Alan 0.169 to 0.269). Two things to watch: Alan sent the two Beta calls in one step, so Beta shows the setting, not a race, but a concurrent pair in a full Project was not tried; and two transcript records in the first second of the run are tagged `claude-opus-5-5` although all later ones are Sonnet and the persona row was `sonnet`, which was not explained. |
+
 ## Adapters: choosing one per Persona, and running two at once
 
 ### ADAPTERS-01 — Two Personas in one Room on different Adapters, and neither Room nor Gate can tell

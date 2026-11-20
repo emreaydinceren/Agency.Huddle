@@ -251,6 +251,7 @@ Singleton Agency.Huddle.App.Tasks.ITaskBacklinkSource -> Agency.Huddle.App.Tasks
 Singleton Agency.Huddle.App.Tasks.ITaskPrefixes -> factory Agency.Huddle.App.Tasks.ITaskPrefixes
 Singleton Agency.Huddle.App.Tasks.ITaskReferenceResolver -> factory Agency.Huddle.App.Tasks.ITaskReferenceResolver
 Singleton Agency.Huddle.App.Tasks.IWakePauses -> factory Agency.Huddle.App.Tasks.IWakePauses
+Singleton Agency.Huddle.App.Tasks.Ordering.ITaskGroupRule -> Agency.Huddle.App.Tasks.Ordering.TaskGroupRule
 Singleton Agency.Huddle.App.Tasks.SprintApprover -> Agency.Huddle.App.Tasks.SprintApprover
 Singleton Agency.Huddle.App.Tasks.SprintProposalService -> Agency.Huddle.App.Tasks.SprintProposalService
 Singleton Agency.Huddle.App.Tasks.SprintProposalStore -> Agency.Huddle.App.Tasks.SprintProposalStore

@@ -13,22 +13,24 @@ internal static class TeamPageTabs
 
         if (isProject)
         {
-            if (features.Library && features.Tasks)
+            List<TeamPageTab> projectTabs = [];
+            if (features.Library)
             {
-                return [TeamPageTab.Files, TeamPageTab.Tasks];
+                projectTabs.Add(TeamPageTab.Files);
             }
-            else if (features.Library)
+
+            if (features.Tasks)
             {
-                return [TeamPageTab.Files];
+                projectTabs.Add(TeamPageTab.Tasks);
             }
-            else if (features.Tasks)
+
+            // A Project's Process tab holds its one-Task-at-a-time setting (ADR-0103); like the Team's it needs the Team's _team.md.
+            if (features.Process)
             {
-                return [TeamPageTab.Tasks];
+                projectTabs.Add(TeamPageTab.Process);
             }
-            else
-            {
-                return [];
-            }
+
+            return projectTabs;
         }
         else
         {

@@ -67,7 +67,8 @@ public sealed class ProcessTabNeedsYouLevelTests
         IRenderedComponent<ContainerFragment> cut = RenderTab(ctx);
 
         Assert.Empty(cut.FindAll("div.process-tab-gate"));
-        Assert.Empty(cut.FindAll(".process-tab .mud-switch"));
+        Assert.Empty(cut.FindAll(".process-tab .mud-switch:not(.process-tab-one-in-progress .mud-switch)"));
+        Assert.Single(cut.FindAll(".process-tab-one-in-progress .mud-switch"));
         Assert.NotEmpty(cut.FindAll(".process-tab-level .needs-you-level"));
     }
 }

@@ -12,7 +12,8 @@ internal static class TaskOrder
     /// <summary>Orders <paramref name="scope"/>; terminal Tasks in it are ignored and duplicate ids collapse to the first.</summary>
     /// <param name="scope">The Tasks to order.</param>
     /// <param name="lookup">Finds any Task by id, in or out of <paramref name="scope"/>, closed ones included; null when it does not exist.</param>
-    public static TaskOrderResult Compute(IReadOnlyList<TaskItem> scope, Func<TaskId, TaskItem?> lookup)
+    /// <param name="groupRule">Says which Projects admit one In Progress Task at a time (ADR-0103); <see langword="null"/> means none does.</param>
+    public static TaskOrderResult Compute(IReadOnlyList<TaskItem> scope, Func<TaskId, TaskItem?> lookup, ITaskGroupRule? groupRule = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(lookup);
@@ -24,9 +25,63 @@ internal static class TaskOrder
             entries.Add(walk.Entry(task, TaskOrderGroup.Started, blocks: null));
         }
 
-        entries.AddRange(walk.Place(TaskOrderGroup.Next));
+        List<TaskOrderEntry> next = walk.Place(TaskOrderGroup.Next);
+        entries.AddRange(groupRule is null ? next : HoldBehindGroupRule(next, groupRule));
         entries.AddRange(walk.Place(TaskOrderGroup.Backlog));
         return new TaskOrderResult(entries);
+    }
+
+    /// <summary>
+    /// Applies "one Task In Progress per Project": in a group whose rule is on, the group's In Progress Task (or else its first
+    /// startable entry) is the only one that may start; each later startable entry keeps its place, stops being startable and
+    /// names that Task in <see cref="TaskOrderEntry.WaitsFor"/>.
+    /// </summary>
+    /// <param name="next">The Next group in placement order.</param>
+    /// <param name="groupRule">The rule of each group.</param>
+    private static List<TaskOrderEntry> HoldBehindGroupRule(List<TaskOrderEntry> next, ITaskGroupRule groupRule)
+    {
+        Dictionary<string, GroupSlot> slots = new(StringComparer.Ordinal);
+        List<TaskOrderEntry> result = new(next.Count);
+        foreach (TaskOrderEntry entry in next)
+        {
+            if (!entry.IsStartable)
+            {
+                result.Add(entry);
+                continue;
+            }
+
+            TaskLocation location = entry.Task.Location;
+            string key = $"{location.Team.ToUpperInvariant()}|{location.Project?.ToUpperInvariant()}";
+            if (!slots.TryGetValue(key, out GroupSlot? slot))
+            {
+                slot = groupRule.IsOn(location.Team, location.Project)
+                    ? new GroupSlot(true, groupRule.InProgressTask(location.Team, location.Project)?.Id)
+                    : new GroupSlot(false, null);
+                slots[key] = slot;
+            }
+
+            if (!slot.IsOn || slot.Holder is null)
+            {
+                slot.Holder = entry.Task.Id;
+                result.Add(entry);
+            }
+            else
+            {
+                result.Add(entry with { IsStartable = false, WaitsFor = slot.Holder });
+            }
+        }
+
+        return result;
+    }
+
+    /// <summary>One group during <see cref="HoldBehindGroupRule"/>: whether its rule is on and the Task that holds it.</summary>
+    private sealed class GroupSlot(bool isOn, TaskId? holder)
+    {
+        /// <summary>Whether the group admits one In Progress Task at a time.</summary>
+        public bool IsOn { get; } = isOn;
+
+        /// <summary>The Task In Progress in the group, or else the first startable one placed.</summary>
+        public TaskId? Holder { get; set; } = holder;
     }
 
     /// <summary>In Progress and Needs You are the started states.</summary>

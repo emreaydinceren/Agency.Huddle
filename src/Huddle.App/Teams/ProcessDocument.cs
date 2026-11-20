@@ -230,6 +230,7 @@ internal sealed record ProcessDocument(
         GateId.AcceptBeforeMerge => "accept-before-merge",
         GateId.BlockersDoneBeforeStart => "blockers-done-before-start",
         GateId.OneInProgressPerAssignee => "one-in-progress-per-assignee",
+        GateId.OneInProgressPerProject => "one-in-progress-per-project",
         GateId.HumanGate => "human-gate",
         GateId.ProofIncomplete => "proof-incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
@@ -249,6 +250,7 @@ internal sealed record ProcessDocument(
         GateId.AcceptBeforeMerge => "Accept before merge",
         GateId.BlockersDoneBeforeStart => "Blockers done before start",
         GateId.OneInProgressPerAssignee => "One In Progress per assignee",
+        GateId.OneInProgressPerProject => "One In Progress per Project",
         GateId.HumanGate => "Human gate",
         GateId.ProofIncomplete => "Proof incomplete",
 #pragma warning disable HAA0601 // Exception path only: the boxed value lives just long enough to build the exception.
