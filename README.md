@@ -7,9 +7,12 @@ everything they learn, kept as plain files on your own machine.**
 
 You talk to your Agents in chat, the way you would talk to colleagues. Each one has
 one job and knows only its part of your life: school, meals, the house, your work.
-What matters in a conversation does not stay in the scrollback. It is filed as a
-Task, a remembered fact or a document, so the next Agent who needs it finds it
-without you repeating yourself.
+
+Behind the chat is a **second brain**. What matters in a conversation does not stay
+in the scrollback: it is filed as a Task, a remembered fact or a document, in the
+same folders for every part of your life. Your Agents read it, so nobody asks you
+twice. You read it too, as plain notes you can search, link and edit, and it gets
+more useful the longer you use Huddle.
 
 ```text
 #  home · kids-and-school                                   You, Hattie, Iris
