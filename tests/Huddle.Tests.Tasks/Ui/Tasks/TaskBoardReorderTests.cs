@@ -203,9 +203,9 @@ public sealed class TaskBoardReorderTests
         Assert.Equal(20, harness.Store.Get(b.Id)?.Rank);
     }
 
-    /// <summary>While reorder is on, dragging an assigned card shows the wake caption under its own column too, since a same-column drop saves a rank and wakes the assignee.</summary>
+    /// <summary>While reorder is on, dragging an assigned To Do card shows no hint in its own column and no Board-wide caption: a same-column drop saves a rank, which wakes no one (smart wakes 5.5).</summary>
     [Fact]
-    public async Task DragStarted_ReorderOn_CaptionAlsoUnderOwnColumn()
+    public async Task DragStarted_ReorderOn_OwnColumnShowsNoHint_AndNoColumnCaption()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -217,14 +217,18 @@ public sealed class TaskBoardReorderTests
         Rig rig = Render(ctx, harness, [a]);
         await rig.StartDragAsync(a);
 
-        rig.Board.WaitForAssertion(() => Assert.Equal(6, rig.Board.FindAll(".task-board-drag-caption").Count));
-        IReadOnlyList<IElement> headers = rig.Board.FindAll("div.task-board-column-header");
-        Assert.Equal("Nova will be notified", headers[1].QuerySelector(".task-board-drag-caption")?.TextContent.Trim());
+        string[] hints = [
+            BoardWakeHints.Entry(NoLane, TaskState.Backlog, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.InProgress, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.NeedsYou, "Nova"),
+        ];
+        rig.Board.WaitForAssertion(() => Assert.Equal(hints, BoardWakeHints.Of(rig.Board)));
+        Assert.Empty(rig.Board.FindAll($".{BoardWakeHints.RetiredCaptionClass}"));
     }
 
-    /// <summary>While the View sorts, reorder is off, so the card's own column shows no caption.</summary>
+    /// <summary>While the View sorts, reorder is off, and the card's own column still shows no hint; the other zones judge the status move as before.</summary>
     [Fact]
-    public async Task DragStarted_ViewSorted_NoCaptionUnderOwnColumn()
+    public async Task DragStarted_ViewSorted_OwnColumnShowsNoHint()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -236,8 +240,13 @@ public sealed class TaskBoardReorderTests
         Rig rig = Render(ctx, harness, [a], sort: [new SortKey("title", Agency.Huddle.App.Tasks.Views.SortDirection.Ascending)]);
         await rig.StartDragAsync(a);
 
-        rig.Board.WaitForAssertion(() => Assert.Equal(5, rig.Board.FindAll(".task-board-drag-caption").Count));
-        Assert.Null(rig.Board.FindAll("div.task-board-column-header")[1].QuerySelector(".task-board-drag-caption"));
+        string[] hints = [
+            BoardWakeHints.Entry(NoLane, TaskState.Backlog, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.InProgress, "Nova"),
+            BoardWakeHints.Entry(NoLane, TaskState.NeedsYou, "Nova"),
+        ];
+        rig.Board.WaitForAssertion(() => Assert.Equal(hints, BoardWakeHints.Of(rig.Board)));
+        Assert.Empty(rig.Board.FindAll($".{BoardWakeHints.RetiredCaptionClass}"));
     }
 
     /// <summary>A save the service refuses (the Task was deleted after the Board drew it) shows a Snackbar error, writes nothing and refreshes the zone.</summary>

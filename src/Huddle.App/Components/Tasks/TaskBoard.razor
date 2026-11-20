@@ -15,16 +15,18 @@
     OnAfterRender whenever the container instance changes (@key per View replaces it, D12-6) and
     unsubscribed in Dispose. StartTransaction raises TransactionStarted synchronously, and
     Cancel/CommitTransaction raise TransactionEnded (MudBlazor 9.10). The drop path (ItemDropped),
-    the dialogs and the wake caption are Task 12.3's; the column header menu is Task 12.4's.
+    the dialogs and the wake hints are Task 12.3's; the column header menu is Task 12.4's.
 
     Moving a card (Spec §13.4 Dropping and Keyboard; corrections-B5 D12-7, -8, -11, -12): a drop and
     the card's Move to menu both call MoveAsync. A move to the card's own state does nothing;
     Duplicate asks DuplicatePickerDialog for the original; Cancelled and Rejected ask ReasonDialog;
     leaving Duplicate clears DuplicateOf. The save is TaskService.Update with baseVersion null, as the
     Human. A cancelled dialog, a Refused result or a NotFound result refreshes the container so the
-    card snaps back; the last two also show a Snackbar error. While dragging, a caption with the
-    Preview text (computed once, at drag start) shows under every column but the card's own - except
-    while a drop there reorders (single-state column, View without a sort), which wakes the assignee too.
+    card snaps back; the last two also show a Snackbar error. While dragging, each zone whose drop would
+    wake the assignee says "Notifies {Name}" inside itself (smart wakes 5.5): the hint is judged once, at
+    drag start, per zone with Preview of the card moved to that zone's state as the Human, so a drop
+    that is silent (Planning to Done, a hand-off to Needs You) shows nothing. The card's own zone never
+    shows one - a drop there saves a rank only - and an unassigned card shows none.
 
     Reordering (rank): a drop inside a card's own single-state column, while the View has no sort,
     saves only the card's rank (RankPlacement, from the zone's displayed order); a drop into another
@@ -81,10 +83,6 @@
                         <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
                     </ChildContent>
                 </RowActionsMenu>
-                @if (this.dragging && this.caption is { } text && (i != this.draggedColumn || this.DropReorders(column)))
-                {
-                    <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>
-                }
             </div>
         }
     </div>
@@ -127,7 +125,12 @@
                                 }
                                 @if (cell.Column.States.Count == 1)
                                 {
-                                    <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" AllowReorder="@this.ReorderEnabled" />
+                                    <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" AllowReorder="@this.ReorderEnabled">
+                                        @if (this.HintFor(lane.Key, cell.Column.States[0]) is { } zoneHint)
+                                        {
+                                            <span class="task-zone-wake-hint">@zoneHint</span>
+                                        }
+                                    </MudDropZone>
                                 }
                                 else
                                 {
@@ -139,6 +142,10 @@
                                                 <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, state)" OnlyZone="true" Class="task-ghost-bucket">
                                                     <MudIcon Icon="@BucketIcon(state)" Size="Size.Small" />
                                                     <span class="task-ghost-bucket-label">@state.ToWire()</span>
+                                                    @if (this.HintFor(lane.Key, state) is { } bucketHint)
+                                                    {
+                                                        <span class="task-zone-wake-hint">@bucketHint</span>
+                                                    }
                                                 </MudDropZone>
                                             }
                                         }
@@ -207,8 +214,7 @@
     private IReadOnlyList<TaskItem>? laidOut;
     private bool refreshPending;
     private bool dragging;
-    private string? caption;
-    private int draggedColumn = -1;
+    private Dictionary<string, string> hints = [];
 
     /// <summary>Joins the presence, health, Turn and wake-budget change events, each of which can change a card (D12-4).</summary>
     protected override void OnInitialized()
@@ -493,14 +499,13 @@
         this.dragging = true;
         if (e.Item is { } item)
         {
-            this.caption = this.CaptionFor(item);
-            this.draggedColumn = this.ColumnIndexOf(item.Status);
+            this.hints = this.WakeHintsFor(item);
         }
 
         _ = this.InvokeAsync(this.StateHasChanged);
     }
 
-    /// <summary><c>TransactionEnded</c>: hide the ghost buckets and the caption.</summary>
+    /// <summary><c>TransactionEnded</c>: hide the ghost buckets and the wake hints.</summary>
     /// <param name="sender">The container.</param>
     /// <param name="e">How the transaction finished.</param>
     private void OnDragEnded(object? sender, MudDragAndDropTransactionFinishedEventArgs<TaskItem> e)
@@ -509,42 +514,50 @@
         _ = this.InvokeAsync(this.StateHasChanged);
     }
 
-    /// <summary>Clears the drag state: buckets and caption go.</summary>
+    /// <summary>Clears the drag state: buckets and wake hints go.</summary>
     private void EndDrag()
     {
         this.dragging = false;
-        this.caption = null;
-        this.draggedColumn = -1;
+        this.hints = [];
     }
 
     /// <summary>
-    /// The drag caption (D12-11): the <c>Preview</c> for the Human moving <paramref name="item"/> -
-    /// independent of the target, so computed once at drag start - as "{Name} will be notified", or
-    /// none when a guard blocks the wake.
+    /// The per-zone wake hints (smart wakes 5.5), computed once at drag start: for each zone of the card's own lane
+    /// that can take the card, "Notifies {Name}" when <c>Preview</c> says the Human moving <paramref name="item"/>
+    /// to that zone's state would wake the assignee. A drop in the card's own zone saves a rank only, so it gets no
+    /// hint; an unassigned card gets none anywhere; a zone in another lane refuses the drop, so it gets none either.
     /// </summary>
     /// <param name="item">The dragged Task.</param>
-    private string? CaptionFor(TaskItem item)
+    /// <returns>The hint text by zone identifier.</returns>
+    private Dictionary<string, string> WakeHintsFor(TaskItem item)
     {
-        // A drop in the card's own column saves a rank only; the preview names who that wakes (any rank value will do).
-        TaskItem ranked = new TaskPatch { Rank = Optional<int?>.Set(item.Rank ?? 1) }.ApplyTo(item);
-        WakePreview preview = this.Triggers.Preview(null, ranked, TaskActors.Human(this.Human));
-        return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
-    }
-
-    /// <summary>The index, among the visible columns, of the column holding <paramref name="state"/>; -1 when hidden.</summary>
-    /// <param name="state">A Task state.</param>
-    private int ColumnIndexOf(TaskState state)
-    {
-        for (int i = 0; i < this.model.VisibleColumns.Count; i++)
+        Dictionary<string, string> result = new(StringComparer.Ordinal);
+        if (!this.laneOf.TryGetValue(item.Id, out string? ownLane))
         {
-            if (this.model.VisibleColumns[i].States.Contains(state))
+            return result;
+        }
+
+        TaskActor human = TaskActors.Human(this.Human);
+        foreach (BoardLane lane in this.model.Lanes.Where(lane => string.Equals(lane.Key, ownLane, StringComparison.Ordinal)))
+        {
+            foreach (TaskState state in lane.Cells.SelectMany(static cell => cell.Column.States).Where(state => state != item.Status))
             {
-                return i;
+                WakePreview preview = this.Triggers.Preview(item, item with { Status = state }, human);
+                if (preview.Block == WakeBlock.None)
+                {
+                    result[BoardLayout.ZoneId(lane.Key, state)] = $"Notifies {preview.AssigneeName}";
+                }
             }
         }
 
-        return -1;
+        return result;
     }
+
+    /// <summary>The hint to draw inside the zone of <paramref name="state"/> in the lane <paramref name="laneKey"/>, or <see langword="null"/> when its drop would wake no one.</summary>
+    /// <param name="laneKey">The lane's raw key.</param>
+    /// <param name="state">The zone's state.</param>
+    private string? HintFor(string laneKey, TaskState state) =>
+        this.hints.GetValueOrDefault(BoardLayout.ZoneId(laneKey, state));
 
     /// <summary>
     /// <c>ItemDropped</c> (Spec §13.4 Dropping; D12-7): clears the drag first, so the buckets are gone
@@ -573,10 +586,6 @@
 
     /// <summary>Whether a drop inside a single-state column reorders: only while the View has no sort, since a sorted column shows another order than rank (decision 3).</summary>
     private bool ReorderEnabled => this.View.Sort.Count == 0;
-
-    /// <summary>Whether a drop into <paramref name="column"/> reorders rather than moves: it is a single-state column and the View has no sort, so a drop in the card's own column saves a rank and wakes the assignee.</summary>
-    /// <param name="column">The column.</param>
-    private bool DropReorders(BoardColumn column) => this.ReorderEnabled && column.States.Count == 1;
 
     /// <summary>The cell of the lane <paramref name="laneKey"/> whose column holds exactly <paramref name="state"/>, or <see langword="null"/> when that state sits in a multi-state column.</summary>
     /// <param name="laneKey">The lane's raw key.</param>

@@ -155,14 +155,17 @@ public sealed class AppCssTasksTests
         Assert.Contains("min-height:", rule, StringComparison.Ordinal);
     }
 
-    /// <summary>The drag caption sits on its own row under the header, not crowding the menu button (finding F10).</summary>
+    /// <summary>A zone's drag hint ("Notifies Nova", smart wakes 5.5) reads in the secondary text colour, a design token and not a literal, and the retired Board-wide caption rule is gone.</summary>
     [Fact]
-    public void AppCss_DeclaresTaskBoardDragCaption_FullWidth()
+    public void AppCss_DeclaresTaskZoneWakeHint_InSecondaryText_AndNoDragCaptionRule()
     {
-        string rule = CssText.RuleBody(CssText.AppCss(CssNewlines.AsIs), ".task-board-drag-caption");
+        string css = CssText.AppCss(CssNewlines.AsIs);
+        string rule = CssText.RuleBody(css, ".task-zone-wake-hint");
 
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("flex: 1 1 100%", rule, StringComparison.Ordinal);
+        Assert.Contains("color: var(--mud-palette-text-secondary)", rule, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no CSS parser - the absence of the retired selector is what's pinned.
+        Assert.DoesNotContain(".task-board-drag-caption", css, StringComparison.Ordinal);
     }
 
     /// <summary>A ghost bucket lays its icon and state name out in a row (finding F10).</summary>
