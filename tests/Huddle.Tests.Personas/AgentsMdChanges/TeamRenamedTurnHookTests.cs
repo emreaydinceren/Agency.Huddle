@@ -19,7 +19,7 @@ public sealed class TeamRenamedTurnHookTests : IDisposable
 {
     private const string RoomId = "room-1";
     private const string TeamTail =
-        "\nEarlier Messages and your own notes use the old name and old paths; use the new ones from now on, and\n" +
+        "\nEarlier Messages and your own notes use the old name and old paths; use the new ones from now on, and " +
         "update your own memory notes if they name the old ";
 
     private static readonly DateTimeOffset Start = new(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);

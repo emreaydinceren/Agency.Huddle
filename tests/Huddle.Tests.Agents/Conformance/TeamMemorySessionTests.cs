@@ -242,8 +242,7 @@ public sealed class TeamMemorySessionTests
             $"- Business, whole Team: {Path.Combine(teamFolder, "memory")}{separator}",
             $"- Business, one Project: {Path.Combine(teamFolder, "<Project>", "memory")}{separator}",
             "Read it with the mcp__team__memory tool, passing the Team or Project as the folder. You do not write it.",
-            "When you learn something the whole Team should keep, propose it with mcp__team__propose_team_memory, one fact at a time; Huddle files it",
-            "and records that you proposed it. Keep your own notes in your own Memory.",
+            "When you learn something the whole Team should keep, propose it with mcp__team__propose_team_memory, one fact at a time; Huddle files it and records that you proposed it. Keep your own notes in your own Memory.",
             string.Empty,
         ];
 

@@ -75,13 +75,13 @@ public sealed class TeamPageTests
     /// <param name="expectedHeaders">The tab headers, comma-joined.</param>
     /// <param name="expectedStub">The one tab component that renders.</param>
     [Theory]
-    [InlineData(true, true, null, "Agents,Library,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(true, true, null, "Agents,Library,Manager playbook,Agent playbook,Details", nameof(TeamRoster))]
     [InlineData(true, true, "Marketing Project", "Library,Tasks", nameof(TeamFilesTab))]
-    [InlineData(false, true, null, "Agents,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(false, true, null, "Agents,Manager playbook,Agent playbook,Details", nameof(TeamRoster))]
     [InlineData(false, true, "Marketing Project", "Tasks", nameof(TeamTasksTab))]
-    [InlineData(true, false, null, "Agents,Library,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(true, false, null, "Agents,Library,Manager playbook,Agent playbook,Details", nameof(TeamRoster))]
     [InlineData(true, false, "Marketing Project", "Library", nameof(TeamFilesTab))]
-    [InlineData(false, false, null, "Agents,Manager Playbook,Agent Playbook,Details", nameof(TeamRoster))]
+    [InlineData(false, false, null, "Agents,Manager playbook,Agent playbook,Details", nameof(TeamRoster))]
     public async Task Tabs_FollowTheFlags_AndOnlyTheDefaultTabRenders(
         bool libraryEnabled,
         bool tasksEnabled,
@@ -266,7 +266,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<ProcessTab>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("Agents,Library,Process,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Agents,Library,Process,Manager playbook,Agent playbook,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(navigation.History);
 
         await ctx.DisposeAsync();
@@ -292,7 +292,7 @@ public sealed class TeamPageTests
         ctx.ComponentFactories.AddStub<ProcessTab>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, "Business", tab: tab);
         BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
-        Assert.Equal("Agents,Library,Process,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Agents,Library,Process,Manager playbook,Agent playbook,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(navigation.History);
 
         foreach (IRenderedComponent<MudTabPanel> panel in cut.FindComponents<MudTabPanel>())
@@ -415,7 +415,7 @@ public sealed class TeamPageTests
 
         Assert.Equal([nameof(TeamFilesTab)], RenderedTabs(cut));
         Assert.Equal("Business", FilesParameters(cut).Get(p => p.Team));
-        Assert.Equal("Agents,Library,Manager Playbook,Agent Playbook,Details", string.Join(',', TabHeaders(cut)));
+        Assert.Equal("Agents,Library,Manager playbook,Agent playbook,Details", string.Join(',', TabHeaders(cut)));
         Assert.Empty(cut.FindAll(AlertSelector));
     }
 
