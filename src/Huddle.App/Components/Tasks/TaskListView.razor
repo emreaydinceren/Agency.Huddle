@@ -88,14 +88,14 @@
                     break;
                 case "creator":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("creator")" InitialDirection="@this.DirectionFor("creator")" T="TaskItem" Title="Creator" Hidden="@(!this.Shows("creator"))" CellClass="task-col-low-1" HeaderClass="task-col-low-1" Sortable="true" SortBy="@(t => (object)t.Creator)">
-                        <CellTemplate>@context.Item.Creator</CellTemplate>
+                        <CellTemplate><span title="@context.Item.Creator">@context.Item.Creator</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "team":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("team")" InitialDirection="@this.DirectionFor("team")" T="TaskItem" Title="Team" Hidden="@(!this.Shows("team"))" Sortable="true" SortBy="@(t => (object)t.Location.Team)"
                                      Grouping="@this.IsGrouped(TaskGroupField.Team)" GroupByOrder="@this.GroupOrder(TaskGroupField.Team)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Team))">
-                        <CellTemplate>@context.Item.Location.Team</CellTemplate>
+                        <CellTemplate><span title="@context.Item.Location.Team">@context.Item.Location.Team</span></CellTemplate>
                         <GroupTemplate>
                             @this.GroupHeading(context, TaskGroupField.Team)
                             @if (this.OrphanTeamOf(context) is { } orphan)
@@ -110,7 +110,7 @@
                                      SortBy="@(t => (object)(t.Location.Project ?? string.Empty))"
                                      Grouping="@this.IsGrouped(TaskGroupField.Project)" GroupByOrder="@this.GroupOrder(TaskGroupField.Project)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Project))">
-                        <CellTemplate>@(context.Item.Location.Project ?? TaskFieldView.EmptyText("project"))</CellTemplate>
+                        <CellTemplate><span title="@(context.Item.Location.Project ?? TaskFieldView.EmptyText("project"))">@(context.Item.Location.Project ?? TaskFieldView.EmptyText("project"))</span></CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Project)</GroupTemplate>
                     </TemplateColumn>
                     break;
@@ -122,7 +122,7 @@
                         <CellTemplate>
                             @if (context.Item.Sprint is { } sprint)
                             {
-                                <span class="task-list-sprint">
+                                <span class="task-list-sprint" title="@SprintLabels.Text(this.Sprints, sprint)">
                                     @if (this.Sprints.Get(sprint) is null)
                                     {
                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" Class="task-sprint-missing" aria-label="@SprintLabels.MissingText" />
@@ -147,7 +147,7 @@
                     break;
                 case "blocked_by":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("blocked_by")" InitialDirection="@this.DirectionFor("blocked_by")" T="TaskItem" Title="Blocked by" Hidden="@(!this.Shows("blocked_by"))" Sortable="false">
-                        <CellTemplate>@string.Join(", ", context.Item.BlockedBy)</CellTemplate>
+                        <CellTemplate><span title="@string.Join(", ", context.Item.BlockedBy)">@string.Join(", ", context.Item.BlockedBy)</span></CellTemplate>
                     </TemplateColumn>
                     break;
                 case "tags":
@@ -199,7 +199,7 @@
                     break;
                 case "origin":
                     <TemplateColumn @key="key" HeaderStyle="@this.HeaderStyle("origin")" InitialDirection="@this.DirectionFor("origin")" T="TaskItem" Title="Origin" Hidden="@(!this.Shows("origin"))">
-                        <CellTemplate>@TaskFieldView.OriginText(context.Item.OriginRoomId, this.RoomNames)</CellTemplate>
+                        <CellTemplate><span title="@TaskFieldView.OriginText(context.Item.OriginRoomId, this.RoomNames)">@TaskFieldView.OriginText(context.Item.OriginRoomId, this.RoomNames)</span></CellTemplate>
                     </TemplateColumn>
                     break;
             }
