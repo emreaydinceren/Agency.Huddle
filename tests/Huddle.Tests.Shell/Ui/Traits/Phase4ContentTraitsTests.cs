@@ -88,17 +88,22 @@ public sealed partial class Phase4ContentTraitsTests
 
     /// <summary>
     /// The default look keeps the app's one priority icon set (#470): the priority chip's icon is not hidden and no rule draws bars or
-    /// a square in its place, so every Theme shows the same marks. Urgent alone takes the error hue.
+    /// a square in its place, so every Theme shows the same marks. High takes the warning hue and Urgent the error hue, as
+    /// <c>TaskColors.For</c> gives them in the pill Themes (#728); Low and Medium keep the subtle ink and have no rule of their own.
     /// </summary>
     [Fact]
     public void StatusDefault_KeepsThePriorityIconSet()
     {
         string section = DefaultStatusRules();
+        string high = Guarded(".mud-chip.priority-high");
         string urgent = Guarded(".mud-chip.priority-urgent");
 
         Assert.DoesNotContain("task-priority-chip .mud-chip-icon", section, StringComparison.Ordinal);
         Assert.DoesNotContain("task-priority-chip::before", section, StringComparison.Ordinal);
         Assert.DoesNotContain("priority-high::before", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("priority-medium", section, StringComparison.Ordinal);
+        Assert.DoesNotContain("priority-low", section, StringComparison.Ordinal);
+        Declares(high, "var(--mud-palette-warning)");
         Declares(urgent, "var(--mud-palette-error)");
     }
 
