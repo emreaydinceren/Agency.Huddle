@@ -1,5 +1,6 @@
 using System.Globalization;
 using Agency.Huddle.App.Jobs;
+using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Components.Jobs;
 
@@ -50,7 +51,7 @@ internal static class JobText
         return owner.AgentName ?? humanName;
     }
 
-    /// <summary>When a Job runs next, in the Human's zone: "Next: Mon 3 Nov, 09:00", "Paused" or "Will not run again".</summary>
+    /// <summary>When a Job runs next, in the Human's zone: "Next: Today 09:00", "Next: Tomorrow 09:00", "Paused" or "Will not run again".</summary>
     /// <param name="job">The Job.</param>
     /// <param name="next">Its next run, or <see langword="null"/>.</param>
     /// <param name="zone">The zone to show times in.</param>
@@ -67,8 +68,37 @@ internal static class JobText
             return "Paused";
         }
 
-        return next is { } at ? "Next: " + Moment(at, zone, clock) : "Will not run again";
+        return next is { } at ? "Next: " + HumanDate.Moment(at, DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), zone).DateTime), zone) : "Will not run again";
     }
+
+    /// <summary>
+    /// A Job's timetable as a list row says it: "Daily at 07:30", with the Job's zone after it ("Daily at 07:30 UTC") when that
+    /// is not the zone the next run is shown in, so the two times on the row never read as a contradiction.
+    /// </summary>
+    /// <param name="job">The Job.</param>
+    /// <param name="jobZone">The zone the Job's times are in.</param>
+    /// <param name="shownZone">The zone the next run is shown in.</param>
+    /// <returns>The timetable.</returns>
+    public static string Timetable(Job job, TimeZoneInfo jobZone, TimeZoneInfo shownZone)
+    {
+        ArgumentNullException.ThrowIfNull(job);
+        ArgumentNullException.ThrowIfNull(jobZone);
+        ArgumentNullException.ThrowIfNull(shownZone);
+
+        string jobId = JobTimeZones.IdOf(jobZone);
+        return string.Equals(jobId, JobTimeZones.IdOf(shownZone), StringComparison.Ordinal) ? job.When.Describe() : job.When.Describe() + " " + jobId;
+    }
+
+    /// <summary>The first line of a notice about a schedule section that could not be read: whose schedule it is, which section, and that it does not run.</summary>
+    /// <param name="ownerName">The Agent's name, or the Human's.</param>
+    /// <param name="isHuman">Whether the schedule is the Human's own.</param>
+    /// <param name="title">The section's heading.</param>
+    /// <returns>The sentence.</returns>
+    public static string ProblemLead(string ownerName, bool isHuman, string title) =>
+        (isHuman ? "Your schedule" : ownerName + "'s schedule") + $" has a job called \"{title}\" that does not run.";
+
+    /// <summary>The label of the link that opens the schedule file a section could not be read from.</summary>
+    public const string ProblemOpenLabel = "Open the schedule file";
 
     /// <summary>
     /// The next-run text a list row adds after the timetable: nothing for a pending one-off, whose timetable already names

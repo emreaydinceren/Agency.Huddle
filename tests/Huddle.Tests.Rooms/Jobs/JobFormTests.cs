@@ -124,9 +124,40 @@ public sealed class JobFormTests
     {
         Job job = new("job-1", JobOwner.Human, "T", "I", JobRecurrence.Daily(new TimeOnly(9, 0)), null, null, false);
 
-        Assert.Equal("Next: Mon 2 Nov, 09:00", JobText.NextRun(job, Monday0800.AddHours(1), TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Today 09:00", JobText.NextRun(job, Monday0800.AddHours(1), TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Tomorrow 09:00", JobText.NextRun(job, Monday0800.AddDays(1).AddHours(1), TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Nov 12 09:00", JobText.NextRun(job, Monday0800.AddDays(10).AddHours(1), TimeZoneInfo.Utc, Clock));
         Assert.Equal("Paused", JobText.NextRun(job with { Paused = true }, Monday0800, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Will not run again", JobText.NextRun(job, null, TimeZoneInfo.Utc, Clock));
+    }
+
+    /// <summary>The next run is said in the Human's zone: 23:30 UTC on Monday is Tuesday 08:30 in Tokyo.</summary>
+    [Fact]
+    public void NextRun_ReadsTheDayInTheShownZone()
+    {
+        TimeZoneInfo tokyo = TimeZoneInfo.CreateCustomTimeZone("tokyo", TimeSpan.FromHours(9), "Tokyo", "Tokyo");
+        Job job = new("job-1", JobOwner.Human, "T", "I", JobRecurrence.Daily(new TimeOnly(7, 30)), "UTC", null, false);
+
+        Assert.Equal("Next: Tomorrow 08:30", JobText.NextRun(job, new DateTimeOffset(2026, 11, 2, 23, 30, 0, TimeSpan.Zero), tokyo, Clock));
+    }
+
+    /// <summary>A timetable names its zone only when that is not the zone the next run is shown in, so the row never contradicts itself.</summary>
+    [Fact]
+    public void Timetable_NamesTheZoneOnlyWhenItDiffers()
+    {
+        TimeZoneInfo tokyo = TimeZoneInfo.CreateCustomTimeZone("Asia/Tokyo", TimeSpan.FromHours(9), "Tokyo", "Tokyo");
+        Job job = new("job-1", JobOwner.Human, "T", "I", JobRecurrence.Daily(new TimeOnly(7, 30)), "UTC", null, false);
+
+        Assert.Equal("Daily at 07:30 UTC", JobText.Timetable(job, TimeZoneInfo.Utc, tokyo));
+        Assert.Equal("Daily at 07:30", JobText.Timetable(job, TimeZoneInfo.Utc, TimeZoneInfo.Utc));
+    }
+
+    /// <summary>The unreadable-section notice names whose schedule it is and which job, in plain words.</summary>
+    [Fact]
+    public void ProblemLead_NamesTheScheduleAndTheJob()
+    {
+        Assert.Equal("Dana's schedule has a job called \"Report\" that does not run.", JobText.ProblemLead("Dana", false, "Report"));
+        Assert.Equal("Your schedule has a job called \"Report\" that does not run.", JobText.ProblemLead("You", true, "Report"));
     }
 
     /// <summary>A run in another year than the clock's shows its year, in the next-run line, the last-run line and the preview.</summary>
@@ -137,7 +168,7 @@ public sealed class JobFormTests
         DateTimeOffset far = new(2099, 12, 31, 9, 0, 0, TimeSpan.Zero);
 
         Assert.Equal("Thu 31 Dec 2099, 09:00", JobText.Moment(far, TimeZoneInfo.Utc, Clock));
-        Assert.Equal("Next: Thu 31 Dec 2099, 09:00", JobText.NextRun(job, far, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Dec 31, 2099 09:00", JobText.NextRun(job, far, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Last ran Wed 31 Dec 2025, 09:00", JobText.LastRun(new DateTimeOffset(2025, 12, 31, 9, 0, 0, TimeSpan.Zero), JobOutcome.Delivered, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Thu 1 Jan, 09:00", JobText.Moment(new DateTimeOffset(2026, 1, 1, 9, 0, 0, TimeSpan.Zero), TimeZoneInfo.Utc, Clock));
     }
@@ -161,7 +192,7 @@ public sealed class JobFormTests
         DateTimeOffset next = Monday0800.AddHours(1);
 
         Assert.Null(JobText.RowNextRun(once, next, TimeZoneInfo.Utc, Clock));
-        Assert.Equal("Next: Mon 2 Nov, 09:00", JobText.RowNextRun(daily, next, TimeZoneInfo.Utc, Clock));
+        Assert.Equal("Next: Today 09:00", JobText.RowNextRun(daily, next, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Paused", JobText.RowNextRun(once with { Paused = true }, next, TimeZoneInfo.Utc, Clock));
         Assert.Equal("Will not run again", JobText.RowNextRun(once, null, TimeZoneInfo.Utc, Clock));
     }
