@@ -1,4 +1,5 @@
 @using System.Globalization
+@using System.Text
 @using Agency.Huddle.App.Library
 @using Agency.Huddle.App.Components.References
 @using Agency.Huddle.App.References
@@ -86,9 +87,31 @@
     public string RoomName { get; set; } = "";
 
     /// <summary>The placeholder: the Room's name, a real ellipsis, and the <c>/invite</c> hint using the defined term Agent.</summary>
-    private string Placeholder => string.IsNullOrWhiteSpace(this.RoomName)
+    private string Placeholder => string.IsNullOrWhiteSpace(WithoutLeadingEmoji(this.RoomName))
         ? "Message… (/invite @Agent)"
-        : $"Message {this.RoomName}… (/invite @Agent)";
+        : $"Message {WithoutLeadingEmoji(this.RoomName)}… (/invite @Agent)";
+
+    /// <summary>The Room's name without a leading emoji (a Job Room's clock), which the header already shows and a sentence should not repeat.</summary>
+    /// <param name="name">The Room's name.</param>
+    /// <returns>The name from its first character that is not a symbol, mark or joiner, trimmed; empty when it is only those.</returns>
+    private static string WithoutLeadingEmoji(string name)
+    {
+        int start = 0;
+        while (start < name.Length)
+        {
+            Rune.DecodeFromUtf16(name.AsSpan(start), out Rune rune, out int consumed);
+            bool decoration = char.IsWhiteSpace(name[start])
+                || Rune.GetUnicodeCategory(rune) is UnicodeCategory.OtherSymbol or UnicodeCategory.ModifierSymbol or UnicodeCategory.NonSpacingMark or UnicodeCategory.Format;
+            if (!decoration)
+            {
+                break;
+            }
+
+            start += consumed;
+        }
+
+        return name[start..].TrimEnd();
+    }
 
     private ElementReference textarea;
     private ElementReference attachHost;
