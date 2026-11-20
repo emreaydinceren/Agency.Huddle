@@ -42,6 +42,7 @@
         </MudText>
     }
 
+    @this.BeforeLimits
     <MudText Typo="Typo.caption" Class="needs-you-level-limits">@NeedsYouLevelCopy.LimitsNote</MudText>
 
     @if (this.saveError is not null)
@@ -87,6 +88,10 @@
     /// <summary>The Project whose level this sets, inside <see cref="Team"/>; <see langword="null"/> sets the Team's.</summary>
     [Parameter]
     public string? Project { get; set; }
+
+    /// <summary>A statement drawn just before the "What this cannot catch" caveat, so a statement reads before the caveat that qualifies it (the Process tab's gate line).</summary>
+    [Parameter]
+    public RenderFragment? BeforeLimits { get; set; }
 
     private bool Inherits => this.Team is not null;
 

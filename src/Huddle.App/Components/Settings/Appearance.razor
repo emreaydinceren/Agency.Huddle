@@ -36,7 +36,7 @@
 
 <SettingsIntro>
     Pick one light theme and one dark theme. The button at the right of the top bar switches between
-    them.
+    them. Your own avatar is set on the <MudLink Href="/settings/profile" Underline="Underline.Always">Profile</MudLink> tab.
 </SettingsIntro>
 
 <StoredAt Label="The selection is stored at" Path="@this.AppearanceStore.FilePath" />
@@ -56,6 +56,10 @@
                 <div class="theme-row">
                     <ThemeSwatch Colours="@SwatchFor(ThemeCatalog.Resolve(theme, this.AppearanceStore.Current.CustomizationFor(theme.Id)))" />
                     <span>@theme.Label</span>
+                    @if (string.Equals(theme.Id, this.AppearanceStore.Current.PreferredLightId, StringComparison.Ordinal))
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="theme-row-check" aria-hidden="true" />
+                    }
                 </div>
             </MudListItem>
         }
@@ -77,6 +81,10 @@
                 <div class="theme-row">
                     <ThemeSwatch Colours="@SwatchFor(ThemeCatalog.Resolve(theme, this.AppearanceStore.Current.CustomizationFor(theme.Id)))" />
                     <span>@theme.Label</span>
+                    @if (string.Equals(theme.Id, this.AppearanceStore.Current.PreferredDarkId, StringComparison.Ordinal))
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="theme-row-check" aria-hidden="true" />
+                    }
                 </div>
             </MudListItem>
         }
@@ -90,7 +98,7 @@
    shown here - by design, see AccentPalette's own remarks. The control belongs to the Theme being shown and
    writes customizations[its id].palette.primary. *@
 <MudColorPicker Label="@this.AccentLabel" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false" Variant="Variant.Outlined" Margin="Margin.Dense"
-                Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
+                Placeholder="Theme default" Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
                 Class="mt-4 theme-picker-accent-colour" />
 @if (this.AppearanceStore.Current.CustomizationFor(this.ShownTheme.Id) is not null)
 {
@@ -114,10 +122,6 @@
         is taken from a third-party colour theme.
     </p>
 </details>
-
-<p class="settings-prompts-file-path">
-    Your own avatar is set on the <a href="/settings/profile">Profile</a> tab.
-</p>
 
 @code {
     /// <summary><see cref="ThemeCatalog.Grouped"/> narrowed to the themes of one <see cref="ThemeMode"/>, so each picker lists only themes that can fill its slot.</summary>

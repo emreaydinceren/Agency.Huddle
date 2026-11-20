@@ -5,7 +5,6 @@
 *@
 
 @implements IDisposable
-@using System.Globalization
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Agents
 @using Agency.Huddle.App.Data
@@ -33,11 +32,12 @@
             @foreach (SpendRow row in this.rows)
             {
                 <div class="spending-row" role="listitem">
-                    <span class="spending-row-name">@row.Name</span>
-                    @if (row.Calls is int calls)
-                    {
-                        <span class="spending-helper-calls">@Plural.Of(calls, "call", "calls")</span>
-                    }
+                    <span class="spending-row-name">@row.Name
+                        @if (row.Calls is int calls)
+                        {
+                            <span class="spending-helper-calls">@($"{Plural.Of(calls, "call", "calls")} in total")</span>
+                        }
+                    </span>
                     @foreach (StoredSpend amount in row.Amounts)
                     {
                         <span class="spending-row-amount">@Money(amount)</span>
@@ -45,14 +45,6 @@
                 </div>
             }
         </div>
-
-        @if (this.overlapping.Count > 0)
-        {
-            <p class="spending-overlap-note">
-                @string.Join(", ", this.overlapping) @(this.overlapping.Count == 1 ? "is" : "are") in more than one Team, so the Team rows add up to
-                more than the Total. The Total counts each Agent once.
-            </p>
-        }
 
         <div class="spending-total">
             <span class="spending-total-label">Total</span>
@@ -65,6 +57,14 @@
                 <span class="spending-total-amount">@Money(amount)</span>
             }
         </div>
+
+        @if (this.overlapping.Count > 0)
+        {
+            <p class="spending-overlap-note">
+                @string.Join(", ", this.overlapping) @(this.overlapping.Count == 1 ? "is" : "are") in more than one Team, so the Team rows add up to
+                more than the Total. The Total counts each Agent once.
+            </p>
+        }
     }
 </div>
 
@@ -76,9 +76,9 @@
     /// <summary>One line of the panel: a name, its amounts (one per currency) and, for the Helpers, their call count.</summary>
     private sealed record SpendRow(string Name, IReadOnlyList<StoredSpend> Amounts, int? Calls = null);
 
-    /// <summary>Formats an amount as three decimals, then the currency, the way a Team page does.</summary>
+    /// <summary>Formats an amount as the Needs You cap card does (two decimals at most), then the currency.</summary>
     private static string Money(StoredSpend amount) =>
-        $"{amount.Amount.ToString("N3", CultureInfo.InvariantCulture)} {amount.Currency}";
+        $"{NeedsYouLevelCopy.Money(amount.Amount)} {amount.Currency}";
 
     /// <summary>Sums amounts per currency, never across currencies.</summary>
     private static List<StoredSpend> SumPerCurrency(IEnumerable<StoredSpend> amounts) =>

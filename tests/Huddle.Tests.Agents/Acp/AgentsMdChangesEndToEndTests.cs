@@ -386,7 +386,7 @@ public sealed class AgentsMdChangesEndToEndTests
 
         /// <summary>The notice a summarised edit renders, in a prompt of an Adapter without file tools.</summary>
         private const string Header =
-            "The rules in AGENTS.md changed. What follows applies from now on, in place of what you\nstarted with. Each level still adds to the one before it, and the more specific rule still wins.\n\n";
+            "The rules in AGENTS.md changed. What follows applies from now on, in place of what you started with. Each level still adds to the one before it, and the more specific rule still wins.\n\n";
 
         private readonly TempDataDir dataDir;
         private readonly Dictionary<string, string?> config;

@@ -102,15 +102,15 @@ internal static class TeamPageTabs
 
     /// <summary>Returns the label a tab shows: the Files tab reads "Library", as the sidebar's section does; the others their own name.</summary>
     /// <param name="tab">The tab to label.</param>
-    /// <returns>"Agents", "Library", "Tasks", "Process", "Manager Playbook", "Agent Playbook" or "Details".</returns>
+    /// <returns>"Agents", "Library", "Tasks", "Process", "Manager playbook", "Agent playbook" or "Details".</returns>
     public static string Label(TeamPageTab tab) => tab switch
     {
         TeamPageTab.Members => "Agents",
         TeamPageTab.Files => "Library",
         TeamPageTab.Tasks => "Tasks",
         TeamPageTab.Process => "Process",
-        TeamPageTab.ManagerPlaybook => "Manager Playbook",
-        TeamPageTab.AgentPlaybook => "Agent Playbook",
+        TeamPageTab.ManagerPlaybook => "Manager playbook",
+        TeamPageTab.AgentPlaybook => "Agent playbook",
         _ => "Details",
     };
 

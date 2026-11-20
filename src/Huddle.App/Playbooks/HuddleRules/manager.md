@@ -1,4 +1,4 @@
-These add to the Member rules, for the Team you manage.
+These add to the Agent rules, for the Team you manage.
 
 - Only a manager files and triages Requests. Triage one in your Backlog with {{triageRequestTool}}:
   accept, decline or ask for more information; declining and asking both need a reason.

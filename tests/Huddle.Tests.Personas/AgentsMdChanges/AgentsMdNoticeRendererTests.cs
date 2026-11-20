@@ -15,7 +15,7 @@ public sealed class AgentsMdNoticeRendererTests
     private const string FullPath = @"E:\data\Teams\Home\AGENTS.md";
 
     private const string Header =
-        "The rules in AGENTS.md changed. What follows applies from now on, in place of what you\n" +
+        "The rules in AGENTS.md changed. What follows applies from now on, in place of what you " +
         "started with. Each level still adds to the one before it, and the more specific rule still wins.\n\n";
 
     /// <summary>A summary with an added, a changed and a removed rule prints each with its quote and ends with the file-wins line.</summary>

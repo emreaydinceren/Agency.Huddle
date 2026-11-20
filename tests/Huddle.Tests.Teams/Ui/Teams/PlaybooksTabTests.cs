@@ -206,7 +206,7 @@ public sealed class PlaybooksTabTests : IDisposable
     /// <param name="manager">Whether the Manager section is read.</param>
     /// <param name="rulesLine">The first line of that kind's shipped rules.</param>
     [Theory]
-    [InlineData(true, "These add to the Member rules, for the Team you manage.")]
+    [InlineData(true, "These add to the Agent rules, for the Team you manage.")]
     [InlineData(false, "Huddle enforces these rules. Where the Playbook text says otherwise, these win.")]
     public async Task Rules_InEveryState_ShowTheCaptionAndTheRulesWithNoButtons(bool manager, string rulesLine)
     {

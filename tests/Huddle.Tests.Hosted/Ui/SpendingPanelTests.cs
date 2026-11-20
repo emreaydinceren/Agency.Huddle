@@ -21,9 +21,9 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class SpendingPanelTests
 {
-    /// <summary>Formats an amount the way the panel does: three decimals, then the currency.</summary>
+    /// <summary>Formats an amount the way the panel does: two decimals at most, then the currency.</summary>
     private static string Money(decimal amount, string currency) =>
-        $"{amount.ToString("N3", CultureInfo.InvariantCulture)} {currency}";
+        $"{amount.ToString("0.##", CultureInfo.InvariantCulture)} {currency}";
 
     /// <summary>Adds an Agent, in the given Teams, through the factory's real <see cref="PersonaStore"/>.</summary>
     private static void AddAgent(TeamWebApplicationFactory factory, string name, params string[] teams) =>
@@ -62,7 +62,7 @@ public sealed class SpendingPanelTests
     /// <summary>The amounts shown on the row with the given name, or an empty list when there is no such row.</summary>
     private static IReadOnlyList<string> RowAmounts(IRenderedComponent<SpendingPanel> cut, string name) =>
         [.. cut.FindAll(".spending-row")
-            .Where(row => string.Equals(row.QuerySelector(".spending-row-name")?.TextContent.Trim(), name, StringComparison.Ordinal))
+            .Where(row => string.Equals(row.QuerySelector(".spending-row-name")?.FirstChild?.TextContent.Trim(), name, StringComparison.Ordinal))
             .SelectMany(static row => row.QuerySelectorAll(".spending-row-amount"))
             .Select(static amount => amount.TextContent.Trim())];
 
@@ -130,7 +130,34 @@ public sealed class SpendingPanelTests
         await using MudBunitContext _ = ctx;
 
         Assert.Equal([Money(0.008m, "USD")], RowAmounts(cut, "Helpers"));
-        Assert.Equal("3 calls", cut.Find(".spending-helper-calls").TextContent.Trim());
+        Assert.Equal("3 calls in total", cut.Find(".spending-helper-calls").TextContent.Trim());
+        Assert.DoesNotContain(cut.FindAll(".spending-row-amount"), static amount => amount.TextContent.Contains("call", StringComparison.Ordinal));
+    }
+
+    /// <summary>Money reads as the Needs You cap card reads it: two decimals at most, never three (#740).</summary>
+    [Fact]
+    public async Task Money_HasTwoDecimalsAtMost()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        AddAgent(factory, "Ben", "Alpha");
+        Spend(factory, "Ben", 1.232m);
+        IRenderedComponent<SpendingPanel> cut = Render(factory, out MudBunitContext ctx);
+        await using MudBunitContext _ = ctx;
+
+        Assert.Equal(["1.23 USD"], TotalAmounts(cut));
+    }
+
+    /// <summary>The overlap note follows the Total, so the figure is read before the sentence that explains it (#740).</summary>
+    [Fact]
+    public async Task OverlapNote_FollowsTheTotal()
+    {
+        await using TeamWebApplicationFactory factory = new();
+        AddAgent(factory, "Amy", "Alpha", "Beta");
+        Spend(factory, "Amy", 0.5m);
+        IRenderedComponent<SpendingPanel> cut = Render(factory, out MudBunitContext ctx);
+        await using MudBunitContext _ = ctx;
+
+        Assert.Equal("spending-overlap-note", cut.Find(".spending-total").NextElementSibling?.ClassName);
     }
 
     /// <summary>When only calls are known and no Adapter reported a cost, the Total row still shows a figure: a dash, never a bare label (#479).</summary>

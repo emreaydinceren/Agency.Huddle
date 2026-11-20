@@ -42,6 +42,12 @@
     width: 100%;
 }
 
+/* The chosen Theme's second cue besides the tint: a check at the row's end. */
+.theme-row-check {
+    margin-inline-start: auto;
+    color: var(--mud-palette-primary);
+}
+
 .theme-credit {
     margin: 0;
     max-width: 75ch;
@@ -460,6 +466,11 @@
     width: 48px;
 }
 
+/* An empty "Used by" reads as a quiet "None", not a blank cell. */
+.skills-grid .skills-used-by-none {
+    color: var(--hu-text-subtle);
+}
+
 .skills-grid .skills-description {
     display: -webkit-box;
     -webkit-box-orient: vertical;
@@ -523,6 +534,7 @@
 }
 
 .spending-helper-calls {
+    margin-inline-start: 8px;
     color: var(--mud-palette-text-secondary);
 }
 

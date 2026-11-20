@@ -71,6 +71,35 @@ public sealed partial class PromptCatalogTests
         Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// No shipped default breaks a line in the middle of a sentence: a long line that ends in a word or a comma is
+    /// followed by a blank line, a list item, a heading or the end, so the Prompts editor wraps it cleanly (#732).
+    /// </summary>
+    [Fact]
+    public void Defaults_HaveNoHardLineBreakInsideAParagraph()
+    {
+        List<string> offenders = [];
+        foreach (PromptDefinition prompt in PromptCatalog.All)
+        {
+            string[] lines = prompt.Default.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+            for (int i = 0; i < lines.Length - 1; i++)
+            {
+                string current = lines[i].TrimEnd();
+                string next = lines[i + 1].TrimStart();
+                bool wrapped = current.Length >= 60
+                    && (char.IsLetterOrDigit(current[^1]) || current[^1] == ',')
+                    && next.Length > 0
+                    && char.IsLower(next[0]);
+                if (wrapped)
+                {
+                    offenders.Add($"{prompt.Key}: {current[^Math.Min(30, current.Length)..]}");
+                }
+            }
+        }
+
+        Assert.Empty(offenders);
+    }
+
     /// <summary>The three Playbook Turn notices are the spec's text word for word (§6.4).</summary>
     [Fact]
     public void PlaybookTurnPrompts_DefaultsAreTheSpecText()
@@ -127,13 +156,13 @@ public sealed partial class PromptCatalogTests
         string manager = PromptCatalog.Get("systemPrompt.managerPlaybook").Default.Replace("\r\n", "\n", StringComparison.Ordinal);
 
         Assert.StartsWith("## How to work on a Task\n\nWork in passes. Each pass is one loop:", member, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
-        Assert.StartsWith("## How to run the Team\n\nYou are also a member: the Member Playbook applies to you.", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
+        Assert.StartsWith("## How to run the Team\n\nYou are also a member: the Agent Playbook applies to you.", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
         Assert.Contains("### Running a mission", manager, StringComparison.Ordinal); // contains-ok: PlaybookPrompts_DefaultsAreTheSpecText pins the whole default
         Assert.Contains("Evidence. End the comment with a line `State: done`, `State: handed off`, `State: blocked` or `State: waiting for the Human`.", member, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("Name it on the last line of the comment, as `State: handed off`.", member, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("Break the Task into child Tasks under it on your first pass, even when part of it waits on the Human.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.Contains("A Task that needs the Human's input is a child Task assigned to no one, or a question to the Human. It never stops the rest of the plan.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
-        Assert.Contains("End it with a `State:` line, as the Member Playbook says.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
+        Assert.Contains("End it with a `State:` line, as the Agent Playbook says.", manager, StringComparison.Ordinal); // contains-ok: exact rule sentence of model-facing text
         Assert.DoesNotContain("{{", member, StringComparison.Ordinal);
         Assert.DoesNotContain("{{", manager, StringComparison.Ordinal);
     }
@@ -450,12 +479,7 @@ public sealed partial class PromptCatalogTests
         var expectedRoomSessions =
             """
             Each Room you are in is a separate conversation, and this session holds exactly one of them.
-            Every Message you receive here comes from the Room its label names, and you answer into that
-            Room. Your other Rooms have sessions of their own, which you cannot see from here. Treat each
-            Room as its own audience: do not assume the people here know what was said in another Room, and
-            do not bring it up here. If a Message seems to continue something you cannot see, say so and ask
-            rather than guess. Describe your own memory truthfully: you remember this Room's conversation,
-            and you do not remember your other Rooms' conversations.
+            Every Message you receive here comes from the Room its label names, and you answer into that Room. Your other Rooms have sessions of their own, which you cannot see from here. Treat each Room as its own audience: do not assume the people here know what was said in another Room, and do not bring it up here. If a Message seems to continue something you cannot see, say so and ask rather than guess. Describe your own memory truthfully: you remember this Room's conversation, and you do not remember your other Rooms' conversations.
             """;
         Assert.Equal(
             expectedRoomSessions.Replace("\r\n", "\n", StringComparison.Ordinal),
@@ -466,8 +490,7 @@ public sealed partial class PromptCatalogTests
         Assert.Empty(carry.Placeholders);
         var expectedCarry =
             """
-            Two things do cross between your Rooms: the files in your memory folder, and the file changes
-            listed at the start of a Turn. If something should hold in every Room, write it to your memory.
+            Two things do cross between your Rooms: the files in your memory folder, and the file changes listed at the start of a Turn. If something should hold in every Room, write it to your memory.
             """;
         Assert.Equal(
             expectedCarry.Replace("\r\n", "\n", StringComparison.Ordinal),
