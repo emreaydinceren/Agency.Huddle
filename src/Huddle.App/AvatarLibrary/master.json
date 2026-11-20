@@ -1,6 +1,6 @@
 {
  "description": "Master index of the bundled pixel-art avatars. One record per PNG in this folder.",
- "generated": "2026-11-13",
+ "generated": "2026-11-19",
  "generator": "tools/avatar-pixel-art/generate.py",
  "count": 126,
  "notes": [
