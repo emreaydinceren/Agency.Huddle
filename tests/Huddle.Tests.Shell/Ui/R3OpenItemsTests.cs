@@ -79,14 +79,14 @@ public sealed partial class R3OpenItemsTests
         Assert.Contains(".agent-profile-card-row { display: flex;", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
-    /// <summary>UX-E16: the roster grid, the one that still scrolls sideways (the roles wrap, #474), uses a thin scrollbar that is transparent at rest and takes the Edge rung on hover or focus-within.</summary>
+    /// <summary>#724: the roster grid, the one that still scrolls sideways (the roles wrap, #474), uses a thin scrollbar that is always visible, so a card cut at the edge reads as a row that scrolls.</summary>
     [Fact]
-    public void RosterGrid_HidesTheScrollbarUntilHoverOrFocus()
+    public void RosterGrid_ScrollbarIsAlwaysVisible()
     {
         string css = Whitespace().Replace(CssText.AppCss(CssNewlines.AsIs), " ");
 
-        Assert.Contains("scrollbar-width: thin; scrollbar-color: transparent transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
-        Assert.Contains(".roster-grid:hover, .roster-grid:focus-within { scrollbar-color: var(--ink-line) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.Contains("scrollbar-width: thin; scrollbar-color: var(--mud-palette-text-secondary) transparent; }", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
+        Assert.DoesNotContain(".roster-grid:hover", css, StringComparison.Ordinal); // contains-ok: stylesheet source text
     }
 
     /// <summary>B8i: every swatch has its own colour name, none is a numbered repeat ("Red 2"), and all 30 are different.</summary>

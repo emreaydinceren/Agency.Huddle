@@ -302,15 +302,9 @@
     /* The roster's cards are 20rem wide. */
     grid-auto-columns: 20rem;
 
-    /* The scrollbar is thin and invisible until the pointer is over the grid or focus is inside it; it still
-       scrolls with the wheel, touch and the arrow keys. */
+    /* The scrollbar is thin and always visible, so a card cut at the edge reads as a row that scrolls. */
     scrollbar-width: thin;
-    scrollbar-color: transparent transparent;
-}
-
-.roster-grid:hover,
-.roster-grid:focus-within {
-    scrollbar-color: var(--ink-line) transparent;
+    scrollbar-color: var(--mud-palette-text-secondary) transparent;
 }
 
 /* A lone card needs no second row: an empty explicit row would still add its row gap below the card. */
